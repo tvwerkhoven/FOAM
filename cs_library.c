@@ -11,6 +11,8 @@ control_t ptc = { //!< Global struct to hold system characteristics and other da
 	.wfc_count = 0
 };
 
+//malloc((size_t) 1);
+
 config_t cs_config = { 
 	.listenip = "0.0.0.0",
 	.listenport = 10000,
@@ -25,6 +27,9 @@ config_t cs_config = {
 	.use_stderr = true,
 	.loglevel = LOGDEBUG
 };
+
+
+
 
 /* logging functions */
 void logInfo(const char *msg, ...) {

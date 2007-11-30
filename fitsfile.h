@@ -403,10 +403,7 @@ float ftgetr4(		/* Extract column for keyword from FITS table line
 	char *filename); /* Name of file to check */
     int isgif(		/* Return 1 if GIF image file, else 0 */
 	char *filename); /* Name of file to check */
-    int first_token(	/* Return first token from the next line of an ASCII file */
-	FILE *diskfile,	/* File descriptor for ASCII file */
-	int ncmax,	/* Maximum number of characters returned */
-	char *token);	/* First token on next line (returned) */
+int first_token(FILE *diskfile, int ncmax, char *token);
     int stc2s (		/* Replace character in string with space */
 	char *spchar,	/* Character to replace with spaces */
 	char *string);	/* Character string to process */

@@ -6,7 +6,21 @@
 	@brief This file contains the functions to run FOAM in simulation mode.
 */
 
+// HEADERS //
+/***********/
+
 #include "fitsfile.h" // for fitsfile.c
+#include "cs_library.h"
+#include "ao_library.h"
+
+// GLOBAL VARIABLES //
+/********************/	
+
+// These are defined in cs_library.c
+extern control_t ptc;
+extern config_t cs_config;
+
+int _simObj(char *file);
 
 int drvReadSensor() {
 	logDebug("Now reading %d sensors.", ptc.wfs_count);
@@ -17,7 +31,7 @@ int drvReadSensor() {
 		return EXIT_FAILURE;
 	}
 	
-	_simObj("testfile.fits"); // This simulates the object
+	_simObj("test.fits"); // This simulates the object
 	
 	return EXIT_SUCCESS;
 }
@@ -29,9 +43,10 @@ int _simObj(char *file) {
 	char *header;
 	
 	// we want to read fits stuff here
-	header = fitsrhead(image, &lhead, &nbhead);
+//	header = fitsrhead(file, &lhead, &nbhead);
 	
-	ptc.wfs[0].image = fitsrfull(image, nbhead, header);
+//	ptc.wfs[0].image = fitsrfull(file, nbhead, header);
+//	ptc.wfs[0].image = 
 
 	return EXIT_SUCCESS;	
 }

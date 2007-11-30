@@ -57,6 +57,10 @@ char printLocaltime() {
 int main () {
 	pthread_t thread;
 	logInfo("Starting %s (%s) by %s",FOAM_NAME, FOAM_VERSION, FOAM_AUTHOR);
+	
+	ptc.wfs = malloc(ptc.wfs_count * sizeof(ptc.wfs));	// allocate memory
+	ptc.wfs[0].resx = 192;
+	ptc.wfs[0].resy = 192;
 
 	if (loadConfig("ao_config.cfg") != EXIT_SUCCESS) {
 		logErr("Loading configuration failed, aborting");
@@ -321,7 +325,7 @@ void modeOpen() {
 	while (ptc.mode == AO_MODE_OPEN) {
 		drvReadSensor();			// read the sensor output into ptc.image
 	
-		modparseSH();			// process SH sensor output, get displacements
+		modParseSH();			// process SH sensor output, get displacements
 	
 		logInfo("Operating in open loop"); // TODO
 		

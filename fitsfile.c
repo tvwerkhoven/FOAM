@@ -874,7 +874,7 @@ char	*header;	/* FITS header for image (previously read) */
     if (!simple) {
 	nbytes = getfilesize (filename) - nbhead;
 	if ((image = (char *) malloc (nbytes + 1)) == NULL) {
-	    snprintf (fitserrmsg,79, "FITSRFULL:  %d-byte image buffer cannot be allocated\n");
+	    snprintf (fitserrmsg,79, "FITSRFULL:  %d-byte image buffer cannot be allocated\n", nbytes); // TVW: added ', nbytes' which lacked
 	    (void)close (fd);
 	    return (NULL);
 	    }
