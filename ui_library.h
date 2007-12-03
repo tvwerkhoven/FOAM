@@ -21,7 +21,7 @@ typedef struct {
 // PROTOTYPES //
 /**************/
 
-int sendMsg(int sock, char *buf, int len);
+// int sendMsg(const int sock, const char *buf);
 int initSockC(in_addr_t host, int port, fd_set *cfd_set);
 int parseArgs(int argc, char *argv[], in_addr_t *host, int *port);
 int sockGetActive(fd_set *cfd_set);

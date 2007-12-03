@@ -11,8 +11,6 @@ control_t ptc = { //!< Global struct to hold system characteristics and other da
 	.wfc_count = 0
 };
 
-//malloc((size_t) 1);
-
 config_t cs_config = { 
 	.listenip = "0.0.0.0",
 	.listenport = 10000,
@@ -28,8 +26,21 @@ config_t cs_config = {
 	.loglevel = LOGDEBUG
 };
 
+static int formatLog(char **output, const char *prepend, const char *msg) {
+	char *timestr;
+	printUTC(&timestr); // fill timestr with date
+	timestr[24] = '\0';
 
-
+	// TODO: this is bad, it allocates memory every call...
+	*output = malloc((strlen(timestr) + strlen(prepend) + 1 + strlen(msg) + 1) * sizeof (char));
+	
+	strcat(*output,timestr);
+	strcat(*output,prepend);
+	strcat(*output,msg);
+	strcat(*output,"\n");
+	
+	return EXIT_SUCCESS;
+}
 
 /* logging functions */
 void logInfo(const char *msg, ...) {
@@ -42,26 +53,14 @@ void logInfo(const char *msg, ...) {
 	va_copy(aq, ap);
 	va_copy(ar, ap);
 	
-	char prepend[] = "<timestamp> - <info>: ";
-	char postpend[] = "\n";
-	char output[strlen(prepend) + strlen(postpend) + strlen(msg) + 1];
-	output[0] ='\0';
+	char *output;
+	formatLog(&output, " <info>: ", msg);
 	
-	strcat(output,prepend);
-	strcat(output,msg);
-	strcat(output,postpend);
-	
-	if (cs_config.infofd != NULL) {	// Do we want to log this to a file?
-//		fprintf(cs_config.infofd, "<timestamp> - <info>: ");
+	if (cs_config.infofd != NULL) // Do we want to log this to a file?
 		vfprintf(cs_config.infofd, output , ap);
-//		fprintf(cs_config.infofd, "\n");
-	}
 	
-	if (cs_config.use_stderr == true) {	// Do we want to log this to syslog?
-//		fprintf(stderr, "<timestamp> - <info>: ");
+	if (cs_config.use_stderr == true) // Do we want to log this to syslog
 		vfprintf(stderr, output, aq);
-//		fprintf(stderr,"\n");
-	}
 		
 	if (cs_config.use_syslog == true) 	// Do we want to log this to syslog?
 		syslog(LOG_INFO, msg, ar);
@@ -81,38 +80,19 @@ void logErr(const char *msg, ...) {
 	va_copy(aq, ap);
 	va_copy(ar, ap);
 	
-	char prepend[] = "<timestamp> - <error>: ";
-	char postpend[] = "\n";
-	char output[strlen(prepend) + strlen(postpend) + strlen(msg) + 1];
-	output[0] ='\0';
+	char *output;
+	formatLog(&output, " <error>: ", msg);
+
 	
-	strcat(output,prepend);
-	strcat(output,msg);
-	strcat(output,postpend);
-	
-	if (cs_config.errfd != NULL) {	// Do we want to log this to a file?
-//		fprintf(cs_config.errfd, "<timestamp> - <error>: ");
+	if (cs_config.errfd != NULL)	// Do we want to log this to a file?
 		vfprintf(cs_config.errfd, output, ap);
-//		if (errno)
-//			vfprintf(cs_config.errfd, "(error was: %s)",strerror(errno));
-//		fprintf(cs_config.errfd, "\n");
-	}
 
-	if (cs_config.use_stderr == true) {	// Do we want to log this to syslog?
-//		fprintf(stderr, "<timestamp> - <error>: ");
+	if (cs_config.use_stderr == true) // Do we want to log this to syslog?
 		vfprintf(stderr, output, aq);
-//		if (errno)
-//			vfprintf(stderr, "(error was: %s)",strerror(errno));
-
-//		fprintf(stderr,"\n");
-	}
 	
-	if (cs_config.use_syslog == true) { 	// Do we want to log this to syslog?
+	if (cs_config.use_syslog == true) // Do we want to log this to syslog?
 		syslog(LOG_ERR, msg, ar);
-//		if (errno)
-//			syslog(LOG_ERR, strerror(errno));
-	}
-	
+
 	va_end(ap);
 	va_end(aq);
 	va_end(ar);
@@ -128,26 +108,15 @@ void logDebug(const char *msg, ...) {
 	va_copy(aq, ap);
 	va_copy(ar, ap);
 
-	char prepend[] = "<timestamp> - <debug>: ";
-	char postpend[] = "\n";
-	char output[strlen(prepend) + strlen(postpend) + strlen(msg) + 1];
-	output[0] ='\0';
+	char *output;
+	formatLog(&output, " <debug>: ", msg);
 	
-	strcat(output,prepend);
-	strcat(output,msg);
-	strcat(output,postpend);
-	
-	if (cs_config.debugfd != NULL) {	// Do we want to log this to a file?
-//		fprintf(cs_config.debugfd, "<timestamp> - <debug>: ");
+	if (cs_config.debugfd != NULL) 	// Do we want to log this to a file?
 		vfprintf(cs_config.debugfd, output, ap);
-//		fprintf(cs_config.debugfd, "\n");
-	}
 	
-	if (cs_config.use_stderr == true) {	// Do we want to log this to stderr?
-//		fprintf(stderr, "<timestamp> - <debug>: ");
+	if (cs_config.use_stderr == true)	// Do we want to log this to stderr?
 		vfprintf(stderr, output, aq);
-//		fprintf(stderr, "\n");
-	}
+
 	
 	if (cs_config.use_syslog == true) 	// Do we want to log this to syslog?
 		syslog(LOG_DEBUG, output, ar);

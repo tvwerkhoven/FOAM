@@ -66,7 +66,7 @@ int main (int argc, char *argv[]) {
 		if (asock == sock) { 									// Act on socket with server
 //			nbytes = recvfrom(sock,buf,sizeof(buf),0,0,0); 		// TODO: nodig?
 			
-			nbytes = sockRead(asock, msg, sizeof(msg), &active_fd_set);
+			nbytes = sockRead(asock, msg, &active_fd_set);
 		
 			if (nbytes == 0) {
 				logInfo("Host closed connection, exiting...");
@@ -84,7 +84,7 @@ int main (int argc, char *argv[]) {
 			msg[strlen(msg)-1] = '\0';					// Strip trailing newline
 			logDebug("Data from stdin: %s",msg);
 			
-			sendMsg(sock,msg,strlen(msg));
+			sendMsg(sock, msg);
 		}
 		else {
 			logErr("Error: this must not be happening\n");
@@ -94,22 +94,8 @@ int main (int argc, char *argv[]) {
 	return EXIT_SUCCESS;
 }
 
-	/*! 
-	@brief Send data over a socket
-
-	@param [in] sock the socket to send over
-	@param [in] *buf the string to send
-	@param [in] len the length of the string to send
-	@return same as write(), number of bytes or -1 on error
-
-	sendMsg() sends data to the server, but is currently simply a wrapper for write()
-	*/
-int sendMsg(int sock, char *buf, int len) {
-	// strip trailing newline
-	if (buf[len-1] == '\n') 
-		buf[len-1] = '\0';
-	return write(sock,buf,strlen(buf)); // TODO non blocking maken
-}
+// int sendMsg(const int sock, const char *buf)
+// 	return write(sock, buf, sizeof(buf)); // TODO non blocking maken
 
 	/*! 
 	@brief Parse the commandline arguments
@@ -133,9 +119,8 @@ int parseArgs(int argc, char *argv[], in_addr_t *host, int *port) {
 		logDebug("Parsing host: %s and port: %s", argv[1], argv[2]);
 		*port = strtol(argv[2], NULL, 10); 				// atoi() replacement, supposed to be better
 		*host = inet_addr(argv[1]);
-		if (*host == -1 || *port <= 0 || *port > 65536) {
+		if (*host == -1 || *port <= 0 || *port > 65536) // TODO:  comparison between signed and unsigned?
 			return EXIT_FAILURE;
-		}
 	}
 	return EXIT_SUCCESS;
 }

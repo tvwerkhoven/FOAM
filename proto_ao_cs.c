@@ -26,25 +26,6 @@ extern config_t cs_config;
 // PROTOTYPES //
 /**************/
 
-char printUTC() {
-	struct tm *utc;
-	char timestr[26];
-	time_t t;
-	t = time(NULL);
-	utc = gmtime(&t);
-//	timestr = asctime(utc);
-//	timestr[24] = '\0';
-	return *timestr;
-}
-
-char printLocaltime() {
-	char timestr[26];
-	time_t t;
-	t = time(NULL);
-	strcpy(timestr, ctime(&t));
-	timestr[24] = '\0';
-	return *timestr;
-}
 
 	/*! 
 	@brief Initialisation function.
@@ -58,9 +39,9 @@ int main () {
 	pthread_t thread;
 	logInfo("Starting %s (%s) by %s",FOAM_NAME, FOAM_VERSION, FOAM_AUTHOR);
 	
-	ptc.wfs = malloc(ptc.wfs_count * sizeof(ptc.wfs));	// allocate memory
-	ptc.wfs[0].resx = 192;
-	ptc.wfs[0].resy = 192;
+//	ptc.wfs = malloc(ptc.wfs_count * sizeof(ptc.wfs));	// allocate memory
+//	ptc.wfs[0].resx = 256;
+//	ptc.wfs[0].resy = 256;
 
 	if (loadConfig("ao_config.cfg") != EXIT_SUCCESS) {
 		logErr("Loading configuration failed, aborting");
@@ -182,7 +163,14 @@ int parseConfig(char *var, char *value) {
 
 		ptc.wfs[tmp].resx = strtol(strtok(value,"{,}"), NULL, 10);
 		ptc.wfs[tmp].resy = strtol(strtok(NULL ,"{,}"), NULL, 10);
-
+		
+		if (((ptc.wfs[tmp].image = calloc(ptc.wfs[tmp].resx * ptc.wfs[tmp].resy, sizeof(ptc.wfs[tmp].image))) == NULL) ||
+		((ptc.wfs[tmp].dark = calloc(ptc.wfs[tmp].resx * ptc.wfs[tmp].resy, sizeof(ptc.wfs[tmp].image))) == NULL) ||
+		((ptc.wfs[tmp].flat = calloc(ptc.wfs[tmp].resx * ptc.wfs[tmp].resy, sizeof(ptc.wfs[tmp].image))) == NULL)) {
+			logErr("Failed to allocate image memory.");
+			return EXIT_FAILURE;
+		}
+		
 		logDebug("WFS_RES initialized for WFS %d: %d x %d", tmp, ptc.wfs[tmp].resx, ptc.wfs[tmp].resy);
 	}
 	else if (strcmp(var, "CS_LISTEN_IP") == 0) {
@@ -406,7 +394,7 @@ int sockListen() {
 	// Use select to poll the socket and multiplex I/O (actually only I)
 	while (1) { // Listening for connections begin
 		
-		logInfo("Info: listening for connections (%d possible, %d used)",FD_SETSIZE,nsock);
+		logInfo("Listening for connections (%d possible, %d used)",FD_SETSIZE,nsock);
 		read_fd_set = active_fd_set;
 		if (select(FD_SETSIZE, &read_fd_set, NULL, NULL, NULL) < 0) {	// Check for acitivity using select()
 			// TODO: make this nicer (dicer) :)
@@ -427,7 +415,7 @@ int sockListen() {
 			nsock++;
 		}
 		else {											// If the active FD != sock, read data (or close connection)
-			nbytes = sockRead(asock, msg, sizeof(msg), &active_fd_set);
+			nbytes = sockRead(asock, msg, &active_fd_set);
 			
 			if (nbytes == 0) nsock--;					// Socket closed
 			else if (nbytes == EXIT_FAILURE) exit(0);	// Error on socket
@@ -552,7 +540,7 @@ int parseCmd(char *msg, int len, int asock, fd_set *lfd_set) {
 	return EXIT_SUCCESS;
 }
 
-int showHelp(int sock, char *subhelp) {
+int showHelp(const int sock, const char *subhelp) {
 	if (subhelp == NULL) {
 		char help[] = "200 OK HELP\n\
 help [command]: help (on a certain command, if available).\n\
@@ -575,9 +563,9 @@ as possible.\n";
 	return EXIT_FAILURE;
 }
 
-int sendMsg(int sock, char *buf) {
-	return write(sock, buf, strlen(buf)); // TODO non blocking maken	
-}
+// int sendMsg(const int sock, const char *buf) {
+// 	return write(sock, buf, sizeof(buf)); // TODO non blocking maken	
+// }
 
 int sockAccept(int sock, fd_set *lfd_set) {
 	int newsock;					// New socket ID

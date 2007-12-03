@@ -61,10 +61,29 @@ by \a *msg. If \c EOF is received, remove the socket from \a lfd_set
 and if an error occured, return \c EXIT_FAILURE.
 @param [in] sock Socket with pending data
 @param [out] *msg A char array to store the message in
-@param [in] msglen The length of the message
 @param [in,out] *lfd_set A pointer to the set of FD's to remove sockets from upon disconnects
 @return Number of received bytes if successful, 0 if \c EOF received, \c EXIT_FAILURE otherwise.
 */
-int sockRead(int sock, char *msg, size_t msglen, fd_set *lfd_set);
+int sockRead(const int sock, char *msg, fd_set *lfd_set);
+
+/*!
+@brief Writes the current UTC datetime to *ret, and a pointer to *ret in **ret.
+
+@param [out] **ret A pointer to a date-time string (*ret) is stored in here.
+@return EXIT_SUCCESS upon success.
+*/
+int printUTC(char **ret);
+
+/*! 
+@brief Send data over a socket
+
+@param [in] sock the socket to send over
+@param [in] *buf the string to send
+@param [in] len the length of the string to send
+@return same as write(), number of bytes or -1 on error
+
+sendMsg() sends data to the server, but is currently simply a wrapper for write()
+*/
+int sendMsg(const int sock, const char *buf);
 
 #endif /* AO_LIBRARY */

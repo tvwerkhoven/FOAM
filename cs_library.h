@@ -192,9 +192,9 @@ int saveConfig(char *file);
 /*!
 @brief Give information on FOAM CS over the socket.
 */
-int showHelp(int sock, char *subhelp);
+int showHelp(const int sock, const char *subhelp);
 
-int sendMsg(int sock, char *buf);
+// int sendMsg(const int sock, const char *buf);
 
 // STRUCTS AND TYPES //
 /*********************/
@@ -217,9 +217,9 @@ typedef struct { // wfs_t
 	int resy;			//!< y-resolution of this WFS
 	int cellsx;			//!< number of x-cells in this WFS (SH only)
 	int cellsy;			//!< number of y-cells in this WFS (SH only)
-	char *image;		//!< pointer to the WFS output
-	char *dark;			//!< darkfield (byte image)
-	char *flat;			//!< flatfield (byte image)
+	float *image;		//!< pointer to the WFS output
+	float *dark;		//!< darkfield (byte image)
+	float *flat;		//!< flatfield (byte image)
 	char *darkfile;		//!< filename for the darkfield calibration
 	char *flatfile;		//!< filename for the flatfield calibration
 
