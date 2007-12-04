@@ -32,6 +32,8 @@ int main (int argc, char *argv[]) {
 	in_addr_t host;
 	int port;
 	fd_set read_fd_set, active_fd_set;
+	char msg[LINE_MAX];
+	int nbytes;
 	
 //	printf("level: %d and deb: %d info: %d err: %d\n", ui_config.loglevel, LOGDEBUG, LOGINFO, LOGERR);
 
@@ -48,8 +50,6 @@ int main (int argc, char *argv[]) {
 		return EXIT_FAILURE;
 	
 	logDebug("Initializing socket successful.");
-	char msg[LINE_MAX];
-	int nbytes;
 
 	FD_SET(STDIN_FILENO, &active_fd_set); 						// add stdin to the set as well
 	

@@ -9,7 +9,7 @@
 int sockRead(const int sock, char *msg, fd_set *lfd_set) {
 	// TODO: this only accepts STATIC length messages! buffer overflow problem! December 3 2007 is it?
 	int nbytes;
-	size_t msglen = sizeof(msg);
+	size_t msglen = strlen(msg); // TODO: this goes wrong, socket broken, implement libevent asap
 	
 	nbytes = recvfrom(sock, msg, msglen, 0, 0, 0); // TODO: nodig? of recv genoeg?
 	msg[nbytes] = '\0';
@@ -41,5 +41,6 @@ int printUTC(char **ret) {
 }
 
 int sendMsg(const int sock, const char *buf) {
-	return write(sock, buf, sizeof(buf)); // TODO non blocking maken
+	printf("sending, len: %d", (int) strlen(buf));
+	return write(sock, buf, strlen(buf)); // TODO non blocking maken
 }

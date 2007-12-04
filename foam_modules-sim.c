@@ -35,7 +35,7 @@ int drvReadSensor() {
 	}
 	
 	simObj("test.fits"); // This simulates the object
-//	simAtm();			// Simulate atmosphere
+//	simAtm();			// Simulate atmosphere ->
 //	simTel();			// Simulate telescope (circular aperture)
 	
 	return EXIT_SUCCESS;
@@ -58,10 +58,8 @@ static int simObj(char *file) {
 	int bitpix;
 	qfits_header *header;
 	qfitsloader ql;
-
-	printf("testing \n");
 	
-	header = qfits_header_read(file); 							// Get the header
+/*	header = qfits_header_read(file); 							// Get the header
 	
 	if ((ptc.wfs[0].resy = qfits_header_getint(header, "NAXIS", 0)) <= 0) {
 		logErr("could not determin NAXIS of FITS file %s, appears to be malformed.", file);
@@ -115,7 +113,7 @@ static int simObj(char *file) {
 //	ptc.wfs[0].image = ql.fbuf;
 	
 	logInfo("Fits file loaded successfully.");
-
+*/
 	return EXIT_SUCCESS;	
 	// we want to read fits stuff here
 	// header = fitsrhead(file, &lhead, &nbhead);
