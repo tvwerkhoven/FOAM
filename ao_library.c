@@ -6,7 +6,7 @@
 #include "ao_library.h"
 
 
-int sockRead(const int sock, char *msg, fd_set *lfd_set) {
+/*int sockRead(const int sock, char *msg) {
 	// TODO: this only accepts STATIC length messages! buffer overflow problem! December 3 2007 is it?
 	int nbytes;
 	size_t msglen = strlen(msg); // TODO: this goes wrong, socket broken, implement libevent asap
@@ -29,7 +29,7 @@ int sockRead(const int sock, char *msg, fd_set *lfd_set) {
 	else { 						// Data on the socket, read it
 		return nbytes;
 	}
-}
+}*/
 
 int printUTC(char **ret) {
 	struct tm *utc;

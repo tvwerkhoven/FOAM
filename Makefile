@@ -14,7 +14,7 @@ RANLIB	= ranlib
 MFLAGS	= -pipe -Wall -Wextra -Wshadow -lpthread -std=c99
 GFLAGS	= -g -DDEBUG_ITIFG=255
 IFLAGS  = -Iqfits/include
-LFLAGS  = -Lqfits/lib
+LFLAGS  = -Lqfits/lib -levent -lqfits
 
 CFLAGS	= $(MFLAGS) $(GFLAGS) $(IFLAGS) $(LFLAGS)
 
@@ -31,7 +31,7 @@ clean:
 proto-sim: protocs-sim protoui
 
 protocs-sim: proto_ao_cs.c ao_library.c cs_library.c foam_modules-sim.c
-		$(CC) $(CFLAGS) -lc -lqfits $^ -o $@
+		$(CC) $(CFLAGS) -lc $^ -o $@
 
 protoui: proto_ao_ui.c ao_library.c ui_library.c
 		$(CC) $(CFLAGS) -lc $^ -o $@

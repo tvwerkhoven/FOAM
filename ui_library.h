@@ -28,17 +28,11 @@ int sockGetActive(fd_set *cfd_set);
 void logDebug(const char *msg, ...);
 void logErr(const char *msg, ...);
 void logInfo(const char *msg, ...);
+int sockRead(const int sock, char *msg, fd_set *lfd_set);
 
 // DEFINES //
 /***********/
 
-#define CRIT 0
-#define ERR 1
-#define INFO 2
-#define DEBUG 3 // debug already taken ;(
-#define LOG_LEVEL 3 // 0: critical errors, 1: errors and notices, 2: user commands & info 3: debug
-					// NB: level 3 also includes things like delays to better see what happens
-#define LOG_FD stdout // FD to log to
 #define DEBUG_SLEEP 1000000 // usleep time for debugmode (typically about 1s = 1000000 usec)
 
 

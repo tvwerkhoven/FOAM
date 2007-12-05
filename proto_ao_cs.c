@@ -22,9 +22,13 @@
 // These are defined in cs_library.c
 extern control_t ptc;
 extern config_t cs_config;
+extern conntrack_t clientlist;
 
 // PROTOTYPES //
 /**************/
+
+// MISC //
+/********/
 
 
 	/*! 
@@ -37,12 +41,9 @@ extern config_t cs_config;
 	*/
 int main () {
 	pthread_t thread;
+	clientlist.nconn = 0;	// Init number of connections to zero
 	logInfo("Starting %s (%s) by %s",FOAM_NAME, FOAM_VERSION, FOAM_AUTHOR);
 	
-//	ptc.wfs = malloc(ptc.wfs_count * sizeof(ptc.wfs));	// allocate memory
-//	ptc.wfs[0].resx = 256;
-//	ptc.wfs[0].resy = 256;
-
 	if (loadConfig("ao_config.cfg") != EXIT_SUCCESS) {
 		logErr("Loading configuration failed, aborting");
 		exit(EXIT_FAILURE);
@@ -54,12 +55,12 @@ int main () {
 	
 	if ((pthread_create(&thread,
 		NULL,
-		(void *) sockListen, // we don't need (void *) here? either ISO C error or GCC error :(
+		(void *) sockListen, // TODO: can we process a return value here?
 		NULL)
 		) != 0)
 		//TODO: rework I/O (where do we print errors?)
-		perror("Error in socket create: ");
-
+		logErr("Error in pthread_create: %s.", strerror(errno));
+		
 	modeListen(); 			// After initialization, start in open mode
 
 	return EXIT_SUCCESS;
@@ -365,121 +366,164 @@ void modeCal() {
 }
 
 int sockListen() {
-	int sock, nsock, asock;
-	fd_set read_fd_set, active_fd_set;
-	int nbytes;
-	char msg[LINE_MAX];
-//	struct event sockevent;
+	int sock;						// Stores the main socket listening for connections
+	struct event sockevent;			// Stores the associated event
+	int optval=1; 					// Used to set socket options
+	struct sockaddr_in serv_addr;	// Store the server address here
 	
-	logDebug("Starting socklisten.");
-	// Initialize the listening socket
-	if ((sock = initSockL(&active_fd_set)) == EXIT_FAILURE)
-		return EXIT_FAILURE;
-		
-	nsock = 1;
+	event_init();					// Initialize libevent
 	
-	logDebug("Successfully initialized socket.");
+	logInfo("Starting socket.");
 	
-	//TODO: rewrite with libevent (portable and scalable)
-	//event_init(); // init libevent
-	/*event_set(&sockevent, sock, EV_READ, sockAccept2, &sockevent); // add to struct
-	event_add(&sockevent, NULL); // set correctly
-	
-	// start looping
-	event_dispatch();
-	// END TODO
-	
-	exit(EXIT_SUCCESS);*/
-	
-	// Use select to poll the socket and multiplex I/O (actually only I)
-	while (1) { // Listening for connections begin
-		
-		logInfo("Listening for connections (%d possible, %d used)",FD_SETSIZE,nsock);
-		read_fd_set = active_fd_set;
-		if (select(FD_SETSIZE, &read_fd_set, NULL, NULL, NULL) < 0) {	// Check for acitivity using select()
-			// TODO: make this nicer (dicer) :)
-			perror("error in select");
-			exit(0);
-			return EXIT_FAILURE;
-		}
-		
-		asock = sockGetActive(&read_fd_set);			// Get the active FD to tend to
-		
-		if (asock == sock) {							// If the active FD == sock, accept a new connection
-			if (sockAccept(asock, &active_fd_set) == EXIT_FAILURE) {
-				// TODO fix exit
-				
-				perror("BAD!");
-				return EXIT_FAILURE;
-			}
-			nsock++;
-		}
-		else {											// If the active FD != sock, read data (or close connection)
-			nbytes = sockRead(asock, msg, &active_fd_set);
-			
-			if (nbytes == 0) nsock--;					// Socket closed
-			else if (nbytes == EXIT_FAILURE) exit(0);	// Error on socket
-			else {										// We got data
-				logDebug("%d bytes received on the socket: '%s'", nbytes, msg);
-				parseCmd(msg, nbytes, asock, &active_fd_set);	// Process the command
-			}
-		}
+	// Initialize the internet socket. We want streaming and we want TCP
+	if ((sock = socket(PF_INET, SOCK_STREAM, 0)) < 0) {
+		logErr("Listening socket error: %s",strerror(errno));
+		return EXIT_FAILURE; // TODO: we cant return here, we're in a thread. Exit?
 	}
+	
+	logDebug("Socket created.");
 		
+	// Get the address fixed:
+	serv_addr.sin_family = AF_INET;
+	serv_addr.sin_addr.s_addr = inet_addr(cs_config.listenip);
+	serv_addr.sin_port = htons(cs_config.listenport);
+	memset(serv_addr.sin_zero, '\0', sizeof(serv_addr.sin_zero)); // TODO: we need to set this padding to zero?
+	
+	logDebug("Mem set to zero for serv_addr.");
+	
+	// We now actually bind the socket to something
+	if (bind(sock, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) != 0) {
+		logErr("Binding socket failed: %s", strerror(errno));
+		exit(EXIT_FAILURE);
+	}
+	
+	if (listen (sock, 1) != 0) {
+		logErr("Listen failed: %s", strerror(errno));
+		exit(EXIT_FAILURE);
+	}
+	logDebug("Setting SO_REUSEADDR, SO_NOSIGPIPE and nonblocking...");
+	// Set reusable and nosigpipe flags so we don't get into trouble later on. TODO: doesn't work?
+	if (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof optval) != 0)
+		logErr("Could not set socket flag SO_REUSEADDR, continuing.");
+	if (setsockopt(sock, SOL_SOCKET, SO_NOSIGPIPE, &optval, sizeof optval) != 0)
+		logErr("Could not set socket flag SO_NOSIGPIPE, continuing.");
+		
+	// Set socket to non-blocking mode, nice for events
+	if (setnonblock(sock) != 0)
+		logErr("Coult not set socket to non-blocking mode, might cause undesired side-effects, continuing.");
+		
+	logDebug("Successfully initialized socket, setting up events.");
+	
+    event_set(&sockevent, sock, EV_READ | EV_PERSIST, sockAccept, NULL);
+    event_add(&sockevent, NULL);
+
+	event_dispatch();				// Start looping
+	
 	return EXIT_SUCCESS;
 }
 
-/*
-void sockAccept2(int sock, short event, void *arg) {
-	char buf[255];
-	int len;
-	struct event *ev = arg;
+int setnonblock(int fd) {
+	int flags;
 
-	// Reschedule this event
-	event_add(ev, NULL);
+    flags = fcntl(fd, F_GETFL);
+    if (flags < 0)
+            return flags;
+    flags |= O_NONBLOCK;
+    if (fcntl(fd, F_SETFL, flags) < 0)
+            return EXIT_FAILURE;
 
-	fprintf(stderr, "sockAccept2 called with sock: %d, event: %d, arg: %p\n",
-		sock, event, arg);
-	
-	int newsock;					// New socket ID
+    return EXIT_SUCCESS;
+}
+
+void sockAccept(const int sock, const short event, void *arg) {
+	int newsock, i;					// Store the newly accepted connection here
 	struct sockaddr_in cli_addr;	// Store the client address here
-	socklen_t cli_len;
-	
+	socklen_t cli_len;				// store the length here
+	client_t *client;				// connection data
 	cli_len = sizeof(cli_addr);
-	newsock = accept(sock,
-		(struct sockaddr *) &cli_addr,
-		&cli_len);
+	
+	logDebug("Handling new client connection.");
+	
+	newsock = accept(sock, (struct sockaddr *) &cli_addr, &cli_len);
 		
 	if (newsock < 0) { 				// on error, quit
-		logErr("accepting socket failed.");
-//		perror("error in accept");
-//		exit(0);
-		return EXIT_FAILURE;
+		logErr("Accepting socket failed: %s!", strerror(errno));
+		return;
 	}
 	
-//	FD_SET(newsock, lfd_set); 		// Add socket to the set of sockets
+	if (setnonblock(newsock) < 0)
+		logErr("Unable to set new client socket to non-blocking.");
 
-	event_set(&evfifo, socket, EV_READ, fifo_read, &evfifo);
-	return newsock;
-		
-	len = read(fd, buf, sizeof(buf) - 1);
-
-	if (len == -1) {
-		perror("read");
-		return;
-	} else if (len == 0) {
-		fprintf(stderr, "Connection closed\n");
+	logDebug("Accepted & set to nonblock.");
+	
+	// Check if we do not exceed the maximum number of connections:
+	// TODO: how can we REFUSE connections?
+	// TODO: this is (was) fishy...
+//if (clientlist.nconn >= 0) {
+	if (clientlist.nconn >= MAX_CLIENTS) {
+		logErr("Refused connection, maximum clients reached1 (%s)", MAX_CLIENTS);
+		close(sock);
+		logErr("Refused connection, maximum clients reached2 (%s)", MAX_CLIENTS);
 		return;
 	}
+	
+	client = calloc(1, sizeof(client_t));
+	if (client == NULL)
+		logErr("Malloc failed.");
 
-	buf[len] = '\0';
+	client->fd = newsock;			// Add socket to the client struct
+	client->buf_ev = bufferevent_new(newsock, sockOnRead, NULL, sockOnErr, client);
 
-	fprintf(stdout, "Read: %s\n", buf);
-}*/
+	clientlist.nconn++;
+	for (i=0; clientlist.connlist[i] != NULL && i < 16; i++) 
+		;	// Run through array until we find an empty connlist entry
 
-/*!
-@brief Takes a string seperated by spaces as input and pops off the first word.
-*/
+	client->connid = i;
+	clientlist.connlist[i] = client;
+
+	// We have to enable it before our callbacks will be
+	// TODO: also write?
+	bufferevent_enable(client->buf_ev, EV_READ);
+
+	logInfo("Succesfully accepted connection from %s", inet_ntoa(cli_addr.sin_addr));
+
+}
+
+void sockOnErr(struct bufferevent *bev, short event, void *arg) {
+	client_t *client = (client_t *)arg;
+
+	if (event & EVBUFFER_EOF) { // En
+		logInfo("Client disconnected.");
+	}
+	else {
+		logErr("Client socket error, disconnecting.");
+	}
+	clientlist.nconn--;
+	clientlist.connlist[(int) client->connid] = NULL; // Does this work nicely?
+	
+	bufferevent_free(client->buf_ev);
+	close(client->fd);
+	free(client);
+}
+
+void sockOnRead(struct bufferevent *bev, void *arg) {
+	client_t *client = (client_t *)arg;
+	char msg[LINE_MAX];
+	char *tmp;
+	int nbytes;
+	
+	nbytes = bufferevent_read(bev, msg, (size_t) (LINE_MAX-1));
+	msg[nbytes] = '\0';
+	// TODO: this still requires a neat solution, does not work with TELNET.
+	if ((tmp = strchr(msg, '\n')) != NULL) // there might be a trailing newline which we don't want
+		*tmp = '\0';
+	if ((tmp = strchr(msg, '\r')) != NULL) // there might be a trailing newline which we don't want
+		*tmp = '\0';
+	
+	logDebug("Received %d bytes on socket reading: '%s'.", nbytes, msg);
+	parseCmd(msg, nbytes, client);
+}
+
 int popword(char **msg, char *cmd) {
 	size_t begin, end;
 	
@@ -492,7 +536,7 @@ int popword(char **msg, char *cmd) {
 	
 	// get first next position of a space
 	end = strcspn(*msg, " \t\n");
-	if (end == 0) {// No characters? return 0 to the calling function
+	if (end == begin) { // No characters? return 0 to the calling function
 		cmd[0] = '\0';
 		return 0;
 	}
@@ -503,51 +547,66 @@ int popword(char **msg, char *cmd) {
 	return strlen(cmd);
 }
 
-int parseCmd(char *msg, int len, int asock, fd_set *lfd_set) {
+int parseCmd(char *msg, const int len, client_t *client) {
 	char tmp[len+1];	// reserve space for the command (TODO: can be shorter using strchr. Can it? wordlength can vary...)	
+	int i;
 	tmp[0] = '\0';
 	
 	logDebug("Command was: '%s'",msg);
-	popword(&msg, tmp);
-	logDebug("Command is '%s' and '%s'", msg, tmp);
+		
+	if (popword(&msg, tmp) > 0)
+		logDebug("First word: '%s'", tmp);
 	
 	if (strcmp(tmp,"help") == 0) {
 		// Show the help command
 		if (popword(&msg, tmp) > 0) // Does the user want help on a specific command?
-			showHelp(asock, tmp);
+			showHelp(client, tmp);
 		else
-			showHelp(asock, NULL);
+			showHelp(client, NULL);
 			
 		logInfo("Got help command & sent it! (subhelp %s)", tmp);
 	}
 	else if (strcmp(tmp,"mode") == 0) {
 		if (popword(&msg, tmp) > 0) {
-			if (strcmp(tmp,"closed") == 0)
+			if (strcmp(tmp,"closed") == 0) {
 				ptc.mode = AO_MODE_CLOSED;
-			else if (strcmp(tmp,"open") == 0)
+				bufferevent_write(client->buf_ev,"200 OK MODE CLOSED\n", sizeof("200 OK MODE CLOSED\n"));
+			}
+			else if (strcmp(tmp,"open") == 0) {
 				ptc.mode = AO_MODE_OPEN;
-			else if (strcmp(tmp,"cal") == 0)
+				bufferevent_write(client->buf_ev,"200 OK MODE OPEN\n", sizeof("200 OK MODE OPEN\n"));
+			}
+			else if (strcmp(tmp,"cal") == 0) {
 				ptc.mode = AO_MODE_CAL;
+				bufferevent_write(client->buf_ev,"200 OK MODE OPEN\n", sizeof("200 OK MODE OPEN\n"));
+			}
+			else 
+				bufferevent_write(client->buf_ev,"400 UNKNOWN MODE\n", sizeof("400 UNKNOWN MODE\n"));
 		}
 		else {
-			showHelp(asock, "mode");
+			bufferevent_write(client->buf_ev,"400 MODE REQUIRES ARG\n", sizeof("400 MODE REQUIRES ARG\n"));
+			showHelp(client, "mode");
 			logInfo("showing help...");
 		}
 
 		logInfo("subcommand: '%s'", tmp);
 	}
+	else {
+		bufferevent_write(client->buf_ev,"400 UNKNOWN\n", sizeof("400 UNKNOWN\n"));
+	}
 	
 	return EXIT_SUCCESS;
 }
 
-int showHelp(const int sock, const char *subhelp) {
+int showHelp(const client_t *client, const char *subhelp) {
 	if (subhelp == NULL) {
 		char help[] = "200 OK HELP\n\
 help [command]: help (on a certain command, if available).\n\
 mode <open|closed>: close or open the loop.\n\
 simulate: toggle simulation mode.\n";
 
-		return sendMsg(sock, help); 
+		return bufferevent_write(client->buf_ev, help, sizeof(help));
+//		return sendMsg(sock, help); 
 	}
 	else if (strcmp(subhelp, "mode") == 0) {
 		char help[] = "200 OK HELP MODE\n\
@@ -557,16 +616,60 @@ and does not actually drive anything.\n\
 mode closed: closes the loop and starts the feedbackloop, correcting the wavefront as fast\n\
 as possible.\n";
 
-		return sendMsg(sock, help);
+		return bufferevent_write(client->buf_ev, help, sizeof(help));
 	}
 	
 	return EXIT_FAILURE;
 }
 
+/*
+void parseSock(int sock, short event, void *arg) {
+	struct event *ev = arg;
+	char msg[LINE_MAX];
+	int nbytes;
+	
+	nbytes = sockRead(sock, msg);
+	
+	if (nbytes == 0) event_del(ev);					// Socket closed, unschedule. TODO: close socket as well?
+	else if (nbytes == EXIT_FAILURE) exit(0);	// Error on socket, exit
+	else {										// We got data
+		logDebug("%d bytes received on the socket: '%s'", nbytes, msg);
+		parseCmd(msg, nbytes, asock);	// Process the command
+	}
+}
+*/
+/*
+void sockAccept2(int sock, short event, void *arg) {
+	struct event *ev = arg;
+	
+	logErr("sockAccept2 called with sock: %d, event: %d, arg: %p\n",sock, event, arg);
+	usleep(DEBUG_SLEEP);
+	
+	int newsock;					// New socket ID
+	struct sockaddr_in cli_addr;	// Store the client address here
+	socklen_t cli_len;				// store the length here
+	
+	cli_len = sizeof(cli_addr);
+	newsock = accept(sock,
+		(struct sockaddr *) &cli_addr,
+		&cli_len);
+		
+	if (newsock < 0) { 				// on error, quit
+		logErr("Accepting socket failed: %s. should i exit or return?", strerror(errno));
+		exit(EXIT_FAILURE); // this won't be reached TODO: event_add doesnt
+	}
+	
+//	FD_SET(newsock, lfd_set); 		// Add socket to the set of sockets
+
+//	event_set(ev, socket, EV_READ | EV_PERSIST, parseSock, ev);
+//	event_add(ev, NULL);
+}
+*/
 // int sendMsg(const int sock, const char *buf) {
 // 	return write(sock, buf, sizeof(buf)); // TODO non blocking maken	
 // }
 
+/*
 int sockAccept(int sock, fd_set *lfd_set) {
 	int newsock;					// New socket ID
 	struct sockaddr_in cli_addr;	// Store the client address here
@@ -586,8 +689,8 @@ int sockAccept(int sock, fd_set *lfd_set) {
 	FD_SET(newsock, lfd_set); 		// Add socket to the set of sockets
 	
 	return newsock;
-}
-
+}*/
+/*
 int initSockL(fd_set *lfd_set) {
 	int sock, optval=1; 			// Socket id
 	struct sockaddr_in serv_addr;	// Store the server address here
@@ -597,7 +700,7 @@ int initSockL(fd_set *lfd_set) {
 	// Initialize the internet socket. We want streaming and we want TCP
 	if ((sock = socket(PF_INET, SOCK_STREAM, 0)) == -1) {
 		// TODO: nicer error
-		logErr("Thread: socket error! %s",strerror(errno));
+		logErr("Listening socket error: %s",strerror(errno));
 		return EXIT_FAILURE;
 	}
 	logDebug("Socket created.");
@@ -632,7 +735,8 @@ int initSockL(fd_set *lfd_set) {
 
 	return sock;
 }
-
+*/
+/*
 int sockGetActive(fd_set *lfd_set) {
 	int i;
 
@@ -642,6 +746,46 @@ int sockGetActive(fd_set *lfd_set) {
 
 	return EXIT_FAILURE; // This shouldn't happen (as with all errors)
 }
+*/
+
+	
+	// Use select to poll the socket and multiplex I/O (actually only I)
+	/*
+	while (1) { // Listening for connections begin
+		
+		logInfo("Listening for connections (%d possible, %d used)",FD_SETSIZE,nsock);
+		read_fd_set = active_fd_set;
+		if (select(FD_SETSIZE, &read_fd_set, NULL, NULL, NULL) < 0) {	// Check for acitivity using select()
+			// TODO: make this nicer (dicer) :)
+			perror("error in select");
+			exit(0);
+			return EXIT_FAILURE;
+		}
+		
+		asock = sockGetActive(&read_fd_set);			// Get the active FD to tend to
+		
+		if (asock == sock) {							// If the active FD == sock, accept a new connection
+			if (sockAccept(asock, &active_fd_set) == EXIT_FAILURE) {
+				// TODO fix exit
+				
+				perror("BAD!");
+				return EXIT_FAILURE;
+			}
+			nsock++;
+		}
+		else {											// If the active FD != sock, read data (or close connection)
+			nbytes = sockRead(asock, msg, &active_fd_set);
+			
+			if (nbytes == 0) nsock--;					// Socket closed
+			else if (nbytes == EXIT_FAILURE) exit(0);	// Error on socket
+			else {										// We got data
+				logDebug("%d bytes received on the socket: '%s'", nbytes, msg);
+				parseCmd(msg, nbytes, asock, &active_fd_set);	// Process the command
+			}
+		}
+	}
+		
+	return EXIT_SUCCESS;*/
 
 
 // DOXYGEN GENERAL DOCUMENTATION //

@@ -20,6 +20,7 @@ longer desc
 #include <bits/posix2_lim.h>
 #endif
 
+
 #include <sys/time.h>
 #include <stdio.h>
 #include <sys/socket.h>
@@ -33,7 +34,7 @@ longer desc
 #include <pthread.h>
 #include <limits.h>
 #include <stdbool.h>
-//#include <event.h>
+#include <event.h>
 #include <sys/uio.h> //?
 #include <inttypes.h> //?
 #include <xlocale.h> //?
@@ -64,7 +65,7 @@ and if an error occured, return \c EXIT_FAILURE.
 @param [in,out] *lfd_set A pointer to the set of FD's to remove sockets from upon disconnects
 @return Number of received bytes if successful, 0 if \c EOF received, \c EXIT_FAILURE otherwise.
 */
-int sockRead(const int sock, char *msg, fd_set *lfd_set);
+//int sockRead(const int sock, char *msg, fd_set *lfd_set);
 
 /*!
 @brief Writes the current UTC datetime to *ret, and a pointer to *ret in **ret.

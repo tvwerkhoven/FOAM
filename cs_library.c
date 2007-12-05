@@ -26,18 +26,18 @@ config_t cs_config = {
 	.loglevel = LOGDEBUG
 };
 
-static int formatLog(char **output, const char *prepend, const char *msg) {
+conntrack_t clientlist;
+
+static int formatLog(char *output, const char *prepend, const char *msg) {
 	char *timestr;
 	printUTC(&timestr); // fill timestr with date
 	timestr[24] = '\0';
-
-	// TODO: this is bad, it allocates memory every call...
-	*output = malloc((strlen(timestr) + strlen(prepend) + 1 + strlen(msg) + 1) * sizeof (char));
+	output[0] = '\0'; // reset string
 	
-	strcat(*output,timestr);
-	strcat(*output,prepend);
-	strcat(*output,msg);
-	strcat(*output,"\n");
+	strcat(output,timestr);
+	strcat(output,prepend);
+	strcat(output,msg);
+	strcat(output,"\n");
 	
 	return EXIT_SUCCESS;
 }
@@ -53,14 +53,13 @@ void logInfo(const char *msg, ...) {
 	va_copy(aq, ap);
 	va_copy(ar, ap);
 	
-	char *output;
-	formatLog(&output, " <info>: ", msg);
+	formatLog(logmessage, " <info>: ", msg);
 	
 	if (cs_config.infofd != NULL) // Do we want to log this to a file?
-		vfprintf(cs_config.infofd, output , ap);
+		vfprintf(cs_config.infofd, logmessage , ap);
 	
 	if (cs_config.use_stderr == true) // Do we want to log this to syslog
-		vfprintf(stderr, output, aq);
+		vfprintf(stderr, logmessage, aq);
 		
 	if (cs_config.use_syslog == true) 	// Do we want to log this to syslog?
 		syslog(LOG_INFO, msg, ar);
@@ -80,15 +79,14 @@ void logErr(const char *msg, ...) {
 	va_copy(aq, ap);
 	va_copy(ar, ap);
 	
-	char *output;
-	formatLog(&output, " <error>: ", msg);
+	formatLog(logmessage, " <error>: ", msg);
 
 	
 	if (cs_config.errfd != NULL)	// Do we want to log this to a file?
-		vfprintf(cs_config.errfd, output, ap);
+		vfprintf(cs_config.errfd, logmessage, ap);
 
 	if (cs_config.use_stderr == true) // Do we want to log this to syslog?
-		vfprintf(stderr, output, aq);
+		vfprintf(stderr, logmessage, aq);
 	
 	if (cs_config.use_syslog == true) // Do we want to log this to syslog?
 		syslog(LOG_ERR, msg, ar);
@@ -108,18 +106,17 @@ void logDebug(const char *msg, ...) {
 	va_copy(aq, ap);
 	va_copy(ar, ap);
 
-	char *output;
-	formatLog(&output, " <debug>: ", msg);
+	formatLog(logmessage, " <debug>: ", msg);
 	
 	if (cs_config.debugfd != NULL) 	// Do we want to log this to a file?
-		vfprintf(cs_config.debugfd, output, ap);
+		vfprintf(cs_config.debugfd, logmessage, ap);
 	
 	if (cs_config.use_stderr == true)	// Do we want to log this to stderr?
-		vfprintf(stderr, output, aq);
+		vfprintf(stderr, logmessage, aq);
 
 	
 	if (cs_config.use_syslog == true) 	// Do we want to log this to syslog?
-		syslog(LOG_DEBUG, output, ar);
+		syslog(LOG_DEBUG, msg, ar);
 
 	va_end(ap);
 	va_end(aq);

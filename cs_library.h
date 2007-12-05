@@ -7,8 +7,8 @@
 // INCLUDES //
 /************/
 
+#include <fcntl.h>
 #include "ao_library.h"
-
 
 // DEFINES //
 /***********/
@@ -19,6 +19,110 @@
 #define FOAM_NAME "FOAM"
 #define FOAM_VERSION "v0.1 Nov"
 #define FOAM_AUTHOR "Tim van Werkhoven"
+
+#define MAX_CLIENTS 16
+
+// GLOBAL VARIABLES //
+/********************/
+
+char logmessage[LINE_MAX];
+		
+// STRUCTS AND TYPES //
+/*********************/
+
+/*!
+@brief Helper struct to store WFC variables in \a ptc. Used by type \c control_t.
+*/
+typedef struct { // wfc_t
+	char *name;			//!< name for the specific WFC
+	int nact;			//!< number of actuators in this WFC
+	double *ctrl;		//!< pointer to array of controls for the WFS
+} wfc_t;
+
+/*!
+@brief Helper struct to store the WFS image(s). Used by type \c control_t.
+*/
+typedef struct { // wfs_t
+	char *name;			//!< name of the specific WFS
+	int resx;			//!< x-resolution of this WFS
+	int resy;			//!< y-resolution of this WFS
+	int cellsx;			//!< number of x-cells in this WFS (SH only)
+	int cellsy;			//!< number of y-cells in this WFS (SH only)
+	float *image;		//!< pointer to the WFS output
+	float *dark;		//!< darkfield (byte image)
+	float *flat;		//!< flatfield (byte image)
+	char *darkfile;		//!< filename for the darkfield calibration
+	char *flatfile;		//!< filename for the flatfield calibration
+
+} wfs_t;
+
+/*!
+@brief Helper enum for ao mode operation.
+*/
+typedef enum { // aomode_t
+	AO_MODE_OPEN,
+	AO_MODE_CLOSED,
+	AO_MODE_CAL
+} aomode_t;
+
+/*! 
+@brief Stores the state of the AO system
+
+This struct is used to store several variables indicating the state of the AO system 
+which are shared between the different CS threads. The thread interfacing with user(s)
+can then read these variables and report them to the user, or change them to influence
+the CS behaviour.\n
+Parts of it are read at initialisation
+\n
+This struct is globally available. 
+*/
+typedef struct { // control_t
+	aomode_t mode;	//!< defines the mode the AO system is in (see \c AO_MODE_* definitions)
+	
+					// WFS variables
+	int wfs_count;	//!< number of WFSs
+	wfs_t *wfs;		//!< pointer to a number of \c wfs_t structs
+	
+					// WFC variables
+	int wfc_count;	//!< number of WFCs
+	wfc_t *wfc;		//!< pointer to a number of \c wfc_t structs
+	
+} control_t;
+
+/*!
+@brief Struct to store the listening socket information in.
+*/
+typedef struct { // config_t
+	char listenip[16];	//!< IP to listen on, like 0.0.0.0
+	int listenport;	//!< port to listen on, like 10000
+	char infofile[FILENAMELEN]; //!< file to log info messages to
+	FILE *infofd;	//!< associated filepointer
+	char errfile[FILENAMELEN];
+	FILE *errfd;
+	char debugfile[FILENAMELEN];
+	FILE *debugfd;
+	bool use_syslog; //!< syslog usage flag
+	char syslog_prepend[32]; //!< string to prepend to syslogs
+	bool use_stderr; //!< stderr usage flag (for everything)
+	level_t loglevel;
+} config_t;
+
+/* 
+TODO: info 
+*/
+typedef struct {
+	int fd; 						// FD for client 
+	int connid;						// ID used in conntrack_t
+	struct bufferevent *buf_ev;		// The event for the connected client
+} client_t;
+
+/* 
+TODO: info
+*/
+typedef struct {
+	int nconn;						// Amount of connections used
+	client_t *connlist[MAX_CLIENTS];	// List of connected clients (max 16)
+} conntrack_t;
 
 
 // PROTOTYPES //
@@ -121,39 +225,44 @@ int sockListen();
 
 Accept a new connection pending on \a sock and add the
 socket to the set of active sockets
+
+TODO: update
 @param [in] sock Socket with pending connection
-@param [in,out] *lfd_set A pointer to the set of FD's to add the sockets to
 @return Socket descriptor if succesfull, \c EXIT_FAILURE otherwise.
 */
-int sockAccept(int sock, fd_set *lfd_set);
+void sockAccept(int sock, short event, void *arg);
 
-/*! 
+/*!
+@brief Sets a socket to non-blocking mode.
+
+From: http://unx.ca/log/libevent_echosrv_bufferedc/
+*/
+int setnonblock(int fd);
+
+/* 
 @brief Initializes a listening TCP socket.
 
 Creates a TCP streaming socket to listen on. Use \c cs_config.listenip
 and \c cs_config.listenport for IP:port combination to listen on.
 @param [out] *lfd_set A pointer to the set of FD's to insert the socket in
 @return Socket descriptor if succefull, \c EXIT_FAILURE otherwise.
-*/
+
 int initSockL(fd_set *lfd_set);
-
-/*! 
-@brief Get socket id which needs I/O.
-
-Loop over all possible sockets and see which needs attention
-@param [in] *lfd_set A pointer to the set of FD's to scan
-@return Socket descriptor if succesfull, \c EXIT_FAILURE otherwise.
 */
-int sockGetActive(fd_set *lfd_set);
 
 /*! 
 @brief Process the command given by the user.
+
+TODO: update
 
 @param [in] *msg the char array (max length 1024)
 @param [in] len the actual length of msg
 @return \c EXIT_SUCCESS upon success, or \c EXIT_FAILURE otherwise.
 */
-int parseCmd(char *msg, int len, int asock, fd_set *lfd_set);
+int parseCmd(char *msg, int len, client_t *client);
+
+void sockOnErr(struct bufferevent *bev, short event, void *arg);
+void sockOnRead(struct bufferevent *bev, void *arg);
 
 /*!
 @brief Pop off a word from a space-seperated (" \t\n") string.
@@ -191,92 +300,21 @@ int saveConfig(char *file);
 
 /*!
 @brief Give information on FOAM CS over the socket.
+
+TODO: update
 */
-int showHelp(const int sock, const char *subhelp);
+int showHelp(const client_t *client, const char *subhelp);
 
 // int sendMsg(const int sock, const char *buf);
 
-// STRUCTS AND TYPES //
-/*********************/
+/*
+@brief Get socket id which needs I/O.
 
-/*!
-@brief Helper struct to store WFC variables in \a ptc. Used by type \c control_t.
+Loop over all possible sockets and see which needs attention
+@param [in] *lfd_set A pointer to the set of FD's to scan
+@return Socket descriptor if succesfull, \c EXIT_FAILURE otherwise.
+
+int sockGetActive(fd_set *lfd_set);
 */
-typedef struct { // wfc_t
-	char *name;			//!< name for the specific WFC
-	int nact;			//!< number of actuators in this WFC
-	double *ctrl;		//!< pointer to array of controls for the WFS
-} wfc_t;
-
-/*!
-@brief Helper struct to store the WFS image(s). Used by type \c control_t.
-*/
-typedef struct { // wfs_t
-	char *name;			//!< name of the specific WFS
-	int resx;			//!< x-resolution of this WFS
-	int resy;			//!< y-resolution of this WFS
-	int cellsx;			//!< number of x-cells in this WFS (SH only)
-	int cellsy;			//!< number of y-cells in this WFS (SH only)
-	float *image;		//!< pointer to the WFS output
-	float *dark;		//!< darkfield (byte image)
-	float *flat;		//!< flatfield (byte image)
-	char *darkfile;		//!< filename for the darkfield calibration
-	char *flatfile;		//!< filename for the flatfield calibration
-
-} wfs_t;
-
-/*!
-@brief Helper enum for ao mode operation.
-*/
-typedef enum { // aomode_t
-	AO_MODE_OPEN,
-	AO_MODE_CLOSED,
-	AO_MODE_CAL
-} aomode_t;
-
-/*! 
-@brief Stores the state of the AO system
-
-This struct is used to store several variables indicating the state of the AO system 
-which are shared between the different CS threads. The thread interfacing with user(s)
-can then read these variables and report them to the user, or change them to influence
-the CS behaviour.\n
-Parts of it are read at initialisation
-\n
-This struct is globally available. 
-*/
-typedef struct { // control_t
-	aomode_t mode;	//!< defines the mode the AO system is in (see \c AO_MODE_* definitions)
-	
-					// WFS variables
-	int wfs_count;	//!< number of WFSs
-	wfs_t *wfs;		//!< pointer to a number of \c wfs_t structs
-	
-					// WFC variables
-	int wfc_count;	//!< number of WFCs
-	wfc_t *wfc;		//!< pointer to a number of \c wfc_t structs
-	
-} control_t;
-
-/*!
-@brief Struct to store the listening socket information in.
-*/
-typedef struct { // config_t
-	char listenip[16];	//!< IP to listen on, like 0.0.0.0
-	int listenport;	//!< port to listen on, like 10000
-	char infofile[FILENAMELEN]; //!< file to log info messages to
-	FILE *infofd;	//!< associated filepointer
-	char errfile[FILENAMELEN];
-	FILE *errfd;
-	char debugfile[FILENAMELEN];
-	FILE *debugfd;
-	bool use_syslog; //!< syslog usage flag
-	char syslog_prepend[32]; //!< string to prepend to syslogs
-	bool use_stderr; //!< stderr usage flag (for everything)
-	level_t loglevel;
-} config_t;
-
-// GLOBAL VARIABLES //
-/********************/
 
 #endif /* CS_LIBRARY */
