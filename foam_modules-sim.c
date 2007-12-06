@@ -12,7 +12,7 @@
 
 #include "cs_library.h"
 #include "ao_library.h"
-#include "qfits.h"
+#include "fitsio.h"
 
 // GLOBAL VARIABLES //
 /********************/	
@@ -22,10 +22,18 @@ extern control_t ptc;
 extern config_t cs_config;
 
 static int simObj(char *file);
-static int simAtm();
-static int simTel();
-	
+static int simAtm(char *file);
+static int simTel(char *file);
+static int simWFC(int wfcid);
+
+// We need these every time...
+char errmsg[FLEN_STATUS];
+int status = 0;  /* MUST initialize status */
+float nulval = 0.0;
+int anynul = 0;
+
 int drvReadSensor() {
+	int i;
 	logDebug("Now reading %d sensors.", ptc.wfs_count);
 	// TODO: simulate object, atmosphere, telescope, TT, DM, WFS (that's a lot :O)
 
@@ -34,103 +42,106 @@ int drvReadSensor() {
 		return EXIT_FAILURE;
 	}
 	
-	simObj("test.fits"); // This simulates the object
-//	simAtm();			// Simulate atmosphere ->
-//	simTel();			// Simulate telescope (circular aperture)
+	if (simAtm("wavefront.fits") != EXIT_SUCCESS) { // This simulates the point source + atmosphere (from wavefront.fits)
+		if (status > 0) {
+			fits_get_errstatus(status, errmsg);
+			logErr("fitsio error in simAtm(): %s", errmsg);
+			status = 0;
+		}
+		else logErr("error in simAtm().");
+	}
 	
-	return EXIT_SUCCESS;
-}
-
-static int simAtm() {
-	return EXIT_SUCCESS;
-}
-
-static int simTel() {
+	if (simTel("aperture.fits") != EXIT_SUCCESS) { // Simulate telescope (from aperture.fits)
+		if (status > 0) {
+			fits_get_errstatus(status, errmsg);
+			logErr("fitsio error in simTel(): %s", errmsg);
+			status = 0;
+		}
+		else logErr("error in simTel().");
+	}
+	logDebug("Now simulating %d WFC(s).", ptc.wfc_count);
+	for (i=0; i < ptc.wfc_count; i++) 
+		simWFC(i); // Simulate TT mirror
+	
 	return EXIT_SUCCESS;
 }
 
 static int simObj(char *file) {
+	return EXIT_SUCCESS;
+}
+
+static int simWFC(int wfcid) {
+	// we want to simulate the tip tilt mirror here. What does it do
+	logDebug("WFC %d (%s) has %d actuators.", wfcid, ptc.wfc[wfcid].name, ptc.wfc[wfcid].nact);
+	
+	return EXIT_SUCCESS;
+}
+
+static int simTel(char *file) {
+	fitsfile *fptr;
+	int bitpix, naxis, i;
+	long naxes[2], fpixel[] = {1,1};
+	long nelements = ptc.wfs[0].resx * ptc.wfs[0].resy;
+	float *aperture;
+	if ((aperture = malloc(nelements * sizeof(aperture))) == NULL)
+		return EXIT_FAILURE;
+	
+	fits_open_file(&fptr, file, READONLY, &status);				// Open FITS file
+	if (status > 0)
+		return EXIT_FAILURE;
+	
+	fits_get_img_param(fptr, 2,  &bitpix, \
+						&naxis, naxes, &status);				// Read header
+	if (status > 0)
+		return EXIT_FAILURE;
+	if (naxes[0] * naxes[1] != nelements) {
+		logErr("Error in simTel(), fitsfile not the same dimension as ptc.wfs[0].image (%dx%d vs %dx%d)", \
+		naxes[0], naxes[1], ptc.wfs[0].resx, ptc.wfs[0].resy);
+		return EXIT_FAILURE;
+	}
+					
+	fits_read_pix(fptr, TFLOAT, fpixel, \
+						nelements, &nulval, aperture, \
+						&anynul, &status);						// Read image to ptc.wfs[0].image
+	if (status > 0)
+		return EXIT_FAILURE;
+	
+	logDebug("Aperture read successfully, processing with image.");
+	
+	// Multiply wavefront with aperture
+	for (i=0; i < nelements; i++)
+		ptc.wfs[0].image[i] *= aperture[i];
+	
+	return EXIT_SUCCESS;
+}
+
+static int simAtm(char *file) {
 	// ASSUMES WFS_COUNT > 0
-	// ASSUMES ptc.wfs[0].image HAS THE SAME RESOLUTION AS THE FITSFILE
-//	int i,j;
-//	int h=ptc.wfs[0].resy;
-//	int w=ptc.wfs[0].resx;
-	int bitpix;
-	qfits_header *header;
-	qfitsloader ql;
+	// ASSUMES ptc.wfs[0].image is initialized to float 
+	fitsfile *fptr;
+	int bitpix, naxis;
+	long naxes[2], fpixel[] = {1,1};
+	long nelements = ptc.wfs[0].resx * ptc.wfs[0].resy;
 	
-/*	header = qfits_header_read(file); 							// Get the header
-	
-	if ((ptc.wfs[0].resy = qfits_header_getint(header, "NAXIS", 0)) <= 0) {
-		logErr("could not determin NAXIS of FITS file %s, appears to be malformed.", file);
+	fits_open_file(&fptr, file, READONLY, &status);				// Open FITS file
+	if (status > 0)
 		return EXIT_FAILURE;
-	}
 	
-	if ((ptc.wfs[0].resy = qfits_header_getint(header, "NAXIS1", 0)) <= 0) {
-		logErr("could not determine pixel height of FITS file %s.", file);
+	fits_get_img_param(fptr, 2,  &bitpix, \
+						&naxis, naxes, &status);				// Read header
+	if (status > 0)
 		return EXIT_FAILURE;
-	}
-	if ((ptc.wfs[0].resx = qfits_header_getint(header, "NAXIS2", 0)) <= 0) {
-		logErr("could not determine pixel height of FITS file %s.", file);
+					
+	fits_read_pix(fptr, TFLOAT, fpixel, \
+						nelements, &nulval, ptc.wfs[0].image, \
+						&anynul, &status);						// Read image to ptc.wfs[0].image
+	if (status > 0)
 		return EXIT_FAILURE;
-	}
-
-	bitpix = abs(qfits_header_getint(header, "BITPIX", 0));		// Get the datatype TODO: is this required?
 	
-	if (bitpix == 8)
-    	ql.ptype = PTYPE_INT;
-	else if (bitpix == 16)
-    	ql.ptype = PTYPE_FLOAT;
-	else if (bitpix == 32)
-    	ql.ptype = PTYPE_DOUBLE;
-	else {
-		logErr("In fits file %s, unknown bitpix (not in 8, 16, 32): %d.", file, bitpix);
-		return EXIT_FAILURE;
-	}
-		
-	// Initialize loader struct
-    ql.filename = file;
-    ql.xtnum = 0;
-    ql.pnum = 0;
-    ql.map = 1;
-
-    if (qfitsloader_init(&ql) != 0) { // This writes somewhere it shouldn't..., right?
-        logErr("Cannot initialize loader on FITS file '%s'.", file);
-        return EXIT_FAILURE;
-    }
-
-	logDebug("Loading pix buffer.");
+	logDebug("Read image, status: %d bitpix: %d, pixel (100,100): %f", status, \
+		bitpix, ptc.wfs[0].image[100 * ptc.wfs[0].resy]);
 	
-    if (qfits_loadpix(&ql) != 0) {
-        logErr("cannot load data from FITS file '%s'.", file);
-        return EXIT_FAILURE;
-    }
-
-	// FITS File loaded in ql.fbuf, 1D array
-	// Link image to loaded fbuf:
-	
-//	free(ptc.wfs[0].image);
-//	ptc.wfs[0].image = ql.fbuf;
-	
-	logInfo("Fits file loaded successfully.");
-*/
 	return EXIT_SUCCESS;	
-	// we want to read fits stuff here
-	// header = fitsrhead(file, &lhead, &nbhead);
-	
-	// FOR THE TIME BEING, WE MAKE AN IMAGE OF THE LETTER 'T'
-	/*for(j=h*3/20; j < h*5/20; j++){
-		for(i=w*1/4; i<w * 4/3; i++) {
-			ptc.wfs[0].image[i+j*w] = 1; // 1D arr
-		}
-	}
-	
-	for(j=h*1/4; j <h*3/4; j++) {
-		for(i=w*9/20; i<w * 11/20; i++) {
-			ptc.wfs[0].image[i+j*w] = 1;
-		}
-	}*/
-
 }
 
 int drvSetActuator() {

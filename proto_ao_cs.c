@@ -549,7 +549,6 @@ int popword(char **msg, char *cmd) {
 
 int parseCmd(char *msg, const int len, client_t *client) {
 	char tmp[len+1];	// reserve space for the command (TODO: can be shorter using strchr. Can it? wordlength can vary...)	
-	int i;
 	tmp[0] = '\0';
 	
 	logDebug("Command was: '%s'",msg);
@@ -617,6 +616,9 @@ mode closed: closes the loop and starts the feedbackloop, correcting the wavefro
 as possible.\n";
 
 		return bufferevent_write(client->buf_ev, help, sizeof(help));
+	}
+	else {
+		return bufferevent_write(client->buf_ev, "400 UNKOWN HELP\n", sizeof("400 UNKOWN HELP\n"));
 	}
 	
 	return EXIT_FAILURE;

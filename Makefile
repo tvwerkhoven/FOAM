@@ -13,8 +13,8 @@ RANLIB	= ranlib
 
 MFLAGS	= -pipe -Wall -Wextra -Wshadow -lpthread -std=c99
 GFLAGS	= -g -DDEBUG_ITIFG=255
-IFLAGS  = -Iqfits/include
-LFLAGS  = -Lqfits/lib -levent -lqfits
+IFLAGS  = -Icfitsio/include
+LFLAGS  = -Lcfitsio/lib -levent -lcfitsio
 
 CFLAGS	= $(MFLAGS) $(GFLAGS) $(IFLAGS) $(LFLAGS)
 
