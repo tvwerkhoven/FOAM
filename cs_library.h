@@ -8,6 +8,7 @@
 /************/
 
 #include <fcntl.h>
+#include "fitsio.h"
 #include "ao_library.h"
 
 // DEFINES //
@@ -16,8 +17,8 @@
 #define DEBUG_SLEEP 1000000 		// usleep time for debugmode (typically about 1s = 1000000 usec)
 #define FILENAMELEN 32				// maximum length for logfile names
 
-#define FOAM_NAME "FOAM"
-#define FOAM_VERSION "v0.1 Nov"
+#define FOAM_NAME "FOAM CS"
+#define FOAM_VERSION "v0.2 Dec"
 #define FOAM_AUTHOR "Tim van Werkhoven"
 
 #define MAX_CLIENTS 16
@@ -34,16 +35,16 @@ char logmessage[LINE_MAX];
 @brief Helper struct to store WFC variables in \a ptc. Used by type \c control_t.
 */
 typedef struct { // wfc_t
-	char *name;			//!< name for the specific WFC
+	char name[FILENAMELEN];			//!< name for the specific WFC
 	int nact;			//!< number of actuators in this WFC
-	double *ctrl;		//!< pointer to array of controls for the WFS
+	float *ctrl;		//!< pointer to array of controls for the WFS
 } wfc_t;
 
 /*!
 @brief Helper struct to store the WFS image(s). Used by type \c control_t.
 */
 typedef struct { // wfs_t
-	char *name;			//!< name of the specific WFS
+	char name[FILENAMELEN];			//!< name of the specific WFS
 	int resx;			//!< x-resolution of this WFS
 	int resy;			//!< y-resolution of this WFS
 	int cellsx;			//!< number of x-cells in this WFS (SH only)
@@ -51,8 +52,8 @@ typedef struct { // wfs_t
 	float *image;		//!< pointer to the WFS output
 	float *dark;		//!< darkfield (byte image)
 	float *flat;		//!< flatfield (byte image)
-	char *darkfile;		//!< filename for the darkfield calibration
-	char *flatfile;		//!< filename for the flatfield calibration
+	char darkfile[FILENAMELEN];		//!< filename for the darkfield calibration
+	char flatfile[FILENAMELEN];		//!< filename for the flatfield calibration
 
 } wfs_t;
 

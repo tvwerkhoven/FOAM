@@ -12,7 +12,7 @@
 
 #include "cs_library.h"
 #include "ao_library.h"
-#include "fitsio.h"
+#include "foam_modules.h"
 
 // GLOBAL VARIABLES //
 /********************/	
@@ -21,13 +21,8 @@
 extern config_t cs_config;
 extern control_t ptc;
 
-static int simObj(char *file);
-static int simAtm(char *file);
-static int simTel(char *file);
-static int simWFC(int wfcid);
-
 // We need these every time...
-char errmsg[FLEN_STATUS];
+char errmsg[FLEN_STATUS]; // FLEN_STATUS is from fitsio.h
 int status = 0;  /* MUST initialize status */
 float nulval = 0.0;
 int anynul = 0;
@@ -41,10 +36,9 @@ int drvReadSensor() {
 		logErr("Nothing to process, no WFSs defined.");
 		return EXIT_FAILURE;
 	}
-	
-	logDebug("Parsing WFS %s (ptc poinst to %p and %p)", ptc.wfs[0].name, ptc, ptc.wfs);
-	
-	if (simAtm("wavefront.fits") != EXIT_SUCCESS) { // This simulates the point source + atmosphere (from wavefront.fits)
+
+	if (simAtm("wavefront.fits", ptc.wfs[0].resx, ptc.wfs[0].resy, ptc.wfs[0].image) 
+		!= EXIT_SUCCESS) { // This simulates the point source + atmosphere (from wavefront.fits)
 		if (status > 0) {
 			fits_get_errstatus(status, errmsg);
 			logErr("fitsio error in simAtm(): %s", errmsg);
@@ -52,8 +46,9 @@ int drvReadSensor() {
 		}
 		else logErr("error in simAtm().");
 	}
-	
-	if (simTel("aperture.fits") != EXIT_SUCCESS) { // Simulate telescope (from aperture.fits)
+
+	if (simTel("aperture.fits", ptc.wfs[0].resx, ptc.wfs[0].resy, ptc.wfs[0].image) 
+		!= EXIT_SUCCESS) { // Simulate telescope (from aperture.fits)
 		if (status > 0) {
 			fits_get_errstatus(status, errmsg);
 			logErr("fitsio error in simTel(): %s", errmsg);
@@ -64,30 +59,34 @@ int drvReadSensor() {
 	
 	logDebug("Now simulating %d WFC(s).", ptc.wfc_count);
 	for (i=0; i < ptc.wfc_count; i++) 
-		simWFC(i); // Simulate TT mirror
+		simWFC(i, ptc.wfc[i].nact, ptc.wfc[i].ctrl, ptc.wfs[0].image); // Simulate every WFC
 	
 	return EXIT_SUCCESS;
 }
 
-static int simObj(char *file) {
+int simObj(char *file, float *image) {
 	return EXIT_SUCCESS;
 }
 
-static int simWFC(int wfcid) {
+// TODO: this only works with 256x256 images...
+int simWFC(int wfcid, int nact, float *ctrl, float *image) {
 	// we want to simulate the tip tilt mirror here. What does it do
-	logDebug("WFC %d (%s) has  actuators.", wfcid, ptc.wfs[0].name);
-	// TODO: bus error on ptc.wfc[wfcid].name ? seems like a pointer?
+	logDebug("WFC %d (%s) has %d actuators, simulating", wfcid, ptc.wfc[wfcid].name, ptc.wfc[wfcid].nact);
+	if (wfcid == 1)
+		simDM("dm37/apert15-256.pgm", "dm37/dm37-256.pgm", nact, ctrl, image, 0);
+//	if (wfcid == 1)
+		//simTT();
 	
 	return EXIT_SUCCESS;
 }
 
-static int simTel(char *file) {
+int simTel(char *file, int resx, int resy, float *image) {
 	fitsfile *fptr;
 	int bitpix, naxis, i;
 	long naxes[2], fpixel[] = {1,1};
-	long nelements = ptc.wfs[0].resx * ptc.wfs[0].resy;
+	long nelements = resx * resy;
 	float *aperture;
-	if ((aperture = malloc(nelements * sizeof(aperture))) == NULL)
+	if ((aperture = malloc(nelements * sizeof(*aperture))) == NULL)
 		return EXIT_FAILURE;
 	
 	fits_open_file(&fptr, file, READONLY, &status);				// Open FITS file
@@ -99,14 +98,14 @@ static int simTel(char *file) {
 	if (status > 0)
 		return EXIT_FAILURE;
 	if (naxes[0] * naxes[1] != nelements) {
-		logErr("Error in simTel(), fitsfile not the same dimension as ptc.wfs[0].image (%dx%d vs %dx%d)", \
-		naxes[0], naxes[1], ptc.wfs[0].resx, ptc.wfs[0].resy);
+		logErr("Error in simTel(), fitsfile not the same dimension as image (%dx%d vs %dx%d)", \
+		naxes[0], naxes[1], resx, resy);
 		return EXIT_FAILURE;
 	}
 					
 	fits_read_pix(fptr, TFLOAT, fpixel, \
 						nelements, &nulval, aperture, \
-						&anynul, &status);						// Read image to ptc.wfs[0].image
+						&anynul, &status);						// Read image to image
 	if (status > 0)
 		return EXIT_FAILURE;
 	
@@ -114,18 +113,18 @@ static int simTel(char *file) {
 	
 	// Multiply wavefront with aperture
 	for (i=0; i < nelements; i++)
-		ptc.wfs[0].image[i] *= aperture[i];
+		image[i] *= aperture[i];
 	
 	return EXIT_SUCCESS;
 }
 
-static int simAtm(char *file) {
+int simAtm(char *file, int resx, int resy, float *image) {
 	// ASSUMES WFS_COUNT > 0
 	// ASSUMES ptc.wfs[0].image is initialized to float 
 	fitsfile *fptr;
 	int bitpix, naxis;
 	long naxes[2], fpixel[] = {1,1};
-	long nelements = ptc.wfs[0].resx * ptc.wfs[0].resy;
+	long nelements = resx * resy;
 	
 	fits_open_file(&fptr, file, READONLY, &status);				// Open FITS file
 	if (status > 0)
@@ -137,13 +136,13 @@ static int simAtm(char *file) {
 		return EXIT_FAILURE;
 					
 	fits_read_pix(fptr, TFLOAT, fpixel, \
-						nelements, &nulval, ptc.wfs[0].image, \
-						&anynul, &status);						// Read image to ptc.wfs[0].image
+						nelements, &nulval, image, \
+						&anynul, &status);						// Read image to image
 	if (status > 0)
 		return EXIT_FAILURE;
 	
 	logDebug("Read image, status: %d bitpix: %d, pixel (100,100): %f", status, \
-		bitpix, ptc.wfs[0].image[100 * ptc.wfs[0].resy]);
+		bitpix, image[100 * resy]);
 	
 	return EXIT_SUCCESS;	
 }

@@ -15,7 +15,6 @@
 #include "cs_library.h"
 #include "foam_modules.h"
 
-
 // GLOBAL VARIABLES //
 /********************/	
 
@@ -24,8 +23,8 @@ extern control_t ptc;
 extern config_t cs_config;
 extern conntrack_t clientlist;
 
-// PROTOTYPES //
-/**************/
+// LOCAL PROTOTYPES //
+/********************/
 
 // MISC //
 /********/
@@ -52,7 +51,9 @@ int main () {
 
 	logInfo("Configuration successfully loaded...");	
 	
-	logDebug("(ptc: %s points to %p and %p)", ptc.wfs[0].name, ptc, ptc.wfs);
+//	logDebug("Checking: %d vs %d and %d - %d.", sizeof(ptc.wfs), sizeof(wfs_t), sizeof(ptc.wfc), sizeof(wfc_t));
+
+	
 	// Create thread which listens to clients on a socket	
 	
 	if ((pthread_create(&thread,
@@ -73,14 +74,14 @@ int parseConfig(char *var, char *value) {
 
 	if (strcmp(var, "WFS_COUNT") == 0) {
 		ptc.wfs_count = (int) strtol(value, NULL, 10);
-		ptc.wfs = malloc(ptc.wfs_count * sizeof(ptc.wfs));	// allocate memory
+		ptc.wfs = malloc(ptc.wfs_count * sizeof(*ptc.wfs));	// allocate memory
 		if (ptc.wfs == NULL) return EXIT_FAILURE;		
 		
 		logDebug("WFS_COUNT initialized: %d", ptc.wfs_count);
 	}
 	else if (strcmp(var, "WFC_COUNT") == 0) {
 		ptc.wfc_count = (int) strtol(value, NULL, 10);
-		ptc.wfc = malloc(ptc.wfc_count * sizeof(ptc.wfc));	// allocate memory
+		ptc.wfc = malloc(ptc.wfc_count * sizeof(*ptc.wfc));	// allocate memory TODO: this does NOT work, why?
 		if (ptc.wfc == NULL) return EXIT_FAILURE;
 
 		logDebug("WFC_COUNT initialized: %d", ptc.wfc_count);
@@ -91,31 +92,44 @@ int parseConfig(char *var, char *value) {
 			return EXIT_FAILURE;
 		}
 		tmp = strtol(strstr(var,"[")+1, NULL, 10);
-		ptc.wfc[tmp].name = value;
+		strncpy(ptc.wfc[tmp].name, value, (size_t) FILENAMELEN);
+		ptc.wfc[tmp].name[FILENAMELEN-1] = '\0'; // TODO: This might not be necessary
 		
 		logDebug("WFC_NAME initialized for WFC %d: %s", tmp, ptc.wfc[tmp].name);
 	}
-	else if (strstr(var, "WFC_NACT") != NULL) {
-		if (ptc.wfc == NULL) {
-			logErr("Cannot initialize WFC_NACT before initializing WFC_COUNT");
+	else if (strstr(var, "WFS_NAME") != NULL){
+		if (ptc.wfs == NULL) {
+			logErr("Cannot initialize WFS_NAME before initializing WFS_COUNT");
 			return EXIT_FAILURE;
 		}
-		// Get the number of actuators for which WFC?
 		tmp = strtol(strstr(var,"[")+1, NULL, 10);
-		ptc.wfc[tmp].nact = strtol(value, NULL, 10);
-		ptc.wfc[tmp].ctrl = malloc(ptc.wfc[tmp].nact * sizeof(ptc.wfc[tmp].ctrl));
-		if (ptc.wfc[tmp].ctrl == NULL) return EXIT_FAILURE;
-		
-		logDebug("WFS_NACT initialized for WFS %d: %d", tmp, ptc.wfc[tmp].nact);
+		strncpy(ptc.wfs[tmp].name, value, (size_t) FILENAMELEN);
+		ptc.wfs[tmp].name[FILENAMELEN-1] = '\0'; // This might not be necessary
+				
+		logDebug("WFS_NAME initialized for WFS %d: %s", tmp, ptc.wfs[tmp].name);
 	}
+    else if (strstr(var, "WFC_NACT") != NULL) {
+            if (ptc.wfc == NULL) {
+                    logErr("Cannot initialize WFC_NACT before initializing WFC_COUNT");
+                    return EXIT_FAILURE;
+            }
+            // Get the number of actuators for which WFC?
+            tmp = strtol(strstr(var,"[")+1, NULL, 10);
+            ptc.wfc[tmp].nact = strtol(value, NULL, 10);
+            ptc.wfc[tmp].ctrl = malloc(ptc.wfc[tmp].nact * sizeof(ptc.wfc[tmp].ctrl));
+            if (ptc.wfc[tmp].ctrl == NULL) return EXIT_FAILURE;
+
+            logDebug("WFS_NACT initialized for WFS %d: %d", tmp, ptc.wfc[tmp].nact);
+    }
 	else if (strstr(var, "WFS_DF") != NULL) {
 		if (ptc.wfs == NULL) {
 			logErr("Cannot initialize WFS_DF before initializing WFS_COUNT");
 			return EXIT_FAILURE;
 		}
-		// Get the DF of actuators for which WFC?
+		// Get the DF for which WFS?
 		tmp = strtol(strstr(var,"[")+1, NULL, 10);
-		ptc.wfs[tmp].darkfile = value;
+		strncpy(ptc.wfs[tmp].darkfile, value, (size_t) FILENAMELEN);
+		ptc.wfs[tmp].darkfile[FILENAMELEN-1] = '\0'; // This might not be necessary
 		
 		logDebug("WFS_DF initialized for WFS %d: %s", tmp, ptc.wfs[tmp].darkfile);
 	}
@@ -125,19 +139,11 @@ int parseConfig(char *var, char *value) {
 			return EXIT_FAILURE;
 		}
 		tmp = strtol(strstr(var,"[")+1, NULL, 10);
-		ptc.wfs[tmp].flatfile = value;
+		strncpy(ptc.wfs[tmp].flatfile, value, (size_t) FILENAMELEN);
+		ptc.wfs[tmp].flatfile[FILENAMELEN-1] = '\0'; // This might not be necessary
+
 		
 		logDebug("WFS_FF initialized for WFS %d: %s", tmp, ptc.wfs[tmp].flatfile);
-	}
-	else if (strstr(var, "WFS_NAME") != NULL){
-		if (ptc.wfs == NULL) {
-			logErr("Cannot initialize WFS_NAME before initializing WFS_COUNT");
-			return EXIT_FAILURE;
-		}
-		tmp = strtol(strstr(var,"[")+1, NULL, 10);
-		ptc.wfs[tmp].name = value;
-		
-		logDebug("WFS_NAME initialized for WFS %d: %s", tmp, ptc.wfs[tmp].name);
 	}
 	else if (strstr(var, "WFS_CELLS") != NULL){
 		if (ptc.wfs == NULL) {
@@ -147,7 +153,7 @@ int parseConfig(char *var, char *value) {
 		tmp = strtol(strstr(var,"[")+1, NULL, 10);
 		
 		if (strstr(value,"{") == NULL || strstr(value,"}") == NULL || strstr(value,",") == NULL) 
-			return EXIT_FAILURE;
+			return EXIT_FAILURE; // return if we don't have the {x,y} syntax
 
 		ptc.wfs[tmp].cellsx = strtol(strtok(value,"{,}"), NULL, 10);
 		ptc.wfs[tmp].cellsy = strtol(strtok(NULL ,"{,}"), NULL, 10);
@@ -170,12 +176,13 @@ int parseConfig(char *var, char *value) {
 		if (((ptc.wfs[tmp].image = calloc(ptc.wfs[tmp].resx * ptc.wfs[tmp].resy, sizeof(ptc.wfs[tmp].image))) == NULL) ||
 		((ptc.wfs[tmp].dark = calloc(ptc.wfs[tmp].resx * ptc.wfs[tmp].resy, sizeof(ptc.wfs[tmp].image))) == NULL) ||
 		((ptc.wfs[tmp].flat = calloc(ptc.wfs[tmp].resx * ptc.wfs[tmp].resy, sizeof(ptc.wfs[tmp].image))) == NULL)) {
-			logErr("Failed to allocate image memory.");
+			logErr("Failed to allocate image memory (image, dark & flat).");
 			return EXIT_FAILURE;
 		}
 		
 		logDebug("WFS_RES initialized for WFS %d: %d x %d", tmp, ptc.wfs[tmp].resx, ptc.wfs[tmp].resy);
 	}
+
 	else if (strcmp(var, "CS_LISTEN_IP") == 0) {
 		strncpy(cs_config.listenip, value, 16);
 		
@@ -186,37 +193,35 @@ int parseConfig(char *var, char *value) {
 		
 		logDebug("CS_LISTEN_PORT initialized: %d", cs_config.listenport);
 	}
-/*	else if (strcmp(var, "CS_USE_SYSLOG") == 0) {
-		cs_config.use_syslog = ((int) strtol(value, NULL, 10) == 1) ? true : false;
+	else if (strcmp(var, "CS_USE_SYSLOG") == 0) {
+		cs_config.use_syslog = ((int) strtol(value, NULL, 10) == 0) ? false : true;
 		
 		logDebug("CS_USE_SYSLOG initialized: %d", cs_config.use_syslog);
 	}
 	else if (strcmp(var, "CS_USE_STDERR") == 0) {
-		cs_config.use_stderr = ((int) strtol(value, NULL, 10) == 1) ? true : false;
+		cs_config.use_stderr = ((int) strtol(value, NULL, 10) == 0) ? false : true;
 		
 		logDebug("CS_USE_STDERR initialized: %d", cs_config.use_stderr);
 	}
 	else if (strcmp(var, "CS_INFOFILE") == 0) {
 //		cs_config.infofile = malloc(FILENAMELEN * sizeof(cs_config.infofile));
-		strncpy(cs_config.infofile,value, FILENAMELEN-1);
-				
+		strncpy(cs_config.infofile,value, (size_t) FILENAMELEN);
+		cs_config.infofile[FILENAMELEN-1] = '\0'; // TODO: is this necessary?
 		logDebug("CS_INFOFILE initialized: %s", cs_config.infofile);
 	}
 	else if (strcmp(var, "CS_ERRFILE") == 0) {
-		cs_config.errfile = malloc(FILENAMELEN * sizeof(cs_config.errfile));
-		strncpy(cs_config.errfile,value, FILENAMELEN-1);
+		strncpy(cs_config.errfile,value, (size_t) FILENAMELEN);
 		cs_config.errfile[FILENAMELEN-1] = '\0'; // TODO: is this necessary?
-		// TODO: this is overwritten somewhere. WHY?
 		
 		logDebug("CS_ERRFILE initialized: %s", cs_config.errfile);
 	}
 	else if (strcmp(var, "CS_DEBUGFILE") == 0) {
-//		cs_config.debugfile = malloc(FILENAMELEN * sizeof(cs_config.debugfile));
-		strncpy(cs_config.debugfile, value, FILENAMELEN-1);
+		strncpy(cs_config.debugfile, value, (size_t) FILENAMELEN);
+		cs_config.debugfile[FILENAMELEN-1] = '\0'; // TODO: is this necessary?
 		
 		logDebug("CS_DEBUGFILE initialized: %s", cs_config.debugfile);
 	}
-*/
+
 	return EXIT_SUCCESS;
 }
 
@@ -239,7 +244,7 @@ int loadConfig(char *file) {
 		
 		logDebug("Parsing '%s' '%s' settings pair.", var, value);
 		
-		if (parseConfig(var,value) == EXIT_FAILURE)	// pass the pair on to be parsed and inserted in ptc
+		if (parseConfig(var,value) != EXIT_SUCCESS)	// pass the pair on to be parsed and inserted in ptc
 			return EXIT_FAILURE;
 	}
 	
@@ -316,16 +321,24 @@ int saveConfig(char *file) {
 }
 
 void modeOpen() {
+	fitsfile *fptr;
+	long naxes[] = {256,256};
+	long fpixel[] = {1,1};
+	int status;
+	
 	logInfo("Entering open loop.");
 		
 	while (ptc.mode == AO_MODE_OPEN) {
+		logInfo("Operating in open loop"); // TODO
 		drvReadSensor();			// read the sensor output into ptc.image
 	
 		modParseSH();			// process SH sensor output, get displacements
 	
-		logInfo("Operating in open loop"); // TODO
-		logDebug("(ptc poinst to %p and %p)", ptc, ptc.wfs);
-		
+
+		logInfo("Writing resulting wavefront to disk (foam.fits)");
+		fits_create_img(fptr, -32, 2, &naxes, &status);
+		fits_write_pix(fptr, TFLOAT, fpixel,
+		               naxes[0] * naxes[1], ptc.wfs[0].image, &status);
 		usleep(DEBUG_SLEEP);
 	}
 	
@@ -411,9 +424,9 @@ int sockListen() {
 	}
 	logDebug("Setting SO_REUSEADDR, SO_NOSIGPIPE and nonblocking...");
 	// Set reusable and nosigpipe flags so we don't get into trouble later on. TODO: doesn't work?
-	if (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof optval) != 0)
+	if (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval)) != 0)
 		logErr("Could not set socket flag SO_REUSEADDR, continuing.");
-	if (setsockopt(sock, SOL_SOCKET, SO_NOSIGPIPE, &optval, sizeof optval) != 0)
+	if (setsockopt(sock, SOL_SOCKET, SO_NOSIGPIPE, &optval, sizeof(optval)) != 0)
 		logErr("Could not set socket flag SO_NOSIGPIPE, continuing.");
 		
 	// Set socket to non-blocking mode, nice for events
@@ -475,7 +488,7 @@ void sockAccept(const int sock, const short event, void *arg) {
 		return;
 	}
 	
-	client = calloc(1, sizeof(client_t));
+	client = calloc(1, sizeof(*client));
 	if (client == NULL)
 		logErr("Malloc failed.");
 

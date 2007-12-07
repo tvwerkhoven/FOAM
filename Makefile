@@ -30,7 +30,7 @@ clean:
 
 proto-sim: protocs-sim protoui
 
-protocs-sim: proto_ao_cs.c ao_library.c cs_library.c foam_modules-sim.c
+protocs-sim: proto_ao_cs.c ao_library.c cs_library.c foam_modules-sim.c foam_modules-dm.c
 		$(CC) $(CFLAGS) -lc $^ -o $@
 
 protoui: proto_ao_ui.c ao_library.c ui_library.c
