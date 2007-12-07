@@ -18,8 +18,8 @@
 /********************/	
 
 // These are defined in cs_library.c
-extern control_t ptc;
 extern config_t cs_config;
+extern control_t ptc;
 
 static int simObj(char *file);
 static int simAtm(char *file);
@@ -36,11 +36,13 @@ int drvReadSensor() {
 	int i;
 	logDebug("Now reading %d sensors.", ptc.wfs_count);
 	// TODO: simulate object, atmosphere, telescope, TT, DM, WFS (that's a lot :O)
-
+	
 	if (ptc.wfs_count < 1) {
 		logErr("Nothing to process, no WFSs defined.");
 		return EXIT_FAILURE;
 	}
+	
+	logDebug("Parsing WFS %s (ptc poinst to %p and %p)", ptc.wfs[0].name, ptc, ptc.wfs);
 	
 	if (simAtm("wavefront.fits") != EXIT_SUCCESS) { // This simulates the point source + atmosphere (from wavefront.fits)
 		if (status > 0) {
@@ -59,6 +61,7 @@ int drvReadSensor() {
 		}
 		else logErr("error in simTel().");
 	}
+	
 	logDebug("Now simulating %d WFC(s).", ptc.wfc_count);
 	for (i=0; i < ptc.wfc_count; i++) 
 		simWFC(i); // Simulate TT mirror
@@ -72,7 +75,8 @@ static int simObj(char *file) {
 
 static int simWFC(int wfcid) {
 	// we want to simulate the tip tilt mirror here. What does it do
-	logDebug("WFC %d (%s) has %d actuators.", wfcid, ptc.wfc[wfcid].name, ptc.wfc[wfcid].nact);
+	logDebug("WFC %d (%s) has  actuators.", wfcid, ptc.wfs[0].name);
+	// TODO: bus error on ptc.wfc[wfcid].name ? seems like a pointer?
 	
 	return EXIT_SUCCESS;
 }

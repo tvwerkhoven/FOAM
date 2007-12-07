@@ -44,6 +44,7 @@ int main () {
 	clientlist.nconn = 0;	// Init number of connections to zero
 	logInfo("Starting %s (%s) by %s",FOAM_NAME, FOAM_VERSION, FOAM_AUTHOR);
 	
+	
 	if (loadConfig("ao_config.cfg") != EXIT_SUCCESS) {
 		logErr("Loading configuration failed, aborting");
 		exit(EXIT_FAILURE);
@@ -51,6 +52,7 @@ int main () {
 
 	logInfo("Configuration successfully loaded...");	
 	
+	logDebug("(ptc: %s points to %p and %p)", ptc.wfs[0].name, ptc, ptc.wfs);
 	// Create thread which listens to clients on a socket	
 	
 	if ((pthread_create(&thread,
@@ -184,7 +186,7 @@ int parseConfig(char *var, char *value) {
 		
 		logDebug("CS_LISTEN_PORT initialized: %d", cs_config.listenport);
 	}
-	else if (strcmp(var, "CS_USE_SYSLOG") == 0) {
+/*	else if (strcmp(var, "CS_USE_SYSLOG") == 0) {
 		cs_config.use_syslog = ((int) strtol(value, NULL, 10) == 1) ? true : false;
 		
 		logDebug("CS_USE_SYSLOG initialized: %d", cs_config.use_syslog);
@@ -195,21 +197,26 @@ int parseConfig(char *var, char *value) {
 		logDebug("CS_USE_STDERR initialized: %d", cs_config.use_stderr);
 	}
 	else if (strcmp(var, "CS_INFOFILE") == 0) {
-		strncpy(cs_config.infofile,value, FILENAMELEN);
-		
+//		cs_config.infofile = malloc(FILENAMELEN * sizeof(cs_config.infofile));
+		strncpy(cs_config.infofile,value, FILENAMELEN-1);
+				
 		logDebug("CS_INFOFILE initialized: %s", cs_config.infofile);
 	}
 	else if (strcmp(var, "CS_ERRFILE") == 0) {
-		strncpy(cs_config.errfile,value, FILENAMELEN);
+		cs_config.errfile = malloc(FILENAMELEN * sizeof(cs_config.errfile));
+		strncpy(cs_config.errfile,value, FILENAMELEN-1);
+		cs_config.errfile[FILENAMELEN-1] = '\0'; // TODO: is this necessary?
+		// TODO: this is overwritten somewhere. WHY?
 		
 		logDebug("CS_ERRFILE initialized: %s", cs_config.errfile);
 	}
 	else if (strcmp(var, "CS_DEBUGFILE") == 0) {
-		strncpy(cs_config.debugfile,value, FILENAMELEN);
+//		cs_config.debugfile = malloc(FILENAMELEN * sizeof(cs_config.debugfile));
+		strncpy(cs_config.debugfile, value, FILENAMELEN-1);
 		
 		logDebug("CS_DEBUGFILE initialized: %s", cs_config.debugfile);
 	}
-
+*/
 	return EXIT_SUCCESS;
 }
 
@@ -317,6 +324,7 @@ void modeOpen() {
 		modParseSH();			// process SH sensor output, get displacements
 	
 		logInfo("Operating in open loop"); // TODO
+		logDebug("(ptc poinst to %p and %p)", ptc, ptc.wfs);
 		
 		usleep(DEBUG_SLEEP);
 	}
