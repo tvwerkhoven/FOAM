@@ -23,6 +23,7 @@ longer desc
 
 #include <sys/time.h>
 #include <stdio.h>
+#include <math.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <sys/types.h>

@@ -336,9 +336,19 @@ void modeOpen() {
 	
 
 		logInfo("Writing resulting wavefront to disk (foam.fits)");
-		fits_create_img(fptr, -32, 2, &naxes, &status);
-		fits_write_pix(fptr, TFLOAT, fpixel,
+		if (status > 0)
+			logErr("Non-local error (%d)", status);
+		fits_open_file(&fptr, "foam.fits", READWRITE, &status); // TODO: how to write files?
+		if (status > 0)
+			logErr("Error in opening fits file foam.fits (%d).", status);
+		fits_create_img(fptr, -32, 2, naxes, &status);
+		if (status > 0)
+			logErr("Error in creatin fits image (%d).", status);
+		fits_write_pix(fptr, TFLOAT, fpixel, \
 		               naxes[0] * naxes[1], ptc.wfs[0].image, &status);
+		if (status > 0)
+			logErr("Error in writing image to file (%d).", status);
+		fits_close_file(fptr, &status);
 		usleep(DEBUG_SLEEP);
 	}
 	

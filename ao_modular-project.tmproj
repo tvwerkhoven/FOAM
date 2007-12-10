@@ -10,13 +10,13 @@
 			<key>filename</key>
 			<string>Makefile</string>
 			<key>lastUsed</key>
-			<date>2007-12-05T14:54:59Z</date>
+			<date>2007-12-07T15:56:31Z</date>
 		</dict>
 		<dict>
 			<key>filename</key>
 			<string>proto_ao_cs.c</string>
 			<key>lastUsed</key>
-			<date>2007-12-05T16:03:09Z</date>
+			<date>2007-12-07T15:56:38Z</date>
 			<key>selected</key>
 			<true/>
 		</dict>
@@ -24,13 +24,19 @@
 			<key>filename</key>
 			<string>proto_ao_ui.c</string>
 			<key>lastUsed</key>
-			<date>2007-12-05T16:02:37Z</date>
+			<date>2007-12-07T15:56:32Z</date>
 		</dict>
 		<dict>
 			<key>filename</key>
 			<string>foam_modules-sim.c</string>
 			<key>lastUsed</key>
-			<date>2007-12-05T15:33:48Z</date>
+			<date>2007-12-07T15:56:37Z</date>
+		</dict>
+		<dict>
+			<key>filename</key>
+			<string>foam_modules-dm.c</string>
+			<key>lastUsed</key>
+			<date>2007-12-07T15:56:34Z</date>
 		</dict>
 		<dict>
 			<key>children</key>
@@ -39,19 +45,19 @@
 					<key>filename</key>
 					<string>ao_library.c</string>
 					<key>lastUsed</key>
-					<date>2007-12-05T16:02:38Z</date>
+					<date>2007-12-07T15:56:37Z</date>
 				</dict>
 				<dict>
 					<key>filename</key>
 					<string>cs_library.c</string>
 					<key>lastUsed</key>
-					<date>2007-12-05T15:48:23Z</date>
+					<date>2007-12-07T15:56:38Z</date>
 				</dict>
 				<dict>
 					<key>filename</key>
 					<string>ui_library.c</string>
 					<key>lastUsed</key>
-					<date>2007-12-05T16:02:36Z</date>
+					<date>2007-12-07T15:56:31Z</date>
 				</dict>
 			</array>
 			<key>expanded</key>
@@ -66,31 +72,31 @@
 					<key>filename</key>
 					<string>foam_modules.h</string>
 					<key>lastUsed</key>
-					<date>2007-12-05T15:33:49Z</date>
+					<date>2007-12-07T15:56:32Z</date>
 				</dict>
 				<dict>
 					<key>filename</key>
 					<string>ao_library.h</string>
 					<key>lastUsed</key>
-					<date>2007-12-05T16:03:09Z</date>
+					<date>2007-12-07T15:56:38Z</date>
 				</dict>
 				<dict>
 					<key>filename</key>
 					<string>cs_config.h</string>
 					<key>lastUsed</key>
-					<date>2007-12-05T15:33:38Z</date>
+					<date>2007-12-07T15:56:31Z</date>
 				</dict>
 				<dict>
 					<key>filename</key>
 					<string>cs_library.h</string>
 					<key>lastUsed</key>
-					<date>2007-12-05T15:46:46Z</date>
+					<date>2007-12-07T15:56:38Z</date>
 				</dict>
 				<dict>
 					<key>filename</key>
 					<string>ui_library.h</string>
 					<key>lastUsed</key>
-					<date>2007-12-05T16:02:36Z</date>
+					<date>2007-12-07T15:56:31Z</date>
 				</dict>
 			</array>
 			<key>expanded</key>
@@ -108,14 +114,14 @@
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>10</integer>
+				<integer>45</integer>
 				<key>line</key>
-				<integer>15</integer>
+				<integer>16</integer>
 			</dict>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>5</integer>
+			<integer>6</integer>
 		</dict>
 		<key>ao_library.c</key>
 		<dict>
@@ -129,21 +135,21 @@
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>12</integer>
+			<integer>2</integer>
 		</dict>
 		<key>ao_library.h</key>
 		<dict>
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>10</integer>
+				<integer>14</integer>
 				<key>line</key>
-				<integer>50</integer>
+				<integer>25</integer>
 			</dict>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>43</integer>
+			<integer>9</integer>
 		</dict>
 		<key>cs_config.h</key>
 		<dict>
@@ -164,74 +170,100 @@
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>15</integer>
+				<integer>9</integer>
 				<key>line</key>
-				<integer>28</integer>
+				<integer>73</integer>
 			</dict>
-			<key>columnSelection</key>
-			<false/>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>5</integer>
-			<key>selectFrom</key>
-			<dict>
-				<key>column</key>
-				<integer>12</integer>
-				<key>line</key>
-				<integer>28</integer>
-			</dict>
-			<key>selectTo</key>
-			<dict>
-				<key>column</key>
-				<integer>22</integer>
-				<key>line</key>
-				<integer>28</integer>
-			</dict>
+			<integer>67</integer>
 		</dict>
 		<key>cs_library.h</key>
 		<dict>
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>8</integer>
+				<integer>0</integer>
 				<key>line</key>
-				<integer>124</integer>
+				<integer>11</integer>
 			</dict>
 			<key>columnSelection</key>
 			<false/>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>95</integer>
+			<integer>0</integer>
 			<key>selectFrom</key>
 			<dict>
 				<key>column</key>
-				<integer>2</integer>
+				<integer>23</integer>
 				<key>line</key>
-				<integer>124</integer>
+				<integer>11</integer>
 			</dict>
 			<key>selectTo</key>
 			<dict>
 				<key>column</key>
-				<integer>13</integer>
+				<integer>0</integer>
 				<key>line</key>
-				<integer>124</integer>
+				<integer>11</integer>
 			</dict>
+		</dict>
+		<key>foam_modules-dm.c</key>
+		<dict>
+			<key>caret</key>
+			<dict>
+				<key>column</key>
+				<integer>23</integer>
+				<key>line</key>
+				<integer>24</integer>
+			</dict>
+			<key>firstVisibleColumn</key>
+			<integer>0</integer>
+			<key>firstVisibleLine</key>
+			<integer>0</integer>
+		</dict>
+		<key>foam_modules-sim.c</key>
+		<dict>
+			<key>caret</key>
+			<dict>
+				<key>column</key>
+				<integer>0</integer>
+				<key>line</key>
+				<integer>0</integer>
+			</dict>
+			<key>firstVisibleColumn</key>
+			<integer>0</integer>
+			<key>firstVisibleLine</key>
+			<integer>17</integer>
+		</dict>
+		<key>foam_modules.h</key>
+		<dict>
+			<key>caret</key>
+			<dict>
+				<key>column</key>
+				<integer>37</integer>
+				<key>line</key>
+				<integer>31</integer>
+			</dict>
+			<key>firstVisibleColumn</key>
+			<integer>0</integer>
+			<key>firstVisibleLine</key>
+			<integer>4</integer>
 		</dict>
 		<key>proto_ao_cs.c</key>
 		<dict>
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>36</integer>
+				<integer>0</integer>
 				<key>line</key>
-				<integer>568</integer>
+				<integer>336</integer>
 			</dict>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>563</integer>
+			<integer>264</integer>
 		</dict>
 		<key>proto_ao_ui.c</key>
 		<dict>
@@ -300,6 +332,9 @@
 		<string>cs_library.h</string>
 		<string>ao_library.h</string>
 		<string>ao_library.c</string>
+		<string>foam_modules-sim.c</string>
+		<string>foam_modules-dm.c</string>
+		<string>foam_modules.h</string>
 		<string>proto_ao_ui.c</string>
 		<string>ui_library.c</string>
 		<string>ui_library.h</string>
@@ -308,6 +343,6 @@
 	<key>showFileHierarchyDrawer</key>
 	<true/>
 	<key>windowFrame</key>
-	<string>{{200, 38}, {977, 657}}</string>
+	<string>{{235, 85}, {977, 657}}</string>
 </dict>
 </plist>

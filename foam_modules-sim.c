@@ -37,8 +37,7 @@ int drvReadSensor() {
 		return EXIT_FAILURE;
 	}
 
-	if (simAtm("wavefront.fits", ptc.wfs[0].resx, ptc.wfs[0].resy, ptc.wfs[0].image) 
-		!= EXIT_SUCCESS) { // This simulates the point source + atmosphere (from wavefront.fits)
+	if (simAtm("wavefront.fits", ptc.wfs[0].resx, ptc.wfs[0].resy, ptc.wfs[0].image) != EXIT_SUCCESS) { // This simulates the point source + atmosphere (from wavefront.fits)
 		if (status > 0) {
 			fits_get_errstatus(status, errmsg);
 			logErr("fitsio error in simAtm(): %s", errmsg);
@@ -47,8 +46,7 @@ int drvReadSensor() {
 		else logErr("error in simAtm().");
 	}
 
-	if (simTel("aperture.fits", ptc.wfs[0].resx, ptc.wfs[0].resy, ptc.wfs[0].image) 
-		!= EXIT_SUCCESS) { // Simulate telescope (from aperture.fits)
+	if (simTel("aperture.fits", ptc.wfs[0].resx, ptc.wfs[0].resy, ptc.wfs[0].image) != EXIT_SUCCESS) { // Simulate telescope (from aperture.fits)
 		if (status > 0) {
 			fits_get_errstatus(status, errmsg);
 			logErr("fitsio error in simTel(): %s", errmsg);
@@ -115,6 +113,7 @@ int simTel(char *file, int resx, int resy, float *image) {
 	for (i=0; i < nelements; i++)
 		image[i] *= aperture[i];
 	
+	fits_close_file(fptr, &status);
 	return EXIT_SUCCESS;
 }
 
@@ -144,6 +143,7 @@ int simAtm(char *file, int resx, int resy, float *image) {
 	logDebug("Read image, status: %d bitpix: %d, pixel (100,100): %f", status, \
 		bitpix, image[100 * resy]);
 	
+	fits_close_file(fptr, &status);
 	return EXIT_SUCCESS;	
 }
 
