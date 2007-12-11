@@ -7,9 +7,9 @@
 // INCLUDES //
 /************/
 
+#include "fitsio.h"
 #include "ao_library.h"
 #include <fcntl.h>
-#include "fitsio.h"
 
 // DEFINES //
 /***********/

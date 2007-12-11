@@ -45,7 +45,7 @@ int read_pgm(char *fname, double **dbuf, int *t_nx, int *t_ny, int *t_ngray);
 @return EXIT_SUCCESS on success, EXIT_FAILURE otherwise
 */
 int simDM(char *boundarymask, char *actuatorpat, int nact, float *ctrl, float *image, int niter) {
-  int	 i, j, stat, nx, ny, ngray1, ngray2;
+  int	 i, j, status, nx, ny, ngray1, ngray2;
   long	 ii, i_1j, i1j, ij_1, ij1;
   int    voltage[nact]; // voltage settings for electrodes (in digital units)
   double *act, *boundary, *resp;
@@ -56,7 +56,7 @@ int simDM(char *boundarymask, char *actuatorpat, int nact, float *ctrl, float *i
 
   // read boundary mask file 
 
-  if ((stat = read_pgm(boundarymask,&boundary,&nx,&ny,&ngray1)) != EXIT_SUCCESS) {
+  if ((status = read_pgm(boundarymask,&boundary,&nx,&ny,&ngray1)) != EXIT_SUCCESS) {
     logErr("Cannot read boundary mask");
 	return EXIT_FAILURE;
   }
@@ -75,7 +75,7 @@ int simDM(char *boundarymask, char *actuatorpat, int nact, float *ctrl, float *i
 
   // read actuator pattern file
 
-  if ((stat = read_pgm(actuatorpat,&act,&nx,&ny,&ngray2)) != EXIT_SUCCESS) {
+  if ((status = read_pgm(actuatorpat,&act,&nx,&ny,&ngray2)) != EXIT_SUCCESS) {
     logErr("Cannot read actuator pattern file");
 	return EXIT_FAILURE;
   }
