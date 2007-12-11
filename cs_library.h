@@ -6,15 +6,14 @@
 
 // INCLUDES //
 /************/
-
-#include "fitsio.h"
+#include <cfitsio/fitsio.h>
 #include "ao_library.h"
 #include <fcntl.h>
 
 // DEFINES //
 /***********/
 
-#define DEBUG_SLEEP 1000000 		// usleep time for debugmode (typically about 1s = 1000000 usec)
+#define DEBUG_SLEEP 1 // sleep time (sec)
 #define FILENAMELEN 32				// maximum length for logfile names
 
 #define FOAM_NAME "FOAM CS"

@@ -12,6 +12,7 @@
 // HEADERS //
 /***********/
 
+#include <cfitsio/fitsio.h>
 #include "cs_library.h"
 #include "foam_modules.h"
 
@@ -352,7 +353,7 @@ void modeOpen() {
 		if (status > 0)
 			logErr("Error in writing image to file (%d).", status);
 		fits_close_file(fptr, &status);
-		usleep(DEBUG_SLEEP);
+		sleep(DEBUG_SLEEP);
 	}
 	
 	modeListen();		// mode is not open anymore, decide what to to next
@@ -363,7 +364,7 @@ void modeClosed() {
 	while (ptc.mode == AO_MODE_CLOSED) {
 
 		logInfo("Operating in closed loop"); // TODO, make faster for fast loop
-		usleep(DEBUG_SLEEP);
+		sleep(DEBUG_SLEEP);
 	}
 	
 	modeListen();		// mode is not closed anymore, decide what to do
@@ -371,7 +372,7 @@ void modeClosed() {
 
 void modeListen() {
 	logInfo("Entering listen mode");
-	usleep(DEBUG_SLEEP);
+	sleep(DEBUG_SLEEP);
 		
 	switch (ptc.mode) {
 		case AO_MODE_OPEN:
@@ -394,7 +395,7 @@ void modeCal() {
 	logDebug("Calibration loop done, switching to open loop (was %d).", ptc.mode);
 	ptc.mode = AO_MODE_OPEN;
 	logDebug("mode now is %d", ptc.mode);
-	usleep(DEBUG_SLEEP);
+	sleep(DEBUG_SLEEP);
 	
 	modeListen();
 }
@@ -679,7 +680,7 @@ void sockAccept2(int sock, short event, void *arg) {
 	struct event *ev = arg;
 	
 	logErr("sockAccept2 called with sock: %d, event: %d, arg: %p\n",sock, event, arg);
-	usleep(DEBUG_SLEEP);
+	sleep(DEBUG_SLEEP);
 	
 	int newsock;					// New socket ID
 	struct sockaddr_in cli_addr;	// Store the client address here

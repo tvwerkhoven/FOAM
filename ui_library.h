@@ -33,7 +33,4 @@ int sockRead(const int sock, char *msg, fd_set *lfd_set);
 // DEFINES //
 /***********/
 
-#define DEBUG_SLEEP 1000000 // usleep time for debugmode (typically about 1s = 1000000 usec)
-
-
 #endif /* UI_LIBRARY */

@@ -11,10 +11,10 @@ AR	= ar
 LD	= ld
 RANLIB	= ranlib
 
-MFLAGS	= -pipe -Wall -Wextra -Wshadow -lpthread -std=c99
+MFLAGS	= -pipe -Wall -Wextra -Wshadow -lpthread  -std=c99
 GFLAGS	= -g -DDEBUG_ITIFG=255
-IFLAGS  = -Icfitsio/include
-LFLAGS  = -Lcfitsio/lib -levent -lcfitsio -lm
+IFLAGS  = -I. -L.
+LFLAGS  = -levent -lcfitsio -lm -lcfitsio -lm
 
 CFLAGS	= $(MFLAGS) $(GFLAGS) $(IFLAGS) $(LFLAGS)
 

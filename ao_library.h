@@ -10,8 +10,7 @@ longer desc
 /****************/
 
 
-#ifdef __linux__ /* we need this for usleep?? */
-#define _XOPEN_SOURCE 500
+#ifdef __linux__ 
 #include <bits/posix2_lim.h> /* we need this for LINE_MAX? */
 #endif
 
