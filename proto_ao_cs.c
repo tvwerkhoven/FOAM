@@ -338,7 +338,10 @@ void modeOpen() {
 		logInfo("Writing resulting wavefront to disk (foam.fits)");
 		if (status > 0)
 			logErr("Non-local error (%d)", status);
-		fits_open_file(&fptr, "foam.fits", READWRITE, &status); // TODO: how to write files?
+
+		fits_create_file(&fptr, "foam.fits", &status);   /* create new file */
+		    
+//		fits_open_file(&fptr, "foam.fits", READWRITE, &status); // TODO: how to write files?
 		if (status > 0)
 			logErr("Error in opening fits file foam.fits (%d).", status);
 		fits_create_img(fptr, -32, 2, naxes, &status);
@@ -436,8 +439,8 @@ int sockListen() {
 	// Set reusable and nosigpipe flags so we don't get into trouble later on. TODO: doesn't work?
 	if (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval)) != 0)
 		logErr("Could not set socket flag SO_REUSEADDR, continuing.");
-	if (setsockopt(sock, SOL_SOCKET, SO_NOSIGPIPE, &optval, sizeof(optval)) != 0)
-		logErr("Could not set socket flag SO_NOSIGPIPE, continuing.");
+//	if (setsockopt(sock, SOL_SOCKET, SO_NOSIGPIPE, &optval, sizeof(optval)) != 0) // TODO: this is a BSD feature! not unix! 
+//		logErr("Could not set socket flag SO_NOSIGPIPE, continuing.");
 		
 	// Set socket to non-blocking mode, nice for events
 	if (setnonblock(sock) != 0)
