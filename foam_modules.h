@@ -36,3 +36,4 @@ int simWFC(int wfcid, int nact, float *ctrl, float *image);
 
 
 #endif /* FOAM_MODULES */
+

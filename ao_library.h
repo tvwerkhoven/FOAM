@@ -10,17 +10,13 @@ longer desc
 /****************/
 
 
+#ifdef __linux__ /* we need this for usleep?? */
+#define _XOPEN_SOURCE 500
+#include <bits/posix2_lim.h> /* we need this for LINE_MAX? */
+#endif
+
 #include <string.h>
 #include <unistd.h>
-#ifdef linux /* we need this for usleep?? */
-#define _XOPEN_SOURCE 500
-#endif
-
-#ifdef linux /* we need this for LINE_MAX? */
-#include <bits/posix2_lim.h>
-#endif
-
-
 #include <sys/time.h>
 #include <stdio.h>
 #include <math.h>
@@ -35,6 +31,8 @@ longer desc
 #include <pthread.h>
 #include <limits.h>
 #include <stdbool.h>
+// This is a hack, u_char needed by event.h but not defined on all systems
+typedef unsigned char u_char;
 #include <event.h>
 #include <sys/uio.h> //?
 #include <inttypes.h> //?
@@ -89,3 +87,4 @@ sendMsg() sends data to the server, but is currently simply a wrapper for write(
 int sendMsg(const int sock, const char *buf);
 
 #endif /* AO_LIBRARY */
+

@@ -7,9 +7,9 @@
 // INCLUDES //
 /************/
 
+#include "ao_library.h"
 #include <fcntl.h>
 #include "fitsio.h"
-#include "ao_library.h"
 
 // DEFINES //
 /***********/
@@ -27,6 +27,7 @@
 /********************/
 
 char logmessage[LINE_MAX];
+
 		
 // STRUCTS AND TYPES //
 /*********************/
