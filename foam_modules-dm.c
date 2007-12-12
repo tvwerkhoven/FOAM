@@ -61,9 +61,12 @@ int simDM(char *boundarymask, char *actuatorpat, int nact, float *ctrl, float *i
 	return EXIT_FAILURE;
   }
 
+  logDebug("Simulating DM with voltages:");
   for(ik = 0; ik < nact; ik++) {
 	voltage[ik] = (int) round(ctrl[ik]);
+	printf("%d ", voltage[ik]);
   }
+  printf("\n");
   
   for (ik = 0; ik < ny*nx; ik++) {
     if (*(boundary + ik) > 0) {
@@ -81,7 +84,6 @@ int simDM(char *boundarymask, char *actuatorpat, int nact, float *ctrl, float *i
   }
  
   // set actuator voltages on electrodes
-  
   for (ik = 0; ik < nx*ny; ik++){
     i = (int) act[ik];
     if(i>0) {
@@ -215,7 +217,7 @@ int read_pgm(char *fname, double **dbuf, int *t_nx, int *t_ny, int *t_ngray) {
 		    "\tPortable ASCII graymap aperture mask detected \n"); */
 	    bin_ind = 0;
 	} else if((strstr(first_string, "P5")) != NULL ){
-	    logDebug("Portable binary graymap aperture mask detected."); 
+	    //logDebug("Portable binary graymap aperture mask detected."); 
 	    bin_ind = 1;
 	} else {
 	    logErr("Unknown magic in pgm file: %s, should be P2 or P5",first_string);

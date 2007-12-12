@@ -12,11 +12,12 @@ LD	= ld
 RANLIB	= ranlib
 
 MFLAGS	= -pipe -Wall -Wextra -Wshadow -lpthread  -std=c99
-GFLAGS	= -g -DDEBUG_ITIFG=255
+GFLAGS	= -g -DDEBUG_ITIFG=255 -pg
 IFLAGS  = -I. -L.
 LFLAGS  = -levent -lcfitsio -lm -lcfitsio -lm
+SDLFLAGS = `sdl-config --libs --cflags`
 
-CFLAGS	= $(MFLAGS) $(GFLAGS) $(IFLAGS) $(LFLAGS)
+CFLAGS	= $(MFLAGS) $(GFLAGS) $(IFLAGS) $(LFLAGS) $(SDLFLAGS)
 
 # ----------------------------------------------------------------------------
 # ----------------------------------------------------------------------------

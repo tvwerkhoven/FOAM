@@ -7,8 +7,10 @@
 // INCLUDES //
 /************/
 #include <cfitsio/fitsio.h>
-#include "ao_library.h"
 #include <fcntl.h>
+#include <SDL/SDL.h>
+#include "ao_library.h"
+
 
 // DEFINES //
 /***********/
@@ -45,8 +47,8 @@ typedef struct { // wfc_t
 */
 typedef struct { // wfs_t
 	char name[FILENAMELEN];			//!< name of the specific WFS
-	int resx;			//!< x-resolution of this WFS
-	int resy;			//!< y-resolution of this WFS
+	long res[2];			//!< x,y-resolution of this WFS
+//	int resy;			//!< y-resolution of this WFS
 	int cellsx;			//!< number of x-cells in this WFS (SH only)
 	int cellsy;			//!< number of y-cells in this WFS (SH only)
 	float *image;		//!< pointer to the WFS output

@@ -12,7 +12,6 @@
 // HEADERS //
 /***********/
 
-#include <cfitsio/fitsio.h>
 #include "cs_library.h"
 #include "foam_modules.h"
 
@@ -24,12 +23,13 @@ extern control_t ptc;
 extern config_t cs_config;
 extern conntrack_t clientlist;
 
+SDL_Surface *screen;
+
 // LOCAL PROTOTYPES //
 /********************/
 
 // MISC //
 /********/
-
 
 	/*! 
 	@brief Initialisation function.
@@ -39,12 +39,23 @@ extern conntrack_t clientlist;
 	what to do.
 	@return \c EXIT_FAILURE on failure, \c EXIT_SUCESS on successful completion.
 	*/
-int main () {
+int main(int argc, char *argv[]) {
 	pthread_t thread;
 	clientlist.nconn = 0;	// Init number of connections to zero
 	logInfo("Starting %s (%s) by %s",FOAM_NAME, FOAM_VERSION, FOAM_AUTHOR);
 	
-	
+	// BEGIN SDL INITIALIZATION
+	if (SDL_Init(SDL_INIT_VIDEO) < 0)
+		logErr("SDL init error");
+	atexit(SDL_Quit);
+
+	screen = SDL_SetVideoMode(256, 256, 0, SDL_HWSURFACE|SDL_DOUBLEBUF);
+	if ( screen == NULL ) {
+		logErr("Unable to set video: %s", SDL_GetError());
+		return EXIT_FAILURE;
+	}
+
+	// BEGIN LOADING CONFIG
 	if (loadConfig("ao_config.cfg") != EXIT_SUCCESS) {
 		logErr("Loading configuration failed, aborting");
 		exit(EXIT_FAILURE);
@@ -117,7 +128,7 @@ int parseConfig(char *var, char *value) {
             // Get the number of actuators for which WFC?
             tmp = strtol(strstr(var,"[")+1, NULL, 10);
             ptc.wfc[tmp].nact = strtol(value, NULL, 10);
-            ptc.wfc[tmp].ctrl = malloc(ptc.wfc[tmp].nact * sizeof(ptc.wfc[tmp].ctrl));
+            ptc.wfc[tmp].ctrl = calloc(ptc.wfc[tmp].nact, sizeof(ptc.wfc[tmp].ctrl));
             if (ptc.wfc[tmp].ctrl == NULL) return EXIT_FAILURE;
 
             logDebug("WFS_NACT initialized for WFS %d: %d", tmp, ptc.wfc[tmp].nact);
@@ -171,17 +182,17 @@ int parseConfig(char *var, char *value) {
 		if (strstr(value,"{") == NULL || strstr(value,"}") == NULL || strstr(value,",") == NULL) 
 			return EXIT_FAILURE;
 
-		ptc.wfs[tmp].resx = strtol(strtok(value,"{,}"), NULL, 10);
-		ptc.wfs[tmp].resy = strtol(strtok(NULL ,"{,}"), NULL, 10);
+		ptc.wfs[tmp].res[0] = strtol(strtok(value,"{,}"), NULL, 10);
+		ptc.wfs[tmp].res[1] = strtol(strtok(NULL ,"{,}"), NULL, 10);
 		
-		if (((ptc.wfs[tmp].image = calloc(ptc.wfs[tmp].resx * ptc.wfs[tmp].resy, sizeof(ptc.wfs[tmp].image))) == NULL) ||
-		((ptc.wfs[tmp].dark = calloc(ptc.wfs[tmp].resx * ptc.wfs[tmp].resy, sizeof(ptc.wfs[tmp].image))) == NULL) ||
-		((ptc.wfs[tmp].flat = calloc(ptc.wfs[tmp].resx * ptc.wfs[tmp].resy, sizeof(ptc.wfs[tmp].image))) == NULL)) {
+		if (((ptc.wfs[tmp].image = calloc(ptc.wfs[tmp].res[0] * ptc.wfs[tmp].res[1], sizeof(ptc.wfs[tmp].image))) == NULL) ||
+		((ptc.wfs[tmp].dark = calloc(ptc.wfs[tmp].res[0] * ptc.wfs[tmp].res[1], sizeof(ptc.wfs[tmp].image))) == NULL) ||
+		((ptc.wfs[tmp].flat = calloc(ptc.wfs[tmp].res[0] * ptc.wfs[tmp].res[1], sizeof(ptc.wfs[tmp].image))) == NULL)) {
 			logErr("Failed to allocate image memory (image, dark & flat).");
 			return EXIT_FAILURE;
 		}
 		
-		logDebug("WFS_RES initialized for WFS %d: %d x %d", tmp, ptc.wfs[tmp].resx, ptc.wfs[tmp].resy);
+		logDebug("WFS_RES initialized for WFS %d: %d x %d", tmp, ptc.wfs[tmp].res[0], ptc.wfs[tmp].res[1]);
 	}
 
 	else if (strcmp(var, "CS_LISTEN_IP") == 0) {
@@ -321,39 +332,38 @@ int saveConfig(char *file) {
 	return EXIT_SUCCESS;
 }
 
-void modeOpen() {
+int writeFits(char *file, float *image, long *naxes) {
+	// only writes float images at the moment
 	fitsfile *fptr;
-	long naxes[] = {256,256};
+	int status = 0;
 	long fpixel[] = {1,1};
-	int status;
+	
+	fits_create_file(&fptr, file, &status);   /* create new file */
+
+	//	fits_open_file(&fptr, "foam.fits", READWRITE, &status); // TODO: how to write files?
+	fits_create_img(fptr, -32, 2, naxes, &status);
+	fits_write_pix(fptr, TFLOAT, fpixel, \
+	               naxes[0] * naxes[1], image, &status);
+	fits_close_file(fptr, &status);
+	return status;
+}
+
+void modeOpen() {
+	int status, i;
+	long naxes[] = {256, 256};
 	
 	logInfo("Entering open loop.");
-		
+	
 	while (ptc.mode == AO_MODE_OPEN) {
 		logInfo("Operating in open loop"); // TODO
 		drvReadSensor();			// read the sensor output into ptc.image
 	
 		modParseSH();			// process SH sensor output, get displacements
 	
+//		if ((status = writeFits("foam.fits", ptc.wfs[0].image, naxes)) > 0)
+//			logErr("Error writing fits file (%d)", status);
 
-		logInfo("Writing resulting wavefront to disk (foam.fits)");
-		if (status > 0)
-			logErr("Non-local error (%d)", status);
-
-		fits_create_file(&fptr, "foam.fits", &status);   /* create new file */
-		    
-//		fits_open_file(&fptr, "foam.fits", READWRITE, &status); // TODO: how to write files?
-		if (status > 0)
-			logErr("Error in opening fits file foam.fits (%d).", status);
-		fits_create_img(fptr, -32, 2, naxes, &status);
-		if (status > 0)
-			logErr("Error in creatin fits image (%d).", status);
-		fits_write_pix(fptr, TFLOAT, fpixel, \
-		               naxes[0] * naxes[1], ptc.wfs[0].image, &status);
-		if (status > 0)
-			logErr("Error in writing image to file (%d).", status);
-		fits_close_file(fptr, &status);
-		sleep(DEBUG_SLEEP);
+//		sleep(DEBUG_SLEEP);
 	}
 	
 	modeListen();		// mode is not open anymore, decide what to to next
