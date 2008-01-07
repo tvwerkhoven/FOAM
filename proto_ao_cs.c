@@ -44,6 +44,15 @@ int main(int argc, char *argv[]) {
 	clientlist.nconn = 0;	// Init number of connections to zero
 	logInfo("Starting %s (%s) by %s",FOAM_NAME, FOAM_VERSION, FOAM_AUTHOR);
 	
+	char date[64];
+	time_t curtime;
+	struct tm *loctime;
+
+	curtime = time (NULL);
+	loctime = localtime (&curtime);
+	strftime (date, 64, "%A, %B %d %H:%M:%S, %Y (%Z).", loctime);	
+	logInfo("at %s", date);
+		
 	// BEGIN SDL INITIALIZATION
 	if (SDL_Init(SDL_INIT_VIDEO) < 0)
 		logErr("SDL init error");

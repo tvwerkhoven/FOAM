@@ -238,8 +238,6 @@ int modParseSH() {
 					// TODO: split this up in readable bits...
 				}
 			}
-		 
-
 		}
 	}
 	// ;;split up the image matrix in SHsens^2  pieces

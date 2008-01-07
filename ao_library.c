@@ -31,7 +31,7 @@
 	}
 }*/
 
-int printUTC(char **ret) {
+int printUTCDateTime(char **ret) {
 	struct tm *utc;
 	time_t t;
 	t = time(NULL);

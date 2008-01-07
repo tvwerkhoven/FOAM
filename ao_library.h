@@ -35,7 +35,8 @@ typedef unsigned char u_char;
 #include <event.h>
 #include <sys/uio.h> //?
 #include <inttypes.h> //?
-#include <xlocale.h> //?
+#include <time.h>
+//#include <xlocale.h> //?
 
 
 // STRUCTS ETC //
@@ -71,7 +72,8 @@ and if an error occured, return \c EXIT_FAILURE.
 @param [out] **ret A pointer to a date-time string (*ret) is stored in here.
 @return EXIT_SUCCESS upon success.
 */
-int printUTC(char **ret);
+int printUTCDateTime(char **ret);
+
 
 /*! 
 @brief Send data over a socket

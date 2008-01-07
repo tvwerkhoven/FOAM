@@ -29,9 +29,14 @@ config_t cs_config = {
 conntrack_t clientlist;
 
 static int formatLog(char *output, const char *prepend, const char *msg) {
-	char *timestr;
-	printUTC(&timestr); // fill timestr with date
-	timestr[24] = '\0';
+	char timestr[9];
+	time_t curtime;
+	struct tm *loctime;
+
+	curtime = time (NULL);
+	loctime = localtime (&curtime);
+	strftime (timestr, 9, "%H:%M:%S", loctime);
+
 	output[0] = '\0'; // reset string
 	
 	strcat(output,timestr);
