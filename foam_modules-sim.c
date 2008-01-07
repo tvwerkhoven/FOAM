@@ -22,18 +22,18 @@ extern config_t cs_config;
 extern control_t ptc;
 extern SDL_Surface *screen;
 
-typedef struct {
+struct simul {
 	int wind[2]; // 'windspeed' in pixels/cycle
 	long curorig[2]; // current origin
 	int shcells[2]; // number of SH cells in both directions
-} simul_t;
+};
 
-simul_t simparams = {
+struct simul simparams = {
 	.wind[0] = 10,
 	.curorig[0] = 1,
-	.curorig[1] = 1
-	.shcells[0] = 8;
-	.shcells[1] = 8;	
+	.curorig[1] = 1,
+	.shcells[0] = 8,
+	.shcells[1] = 8	
 };
 
 // We need these every time...
@@ -203,12 +203,12 @@ int modParseSH() {
 	// shsize = ssize[0]/SHsens
 	
 	int shsize[2];
-	shsize[0] = ptc.wfs[0].res[0]/simparams.shcells[0]
-	shsize[1] = ptc.wfs[0].res[1]/simparams.shcells[1]
+	shsize[0] = ptc.wfs[0].res[0]/simparams.shcells[0];
+	shsize[1] = ptc.wfs[0].res[1]/simparams.shcells[1];
 	
 	// TODO: again we only support float images here :<
 	float *subapt;
-	subapt = calloc((shsize[0] * 2 + 2) * (shsize[1] * 2 + 2)); // We store the subaperture here, +2 is to make sure we 
+	subapt = calloc((shsize[0] * 2 + 2) * (shsize[1] * 2 + 2), sizeof(subapt)); // We store the subaperture here, +2 is to make sure we 
 																// have enough space on both sides lateron (even & odd sized SHcells)
 	
 	// 
@@ -226,7 +226,8 @@ int modParseSH() {
 	// zeroside = DBLARR(shsize/2+1,shsize)
 	// zerotop = DBLARR((shsize/2+1)*2+shsize,shsize/2+1)
 	// 
-	int x,y;
+	int x, y;
+	int xx, yy;
 	for (x=0; x < simparams.shcells[0]; x++) {
 		for (y=0; y < simparams.shcells[1]; y++) {
 			// Copy the subaperture to subapt
