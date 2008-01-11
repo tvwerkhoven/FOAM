@@ -33,17 +33,6 @@
 // local prototypes
 int read_pgm(char *fname, double **dbuf, int *t_nx, int *t_ny, int *t_ngray);
 
-/*!
-@brief This function simulates a deformable mirror (membrane only probably)
-
-@params [in] *boundarymask The pgm-file containing the boundary mask (aperture)
-@params [in] *actuatorpat The pgm-file containing the DM-actuator pattern
-@params [in] nact The number of actuators, must be the same as used in \a *actuatorpat
-@params [in] *voltage The voltage array, \a nact long
-@params [in] niter The number of iterations, pass 0 for automatic choice
-@params [out] *dm The DM wavefront correction in um.
-@return EXIT_SUCCESS on success, EXIT_FAILURE otherwise
-*/
 int simDM(char *boundarymask, char *actuatorpat, int nact, float *ctrl, float *image, int niter) {
   int	 i, j, status, nx, ny, ngray1, ngray2;
   long	 ii, i_1j, i1j, ij_1, ij1;

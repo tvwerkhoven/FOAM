@@ -24,6 +24,7 @@ extern config_t cs_config;
 extern conntrack_t clientlist;
 
 SDL_Surface *screen;
+SDL_Event event;
 
 // LOCAL PROTOTYPES //
 /********************/
@@ -40,13 +41,22 @@ SDL_Surface *screen;
 	@return \c EXIT_FAILURE on failure, \c EXIT_SUCESS on successful completion.
 	*/
 int main(int argc, char *argv[]) {
+	// INIT VARS // 
+	/*************/
+	
 	pthread_t thread;
 	clientlist.nconn = 0;	// Init number of connections to zero
-	logInfo("Starting %s (%s) by %s",FOAM_NAME, FOAM_VERSION, FOAM_AUTHOR);
-	
+
 	char date[64];
 	time_t curtime;
 	struct tm *loctime;
+
+	// SIGNAL HANDLERS //
+	/*******************/
+
+//	signal(SDL_QUITEVENT, exit);
+
+	logInfo("Starting %s (%s) by %s",FOAM_NAME, FOAM_VERSION, FOAM_AUTHOR);
 
 	curtime = time (NULL);
 	loctime = localtime (&curtime);
@@ -57,17 +67,20 @@ int main(int argc, char *argv[]) {
 	if (SDL_Init(SDL_INIT_VIDEO) < 0)
 		logErr("SDL init error");
 	atexit(SDL_Quit);
+	
+	SDL_WM_SetCaption("WFS output","WFS output");
 
+	// TODO: hardcoded resolution is not nice :(
 	screen = SDL_SetVideoMode(256, 256, 0, SDL_HWSURFACE|SDL_DOUBLEBUF);
 	if ( screen == NULL ) {
-		logErr("Unable to set video: %s", SDL_GetError());
+		logErr("Unable to set video, SDL error was: %s", SDL_GetError());
 		return EXIT_FAILURE;
 	}
 
 	// BEGIN LOADING CONFIG
 	if (loadConfig("ao_config.cfg") != EXIT_SUCCESS) {
 		logErr("Loading configuration failed, aborting");
-		exit(EXIT_FAILURE);
+		return EXIT_FAILURE;
 	}
 
 	logInfo("Configuration successfully loaded...");	
@@ -372,6 +385,9 @@ void modeOpen() {
 //		if ((status = writeFits("foam.fits", ptc.wfs[0].image, naxes)) > 0)
 //			logErr("Error writing fits file (%d)", status);
 
+		if (SDL_PollEvent(&event)) 
+			if (event.type == SDL_QUIT)
+				exit(EXIT_SUCCESS);
 //		sleep(DEBUG_SLEEP);
 	}
 	
