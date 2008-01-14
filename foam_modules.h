@@ -9,6 +9,7 @@
 #define FOAM_MODULES
 
 #include <gsl/gsl_fft_complex.h> // we need this for modParseSH()
+#include <fitsio.h> // we need this to read FITS files
 
 /*!
 @brief Reads out the sensor(s) and outputs to ptc.wfs[n].image.

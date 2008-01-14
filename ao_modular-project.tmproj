@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple Computer//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
 	<key>currentDocument</key>
@@ -16,7 +16,7 @@
 			<key>filename</key>
 			<string>proto_ao_cs.c</string>
 			<key>lastUsed</key>
-			<date>2008-01-11T12:05:05Z</date>
+			<date>2008-01-14T10:13:48Z</date>
 		</dict>
 		<dict>
 			<key>filename</key>
@@ -28,7 +28,7 @@
 			<key>filename</key>
 			<string>foam_modules-sim.c</string>
 			<key>lastUsed</key>
-			<date>2008-01-11T12:06:41Z</date>
+			<date>2008-01-14T10:13:48Z</date>
 			<key>selected</key>
 			<true/>
 		</dict>
@@ -36,7 +36,7 @@
 			<key>filename</key>
 			<string>foam_modules-dm.c</string>
 			<key>lastUsed</key>
-			<date>2008-01-11T12:06:41Z</date>
+			<date>2008-01-14T10:07:14Z</date>
 		</dict>
 		<dict>
 			<key>children</key>
@@ -45,13 +45,13 @@
 					<key>filename</key>
 					<string>ao_library.c</string>
 					<key>lastUsed</key>
-					<date>2008-01-11T11:43:06Z</date>
+					<date>2008-01-14T10:13:37Z</date>
 				</dict>
 				<dict>
 					<key>filename</key>
 					<string>cs_library.c</string>
 					<key>lastUsed</key>
-					<date>2008-01-11T12:00:49Z</date>
+					<date>2008-01-14T10:13:38Z</date>
 				</dict>
 				<dict>
 					<key>filename</key>
@@ -72,13 +72,13 @@
 					<key>filename</key>
 					<string>foam_modules.h</string>
 					<key>lastUsed</key>
-					<date>2008-01-11T12:00:47Z</date>
+					<date>2008-01-14T10:07:13Z</date>
 				</dict>
 				<dict>
 					<key>filename</key>
 					<string>ao_library.h</string>
 					<key>lastUsed</key>
-					<date>2008-01-11T12:00:22Z</date>
+					<date>2008-01-14T10:13:37Z</date>
 				</dict>
 				<dict>
 					<key>filename</key>
@@ -90,7 +90,7 @@
 					<key>filename</key>
 					<string>cs_library.h</string>
 					<key>lastUsed</key>
-					<date>2008-01-11T12:00:19Z</date>
+					<date>2008-01-14T10:13:37Z</date>
 				</dict>
 				<dict>
 					<key>filename</key>
@@ -130,7 +130,7 @@
 				<key>column</key>
 				<integer>0</integer>
 				<key>line</key>
-				<integer>7</integer>
+				<integer>0</integer>
 			</dict>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
@@ -142,9 +142,9 @@
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>0</integer>
+				<integer>19</integer>
 				<key>line</key>
-				<integer>75</integer>
+				<integer>26</integer>
 			</dict>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
@@ -184,9 +184,9 @@
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>18</integer>
+				<integer>14</integer>
 				<key>line</key>
-				<integer>9</integer>
+				<integer>7</integer>
 			</dict>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
@@ -212,23 +212,39 @@
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>1</integer>
+				<integer>33</integer>
 				<key>line</key>
-				<integer>436</integer>
+				<integer>44</integer>
 			</dict>
+			<key>columnSelection</key>
+			<false/>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>420</integer>
+			<integer>28</integer>
+			<key>selectFrom</key>
+			<dict>
+				<key>column</key>
+				<integer>29</integer>
+				<key>line</key>
+				<integer>44</integer>
+			</dict>
+			<key>selectTo</key>
+			<dict>
+				<key>column</key>
+				<integer>33</integer>
+				<key>line</key>
+				<integer>44</integer>
+			</dict>
 		</dict>
 		<key>foam_modules.h</key>
 		<dict>
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>0</integer>
-				<key>line</key>
 				<integer>10</integer>
+				<key>line</key>
+				<integer>11</integer>
 			</dict>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
@@ -240,14 +256,30 @@
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>17</integer>
+				<integer>2</integer>
 				<key>line</key>
-				<integer>43</integer>
+				<integer>77</integer>
 			</dict>
+			<key>columnSelection</key>
+			<false/>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>28</integer>
+			<integer>49</integer>
+			<key>selectFrom</key>
+			<dict>
+				<key>column</key>
+				<integer>0</integer>
+				<key>line</key>
+				<integer>65</integer>
+			</dict>
+			<key>selectTo</key>
+			<dict>
+				<key>column</key>
+				<integer>2</integer>
+				<key>line</key>
+				<integer>77</integer>
+			</dict>
 		</dict>
 		<key>proto_ao_ui.c</key>
 		<dict>
@@ -311,6 +343,6 @@
 	<key>showFileHierarchyDrawer</key>
 	<true/>
 	<key>windowFrame</key>
-	<string>{{218, 113}, {977, 657}}</string>
+	<string>{{205, 121}, {977, 657}}</string>
 </dict>
 </plist>

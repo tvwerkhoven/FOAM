@@ -6,7 +6,6 @@
 
 // INCLUDES //
 /************/
-#include <cfitsio/fitsio.h>
 #include <fcntl.h>
 #include "SDL.h" 	// most portable way according to 
 					//http://www.libsdl.org/cgi/docwiki.cgi/FAQ_20Including_20SDL_20Headers
