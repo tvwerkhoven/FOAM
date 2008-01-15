@@ -23,11 +23,14 @@ extern control_t ptc;
 extern SDL_Surface *screen;
 
 struct simul {
-	int wind[2]; 		// 'windspeed' in pixels/cycle
-	long curorig[2]; 	// current origin
-	int shcells[2]; 	// number of SH cells in both directions
-	float *simimg; 		// pointer to the image we use to simulate stuff
-	long simimgres[2];	// resolution of the simulation image
+	int wind[2]; 			// 'windspeed' in pixels/cycle
+	long curorig[2]; 		// current origin
+	int shcells[2]; 		// number of SH cells in both directions
+	float *simimg; 			// pointer to the image we use to simulate stuff
+	long simimgres[2];		// resolution of the simulation image
+	fftw_complex *shin;		// input for fft algorithm
+	fftw_complex *shout;	// output for fft (but shin can be used if fft is inplace)
+	fftw_plan plan_forward; // plan, one time calculation on how to calculate ffts fastest
 };
 
 struct simul simparams = {
@@ -37,7 +40,7 @@ struct simul simparams = {
 	.curorig[1] = 1,
 	.shcells[0] = 8,
 	.shcells[1] = 8,
-	.simimg = NULL
+	.simimg = NULL,
 };
 
 // We need these every time, declare them globally
@@ -48,7 +51,6 @@ int anynul = 0;
 
 int drvReadSensor() {
 	int i;
-	int once=0;
 	logDebug("Now reading %d sensors, origin is at (%d,%d).", ptc.wfs_count, simparams.curorig[0], simparams.curorig[1]);
 	// TODO: simulate object, atmosphere, telescope, TT, DM, WFS (that's a lot :O)
 	
@@ -72,7 +74,8 @@ int drvReadSensor() {
 	
 
 	//displayImg(ptc.wfs[0].image, ptc.wfs[0].res);
-	
+
+
 	if (simTel("aperture.fits", ptc.wfs[0].res, ptc.wfs[0].image) != EXIT_SUCCESS) { // Simulate telescope (from aperture.fits)
 		if (status > 0) {
 			fits_get_errstatus(status, errmsg);
@@ -83,7 +86,8 @@ int drvReadSensor() {
 	}
 	
 	
-	//displayImg(simparams.simimg, simparams.simimgres);
+	//displayImg(ptc.wfs[0].image, ptc.wfs[0].res);
+	
 		
 	logDebug("Now simulating %d WFC(s).", ptc.wfc_count);
 	//for (i=0; i < ptc.wfc_count; i++)
@@ -127,6 +131,8 @@ int drvReadSensor() {
 		simparams.wind[1] *= -1;						// Reverse Y wind speed
 		simparams.curorig[1] += 2*simparams.wind[1];	// move in the new wind direction
 	}
+
+	//displayImg(ptc.wfs[0].image, ptc.wfs[0].res);
 	
 	return EXIT_SUCCESS;
 }
@@ -272,6 +278,7 @@ int simAtm(char *file, long res[2], long origin[2], float *image) {
 	}
 	
 	// TODO: How do we copy this efficiently?
+	// TODO: matrix indices exactly the wrong way around (i,j) ~ (y,x)
 	for (j=0; j<res[0]; j++) // y coordinate
 	{
 		for (i=0; i<res[1]; i++) // x coordinate 
@@ -304,6 +311,7 @@ int drvSetActuator() {
 
 int modParseSH() {
 	logDebug("Parsing SH WFSs now.");
+	
 
 	// we need to port this to C:
 
@@ -314,30 +322,53 @@ int modParseSH() {
 	// shsize = ssize[0]/SHsens
 	
 	int shsize[2];
-	float *subapt;
-	int i;
+	//float *subapt;
+	int i,j;
+	int nx, ny;
 	int xc, yc;
-	int xp, yp;
-
-	gsl_fft_complex_wavetable * wavetable;
-	gsl_fft_complex_workspace * workspace;	
-
-	double *csubapt; // TODO: do we need double precision here?
+	int jp, ip;
+	
+	//double *csubapt; // TODO: do we need double precision here?
 	float tmp;
-		
+	double sum;
+
 	// we have simparams.shcells[0] by simparams.shcells[1] SH cells, so the size of each cell is:
 	shsize[0] = ptc.wfs[0].res[0]/simparams.shcells[0];
 	shsize[1] = ptc.wfs[0].res[1]/simparams.shcells[1];
-	
-	// TODO: again we only support float images here :<
 
-	int pts = (shsize[0] * 2 + 2) * ( shsize[1] * 2 + 2);
-	subapt = calloc(pts, sizeof(*ptc.wfs[0].image)); // We store the subaperture here, +2 is to make sure we 
-																// have enough space on both sides lateron (even & odd sized SHcells)
-	if (subapt == NULL) {
-		logErr("Failed to allocate memory for subaperture.");
+	nx = (shsize[0] * 2 + 2);
+	ny = (shsize[1] * 2 + 2);
+	
+	// init FFT plan, FFTW_ESTIMATE could be replaces by MEASURE or sth
+	if (simparams.plan_forward == NULL) {
+		logDebug("Setting up plan for fftw");
+		simparams.plan_forward = fftw_plan_dft_2d(nx, ny, simparams.shin, simparams.shout, FFTW_FORWARD, FFTW_ESTIMATE );
+	}
+		
+	// init data structures for images, fill with zeroes (no calloc here?)
+	if (simparams.shin == NULL) {
+		simparams.shin = fftw_malloc ( sizeof ( fftw_complex ) * nx * ny );
+		for (i=0; i< nx*ny; i++)
+			simparams.shin[i][0] = simparams.shin[i][1] = 0;
+	}
+	if (simparams.shout == NULL) {
+		simparams.shout = fftw_malloc ( sizeof ( fftw_complex ) * nx * ny );
+		for (i=0; i< nx*ny; i++)
+			simparams.shout[i][0] = simparams.shout[i][1] = 0;
+	}
+
+	if (simparams.shout == NULL || simparams.shin == NULL || simparams.plan_forward == NULL) {
+		logDebug("Allocation of memory for FFT failed.");
 		return EXIT_FAILURE;
 	}
+	
+	// TODO: again we only support float images here :<
+	//subapt = calloc(nx * ny, sizeof(*ptc.wfs[0].image)); // We store the subaperture here, +2 is to make sure we 
+															// have enough space on both sides lateron (even & odd sized SHcells)
+/*	if (subapt == NULL) {
+		logErr("Failed to allocate memory for subaperture.");
+		return EXIT_FAILURE;
+	}*/
 	
 	// 
 	// if (shsize*SHsens NE ssize[0]) then $
@@ -355,51 +386,93 @@ int modParseSH() {
 	// zerotop = DBLARR((shsize/2+1)*2+shsize,shsize/2+1)
 	// 
 	
+	logDebug("Beginning imaging simulation.");
+
+	/*for (i=0; i<ptc.wfs[0].res[0]; i++) // y coordinate
+	{
+		for (j=0; j<ptc.wfs[0].res[1]; j++) // x coordinate 
+		{
+//			image[j + i*res[0]] = simparams.simimg[(j+origin[0])+(i+origin[1])*simparams.simimgres[0]];
+			sum += ptc.wfs[0].image[i*ptc.wfs[0].res[0] + j];
+			//printf("%2.2f ", ptc.wfs[0].image[i*ptc.wfs[0].res[0] + j]);
+//			if (i% 100 == 0 && j % 75 == 0) 
+//				logDebug("set coordinate %d to %f (should be %f)", 
+//					i + j*res[0], image[i + j*res[0]], simparams.simimg[i+j*res[0]]);
+		}
+		//printf("\n");
+	}
+	logDebug("Img sum is %lf", sum);
+	exit(0); */
 	// now we loop over each subaperture:
-	for (yc=0; yc<simparams.shcells[1]; yc++) {
-		for (xc=0; xc<simparams.shcells[0]; xc++) {
+	for (yc=1; yc<simparams.shcells[1]; yc++) {// TODO THIS MUST START AT 0
+		for (xc=1; xc<simparams.shcells[0]; xc++) {
 			// we're at subapt (xc, yc) here...
 			// loop over all pixels in the subaperture, copy them to subapt:
-			for (yp=0; yp<shsize[1]; yp++) {
-				for (xp=0; xp<shsize[0]; xp++) {
-					// we need the ypth row PLUS the rows that we skip at the top (shsize[1]/2+1)
+			printf("subapt is:");
+			for (ip=0; ip<shsize[1]; ip++) { 
+				for (jp=0; jp<shsize[0]; jp++) {
+					// we need the ipth row PLUS the rows that we skip at the top (shsize[1]/2+1)
 					// the width is not shsize[0] but twice that plus 2, so mulyiply the row number
 					// with that. Then we need to add the column number PLUS the margin at the beginning 
 					// which is shsize[0]/2 + 1, THAT's the right subapt location.
-					// For the image itself, we need to skip to the (yp,xp)th subaperture,
+					// For the image itself, we need to skip to the (ip,jp)th subaperture,
 					// which is located at pixel yc * the height of a cell * the width of the picture
 					// and the x coordinate times the width of a cell time, that's at least the first
 					// subapt pixel. After that we add the subaperture row we want which is located at
-					// pixel yp * the width of the whole image plus the x coordinate
-					subapt[(yp+ shsize[1]/2 +1)*(shsize[0]*2+2) + xp + shsize[0]/2 + 1] = \
-					ptc.wfs[0].image[yc*shsize[1]*ptc.wfs[0].res[0] + xc*shsize[0] + yp*ptc.wfs[0].res[0] + xp];
+					// pixel ip * the width of the whole image plus the x coordinate
+					simparams.shin[(ip+ shsize[1]/2 +1)*nx + jp + shsize[0]/2 + 1][0] = \
+						ptc.wfs[0].image[yc*shsize[1]*ptc.wfs[0].res[0] + xc*shsize[0] + ip*ptc.wfs[0].res[0] + jp];
+					//printf("%f ",ptc.wfs[0].image[yc*shsize[1]*ptc.wfs[0].res[0] + xc*shsize[0] + ip*ptc.wfs[0].res[0] + jp]);
 				}
+			//	printf("\n");
 			}
+
 			
 			// now image the subaperture, first generate EM wave amplitude
 			// this has to be done using complex numbers.
 			// we know that exp ( i * phi ) = cos(phi) + i sin(phi),
 			// so we split it up in a real and a imaginary part
-			csubapt = calloc(2*pts, sizeof(*csubapt));
-			for (yp=shsize[1]/2+1; yp<shsize[1] + shsize[1]/2+1; yp++) {
-				for (xp=shsize[0]/2+1; xp<shsize[0]+shsize[0]/2+1; xp++) {
-					tmp = subapt[yp*(shsize[0]*2+2) + xp];
-					//use gsl_complex_packed_array type for complex data
-					csubapt[yp*(shsize[0]*2+2) + xp] = cos(tmp);
-					csubapt[yp*(shsize[0]*2+2) + xp + 1] = sin(tmp);
+			
+			//csubapt = calloc(2*pts, sizeof(*csubapt));
+			printf("Calculating EM:\n");
+			for (ip=shsize[1]/2+1; ip<shsize[1] + shsize[1]/2+1; ip++) {
+				for (jp=shsize[0]/2+1; jp<shsize[0]+shsize[0]/2+1; jp++) {
+					tmp = simparams.shin[ip*nx + jp][0];
+					//use fftw_complex datatype
+					simparams.shin[ip*nx + jp][0] = cos(tmp);
+					simparams.shin[ip*nx + jp][1] = sin(tmp);
+					//printf("(%f,%f) ", simparams.shin[ip*nx + jp][0], simparams.shin[ip*nx + jp][1]);
 				}
+				//printf("\n");
 			}
+			
+			printf("=============================\n=============================\n=============================n");
+			printf("We're going to FFT this:\n");
+			for (ip=0; ip<ny; ip++) {
+				for (jp=0; jp<nx; jp++) {
+//					tmp = simparams.shin[ip*nx + jp][0];
+					//use fftw_complex datatype
+//					simparams.shin[ip*nx + jp][0] = cos(tmp);
+//					simparams.shin[ip*nx + jp][1] = sin(tmp);
+					simparams.shin[ip*nx + jp][0] = simparams.shin[ip*nx + jp][1] = 1;
+					simparams.shout[ip*nx + jp][0] = simparams.shout[ip*nx + jp][1] = 1;
+					//printf("(%f,%f) ", simparams.shin[ip*nx + jp][0], simparams.shin[ip*nx + jp][1]);
+				}
+				//printf("\n");
+			}
+			// TODO: disabling the following line gives a bus error? WTF? It's already defined above!
+			simparams.plan_forward = fftw_plan_dft_2d(nx, ny, simparams.shin, simparams.shout, FFTW_FORWARD, FFTW_ESTIMATE );
+			
 
 			// now calculate the  FFT, pts is the number of (complex) datapoints
-			wavetable = gsl_fft_complex_wavetable_alloc (pts);
-			workspace = gsl_fft_complex_workspace_alloc (pts);
-			gsl_fft_complex_forward(csubapt, 1, pts, wavetable, workspace);
-			
+			fftw_execute ( simparams.plan_forward );
+			exit(0);	
 			// now calculate the absolute squared value of that, store it in the subapt thing
-			for (yp=0; yp<(2*shsize[1]+2); yp++) {
-				for (xp=0; xp<(2*shsize[0]+2); xp++) {
-					subapt[yp*(shsize[0]*2+2) + xp] = pow(csubapt[yp*(shsize[0]*2+2) + xp],2) + pow(csubapt[yp*(shsize[0]*2+2) + xp + 1],2);
-					//printf("%f ", subapt[yp*(shsize[0]*2+2) + xp]);
+			for (ip=0; ip<(2*shsize[1]+2); ip++) {
+				for (jp=0; jp<(2*shsize[0]+2); jp++) {
+					simparams.shin[ip*(shsize[0]*2+2) + jp][0] = \
+					 abs(pow(simparams.shout[ip*nx + jp][0],2) + pow(simparams.shout[ip*nx + jp][1],2));
+					//printf("%f ", subapt[ip*(shsize[0]*2+2) + jp]);
 					//printf("%d ",(int) subapt[yc*(shsize[0]*2+2) + xc]);
 				}
 				//printf("\n");
@@ -412,25 +485,23 @@ int modParseSH() {
 		for (xc=0; xc<simparams.shcells[0]; xc++) {
 			// we're at subapt (xc, yc) here...
 			// loop over all pixels in the subaperture, copy them to subapt:
-			for (yp=0; yp<shsize[1]; yp++) {
-				for (xp=0; xp<shsize[0]; xp++) {
-					// we need the ypth row PLUS the rows that we skip at the top (shsize[1]/2+1)
+			for (ip=0; ip<shsize[1]; ip++) {
+				for (jp=0; jp<shsize[0]; jp++) {
+					// we need the ipth row PLUS the rows that we skip at the top (shsize[1]/2+1)
 					// the width is not shsize[0] but twice that plus 2, so mulyiply the row number
 					// with that. Then we need to add the column number PLUS the margin at the beginning 
 					// which is shsize[0]/2 + 1, THAT's the right subapt location.
-					// For the image itself, we need to skip to the (yp,xp)th subaperture,
+					// For the image itself, we need to skip to the (ip,jp)th subaperture,
 					// which is located at pixel yc * the height of a cell * the width of the picture
 					// and the x coordinate times the width of a cell time, that's at least the first
 					// subapt pixel. After that we add the subaperture row we want which is located at
-					// pixel yp * the width of the whole image plus the x coordinate
-					ptc.wfs[0].image[yc*shsize[1]*ptc.wfs[0].res[0] + xc*shsize[0] + yp*ptc.wfs[0].res[0] + xp] = \
-						subapt[(yp+ shsize[1]/2 +1)*(shsize[0]*2+2) + xp + shsize[0]/2 + 1];
+					// pixel ip * the width of the whole image plus the x coordinate
+					ptc.wfs[0].image[yc*shsize[1]*ptc.wfs[0].res[0] + xc*shsize[0] + ip*ptc.wfs[0].res[0] + jp] = \
+						simparams.shin[(ip+ shsize[1]/2 +1)*nx + jp + shsize[0]/2 + 1][0];
 				}
 			}
 		}
 	}
-	gsl_fft_complex_wavetable_free(wavetable);
-	gsl_fft_complex_workspace_free(workspace);	
 
 	displayImg(ptc.wfs[0].image, ptc.wfs[0].res); // TODO: totale crap?
 	return EXIT_SUCCESS;

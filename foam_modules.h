@@ -8,7 +8,7 @@
 #ifndef FOAM_MODULES
 #define FOAM_MODULES
 
-#include <gsl/gsl_fft_complex.h> // we need this for modParseSH()
+#include <fftw3.h> // we need this for modParseSH()
 #include <fitsio.h> // we need this to read FITS files
 
 /*!
