@@ -41,6 +41,7 @@ struct simul simparams = {
 	.shcells[0] = 8,
 	.shcells[1] = 8,
 	.simimg = NULL,
+	.plan_forward = NULL,
 };
 
 // We need these every time, declare them globally
@@ -338,13 +339,7 @@ int modParseSH() {
 
 	nx = (shsize[0] * 2 + 2);
 	ny = (shsize[1] * 2 + 2);
-	
-	// init FFT plan, FFTW_ESTIMATE could be replaces by MEASURE or sth
-	if (simparams.plan_forward == NULL) {
-		logDebug("Setting up plan for fftw");
-		simparams.plan_forward = fftw_plan_dft_2d(nx, ny, simparams.shin, simparams.shout, FFTW_FORWARD, FFTW_ESTIMATE );
-	}
-		
+
 	// init data structures for images, fill with zeroes (no calloc here?)
 	if (simparams.shin == NULL) {
 		simparams.shin = fftw_malloc ( sizeof ( fftw_complex ) * nx * ny );
@@ -356,6 +351,12 @@ int modParseSH() {
 		for (i=0; i< nx*ny; i++)
 			simparams.shout[i][0] = simparams.shout[i][1] = 0;
 	}
+	// init FFT plan, FFTW_ESTIMATE could be replaces by MEASURE or sth
+	if (simparams.plan_forward == NULL) {
+		logDebug("Setting up plan for fftw");
+		simparams.plan_forward = fftw_plan_dft_2d(nx, ny, simparams.shin, simparams.shout, FFTW_FORWARD, FFTW_ESTIMATE );
+	}
+		
 
 	if (simparams.shout == NULL || simparams.shin == NULL || simparams.plan_forward == NULL) {
 		logDebug("Allocation of memory for FFT failed.");
@@ -403,12 +404,14 @@ int modParseSH() {
 	}
 	logDebug("Img sum is %lf", sum);
 	exit(0); */
+	
+
 	// now we loop over each subaperture:
-	for (yc=1; yc<simparams.shcells[1]; yc++) {// TODO THIS MUST START AT 0
-		for (xc=1; xc<simparams.shcells[0]; xc++) {
+	for (yc=0; yc<simparams.shcells[1]; yc++) {
+		for (xc=0; xc<simparams.shcells[0]; xc++) {
 			// we're at subapt (xc, yc) here...
 			// loop over all pixels in the subaperture, copy them to subapt:
-			printf("subapt is:");
+//			printf("subapt is:");
 			for (ip=0; ip<shsize[1]; ip++) { 
 				for (jp=0; jp<shsize[0]; jp++) {
 					// we need the ipth row PLUS the rows that we skip at the top (shsize[1]/2+1)
@@ -434,7 +437,7 @@ int modParseSH() {
 			// so we split it up in a real and a imaginary part
 			
 			//csubapt = calloc(2*pts, sizeof(*csubapt));
-			printf("Calculating EM:\n");
+//			printf("Calculating EM:\n");
 			for (ip=shsize[1]/2+1; ip<shsize[1] + shsize[1]/2+1; ip++) {
 				for (jp=shsize[0]/2+1; jp<shsize[0]+shsize[0]/2+1; jp++) {
 					tmp = simparams.shin[ip*nx + jp][0];
@@ -446,7 +449,7 @@ int modParseSH() {
 				//printf("\n");
 			}
 			
-			printf("=============================\n=============================\n=============================n");
+			/*printf("=============================\n=============================\n=============================n");
 			printf("We're going to FFT this:\n");
 			for (ip=0; ip<ny; ip++) {
 				for (jp=0; jp<nx; jp++) {
@@ -459,14 +462,12 @@ int modParseSH() {
 					//printf("(%f,%f) ", simparams.shin[ip*nx + jp][0], simparams.shin[ip*nx + jp][1]);
 				}
 				//printf("\n");
-			}
-			// TODO: disabling the following line gives a bus error? WTF? It's already defined above!
-			simparams.plan_forward = fftw_plan_dft_2d(nx, ny, simparams.shin, simparams.shout, FFTW_FORWARD, FFTW_ESTIMATE );
+			}*/
 			
 
 			// now calculate the  FFT, pts is the number of (complex) datapoints
 			fftw_execute ( simparams.plan_forward );
-			exit(0);	
+
 			// now calculate the absolute squared value of that, store it in the subapt thing
 			for (ip=0; ip<(2*shsize[1]+2); ip++) {
 				for (jp=0; jp<(2*shsize[0]+2); jp++) {
@@ -480,7 +481,7 @@ int modParseSH() {
 		}
 	}
 	logDebug("Parsed subaperture imaging, copying to main image.");
-	
+	displayImg(ptc.wfs[0].image, ptc.wfs[0].res); 	
 	for (yc=0; yc<simparams.shcells[1]; yc++) {
 		for (xc=0; xc<simparams.shcells[0]; xc++) {
 			// we're at subapt (xc, yc) here...
@@ -503,7 +504,7 @@ int modParseSH() {
 		}
 	}
 
-	displayImg(ptc.wfs[0].image, ptc.wfs[0].res); // TODO: totale crap?
+
 	return EXIT_SUCCESS;
 	
 	// ;;split up the image matrix in SHsens^2  pieces
