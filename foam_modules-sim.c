@@ -410,8 +410,21 @@ int modParseSH() {
 	for (yc=0; yc<simparams.shcells[1]; yc++) {
 		for (xc=0; xc<simparams.shcells[0]; xc++) {
 			// we're at subapt (xc, yc) here...
+			
+			// we only want the center subapts:
+			if ((yc-3.5)*(yc-3.5)+(xc-3.5)*(xc-3.5) > 10.0) {
+				logDebug("Skipping subapt (%d,%d)", xc,yc);
+				continue;
+			}
+			
+			logDebug("Parsing subapt (%d,%d)", xc,yc);
+			// We want to set the helper arrays to zero first
+			for (i=0; i< nx*ny; i++)
+				simparams.shin[i][0] = simparams.shin[i][1] = 0;
+			for (i=0; i< nx*ny; i++)
+				simparams.shout[i][0] = simparams.shout[i][1] = 0;
+					
 			// loop over all pixels in the subaperture, copy them to subapt:
-//			printf("subapt is:");
 			for (ip=0; ip<shsize[1]; ip++) { 
 				for (jp=0; jp<shsize[0]; jp++) {
 					// we need the ipth row PLUS the rows that we skip at the top (shsize[1]/2+1)
@@ -446,8 +459,8 @@ int modParseSH() {
 					simparams.shin[ip*nx + jp][1] = sin(tmp);
 					//printf("(%f,%f) ", simparams.shin[ip*nx + jp][0], simparams.shin[ip*nx + jp][1]);
 				}
-				//printf("\n");
 			}
+
 			
 			/*printf("=============================\n=============================\n=============================n");
 			printf("We're going to FFT this:\n");
@@ -463,25 +476,54 @@ int modParseSH() {
 				}
 				//printf("\n");
 			}*/
+			// now calculate the absolute squared value of that, store it in the subapt thing
+/*			for (ip=0; ip<ny; ip++) {
+				for (jp=0; jp<nx; jp++) {
+					//printf("(%3.2f,%3.2f) ", simparams.shin[ip*nx + jp][0], simparams.shin[ip*nx + jp][1]);
+					//printf("%f ", subapt[ip*(shsize[0]*2+2) + jp]);
+//					if (simparams.shin[ip*nx + jp][0] < -1) {
+//						printf("!(%d,%d) ", yc, xc);
 			
+					}
+				}
+				//printf("\n");
+			}*/
+
 
 			// now calculate the  FFT, pts is the number of (complex) datapoints
 			fftw_execute ( simparams.plan_forward );
-
+			float max=0, min=0;
 			// now calculate the absolute squared value of that, store it in the subapt thing
-			for (ip=0; ip<(2*shsize[1]+2); ip++) {
-				for (jp=0; jp<(2*shsize[0]+2); jp++) {
-					simparams.shin[ip*(shsize[0]*2+2) + jp][0] = \
+			for (ip=0; ip<ny; ip++) {
+				for (jp=0; jp<nx; jp++) {
+					//printf("%3.2f ", simparams.shin[ip*nx + jp][0]);
+					simparams.shin[ip*nx + jp][0] = \
 					 abs(pow(simparams.shout[ip*nx + jp][0],2) + pow(simparams.shout[ip*nx + jp][1],2));
 					//printf("%f ", subapt[ip*(shsize[0]*2+2) + jp]);
-					//printf("%d ",(int) subapt[yc*(shsize[0]*2+2) + xc]);
+					if (simparams.shin[ip*nx + jp][0] > max)
+						max = simparams.shin[ip*nx + jp][0];
+					if (simparams.shin[ip*nx + jp][0] < min)
+						min = simparams.shin[ip*nx + jp][0];
 				}
 				//printf("\n");
 			}
+			printf("(%d,%d) max: %f, min: %f\n", xc, yc, max, min);
+			
+			// copy subaparture back to main image
+			for (ip=0; ip<shsize[1]; ip++) { 
+				for (jp=0; jp<shsize[0]; jp++) {
+					ptc.wfs[0].image[yc*shsize[1]*ptc.wfs[0].res[0] + xc*shsize[0] + ip*ptc.wfs[0].res[0] + jp] = \
+						simparams.shin[(ip+ shsize[1]/2 +1)*nx + jp + shsize[0]/2 + 1][0];
+				}
+			}
+
 		}
 	}
 	logDebug("Parsed subaperture imaging, copying to main image.");
 	displayImg(ptc.wfs[0].image, ptc.wfs[0].res); 	
+	
+	sleep(5);
+	exit(0);
 	for (yc=0; yc<simparams.shcells[1]; yc++) {
 		for (xc=0; xc<simparams.shcells[0]; xc++) {
 			// we're at subapt (xc, yc) here...
