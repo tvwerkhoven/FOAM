@@ -11,7 +11,7 @@ AR	= ar
 LD	= ld
 RANLIB	= ranlib
 
-MFLAGS	= -pipe -Wall -Wextra -Wshadow -lpthread  -std=c99
+MFLAGS	= -pipe -Wall -Wextra -lpthread  -std=c99 # -Wshadow
 GFLAGS	= -g -DDEBUG_ITIFG=255
 IFLAGS  = -I. -L.
 LFLAGS  = -levent -lcfitsio -lfftw3 -lcfitsio -lm

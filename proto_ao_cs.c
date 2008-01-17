@@ -48,18 +48,18 @@ int main(int argc, char *argv[]) {
 	clientlist.nconn = 0;	// Init number of connections to zero
 
 	char date[64];
-	time_t curtime;
+//	time_t curtime;
 	struct tm *loctime;
 
 	// SIGNAL HANDLERS //
 	/*******************/
 
-//	signal(SDL_QUITEVENT, exit);
+	signal(SIGINT, catchSIGINT);
 
 	logInfo("Starting %s (%s) by %s",FOAM_NAME, FOAM_VERSION, FOAM_AUTHOR);
 
-	curtime = time (NULL);
-	loctime = localtime (&curtime);
+	ptc.starttime = time (NULL);
+	loctime = localtime (&ptc.starttime);
 	strftime (date, 64, "%A, %B %d %H:%M:%S, %Y (%Z).", loctime);	
 	logInfo("at %s", date);
 		
@@ -101,6 +101,30 @@ int main(int argc, char *argv[]) {
 	modeListen(); 			// After initialization, start in open mode
 
 	return EXIT_SUCCESS;
+}
+
+void catchSIGINT() {
+	// reset signal handler, as noted on http://www.cs.cf.ac.uk/Dave/C/node24.html
+	signal(SIGINT, catchSIGINT);
+	
+	// stop the framework
+	stopFOAM();
+}
+
+void stopFOAM() {
+	char date[64];
+	struct tm *loctime;
+	time_t end;
+	
+	end = time (NULL);
+	loctime = localtime (&end);
+	strftime (date, 64, "%A, %B %d %H:%M:%S, %Y (%Z).", loctime);	
+	
+	logInfo("Stopping FOAM at %s", date);
+	logInfo("Ran for %ld seconds and parsed %ld frames (framerate: %f).", \
+		end-ptc.starttime, ptc.frames, ptc.frames/(float) (end-ptc.starttime));
+
+	exit(0);
 }
 
 int parseConfig(char *var, char *value) {
@@ -189,10 +213,15 @@ int parseConfig(char *var, char *value) {
 		if (strstr(value,"{") == NULL || strstr(value,"}") == NULL || strstr(value,",") == NULL) 
 			return EXIT_FAILURE; // return if we don't have the {x,y} syntax
 
-		ptc.wfs[tmp].cellsx = strtol(strtok(value,"{,}"), NULL, 10);
-		ptc.wfs[tmp].cellsy = strtol(strtok(NULL ,"{,}"), NULL, 10);
+		ptc.wfs[tmp].cells[0] = strtol(strtok(value,"{,}"), NULL, 10);
+		ptc.wfs[tmp].cells[1] = strtol(strtok(NULL ,"{,}"), NULL, 10);
+		
+		if ((ptc.wfs[tmp].subc = calloc(ptc.wfs[tmp].cells[0] * ptc.wfs[tmp].cells[1], sizeof(*ptc.wfs[tmp].subc))) == NULL) {
+			logErr("Cannot allocate memory for subaperture coordinates");
+			return EXIT_FAILURE;
+		}
 
-		logDebug("WFS_CELLS initialized for WFS %d: %d x %d", tmp, ptc.wfs[tmp].cellsx, ptc.wfs[tmp].cellsy);
+		logDebug("WFS_CELLS initialized for WFS %d: %d x %d", tmp, ptc.wfs[tmp].cells[0], ptc.wfs[tmp].cells[1]);
 	}
 	else if (strstr(var, "WFS_RES") != NULL){
 		if (ptc.wfs == NULL) {
@@ -208,9 +237,11 @@ int parseConfig(char *var, char *value) {
 		ptc.wfs[tmp].res[1] = strtol(strtok(NULL ,"{,}"), NULL, 10);
 		
 		if (((ptc.wfs[tmp].image = calloc(ptc.wfs[tmp].res[0] * ptc.wfs[tmp].res[1], sizeof(ptc.wfs[tmp].image))) == NULL) ||
-		((ptc.wfs[tmp].dark = calloc(ptc.wfs[tmp].res[0] * ptc.wfs[tmp].res[1], sizeof(ptc.wfs[tmp].image))) == NULL) ||
-		((ptc.wfs[tmp].flat = calloc(ptc.wfs[tmp].res[0] * ptc.wfs[tmp].res[1], sizeof(ptc.wfs[tmp].image))) == NULL)) {
-			logErr("Failed to allocate image memory (image, dark & flat).");
+		((ptc.wfs[tmp].darkim = calloc(ptc.wfs[tmp].res[0] * ptc.wfs[tmp].res[1], sizeof(ptc.wfs[tmp].darkim))) == NULL) ||
+		((ptc.wfs[tmp].flatim = calloc(ptc.wfs[tmp].res[0] * ptc.wfs[tmp].res[1], sizeof(ptc.wfs[tmp].flatim))) == NULL) ||
+		((ptc.wfs[tmp].corrim = calloc(ptc.wfs[tmp].res[0] * ptc.wfs[tmp].res[1], sizeof(ptc.wfs[tmp].corrim))) == NULL)
+		) {
+			logErr("Failed to allocate image memory (image, dark, flat or corrected).");
 			return EXIT_FAILURE;
 		}
 		
@@ -371,28 +402,40 @@ int writeFits(char *file, float *image, long *naxes) {
 }
 
 void modeOpen() {
-	int status, i;
-	long naxes[] = {256, 256};
+//	int status, i;
+//	long naxes[] = {256, 256};
 	
 	logInfo("Entering open loop.");
 	
+	// apply some initial checks
+	
+	// read first image from sensor `manually'
+//	if (drvReadSensor() != EXIT_SUCCESS)		// read the sensor output into ptc.image
+//		return;
+		
+	// TODO: problem: in simulation we first need to select the subapts, 
+	// but we cannot if we don't know the telescope image?
+	// check subapertures:
+	//selectSubapts(ptc.wfs[0].image, 1, 3, 0); // check samini (1) and samxr (3)
+	
+	
 	while (ptc.mode == AO_MODE_OPEN) {
 		logInfo("Operating in open loop"); 			// TODO
+		
 		if (drvReadSensor() != EXIT_SUCCESS)		// read the sensor output into ptc.image
-			return EXIT_FAILURE;
-		displayImg(ptc.wfs[0].image, ptc.wfs[0].res);
+			return;
+
 			
 		if (modParseSH() != EXIT_SUCCESS)			// process SH sensor output, get displacements
-			return EXIT_FAILURE;
+			return;
+			
+		displayImg(ptc.wfs[0].image, ptc.wfs[0].res);
+				
+		ptc.frames++;								// increment the amount of frames parsed		
 
-
-		
-//		if ((status = writeFits("foam.fits", ptc.wfs[0].image, naxes)) > 0)
-//			logErr("Error writing fits file (%d)", status);
-
-		if (SDL_PollEvent(&event)) 
+		if (SDL_PollEvent(&event))
 			if (event.type == SDL_QUIT)
-				exit(EXIT_SUCCESS);
+				stopFOAM();
 //		sleep(DEBUG_SLEEP);
 	}
 	

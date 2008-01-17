@@ -42,6 +42,21 @@ DM.
 int modParseSH();
 
 /*!
+@brief Simulates the SH sensor
+
+TODO: add info
+*/
+int modSimSH();
+
+/*!
+@brief Calculates the sum of absolute differences for two subapertures
+*/
+float sae(float *subapt, float *refapt, long res[2]);
+
+void imcal(float *corrim, float *image, float *darkim, float *flatim);
+
+
+/*!
 @brief Calculates DM output voltages, which are in turn set by drvSetActuator().
 
 @return EXIT_SUCCESS on success, EXIT_FAILURE otherwise.

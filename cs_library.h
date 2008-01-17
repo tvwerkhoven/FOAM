@@ -49,14 +49,17 @@ typedef struct { // wfs_t
 	char name[FILENAMELEN];			//!< name of the specific WFS
 	long res[2];			//!< x,y-resolution of this WFS
 //	int resy;			//!< y-resolution of this WFS
-	int cellsx;			//!< number of x-cells in this WFS (SH only)
-	int cellsy;			//!< number of y-cells in this WFS (SH only)
+	int cells[2];		//!< number of cells in this WFS (SH only)
+	int (*subc)[2];		//!< this will hold the coordinates of each subapt
+						// TODO: how to make a pointer to an array which holds pairs of ints as elements?
+						// e.g. pointer to: { {x1,y1}, {x2,y2} ... {xn,yn}}
+						// where ptr[i] = {xi,yi} ? GUUS
 	float *image;		//!< pointer to the WFS output
-	float *dark;		//!< darkfield (byte image)
-	float *flat;		//!< flatfield (byte image)
+	float *darkim;		//!< darkfield (byte image)
+	float *flatim;		//!< flatfield (byte image)
+	float *corrim;		//!< corrected image
 	char darkfile[FILENAMELEN];		//!< filename for the darkfield calibration
 	char flatfile[FILENAMELEN];		//!< filename for the flatfield calibration
-
 } wfs_t;
 
 /*!
@@ -81,6 +84,8 @@ This struct is globally available.
 */
 typedef struct { // control_t
 	aomode_t mode;	//!< defines the mode the AO system is in (see \c AO_MODE_* definitions)
+	time_t starttime;	//!< stores the starting time of the system
+	long frames;	//!< store the number of frames parsed
 	
 					// WFS variables
 	int wfs_count;	//!< number of WFSs
@@ -307,6 +312,18 @@ int saveConfig(char *file);
 TODO: update
 */
 int showHelp(const client_t *client, const char *subhelp);
+
+/*!
+@brief Function which wraps up the FOAM framework (gives some stats)
+*/
+void stopFOAM();
+
+void catchSIGINT();
+
+/*!
+@brief Selects suitable subapts to work with
+*/
+void selectSubapts(float *image, float samini, int samxr, int wfs);
 
 // int sendMsg(const int sock, const char *buf);
 

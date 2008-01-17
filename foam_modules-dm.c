@@ -34,112 +34,112 @@
 int read_pgm(char *fname, double **dbuf, int *t_nx, int *t_ny, int *t_ngray);
 
 int simDM(char *boundarymask, char *actuatorpat, int nact, float *ctrl, float *image, int niter) {
-  int	 i, j, status, nx, ny, ngray1, ngray2;
-  long	 ii, i_1j, i1j, ij_1, ij1;
-  int    voltage[nact]; // voltage settings for electrodes (in digital units)
-  double *act, *boundary, *resp;
-  double pi, rho, omega = 1.0, sum, sdif, update;
-  long   ik;
+	int	 i, j, status, nx, ny, ngray1, ngray2;
+	long	 ii, i_1j, i1j, ij_1, ij1;
+	int    voltage[nact]; // voltage settings for electrodes (in digital units)
+	double *act, *boundary, *resp;
+	double pi, rho, omega = 1.0, sum, sdif, update;
+	long   ik;
 
-  pi = 4.0*atan(1);
+	pi = 4.0*atan(1);
 
-  // read boundary mask file 
+// read boundary mask file 
 
-  if ((status = read_pgm(boundarymask,&boundary,&nx,&ny,&ngray1)) != EXIT_SUCCESS) {
-    logErr("Cannot read boundary mask");
-	return EXIT_FAILURE;
-  }
+	if ((status = read_pgm(boundarymask,&boundary,&nx,&ny,&ngray1)) != EXIT_SUCCESS) {
+		logErr("Cannot read boundary mask");
+		return EXIT_FAILURE;
+	}
 
-  logDebug("Simulating DM with voltages:");
-  for(ik = 0; ik < nact; ik++) {
-	voltage[ik] = (int) round(ctrl[ik]);
-	printf("%d ", voltage[ik]);
-  }
-  printf("\n");
-  
-  for (ik = 0; ik < ny*nx; ik++) {
-    if (*(boundary + ik) > 0) {
-      *(boundary + ik) = 1.;
-    } else {
-      *(boundary + ik) = 0.;
-    }
-  }
+	logDebug("Simulating DM with voltages:");
+	for(ik = 0; ik < nact; ik++) {
+		voltage[ik] = (int) round(ctrl[ik]);
+		printf("%d ", voltage[ik]);
+	}
+	printf("\n");
 
-  // read actuator pattern file
+	for (ik = 0; ik < ny*nx; ik++) {
+		if (*(boundary + ik) > 0) {
+			*(boundary + ik) = 1.;
+		} else {
+			*(boundary + ik) = 0.;
+		}
+	}
 
-  if ((status = read_pgm(actuatorpat,&act,&nx,&ny,&ngray2)) != EXIT_SUCCESS) {
-    logErr("Cannot read actuator pattern file");
-	return EXIT_FAILURE;
-  }
- 
-  // set actuator voltages on electrodes
-  for (ik = 0; ik < nx*ny; ik++){
-    i = (int) act[ik];
-    if(i>0) {
-      act[ik] = pow(voltage[i-1] / 255.0, 2.0) / 75.7856;
-    }
-    // 75.7856*2 gets 3 um deflection when all voltages 
-    // are set to 180; however, since the reflected wavefront sees twice
-    // the surface deformation, we simply put a factor of two here
-  }
+// read actuator pattern file
 
+	if ((status = read_pgm(actuatorpat,&act,&nx,&ny,&ngray2)) != EXIT_SUCCESS) {
+		logErr("Cannot read actuator pattern file");
+		return EXIT_FAILURE;
+	}
 
-  // compute spectral radius rho and SOR omega factor. These are appro-
-  // ximate values. Get the number of iterations.
-
-  rho = (cos(pi/((double)nx)) + cos(pi/((double)ny)))/2.0;
-  omega = 2.0/(1.0 + sqrt(1.0 - rho*rho));
-  // fprintf(stderr,"Spectral radius:\t%g\tSOR Omega:\t%g\n",rho,omega);
-  
-  if (niter <= 0) // Set the number of iterations if the argument was <= 0
-    niter = (int)(2.0*sqrt((double)nx*ny));
-
-  // fprintf(stderr,"Number of iterations:\t%d\n", niter);
+// set actuator voltages on electrodes
+	for (ik = 0; ik < nx*ny; ik++){
+		i = (int) act[ik];
+		if(i>0) {
+			act[ik] = pow(voltage[i-1] / 255.0, 2.0) / 75.7856;
+		}
+// 75.7856*2 gets 3 um deflection when all voltages 
+// are set to 180; however, since the reflected wavefront sees twice
+// the surface deformation, we simply put a factor of two here
+	}
 
 
-  // Calculation of the response. This is a Poisson PDE problem
-  // where the actuator pattern represents the source term and and
-  // mirror boundary a Dirichlet boundary condition. Because of the
-  // arbitrary nature of the latter we use a relaxation algorithm.
-  // This is a Simultaneous Over-Relaxation (SOR) algorithm described
-  // in Press et al., "Numerical Recipes", Section 17.
+// compute spectral radius rho and SOR omega factor. These are appro-
+// ximate values. Get the number of iterations.
 
-  resp = (double *) calloc(nx*ny, sizeof(double));
-  if(resp == NULL) {
-    logErr("Allocation error, exiting");
-	return EXIT_FAILURE;
-  }
-  
-  /*  fprintf(stderr,"Iterating:\n"); */
-  
-  /* loop over all iterations */
-	for (ii = 1; ii <= niter; ii++) {
-		sum = 0.0;
-		sdif = 0.0;
+	rho = (cos(pi/((double)nx)) + cos(pi/((double)ny)))/2.0;
+	omega = 2.0/(1.0 + sqrt(1.0 - rho*rho));
+// fprintf(stderr,"Spectral radius:\t%g\tSOR Omega:\t%g\n",rho,omega);
 
-		for (i = 2; i <= nx-1; i += 1) { /* loops over 2-D aperture */
-			for (j = 2; j <= ny-1; j += 1) {
-					/* --->>> might need to be nx instead of ny, also everywhere below */
+	if (niter <= 0) // Set the number of iterations if the argument was <= 0
+		niter = (int)(2.0*sqrt((double)nx*ny));
+
+// fprintf(stderr,"Number of iterations:\t%d\n", niter);
+
+
+// Calculation of the response. This is a Poisson PDE problem
+// where the actuator pattern represents the source term and and
+// mirror boundary a Dirichlet boundary condition. Because of the
+// arbitrary nature of the latter we use a relaxation algorithm.
+// This is a Simultaneous Over-Relaxation (SOR) algorithm described
+// in Press et al., "Numerical Recipes", Section 17.
+
+	resp = (double *) calloc(nx*ny, sizeof(double));
+	if(resp == NULL) {
+		logErr("Allocation error, exiting");
+		return EXIT_FAILURE;
+	}
+
+	/*  fprintf(stderr,"Iterating:\n"); */
+
+	/* loop over all iterations */
+		for (ii = 1; ii <= niter; ii++) {
+			sum = 0.0;
+			sdif = 0.0;
+
+			for (i = 2; i <= nx-1; i += 1) { /* loops over 2-D aperture */
+				for (j = 2; j <= ny-1; j += 1) {
+	/* --->>> might need to be nx instead of ny, also everywhere below */
 				ik = (i - 1)*ny + j - 1; /* the pixel location in the 1-d array */
 				if (*(boundary + ik) > 0) { /* pixel is within membrane boundary */
-					/* calculate locations of neighbouring pixels */
+	/* calculate locations of neighbouring pixels */
 					i_1j = (i - 2)*ny + j - 1;
 					i1j = i*ny + j - 1;
 					ij_1 = (i - 1)*ny + j - 2;
 					ij1 = (i - 1)*ny + j;
 					update = -resp[ik] - (act[ik] - resp[i_1j] - resp[i1j] - 
-						resp[ij1] - resp[ij_1])/4.;
+					resp[ij1] - resp[ij_1])/4.;
 					resp[ik] = resp[ik] + omega*update;
 					sum += resp[ik];
 					sdif += (omega*update)*(omega*update);
 				} 
 				else
 					resp[ik] = 0.0;
-			}
-		} /* end of loop over aperture */
+				}
+			} /* end of loop over aperture */
 
 		sdif = sqrt(sdif/(sum*sum));
-			/*    fprintf(stderr,"\t%d\t%g    \r",ii,sdif); */
+		/*    fprintf(stderr,"\t%d\t%g    \r",ii,sdif); */
 		if (sdif < SOR_LIM)		/* stop iteration if changes are */
 			break;			/* small enough			 */
 	}
@@ -151,19 +151,19 @@ int simDM(char *boundarymask, char *actuatorpat, int nact, float *ctrl, float *i
 	for (i = 1; i <= nx; i += 1){
 		for (j = 1; j <= ny; j += 1){
 			image[ik] = resp[ik];
-//			printf("%e\n",resp[ik]);
+	//printf("%e\n",resp[ik]);
 			ik ++;
 		} 
-//		printf("\n");
+	//printf("\n");
 	}
-  
-  //stat = write_pgm("response2.pgm",resp,nx,ny,255);
-  
-  free(act);
-  free(boundary);
-  free(resp);
 
-  return EXIT_SUCCESS; // successful completion
+	//stat = write_pgm("response2.pgm",resp,nx,ny,255);
+
+	free(act);
+	free(boundary);
+	free(resp);
+
+	return EXIT_SUCCESS; // successful completion
 }
 
 
