@@ -405,15 +405,22 @@ int modParseSH() {
 	logDebug("Img sum is %lf", sum);
 	exit(0); */
 	
-
+	float max=0, min=0;
 	// now we loop over each subaperture:
 	for (yc=0; yc<simparams.shcells[1]; yc++) {
 		for (xc=0; xc<simparams.shcells[0]; xc++) {
 			// we're at subapt (xc, yc) here...
 			
-			// we only want the center subapts:
+			// we only want the center subapts, so we skip the outer subapts,
+			// but we make sure that the image is erased outside the subapts
 			if ((yc-3.5)*(yc-3.5)+(xc-3.5)*(xc-3.5) > 10.0) {
 				logDebug("Skipping subapt (%d,%d)", xc,yc);
+				for (ip=0; ip<shsize[1]; ip++) { 
+					for (jp=0; jp<shsize[0]; jp++) {
+						ptc.wfs[0].image[yc*shsize[1]*ptc.wfs[0].res[0] + xc*shsize[0] + ip*ptc.wfs[0].res[0] + jp] = 0;
+					}
+				}
+				// and we skip the rest of this iteration
 				continue;
 			}
 			
@@ -492,14 +499,15 @@ int modParseSH() {
 
 			// now calculate the  FFT, pts is the number of (complex) datapoints
 			fftw_execute ( simparams.plan_forward );
-			float max=0, min=0;
+			max=0;
+			min=0;
 			// now calculate the absolute squared value of that, store it in the subapt thing
 			for (ip=0; ip<ny; ip++) {
 				for (jp=0; jp<nx; jp++) {
-					//printf("%3.2f ", simparams.shin[ip*nx + jp][0]);
+//					printf("(%3.1f,%3.1f) ", simparams.shout[ip*nx + jp][0], simparams.shout[ip*nx + jp][1]);
 					simparams.shin[ip*nx + jp][0] = \
-					 abs(pow(simparams.shout[ip*nx + jp][0],2) + pow(simparams.shout[ip*nx + jp][1],2));
-					//printf("%f ", subapt[ip*(shsize[0]*2+2) + jp]);
+					 fabs(pow(simparams.shout[ip*nx + jp][0],2) + pow(simparams.shout[ip*nx + jp][1],2));
+					//printf("%3.1f ", simparams.shin[ip*nx + jp][0]);
 					if (simparams.shin[ip*nx + jp][0] > max)
 						max = simparams.shin[ip*nx + jp][0];
 					if (simparams.shin[ip*nx + jp][0] < min)
@@ -510,21 +518,46 @@ int modParseSH() {
 			printf("(%d,%d) max: %f, min: %f\n", xc, yc, max, min);
 			
 			// copy subaparture back to main image
+			// note: we don't want the center of the image, but we want all corners
+			// because begins in the origin. Therefore we need to start at coordinates
+			//  nx-(nx_subapt/2), ny-(ny_subapt/2)
+			// e.g. for 32x32 subapts and (nx,ny) = (66,66), we start at
+			//  (50,50) -> (72,72) = (-16,-16)
+			// so we need to wrap around the matrix, which results in:
+			//  (ip,jp) + (ny,nx)-(shsize[1],shsize[2])/2 % (ny,nx)
+			// if (ip,jp) starts at (0,0)
 			for (ip=0; ip<shsize[1]; ip++) { 
 				for (jp=0; jp<shsize[0]; jp++) {
 					ptc.wfs[0].image[yc*shsize[1]*ptc.wfs[0].res[0] + xc*shsize[0] + ip*ptc.wfs[0].res[0] + jp] = \
-						simparams.shin[(ip+ shsize[1]/2 +1)*nx + jp + shsize[0]/2 + 1][0];
+						simparams.shin[((ip+ny-shsize[1]/2) % shsize[1]) * nx + ((jp + nx - shsize[0]/2) % shsize[0])][0];						
+//						simparams.shin[(ip+ shsize[1]/2 +1)*nx + jp + shsize[0]/2 + 1][0];
+					printf("%3.3f ", simparams.shin[((ip+ny-shsize[1]/2) % shsize[1]) * nx + ((jp + nx - shsize[0]/2) % shsize[0])][0]);
+					if (simparams.shin[((ip+ny-shsize[1]/2) % shsize[1]) * nx + ((jp + nx - shsize[0]/2) % shsize[0])][0] > max)
+						max = simparams.shin[((ip+ny-shsize[1]/2) % shsize[1]) * nx + ((jp + nx - shsize[0]/2) % shsize[0])][0];
+					if (simparams.shin[((ip+ny-shsize[1]/2) % shsize[1]) * nx + ((jp + nx - shsize[0]/2) % shsize[0])][0] < min)
+						min = simparams.shin[((ip+ny-shsize[1]/2) % shsize[1]) * nx + ((jp + nx - shsize[0]/2) % shsize[0])][0];
 				}
+				printf("\n");
 			}
-
+			printf("(%d,%d) max2: %f, min: %f\n", xc, yc, max, min);
+					
 		}
 	}
+	max=0.0;
+	min=0.0;
+	for (ip=0; ip<ptc.wfs[0].res[0]*ptc.wfs[0].res[1]; ip++) { 
+		if (ptc.wfs[0].image[ip] > max)
+			max = ptc.wfs[0].image[ip];
+		if (ptc.wfs[0].image[ip] < min)
+			min = ptc.wfs[0].image[ip];
+	}
+			printf("max3: %f, min: %f\n", max, min);
 	logDebug("Parsed subaperture imaging, copying to main image.");
 	displayImg(ptc.wfs[0].image, ptc.wfs[0].res); 	
 	
 	sleep(5);
 	exit(0);
-	for (yc=0; yc<simparams.shcells[1]; yc++) {
+	/*for (yc=0; yc<simparams.shcells[1]; yc++) {
 		for (xc=0; xc<simparams.shcells[0]; xc++) {
 			// we're at subapt (xc, yc) here...
 			// loop over all pixels in the subaperture, copy them to subapt:
@@ -544,47 +577,10 @@ int modParseSH() {
 				}
 			}
 		}
-	}
+	}*/
 
 
 	return EXIT_SUCCESS;
-	
-	// ;;split up the image matrix in SHsens^2  pieces
-	// FOR K=0,SHsens-1 DO BEGIN
-	//  FOR M=0,SHsens-1 DO BEGIN
-	//   wavepiece = wavefront[K*shsize:(K+1)*shsize-1,M*shsize:(M+1)*shsize-1]
-	// 
-	//   IF mode eq 'fft' THEN BEGIN
-	//    ;;calculate actual EM wave amplitude:
-	//    wave = 1D * EXP(im*wavepiece)
-	// 
-	//    ;;we need to pad the array when using FFT because otherwise edge effects
-	//    ;;come into play
-	//    ;padded2 = [zeroside,wave,zeroside]
-	//    ;padded2 = [[zerotop],[padded2],[zerotop]]
-	//    padded = padmat(wave)
-	// 
-	//    ;help,padded2,padded
-	//    ;print,TOTAL(padded2-padded)
-	// 
-	//    ;;we now have a wavefront with a padded edge of value 0, calculate FFT
-	//    image = ABS(FFT(padded))^2
-	//    ;;shift to center
-	//    image = SHIFT(image,(shsize+(shsize/2+1)*2)/2,(shsize+(shsize/2+1)*2)/2)
-	// 
-	//    ;crop1 = image[shsize/2+1:shsize*3/2,shsize/2+1:shsize*3/2]
-	//    crop = unpadmat(image)
-	// 
-	//    ;help,crop1,crop
-	//    ;print,TOTAL(crop1-crop)
-	// 
-	//    ;;crop image to original size:
-	//    imageOut[K*shsize:(K+1)*shsize-1,M*shsize:(M+1)*shsize-1] = crop
-	// 
-	//   ENDIF
-	// 
-	//  ENDFOR
-	// ENDFOR
 }
 
 int modCalcDMVolt() {
@@ -598,7 +594,7 @@ int displayImg(float *img, long res[2]) {
 	float max=img[0];
 	float min=img[0];
 	
-	logDebug("Displaying image precalc, min: %f, max: %f (%f,%f).", min, max, img[0], img[100]);
+	//logDebug("Displaying image precalc, min: %f, max: %f (%f,%f).", min, max, img[0], img[100]);
 	
 	// we need this loop to check the maximum and minimum intensity. Do we need that? can't SDL do that?	
 	for (x=0; x < res[0]*res[1]; x++) {
