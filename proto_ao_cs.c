@@ -380,11 +380,12 @@ void modeOpen() {
 		logInfo("Operating in open loop"); 			// TODO
 		if (drvReadSensor() != EXIT_SUCCESS)		// read the sensor output into ptc.image
 			return EXIT_FAILURE;
-	
+		displayImg(ptc.wfs[0].image, ptc.wfs[0].res);
+			
 		if (modParseSH() != EXIT_SUCCESS)			// process SH sensor output, get displacements
 			return EXIT_FAILURE;
 
-		displayImg(ptc.wfs[0].image, ptc.wfs[0].res);
+
 		
 //		if ((status = writeFits("foam.fits", ptc.wfs[0].image, naxes)) > 0)
 //			logErr("Error writing fits file (%d)", status);

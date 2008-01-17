@@ -403,7 +403,7 @@ int modParseSH() {
 
 			
 			// now image the subaperture, first generate EM wave amplitude
-			// this has to be done using complex numbers.
+			// this has to be done using complex numbers over the BIG subapt
 			// we know that exp ( i * phi ) = cos(phi) + i sin(phi),
 			// so we split it up in a real and a imaginary part
 			for (ip=shsize[1]/2+1; ip<shsize[1] + shsize[1]/2+1; ip++) {
@@ -419,12 +419,10 @@ int modParseSH() {
 			fftw_execute ( simparams.plan_forward );
 
 			// now calculate the absolute squared value of that, store it in the subapt thing
-			for (ip=0; ip<ny; ip++) {
-				for (jp=0; jp<nx; jp++) {
+			for (ip=0; ip<ny; ip++)
+				for (jp=0; jp<nx; jp++)
 					simparams.shin[ip*nx + jp][0] = \
 					 fabs(pow(simparams.shout[ip*nx + jp][0],2) + pow(simparams.shout[ip*nx + jp][1],2));
-				}
-			}
 			
 			// copy subaparture back to main image
 			// note: we don't want the center of the image, but we want all corners
