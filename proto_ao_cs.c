@@ -409,22 +409,8 @@ int writeFits(char *file, float *image, long *naxes) {
 }
 
 void modeOpen() {
-//	int status, i;
-//	long naxes[] = {256, 256};
-	
 	logInfo("Entering open loop.");
-	
-	// apply some initial checks
-	
-	// read first image from sensor `manually'
-//	if (drvReadSensor() != EXIT_SUCCESS)		// read the sensor output into ptc.image
-//		return;
 		
-	// TODO: problem: in simulation we first need to select the subapts, 
-	// but we cannot if we don't know the telescope image?
-	// check subapertures:
-	//selectSubapts(ptc.wfs[0].image, 1, 3, 0); // check samini (1) and samxr (3)
-	
 	
 	while (ptc.mode == AO_MODE_OPEN) {
 		logInfo("Operating in open loop"); 			// TODO
@@ -432,7 +418,7 @@ void modeOpen() {
 		if (drvReadSensor() != EXIT_SUCCESS)		// read the sensor output into ptc.image
 			return;
 
-
+		//selectSubapts(ptc.wfs[0].image, 1, 3, 0); // check samini (1) and samxr (3)		
 		
 		if (modParseSH(0) != EXIT_SUCCESS)			// process SH sensor output, get displacements
 			return;

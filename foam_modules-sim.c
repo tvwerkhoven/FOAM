@@ -424,8 +424,8 @@ int modSimSH() {
 	shsize[0] = ptc.wfs[0].res[0]/ptc.wfs[0].cells[0];
 	shsize[1] = ptc.wfs[0].res[1]/ptc.wfs[0].cells[1];
 
-	nx = (shsize[0] * 2 + 2); // TODO: fixen voor oneven
-	ny = (shsize[1] * 2 + 2);
+	nx = (shsize[0] * 2); // TODO: fixen voor oneven // DONE: eis even:
+	ny = (shsize[1] * 2);
 
 	// init data structures for images, fill with zeroes (no calloc here?)
 	if (simparams.shin == NULL) {
@@ -466,7 +466,7 @@ int modSimSH() {
 		for (xc=0; xc<ptc.wfs[0].cells[0]; xc++) {
 			// we're at subapt (xc, yc) here...
 			
-			// we only want the center subapts, so we skip the outer subapts,
+			/*// we only want the center subapts, so we skip the outer subapts,
 			// but we make sure that the image is erased outside the subapts
 			if ((yc-3.5)*(yc-3.5)+(xc-3.5)*(xc-3.5) > 10.0) {
 				for (ip=0; ip<shsize[1]; ip++) { 
@@ -477,6 +477,20 @@ int modSimSH() {
 				// and we skip the rest of this iteration
 				continue;
 			}
+			*/
+			// possible approaches on subapt selection for simulation:
+			//  - select only central apertures (use radius)
+			//  - use absolute intensity (still partly illuminated apts)
+			//  - count pixels with intensity zero
+			i = 0;
+			for (ip=0; ip<shsize[1]; ip++)
+				for (jp=0; jp<shsize[0]; jp++)
+					 	if (ptc.wfs[0].image[yc*shsize[1]*ptc.wfs[0].res[0] + xc*shsize[0] + ip*ptc.wfs[0].res[0] + jp] == 0)
+							i++;
+			// allow one quarter of the pixels to be zero
+			if (i > shsize[1]*shsize[0]/4)
+				continue;
+			
 			
 			// We want to set the helper arrays to zero first
 			// otherwise we get trouble? TODO: check this out
