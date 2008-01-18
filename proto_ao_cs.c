@@ -48,7 +48,6 @@ int main(int argc, char *argv[]) {
 	clientlist.nconn = 0;	// Init number of connections to zero
 
 	char date[64];
-//	time_t curtime;
 	struct tm *loctime;
 
 	// SIGNAL HANDLERS //
@@ -56,6 +55,9 @@ int main(int argc, char *argv[]) {
 
 	signal(SIGINT, catchSIGINT);
 
+	// BEGIN FOAM //
+	/**************/
+	
 	logInfo("Starting %s (%s) by %s",FOAM_NAME, FOAM_VERSION, FOAM_AUTHOR);
 
 	ptc.starttime = time (NULL);
@@ -63,7 +65,7 @@ int main(int argc, char *argv[]) {
 	strftime (date, 64, "%A, %B %d %H:%M:%S, %Y (%Z).", loctime);	
 	logInfo("at %s", date);
 		
-	// BEGIN SDL INITIALIZATION
+	// Init SDL
 	if (SDL_Init(SDL_INIT_VIDEO) < 0)
 		logErr("SDL init error");
 	atexit(SDL_Quit);
@@ -84,12 +86,8 @@ int main(int argc, char *argv[]) {
 	}
 
 	logInfo("Configuration successfully loaded...");	
-	
-//	logDebug("Checking: %d vs %d and %d - %d.", sizeof(ptc.wfs), sizeof(wfs_t), sizeof(ptc.wfc), sizeof(wfc_t));
 
-	
-	// Create thread which listens to clients on a socket	
-	
+	// Create thread which listens to clients on a socket		
 	if ((pthread_create(&thread,
 		NULL,
 		(void *) sockListen, // TODO: can we process a return value here?
@@ -216,6 +214,12 @@ int parseConfig(char *var, char *value) {
 		ptc.wfs[tmp].cells[0] = strtol(strtok(value,"{,}"), NULL, 10);
 		ptc.wfs[tmp].cells[1] = strtol(strtok(NULL ,"{,}"), NULL, 10);
 		
+		if (ptc.wfs[tmp].cells[0] % 2 != 0 || ptc.wfs[tmp].cells[1] % 2 != 0) {
+			logErr("WFS %d has an odd cell-resolution (%dx%d), not supported. Please only use 2nx2n cells.", \
+				tmp, ptc.wfs[tmp].cells[0], ptc.wfs[tmp].cells[1]);
+			return EXIT_FAILURE;
+		}
+		
 		if ((ptc.wfs[tmp].subc = calloc(ptc.wfs[tmp].cells[0] * ptc.wfs[tmp].cells[1], sizeof(*ptc.wfs[tmp].subc))) == NULL) {
 			logErr("Cannot allocate memory for subaperture coordinates");
 			return EXIT_FAILURE;
@@ -236,11 +240,17 @@ int parseConfig(char *var, char *value) {
 		ptc.wfs[tmp].res[0] = strtol(strtok(value,"{,}"), NULL, 10);
 		ptc.wfs[tmp].res[1] = strtol(strtok(NULL ,"{,}"), NULL, 10);
 		
+		if (ptc.wfs[tmp].res[0] % 2 != 0 || ptc.wfs[tmp].res[1] % 2 != 0) {
+			logErr("WFS %d has an odd resolution (%dx%d), not supported. Please only use 2nx2n pixels.", \
+				tmp, ptc.wfs[tmp].res[0], ptc.wfs[tmp].res[1]);
+			return EXIT_FAILURE;
+		}		
+		
 		if (((ptc.wfs[tmp].image = calloc(ptc.wfs[tmp].res[0] * ptc.wfs[tmp].res[1], sizeof(ptc.wfs[tmp].image))) == NULL) ||
-		((ptc.wfs[tmp].darkim = calloc(ptc.wfs[tmp].res[0] * ptc.wfs[tmp].res[1], sizeof(ptc.wfs[tmp].darkim))) == NULL) ||
-		((ptc.wfs[tmp].flatim = calloc(ptc.wfs[tmp].res[0] * ptc.wfs[tmp].res[1], sizeof(ptc.wfs[tmp].flatim))) == NULL) ||
-		((ptc.wfs[tmp].corrim = calloc(ptc.wfs[tmp].res[0] * ptc.wfs[tmp].res[1], sizeof(ptc.wfs[tmp].corrim))) == NULL)
-		) {
+				((ptc.wfs[tmp].darkim = calloc(ptc.wfs[tmp].res[0] * ptc.wfs[tmp].res[1], sizeof(ptc.wfs[tmp].darkim))) == NULL) ||
+				((ptc.wfs[tmp].flatim = calloc(ptc.wfs[tmp].res[0] * ptc.wfs[tmp].res[1], sizeof(ptc.wfs[tmp].flatim))) == NULL) ||
+				((ptc.wfs[tmp].corrim = calloc(ptc.wfs[tmp].res[0] * ptc.wfs[tmp].res[1], sizeof(ptc.wfs[tmp].corrim))) == NULL)
+				) {
 			logErr("Failed to allocate image memory (image, dark, flat or corrected).");
 			return EXIT_FAILURE;
 		}
@@ -269,7 +279,6 @@ int parseConfig(char *var, char *value) {
 		logDebug("CS_USE_STDERR initialized: %d", cs_config.use_stderr);
 	}
 	else if (strcmp(var, "CS_INFOFILE") == 0) {
-//		cs_config.infofile = malloc(FILENAMELEN * sizeof(cs_config.infofile));
 		strncpy(cs_config.infofile,value, (size_t) FILENAMELEN);
 		cs_config.infofile[FILENAMELEN-1] = '\0'; // TODO: is this necessary?
 		logDebug("CS_INFOFILE initialized: %s", cs_config.infofile);
@@ -277,13 +286,11 @@ int parseConfig(char *var, char *value) {
 	else if (strcmp(var, "CS_ERRFILE") == 0) {
 		strncpy(cs_config.errfile,value, (size_t) FILENAMELEN);
 		cs_config.errfile[FILENAMELEN-1] = '\0'; // TODO: is this necessary?
-		
 		logDebug("CS_ERRFILE initialized: %s", cs_config.errfile);
 	}
 	else if (strcmp(var, "CS_DEBUGFILE") == 0) {
 		strncpy(cs_config.debugfile, value, (size_t) FILENAMELEN);
 		cs_config.debugfile[FILENAMELEN-1] = '\0'; // TODO: is this necessary?
-		
 		logDebug("CS_DEBUGFILE initialized: %s", cs_config.debugfile);
 	}
 
@@ -425,8 +432,9 @@ void modeOpen() {
 		if (drvReadSensor() != EXIT_SUCCESS)		// read the sensor output into ptc.image
 			return;
 
-			
-		if (modParseSH() != EXIT_SUCCESS)			// process SH sensor output, get displacements
+
+		
+		if (modParseSH(0) != EXIT_SUCCESS)			// process SH sensor output, get displacements
 			return;
 			
 		displayImg(ptc.wfs[0].image, ptc.wfs[0].res);

@@ -54,6 +54,7 @@ typedef struct { // wfs_t
 						// TODO: how to make a pointer to an array which holds pairs of ints as elements?
 						// e.g. pointer to: { {x1,y1}, {x2,y2} ... {xn,yn}}
 						// where ptr[i] = {xi,yi} ? GUUS
+	int nsubap;			//!< amount of subapertures used (coordinates stored in subc)
 	float *image;		//!< pointer to the WFS output
 	float *darkim;		//!< darkfield (byte image)
 	float *flatim;		//!< flatfield (byte image)
@@ -322,6 +323,9 @@ void catchSIGINT();
 
 /*!
 @brief Selects suitable subapts to work with
+
+image should point to the (wfs) image , samini is the minimum intensity,
+samxr is the maximum radius (?), wfs is the wfs id you want to calibrate
 */
 void selectSubapts(float *image, float samini, int samxr, int wfs);
 

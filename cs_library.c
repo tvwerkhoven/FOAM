@@ -177,6 +177,7 @@ void selectSubapts(float *image, float samini, int samxr, int wfs) {
 			if (csum > 0.0) { // good as long as pixels above background exist
 				subc[sn][0] = isx*shsize[0]+4 + (int) (cs[0]/csum) - shsize[0]/2;	// subapt coordinates
 				subc[sn][1] = isy*shsize[1]+4 + (int) (cs[1]/csum) - shsize[1]/2;	// TODO: how does this work? 
+							//coordinate in big image, CoG of one subapt, 							
 																				// why 4? (partial subapt?)
 				cx += isx*shsize[0];
 				cy += isy*shsize[1];
@@ -189,8 +190,8 @@ void selectSubapts(float *image, float samini, int samxr, int wfs) {
 			}
 		}
 	}
-	nsubap = sn; // nsubap: global variable that contains number of subapertures
-	cx = cx / (float) sn; // TODO what does this do? why?
+	nsubap = sn; 			// nsubap: variable that contains number of subapertures
+	cx = cx / (float) sn; 	// TODO what does this do? why?
 	cy = cy / (float) sn;
 
 	// determine central aperture that will be reference
@@ -214,6 +215,7 @@ void selectSubapts(float *image, float samini, int samxr, int wfs) {
 	// center central subaperture; it might not be centered if there is
 	// a large shift between the expected and the actual position in the
 	// center of gravity approach above
+	// TODO: might not be necessary? leftover?
 	cs[0] = 0.0; cs[1] = 0.0; csum = 0.0;
 	for (iy=0; iy<shsize[1]; iy++) {
 		for (ix=0; ix<shsize[0]; ix++) {
@@ -230,7 +232,7 @@ void selectSubapts(float *image, float samini, int samxr, int wfs) {
 	}
 	
 	printf("old subx=%d, old suby=%d\n",subc[0][0],subc[0][1]);
-	subc[0][0] += (int) (cs[0]/csum+0.5) - shsize[0]/2;
+	subc[0][0] += (int) (cs[0]/csum+0.5) - shsize[0]/2; // +0.5 rounding error
 	subc[0][1] += (int) (cs[1]/csum+0.5) - shsize[1]/2;
 	printf("new subx=%d, new suby=%d\n",subc[0][0],subc[0][1]);
 
@@ -240,7 +242,7 @@ void selectSubapts(float *image, float samini, int samxr, int wfs) {
 		sn = 1;
 		while (sn < nsubap) {
 			if (sqrt((subc[sn][0]-cx)*(subc[sn][0]-cx) + \
-				(subc[sn][1]-cy)*(subc[sn][1]-cy)) > samxr) { // TODO: why remove subapts?
+				(subc[sn][1]-cy)*(subc[sn][1]-cy)) > samxr) { // TODO: why remove subapts? might be bad subapts
 				for (i=sn; i<(nsubap-1); i++) {
 					subc[i][0] = subc[i+1][0];
 					subc[i][1] = subc[i+1][1];
@@ -293,7 +295,8 @@ void selectSubapts(float *image, float samini, int samxr, int wfs) {
 				apmap[isx][isy] = apmap2[isx][isy];
 
 	}
-	logInfo("Selected %d usable subapertures",nsubap);
+	ptc.wfs[wfs].nsubap = nsubap; // store to global configuration struct
+	logInfo("Selected %d usable subapertures", nsubap);
 	
 	// set remaining subaperture coordinates to 0
 	for (sn=nsubap; sn<cells[0]*cells[1]; sn++) {

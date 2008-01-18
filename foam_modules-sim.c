@@ -327,7 +327,7 @@ void imcal(float *corrim, float *image, float *darkim, float *flatim) {
 }
 
 
-int modParseSH() {
+int modParseSH(int wfs) {
 	// First simulate the SH because we are in simulation mode
 	if (modSimSH() != EXIT_SUCCESS) {
 		logDebug("Simulating SH WFSs failed.");
@@ -335,17 +335,12 @@ int modParseSH() {
 	}
 
 	// now calculate the offsets 
-	int yc, xc;
+	int ns;
 	
 	// now we loop over each subaperture:
-	for (yc=0; yc<ptc.wfs[0].cells[1]; yc++) {
-		for (xc=0; xc<ptc.wfs[0].cells[0]; xc++) {
-			// we're at subapt (xc, yc) here...
-			
-			// we only want the center subapts, so we skip the outer subapts,
-			// TODO: generalize this (subroutine or something)
-			if ((yc-3.5)*(yc-3.5)+(xc-3.5)*(xc-3.5) > 10.0)
-				continue;
+	for (ns=0; ns<ptc.wfs[wfs].nsubap; ns++) {
+		// we're now at subapt ns with coordinates (subc[ns][0], subc[ns][1])
+		// this array of subapts has already been calibrated by selectSubapts()
 /*
 		    ip = &imag[suby[sn]*NY+subx[sn]]; // set pointers to various 'images'
 		    dp = &dark[sn*SX*SY];
@@ -409,7 +404,6 @@ int modParseSH() {
 						simparams.shin[((ip+ny-shsize[1]/2) % shsize[1]) * nx + ((jp + nx - shsize[0]/2) % shsize[0])][0];		
 				}
 			}		*/
-		} 
 	} // end looping over subapts
 	return EXIT_SUCCESS;
 	
@@ -516,7 +510,7 @@ int modSimSH() {
 			// TODO dit kan hierboven al gedaan worden
 			for (ip=shsize[1]/2+1; ip<shsize[1] + shsize[1]/2+1; ip++) {
 				for (jp=shsize[0]/2+1; jp<shsize[0]+shsize[0]/2+1; jp++) {
-					tmp = 6.0*simparams.shin[ip*nx + jp][0]; // 6.0 = 2 * pi :P
+					tmp = 60.0*simparams.shin[ip*nx + jp][0]; // 6.0 = 2 * pi :P
 					//use fftw_complex datatype, i.e. [0] is real, [1] is imaginary
 					simparams.shin[ip*nx + jp][0] = cos(tmp);
 					simparams.shin[ip*nx + jp][1] = sin(tmp);

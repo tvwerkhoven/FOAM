@@ -39,7 +39,7 @@ DM.
 
 @return EXIT_SUCCESS on success, EXIT_FAILURE otherwise.
 */
-int modParseSH();
+int modParseSH(int wfs);
 
 /*!
 @brief Simulates the SH sensor
