@@ -466,18 +466,6 @@ int modSimSH() {
 		for (xc=0; xc<ptc.wfs[0].cells[0]; xc++) {
 			// we're at subapt (xc, yc) here...
 			
-			/*// we only want the center subapts, so we skip the outer subapts,
-			// but we make sure that the image is erased outside the subapts
-			if ((yc-3.5)*(yc-3.5)+(xc-3.5)*(xc-3.5) > 10.0) {
-				for (ip=0; ip<shsize[1]; ip++) { 
-					for (jp=0; jp<shsize[0]; jp++) {
-						ptc.wfs[0].image[yc*shsize[1]*ptc.wfs[0].res[0] + xc*shsize[0] + ip*ptc.wfs[0].res[0] + jp] = 0;
-					}
-				}
-				// and we skip the rest of this iteration
-				continue;
-			}
-			*/
 			// possible approaches on subapt selection for simulation:
 			//  - select only central apertures (use radius)
 			//  - use absolute intensity (still partly illuminated apts)
@@ -487,9 +475,16 @@ int modSimSH() {
 				for (jp=0; jp<shsize[0]; jp++)
 					 	if (ptc.wfs[0].image[yc*shsize[1]*ptc.wfs[0].res[0] + xc*shsize[0] + ip*ptc.wfs[0].res[0] + jp] == 0)
 							i++;
-			// allow one quarter of the pixels to be zero
-			if (i > shsize[1]*shsize[0]/4)
+			
+			// allow one quarter of the pixels to be zero, otherwise set subapt to zero and continue
+			// TODO: double loop (this one and above) ugly?
+			if (i > shsize[1]*shsize[0]/4) {
+				for (ip=0; ip<shsize[1]; ip++)
+					for (jp=0; jp<shsize[0]; jp++)
+						ptc.wfs[0].image[yc*shsize[1]*ptc.wfs[0].res[0] + xc*shsize[0] + ip*ptc.wfs[0].res[0] + jp] = 0;
+								
 				continue;
+			}
 			
 			
 			// We want to set the helper arrays to zero first
@@ -498,8 +493,17 @@ int modSimSH() {
 				simparams.shin[i][0] = simparams.shin[i][1] = 0;
 			for (i=0; i< nx*ny; i++)
 				simparams.shout[i][0] = simparams.shout[i][1] = 0;
-					
+			
+			// add markers to track copying:
+			for (i=0; i< 2*nx; i++)
+				simparams.shin[i][0] = 1;
+
+			for (i=0; i< ny; i++)
+				simparams.shin[nx/2+i*nx][0] = 1;
+
+							
 			// loop over all pixels in the subaperture, copy them to subapt:
+			// I'm pretty sure these index gymnastics are correct (2008-01-18)
 			for (ip=0; ip<shsize[1]; ip++) { 
 				for (jp=0; jp<shsize[0]; jp++) {
 					// we need the ipth row PLUS the rows that we skip at the top (shsize[1]/2+1)
@@ -511,20 +515,21 @@ int modSimSH() {
 					// and the x coordinate times the width of a cell time, that's at least the first
 					// subapt pixel. After that we add the subaperture row we want which is located at
 					// pixel ip * the width of the whole image plus the x coordinate
-					simparams.shin[(ip+ shsize[1]/2 +1)*nx + jp + shsize[0]/2 + 1][0] = \
+
+					simparams.shin[(ip+ ny/4)*nx + (jp + nx/4)][0] = \
 						ptc.wfs[0].image[yc*shsize[1]*ptc.wfs[0].res[0] + xc*shsize[0] + ip*ptc.wfs[0].res[0] + jp];
+					// old: simparams.shin[(ip+ shsize[1]/2 +1)*nx + jp + shsize[0]/2 + 1][0] = 
 				}
 			}
-
 			
 			// now image the subaperture, first generate EM wave amplitude
 			// this has to be done using complex numbers over the BIG subapt
 			// we know that exp ( i * phi ) = cos(phi) + i sin(phi),
 			// so we split it up in a real and a imaginary part
 			// TODO dit kan hierboven al gedaan worden
-			for (ip=shsize[1]/2+1; ip<shsize[1] + shsize[1]/2+1; ip++) {
-				for (jp=shsize[0]/2+1; jp<shsize[0]+shsize[0]/2+1; jp++) {
-					tmp = 60.0*simparams.shin[ip*nx + jp][0]; // 6.0 = 2 * pi :P
+			for (ip=shsize[1]/2; ip<shsize[1] + shsize[1]/2; ip++) {
+				for (jp=shsize[0]/2; jp<shsize[0]+shsize[0]/2; jp++) {
+					tmp = 6.0*simparams.shin[ip*nx + jp][0]; // multiply for worse seeing
 					//use fftw_complex datatype, i.e. [0] is real, [1] is imaginary
 					simparams.shin[ip*nx + jp][0] = cos(tmp);
 					simparams.shin[ip*nx + jp][1] = sin(tmp);
@@ -540,23 +545,26 @@ int modSimSH() {
 					simparams.shin[ip*nx + jp][0] = \
 					 fabs(pow(simparams.shout[ip*nx + jp][0],2) + pow(simparams.shout[ip*nx + jp][1],2));
 			
-			// copy subaparture back to main image
+			// copy subaparture back to main images
 			// note: we don't want the center of the image, but we want all corners
 			// because begins in the origin. Therefore we need to start at coordinates
 			//  nx-(nx_subapt/2), ny-(ny_subapt/2)
-			// e.g. for 32x32 subapts and (nx,ny) = (66,66), we start at
-			//  (50,50) -> (72,72) = (-16,-16)
-			// so we need to wrap around the matrix, which results in:
-			//  (ip,jp) + (ny,nx)-(shsize[1],shsize[2])/2 % (ny,nx)
+			// e.g. for 32x32 subapts and (nx,ny) = (64,64), we start at
+			//  (48,48) -> (70,70) = (-16,-16)
+			// so we need to wrap around the matrix, which results in the following
 			// if (ip,jp) starts at (0,0)
-			for (ip=0; ip<shsize[1]; ip++) { 
-				for (jp=0; jp<shsize[0]; jp++) {
-					ptc.wfs[0].image[yc*shsize[1]*ptc.wfs[0].res[0] + xc*shsize[0] + ip*ptc.wfs[0].res[0] + jp] = \
-						simparams.shin[((ip+ny-shsize[1]/2) % shsize[1]) * nx + ((jp + nx - shsize[0]/2) % shsize[0])][0];		
+			for (ip=ny/4; ip<ny*3/4; ip++) { 
+				for (jp=nx/4; jp<nx*3/4; jp++) {
+					ptc.wfs[0].image[yc*shsize[1]*ptc.wfs[0].res[0] + xc*shsize[0] + (ip-ny/4)*ptc.wfs[0].res[0] + (jp-nx/4)] = \
+						simparams.shin[((ip+ny/2)%ny)*nx + (jp+nx/2)%nx][0];
 				}
-			}		
+			}
+			
 		} 
 	} // end looping over subapts
+	
+	//manually copy one subapt to check the alignment and shit
+	
 	
 	return EXIT_SUCCESS;
 }
