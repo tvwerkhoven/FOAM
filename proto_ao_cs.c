@@ -5,7 +5,7 @@
 
 	@brief This is the main file for the FOAM Control Software.
 
-	Prototyped / pseudocoded FOAM Control Software\n\n
+	Partially functional alpha version of the FOAM Control Software\n\n
 	TODO tags are used for work in progress or things that are unclear.
 */
 
@@ -23,14 +23,8 @@ extern control_t ptc;
 extern config_t cs_config;
 extern conntrack_t clientlist;
 
-SDL_Surface *screen;
-SDL_Event event;
-
-// LOCAL PROTOTYPES //
-/********************/
-
-// MISC //
-/********/
+SDL_Surface *screen;	// Global surface to draw on
+SDL_Event event;		// Global SDL event struct to catch user IO
 
 	/*! 
 	@brief Initialisation function.
@@ -410,15 +404,22 @@ int writeFits(char *file, float *image, long *naxes) {
 
 void modeOpen() {
 	logInfo("Entering open loop.");
-		
+	// initial run outside loop, we need some extra stuff here
 	
+	if (drvReadSensor() != EXIT_SUCCESS)		// read the sensor output into ptc.image
+		return;
+
+	selectSubapts(ptc.wfs[0].image, 1, 3, 0); // check samini (1) and samxr (3)		
+	
+	if (modParseSH(0) != EXIT_SUCCESS)			// process SH sensor output, get displacements
+		return;
+	
+	ptc.frames++;
 	while (ptc.mode == AO_MODE_OPEN) {
 		logInfo("Operating in open loop"); 			// TODO
 		
 		if (drvReadSensor() != EXIT_SUCCESS)		// read the sensor output into ptc.image
 			return;
-
-		//selectSubapts(ptc.wfs[0].image, 1, 3, 0); // check samini (1) and samxr (3)		
 		
 		if (modParseSH(0) != EXIT_SUCCESS)			// process SH sensor output, get displacements
 			return;
@@ -736,172 +737,6 @@ as possible.\n";
 	return EXIT_FAILURE;
 }
 
-/*
-void parseSock(int sock, short event, void *arg) {
-	struct event *ev = arg;
-	char msg[LINE_MAX];
-	int nbytes;
-	
-	nbytes = sockRead(sock, msg);
-	
-	if (nbytes == 0) event_del(ev);					// Socket closed, unschedule. TODO: close socket as well?
-	else if (nbytes == EXIT_FAILURE) exit(0);	// Error on socket, exit
-	else {										// We got data
-		logDebug("%d bytes received on the socket: '%s'", nbytes, msg);
-		parseCmd(msg, nbytes, asock);	// Process the command
-	}
-}
-*/
-/*
-void sockAccept2(int sock, short event, void *arg) {
-	struct event *ev = arg;
-	
-	logErr("sockAccept2 called with sock: %d, event: %d, arg: %p\n",sock, event, arg);
-	sleep(DEBUG_SLEEP);
-	
-	int newsock;					// New socket ID
-	struct sockaddr_in cli_addr;	// Store the client address here
-	socklen_t cli_len;				// store the length here
-	
-	cli_len = sizeof(cli_addr);
-	newsock = accept(sock,
-		(struct sockaddr *) &cli_addr,
-		&cli_len);
-		
-	if (newsock < 0) { 				// on error, quit
-		logErr("Accepting socket failed: %s. should i exit or return?", strerror(errno));
-		exit(EXIT_FAILURE); // this won't be reached TODO: event_add doesnt
-	}
-	
-//	FD_SET(newsock, lfd_set); 		// Add socket to the set of sockets
-
-//	event_set(ev, socket, EV_READ | EV_PERSIST, parseSock, ev);
-//	event_add(ev, NULL);
-}
-*/
-// int sendMsg(const int sock, const char *buf) {
-// 	return write(sock, buf, sizeof(buf)); // TODO non blocking maken	
-// }
-
-/*
-int sockAccept(int sock, fd_set *lfd_set) {
-	int newsock;					// New socket ID
-	struct sockaddr_in cli_addr;	// Store the client address here
-	socklen_t cli_len;
-	
-	cli_len = sizeof(cli_addr);
-	newsock = accept(sock,
-		(struct sockaddr *) &cli_addr,
-		&cli_len);
-		
-	if (newsock < 0) { 				// on error, quit
-		perror("error in accept");
-		exit(0);
-		newsock = EXIT_FAILURE;
-	}
-	
-	FD_SET(newsock, lfd_set); 		// Add socket to the set of sockets
-	
-	return newsock;
-}*/
-/*
-int initSockL(fd_set *lfd_set) {
-	int sock, optval=1; 			// Socket id
-	struct sockaddr_in serv_addr;	// Store the server address here
-
-	logInfo("Starting socket.");
-	
-	// Initialize the internet socket. We want streaming and we want TCP
-	if ((sock = socket(PF_INET, SOCK_STREAM, 0)) == -1) {
-		// TODO: nicer error
-		logErr("Listening socket error: %s",strerror(errno));
-		return EXIT_FAILURE;
-	}
-	logDebug("Socket created.");
-	
-	// Set reusable and nosigpipe flags so we don't get into trouble later on.
-	if (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof optval) != 0)
-		logErr("Could not set socket flag SO_REUSEADDR, continuing.");
-	if (setsockopt(sock, SOL_SOCKET, SO_NOSIGPIPE, &optval, sizeof optval) != 0)
-		logErr("Could not set socket flag SO_NOSIGPIPE, continuing.");
-		
-	// Get the address fixed:
-	serv_addr.sin_family = AF_INET;
-	serv_addr.sin_addr.s_addr = inet_addr(cs_config.listenip);
-	serv_addr.sin_port = htons(cs_config.listenport);
-	memset(serv_addr.sin_zero, '\0', sizeof(serv_addr.sin_zero)); // TODO: we need to set this padding to zero?
-	
-	logDebug("Mem set to zero for serv_addr.");
-	
-	// We now actually bind the socket to something
-	if (bind(sock, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) == -1) {
-		logErr("Binding socket failed: %s", strerror(errno));
-		return EXIT_FAILURE;
-	}
-	
-	if (listen (sock, 1) < 0) {
-		logErr("listen failed: ", strerror(errno));
-		return EXIT_FAILURE;	
-	}
-	
-	FD_ZERO(lfd_set);		// init lfd_set
-	FD_SET(sock, lfd_set); 	// add sock to the set
-
-	return sock;
-}
-*/
-/*
-int sockGetActive(fd_set *lfd_set) {
-	int i;
-
-	for (i = 0; i < FD_SETSIZE; ++i) 
-		if (FD_ISSET(i, lfd_set)) 
-			return i;
-
-	return EXIT_FAILURE; // This shouldn't happen (as with all errors)
-}
-*/
-
-	
-	// Use select to poll the socket and multiplex I/O (actually only I)
-	/*
-	while (1) { // Listening for connections begin
-		
-		logInfo("Listening for connections (%d possible, %d used)",FD_SETSIZE,nsock);
-		read_fd_set = active_fd_set;
-		if (select(FD_SETSIZE, &read_fd_set, NULL, NULL, NULL) < 0) {	// Check for acitivity using select()
-			// TODO: make this nicer (dicer) :)
-			perror("error in select");
-			exit(0);
-			return EXIT_FAILURE;
-		}
-		
-		asock = sockGetActive(&read_fd_set);			// Get the active FD to tend to
-		
-		if (asock == sock) {							// If the active FD == sock, accept a new connection
-			if (sockAccept(asock, &active_fd_set) == EXIT_FAILURE) {
-				// TODO fix exit
-				
-				perror("BAD!");
-				return EXIT_FAILURE;
-			}
-			nsock++;
-		}
-		else {											// If the active FD != sock, read data (or close connection)
-			nbytes = sockRead(asock, msg, &active_fd_set);
-			
-			if (nbytes == 0) nsock--;					// Socket closed
-			else if (nbytes == EXIT_FAILURE) exit(0);	// Error on socket
-			else {										// We got data
-				logDebug("%d bytes received on the socket: '%s'", nbytes, msg);
-				parseCmd(msg, nbytes, asock, &active_fd_set);	// Process the command
-			}
-		}
-	}
-		
-	return EXIT_SUCCESS;*/
-
-
 // DOXYGEN GENERAL DOCUMENTATION //
 /*********************************/
 
@@ -932,11 +767,17 @@ int sockGetActive(fd_set *lfd_set) {
 
 	\section install_sec Installation
 	
-	FOAM requires \a libevent to be installed on the target machine, which is released under 
-	a 3-clause BSD license and is avalaible here:
+	FOAM depends on the following libraries to be present on the system:
+	\li \a libevent to be installed on the target machine, which is released under a 3-clause BSD license and is avalaible here:
 	 http://www.monkey.org/~provos/libevent/
+	\li \a libsdl which is used to display the sensor output
 	
-	Furthermore FOAM requires basic things like a hosted compilation environment, pthreads, etc.
+	For simulation mode, the following is also required:
+	\li \a cfitsio, a library to read (and write) FITS files. Used to read the simulated wavefront.
+	\li \a fftw3 which is used to compute FFT's to simulate the SH lenslet array	
+	
+	Furthermore FOAM requires basic things like a hosted compilation environment, pthreads, etc. For a full list of dependencies,
+	see the header files (notably cs_library.h and ao_library.h).
 
 	\subsection drivers Write drivers
 	
@@ -946,6 +787,8 @@ int sockGetActive(fd_set *lfd_set) {
 	
 	\subsection config Configure FOAM
 	
-	Configure FOAM, especially cs_config.h.
+	Configure FOAM, especially ao_config.cfg. Make sure you do \b not copy the FFTW wisdom file 'fftw_wisdom.dat' to new machines,
+	this file contains some simple benchmarking results done by FFTW and are very machine dependent. FOAM will regenerate the file
+	if necessary, but it cannot detect 'wrong' wisdom files.
 	
 */

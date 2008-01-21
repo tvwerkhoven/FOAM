@@ -1,6 +1,10 @@
 /*! @file ao_library.h 
-@brief short desc for file ao_lib.h
-longer desc
+@brief This file is the main library for things shared between all FOAM components.
+
+This header files includes most libraries that are used in the UI and the CS components of FOAM.
+It also contains some function declarations used in the UI and CS. See \a cs_library.h and
+\a ui_library.h for the specific CS and UI header files.\n
+Last: 2008-01-21
 */
 
 #ifndef AO_LIBRARY
@@ -30,7 +34,7 @@ longer desc
 #include <pthread.h>
 #include <limits.h>
 #include <stdbool.h>
-// This is a hack, u_char needed by event.h but not defined on all systems
+// This is a hack, u_char needed by event.h but not defined on all systems. TODO
 typedef unsigned char u_char;
 #include <event.h>
 #include <sys/uio.h> //?
@@ -43,7 +47,7 @@ typedef unsigned char u_char;
 /***************/
 
 /*!
-@brief Helper struct for logleve used by various structs
+@brief Helper enum for loglevel. Can be LOGNONE, LOGERR, LOGINFO or LOGDEBUG.
 */
 typedef enum { // level_t
 	LOGNONE, LOGERR, LOGINFO, LOGDEBUG

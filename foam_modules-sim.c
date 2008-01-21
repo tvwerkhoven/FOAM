@@ -30,6 +30,7 @@ struct simul {
 	fftw_complex *shin;		// input for fft algorithm
 	fftw_complex *shout;	// output for fft (but shin can be used if fft is inplace)
 	fftw_plan plan_forward; // plan, one time calculation on how to calculate ffts fastest
+	char wisdomfile[32];
 };
 
 struct simul simparams = {
@@ -39,6 +40,7 @@ struct simul simparams = {
 	.curorig[1] = 1,
 	.simimg = NULL,
 	.plan_forward = NULL,
+	.wisdomfile = "fftw_wisdom.dat",
 };
 
 // We need these every time, declare them globally
@@ -69,9 +71,7 @@ int drvReadSensor() {
 		}
 		logDebug("simAtm() done");
 //	}
-	
 
-	//displayImg(ptc.wfs[0].image, ptc.wfs[0].res);
 
 
 	if (simTel("aperture.fits", ptc.wfs[0].res, ptc.wfs[0].image) != EXIT_SUCCESS) { // Simulate telescope (from aperture.fits)
@@ -82,14 +82,17 @@ int drvReadSensor() {
 		}
 		else logErr("error in simTel().");
 	}
-	
-	
-	//displayImg(ptc.wfs[0].image, ptc.wfs[0].res);
-	
-		
-	logDebug("Now simulating %d WFC(s).", ptc.wfc_count);
+
+//	logDebug("Now simulating %d WFC(s).", ptc.wfc_count);
 	//for (i=0; i < ptc.wfc_count; i++)
 	//	simWFC(i, ptc.wfc[i].nact, ptc.wfc[i].ctrl, ptc.wfs[0].image); // Simulate every WFC
+	
+	
+	// Simulate the WFS here. TODO: could be abstracted to a simWFC module or something.
+	if (modSimSH() != EXIT_SUCCESS) {
+		logDebug("Simulating SH WFSs failed.");
+		return EXIT_FAILURE;
+	}	
 	
 	// Check if we have enough simulated wavefront to use wind 
 	// (should be at least res+wind, take 2*wind to be sure)
@@ -129,8 +132,6 @@ int drvReadSensor() {
 		simparams.wind[1] *= -1;						// Reverse Y wind speed
 		simparams.curorig[1] += 2*simparams.wind[1];	// move in the new wind direction
 	}
-
-	//displayImg(ptc.wfs[0].image, ptc.wfs[0].res);
 	
 	return EXIT_SUCCESS;
 }
@@ -328,12 +329,6 @@ void imcal(float *corrim, float *image, float *darkim, float *flatim) {
 
 
 int modParseSH(int wfs) {
-	// First simulate the SH because we are in simulation mode
-	if (modSimSH() != EXIT_SUCCESS) {
-		logDebug("Simulating SH WFSs failed.");
-		return EXIT_FAILURE;
-	}
-
 	// now calculate the offsets 
 	int ns;
 	
@@ -417,6 +412,7 @@ int modSimSH() {
 	int nx, ny;
 	int xc, yc;
 	int jp, ip;
+	FILE *fp;
 	
 	double tmp;
 
@@ -424,7 +420,7 @@ int modSimSH() {
 	shsize[0] = ptc.wfs[0].res[0]/ptc.wfs[0].cells[0];
 	shsize[1] = ptc.wfs[0].res[1]/ptc.wfs[0].cells[1];
 
-	nx = (shsize[0] * 2); // TODO: fixen voor oneven // DONE: eis even:
+	nx = (shsize[0] * 2); // TODO: fixen voor oneven // DONE: eis is dat resolutie even is
 	ny = (shsize[1] * 2);
 
 	// init data structures for images, fill with zeroes (no calloc here?)
@@ -441,11 +437,37 @@ int modSimSH() {
 	}
 	
 	// init FFT plan, FFTW_ESTIMATE could be replaces by MEASURE or sth, which should calculate FFT's faster
-	// TODO: implement faster FFT
-	// -> wisdom saven en laden
 	if (simparams.plan_forward == NULL) {
 		logDebug("Setting up plan for fftw");
-		simparams.plan_forward = fftw_plan_dft_2d(nx, ny, simparams.shin, simparams.shout, FFTW_FORWARD, FFTW_ESTIMATE );
+		
+		fp = fopen(simparams.wisdomfile,"r");
+		if (fp == NULL)	{				// File does not exist, generate new plan
+			logInfo("No FFTW plan found in %s, generating new plan, this may take a while.", simparams.wisdomfile);
+			simparams.plan_forward = fftw_plan_dft_2d(nx, ny, simparams.shin, simparams.shout, FFTW_FORWARD, FFTW_EXHAUSTIVE);
+
+			// Open file for writing now
+			fp = fopen(simparams.wisdomfile,"w");
+			if (fp == NULL) {
+				logDebug("Could not open file %s for saving FFTW wisdom.", simparams.wisdomfile);
+				return EXIT_FAILURE;
+			}
+			fftw_export_wisdom_to_file(fp);
+			fclose(fp);
+		}
+		else {
+			logInfo("Importing FFTW wisdom file.");
+			logInfo("If this is the first time this program runs on this machine, this is bad.");
+			logInfo("In that case, please delete '%s' and rerun the program. It will generate new wisdom which is A Good Thing.", \
+				simparams.wisdomfile);
+			if (fftw_import_wisdom_from_file(fp) == 0) {
+				logDebug("Importing wisdom failed.");
+				return EXIT_FAILURE;
+			}
+			// regenerating plan using wisdom imported above. TODO: no extra flags needed?
+			simparams.plan_forward = fftw_plan_dft_2d(nx, ny, simparams.shin, simparams.shout, FFTW_FORWARD, FFTW_EXHAUSTIVE);
+			fclose(fp);
+		}
+		
 	}
 		
 	if (simparams.shout == NULL || simparams.shin == NULL || simparams.plan_forward == NULL) {

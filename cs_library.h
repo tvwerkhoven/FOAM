@@ -1,6 +1,15 @@
-/*
-	Control Software Library header file
+/*! @file cs_library.h 
+@brief This file is the main library for the CS component of FOAM
+
+This header file contains allmost all functions used by the CS component of FOAM.
+In addition to that, it contains specific libraries only used by CS and not by the UI
+as well as a lot of structs to hold data used in the CS. These include things like the 
+state of the AO system (control_t), as well as some structs to track network connections
+to the CS. For UI headers, see ui_library.h.\n
+Last: 2008-01-21
 */
+
+
 #ifndef CS_LIBRARY
 #define CS_LIBRARY
 
@@ -15,21 +24,21 @@
 // DEFINES //
 /***********/
 
-#define DEBUG_SLEEP 1 // sleep time (sec)
+#define DEBUG_SLEEP 1 				// sleep time (sec) for loops in debug mode
 #define FILENAMELEN 32				// maximum length for logfile names
 
-#define FOAM_NAME "FOAM CS"
+#define FOAM_NAME "FOAM CS"			// some info about FOAM
 #define FOAM_VERSION "v0.2 Dec"
 #define FOAM_AUTHOR "Tim van Werkhoven"
 
-#define MAX_CLIENTS 16
+#define MAX_CLIENTS 16				// maximum number of clients that can connect
+ 									// (allows for easy implementation of connection tracking)
 
 // GLOBAL VARIABLES //
 /********************/
 
 char logmessage[LINE_MAX];
 
-		
 // STRUCTS AND TYPES //
 /*********************/
 
@@ -39,7 +48,7 @@ char logmessage[LINE_MAX];
 typedef struct { // wfc_t
 	char name[FILENAMELEN];			//!< name for the specific WFC
 	int nact;			//!< number of actuators in this WFC
-	float *ctrl;		//!< pointer to array of controls for the WFS
+	float *ctrl;		//!< pointer to array of controls for the WFS (i.e. voltages)
 } wfc_t;
 
 /*!
@@ -48,29 +57,37 @@ typedef struct { // wfc_t
 typedef struct { // wfs_t
 	char name[FILENAMELEN];			//!< name of the specific WFS
 	long res[2];			//!< x,y-resolution of this WFS
-//	int resy;			//!< y-resolution of this WFS
 	int cells[2];		//!< number of cells in this WFS (SH only)
 	int (*subc)[2];		//!< this will hold the coordinates of each subapt
 						// TODO: how to make a pointer to an array which holds pairs of ints as elements?
 						// e.g. pointer to: { {x1,y1}, {x2,y2} ... {xn,yn}}
 						// where ptr[i] = {xi,yi} ? GUUS
 	int nsubap;			//!< amount of subapertures used (coordinates stored in subc)
-	float *image;		//!< pointer to the WFS output
-	float *darkim;		//!< darkfield (byte image)
-	float *flatim;		//!< flatfield (byte image)
-	float *corrim;		//!< corrected image
+	float *image;		//!< pointer to the WFS output, stored in row-major format
+	float *darkim;		//!< darkfield (byte image), stored in row-major format \b per \b subapt
+	float *flatim;		//!< flatfield (byte image), stored in row-major format \b per \b subapt
+	float *corrim;		//!< corrected image, stored in row-major format \b per \b subapt
 	char darkfile[FILENAMELEN];		//!< filename for the darkfield calibration
 	char flatfile[FILENAMELEN];		//!< filename for the flatfield calibration
 } wfs_t;
 
 /*!
-@brief Helper enum for ao mode operation.
+@brief Helper enum for ao mode operation. Modes include AO_MODE_OPEN, AO_MODE_CLOSED and AO_MODE_CAL.
 */
 typedef enum { // aomode_t
 	AO_MODE_OPEN,
 	AO_MODE_CLOSED,
 	AO_MODE_CAL
 } aomode_t;
+
+/*!
+@brief Helper enum for ao scanning mode (i.e. in X and/or Y direction).
+*/
+typedef enum { // aomode_t
+	AO_AXES_XY,
+	AO_AXES_X,
+	AO_AXES_Y
+} axes_t;
 
 /*! 
 @brief Stores the state of the AO system
@@ -79,27 +96,33 @@ This struct is used to store several variables indicating the state of the AO sy
 which are shared between the different CS threads. The thread interfacing with user(s)
 can then read these variables and report them to the user, or change them to influence
 the CS behaviour.\n
-Parts of it are read at initialisation
+Parts of it are read at initialisation from some configuration file, other parts are
+hardcoded and yet others are assigned dynamically.
 \n
-This struct is globally available. 
+This struct is globally available.
 */
 typedef struct { // control_t
-	aomode_t mode;	//!< defines the mode the AO system is in (see \c AO_MODE_* definitions)
+	aomode_t mode;	//!< defines the mode the AO system is in (see \c aomode_t type)
+	axes_t scandir; //!< scanning direction(s) used (see \c axes_t type)
 	time_t starttime;	//!< stores the starting time of the system
 	long frames;	//!< store the number of frames parsed
 	
 					// WFS variables
-	int wfs_count;	//!< number of WFSs
+	int wfs_count;	//!< number of WFSs in the system
 	wfs_t *wfs;		//!< pointer to a number of \c wfs_t structs
 	
 					// WFC variables
-	int wfc_count;	//!< number of WFCs
+	int wfc_count;	//!< number of WFCs in the system
 	wfc_t *wfc;		//!< pointer to a number of \c wfc_t structs
 	
 } control_t;
 
 /*!
-@brief Struct to store the listening socket information in.
+@brief Struct to configuration data in.
+
+This struct stores things like the IP and port it should be listening on, the 
+files to log error, info and debug messages to and whether or not to use
+syslog.
 */
 typedef struct { // config_t
 	char listenip[16];	//!< IP to listen on, like 0.0.0.0
@@ -117,7 +140,7 @@ typedef struct { // config_t
 } config_t;
 
 /* 
-TODO: info 
+@brief This holds information on one particular connection to the CS. Used by conntrack_t
 */
 typedef struct {
 	int fd; 						// FD for client 
@@ -126,7 +149,8 @@ typedef struct {
 } client_t;
 
 /* 
-TODO: info
+@brief This counts and stores the number of connections to the CS. Maximum amount of connections
+is defined by MAX_CLIENTS (hardcoded) 
 */
 typedef struct {
 	int nconn;						// Amount of connections used
@@ -167,7 +191,7 @@ void logErr(const char *msg, ...);
 /*!
 @brief logDebug() prints out debug messages to the appropriate streams.
 
-See logInfo() for more details.
+This function is used for debug logging. See documentation on logInfo() for more information.
 
 @param [in] msg The string to be passed on to vfprintf.
 */
@@ -175,7 +199,7 @@ void logDebug(const char *msg, ...);
 
 
 /*!
-@brief Parse a \a var = \a value configuration pair.
+@brief Parse a \a var = \a value configuration pair stored in a config file.
 
 @param [in] *var the name of the variable.
 @param [in] *value the value of the variable.
@@ -189,7 +213,7 @@ int parseConfig(char *var, char *value);
 Runs the AO system in open loop mode, it reads out 
 the sensors, calculates stuff and displays this to the user, but 
 it does not control anything. Communcation is done via global variables,
-in particular \a ptc.
+in particular \a ptc (also see control_t).
 */
 void modeOpen();
 
@@ -197,8 +221,8 @@ void modeOpen();
 @brief Runs the AO closed-loop mode.
 
 This function runs the AO system in closed loop mode and drives all 
-components that the user wants to use. Communication again done via
-global variables, in particular \a ptc.
+components that the user wants to use. Communication is again done via
+global variables, in particular \a ptc (also see control_t).
 */
 void modeClosed();
 
@@ -206,7 +230,7 @@ void modeClosed();
 @brief Listens to the user and decides what to do next.
 
 This function runs continously every XXX microseconds and 
-checks the global variables shared with the UI thread (\a ptc)
+checks the global variables shared with the UI thread (\a ptc, see control_t)
 and decides what to do next (e.g. what mode to run).
 */
 void modeListen();
@@ -214,7 +238,7 @@ void modeListen();
 /*! 
 @brief Runs the AO calibration-loop mode.
 
-This calibrates some components of the AO system.
+This calibrates some components of the AO system, and then returns to open loop mode.
 */
 void modeCal();
 
@@ -222,7 +246,7 @@ void modeCal();
 @brief Listens on a socket for connections
 
 Listen on a socket for connections by any client, for example 
-the UI also provided in this package. Uses the global \a ptc
+the UI also provided in this package. Uses the global \a ptc (see control_t)
 struct to provide data to the connected clients or to change
 the behaviour of the CS as dictated by the client.
 @return \c EXIT_SUCCESS if it ran succesfully, \c EXIT_FAILURE otherwise.
@@ -233,36 +257,31 @@ int sockListen();
 @brief Accept new client connection.
 
 Accept a new connection pending on \a sock and add the
-socket to the set of active sockets
+socket to the set of active sockets (see conntrack_t and client_t).
+This function is called if there is an event on the main socket, which means 
+someone wants to connect. It spawns a new bufferent event which keeps an eye 
+on activity on the new socket, in which case there is data to be read.
 
-TODO: update
 @param [in] sock Socket with pending connection
-@return Socket descriptor if succesfull, \c EXIT_FAILURE otherwise.
+@param [in] event The way this function was called
 */
 void sockAccept(int sock, short event, void *arg);
 
 /*!
 @brief Sets a socket to non-blocking mode.
 
-From: http://unx.ca/log/libevent_echosrv_bufferedc/
+Taken from \c http://unx.ca/log/libevent_echosrv_bufferedc/
 */
 int setnonblock(int fd);
 
-/* 
-@brief Initializes a listening TCP socket.
-
-Creates a TCP streaming socket to listen on. Use \c cs_config.listenip
-and \c cs_config.listenport for IP:port combination to listen on.
-@param [out] *lfd_set A pointer to the set of FD's to insert the socket in
-@return Socket descriptor if succefull, \c EXIT_FAILURE otherwise.
-
-int initSockL(fd_set *lfd_set);
-*/
 
 /*! 
 @brief Process the command given by the user.
 
-TODO: update
+This function is called if there is data on a socket. The data
+is then passed on to this function which interprets it and
+takes action if necessary. Currently this function can only
+read 1 kb in one time maximum (which should be enough).
 
 @param [in] *msg the char array (max length 1024)
 @param [in] len the actual length of msg
@@ -270,11 +289,18 @@ TODO: update
 */
 int parseCmd(char *msg, int len, client_t *client);
 
+/*!
+@brief This function is called if there is an error on the socket.
+*/
 void sockOnErr(struct bufferevent *bev, short event, void *arg);
+
+/*!
+@brief This function is called if there is data to be read on the socket.
+*/
 void sockOnRead(struct bufferevent *bev, void *arg);
 
 /*!
-@brief Pop off a word from a space-seperated (" \t\n") string.
+@brief Pop off a word from a space-seperated (" \t\n") string. Used to parse commands (see parseCmd()).
 */
 int popword(char **msg, char *cmd);
 
@@ -294,13 +320,14 @@ int loadConfig(char *file);
 
 This function opens the error-, info- and debug-log files IF they
 are defined in the global struct \a cs_config.
+@return EXIT_SUCCESS if the load succeeds, EXIT_FAILURE otherwise.
 */
 int initLogFiles();
 
 /*!
 @brief Save the configuration currently being used to \a file.
 
-TODO: not complete yet.
+Save the configuration to a file such that it can be read by loadConfig().
 
 @param [in] *file the file to store the data in
 @return EXIT_SUCCESS on successful save, EXIT_FAILURE otherwise.
@@ -310,7 +337,10 @@ int saveConfig(char *file);
 /*!
 @brief Give information on FOAM CS over the socket.
 
-TODO: update
+This function gives help to the cliet which sent a HELP command over the socket.
+
+@param [in] *client the client that requested help
+@param [in] *subhelp the helpcode requested by the client (i.e. what topic)
 */
 int showHelp(const client_t *client, const char *subhelp);
 
@@ -319,26 +349,24 @@ int showHelp(const client_t *client, const char *subhelp);
 */
 void stopFOAM();
 
+/*!
+@brief Catches \c SIGINT signals and decides what to do with it.
+*/
 void catchSIGINT();
 
 /*!
 @brief Selects suitable subapts to work with
 
-image should point to the (wfs) image , samini is the minimum intensity,
-samxr is the maximum radius (?), wfs is the wfs id you want to calibrate
+This routine checks all subapertures and sees whether they are useful or not.
+It can also 'erode' some apertures away from the edge or enforce a maximum
+radius between any subaperture and the reference subaperture.
+
+@param [in] *image The sensor output image (i.e. SH camera).
+@param [in] samini The minimum intensity a useful subaperture should have
+@param [in] samxr The maximum radius to enforce if positive, or the amount of subapts to erode if negative.
+@param [in] wfs The wavefront sensor to apply this to.
 */
 void selectSubapts(float *image, float samini, int samxr, int wfs);
 
-// int sendMsg(const int sock, const char *buf);
-
-/*
-@brief Get socket id which needs I/O.
-
-Loop over all possible sockets and see which needs attention
-@param [in] *lfd_set A pointer to the set of FD's to scan
-@return Socket descriptor if succesfull, \c EXIT_FAILURE otherwise.
-
-int sockGetActive(fd_set *lfd_set);
-*/
 
 #endif /* CS_LIBRARY */
