@@ -29,17 +29,6 @@ int drvReadSensor();
 */
 int drvSetActuator();
 
-/*!
-@brief Parses output from Shack-Hartmann WFSs.
-
-This function takes the output from the drvReadSensor() routine (if the sensor is a
-SH WFS) and preprocesses this sensor output (typically from a CCD) to be further
-analysed by modCalcDMVolt(), which calculates the actual driving voltages for the
-DM. 
-
-@return EXIT_SUCCESS on success, EXIT_FAILURE otherwise.
-*/
-int modParseSH(int wfs);
 
 /*!
 @brief Simulates the SH sensor
@@ -47,14 +36,6 @@ int modParseSH(int wfs);
 TODO: add info
 */
 int modSimSH();
-
-/*!
-@brief Calculates the sum of absolute differences for two subapertures
-*/
-float sae(float *subapt, float *refapt, long res[2]);
-
-void imcal(float *corrim, float *image, float *darkim, float *flatim);
-
 
 /*!
 @brief Calculates DM output voltages, which are in turn set by drvSetActuator().
@@ -109,10 +90,6 @@ This fuction works in wavefront-space.
 */
 int simWFC(int wfcid, int nact, float *ctrl, float *image);
 
-int displayImg(float *img, long res[2]);
-void DrawPixel(SDL_Surface *screen, int x, int y, Uint8 R, Uint8 G, Uint8 B);
-void Sulock(SDL_Surface *screen);
-void Slock(SDL_Surface *screen);
 
 
 #endif /* FOAM_MODULES */

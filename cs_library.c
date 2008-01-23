@@ -144,21 +144,23 @@ void selectSubapts(float *image, float samini, int samxr, int wfs) {
 	res[1] = ptc.wfs[wfs].res[1];
 	cells[0] = ptc.wfs[wfs].cells[0];
 	cells[1] = ptc.wfs[wfs].cells[1];
+
+	shsize[0] = res[0]/cells[0]; 		// size of subapt cell in x
+	shsize[1] = res[1]/cells[1];		// size of subapt cell in y
 	
 	// TODO: what's this? why do we use this?
 	int apmap[cells[0]][cells[1]];		// aperture map
 	int apmap2[cells[0]][cells[1]];		// aperture map 2
 	int apcoo[cells[0] * cells[1]][2];  // subaperture coordinates in apmap
 	
-	shsize[0] = res[0]/cells[0]; 		// size of subapt cell in x
-	shsize[1] = res[1]/cells[1];		// size of subapt cell in y
 	
 	//
 	//cells[0]
 	for (isy=0; isy<cells[1]; isy++) { // loops over all potential subapertures
 		for (isx=0; isx<cells[0]; isx++) {
 			// check one potential subapt (isy,isx)
-			
+
+			sum=0.0; cs[0] = 0.0; cs[1] = 0.0; csum = 0.0;
 			for (iy=0; iy<shsize[1]; iy++) { // sum all pixels in the subapt
 				for (ix=0; ix<shsize[0]; ix++) {
 					fi = (float) image[isy*shsize[1]*res[0] + isx*shsize[0] + ix+ iy*res[0]];
@@ -176,8 +178,8 @@ void selectSubapts(float *image, float samini, int samxr, int wfs) {
 
 			// check if the summed subapt intensity is above zero (e.g. do we use it?)
 			if (csum > 0.0) { // good as long as pixels above background exist
-				subc[sn][0] = isx*shsize[0]+4 + (int) (cs[0]/csum) - shsize[0]/2;	// subapt coordinates
-				subc[sn][1] = isy*shsize[1]+4 + (int) (cs[1]/csum) - shsize[1]/2;	// TODO: how does this work? 
+				subc[sn][0] = isx*shsize[0]+shsize[0]/4 + (int) (cs[0]/csum) - shsize[0]/2;	// subapt coordinates
+				subc[sn][1] = isy*shsize[1]+shsize[1]/4 + (int) (cs[1]/csum) - shsize[1]/2;	// TODO: how does this work? 
 							//coordinate in big image, CoG of one subapt, 							
 																				// why 4? (partial subapt?)
 				cx += isx*shsize[0];
@@ -225,7 +227,8 @@ void selectSubapts(float *image, float samini, int samxr, int wfs) {
 	cs[0] = 0.0; cs[1] = 0.0; csum = 0.0;
 	for (iy=0; iy<shsize[1]; iy++) {
 		for (ix=0; ix<shsize[0]; ix++) {
-			fi = (float) image[(subc[0][1]-4+iy)*res[0]+subc[0][0]-4+ix]; // TODO: fix the static '4'
+			fi = (float) image[(subc[0][1]-0+iy)*res[0]+subc[0][0]-0+ix]; // TODO: fix the static '4' --> -0 works, but why?
+			
 			/* for center of gravity, only pixels above the threshold are used;
 			otherwise the position estimate always gets pulled to the center;
 			good background elimination is crucial for this to work !!! */
@@ -309,8 +312,8 @@ void selectSubapts(float *image, float samini, int samxr, int wfs) {
 		subc[sn][0] = 0; 
 		subc[sn][1] = 0;
 	}
-
-	int cfd;
+	
+/*	int cfd;
 	char *cfn;
 
 	// write subaperture image into file
@@ -320,295 +323,304 @@ void selectSubapts(float *image, float samini, int samxr, int wfs) {
 		logErr("Unable to write subapt img to file");
 
 	close(cfd);
-	logInfo("Subaperture definition image saved in file %s",cfn);
+	logInfo("Subaperture definition image saved in file %s",cfn);*/
 }
 
-/*!
-@brief Tracks the seeing using correlation tracking
+void corrTrack(int wfs, float *aver, float *max, float coords[][2]) {
+	// center of gravity tracking here (easy)
 
-TODO: make prototype
-*/
-void corrTrack(int wfs, int rs, float cx, float cy, 
-               float stx[NS], float sty[NS], float *aver, float *sharp,
-               int   msae[NS], int *newref, int track, int mode,
-               int   *max) {
-	
-	//(uint8_t imag[NX*NY], int rs, float cx, float cy,  \
-	               float stx[NS], float sty[NS], float *aver, float *sharp, \
-	               int   msae[NS], int *newref, int track, int mode, int axes, \
-	               int   *max)
-	// Stolen from ao3.c by Keller
-	
-	// we want these defines so the compiler can unroll the loops
-	#define NP 5
-	#define NO (NP/2)
+	int ix, iy, sn;
+	float csx, csy, csum, fi; 			// variables for center-of-gravity
+	float sum = 0;
 
-	if (wfs > ptc.wfs_count) {
-		logErr("Error, %d is not a valid WFS identifier.", wfs);
-		return EXIT_FAILURE;
-	}
-	
-	float *image = ptc.wfs[wfs].image
-	float *dark = ptc.wfs[wfs].darkim
-	float *flat = ptc.wfs[wfs].flatim
-	float *corr = ptc.wfs[wfs].corrim
-	int i, j, si, ix, iy, cmin, sn;
-	int d, diff[NP][NP];
-	float sig[NP];
-	float refaver = 0.0, corr = 1.0;
-
-	float sxx, sxxxx, rnp;     			// fixed values for parabola fit
-	float sy,sxy,sxxy,x,y,a,b,da,db; 	// variable values for parabola fit
-
+	float *image = ptc.wfs[wfs].image;
+//	float *dark = ptc.wfs[wfs].darkim
+//	float *flat = ptc.wfs[wfs].flatim
+	float *corr = ptc.wfs[wfs].corrim;
 	int nsubap = ptc.wfs[wfs].nsubap;
+	int (*subc)[2] = ptc.wfs[wfs].subc;	// TODO: does this work?
 	
-	res[0] = ptc.wfs[wfs].res[0];	// shortcuts
+	int res[2], cells[2], shsize[2];
+	res[0] = ptc.wfs[wfs].res[0];		// shortcuts, TODO: can be done faster like res = ptc.wfs.res ?
 	res[1] = ptc.wfs[wfs].res[1];
 	cells[0] = ptc.wfs[wfs].cells[0];
 	cells[1] = ptc.wfs[wfs].cells[1];
-	
-	shsize[0] = res[0]/cells[0]; 		// size of subapt cell in x
-	shsize[1] = res[1]/cells[1];		// size of subapt cell in y
-	
-	float *gp, *dp; // pointers to gain and dark
-	float  *ip, *cp, *rp; // pointers to raw, processed image, reference
 
+	shsize[0] = res[0]/cells[0]; 		// size of subapt cell in x (width)
+	shsize[1] = res[1]/cells[1];		// size of subapt cell in y (height)
 
-	uint8_t   max8[8]     __attribute__ ((aligned (32))); 
-	/* 8 bytes containing current maxima */
-	uint16_t  tmpmean4[4] __attribute__ ((aligned (32))); 
-	/* 8 bytes containing current average sum */
-	uint16_t  tmpcorr4[4] __attribute__ ((aligned (32))), *sp; 
-	/* 8 bytes containing correction factor */
-
-	// when working at the limb, we do not correct for transparency 
-	// variations since there is a coupling between subaperture intensity
-	// and overall shift
-	//
-	// --->>> but we should really figure out a way to correct anyway at
-	// the limb since the transparency variations influence the limb
-	// position; we might use pixels well within the disk to separate the
-	// transparency fluctuations from the limb position
-	if (ptc.scandir != AO_AXES_XY) corr = 1.0;
-
-	// cimage and refim are global variables
-	cp = cimage; // pointer to start of calibrated subaperture images
-	sp = tmpcorr4; // pointer to temporary 4-vector storage of correction
 	*max = 0; // set maximum of all raw subapertures to 0
-	si = 0; // set sum of all intensities to 0
+	
+//	uint16_t *gp, *dp; // pointers to gain and dark
+	float  *ip, *cp; // pointers to raw, processed image
 
-	// precompute some values needed to fit a parabola
-	// --->>> we could do this only once, not every time shtracker is called
-	sxx   = 0.0;
-	sxxxx = 0.0;
-	for (ix=0; ix<NP; ix++) {
-		x = ix - NO;
-		sxx   = sxx   + x*x;
-		sxxxx = sxxxx + x*x*x*x;
-	}
-	rnp = 1.0 / (float) NP;
-	da = 1.0 / (sxxxx-rnp*sxx*sxx);
-	db = 1.0 / sxx;
 
-	// correction factor for transparency fluctuations (e.g. cirrus)
-	// 32768 = 2^15
-	for (i=0;i<4;i++) tmpcorr4[i] = (uint16_t) (corr * 32768.0);
-
-	// (big) loop over all subapertures
-	for (sn=0; sn<nsubap; sn++) {
+	// loop over all subapertures
+	for (sn=0;sn<nsubap;sn++) {
 
 		// --->>> might use some pointer incrementing instead of setting
 		//        addresses from scratch every time
-		ip = &image[subc[sn][0]*res[1]+subc[sn][1]]; // set pointers to various 'images'
-		dp = &dark[sn*shsize[0]*shsize[1]];
-		gp = &gain[sn*shsize[0]*shsize[1]];
-		cp = &cimage[sn*shsize[0]*shsize[1]];
+		// set pointers to various 'images'
+		ip = &image[subc[sn][0]*res[1]+subc[sn][1]]; // raw image (input)
+//		dp = &dark[sn*shsize[0]*shsize[1]]; // dark (input)
+//		gp = &gain[sn*shsize[0]*shsize[1]]; // gain (output)
+		cp = &corr[sn*shsize[0]*shsize[1]]; // calibrated image (output)
 
 		// dark and flat correct subaperture, determine statistical quantities
-		imcal(cp, ip, dp, gp, sp, tmpmean4, max8);
+		imcal(cp, ip, NULL, NULL, wfs, &sum, max);
 
-		// add intensities in temporary 4-vector
-		for (j=0;j<4;j++) si = si + tmpmean4[j];
+		// center-of-gravity
+		csx = 0.0; csy = 0.0; csum = 0.0;
+		for (iy=0; iy<shsize[1]; iy++) {
+			for (ix=0; ix<shsize[0]; ix++) {
+				fi = (float) corr[sn*shsize[0]*shsize[1]+iy*shsize[0]+ix];
 
-		// --->>> should really do a horizontal max() in asm statement
-		for (j=0;j<8;j++) {
-		//      printf("%d ",max8[j]);
-		//      if (max8[j] > *max) *max = max8[j];
-		// the following version might be faster because the branch prediction
-		// is correct more frequently
-					if (max8[j] <= *max) continue;
-					*max = max8[j];
-				}
-//    printf("\n");
+				csum += + fi;    // add this pixel's intensity to sum
+				csx += + fi * ix; // center of gravity of subaperture intensity 
+				csy += + fi * iy;
+			}
 
-
-// correlation tracking
-
-				cmin = 1000000; /* large positive integer */
-
-				switch (ptc.scandir) {
-					case AO_AXES_XY:
-					ip = &cimage[sn*shsize[0]*shsize[1]]; // first pixel of each subaperture
-					for (ix=-NO;ix<=NO;ix++) {
-// --->>> might explicitely unroll the inner loop
-						for (iy=-NO;iy<=NO;iy++) {
-							rp = &refim[(iy+4)*RX+ix+4]; // first pixel of shifted reference
-							d = sae(ip,rp);
-// --->>> squaring could be done in assembler code
-							diff[ix+NO][iy+NO] = d*d; // square of SAD
-//if (sn==0) printf("ix=%d, iy=%d, d=%d\n",ix,iy,d);
-//  if (cmin>d) { // FYI: if{} adds over 30us !!!
-//    cmin = d;
-//      ndx = dx+ix;
-//      ndy = dy+iy;
-// }
-						}
-					}
-					break;
-
-					case AO_AXES_X:
-					ip = &cimage[sn*shsize[0]*shsize[1]]; // first pixel of each subaperture
-					for (ix=-NO;ix<=NO;ix++) {
-						rp = &refim[4*RX+ix+4]; // first pixel of shifted reference
-						d = sae(ip,rp);
-						diff[ix+NO][NO] = d;
-						if (cmin>d) {
-							cmin = d;
-//  ndx = dx+ix;
-						}
-					}
-					break;
-
-					case AO_AXES_Y:
-					ip = &cimage[sn*shsize[0]*shsize[1]]; // first pixel of each subaperture
-					for (iy=-NO;iy<=NO;iy++) {
-						rp = &refim[(iy+4)*RX+4]; // first pixel of shifted reference
-						d = sae(ip,rp);
-						diff[NO][iy+NO] = d;
-						if (cmin>d) {
-							cmin = d;
-//  ndy = dy+iy;
-						}
-					}
-					break;
-				} /* end of switch (ptc.scandir) statement */
-
-				asm volatile ("emms           " /* recover from MMX use, allow FP */
-					: /* no output */
-				: /* no input */
-				);
-
-				msae[sn] = cmin;            /* minimum sum of absolute differences */
-
-//    if (sn==0) {
-//      for (ix=0;ix<NP;ix++) { 
-//for (iy=0;iy<NP;iy++) printf("%d  ",diff[ix][iy]);
-//printf("\n");
-//      }
-//      printf("\n");
-//    }
-
-// subpixel interpolation of minimum position
-// currently uses two 1-D approaches
-
-				if ((ptc.scandir==AO_AXES_X) || (ptc.scandir==AO_AXES_XY)) {
-					if (ptc.scandir==AO_AXES_XY) { // average values over the y-axis
-					for (ix=0;ix<NP;ix++) { 
-						sig[ix] = 0.0;
-						for (iy=0;iy<NP;iy++) sig[ix] = sig[ix] + (float) diff[ix][iy];
-					}
-				} else {
-					for (ix=0;ix<NP;ix++) { 
-						sig[ix] = diff[ix][NO];
-					}
-				}
-				sy   = 0.0;
-				sxy  = 0.0;
-				sxxy = 0.0;
-				for (ix=0;ix<NP;ix++) {
-					x = ix - NO;
-					y = sig[ix];
-					sy   = sy + y;
-					sxy  = sxy + x*y;
-					sxxy = sxxy + x*x*y;
-				}
-
-// --->>> this useless line is required for the gcc inline function 
-//        to work properly !!!
-				if (sn<0) printf("%f\n",sy);
-
-				if (sy>0.0) {
-//if (sn==0) printf("rnp=%f sxx=%f sxxxx=%f sxy=%f sxxy=%f\n",
-//  rnp,   sxx,   sxxxx,   sxy,   sxxy);
-					a = (sxxy-rnp*sxx*sy) * da;
-					b = sxy * db;
-					if (a!=0.0) stx[sn] = -0.5 * b/a; // +(float) (dx); 
-					else stx[sn]=0.0;
-					} else
-						stx[sn]=0.0;
-				} else {
-					stx[sn] = 0.0;
-				}
-
-				if ((ptc.scandir==AO_AXES_Y) || (ptc.scandir==AO_AXES_XY)) {
-					if (ptc.scandir==AO_AXES_XY) { // average values over the x-axis
-					for (iy=0;iy<NP;iy++) {
-						sig[iy] = 0.0;
-						for (ix=0;ix<NP;ix++) sig[iy] = sig[iy] + (float) diff[ix][iy];
-					}
-				} else {
-					for (iy=0;iy<NP;iy++) {
-						sig[iy] = diff[NO][iy];
-					}
-				}
-				sy   = 0.0;
-				sxy  = 0.0;
-				sxxy = 0.0;
-				for (ix=0;ix<NP;ix++) {
-					x = ix - NO;
-					y = sig[ix];
-					sy   = sy   + y;
-					sxy  = sxy  + x*y;
-					sxxy = sxxy + x*x*y;
-				}
-				if (sy>0.0) {
-					a = (sxxy-rnp*sxx*sy) * da;
-					b = sxy * db;
-					if (a!=0.0) sty[sn] = -0.5 * b/a; // +(float) (dy); 
-					else sty[sn]=0.0;
-					} else 
-						sty[sn]=0.0;
-				} else {
-					sty[sn] = 0.0;
-				}
-			} // end of loop over all subapertures
-
-		// average intensity over all subapertures
-		*aver  = si / ((float) (shsize[0]*shsize[1]*nsubap));
-
-		// calculate average reference subaperture intensity if new reference 
-		// was just taken
-			if (*newref == AO_REFIM_NONE) { // new reference is valid
-				printf("old correction factor: %f\n",corr);
-			refaver = 0.0;  // average reference subaperture intensity
-			for (ix=0;ix<shsize[0];ix++)
-				for (iy=0;iy<shsize[1];iy++)
-					refaver = refaver + (float) refim[(iy+4)*RX+ix+4];
-			refaver = refaver/(float) (shsize[0]*shsize[1]);
-			corr = 1.0; // reset brightness correction
-			*newref = AO_REFIM_GOOD;
-			printf("new reference, correction factor: %f\n",corr);
+			if (csum > 0.0) { // if there is any signal at all
+				coords[sn][0] = -csx/csum + shsize[0]/2; // negative for consistency with CT 
+				coords[sn][1] = -csy/csum + shsize[1]/2;
+			//	if (sn<0) printf("%d %f %f\n",sn,stx[sn],sty[sn]);
+			} 
+			else {
+				coords[sn][0] = 0.0;
+				coords[sn][1] = 0.0;
+			}
 		}
 
-// calculate intensity correction factor based on average intensity
-		if (refaver == 0.0)
-			corr = 1.0;
-		else {
-			if (*aver>0) corr = corr * refaver / *aver; // update correction factor
-// if correction factor is 2 or larger, then the multiplication
-// with 2^15 above 'flips' over to something close to zero; we should
-// allow at least a factor of 4, but we still need to catch that case
-// (maybe using saturated multiplication)
-			if (corr>1.999) corr=1.999;
+	} // end of loop over all subapertures
+
+	// average intensity over all subapertures
+	*aver = sum / ((float) (shsize[0]*shsize[1]*nsubap));
+}
+
+float sae(float *subapt, float *refapt, long res[2]) {
+	// *ip     pointer to first pixel of each subaperture
+	// *rp     pointer to first pixel of (shifted) reference
+
+	float sum=0;
+	int i,j;
+	
+	// loop over alle pixels
+	for (i=0; i < res[1]; i++) {
+		for (j=0; j<res[0]; j++) {
+			sum += fabs(subapt[i*res[0] + j] - refapt[i*res[0] + j]);
 		}
+	}
+	return sum;
+}
+
+int modParseSH(int wfs) {
+	// now calculate the offsets 
+	float aver=0.0, max=0.0;
+	float coords[ptc.wfs[wfs].nsubap][2];
+	int i;
+	
+	// track the maxima
+	corrTrack(wfs, &aver, &max, &coords); // TODO: dit werkt niet goed? hoe 2d arrays als pointer meegeven?
+	
+	// update the subapt locations
+	logDebug("We have %d coords for wfs %d:", ptc.wfs[wfs].nsubap, wfs);
+	ptc.wfs[wfs].subc[0][0] -= coords[0][0]-ptc.wfs[wfs].res[0]/ptc.wfs[wfs].cells[0]/4;
+	ptc.wfs[wfs].subc[0][1] -= coords[0][1]-ptc.wfs[wfs].res[1]/ptc.wfs[wfs].cells[1]/4;
+	logDebug("was: (%d,%d), found (%f,%f)", ptc.wfs[wfs].subc[0][0], ptc.wfs[wfs].subc[0][1], coords[0][0], coords[0][1]);	
+	for (i=1; i<ptc.wfs[wfs].nsubap; i++) {
+		ptc.wfs[wfs].subc[i][0] -= coords[i][0]-ptc.wfs[wfs].res[0]/ptc.wfs[wfs].cells[0]/4;
+		ptc.wfs[wfs].subc[i][1] -= coords[i][1]-ptc.wfs[wfs].res[1]/ptc.wfs[wfs].cells[1]/4;
+	}
+	sleep(3);
+	
+	return EXIT_SUCCESS;
+}
+
+/*!
+@brief ADD DOC
+*/
+void imcal(float *corrim, float *image, float *darkim, float *flatim, int wfs, float *sum, float *max) {
+	// substract the dark, multiply with the flat (right?)
+	// TODO: dark and flat currently ignored, fix that
+	int shsize[2];
+	int i,j;
+	
+	shsize[0] = ptc.wfs[wfs].res[0]/ptc.wfs[wfs].cells[0];
+	shsize[1] = ptc.wfs[wfs].res[1]/ptc.wfs[wfs].cells[1];
+	
+	for (i=0; i<shsize[1]; i++) {
+		for (j=0; j<shsize[0]; j++) {
+			// We correct the image stored in 'image' by applying some dark and flat stuff,
+			// and copy it to 'corrim' which has a different format than image.
+			// Image is a row-major array of res[0] * res[1], where subapertures are hard to
+			// read out (i.e. you have to skip pixels and stuff), while corrim is reformatted
+			// in such a way that the first shsize[0]*shsize[1] pixels are exactly one subapt,
+			// and each consecutive set is again one seperate subapt. This way you can loop
+			// through subapts with only one counter (right?)
+			
+			corrim[i*shsize[0] + j] = image[i*ptc.wfs[wfs].res[0] + j];
+			*sum += corrim[i*shsize[0] + j];
+			if (corrim[i*shsize[0] + j] > *max) *max = corrim[i*shsize[0] + j];
+		}
+	}			
+	
+}
+
+// Graphic routines, do we want these in the CS?
+
+
+int drawSubapts(int wfs, SDL_Surface *screen) {
+	if (ptc.wfs[wfs].nsubap == 0)
+		return EXIT_SUCCESS;	// if there's nothing to draw, don't draw (shouldn't happen)
+		
+	int shsize[2];			// size of one subapt (in pixels)
+	int res[2], cells[2];	// size of whole image, nr of cells
+	int (*subc)[2] = ptc.wfs[wfs].subc;	// TODO: does this work?
+
+	res[0] = ptc.wfs[wfs].res[0];	// shortcuts
+	res[1] = ptc.wfs[wfs].res[1];
+	cells[0] = ptc.wfs[wfs].cells[0];
+	cells[1] = ptc.wfs[wfs].cells[1];	
+	shsize[0] = res[0]/cells[0]; 		// size of subapt cell in x
+	shsize[1] = res[1]/cells[1];		// size of subapt cell in y
+	
+	int sn=0;
+	Slock(screen);
+	drawRect(subc[0], shsize, screen);
+	int subsize[2] = {shsize[0]/2, shsize[1]/2};
+	
+	for (sn=1; sn<ptc.wfs[wfs].nsubap; sn++) {
+		// subapt with lower coordinates (subc[sn][0],subc[sn][1])
+		// first subapt has size (shsize[0],shsize[1]),
+		// the rest are (shsize[0]/2,shsize[1]/2)
+		drawRect(subc[sn], subsize, screen);
+	}
+	
+		Sulock(screen);
+		SDL_Flip(screen);	
+	return EXIT_SUCCESS;
+}
+
+/*!
+document, add color
+*/
+void drawRect(int coord[2], int size[2], SDL_Surface *screen) {
+
+
+	// lower line
+	drawLine(coord[0], coord[1], coord[0]+ size[0], coord[1], screen);
+	// top line
+	drawLine(coord[0], coord[1] + size[1], coord[0] + size[0], coord[1] + size[1], screen);
+	// left line
+	drawLine(coord[0], coord[1], coord[0], coord[1] + size[1], screen);
+	// right line
+	drawLine(coord[0] + size[0], coord[1], coord[0] + size[0], coord[1] + size[1], screen);
+	// done
+
+
+}
+
+/*!
+document, add color?
+*/
+void drawLine(int x0, int y0, int x1, int y1, SDL_Surface*screen) {
+	int step = abs(x1-x0);
+	int i;
+	if (abs(y1-y0) > step) step = abs(y1-y0); // this can be done faster?
+	 
+	float dx = (x1-x0)/(float) step;
+	float dy = (y1-y0)/(float) step;
+
+	DrawPixel(screen, x0, y0, 255, 255, 255);
+	for(i=0; i<=step; i++) {
+		x0 = round(x0+dx); // round because integer casting would floor, resulting in an ugly line (?)
+		y0 = round(y0+dy);
+		DrawPixel(screen, x0, y0, 255, 255, 255); // draw directly to the screen in white
+	}
+}
+int displayImg(float *img, long res[2], SDL_Surface *screen) {
+	// ONLY does float images
+	int x, y, i;
+	float max=img[0];
+	float min=img[0];
+	
+	//logDebug("Displaying image precalc, min: %f, max: %f (%f,%f).", min, max, img[0], img[100]);
+	
+	// we need this loop to check the maximum and minimum intensity. Do we need that? can't SDL do that?	
+	for (x=0; x < res[0]*res[1]; x++) {
+		if (img[x] > max)
+			max = img[x];
+		if (img[x] < min)
+			min = img[x];
+	}
+	
+	logDebug("Displaying image, min: %f, max: %f.", min, max);
+	Slock(screen);
+	for (x=0; x<res[0]; x++) {
+		for (y=0; y<res[1]; y++) {
+			i = (int) ((img[y*res[0] + x]-min)/(max-min)*255);
+			DrawPixel(screen, x, y, \
+				i, \
+				i, \
+				i);
+		}
+	}
+	Sulock(screen);
+	SDL_Flip(screen);
+	
+	return EXIT_SUCCESS;
+}
+
+void Slock(SDL_Surface *screen) {
+	if ( SDL_MUSTLOCK(screen) )	{
+		if ( SDL_LockSurface(screen) < 0 )
+			return;
+	}
+}
+
+void Sulock(SDL_Surface *screen) {
+	if ( SDL_MUSTLOCK(screen) )
+		SDL_UnlockSurface(screen);
+}
+
+void DrawPixel(SDL_Surface *screen, int x, int y, Uint8 R, Uint8 G, Uint8 B) {
+	Uint32 color = SDL_MapRGB(screen->format, R, G, B);
+	switch (screen->format->BytesPerPixel) {
+		case 1: // Assuming 8-bpp
+			{
+				Uint8 *bufp;
+				bufp = (Uint8 *)screen->pixels + y*screen->pitch + x;
+				*bufp = color;
+			}
+			break;
+		case 2: // Probably 15-bpp or 16-bpp
+			{
+				Uint16 *bufp;
+				bufp = (Uint16 *)screen->pixels + y*screen->pitch/2 + x;
+				*bufp = color;
+			}
+			break;
+		case 3: // Slow 24-bpp mode, usually not used
+			{
+				Uint8 *bufp;
+				bufp = (Uint8 *)screen->pixels + y*screen->pitch + x * 3;
+				if(SDL_BYTEORDER == SDL_LIL_ENDIAN)
+				{
+					bufp[0] = color;
+					bufp[1] = color >> 8;
+					bufp[2] = color >> 16;
+				} else {
+					bufp[2] = color;
+					bufp[1] = color >> 8;
+					bufp[0] = color >> 16;
+				}
+			}
+			break;
+		case 4: { // Probably 32-bpp
+				Uint32 *bufp;
+				bufp = (Uint32 *)screen->pixels + y*screen->pitch/4 + x;
+				*bufp = color;
+			}
+			break;
+	}
 }

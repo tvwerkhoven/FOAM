@@ -409,10 +409,10 @@ void modeOpen() {
 	if (drvReadSensor() != EXIT_SUCCESS)		// read the sensor output into ptc.image
 		return;
 
-	selectSubapts(ptc.wfs[0].image, 1, 3, 0); // check samini (1) and samxr (3)		
+	selectSubapts(ptc.wfs[0].image, 0, 0, 1); 	// check samini (2nd param) and samxr (3d param)
 	
-	if (modParseSH(0) != EXIT_SUCCESS)			// process SH sensor output, get displacements
-		return;
+//	if (modParseSH(0) != EXIT_SUCCESS)			// process SH sensor output, get displacements
+//		return;
 	
 	ptc.frames++;
 	while (ptc.mode == AO_MODE_OPEN) {
@@ -420,11 +420,14 @@ void modeOpen() {
 		
 		if (drvReadSensor() != EXIT_SUCCESS)		// read the sensor output into ptc.image
 			return;
+
+		//selectSubapts(ptc.wfs[0].image, 0, 0, 0); 	// check samini (2nd param) and samxr (3d param)				
 		
 		if (modParseSH(0) != EXIT_SUCCESS)			// process SH sensor output, get displacements
 			return;
-			
-		displayImg(ptc.wfs[0].image, ptc.wfs[0].res);
+		
+		displayImg(ptc.wfs[0].image, ptc.wfs[0].res, screen);
+		drawSubapts(0, screen);
 				
 		ptc.frames++;								// increment the amount of frames parsed		
 

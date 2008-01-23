@@ -369,4 +369,42 @@ radius between any subaperture and the reference subaperture.
 void selectSubapts(float *image, float samini, int samxr, int wfs);
 
 
+/*!
+@brief Parses output from Shack-Hartmann WFSs.
+
+This function takes the output from the drvReadSensor() routine (if the sensor is a
+SH WFS) and preprocesses this sensor output (typically from a CCD) to be further
+analysed by modCalcDMVolt(), which calculates the actual driving voltages for the
+DM. 
+
+@return EXIT_SUCCESS on success, EXIT_FAILURE otherwise.
+*/
+int modParseSH(int wfs);
+
+/*!
+@brief Calculates the sum of absolute differences for two subapertures
+*/
+float sae(float *subapt, float *refapt, long res[2]);
+
+/*!
+@brief ADD DOC
+*/
+void imcal(float *corrim, float *image, float *darkim, float *flatim, int wfs, float *sum, float *max);
+
+/*!
+@brief Tracks the seeing using center of gravity tracking
+
+TODO: make prototype, document, add dark and flat, add correlation tracking
+*/
+void corrTrack(int wfs, float *aver, float *max, float coords[][2]);
+
+
+void drawRect(int coord[2], int size[2], SDL_Surface*screen);
+void drawLine(int x0, int y0, int x1, int y1, SDL_Surface*screen);
+int drawSubapts(int wfs, SDL_Surface *screen);
+
+int displayImg(float *img, long res[2], SDL_Surface *screen);
+void DrawPixel(SDL_Surface *screen, int x, int y, Uint8 R, Uint8 G, Uint8 B);
+void Sulock(SDL_Surface *screen);
+void Slock(SDL_Surface *screen);
 #endif /* CS_LIBRARY */
