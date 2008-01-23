@@ -63,7 +63,7 @@ void logInfo(const char *msg, ...) {
 	if (cs_config.infofd != NULL) // Do we want to log this to a file?
 		vfprintf(cs_config.infofd, logmessage , ap);
 	
-	if (cs_config.use_stderr == true) // Do we want to log this to syslog
+	if (cs_config.use_stderr == true) // Do we want to log this to stderr
 		vfprintf(stderr, logmessage, aq);
 		
 	if (cs_config.use_syslog == true) 	// Do we want to log this to syslog?
@@ -90,7 +90,7 @@ void logErr(const char *msg, ...) {
 	if (cs_config.errfd != NULL)	// Do we want to log this to a file?
 		vfprintf(cs_config.errfd, logmessage, ap);
 
-	if (cs_config.use_stderr == true) // Do we want to log this to syslog?
+	if (cs_config.use_stderr == true) // Do we want to log this to stderr?
 		vfprintf(stderr, logmessage, aq);
 	
 	if (cs_config.use_syslog == true) // Do we want to log this to syslog?
@@ -202,7 +202,9 @@ void selectSubapts(float *image, float samini, int samxr, int wfs) {
 
 	// determine central aperture that will be reference
 	// initial value for rmin is the distance of the first subapt. TODO: this should work, right?
+	csa = 0;
 	rmin = sqrt((subc[0][0]-cx)*(subc[0][0]-cx) + (subc[0][1]-cy)*(subc[0][1]-cy));
+
 	for (i=0; i<nsubap; i++) {
 		dist = sqrt((subc[i][0]-cx)*(subc[i][0]-cx) + (subc[i][1]-cy)*(subc[i][1]-cy));
 		if (dist < rmin) {
@@ -329,7 +331,7 @@ void selectSubapts(float *image, float samini, int samxr, int wfs) {
 void corrTrack(int wfs, float *aver, float *max, float coords[][2]) {
 	// center of gravity tracking here (easy)
 
-	int ix, iy, sn;
+	int ix, iy, sn=0;
 	float csx, csy, csum, fi; 			// variables for center-of-gravity
 	float sum = 0;
 
@@ -354,14 +356,19 @@ void corrTrack(int wfs, float *aver, float *max, float coords[][2]) {
 //	uint16_t *gp, *dp; // pointers to gain and dark
 	float  *ip, *cp; // pointers to raw, processed image
 
-
+	logDebug("Starting corrTrack for %d subapts (CoG mode)", nsubap);
+	
+	// TODO: make imcal process specific tracker window sizes
+	// TODO: process center subapt seperately (bigger window)
+	
 	// loop over all subapertures
 	for (sn=0;sn<nsubap;sn++) {
 
 		// --->>> might use some pointer incrementing instead of setting
 		//        addresses from scratch every time
 		// set pointers to various 'images'
-		ip = &image[subc[sn][0]*res[1]+subc[sn][1]]; // raw image (input)
+		ip = &image[subc[sn][1]*res[0]+subc[sn][0]]; // raw image (input)
+//		fprintf(stderr, "i: %d", subc[sn][0]*res[0]+subc[sn][1]);
 //		dp = &dark[sn*shsize[0]*shsize[1]]; // dark (input)
 //		gp = &gain[sn*shsize[0]*shsize[1]]; // gain (output)
 		cp = &corr[sn*shsize[0]*shsize[1]]; // calibrated image (output)
@@ -420,7 +427,7 @@ int modParseSH(int wfs) {
 	int i;
 	
 	// track the maxima
-	corrTrack(wfs, &aver, &max, &coords); // TODO: dit werkt niet goed? hoe 2d arrays als pointer meegeven?
+	corrTrack(wfs, &aver, &max, coords); // TODO: dit werkt niet goed? hoe 2d arrays als pointer meegeven?
 	
 	// update the subapt locations
 	logDebug("We have %d coords for wfs %d:", ptc.wfs[wfs].nsubap, wfs);
@@ -431,7 +438,6 @@ int modParseSH(int wfs) {
 		ptc.wfs[wfs].subc[i][0] -= coords[i][0]-ptc.wfs[wfs].res[0]/ptc.wfs[wfs].cells[0]/4;
 		ptc.wfs[wfs].subc[i][1] -= coords[i][1]-ptc.wfs[wfs].res[1]/ptc.wfs[wfs].cells[1]/4;
 	}
-	sleep(3);
 	
 	return EXIT_SUCCESS;
 }
@@ -445,11 +451,18 @@ void imcal(float *corrim, float *image, float *darkim, float *flatim, int wfs, f
 	int shsize[2];
 	int i,j;
 	
+	// corrim comes from:
+	// cp = &corr[sn*shsize[0]*shsize[1]]; // calibrated image (output)
+	// image comes form:
+	// ip = &image[subc[sn][0]*res[0]+subc[sn][1]]; // raw image (input)
+	
 	shsize[0] = ptc.wfs[wfs].res[0]/ptc.wfs[wfs].cells[0];
 	shsize[1] = ptc.wfs[wfs].res[1]/ptc.wfs[wfs].cells[1];
 	
-	for (i=0; i<shsize[1]; i++) {
-		for (j=0; j<shsize[0]; j++) {
+	// we do shsize/2 because the tracker windows are only a quarter of the
+	// total tracker area
+	for (i=0; i<shsize[1]/2; i++) {
+		for (j=0; j<shsize[0]/2; j++) {
 			// We correct the image stored in 'image' by applying some dark and flat stuff,
 			// and copy it to 'corrim' which has a different format than image.
 			// Image is a row-major array of res[0] * res[1], where subapertures are hard to
@@ -457,8 +470,8 @@ void imcal(float *corrim, float *image, float *darkim, float *flatim, int wfs, f
 			// in such a way that the first shsize[0]*shsize[1] pixels are exactly one subapt,
 			// and each consecutive set is again one seperate subapt. This way you can loop
 			// through subapts with only one counter (right?)
-			
-			corrim[i*shsize[0] + j] = image[i*ptc.wfs[wfs].res[0] + j];
+
+			corrim[i*shsize[0] + j] = image[i*ptc.wfs[wfs].res[0] + j];			
 			*sum += corrim[i*shsize[0] + j];
 			if (corrim[i*shsize[0] + j] > *max) *max = corrim[i*shsize[0] + j];
 		}
@@ -496,8 +509,8 @@ int drawSubapts(int wfs, SDL_Surface *screen) {
 		drawRect(subc[sn], subsize, screen);
 	}
 	
-		Sulock(screen);
-		SDL_Flip(screen);	
+	Sulock(screen);
+	SDL_Flip(screen);	
 	return EXIT_SUCCESS;
 }
 
@@ -508,7 +521,7 @@ void drawRect(int coord[2], int size[2], SDL_Surface *screen) {
 
 
 	// lower line
-	drawLine(coord[0], coord[1], coord[0]+ size[0], coord[1], screen);
+	drawLine(coord[0], coord[1], coord[0] + size[0], coord[1], screen);
 	// top line
 	drawLine(coord[0], coord[1] + size[1], coord[0] + size[0], coord[1] + size[1], screen);
 	// left line
@@ -532,12 +545,13 @@ void drawLine(int x0, int y0, int x1, int y1, SDL_Surface*screen) {
 	float dy = (y1-y0)/(float) step;
 
 	DrawPixel(screen, x0, y0, 255, 255, 255);
-	for(i=0; i<=step; i++) {
+	for(i=0; i<step; i++) {
 		x0 = round(x0+dx); // round because integer casting would floor, resulting in an ugly line (?)
 		y0 = round(y0+dy);
 		DrawPixel(screen, x0, y0, 255, 255, 255); // draw directly to the screen in white
 	}
 }
+
 int displayImg(float *img, long res[2], SDL_Surface *screen) {
 	// ONLY does float images
 	int x, y, i;

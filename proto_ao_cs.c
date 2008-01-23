@@ -409,7 +409,7 @@ void modeOpen() {
 	if (drvReadSensor() != EXIT_SUCCESS)		// read the sensor output into ptc.image
 		return;
 
-	selectSubapts(ptc.wfs[0].image, 0, 0, 1); 	// check samini (2nd param) and samxr (3d param)
+	selectSubapts(ptc.wfs[0].image, 0, 0, 0); 	// check samini (2nd param) and samxr (3d param)
 	
 //	if (modParseSH(0) != EXIT_SUCCESS)			// process SH sensor output, get displacements
 //		return;
