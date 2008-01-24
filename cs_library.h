@@ -389,7 +389,7 @@ float sae(float *subapt, float *refapt, long res[2]);
 /*!
 @brief ADD DOC
 */
-void imcal(float *corrim, float *image, float *darkim, float *flatim, int wfs, float *sum, float *max);
+void imcal(float *corrim, float *image, float *darkim, float *flatim, int wfs, float *sum, float *max, int window[]);
 
 /*!
 @brief Tracks the seeing using center of gravity tracking

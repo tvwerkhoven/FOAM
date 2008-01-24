@@ -445,8 +445,21 @@ int modSimSH() {
 				for (jp=shsize[0]/2; jp<shsize[0]+shsize[0]/2; jp++) {
 					tmp = 6.0*simparams.shin[ip*nx + jp][0]; // multiply for worse seeing
 					//use fftw_complex datatype, i.e. [0] is real, [1] is imaginary
-					simparams.shin[ip*nx + jp][0] = cos(tmp);
+					
+					// PROF: cos and sin are SLOW, replace by taylor series
+					// optimilization with parabola, see http://www.devmaster.net/forums/showthread.php?t=5784
+					// and http://lab.polygonal.de/2007/07/18/fast-and-accurate-sinecosine-approximation/
+					// wrap tmp to (-pi, pi):
+					//tmp -= ((int) ((tmp+3.14159265)/(2*3.14159265))) * (2* 3.14159265);
+					//simparams.shin[ip*nx + jp][1] = 1.27323954 * tmp -0.405284735 * tmp * fabs(tmp);
+					// wrap tmp + pi/2 to (-pi,pi) again, but we know tmp is already in (-pi,pi):
+					//tmp += 1.57079633;
+					//tmp -= (tmp > 3.14159265) * (2*3.14159265);
+					//simparams.shin[ip*nx + jp][0] = 1.27323954 * tmp -0.405284735 * tmp * fabs(tmp);
+					
+					// used to be:
 					simparams.shin[ip*nx + jp][1] = sin(tmp);
+					simparams.shin[ip*nx + jp][0] = cos(tmp);
 				}
 			}
 

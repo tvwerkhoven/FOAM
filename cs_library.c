@@ -330,7 +330,6 @@ void selectSubapts(float *image, float samini, int samxr, int wfs) {
 
 void corrTrack(int wfs, float *aver, float *max, float coords[][2]) {
 	// center of gravity tracking here (easy)
-
 	int ix, iy, sn=0;
 	float csx, csy, csum, fi; 			// variables for center-of-gravity
 	float sum = 0;
@@ -350,6 +349,7 @@ void corrTrack(int wfs, float *aver, float *max, float coords[][2]) {
 
 	shsize[0] = res[0]/cells[0]; 		// size of subapt cell in x (width)
 	shsize[1] = res[1]/cells[1];		// size of subapt cell in y (height)
+	int track[] = {shsize[0]/2, shsize[1]/2}; // size of the tracker windows. TODO: GLOBALIZE THIS!!
 
 	*max = 0; // set maximum of all raw subapertures to 0
 	
@@ -361,8 +361,34 @@ void corrTrack(int wfs, float *aver, float *max, float coords[][2]) {
 	// TODO: make imcal process specific tracker window sizes
 	// TODO: process center subapt seperately (bigger window)
 	
-	// loop over all subapertures
-	for (sn=0;sn<nsubap;sn++) {
+	// Process reference subapt here:
+	sn = 0;
+	ip = &image[subc[sn][1]*res[0]+subc[sn][0]]; // raw image (input)
+	cp = &corr[sn*shsize[0]*shsize[1]]; // calibrated image (output)
+
+	// dark and flat correct subaperture, determine statistical quantities
+	imcal(cp, ip, NULL, NULL, wfs, &sum, max, shsize); // shsize for reference subapt!
+
+	// center-of-gravity
+	csx = 0.0; csy = 0.0; csum = 0.0;
+	for (iy=0; iy<shsize[1]; iy++) {
+		for (ix=0; ix<shsize[0]; ix++) {
+			fi = (float) corr[sn*shsize[0]*shsize[1]+iy*shsize[0]+ix];
+			csum += + fi; csx += + fi * ix; csy += + fi * iy;
+		}
+
+		if (csum > 0.0) {
+			coords[sn][0] = -csx/csum + shsize[0]/2; // negative for consistency with CT 
+			coords[sn][1] = -csy/csum + shsize[1]/2;
+		} 
+		else {
+			coords[sn][0] = coords[sn][1] = 0.0;
+		}
+	}
+	
+	// Process the rest of the subapertures here:		
+	// loop over all subapertures, except sn=0 (ref subapt)
+	for (sn=1;sn<nsubap;sn++) {
 
 		// --->>> might use some pointer incrementing instead of setting
 		//        addresses from scratch every time
@@ -371,16 +397,18 @@ void corrTrack(int wfs, float *aver, float *max, float coords[][2]) {
 //		fprintf(stderr, "i: %d", subc[sn][0]*res[0]+subc[sn][1]);
 //		dp = &dark[sn*shsize[0]*shsize[1]]; // dark (input)
 //		gp = &gain[sn*shsize[0]*shsize[1]]; // gain (output)
-		cp = &corr[sn*shsize[0]*shsize[1]]; // calibrated image (output)
+		// shsize[0]*shsize[1] is taken up by the ref subapt, 
+		// (sn-1)*track[0]*track[1] by the following subapts (which are smaller)
+		cp = &corr[shsize[0]*shsize[1]+(sn-1)*track[0]*track[1]]; // calibrated image (output)
 
 		// dark and flat correct subaperture, determine statistical quantities
-		imcal(cp, ip, NULL, NULL, wfs, &sum, max);
+		imcal(cp, ip, NULL, NULL, wfs, &sum, max, track);
 
 		// center-of-gravity
 		csx = 0.0; csy = 0.0; csum = 0.0;
-		for (iy=0; iy<shsize[1]; iy++) {
-			for (ix=0; ix<shsize[0]; ix++) {
-				fi = (float) corr[sn*shsize[0]*shsize[1]+iy*shsize[0]+ix];
+		for (iy=0; iy<track[1]; iy++) {
+			for (ix=0; ix<track[0]; ix++) {
+				fi = (float) corr[shsize[0]*shsize[1]+(sn-1)*track[0]*track[1]+iy*track[0]+ix];
 
 				csum += + fi;    // add this pixel's intensity to sum
 				csx += + fi * ix; // center of gravity of subaperture intensity 
@@ -388,8 +416,8 @@ void corrTrack(int wfs, float *aver, float *max, float coords[][2]) {
 			}
 
 			if (csum > 0.0) { // if there is any signal at all
-				coords[sn][0] = -csx/csum + shsize[0]/2; // negative for consistency with CT 
-				coords[sn][1] = -csy/csum + shsize[1]/2;
+				coords[sn][0] = -csx/csum + track[0]/2; // negative for consistency with CT 
+				coords[sn][1] = -csy/csum + track[1]/2; // /4 because our tracker cells for sn>0 are shsize/2 big
 			//	if (sn<0) printf("%d %f %f\n",sn,stx[sn],sty[sn]);
 			} 
 			else {
@@ -401,6 +429,8 @@ void corrTrack(int wfs, float *aver, float *max, float coords[][2]) {
 	} // end of loop over all subapertures
 
 	// average intensity over all subapertures
+	// this is incorrect, should be shsize[0]*shsize[1] + track[0]*track[1]*(nsubap-1)
+	// TODO:
 	*aver = sum / ((float) (shsize[0]*shsize[1]*nsubap));
 }
 
@@ -429,14 +459,19 @@ int modParseSH(int wfs) {
 	// track the maxima
 	corrTrack(wfs, &aver, &max, coords); // TODO: dit werkt niet goed? hoe 2d arrays als pointer meegeven?
 	
-	// update the subapt locations
-	logDebug("We have %d coords for wfs %d:", ptc.wfs[wfs].nsubap, wfs);
-	ptc.wfs[wfs].subc[0][0] -= coords[0][0]-ptc.wfs[wfs].res[0]/ptc.wfs[wfs].cells[0]/4;
-	ptc.wfs[wfs].subc[0][1] -= coords[0][1]-ptc.wfs[wfs].res[1]/ptc.wfs[wfs].cells[1]/4;
-	logDebug("was: (%d,%d), found (%f,%f)", ptc.wfs[wfs].subc[0][0], ptc.wfs[wfs].subc[0][1], coords[0][0], coords[0][1]);	
+	// reference subapt is bigger, treat seperately:
+	ptc.wfs[wfs].subc[0][0] -= coords[0][0];//-ptc.wfs[wfs].res[0]/ptc.wfs[wfs].cells[0]/2;
+	ptc.wfs[wfs].subc[0][1] -= coords[0][1];//-ptc.wfs[wfs].res[1]/ptc.wfs[wfs].cells[1]/2;
+	logDebug("was: (%d,%d), found (%f,%f)", ptc.wfs[wfs].subc[1][0], ptc.wfs[wfs].subc[1][1], coords[1][0], coords[1][1]);	
+
+	//exit(0);
+	// and then parse the rest of the subapts
+	// note: coords is relative to the tracker window and since the tracker window is
+	// ptc.wfs[wfs].res[0]/ptc.wfs[wfs].cells[0]/2 big (wide), we subtract half of that from the coordinate
+	// to update the tracker window coordinate.
 	for (i=1; i<ptc.wfs[wfs].nsubap; i++) {
-		ptc.wfs[wfs].subc[i][0] -= coords[i][0]-ptc.wfs[wfs].res[0]/ptc.wfs[wfs].cells[0]/4;
-		ptc.wfs[wfs].subc[i][1] -= coords[i][1]-ptc.wfs[wfs].res[1]/ptc.wfs[wfs].cells[1]/4;
+		ptc.wfs[wfs].subc[i][0] -= coords[i][0];//-ptc.wfs[wfs].res[0]/ptc.wfs[wfs].cells[0]/4;
+		ptc.wfs[wfs].subc[i][1] -= coords[i][1];//-ptc.wfs[wfs].res[1]/ptc.wfs[wfs].cells[1]/4;
 	}
 	
 	return EXIT_SUCCESS;
@@ -444,11 +479,12 @@ int modParseSH(int wfs) {
 
 /*!
 @brief ADD DOC
+window is the window size to look in
 */
-void imcal(float *corrim, float *image, float *darkim, float *flatim, int wfs, float *sum, float *max) {
+void imcal(float *corrim, float *image, float *darkim, float *flatim, int wfs, float *sum, float *max, int window[]) {
 	// substract the dark, multiply with the flat (right?)
 	// TODO: dark and flat currently ignored, fix that
-	int shsize[2];
+//	int shsize[2];
 	int i,j;
 	
 	// corrim comes from:
@@ -456,13 +492,13 @@ void imcal(float *corrim, float *image, float *darkim, float *flatim, int wfs, f
 	// image comes form:
 	// ip = &image[subc[sn][0]*res[0]+subc[sn][1]]; // raw image (input)
 	
-	shsize[0] = ptc.wfs[wfs].res[0]/ptc.wfs[wfs].cells[0];
-	shsize[1] = ptc.wfs[wfs].res[1]/ptc.wfs[wfs].cells[1];
+//	shsize[0] = ptc.wfs[wfs].res[0]/ptc.wfs[wfs].cells[0];
+//	shsize[1] = ptc.wfs[wfs].res[1]/ptc.wfs[wfs].cells[1];
 	
 	// we do shsize/2 because the tracker windows are only a quarter of the
 	// total tracker area
-	for (i=0; i<shsize[1]/2; i++) {
-		for (j=0; j<shsize[0]/2; j++) {
+	for (i=0; i<window[1]; i++) {
+		for (j=0; j<window[0]; j++) {
 			// We correct the image stored in 'image' by applying some dark and flat stuff,
 			// and copy it to 'corrim' which has a different format than image.
 			// Image is a row-major array of res[0] * res[1], where subapertures are hard to
@@ -471,9 +507,9 @@ void imcal(float *corrim, float *image, float *darkim, float *flatim, int wfs, f
 			// and each consecutive set is again one seperate subapt. This way you can loop
 			// through subapts with only one counter (right?)
 
-			corrim[i*shsize[0] + j] = image[i*ptc.wfs[wfs].res[0] + j];			
-			*sum += corrim[i*shsize[0] + j];
-			if (corrim[i*shsize[0] + j] > *max) *max = corrim[i*shsize[0] + j];
+			corrim[i*window[0] + j] = image[i*ptc.wfs[wfs].res[0] + j];			
+			*sum += corrim[i*window[0] + j];
+			if (corrim[i*window[0] + j] > *max) *max = corrim[i*window[0] + j];
 		}
 	}			
 	

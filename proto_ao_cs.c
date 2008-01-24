@@ -426,8 +426,13 @@ void modeOpen() {
 		if (modParseSH(0) != EXIT_SUCCESS)			// process SH sensor output, get displacements
 			return;
 		
-		displayImg(ptc.wfs[0].image, ptc.wfs[0].res, screen);
-		drawSubapts(0, screen);
+		if (ptc.frames % 20 == 0) {
+			displayImg(ptc.wfs[0].image, ptc.wfs[0].res, screen);
+			drawSubapts(0, screen);
+		}
+		
+		if (ptc.frames > 2000) // exit for debugging
+			exit(EXIT_SUCCESS);
 				
 		ptc.frames++;								// increment the amount of frames parsed		
 
