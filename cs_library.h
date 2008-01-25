@@ -398,6 +398,12 @@ TODO: make prototype, document, add dark and flat, add correlation tracking
 */
 void cogTrack(int wfs, float *aver, float *max, float coords[][2]);
 
+/*!
+@brief Tracks the seeing using correlation tracking (works on extended objects)
+
+TODO: add doc
+*/
+void corrTrack(int wfs, float *aver, float *max, float coords[][2]);
 
 void drawRect(int coord[2], int size[2], SDL_Surface*screen);
 void drawLine(int x0, int y0, int x1, int y1, SDL_Surface*screen);
