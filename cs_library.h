@@ -396,7 +396,7 @@ void imcal(float *corrim, float *image, float *darkim, float *flatim, int wfs, f
 
 TODO: make prototype, document, add dark and flat, add correlation tracking
 */
-void corrTrack(int wfs, float *aver, float *max, float coords[][2]);
+void cogTrack(int wfs, float *aver, float *max, float coords[][2]);
 
 
 void drawRect(int coord[2], int size[2], SDL_Surface*screen);

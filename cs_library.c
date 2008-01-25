@@ -23,7 +23,7 @@ config_t cs_config = {
 	.use_syslog = false,
 	.syslog_prepend = "foam",
 	.use_stderr = true,
-	.loglevel = LOGDEBUG
+	.loglevel = LOGINFO
 };
 
 conntrack_t clientlist;
@@ -65,6 +65,29 @@ void logInfo(const char *msg, ...) {
 	
 	if (cs_config.use_stderr == true) // Do we want to log this to stderr
 		vfprintf(stderr, logmessage, aq);
+		
+	if (cs_config.use_syslog == true) 	// Do we want to log this to syslog?
+		syslog(LOG_INFO, msg, ar);
+	
+	va_end(ap);
+	va_end(aq);
+	va_end(ar);
+}
+
+void logDirect(const char *msg, ...) {
+	// this log command is always logged and without any additional formatting on the loginfo level
+		
+	va_list ap, aq, ar; // We need three of these because we cannot re-use a va_list variable
+	
+	va_start(ap, msg);
+	va_copy(aq, ap);
+	va_copy(ar, ap);
+	
+	if (cs_config.infofd != NULL) // Do we want to log this to a file?
+		vfprintf(cs_config.infofd, msg , ap);
+	
+	if (cs_config.use_stderr == true) // Do we want to log this to stderr
+		vfprintf(stderr, msg, aq);
 		
 	if (cs_config.use_syslog == true) 	// Do we want to log this to syslog?
 		syslog(LOG_INFO, msg, ar);
@@ -138,7 +161,7 @@ void selectSubapts(float *image, float samini, int samxr, int wfs) {
 	float cx=0, cy=0;		// for CoG
 	float dist, rmin;		// minimum distance
 	int csa=0;				// estimate for best subapt
-	int (*subc)[2] = ptc.wfs[wfs].subc;	// TODO: does this work?
+	int (*subc)[2] = ptc.wfs[wfs].subc;	// lower left coordinates of the tracker windows
 
 	res[0] = ptc.wfs[wfs].res[0];	// shortcuts
 	res[1] = ptc.wfs[wfs].res[1];
@@ -148,14 +171,11 @@ void selectSubapts(float *image, float samini, int samxr, int wfs) {
 	shsize[0] = res[0]/cells[0]; 		// size of subapt cell in x
 	shsize[1] = res[1]/cells[1];		// size of subapt cell in y
 	
-	// TODO: what's this? why do we use this?
+	// we store our subaperture map in here when deciding which subapts to use
 	int apmap[cells[0]][cells[1]];		// aperture map
 	int apmap2[cells[0]][cells[1]];		// aperture map 2
 	int apcoo[cells[0] * cells[1]][2];  // subaperture coordinates in apmap
 	
-	
-	//
-	//cells[0]
 	for (isy=0; isy<cells[1]; isy++) { // loops over all potential subapertures
 		for (isx=0; isx<cells[0]; isx++) {
 			// check one potential subapt (isy,isx)
@@ -169,7 +189,7 @@ void selectSubapts(float *image, float samini, int samxr, int wfs) {
 					otherwise the position estimate always gets pulled to the center;
 					good background elimination is crucial for this to work !!! */
 					fi -= samini;    		// subtract threshold
-					if (fi<0.0) fi=0.0;		// clip
+					if (fi<0.0) fi = 0.0;	// clip
 					csum = csum + fi;		// add this pixel's intensity to sum
 					cs[0] += + fi * ix;	// center of gravity of subaperture intensity 
 					cs[1] += + fi * iy;
@@ -179,9 +199,9 @@ void selectSubapts(float *image, float samini, int samxr, int wfs) {
 			// check if the summed subapt intensity is above zero (e.g. do we use it?)
 			if (csum > 0.0) { // good as long as pixels above background exist
 				subc[sn][0] = isx*shsize[0]+shsize[0]/4 + (int) (cs[0]/csum) - shsize[0]/2;	// subapt coordinates
-				subc[sn][1] = isy*shsize[1]+shsize[1]/4 + (int) (cs[1]/csum) - shsize[1]/2;	// TODO: how does this work? 
-							//coordinate in big image, CoG of one subapt, 							
-																				// why 4? (partial subapt?)
+				subc[sn][1] = isy*shsize[1]+shsize[1]/4 + (int) (cs[1]/csum) - shsize[1]/2;	// TODO: sort this out
+							// ^^ coordinate in big image,  ^^ CoG of one subapt, 							
+																				// why /4? (partial subapt?)
 				cx += isx*shsize[0];
 				cy += isy*shsize[1];
 				apmap[isx][isy] = 1; // set aperture map
@@ -191,7 +211,6 @@ void selectSubapts(float *image, float samini, int samxr, int wfs) {
 			} else {
 				apmap[isx][isy] = 0; // don't use this subapt
 			}
-
 		}
 	}
 	
@@ -199,7 +218,6 @@ void selectSubapts(float *image, float samini, int samxr, int wfs) {
 	cx = cx / (float) sn; 	// TODO what does this do? why?
 	cy = cy / (float) sn;
 	
-
 	// determine central aperture that will be reference
 	// initial value for rmin is the distance of the first subapt. TODO: this should work, right?
 	csa = 0;
@@ -229,7 +247,7 @@ void selectSubapts(float *image, float samini, int samxr, int wfs) {
 	cs[0] = 0.0; cs[1] = 0.0; csum = 0.0;
 	for (iy=0; iy<shsize[1]; iy++) {
 		for (ix=0; ix<shsize[0]; ix++) {
-			fi = (float) image[(subc[0][1]-0+iy)*res[0]+subc[0][0]-0+ix]; // TODO: fix the static '4' --> -0 works, but why?
+			fi = (float) image[(subc[0][1]-0+iy)*res[0]+subc[0][0]-0+ix]; // TODO: fix the static '4' --> -0 works, but *why*?
 			
 			/* for center of gravity, only pixels above the threshold are used;
 			otherwise the position estimate always gets pulled to the center;
@@ -243,8 +261,8 @@ void selectSubapts(float *image, float samini, int samxr, int wfs) {
 	}
 	
 	logDebug("old subx=%d, old suby=%d",subc[0][0],subc[0][1]);
-	subc[0][0] += (int) (cs[0]/csum+0.5) - shsize[0]/2; // +0.5 rounding error
-	subc[0][1] += (int) (cs[1]/csum+0.5) - shsize[1]/2;
+	subc[0][0] += (int) (cs[0]/csum+0.5) - shsize[0]/4; // +0.5 rounding error
+	subc[0][1] += (int) (cs[1]/csum+0.5) - shsize[1]/4; // also the reference subapt is the same size as the rest
 	logDebug("new subx=%d, new suby=%d",subc[0][0],subc[0][1]);
 
 	// enforce maximum radial distance from center of gravity of all
@@ -328,7 +346,7 @@ void selectSubapts(float *image, float samini, int samxr, int wfs) {
 	logInfo("Subaperture definition image saved in file %s",cfn);*/
 }
 
-void corrTrack(int wfs, float *aver, float *max, float coords[][2]) {
+void cogTrack(int wfs, float *aver, float *max, float coords[][2]) {
 	// center of gravity tracking here (easy)
 	int ix, iy, sn=0;
 	float csx, csy, csum, fi; 			// variables for center-of-gravity
@@ -356,39 +374,11 @@ void corrTrack(int wfs, float *aver, float *max, float coords[][2]) {
 //	uint16_t *gp, *dp; // pointers to gain and dark
 	float  *ip, *cp; // pointers to raw, processed image
 
-	logDebug("Starting corrTrack for %d subapts (CoG mode)", nsubap);
-	
-	// TODO: make imcal process specific tracker window sizes
-	// TODO: process center subapt seperately (bigger window)
-	
-	// Process reference subapt here:
-	sn = 0;
-	ip = &image[subc[sn][1]*res[0]+subc[sn][0]]; // raw image (input)
-	cp = &corr[sn*shsize[0]*shsize[1]]; // calibrated image (output)
-
-	// dark and flat correct subaperture, determine statistical quantities
-	imcal(cp, ip, NULL, NULL, wfs, &sum, max, shsize); // shsize for reference subapt!
-
-	// center-of-gravity
-	csx = 0.0; csy = 0.0; csum = 0.0;
-	for (iy=0; iy<shsize[1]; iy++) {
-		for (ix=0; ix<shsize[0]; ix++) {
-			fi = (float) corr[sn*shsize[0]*shsize[1]+iy*shsize[0]+ix];
-			csum += + fi; csx += + fi * ix; csy += + fi * iy;
-		}
-
-		if (csum > 0.0) {
-			coords[sn][0] = -csx/csum + shsize[0]/2; // negative for consistency with CT 
-			coords[sn][1] = -csy/csum + shsize[1]/2;
-		} 
-		else {
-			coords[sn][0] = coords[sn][1] = 0.0;
-		}
-	}
+	logDebug("Starting cogTrack for %d subapts (CoG mode)", nsubap);
 	
 	// Process the rest of the subapertures here:		
 	// loop over all subapertures, except sn=0 (ref subapt)
-	for (sn=1;sn<nsubap;sn++) {
+	for (sn=0;sn<nsubap;sn++) {
 
 		// --->>> might use some pointer incrementing instead of setting
 		//        addresses from scratch every time
@@ -399,7 +389,7 @@ void corrTrack(int wfs, float *aver, float *max, float coords[][2]) {
 //		gp = &gain[sn*shsize[0]*shsize[1]]; // gain (output)
 		// shsize[0]*shsize[1] is taken up by the ref subapt, 
 		// (sn-1)*track[0]*track[1] by the following subapts (which are smaller)
-		cp = &corr[shsize[0]*shsize[1]+(sn-1)*track[0]*track[1]]; // calibrated image (output)
+		cp = &corr[sn*track[0]*track[1]]; // calibrated image (output)
 
 		// dark and flat correct subaperture, determine statistical quantities
 		imcal(cp, ip, NULL, NULL, wfs, &sum, max, track);
@@ -408,7 +398,7 @@ void corrTrack(int wfs, float *aver, float *max, float coords[][2]) {
 		csx = 0.0; csy = 0.0; csum = 0.0;
 		for (iy=0; iy<track[1]; iy++) {
 			for (ix=0; ix<track[0]; ix++) {
-				fi = (float) corr[shsize[0]*shsize[1]+(sn-1)*track[0]*track[1]+iy*track[0]+ix];
+				fi = (float) corr[sn*track[0]*track[1]+iy*track[0]+ix];
 
 				csum += + fi;    // add this pixel's intensity to sum
 				csx += + fi * ix; // center of gravity of subaperture intensity 
@@ -417,7 +407,7 @@ void corrTrack(int wfs, float *aver, float *max, float coords[][2]) {
 
 			if (csum > 0.0) { // if there is any signal at all
 				coords[sn][0] = -csx/csum + track[0]/2; // negative for consistency with CT 
-				coords[sn][1] = -csy/csum + track[1]/2; // /4 because our tracker cells for sn>0 are shsize/2 big
+				coords[sn][1] = -csy/csum + track[1]/2; // /2 because our tracker cells are track[] wide and high
 			//	if (sn<0) printf("%d %f %f\n",sn,stx[sn],sty[sn]);
 			} 
 			else {
@@ -431,7 +421,7 @@ void corrTrack(int wfs, float *aver, float *max, float coords[][2]) {
 	// average intensity over all subapertures
 	// this is incorrect, should be shsize[0]*shsize[1] + track[0]*track[1]*(nsubap-1)
 	// TODO:
-	*aver = sum / ((float) (shsize[0]*shsize[1]*nsubap));
+	*aver = sum / ((float) (track[0]*track[1]*nsubap));
 }
 
 float sae(float *subapt, float *refapt, long res[2]) {
@@ -457,22 +447,19 @@ int modParseSH(int wfs) {
 	int i;
 	
 	// track the maxima
-	corrTrack(wfs, &aver, &max, coords); // TODO: dit werkt niet goed? hoe 2d arrays als pointer meegeven?
+	cogTrack(wfs, &aver, &max, coords);
 	
-	// reference subapt is bigger, treat seperately:
-	ptc.wfs[wfs].subc[0][0] -= coords[0][0];//-ptc.wfs[wfs].res[0]/ptc.wfs[wfs].cells[0]/2;
-	ptc.wfs[wfs].subc[0][1] -= coords[0][1];//-ptc.wfs[wfs].res[1]/ptc.wfs[wfs].cells[1]/2;
-	logDebug("was: (%d,%d), found (%f,%f)", ptc.wfs[wfs].subc[1][0], ptc.wfs[wfs].subc[1][1], coords[1][0], coords[1][1]);	
-
-	//exit(0);
-	// and then parse the rest of the subapts
-	// note: coords is relative to the tracker window and since the tracker window is
-	// ptc.wfs[wfs].res[0]/ptc.wfs[wfs].cells[0]/2 big (wide), we subtract half of that from the coordinate
-	// to update the tracker window coordinate.
-	for (i=1; i<ptc.wfs[wfs].nsubap; i++) {
+	// note: coords is relative to the center of the tracker window
+	// therefore we can simply update the lower left coord by subtracting the coordinates.
+	
+	logInfo("Coords: ");
+	for (i=0; i<ptc.wfs[wfs].nsubap; i++) {
 		ptc.wfs[wfs].subc[i][0] -= coords[i][0];//-ptc.wfs[wfs].res[0]/ptc.wfs[wfs].cells[0]/4;
 		ptc.wfs[wfs].subc[i][1] -= coords[i][1];//-ptc.wfs[wfs].res[1]/ptc.wfs[wfs].cells[1]/4;
+		logDirect("(%d, %d) ", ptc.wfs[wfs].subc[i][0]+ptc.wfs[wfs].res[0]/ptc.wfs[wfs].cells[0]/4, \
+			ptc.wfs[wfs].subc[i][1]+ptc.wfs[wfs].res[1]/ptc.wfs[wfs].cells[1]/4);
 	}
+	logDirect("\n");
 	
 	return EXIT_SUCCESS;
 }
@@ -535,8 +522,13 @@ int drawSubapts(int wfs, SDL_Surface *screen) {
 	
 	int sn=0;
 	Slock(screen);
-	drawRect(subc[0], shsize, screen);
+	
+	// this is the size for the tracker rectangles
 	int subsize[2] = {shsize[0]/2, shsize[1]/2};
+	
+	// we draw the reference subaperture rectangle bigger than the rest, with lower left coord:
+	int refcoord[] = {subc[0][0]-shsize[0]/4, subc[0][1]-shsize[1]/4};
+	drawRect(refcoord, shsize, screen);
 	
 	for (sn=1; sn<ptc.wfs[wfs].nsubap; sn++) {
 		// subapt with lower coordinates (subc[sn][0],subc[sn][1])
