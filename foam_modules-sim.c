@@ -1,32 +1,24 @@
 /*! 
 	@file foam_modules-sim.c
-	@author Tim van Werkhoven
+	@author @authortim
 	@date November 30 2007
 
-	@brief This file contains the functions to run FOAM in simulation mode, and 
+	@brief This file contains the functions to run @name in simulation mode, and 
 	links to other files like foam_modules-dm.c which simulates the DM.
 */
 
 // HEADERS //
 /***********/
 
-#include "cs_library.h"
-#include "ao_library.h"
-#include "foam_modules.h"
+#include "foam_modules-sim.h"
+#include "foam_cs_library.h"
 
-// GLOBAL VARIABLES //
-/********************/	
-
-// These are defined in cs_library.c
-extern config_t cs_config;
-extern control_t ptc;
-//extern SDL_Surface *screen;
 
 struct simul {
 	int wind[2]; 			// 'windspeed' in pixels/cycle
-	long curorig[2]; 		// current origin
+	int curorig[2]; 		// current origin
 	float *simimg; 			// pointer to the image we use to simulate stuff
-	long simimgres[2];		// resolution of the simulation image
+	int simimgres[2];		// resolution of the simulation image
 	fftw_complex *shin;		// input for fft algorithm
 	fftw_complex *shout;	// output for fft (but shin can be used if fft is inplace)
 	fftw_plan plan_forward; // plan, one time calculation on how to calculate ffts fastest
@@ -50,29 +42,26 @@ float nulval = 0.0;
 int anynul = 0;
 
 int drvReadSensor() {
-//	int i;
+	int i;
 	logDebug("Now reading %d sensors, origin is at (%d,%d).", ptc.wfs_count, simparams.curorig[0], simparams.curorig[1]);
-	// TODO: simulate object, atmosphere, telescope, TT, DM, WFS (that's a lot :O)
+	// TODO: TT, DM 
 	
 	if (ptc.wfs_count < 1) {
 		logErr("Nothing to process, no WFSs defined.");
 		return EXIT_FAILURE;
 	}
 	
-		// This simulates the point source + atmosphere (from wavefront.fits)
-//	if (simparams.simimg == NULL) {
-		if (simAtm("wavefront.fits", ptc.wfs[0].res, simparams.curorig, ptc.wfs[0].image) != EXIT_SUCCESS) { 	
-			if (status > 0) {
-				fits_get_errstatus(status, errmsg);
-				logErr("fitsio error in simAtm(): (%d) %s", status, errmsg);
-				status = 0;
-			}
-			else logErr("error in simAtm().");
+	// This reads in wavefront.fits to memory at the first call, and each consecutive call
+	// selects a subimage of that big image, defined by simparams.curorig
+	if (simAtm("wavefront.fits", ptc.wfs[0].res, simparams.curorig, ptc.wfs[0].image) != EXIT_SUCCESS) { 	
+		if (status > 0) {
+			fits_get_errstatus(status, errmsg);
+			logErr("fitsio error in simAtm(): (%d) %s", status, errmsg);
+			status = 0;
 		}
-		logDebug("simAtm() done");
-//	}
-
-
+		else logErr("error in simAtm().");
+	}
+	logDebug("simAtm() done");
 
 	if (simTel("aperture.fits", ptc.wfs[0].res, ptc.wfs[0].image) != EXIT_SUCCESS) { // Simulate telescope (from aperture.fits)
 		if (status > 0) {
@@ -83,19 +72,25 @@ int drvReadSensor() {
 		else logErr("error in simTel().");
 	}
 
-//	logDebug("Now simulating %d WFC(s).", ptc.wfc_count);
-	//for (i=0; i < ptc.wfc_count; i++)
-	//	simWFC(i, ptc.wfc[i].nact, ptc.wfc[i].ctrl, ptc.wfs[0].image); // Simulate every WFC
+	logDebug("Now simulating %d WFC(s).", ptc.wfc_count);
+	for (i=0; i < ptc.wfc_count; i++)
+		simWFC(i, ptc.wfc[i].nact, ptc.wfc[i].ctrl, ptc.wfs[0].image); // Simulate every WFC in series
 	
 	
-	// Simulate the WFS here. TODO: could be abstracted to a simWFC module or something.
+	// Simulate the WFS here.
 	if (modSimSH() != EXIT_SUCCESS) {
 		logDebug("Simulating SH WFSs failed.");
 		return EXIT_FAILURE;
 	}	
 	
-	// Check if we have enough simulated wavefront to use wind 
-	// (should be at least res+wind, take 2*wind to be sure)
+	// This function simulates wind by changing the origin we want read at simAtm().
+	modSimWind();
+
+	
+	return EXIT_SUCCESS;
+}
+
+int modSimWind() {
 	if (simparams.simimgres[0] < ptc.wfs[0].res[0] + 2*simparams.wind[0]) {
 		logErr("Simulated wavefront too small for current x-wind, setting to zero.");
 		simparams.wind[0] = 0;
@@ -144,15 +139,15 @@ int simObj(char *file, float *image) {
 int simWFC(int wfcid, int nact, float *ctrl, float *image) {
 	// we want to simulate the tip tilt mirror here. What does it do
 	logDebug("WFC %d (%s) has %d actuators, simulating", wfcid, ptc.wfc[wfcid].name, ptc.wfc[wfcid].nact);
-	if (wfcid == 1)
-		simDM("dm37/apert15-256.pgm", "dm37/dm37-256.pgm", nact, ctrl, image, 0);
+	//if (wfcid == 1)
+	//	simDM("dm37/apert15-256.pgm", "dm37/dm37-256.pgm", nact, ctrl, image, 0);
 //	if (wfcid == 1)
 		//simTT();
 	
 	return EXIT_SUCCESS;
 }
 
-int simTel(char *file, long res[2], float *image) {
+int simTel(char *file, int res[2], float *image) {
 	fitsfile *fptr;
 	int bitpix, naxis, i;
 	long naxes[2], fpixel[] = {1,1};
@@ -192,11 +187,10 @@ int simTel(char *file, long res[2], float *image) {
 	return EXIT_SUCCESS;
 }
 
-int simAtm(char *file, long res[2], long origin[2], float *image) {
-	// TODO: broken :(
+int simAtm(char *file, int res[2], int origin[2], float *image) {
 	// ASSUMES WFS_COUNT > 0
 	// ASSUMES ptc.wfs[0].image is initialized to float 
-	// ASSUMES simparams.simimg is float
+	// ASSUMES simparams.simimg is also float
 	
 	fitsfile *fptr;
 	int bitpix, naxis;
@@ -208,7 +202,7 @@ int simAtm(char *file, long res[2], long origin[2], float *image) {
 	
 	logDebug("Simulating atmosphere.");
 	
-		// If we haven't loaded the simulated wavefront yet, load it now
+	// If we haven't loaded the simulated wavefront yet, load it now
 	if (simparams.simimg == NULL) {
 		// Loading was different, loaded only part of a file, slower.
 		// sprintf(newfile, "%s[%ld:%ld,%ld:%ld]", file, origin[0], origin[0]+res[0]-1, origin[1], origin[1]+res[1]-1);
@@ -247,11 +241,6 @@ int simAtm(char *file, long res[2], long origin[2], float *image) {
 			simparams.simimgres[0] = naxes[0];
 			simparams.simimgres[1] = naxes[1];
 		
-			/*for (j=0; j<512; j++) {
-				for (i=0; i<512; i++) {
-					simparams.simimg[i + 512*j] = (i + j) % (128);
-				}
-			}*/
 		}
 		
 		logDebug("Now reading image with size (%dx%d) from file %s.", naxes[0], naxes[1], newfile);
@@ -267,6 +256,7 @@ int simAtm(char *file, long res[2], long origin[2], float *image) {
 	}
 	
 	// If we move outside the simulated wavefront, reverse the 'windspeed'
+	// TODO: this is already handled in modSimWind? should not be necessary?
 	if ((origin[0] + res[0] >= simparams.simimgres[0]) || (origin[1] + res[1] >= simparams.simimgres[1]) 
 		|| (origin[0] < 0) || (origin[1] < 0)) {
 		logErr("Simulation out of bound, wind reset failed. (%f,%f) ", origin[0], origin[1]);
@@ -294,8 +284,6 @@ int drvSetActuator() {
 	return EXIT_SUCCESS;
 }
 
-
-
 int modSimSH() {
 	logDebug("Simulating SH WFSs now.");
 	
@@ -312,7 +300,7 @@ int modSimSH() {
 	shsize[0] = ptc.wfs[0].res[0]/ptc.wfs[0].cells[0];
 	shsize[1] = ptc.wfs[0].res[1]/ptc.wfs[0].cells[1];
 
-	nx = (shsize[0] * 2); // TODO: fixen voor oneven // DONE: eis is dat resolutie even is
+	nx = (shsize[0] * 2);
 	ny = (shsize[1] * 2);
 
 	// init data structures for images, fill with zeroes (no calloc here?)

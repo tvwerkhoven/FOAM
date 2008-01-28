@@ -1,29 +1,34 @@
 /*! 
 	@file foam_modules-dm.c
-	@author Tim van Werkhoven
-	@date December 7 2007
+	@author @authortim
+	@date December 7, 2007
 
-	@brief This file contains routines to simulate a 37 actuator DM.
+	@brief This file contains routines to simulate an n-actuator DM.
+
+	To run, see help at simDM()
 	
+	\section History
 	This file is based on response2.c by C. Keller (ckeller@noao.edu)
 	which was last update on December 19, 2002. This code in turn was based
-	on response.c by Gleb Vdovin with the following copyright notice:\n
-	\n
-	(C) Gleb Vdovin 1997\n
-	Send bug reports to gleb@okotech.com\n
-	\n
-	Modified and cleaned in 1998\n
-	by Prof. Oskar von der Luehe\n
-	ovdluhe@kis.uni-freiburg.de\n
-	\n
-	To run, see help at simDM();
+	on response.c by Gleb Vdovin (gleb@okotech.com) with the following copyright notice:
+
+\verbatim
+(C) Gleb Vdovin 1997
+Send bug reports to gleb@okotech.com
+
+Modified and cleaned in 1998
+by Prof. Oskar von der Luehe
+ovdluhe@kis.uni-freiburg.de
+\endverbatim 
+
+	\section License
+	Gleb Vdovin agreed to release his code into the public domain under the GPL on January 26, 2008.
 */
 
 // include files
-    
-#include "ao_library.h"
-#include "cs_library.h"
-#include "foam_modules.h"
+
+#include "foam_cs_library.h"
+
 
 // constants
 
@@ -31,7 +36,35 @@
 //#define NACT      37       // number of actuators
 
 // local prototypes
+/*!
+@brief Reads a pgm file from disk into memory
+
+@param [in] *fname the filename to read
+@param [out] **dbuf the buffer that the image will be read to (will be allocated dynamically)
+@param [out] *t_nx will hold the x resolution of the image
+@param [out] *t_ny will hold the y resolution of the image
+@param [out] *t_ngray will hold the number of different graylevels in the image
+*/
 int read_pgm(char *fname, double **dbuf, int *t_nx, int *t_ny, int *t_ngray);
+
+/*!
+@brief Simulates the DM shape as function of input voltages.
+
+This routine, based on response2.c by C.U. Keller, takes a boundarymask,
+an actuatorpattern for the DM being simulated, the number of actuators
+and the voltages as input. It then calculates the shape of the mirror
+in the output variable image. Additionally, niter can be set to limit the 
+amount of iterations (0 is auto).
+
+@param [in] *boundarymask The pgm-file containing the boundary mask (aperture)
+@param [in] *actuatorpat The pgm-file containing the DM-actuator pattern
+@param [in] nact The number of actuators, must be the same as used in \a *actuatorpat
+@param [in] *voltage The voltage array, \a nact long
+@param [in] niter The number of iterations, pass 0 for automatic choice
+@param [out] *dm The DM wavefront correction in um.
+@return EXIT_SUCCESS on success, EXIT_FAILURE otherwise.
+*/
+int simDM(char *boundarymask, char *actuatorpat, int nact, float *ctrl, float *image, int niter);
 
 int simDM(char *boundarymask, char *actuatorpat, int nact, float *ctrl, float *image, int niter) {
 	int	 i, j, status, nx, ny, ngray1, ngray2;
@@ -53,7 +86,7 @@ int simDM(char *boundarymask, char *actuatorpat, int nact, float *ctrl, float *i
 	logDebug("Simulating DM with voltages:");
 	for(ik = 0; ik < nact; ik++) {
 		voltage[ik] = (int) round(ctrl[ik]);
-		printf("%d ", voltage[ik]);
+		printf("%d ", voltage[ik]); // TODO: we don't want printf here
 	}
 	printf("\n");
 

@@ -5,7 +5,6 @@
 #
 # ----------------------------------------------------------------------------
 
-
 CC	= gcc
 AR	= ar
 LD	= ld
@@ -22,20 +21,19 @@ CFLAGS	= $(MFLAGS) $(GFLAGS) $(OFLAGS) $(IFLAGS) $(LFLAGS) $(SDLFLAGS)
 
 # ----------------------------------------------------------------------------
 # ----------------------------------------------------------------------------
-all:	proto-sim
+all:	foamcs-sim foamui
 
 clean:	
-	-rm -f protocs-sim protoui
+	-rm -f foamcs-sim
 
-# make multi-file prototyped AO
+
+# make multi-file foam
 # ----------------------------------------------------------------------------
 
-proto-sim: protocs-sim protoui
-
-protocs-sim: proto_ao_cs.c ao_library.c cs_library.c foam_modules-sim.c foam_modules-dm.c
+foamcs-sim: foam_cs.c foam_library.c foam_cs_library.c foam_modules-sim.c foam_modules-dm.c foam_modules-sh.c
 		$(CC) $(CFLAGS) -lc $^ -o $@
 
-protoui: proto_ao_ui.c ao_library.c ui_library.c
+foamui: foam_ui.c foam_library.c foam_ui_library.c
 		$(CC) $(CFLAGS) -lc $^ -o $@
 
 
