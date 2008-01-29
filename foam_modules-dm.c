@@ -66,6 +66,9 @@ amount of iterations (0 is auto).
 */
 int simDM(char *boundarymask, char *actuatorpat, int nact, float *ctrl, float *image, int niter);
 
+// FUNCTIONS BEGIN //
+/*******************/
+
 int simDM(char *boundarymask, char *actuatorpat, int nact, float *ctrl, float *image, int niter) {
 	int	 i, j, status, nx, ny, ngray1, ngray2;
 	long	 ii, i_1j, i1j, ij_1, ij1;
