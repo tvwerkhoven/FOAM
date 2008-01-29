@@ -81,7 +81,7 @@ subaperture.
 @param [in] wfs The WFS identifier to read the image from
 @param [out] *sum The summed intensity over the whole *image
 @param [out] *max The maximum of the whole *image
-@param [in] window[2] The size of the individual subapertures, used to reformat *corrim
+@param [in] window The size of the individual subapertures, used to reformat *corrim
 */
 void imcal(float *corrim, float *image, float *darkim, float *flatim, int wfs, float *sum, float *max, int window[2]);
 
@@ -96,7 +96,7 @@ images will not work.
 @param [in] wfs The WFS identifier to track the CoG of 
 @param [out] *aver The average intensity over all subapts wil be stored here
 @param [out] *max The maximum intensity of all subapts will be stored here
-@param [out] coords[][2] will hold the CoG coordinates relative to the center of the subaperture
+@param [out] coords will hold the CoG coordinates relative to the center of the subaperture
 */
 void cogTrack(int wfs, float *aver, float *max, float coords[][2]);
 
@@ -107,7 +107,11 @@ Work in progress as of 2008-01-28
 */
 void corrTrack(int wfs, float *aver, float *max, float coords[][2]);
 
-
+/*!
+@brief Process a reference image stored in *image, old refim *ref
+TODO: doc
+*/
+void procRefim(float *image, float *ref, float *sharp, float *aver);
 /*!
 @brief This draws all subapertures for a certain wfs
 

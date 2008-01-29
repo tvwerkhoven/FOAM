@@ -279,6 +279,7 @@ on activity on the new socket, in which case there is data to be read.
 
 @param [in] sock Socket with pending connection
 @param [in] event The way this function was called
+@param [in] *arg Necessary additional argument to use as caller function for libevent
 */
 void sockAccept(int sock, short event, void *arg);
 
@@ -299,6 +300,7 @@ read 1 kb in one time maximum (which should be enough).
 
 @param [in] *msg the char array (max length 1024)
 @param [in] len the actual length of msg
+@param [in] *client the client_t struct of the client we want to parse a command from
 @return \c EXIT_SUCCESS upon success, or \c EXIT_FAILURE otherwise.
 */
 int parseCmd(char *msg, int len, client_t *client);
@@ -371,8 +373,8 @@ void catchSIGINT();
 /*!
 @brief This draws a rectangle starting at {coord[0], coord[1]} with size {size[0], size[1]} on screen *screen
 
-@param [in] coord[2] Lower left coordinate of the rectangle to be drawn
-@param [in] size[2] Size of the rectangle to be drawn 
+@param [in] coord Lower left coordinate of the rectangle to be drawn
+@param [in] size Size of the rectangle to be drawn 
 @param [in] *screen SDL_Surface to draw on
 */
 void drawRect(int coord[2], int size[2], SDL_Surface*screen);

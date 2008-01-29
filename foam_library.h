@@ -71,12 +71,11 @@ int printUTCDateTime(char **ret);
 /*! 
 @brief Send data over a socket
 
+sendMsg() sends data to the server, but is currently simply a wrapper for write()
+
 @param [in] sock the socket to send over
 @param [in] *buf the string to send
-@param [in] len the length of the string to send
 @return same as write(), number of bytes or -1 on error
-
-sendMsg() sends data to the server, but is currently simply a wrapper for write()
 */
 int sendMsg(const int sock, const char *buf);
 

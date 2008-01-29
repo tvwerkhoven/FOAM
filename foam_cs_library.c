@@ -1,5 +1,5 @@
 /*! 
-@file foam_cs_library 
+@file foam_cs_library.c
 @brief Library file for the Control Software
 @author @authortim
 @date November 13 2007

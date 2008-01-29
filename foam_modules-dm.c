@@ -59,9 +59,9 @@ amount of iterations (0 is auto).
 @param [in] *boundarymask The pgm-file containing the boundary mask (aperture)
 @param [in] *actuatorpat The pgm-file containing the DM-actuator pattern
 @param [in] nact The number of actuators, must be the same as used in \a *actuatorpat
-@param [in] *voltage The voltage array, \a nact long
+@param [in] *ctrl The control commands array, \a nact long
 @param [in] niter The number of iterations, pass 0 for automatic choice
-@param [out] *dm The DM wavefront correction in um.
+@param [out] *image The DM wavefront correction in um, 2d array.
 @return EXIT_SUCCESS on success, EXIT_FAILURE otherwise.
 */
 int simDM(char *boundarymask, char *actuatorpat, int nact, float *ctrl, float *image, int niter);

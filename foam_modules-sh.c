@@ -567,6 +567,10 @@ float sae(float *subapt, float *refapt, int len) {
 	return sum;
 }
 
+void procRefim(float *image, float *ref, float *sharp, float *aver) {
+	
+}
+
 int modParseSH(int wfs) {
 	// now calculate the offsets 
 	float aver=0.0, max=0.0;
