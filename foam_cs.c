@@ -1,29 +1,31 @@
 /*! 
-	@file proto_ao_cs.c
-	@author Tim van Werkhoven
+	@file foam_cs.c
+	@author @authortim
 	@date November 14 2007
 
-	@brief This is the main file for the FOAM Control Software.
+	@brief This is the main file for the @name Control Software.
 
-	Partially functional alpha version of the FOAM Control Software\n\n
+ 	(was proto_ao_cs.c)
+
+	Partially functional alpha version of the @name Control Software\n\n
 	TODO tags are used for work in progress or things that are unclear.
 */
 
 // HEADERS //
 /***********/
 
-#include "cs_library.h"
+#include "foam_cs_library.h"
 #include "foam_modules.h"
 
 // GLOBAL VARIABLES //
 /********************/	
 
-// These are defined in cs_library.c
+// These are defined in foam_cs_library.c
 extern control_t ptc;
 extern config_t cs_config;
 extern conntrack_t clientlist;
 
-SDL_Surface *screen;	// Global surface to draw on
+extern SDL_Surface *screen;	// Global surface to draw on
 SDL_Event event;		// Global SDL event struct to catch user IO
 
 	/*! 
@@ -240,12 +242,14 @@ int parseConfig(char *var, char *value) {
 			return EXIT_FAILURE;
 		}		
 		
+		// Allocate memory for all images we need lateron
 		if (((ptc.wfs[tmp].image = calloc(ptc.wfs[tmp].res[0] * ptc.wfs[tmp].res[1], sizeof(ptc.wfs[tmp].image))) == NULL) ||
 				((ptc.wfs[tmp].darkim = calloc(ptc.wfs[tmp].res[0] * ptc.wfs[tmp].res[1], sizeof(ptc.wfs[tmp].darkim))) == NULL) ||
 				((ptc.wfs[tmp].flatim = calloc(ptc.wfs[tmp].res[0] * ptc.wfs[tmp].res[1], sizeof(ptc.wfs[tmp].flatim))) == NULL) ||
-				((ptc.wfs[tmp].corrim = calloc(ptc.wfs[tmp].res[0] * ptc.wfs[tmp].res[1], sizeof(ptc.wfs[tmp].corrim))) == NULL)
+				((ptc.wfs[tmp].corrim = calloc(ptc.wfs[tmp].res[0] * ptc.wfs[tmp].res[1], sizeof(ptc.wfs[tmp].corrim))) == NULL) ||
+				((ptc.wfs[tmp].refim = calloc(ptc.wfs[tmp].res[0] * ptc.wfs[tmp].res[1], sizeof(ptc.wfs[tmp].refim))) == NULL)
 				) {
-			logErr("Failed to allocate image memory (image, dark, flat or corrected).");
+			logErr("Failed to allocate image memory (image, dark, flat, corrected or reference).");
 			return EXIT_FAILURE;
 		}
 		
@@ -726,7 +730,6 @@ mode <open|closed>: close or open the loop.\n\
 simulate: toggle simulation mode.\n";
 
 		return bufferevent_write(client->buf_ev, help, sizeof(help));
-//		return sendMsg(sock, help); 
 	}
 	else if (strcmp(subhelp, "mode") == 0) {
 		char help[] = "200 OK HELP MODE\n\
@@ -738,6 +741,14 @@ as possible.\n";
 
 		return bufferevent_write(client->buf_ev, help, sizeof(help));
 	}
+	else if (strcmp(subhelp, "set") == 0) {
+		char help[] = "200 OK HELP MODE\n\
+set <var> <value>\n\
+This changes the value of a run-time variable.\
+";
+		return bufferevent_write(client->buf_ev, help, sizeof(help));
+	}
+
 	else {
 		return bufferevent_write(client->buf_ev, "400 UNKOWN HELP\n", sizeof("400 UNKOWN HELP\n"));
 	}
@@ -748,21 +759,33 @@ as possible.\n";
 // DOXYGEN GENERAL DOCUMENTATION //
 /*********************************/
 
-/*! \mainpage FOAM 
-	
+/* Doxygen needs the following aliases in the configuration file!
+
+ALIASES += authortim="Tim van Werkhoven (T.I.M.vanWerkhoven@phys.uu.nl)"
+ALIASES += license="GPL"
+ALIASES += wisdomfile="fftw_wisdom.dat"
+ALIASES += name="FOAM"
+ALIASES += longname="Modular Adaptive Optics Framework"
+ALIASES += uilib="foam_ui_library.*"
+ALIASES += cslib="foam_cs_library.*"
+*/
+
+
+/*!	\mainpage @name 
+
 	\section aboutdoc About this document
 	
-	This is the (developer) documentation for FOAM, the Modular Adaptive 
-	Optics Framework (yes, FOAM is backwards). It is intended to clarify the
+	This is the (developer) documentation for @name, the @longname 
+	 (yes, @name is backwards). It is intended to clarify the
 	code and give some help to people re-using the code for their specific needs.
 	
-	\section aboutfoam About FOAM
+	\section aboutfoam About @name
 	
-	FOAM, the Modular Adaptive Optics Framework, is intended to be a modular
+	@name, the @longname, is intended to be a modular
 	framework which works independent of hardware and should provide such
 	flexibility that the framework can be implemented on any AO system.
 	
-	A short list of the features of FOAM follows:
+	A short list of the features of @name follows:
 	\li Portable - It will run on many (Unix) systems and is hardware independent
 	\li Scalable - It  will scale easily and handle multiple cores/CPU's
 	\li Usable - It will be controllable over a network by multiple clients simultaneously
@@ -775,7 +798,7 @@ as possible.\n";
 
 	\section install_sec Installation
 	
-	FOAM depends on the following libraries to be present on the system:
+	@name depends on the following libraries to be present on the system:
 	\li \a libevent to be installed on the target machine, which is released under a 3-clause BSD license and is avalaible here:
 	 http://www.monkey.org/~provos/libevent/
 	\li \a libsdl which is used to display the sensor output
@@ -784,8 +807,13 @@ as possible.\n";
 	\li \a cfitsio, a library to read (and write) FITS files. Used to read the simulated wavefront.
 	\li \a fftw3 which is used to compute FFT's to simulate the SH lenslet array	
 	
-	Furthermore FOAM requires basic things like a hosted compilation environment, pthreads, etc. For a full list of dependencies,
+	Furthermore @name requires basic things like a hosted compilation environment, pthreads, etc. For a full list of dependencies,
 	see the header files (notably cs_library.h and ao_library.h).
+	
+	Other run-time requirements/limitations of @name are:
+	\li The subaperture resolution must be a multiple of 4.
+	\li At the moment, only 256x256 pixel images can be simulated
+	\li At the moment, only float images are processed
 
 	\subsection drivers Write drivers
 	
@@ -793,10 +821,10 @@ as possible.\n";
 	adhere to the interfaces described below. The functions will have to be
 	defined in the config file, see next section.
 	
-	\subsection config Configure FOAM
+	\subsection config Configure @name
 	
-	Configure FOAM, especially ao_config.cfg. Make sure you do \b not copy the FFTW wisdom file 'fftw_wisdom.dat' to new machines,
-	this file contains some simple benchmarking results done by FFTW and are very machine dependent. FOAM will regenerate the file
+	Configure @name, especially ao_config.cfg. Make sure you do \b not copy the FFTW wisdom file 'fftw_wisdom.dat' to new machines,
+	this file contains some simple benchmarking results done by FFTW and are very machine dependent. @name will regenerate the file
 	if necessary, but it cannot detect 'wrong' wisdom files.
 	
 */

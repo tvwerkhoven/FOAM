@@ -1,9 +1,11 @@
 /* 
-	Library file for the whole AO framework
-	Tim van Werkhoven, November 13 2007
+	@file foam_library.c (was ao_library.c)
+	@brief Library file for the whole AO framework
+	@author @authortim
+	@date November 13 2007
 */
 
-#include "ao_library.h"
+#include "foam_library.h"
 
 int printUTCDateTime(char **ret) {
 	struct tm *utc;

@@ -1,24 +1,28 @@
-/*! @file cs_library.h 
-@brief This file is the main library for the CS component of FOAM
+/*! 
+@file foam_cs_library.h
+@brief This file is the main library for the CS component of @name
+@author @authortim
 
-This header file contains allmost all functions used by the CS component of FOAM.
+(was cs_library.h)
+
+This header file contains allmost all functions used by the CS component of @name.
 In addition to that, it contains specific libraries only used by CS and not by the UI
 as well as a lot of structs to hold data used in the CS. These include things like the 
 state of the AO system (control_t), as well as some structs to track network connections
-to the CS. For UI headers, see ui_library.h.\n
+to the CS. For UI headers, see @uilib.\n
 Last: 2008-01-21
 */
 
-
-#ifndef CS_LIBRARY
-#define CS_LIBRARY
+#ifndef FOAM_CS_LIBRARY
+#define FOAM_CS_LIBRARY
 
 // INCLUDES //
 /************/
 #include <fcntl.h>
 #include "SDL.h" 	// most portable way according to 
 					//http://www.libsdl.org/cgi/docwiki.cgi/FAQ_20Including_20SDL_20Headers
-#include "ao_library.h"
+#include <fitsio.h> // we need this to read FITS files
+#include "foam_library.h"
 
 
 // DEFINES //
@@ -43,6 +47,24 @@ char logmessage[LINE_MAX];
 /*********************/
 
 /*!
+@brief Helper enum for ao mode operation. Modes include AO_MODE_OPEN, AO_MODE_CLOSED and AO_MODE_CAL.
+*/
+typedef enum { // aomode_t
+	AO_MODE_OPEN,
+	AO_MODE_CLOSED,
+	AO_MODE_CAL
+} aomode_t;
+
+/*!
+@brief Helper enum for ao scanning mode (i.e. in X and/or Y direction).
+*/
+typedef enum { // axes_t
+	AO_AXES_XY,
+	AO_AXES_X,
+	AO_AXES_Y
+} axes_t;
+
+/*!
 @brief Helper struct to store WFC variables in \a ptc. Used by type \c control_t.
 */
 typedef struct { // wfc_t
@@ -56,38 +78,23 @@ typedef struct { // wfc_t
 */
 typedef struct { // wfs_t
 	char name[FILENAMELEN];			//!< name of the specific WFS
-	long res[2];			//!< x,y-resolution of this WFS
+	int res[2];			//!< x,y-resolution of this WFS
 	int cells[2];		//!< number of cells in this WFS (SH only)
 	int (*subc)[2];		//!< this will hold the coordinates of each subapt
 						// TODO: how to make a pointer to an array which holds pairs of ints as elements?
 						// e.g. pointer to: { {x1,y1}, {x2,y2} ... {xn,yn}}
 						// where ptr[i] = {xi,yi} ? GUUS
 	int nsubap;			//!< amount of subapertures used (coordinates stored in subc)
+	axes_t scandir; 	//!< scanning direction(s) used (see \c axes_t type)
 	float *image;		//!< pointer to the WFS output, stored in row-major format
 	float *darkim;		//!< darkfield (byte image), stored in row-major format \b per \b subapt
 	float *flatim;		//!< flatfield (byte image), stored in row-major format \b per \b subapt
 	float *corrim;		//!< corrected image, stored in row-major format \b per \b subapt
+	float *refim;		//!< reference image for correlation tracking
 	char darkfile[FILENAMELEN];		//!< filename for the darkfield calibration
 	char flatfile[FILENAMELEN];		//!< filename for the flatfield calibration
 } wfs_t;
 
-/*!
-@brief Helper enum for ao mode operation. Modes include AO_MODE_OPEN, AO_MODE_CLOSED and AO_MODE_CAL.
-*/
-typedef enum { // aomode_t
-	AO_MODE_OPEN,
-	AO_MODE_CLOSED,
-	AO_MODE_CAL
-} aomode_t;
-
-/*!
-@brief Helper enum for ao scanning mode (i.e. in X and/or Y direction).
-*/
-typedef enum { // aomode_t
-	AO_AXES_XY,
-	AO_AXES_X,
-	AO_AXES_Y
-} axes_t;
 
 /*! 
 @brief Stores the state of the AO system
@@ -103,7 +110,6 @@ This struct is globally available.
 */
 typedef struct { // control_t
 	aomode_t mode;	//!< defines the mode the AO system is in (see \c aomode_t type)
-	axes_t scandir; //!< scanning direction(s) used (see \c axes_t type)
 	time_t starttime;	//!< stores the starting time of the system
 	long frames;	//!< store the number of frames parsed
 	
@@ -177,6 +183,15 @@ This function does not report any problems at all.
 @param [in] msg The string to be passed on to vfprintf.
 */
 void logInfo(const char *msg, ...);
+
+/*!
+@brief This directly prints something to the log files and/or screen without formatting
+
+Works the same as logInfo() in the sense that it uses the same files/streams etc.
+
+@param [in] msg The string to be passed on to vfprintf.
+*/
+void logDirect(const char *msg, ...);
 
 /*!
 @brief logErr() prints out error messages to the appropriate streams.
@@ -274,7 +289,6 @@ Taken from \c http://unx.ca/log/libevent_echosrv_bufferedc/
 */
 int setnonblock(int fd);
 
-
 /*! 
 @brief Process the command given by the user.
 
@@ -335,7 +349,7 @@ Save the configuration to a file such that it can be read by loadConfig().
 int saveConfig(char *file);
 
 /*!
-@brief Give information on FOAM CS over the socket.
+@brief Give information on @name CS over the socket.
 
 This function gives help to the cliet which sent a HELP command over the socket.
 
@@ -345,7 +359,7 @@ This function gives help to the cliet which sent a HELP command over the socket.
 int showHelp(const client_t *client, const char *subhelp);
 
 /*!
-@brief Function which wraps up the FOAM framework (gives some stats)
+@brief Function which wraps up  @name  (gives some stats)
 */
 void stopFOAM();
 
@@ -355,62 +369,30 @@ void stopFOAM();
 void catchSIGINT();
 
 /*!
-@brief Selects suitable subapts to work with
+@brief This draws a rectangle starting at {coord[0], coord[1]} with size {size[0], size[1]} on screen *screen
 
-This routine checks all subapertures and sees whether they are useful or not.
-It can also 'erode' some apertures away from the edge or enforce a maximum
-radius between any subaperture and the reference subaperture.
-
-@param [in] *image The sensor output image (i.e. SH camera).
-@param [in] samini The minimum intensity a useful subaperture should have
-@param [in] samxr The maximum radius to enforce if positive, or the amount of subapts to erode if negative.
-@param [in] wfs The wavefront sensor to apply this to.
+@param [in] coord[2] Lower left coordinate of the rectangle to be drawn
+@param [in] size[2] Size of the rectangle to be drawn 
+@param [in] *screen SDL_Surface to draw on
 */
-void selectSubapts(float *image, float samini, int samxr, int wfs);
-
-
-/*!
-@brief Parses output from Shack-Hartmann WFSs.
-
-This function takes the output from the drvReadSensor() routine (if the sensor is a
-SH WFS) and preprocesses this sensor output (typically from a CCD) to be further
-analysed by modCalcDMVolt(), which calculates the actual driving voltages for the
-DM. 
-
-@return EXIT_SUCCESS on success, EXIT_FAILURE otherwise.
-*/
-int modParseSH(int wfs);
-
-/*!
-@brief Calculates the sum of absolute differences for two subapertures
-*/
-float sae(float *subapt, float *refapt, long res[2]);
-
-/*!
-@brief ADD DOC
-*/
-void imcal(float *corrim, float *image, float *darkim, float *flatim, int wfs, float *sum, float *max, int window[]);
-
-/*!
-@brief Tracks the seeing using center of gravity tracking
-
-TODO: make prototype, document, add dark and flat, add correlation tracking
-*/
-void cogTrack(int wfs, float *aver, float *max, float coords[][2]);
-
-/*!
-@brief Tracks the seeing using correlation tracking (works on extended objects)
-
-TODO: add doc
-*/
-void corrTrack(int wfs, float *aver, float *max, float coords[][2]);
-
 void drawRect(int coord[2], int size[2], SDL_Surface*screen);
-void drawLine(int x0, int y0, int x1, int y1, SDL_Surface*screen);
-int drawSubapts(int wfs, SDL_Surface *screen);
 
-int displayImg(float *img, long res[2], SDL_Surface *screen);
+/*!
+@brief This draws a line from {x0, y0} to {x1, y1} without any aliasing
+
+@param [in] x0 starting x-coordinate
+@param [in] y0 starting y-coordinate
+@param [in] x1 end x-coordinate
+@param [in] y1 end y-coordinate
+@param [in] *screen SDL_Surface to draw on
+*/
+void drawLine(int x0, int y0, int x1, int y1, SDL_Surface*screen);
+
+
+
+int displayImg(float *img, int res[2], SDL_Surface *screen);
 void DrawPixel(SDL_Surface *screen, int x, int y, Uint8 R, Uint8 G, Uint8 B);
 void Sulock(SDL_Surface *screen);
 void Slock(SDL_Surface *screen);
-#endif /* CS_LIBRARY */
+
+#endif /* FOAM_CS_LIBRARY */

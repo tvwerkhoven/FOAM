@@ -1,12 +1,12 @@
 /*! 
-	@file cs_config.h
-	@author Tim van Werkhoven
+	@file foam_config.h
+	@author @authortim
 	@date November 14 2007
 
-	@brief This is the user config file for FOAM
+	@brief This is the user config file for @name
 
 	Hardware-dependent variables can be defined here to be used in
-	te rest of FOAM.
+	te rest of @name.
 */
 
 

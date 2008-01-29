@@ -2,8 +2,8 @@
 	User Interface Library
 */
 
-#ifndef UI_LIBRARY
-#define UI_LIBRARY
+#ifndef FOAM_UI_LIBRARY
+#define FOAM_UI_LIBRARY
 
 // INCLUDES //
 /************/
@@ -33,4 +33,4 @@ int sockRead(const int sock, char *msg, fd_set *lfd_set);
 // DEFINES //
 /***********/
 
-#endif /* UI_LIBRARY */
+#endif /* FOAM_UI_LIBRARY */
