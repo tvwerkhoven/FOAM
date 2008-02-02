@@ -477,7 +477,7 @@ int modSimSH() {
 			
 		} 
 	} // end looping over subapts
-	
+	logDebug("Image simulation done.");	
 	//manually copy one subapt to check the alignment and shit
 	
 	

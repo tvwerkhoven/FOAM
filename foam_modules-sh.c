@@ -13,35 +13,35 @@
 
 #include "foam_modules-sh.h"
 
-void selectSubapts(float *image, float samini, int samxr, int wfs) {
+void selectSubapts(wfs_t *wfsinfo, float samini, int samxr) {
+
 	// stolen from ao3.c by CUK
 	int isy, isx, iy, ix, i, sn=0, nsubap=0; //init sn to zero!!
 	float sum=0.0, fi;			// check 'intensity' of a subapt
-	float csum=0.0, cs[] = {0.0,0.0}; // for center of gravity
+	float csum=0.0, cs[] = {0.0, 0.0}; // for center of gravity
 	int shsize[2];			// size of one subapt (in pixels)
-	int res[2], cells[2];	// size of whole image, nr of cells
 	float cx=0, cy=0;		// for CoG
 	float dist, rmin;		// minimum distance
 	int csa=0;				// estimate for best subapt
-	int (*subc)[2] = ptc.wfs[wfs].subc;	// lower left coordinates of the tracker windows
+	int (*subc)[2] = wfsinfo->subc;	// lower left coordinates of the tracker windows
 
-	res[0] = ptc.wfs[wfs].res[0];	// shortcuts
-	res[1] = ptc.wfs[wfs].res[1];
-	cells[0] = ptc.wfs[wfs].cells[0];
-	cells[1] = ptc.wfs[wfs].cells[1];
-
-	shsize[0] = res[0]/cells[0]; 		// size of subapt cell in x
-	shsize[1] = res[1]/cells[1];		// size of subapt cell in y
+	float *image = wfsinfo->image;		// source image from sensor
+	int *res = wfsinfo->res;			// image resolution
+	int *cells = wfsinfo->cells;		// cell resolution used (i.e. 8x8)
+	
+	shsize[0] = res[0]/cells[0]; 		// resolution of subapt cell in x
+	shsize[1] = res[1]/cells[1];		// resolution of subapt cell in y
 	
 	// we store our subaperture map in here when deciding which subapts to use
 	int apmap[cells[0]][cells[1]];		// aperture map
 	int apmap2[cells[0]][cells[1]];		// aperture map 2
 	int apcoo[cells[0] * cells[1]][2];  // subaperture coordinates in apmap
 	
+	logInfo("Selecting subapertures.");
 	for (isy=0; isy<cells[1]; isy++) { // loops over all potential subapertures
 		for (isx=0; isx<cells[0]; isx++) {
 			// check one potential subapt (isy,isx)
-
+			logDebug("sapt (%d,%d) of (%d,%d)",isx, isy, cells[0], cells[1]);
 			sum=0.0; cs[0] = 0.0; cs[1] = 0.0; csum = 0.0;
 			for (iy=0; iy<shsize[1]; iy++) { // sum all pixels in the subapt
 				for (ix=0; ix<shsize[0]; ix++) {
@@ -57,7 +57,7 @@ void selectSubapts(float *image, float samini, int samxr, int wfs) {
 					cs[1] += + fi * iy;
 				}
 			}
-
+			logDebug("sapt part 2");
 			// check if the summed subapt intensity is above zero (e.g. do we use it?)
 			if (csum > 0.0) { // good as long as pixels above background exist
 				subc[sn][0] = isx*shsize[0]+shsize[0]/4 + (int) (cs[0]/csum) - shsize[0]/2;	// subapt coordinates
@@ -75,6 +75,7 @@ void selectSubapts(float *image, float samini, int samxr, int wfs) {
 			}
 		}
 	}
+	logInfo("CoG for subapts done.");
 	
 	nsubap = sn; 			// nsubap: variable that contains number of subapertures
 	cx = cx / (float) sn; 	// TODO what does this do? why?
@@ -186,7 +187,7 @@ void selectSubapts(float *image, float samini, int samxr, int wfs) {
 				apmap[isx][isy] = apmap2[isx][isy];
 
 	}
-	ptc.wfs[wfs].nsubap = nsubap; // store to global configuration struct
+	wfsinfo->nsubap = nsubap; // store to global configuration struct
 	logInfo("Selected %d usable subapertures", nsubap);
 	
 	// set remaining subaperture coordinates to 0
@@ -208,24 +209,22 @@ void selectSubapts(float *image, float samini, int samxr, int wfs) {
 	logInfo("Subaperture definition image saved in file %s",cfn);*/
 }
 
-void cogTrack(int wfs, float *aver, float *max, float coords[][2]) {
+void cogTrack(wfs_t *wfsinfo, float *aver, float *max, float coords[][2]) {
 	// center of gravity tracking here (easy)
 	int ix, iy, sn=0;
 	float csx, csy, csum, fi; 			// variables for center-of-gravity
 	float sum = 0;
 
-	float *image = ptc.wfs[wfs].image;
-//	float *dark = ptc.wfs[wfs].darkim
-//	float *flat = ptc.wfs[wfs].flatim
-	float *corr = ptc.wfs[wfs].corrim;
-	int nsubap = ptc.wfs[wfs].nsubap;
-	int (*subc)[2] = ptc.wfs[wfs].subc;	// TODO: does this work?
+	float *image = wfsinfo->image;
+//	float *dark = wfsinfo->darkim
+//	float *flat = wfsinfo->flatim
+	float *corr = wfsinfo->corrim;
+	int nsubap = wfsinfo->nsubap;
+	int (*subc)[2] = wfsinfo->subc;	// TODO: does this work?
 	
-	int res[2], cells[2], shsize[2];
-	res[0] = ptc.wfs[wfs].res[0];		// shortcuts, TODO: can be done faster like res = ptc.wfs.res ?
-	res[1] = ptc.wfs[wfs].res[1];
-	cells[0] = ptc.wfs[wfs].cells[0];
-	cells[1] = ptc.wfs[wfs].cells[1];
+	int *res, *cells, shsize[2];
+	res = wfsinfo->res;					// shortcuts to resolution
+	cells = wfsinfo->cells;				// number of x-cells y-cells
 
 	shsize[0] = res[0]/cells[0]; 		// size of subapt cell in x (width)
 	shsize[1] = res[1]/cells[1];		// size of subapt cell in y (height)
@@ -252,7 +251,7 @@ void cogTrack(int wfs, float *aver, float *max, float coords[][2]) {
 		cp = &corr[sn*track[0]*track[1]]; // calibrated image (output)
 
 		// dark and flat correct subaperture, determine statistical quantities
-		imcal(cp, ip, NULL, NULL, wfs, &sum, max, track);
+		imcal(cp, ip, NULL, NULL, &sum, max, res, track);
 
 		// center-of-gravity
 		csx = 0.0; csy = 0.0; csum = 0.0;
@@ -284,6 +283,7 @@ void cogTrack(int wfs, float *aver, float *max, float coords[][2]) {
 	*aver = sum / ((float) (track[0]*track[1]*nsubap));
 }
 
+/*
 void corrTrack(int wfs, float *aver, float *max, float coords[][2]) {
 	// this will contain correlation tracking, but first we need to get reference images
 
@@ -350,7 +350,7 @@ void corrTrack(int wfs, float *aver, float *max, float coords[][2]) {
 	
 	
 	// BEGIN SUBAPERTURE LOOP //
-	/**************************/
+	////////////////////////////
 	for (sn=0;sn<nsubap;sn++) {
 
 		// --->>> might use some pointer incrementing instead of setting
@@ -362,21 +362,21 @@ void corrTrack(int wfs, float *aver, float *max, float coords[][2]) {
 		
 
 		// dark and flat correct subaperture, determine statistical quantities
-		imcal(cp, ip, NULL, NULL, wfs, &sum, &tmpmax, track);
+		imcal(cp, ip, NULL, NULL, &sum, max, res, track);
 		
 		// update the maximum value
-		if (tmpmax > *max) 
+		if (tmpmax > *max)
 			*max = tmpmax;
 			
 		// add the sum of this subapt to the average (divide by nsubapt later)
 		*aver += sum;
 		
-	    cmin = 1000000; /* large positive integer */
+	    cmin = 1000000; // large positive integer 
 		// TODO: ugly, how to fix?
 
 	    switch (ptc.wfs[wfs].scandir) {
 			case AO_AXES_XY:
-			//*************//
+			////////////////
 
 			ip = &corr[sn*track[0]*track[1]]; // first pixel of each corrected subaperture
 			for (ix=-NO; ix<=NO; ix++) {
@@ -391,7 +391,7 @@ void corrTrack(int wfs, float *aver, float *max, float coords[][2]) {
 			break;
 
 			case AO_AXES_X:
-			//*************//
+			////////////////
 			
 			ip = &corr[sn*track[0]*track[1]]; // first pixel of each corrected subaperture
 			for (ix=-NO; ix<=NO; ix++) {
@@ -406,7 +406,7 @@ void corrTrack(int wfs, float *aver, float *max, float coords[][2]) {
 			break;
 
 			case AO_AXES_Y:
-			//*************//
+			////////////////
 			
 			ip = &corr[sn*track[0]*track[1]]; // first pixel of each corrected subaperture
 			for (iy=-NO; iy<=NO; iy++) {
@@ -422,13 +422,13 @@ void corrTrack(int wfs, float *aver, float *max, float coords[][2]) {
 		} // end of switch(axes) statement
 
 
-	    msae[sn] = cmin;            /* minimum sum of absolute differences */
+	    msae[sn] = cmin;            // minimum sum of absolute differences 
 
 	    // subpixel interpolation of minimum position
 	    // currently uses two 1-D approaches
 
-		// Interpolation along the X direction
-		//**********************************//
+		// Interpolation along the X direction //
+		/////////////////////////////////////////
 		if ((ptc.wfs[wfs].scandir==AO_AXES_X) || (ptc.wfs[wfs].scandir==AO_AXES_XY)) {
 			if (ptc.wfs[wfs].scandir==AO_AXES_XY) { // average values over the y-axis
 				for (ix=0; ix<NP; ix++) { 
@@ -468,8 +468,8 @@ void corrTrack(int wfs, float *aver, float *max, float coords[][2]) {
 			coords[sn][0] = 0.0;
 		}
 
-		// Interpolation along the Y direction
-		//**********************************//
+		// Interpolation along the Y direction //
+		/////////////////////////////////////////
 		if ((ptc.wfs[wfs].scandir==AO_AXES_Y) || (ptc.wfs[wfs].scandir==AO_AXES_XY)) {
 			if (ptc.wfs[wfs].scandir==AO_AXES_XY) { // average values over the x-axis
 				for (iy=0; iy<NP; iy++) {
@@ -510,8 +510,8 @@ void corrTrack(int wfs, float *aver, float *max, float coords[][2]) {
 		} // End for: if ((ptc.wfs[wfs].scandir==AO_AXES_Y) || (ptc.wfs[wfs].scandir==AO_AXES_XY))
 	}
 	// END SUBAPERTURE LOOP //
-	/************************/
-	
+	//////////////////////////
+
 	// TvW: why do we use corr?
 	// what is si?
 	// what do we need the statistics for?
@@ -524,34 +524,34 @@ void corrTrack(int wfs, float *aver, float *max, float coords[][2]) {
 	// calculate average reference subaperture intensity if new reference 
 	// was just taken
 	// TvW: what's this then?
-/*	
-	if (*newref == AO_REFIM_NONE) { // new reference is valid
-		printf("old correction factor: %f\n",corr);
-		refaver = 0.0;  // average reference subaperture intensity
-		for (ix=0;ix<SX;ix++)
-			for (iy=0;iy<SY;iy++)
-				refaver = refaver + (float) refim[(iy+4)*RX+ix+4];
-		
-		refaver = refaver/(float) (SX*SY);
-		corr = 1.0; // reset brightness correction
-		*newref = AO_REFIM_GOOD;
-		printf("new reference, correction factor: %f\n",corr);
-	}
-*/
+	
+	// if (*newref == AO_REFIM_NONE) { // new reference is valid
+	// 	printf("old correction factor: %f\n",corr);
+	// 	refaver = 0.0;  // average reference subaperture intensity
+	// 	for (ix=0;ix<SX;ix++)
+	// 		for (iy=0;iy<SY;iy++)
+	// 			refaver = refaver + (float) refim[(iy+4)*RX+ix+4];
+	// 	
+	// 	refaver = refaver/(float) (SX*SY);
+	// 	corr = 1.0; // reset brightness correction
+	// 	*newref = AO_REFIM_GOOD;
+	// 	printf("new reference, correction factor: %f\n",corr);
+	// }
 
 	// calculate intensity correction factor based on average intensity
-/*	if (refaver == 0.0)
-		corr = 1.0;
-	else {
-		if (*aver>0) corr = corr * refaver / *aver; // update correction factor
-		// if correction factor is 2 or larger, then the multiplication
-		// with 2^15 above 'flips' over to something close to zero; we should
-		// allow at least a factor of 4, but we still need to catch that case
-		// (maybe using saturated multiplication)
-		if (corr>1.999) corr=1.999;
-	}
-	*/
+	// if (refaver == 0.0)
+	// 	corr = 1.0;
+	// else {
+	// 	if (*aver>0) corr = corr * refaver / *aver; // update correction factor
+	// 	// if correction factor is 2 or larger, then the multiplication
+	// 	// with 2^15 above 'flips' over to something close to zero; we should
+	// 	// allow at least a factor of 4, but we still need to catch that case
+	// 	// (maybe using saturated multiplication)
+	// 	if (corr>1.999) corr=1.999;
+	// }
+
 }
+*/
 
 float sae(float *subapt, float *refapt, int len) {
 	// *ip     pointer to first pixel of each subaperture
@@ -567,28 +567,235 @@ float sae(float *subapt, float *refapt, int len) {
 	return sum;
 }
 
-void procRefim(float *image, float *ref, float *sharp, float *aver) {
-	
-}
+/*
+void procRef(wfs_t *wfsinfo, float *sharp, float *aver) {
+//	uint8_t  pixel;
+//	uint16_t in16, d16, g16;
+	float in, dd, gg;  // these types should be higher than the image type for internal calculation
+	float pixel;
 
-int modParseSH(int wfs) {
+	float *image = wfsinfo->image;	
+	float *ref = wfsinfo->refim;		// reference image
+	float *dark = wfsinfo->dark; 	// dark image
+	float *flat = wfsinfo->flat; 	// flat img
+	float si=0, sqi=0;				// some summing variables
+	float a=0, b=0, c=0, d=0; 		// summed quadrant intensities
+	
+	int ix, iy;	// counters
+
+	int res[] = {wfsinfo->res[0], wfsinfo->res[1]};	// resolution of *image and *refim
+	int shsize[] = {wfsinfo->res[0]/wfsinfo->cells[0], wfsinfo->res[1]/wfsinfo->cells[1]};
+	int (*subc)[2] = wfsinfo->subc;		// coordinates of the tracker windows 
+	
+	for (iy=0; iy<shsize[1]; iy++) {
+		for (ix=0; ix<shsize[0]; ix++) {
+			// TvW: why *256 and /4?
+			in = (float) image[(subc[0][1]-shsize[1]/4+iy)*res[0]+subc[0][0]-shsize[0]/4+ix]*256;
+			dd = (float) dark[(subc[0][1]-shsize[1]/4+iy)*res[0]+subc[0][0]-shsize[0]/4+ix]/4;
+			if (in > dd) in -= dd;
+			else in = 0;
+			gg = (float) (1.07374182E+09 / (float) 
+				( flat[(subc[0][1]-shsize[1]/4+iy)*NX+subc[0][0]-shsize[0]/4+ix] - 
+				dark[(subc[0][1]-shsize[1]/4+iy)*res[0]+subc[0][0]-shsize[0]/4+ix]));
+			// 1.07374182E+09 is 2^30 
+			pixel = (float) (((double) in * (double) gg)>>21);
+			ref[iy* shsize[1] + ix] = pixel;
+			// TvW: this is not used at the moment:
+			// si += pixel;
+			// sqi += pixel;
+		}
+	}
+
+	switch (wfsinfo->scandir) {
+		case AO_AXES_XY:
+		    // the following defines the sharpness as the rms contrast
+		    // --->>> maybe we should only use the SX*SY subaperture and not the full
+		    //        RX*RY reference aperture because of flatfielding at the edges
+		    //  *sharp = sqrt( (sqi - ((float) si *(float) si)/((float) (RX*RY))) 
+		    //		 / (float) (RX*RY-1) );
+
+		    // the following is useful on spots, which returns the inverse
+		    // distance from a centered spot using a quad-cell approach
+	
+			// TvW: check this!
+			for (iy=shsize[1]/4; iy<shsize[1]/2; iy++) {
+				for (ix=shsize[0]/4; ix<shsize[0]/2; ix++) a=a+ref[iy*shsize[0]+ix]; // lower left
+				for (ix=shsize[0]/2; ix<shsize[0]*3/4; ix++) b=b+ref[iy*shsize[0]+ix]; // lower right 
+			}
+			for (iy=shsize[1]/2; iy<shsize[1]*3/4; iy++) {
+				for (ix=shsize[0]/4; ix<shsize[0]/2; ix++) c=c+ref[iy*shsize[0]+ix]; // upper left
+				for (ix=shsize[0]/2; ix<shsize[0]*3/4; ix++) d=d+ref[iy*shsize[0]+ix]; // upper right
+			}
+		    // adding +1 prevents division by zero
+		    *sharp = (float) (a+b+c+d) / (float) (abs(a+b-c-d)+abs(a+c-b-d)+1); 
+		    break;
+
+		case AO_AXES_X: // vertical limb, maximize intensity difference 
+			// between left and right
+			for (iy=shsize[1]/4; iy<shsize[1]*3/4; iy++) {
+				for (ix=shsize[0]/4; ix<shsize[0]/2; ix++) a=a+ref[iy*shsize[0]+ix]; //  left
+				for (ix=shsize[0]/2; ix<shsize[0]*3/4; ix++) b=b+ref[iy*shsize[0]+ix]; //  right 
+			}
+			// TvW: why /64?
+			*sharp = (float) fabs(a-b)/64.0;
+			break;
+
+		case AO_AXES_Y: // horizontal limb, maximize intensity difference 
+			// between top and bottom
+			// TvW: continue
+			for (ix=shsize[0]/4; ix<shsize[0]*3/4; ix++) {
+				for (iy=shsize[1]/4; iy<shsize[1]/2; iy++) a=a+ref[iy*shsize[0]+ix]; //  left
+				for (iy=shsize[1]/2; iy<shsize[1]*3/4; iy++) b=b+ref[iy*shsize[0]+ix]; //  right 
+			}
+			*sharp = (float) fabs(a-b)/64.0; 
+			break;
+
+	} // end switch (ptc.wfs[wfs].scandir)
+
+	// average intensity over subaperture
+	si=0;
+	for (iy=shsize[1]/4; iy<shsize[1]*3/4; iy++)
+		for (ix=shsize[0]/4; ix<shsize[0]*3/4; ix++)
+			si=si+ref[iy*shsize[0]+ix];
+			
+	*rint = (float) (si) / (float) (shsize[0]/2*shsize[1]/2);
+
+	} // end of procref
+}
+*/
+/*
+void getRef(float *imgptr) {
+	
+	float *ref = wfsinfo->image;
+	
+	float sharp, aver, bestsharp;	// store some stats in here
+
+	procRef(wfsinfo, &sharp, &aver);			
+	if (sharp > bestsharp) {
+		bestsharp = sharp;
+		
+	}
+	procref(image.srcptr + image.srcoff,refbu,&sharp,&rint,ptc->axes);
+
+  if (refcount<1024) {
+    procref(image.srcptr + image.srcoff,refbu,&sharp,&rint,ptc->axes);
+    if (sharp>bestsharp) { // the new potential reference is sharper
+      if (ptc->track == AO_LOOP_OPEN) {
+	bestsharp = sharp;
+            // calculate shift seen in this reference image
+            // --->>> by now there might already be a new image in
+            //        image.srcptr !!!
+            // can we use previous shtracker information?
+            // we should just work on the calibrated cimage[]
+            //	procref(image.srcptr + image.srcoff,refim,
+            //		&sharp,&rint,ptc->axes);
+            //	shtracker(image.srcptr + image.srcoff,
+            //		  0,cx,cy,qx,qy,&aver,&sharp,msae,&newref,
+            //		  ptc->track,ptc->mode,ptc->axes,&imax);
+            // calculate average shift (tip-tilt) that would be 
+            // measured by this reference using the 'same' wavefront
+            // this needs to be known because the reference subaperture
+            // might be badly shifted because of local wavefront
+            // deformation
+	sumx = 0.0; 
+	sumy = 0.0;
+	for (i=0;i<nsubap;i++) {
+	  // --->>> might not need pinhole subtraction if there
+	  // is no average shift in the pinhole calibration
+	  // Currently, 3/21/2003, there is no average shift there
+	  // --->>> should take care of outlyers in shift vectors
+	  sumx = sumx + qx[i] - ptc->px[i];
+	  sumy = sumy + qy[i] - ptc->py[i];
+	}
+	refx = sumx / (float) nsubap;
+	refy = sumy / (float) nsubap;
+
+            // store shift vector of reference subaperture with itself
+            // while this is expected to be 0.0, it is not because of
+            // systematic errors introduced by the subpixel interpolation
+	refx0 = qx[0];
+	refy0 = qy[0];
+	printf("refx0=%f refy0=%f\n",refx0,refy0);
+
+            // set various variables to zero if only using one WFS axis
+	if (ptc->axes==AO_AXES_X) {
+	  refy  = 0.0;
+	  refy0 = 0.0;
+	}
+	if (ptc->axes==AO_AXES_Y) {
+	  refx  = 0.0;
+	  refx0 = 0.0;
+	}
+
+      } else { // closed loop tracking
+	qx0 = qx[0] - refx0 + cx;
+	qy0 = qy[0] - refy0 + cy;
+            // if (sqrt((qx[0]-cx)*(qx[0]-cx)+(qy[0]-cy)*(qy[0]-cy)) 
+            //     < ptc->maxdisp) {
+            // bestsharp = sharp;
+            // bestdisp = sqrt((qx[0]-cx)*(qx[0]-cx)+
+            //                 (qy[0]-cy)*(qy[0]-cy));
+            // printf("reference subaperture shifts x=%f y=%f\n",qx0,qy0);
+            // at this time, nothing has been done to the raw shifts!
+	if (sqrt(qx0*qx0+qy0*qy0) < ptc->maxdisp) {
+	  printf("---->>>> new potential reference acquired\n");
+	  bestsharp = sharp;
+	  bestdisp = sqrt(qx0*qx0+qy0*qy0);
+	}
+      }
+    }
+    refcount++;
+  } else { // last candidate for new reference image analyzed 
+    if (ptc->track == AO_LOOP_OPEN) { // open loop
+      if (bestsharp > 0.0) {
+	for (i=0;i<RX*RY;i++) {// transfer best reference image 
+	  refim[i]=refbu[i];
+	  ptc->image[i] = (int) refim[i];
+	}
+	for (i=0;i<RX*RY;i++) // transfer best reference image
+	  ptc->image[i] = (int) refim[i];
+      } // end (bestsharp > 0.0)
+    } else { // closed loop operation
+      if (bestsharp > 0.0) { 
+	for (i=0;i<RX*RY;i++) {// transfer best reference image
+	  refim[i]=refbu[i];
+	  ptc->image[i] = (int) refim[i];
+	}
+	ptc->cx = 0.0; // reset offsets since new reference takes 
+	ptc->cy = 0.0; // those into account 
+	newref = AO_REFIM_NONE;
+      }
+    }
+    newref = AO_REFIM_NONE; // indicate valid new reference
+    ptc->refstat = AO_REFIM_GOOD;
+    if (time(&reftime) == (time_t) -1) // set time of reference
+      reftime = (time_t) 0; // set to zero in case of error 
+    printf("new reference image acquired, rms=%f, disp=%f, "
+	   "time=%d\n",bestsharp,bestdisp,(int) reftime);
+    refcount = 0;
+    bestsharp = 0.0;
+    stdvx = 0.0; stdvy = 0.0; // reset mean rms 
+  }
+} // end of if (ptc->refstat == AO_REFIM_NONE)
+*/
+int modParseSH(wfs_t *wfsinfo) {
 	// now calculate the offsets 
 	float aver=0.0, max=0.0;
-	float coords[ptc.wfs[wfs].nsubap][2];
+	float coords[wfsinfo->nsubap][2];
 	int i;
 	
 	// track the maxima
-	cogTrack(wfs, &aver, &max, coords);
+	cogTrack(wfsinfo, &aver, &max, coords);
 	
 	// note: coords is relative to the center of the tracker window
 	// therefore we can simply update the lower left coord by subtracting the coordinates.
 	
 	logInfo("Coords: ");
-	for (i=0; i<ptc.wfs[wfs].nsubap; i++) {
-		ptc.wfs[wfs].subc[i][0] -= coords[i][0];//-ptc.wfs[wfs].res[0]/ptc.wfs[wfs].cells[0]/4;
-		ptc.wfs[wfs].subc[i][1] -= coords[i][1];//-ptc.wfs[wfs].res[1]/ptc.wfs[wfs].cells[1]/4;
-		logDirect("(%d, %d) ", ptc.wfs[wfs].subc[i][0]+ptc.wfs[wfs].res[0]/ptc.wfs[wfs].cells[0]/4, \
-			ptc.wfs[wfs].subc[i][1]+ptc.wfs[wfs].res[1]/ptc.wfs[wfs].cells[1]/4);
+	for (i=0; i<wfsinfo->nsubap; i++) {
+		wfsinfo->subc[i][0] -= coords[i][0];//-wfsinfo->res[0]/wfsinfo->cells[0]/4;
+		wfsinfo->subc[i][1] -= coords[i][1];//-wfsinfo->res[1]/wfsinfo->cells[1]/4;
+		logDirect("(%d, %d) ", wfsinfo->subc[i][0]+wfsinfo->res[0]/wfsinfo->cells[0]/4, \
+			wfsinfo->subc[i][1]+wfsinfo->res[1]/wfsinfo->cells[1]/4);
 	}
 	logDirect("\n");
 	
@@ -596,7 +803,7 @@ int modParseSH(int wfs) {
 }
 
 // TODO: on the one hand depends on int wfs, on the other hand needs int window[2], fix that
-void imcal(float *corrim, float *image, float *darkim, float *flatim, int wfs, float *sum, float *max, int window[2]) {
+void imcal(float *corrim, float *image, float *darkim, float *flatim, float *sum, float *max, int res[2], int window[2]) {
 	// substract the dark, multiply with the flat (right?)
 	// TODO: dark and flat currently ignored, fix that
 	int i,j;
@@ -618,7 +825,7 @@ void imcal(float *corrim, float *image, float *darkim, float *flatim, int wfs, f
 			// and each consecutive set is again one seperate subapt. This way you can loop
 			// through subapts with only one counter (right?)
 
-			corrim[i*window[0] + j] = image[i*ptc.wfs[wfs].res[0] + j];			
+			corrim[i*window[0] + j] = image[i*res[0] + j];			
 			*sum += corrim[i*window[0] + j];
 			if (corrim[i*window[0] + j] > *max) *max = corrim[i*window[0] + j];
 		}
@@ -626,18 +833,16 @@ void imcal(float *corrim, float *image, float *darkim, float *flatim, int wfs, f
 	
 }
 
-int drawSubapts(int wfs, SDL_Surface *screen) {
-	if (ptc.wfs[wfs].nsubap == 0)
+int drawSubapts(wfs_t *wfsinfo, SDL_Surface *screen) {
+	if (wfsinfo->nsubap == 0)
 		return EXIT_SUCCESS;	// if there's nothing to draw, don't draw (shouldn't happen)
 		
 	int shsize[2];			// size of one subapt (in pixels)
-	int res[2], cells[2];	// size of whole image, nr of cells
-	int (*subc)[2] = ptc.wfs[wfs].subc;	// TODO: does this work?
+	int *res, *cells;		// size of whole image, nr of cells. will hold an int[2] array
+	int (*subc)[2] = wfsinfo->subc;	// TODO: does this work?
 
-	res[0] = ptc.wfs[wfs].res[0];	// shortcuts
-	res[1] = ptc.wfs[wfs].res[1];
-	cells[0] = ptc.wfs[wfs].cells[0];
-	cells[1] = ptc.wfs[wfs].cells[1];	
+	res = wfsinfo->res;					// resolution of the big images for current WFS
+	cells = wfsinfo->cells;
 	shsize[0] = res[0]/cells[0]; 		// size of subapt cell in x
 	shsize[1] = res[1]/cells[1];		// size of subapt cell in y
 	
@@ -651,7 +856,7 @@ int drawSubapts(int wfs, SDL_Surface *screen) {
 	int refcoord[] = {subc[0][0]-shsize[0]/4, subc[0][1]-shsize[1]/4};
 	drawRect(refcoord, shsize, screen);
 	
-	for (sn=1; sn<ptc.wfs[wfs].nsubap; sn++) {
+	for (sn=1; sn< wfsinfo->nsubap; sn++) {
 		// subapt with lower coordinates (subc[sn][0],subc[sn][1])
 		// first subapt has size (shsize[0],shsize[1]),
 		// the rest are (shsize[0]/2,shsize[1]/2)

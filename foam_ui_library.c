@@ -1,4 +1,4 @@
-#include "ui_library.h"
+#include "foam_ui_library.h"
 
 config_t ui_config = {
 	.loglevel = LOGDEBUG,

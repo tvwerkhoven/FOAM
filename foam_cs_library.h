@@ -52,7 +52,8 @@ char logmessage[LINE_MAX];
 typedef enum { // aomode_t
 	AO_MODE_OPEN,
 	AO_MODE_CLOSED,
-	AO_MODE_CAL
+	AO_MODE_CAL,
+	AO_MODE_NONE
 } aomode_t;
 
 /*!

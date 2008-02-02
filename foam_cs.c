@@ -374,9 +374,11 @@ int saveConfig(char *file) {
 	FILE *fp;
 		
 	fp = fopen(file,"w+");
-	if (fp == NULL)		// We can't open the file?
+	if (fp == NULL)		// We can't open the file
 		return EXIT_FAILURE;
 
+	// this is not complete yet
+	// TODO
 	fputs("# Automatically created config file\n", fp);
 	fputs("WFS_COUNT = 1\n", fp);
 	
@@ -408,13 +410,29 @@ int writeFits(char *file, float *image, long *naxes) {
 
 void modeOpen() {
 	logInfo("Entering open loop.");
-	// initial run outside loop, we need some extra stuff here
-	
-	if (drvReadSensor() != EXIT_SUCCESS)		// read the sensor output into ptc.image
-		return;
 
-	selectSubapts(ptc.wfs[0].image, 0, 0, 0); 	// check samini (2nd param) and samxr (3d param)
+	// perform some sanity checks before actually entering the open loop
 	
+	if (ptc.wfs_count == 0) {				// we need wave front sensors
+		logErr("Error, no WFSs defined.");
+		ptc.mode = AO_MODE_NONE;
+	}
+	
+	if (drvReadSensor() != EXIT_SUCCESS) {		// read the sensor output into ptc.image
+		logErr("Error, reading sensor failed.");
+		ptc.mode = AO_MODE_NONE;
+	}
+	
+	if (ptc.wfs[0].nsubap == 0)	{			// we need to have subapertures
+		logInfo("No subapts in use, selecting new ones.");
+		selectSubapts(&ptc.wfs[0], 0, 0); 	// check samini (2nd param) and samxr (3d param)
+	}
+	
+// TvW continue here
+//	if (ptc.wfs[0].nsubap == NULL)				// we need to a reference image
+//		getRef();
+		
+		
 //	if (modParseSH(0) != EXIT_SUCCESS)			// process SH sensor output, get displacements
 //		return;
 	
@@ -425,14 +443,14 @@ void modeOpen() {
 		if (drvReadSensor() != EXIT_SUCCESS)		// read the sensor output into ptc.image
 			return;
 
-		//selectSubapts(ptc.wfs[0].image, 0, 0, 0); 	// check samini (2nd param) and samxr (3d param)				
+		//selectSubapts(&ptc.wfs[0], 0, 0); 	// check samini (2nd param) and samxr (3d param)				
 		
-		if (modParseSH(0) != EXIT_SUCCESS)			// process SH sensor output, get displacements
+		if (modParseSH(&ptc.wfs[0]) != EXIT_SUCCESS)			// process SH sensor output, get displacements
 			return;
 		
 		if (ptc.frames % 20 == 0) {
 			displayImg(ptc.wfs[0].image, ptc.wfs[0].res, screen);
-			drawSubapts(0, screen);
+			drawSubapts(&ptc.wfs[0], screen);
 		}
 		
 		if (ptc.frames > 2000) // exit for debugging

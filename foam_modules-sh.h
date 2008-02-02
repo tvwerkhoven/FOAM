@@ -32,12 +32,11 @@ This routine checks all subapertures and sees whether they are useful or not.
 It can also 'erode' some apertures away from the edge or enforce a maximum
 radius between any subaperture and the reference subaperture.
 
-@param [in] *image The sensor output image (i.e. SH camera).
+@param [in] *wfsinfo The wfs_t struct holding info on the current WFS info
 @param [in] samini The minimum intensity a useful subaperture should have
 @param [in] samxr The maximum radius to enforce if positive, or the amount of subapts to erode if negative.
-@param [in] wfs The wavefront sensor to apply this to.
 */
-void selectSubapts(float *image, float samini, int samxr, int wfs);
+void selectSubapts(wfs_t *wfsinfo, float samini, int samxr);
 
 
 /*!
@@ -49,8 +48,9 @@ analysed by modCalcDMVolt(), which calculates the actual driving voltages for th
 DM. 
 
 @return EXIT_SUCCESS on success, EXIT_FAILURE otherwise.
+@param [in] *wfsinfo wfs_t struct holding relevant information for the current WFS
 */
-int modParseSH(int wfs);
+int modParseSH(wfs_t *wfsinfo);
 
 /*!
 @brief Calculates the sum of absolute differences for two subapertures
@@ -78,12 +78,12 @@ subaperture.
 @param [in] *image Image of the sensor output, row-major format
 @param [in] *darkim Darkfield image in \a *corrim format (read above)
 @param [in] *flatim Flatfield image in \a *corrim format (read above)
-@param [in] wfs The WFS identifier to read the image from
 @param [out] *sum The summed intensity over the whole *image
 @param [out] *max The maximum of the whole *image
-@param [in] window The size of the individual subapertures, used to reformat *corrim
+@param [in] res the resolution of the big images (corrim, image, darkim, flatim)
+@param [in] window The resolution of the individual subapertures, used to reformat *corrim
 */
-void imcal(float *corrim, float *image, float *darkim, float *flatim, int wfs, float *sum, float *max, int window[2]);
+void imcal(float *corrim, float *image, float *darkim, float *flatim, float *sum, float *max, int res[2], int window[2]);
 
 /*!
 @brief Tracks the seeing using center of gravity tracking
@@ -93,12 +93,12 @@ tracking window, i.e. if the center of gravity coordinate is added to the tracki
 centered around the real center of gravity. Note that this will only work for star-like images, extended
 images will not work.
 
-@param [in] wfs The WFS identifier to track the CoG of 
+@param [in] *wfsinfo The wfs_t struct holding relevant info on the current WFS being analysed
 @param [out] *aver The average intensity over all subapts wil be stored here
 @param [out] *max The maximum intensity of all subapts will be stored here
 @param [out] coords will hold the CoG coordinates relative to the center of the subaperture
 */
-void cogTrack(int wfs, float *aver, float *max, float coords[][2]);
+void cogTrack(wfs_t *wfsinfo, float *aver, float *max, float coords[][2]);
 
 /*!
 @brief Tracks the seeing using correlation tracking (works on extended objects)
@@ -111,13 +111,13 @@ void corrTrack(int wfs, float *aver, float *max, float coords[][2]);
 @brief Process a reference image stored in *image, old refim *ref
 TODO: doc
 */
-void procRefim(float *image, float *ref, float *sharp, float *aver);
+void procRef(int wfs, float *sharp, float *aver);
 /*!
 @brief This draws all subapertures for a certain wfs
 
-@param [in] wfs the wfs identifies to draw subapts for
-@param *screen SDL_Surface to draw on
+@param [in] *wfsinfo wfs_t struct with info on the current wfs
+@param [in] *screen SDL_Surface to draw on
 */
-int drawSubapts(int wfs, SDL_Surface *screen);
+int drawSubapts(wfs_t *wfsinfo, SDL_Surface *screen);
 
 #endif /* FOAM_MODULES_SH */
