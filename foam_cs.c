@@ -423,10 +423,9 @@ void modeOpen() {
 		ptc.mode = AO_MODE_NONE;
 	}
 	
-	if (ptc.wfs[0].nsubap == 0)	{			// we need to have subapertures
-		logInfo("No subapts in use, selecting new ones.");
-		selectSubapts(&ptc.wfs[0], 0, 0); 	// check samini (2nd param) and samxr (3d param)
-	}
+	logInfo("Selecting new subapts.");
+	selectSubapts(&ptc.wfs[0], 0, 0); 	// check samini (2nd param) and samxr (3d param)
+
 	
 // TvW continue here
 //	if (ptc.wfs[0].nsubap == NULL)				// we need to a reference image

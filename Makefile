@@ -10,11 +10,11 @@ AR	= ar
 LD	= ld
 RANLIB	= ranlib
 
-MFLAGS	= -pipe -Wall -Wextra -lpthread  -std=c99 # -Wshadow
+MFLAGS	= -pipe -Wall -Wextra -std=c99 # -Wshadow
 GFLAGS	= #-g -DDEBUG_ITIFG=255 -finstrument-functions # -pg for gprof profiling,  -finstrument-functions for Saturn profiling
 IFLAGS  = -I. -L.
 OFLAGS  =  -O3 -ftree-vectorize # tree-vectorize works with gcc 4.3 (for SSE/Altivec?)
-LFLAGS  = -lSaturn -levent -lcfitsio -lfftw3 -lcfitsio -lm 
+LFLAGS  = -lSaturn -levent -lcfitsio -lfftw3 -lcfitsio -lm -lpthread
 SDLFLAGS = `sdl-config --libs --cflags`
 
 CFLAGS	= $(MFLAGS) $(GFLAGS) $(OFLAGS) $(IFLAGS) $(LFLAGS) $(SDLFLAGS)
