@@ -35,6 +35,7 @@ Last: 2008-01-21
 #include <pthread.h>
 #include <limits.h>
 #include <stdbool.h>
+#include <signal.h>
 // This is a hack, u_char needed by event.h but not defined on all systems. TODO
 typedef unsigned char u_char;
 #include <event.h>
