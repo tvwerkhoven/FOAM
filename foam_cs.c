@@ -216,8 +216,21 @@ int parseConfig(char *var, char *value) {
 			return EXIT_FAILURE;
 		}
 		
-		if ((ptc.wfs[tmp].subc = calloc(ptc.wfs[tmp].cells[0] * ptc.wfs[tmp].cells[1], sizeof(*ptc.wfs[tmp].subc))) == NULL) {
+		ptc.wfs[tmp].subc = calloc(ptc.wfs[tmp].cells[0] * ptc.wfs[tmp].cells[1], sizeof(*ptc.wfs[tmp].subc));
+		if (ptc.wfs[tmp].subc == NULL) {
 			logErr("Cannot allocate memory for subaperture coordinates");
+			return EXIT_FAILURE;
+		}
+		
+		if (ptc.wfs[tmp].res[0] * ptc.wfs[tmp].res[1] <= 0) {
+			logErr("Cannot initialize WFS_CELLS before WFS_RES");
+			return EXIT_FAILURE;
+		}
+
+		ptc.wfs[tmp].refim = calloc((ptc.wfs[tmp].res[0]/ ptc.wfs[tmp].cells[0]) * \
+			(ptc.wfs[tmp].res[1]/ptc.wfs[tmp].cells[1]), sizeof(ptc.wfs[tmp].corrim));
+		if (ptc.wfs[tmp].refim == NULL) {
+			logErr("Failed to allocate image memory for reference image.");
 			return EXIT_FAILURE;
 		}
 
@@ -236,20 +249,24 @@ int parseConfig(char *var, char *value) {
 		ptc.wfs[tmp].res[0] = strtol(strtok(value,"{,}"), NULL, 10);
 		ptc.wfs[tmp].res[1] = strtol(strtok(NULL ,"{,}"), NULL, 10);
 		
-		if (ptc.wfs[tmp].res[0] % 2 != 0 || ptc.wfs[tmp].res[1] % 2 != 0) {
+		if (ptc.wfs[tmp].res[0] % 2 != 0 || ptc.wfs[tmp].res[1] % 4 != 0) {
 			logErr("WFS %d has an odd resolution (%dx%d), not supported. Please only use 2nx2n pixels.", \
 				tmp, ptc.wfs[tmp].res[0], ptc.wfs[tmp].res[1]);
 			return EXIT_FAILURE;
 		}		
 		
 		// Allocate memory for all images we need lateron
-		if (((ptc.wfs[tmp].image = calloc(ptc.wfs[tmp].res[0] * ptc.wfs[tmp].res[1], sizeof(ptc.wfs[tmp].image))) == NULL) ||
-				((ptc.wfs[tmp].darkim = calloc(ptc.wfs[tmp].res[0] * ptc.wfs[tmp].res[1], sizeof(ptc.wfs[tmp].darkim))) == NULL) ||
-				((ptc.wfs[tmp].flatim = calloc(ptc.wfs[tmp].res[0] * ptc.wfs[tmp].res[1], sizeof(ptc.wfs[tmp].flatim))) == NULL) ||
-				((ptc.wfs[tmp].corrim = calloc(ptc.wfs[tmp].res[0] * ptc.wfs[tmp].res[1], sizeof(ptc.wfs[tmp].corrim))) == NULL) ||
-				((ptc.wfs[tmp].refim = calloc(ptc.wfs[tmp].res[0] * ptc.wfs[tmp].res[1], sizeof(ptc.wfs[tmp].refim))) == NULL)
-				) {
-			logErr("Failed to allocate image memory (image, dark, flat, corrected or reference).");
+		ptc.wfs[tmp].image = calloc(ptc.wfs[tmp].res[0] * ptc.wfs[tmp].res[1], sizeof(ptc.wfs[tmp].image));
+		ptc.wfs[tmp].darkim = calloc(ptc.wfs[tmp].res[0] * ptc.wfs[tmp].res[1], sizeof(ptc.wfs[tmp].darkim));
+		ptc.wfs[tmp].flatim = calloc(ptc.wfs[tmp].res[0] * ptc.wfs[tmp].res[1], sizeof(ptc.wfs[tmp].flatim));
+		ptc.wfs[tmp].corrim = calloc(ptc.wfs[tmp].res[0] * ptc.wfs[tmp].res[1], sizeof(ptc.wfs[tmp].corrim));
+		
+		// check if everything worked out ok
+		if ((ptc.wfs[tmp].image == NULL) ||
+				(ptc.wfs[tmp].darkim == NULL) ||
+				(ptc.wfs[tmp].flatim == NULL) ||
+				(ptc.wfs[tmp].corrim == NULL)) {
+			logErr("Failed to allocate image memory (image, dark, flat, corrected).");
 			return EXIT_FAILURE;
 		}
 		
@@ -315,11 +332,14 @@ int loadConfig(char *file) {
 		logDebug("Parsing '%s' '%s' settings pair.", var, value);
 		
 		if (parseConfig(var,value) != EXIT_SUCCESS)	// pass the pair on to be parsed and inserted in ptc
-			return EXIT_FAILURE;
+			return EXIT_FAILURE;		
 	}
 	
 	if (!feof(fp)) 		// Oops, not everything was read?
 		return EXIT_FAILURE;
+		
+	// begin postconfig check
+	// TvW: todo
 	
 	// Check the info, error and debug files that we possibly have to log to
 	initLogFiles();
@@ -426,7 +446,10 @@ void modeOpen() {
 	logInfo("Selecting new subapts.");
 	selectSubapts(&ptc.wfs[0], 0, 0); 	// check samini (2nd param) and samxr (3d param)
 
-	
+
+	logInfo("Getting initial reference");
+	modGetRef(&ptc.wfs[0]);
+
 // TvW continue here
 //	if (ptc.wfs[0].nsubap == NULL)				// we need to a reference image
 //		getRef();
@@ -434,7 +457,8 @@ void modeOpen() {
 		
 //	if (modParseSH(0) != EXIT_SUCCESS)			// process SH sensor output, get displacements
 //		return;
-	
+	sleep(2);
+	int tmp[] = {32, 32};
 	ptc.frames++;
 	while (ptc.mode == AO_MODE_OPEN) {
 		logInfo("Operating in open loop"); 			// TODO
@@ -446,6 +470,9 @@ void modeOpen() {
 		
 		if (modParseSH(&ptc.wfs[0]) != EXIT_SUCCESS)			// process SH sensor output, get displacements
 			return;
+		
+		displayImg(ptc.wfs[0].refim, tmp, screen);
+		sleep(2);
 		
 		if (ptc.frames % 20 == 0) {
 			displayImg(ptc.wfs[0].image, ptc.wfs[0].res, screen);

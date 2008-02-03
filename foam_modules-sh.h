@@ -105,13 +105,20 @@ void cogTrack(wfs_t *wfsinfo, float *aver, float *max, float coords[][2]);
 
 Work in progress as of 2008-01-28
 */
-void corrTrack(int wfs, float *aver, float *max, float coords[][2]);
+void corrTrack(wfs_t *wfsinfo, float *aver, float *max, float coords[][2]);
 
 /*!
 @brief Process a reference image stored in *image, old refim *ref
 TODO: doc
 */
-void procRef(int wfs, float *sharp, float *aver);
+void procRef(wfs_t *wfsinfo, float *sharp, float *aver);
+
+/*!
+@brief Module to get a (new) reference image 
+TODO: doc
+*/
+void modGetRef(wfs_t *wfsinfo);	
+
 /*!
 @brief This draws all subapertures for a certain wfs
 
