@@ -698,7 +698,7 @@ int modParseSH(wfs_t *wfsinfo) {
 	int i;
 	
 	// track the maxima
-	corrTrack(wfsinfo, &aver, &max, coords);
+	cogTrack(wfsinfo, &aver, &max, coords);
 	
 	// note: coords is relative to the center of the tracker window
 	// therefore we can simply update the lower left coord by subtracting the coordinates.

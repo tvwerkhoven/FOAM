@@ -447,8 +447,8 @@ void modeOpen() {
 	selectSubapts(&ptc.wfs[0], 0, 0); 	// check samini (2nd param) and samxr (3d param)
 
 
-	logInfo("Getting initial reference");
-	modGetRef(&ptc.wfs[0]);
+//	logInfo("Getting initial reference");
+//	modGetRef(&ptc.wfs[0]);
 
 // TvW continue here
 //	if (ptc.wfs[0].nsubap == NULL)				// we need to a reference image
@@ -457,7 +457,6 @@ void modeOpen() {
 		
 //	if (modParseSH(0) != EXIT_SUCCESS)			// process SH sensor output, get displacements
 //		return;
-	sleep(2);
 	int tmp[] = {32, 32};
 	ptc.frames++;
 	while (ptc.mode == AO_MODE_OPEN) {
@@ -472,7 +471,6 @@ void modeOpen() {
 			return;
 		
 		displayImg(ptc.wfs[0].refim, tmp, screen);
-		sleep(2);
 		
 		if (ptc.frames % 20 == 0) {
 			displayImg(ptc.wfs[0].image, ptc.wfs[0].res, screen);
