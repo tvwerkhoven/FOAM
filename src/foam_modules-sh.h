@@ -36,7 +36,7 @@ radius between any subaperture and the reference subaperture.
 @param [in] samini The minimum intensity a useful subaperture should have
 @param [in] samxr The maximum radius to enforce if positive, or the amount of subapts to erode if negative.
 */
-void selectSubapts(wfs_t *wfsinfo, float samini, int samxr);
+int modSelSubapts(wfs_t *wfsinfo, float samini, int samxr);
 
 
 /*!
@@ -63,7 +63,7 @@ the pointers given to the function.
 @param [in] len number of pixels to check (usually SX*SY, i.e. the total amount of pixels in a subapt)
 @return Sum of absolute differences
 */
-float sae(float *subapt, float *refapt, int len);
+static float sae(float *subapt, float *refapt, int len);
 
 /*!
 @brief Calibrates the image for dark- and flatfield, returns some statistics
@@ -83,7 +83,7 @@ subaperture.
 @param [in] res the resolution of the big images (corrim, image, darkim, flatim)
 @param [in] window The resolution of the individual subapertures, used to reformat *corrim
 */
-void imcal(float *corrim, float *image, float *darkim, float *flatim, float *sum, float *max, int res[2], int window[2]);
+static void imcal(float *corrim, float *image, float *darkim, float *flatim, float *sum, float *max, int res[2], int window[2]);
 
 /*!
 @brief Tracks the seeing using center of gravity tracking
@@ -98,20 +98,20 @@ images will not work.
 @param [out] *max The maximum intensity of all subapts will be stored here
 @param [out] coords will hold the CoG coordinates relative to the center of the subaperture
 */
-void cogTrack(wfs_t *wfsinfo, float *aver, float *max, float coords[][2]);
+void modCogTrack(wfs_t *wfsinfo, float *aver, float *max, float coords[][2]);
 
 /*!
 @brief Tracks the seeing using correlation tracking (works on extended objects)
 
 Work in progress as of 2008-01-28
 */
-void corrTrack(wfs_t *wfsinfo, float *aver, float *max, float coords[][2]);
+void modCorrTrack(wfs_t *wfsinfo, float *aver, float *max, float coords[][2]);
 
 /*!
 @brief Process a reference image stored in *image, old refim *ref
 TODO: doc
 */
-void procRef(wfs_t *wfsinfo, float *sharp, float *aver);
+static void procRef(wfs_t *wfsinfo, float *sharp, float *aver);
 
 /*!
 @brief Module to get a (new) reference image 
@@ -125,6 +125,6 @@ void modGetRef(wfs_t *wfsinfo);
 @param [in] *wfsinfo wfs_t struct with info on the current wfs
 @param [in] *screen SDL_Surface to draw on
 */
-int drawSubapts(wfs_t *wfsinfo, SDL_Surface *screen);
+int modDrawSubapts(wfs_t *wfsinfo, SDL_Surface *screen);
 
 #endif /* FOAM_MODULES_SH */

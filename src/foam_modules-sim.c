@@ -144,9 +144,9 @@ int simWFC(int wfcid, int nact, float *ctrl, float *image) {
 	// we want to simulate the tip tilt mirror here. What does it do
 	logDebug("WFC %d (%s) has %d actuators, simulating", wfcid, ptc.wfc[wfcid].name, ptc.wfc[wfcid].nact);
 	//if (wfcid == 1)
-	//	simDM("dm37/apert15-256.pgm", "dm37/dm37-256.pgm", nact, ctrl, image, 0);
+	//	modSimDM("dm37/apert15-256.pgm", "dm37/dm37-256.pgm", nact, ctrl, image, 0);
 //	if (wfcid == 1)
-		//simTT();
+		//modSimTT();
 	
 	return EXIT_SUCCESS;
 }
@@ -291,7 +291,6 @@ int drvSetActuator() {
 int modSimSH() {
 	logDebug("Simulating SH WFSs now.");
 	
-	int shsize[2];
 	int i;
 	int nx, ny;
 	int xc, yc;
@@ -301,9 +300,8 @@ int modSimSH() {
 	double tmp;
 
 	// we have ptc.wfs[0].cells[0] by ptc.wfs[0].cells[1] SH cells, so the size of each cell is:
-	shsize[0] = ptc.wfs[0].res[0]/ptc.wfs[0].cells[0];
-	shsize[1] = ptc.wfs[0].res[1]/ptc.wfs[0].cells[1];
-
+	int *shsize = ptc.wfs[0].shsize;
+	
 	nx = (shsize[0] * 2);
 	ny = (shsize[1] * 2);
 

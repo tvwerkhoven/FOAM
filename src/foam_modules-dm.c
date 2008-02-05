@@ -5,7 +5,12 @@
 
 	@brief This file contains routines to simulate an n-actuator DM.
 
-	To run, see help at simDM()
+	\section Info
+	To run, see help at modSimDM(). This module can simulate the shape of an N-actuator piezo-electric driven membrane mirror.
+	
+	\section Functions
+	
+	\li modSimDM
 	
 	\section History
 	This file is based on response2.c by C. Keller (ckeller@noao.edu)
@@ -45,7 +50,7 @@ ovdluhe@kis.uni-freiburg.de
 @param [out] *t_ny will hold the y resolution of the image
 @param [out] *t_ngray will hold the number of different graylevels in the image
 */
-int read_pgm(char *fname, double **dbuf, int *t_nx, int *t_ny, int *t_ngray);
+static int read_pgm(char *fname, double **dbuf, int *t_nx, int *t_ny, int *t_ngray);
 
 /*!
 @brief Simulates the DM shape as function of input voltages.
@@ -64,12 +69,12 @@ amount of iterations (0 is auto).
 @param [out] *image The DM wavefront correction in um, 2d array.
 @return EXIT_SUCCESS on success, EXIT_FAILURE otherwise.
 */
-int simDM(char *boundarymask, char *actuatorpat, int nact, float *ctrl, float *image, int niter);
+int modSimDM(char *boundarymask, char *actuatorpat, int nact, float *ctrl, float *image, int niter);
 
 // FUNCTIONS BEGIN //
 /*******************/
 
-int simDM(char *boundarymask, char *actuatorpat, int nact, float *ctrl, float *image, int niter) {
+int modSimDM(char *boundarymask, char *actuatorpat, int nact, float *ctrl, float *image, int niter) {
 	int	 i, j, status, nx, ny, ngray1, ngray2;
 	long	 ii, i_1j, i1j, ij_1, ij1;
 	int    voltage[nact]; // voltage settings for electrodes (in digital units)
@@ -215,7 +220,7 @@ int simDM(char *boundarymask, char *actuatorpat, int nact, float *ctrl, float *i
  *============================================================================
  */
 
-int read_pgm(char *fname, double **dbuf, int *t_nx, int *t_ny, int *t_ngray) {
+static int read_pgm(char *fname, double **dbuf, int *t_nx, int *t_ny, int *t_ngray) {
 	char		c_int, first_string[110];
 	unsigned char	b_in;
 	int		i, j, bin_ind, nx, ny, ngray;

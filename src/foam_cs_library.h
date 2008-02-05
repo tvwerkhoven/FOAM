@@ -81,6 +81,7 @@ typedef struct { // wfs_t
 	char name[FILENAMELEN];			//!< name of the specific WFS
 	int res[2];			//!< x,y-resolution of this WFS
 	int cells[2];		//!< number of cells in this WFS (SH only)
+	int shsize[2];		//!< cells/res, resolution per cell (redundant, but easy)
 	int (*subc)[2];		//!< this will hold the coordinates of each subapt
 						// TODO: how to make a pointer to an array which holds pairs of ints as elements?
 						// e.g. pointer to: { {x1,y1}, {x2,y2} ... {xn,yn}}

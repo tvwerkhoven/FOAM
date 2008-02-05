@@ -6,6 +6,23 @@
 	@brief This file contains modules and functions related to Shack-Hartmann wavefront sensing used in 
 	adaptive optics setups.
 	
+	\section Info
+	This module can be used to do Shack Hartmann wavefront sensing.
+	
+	\section Functions
+	
+	The functions provided to the outside world are:
+	\li modSelSubapts
+	\li modDrawSubapts
+	\li modCogTrack
+	\li modCorrTrack
+	\li modGetRef
+	\li modParseSH
+	
+	
+	\section License
+	This code is licensed under the GPL, version 2.
+	
 */
 
 // HEADERS //
@@ -13,13 +30,12 @@
 
 #include "foam_modules-sh.h"
 
-void selectSubapts(wfs_t *wfsinfo, float samini, int samxr) {
+int modSelSubapts(wfs_t *wfsinfo, float samini, int samxr) {
 
 	// stolen from ao3.c by CUK
 	int isy, isx, iy, ix, i, sn=0, nsubap=0; //init sn to zero!!
 	float sum=0.0, fi;			// check 'intensity' of a subapt
 	float csum=0.0, cs[] = {0.0, 0.0}; // for center of gravity
-	int shsize[2];			// size of one subapt (in pixels)
 	float cx=0, cy=0;		// for CoG
 	float dist, rmin;		// minimum distance
 	int csa=0;				// estimate for best subapt
@@ -28,9 +44,7 @@ void selectSubapts(wfs_t *wfsinfo, float samini, int samxr) {
 	float *image = wfsinfo->image;		// source image from sensor
 	int *res = wfsinfo->res;			// image resolution
 	int *cells = wfsinfo->cells;		// cell resolution used (i.e. 8x8)
-	
-	shsize[0] = res[0]/cells[0]; 		// resolution of subapt cell in x
-	shsize[1] = res[1]/cells[1];		// resolution of subapt cell in y
+	int *shsize = wfsinfo->shsize;		// subapt pixel resolution
 	
 	// we store our subaperture map in here when deciding which subapts to use
 	int apmap[cells[0]][cells[1]];		// aperture map
@@ -207,7 +221,7 @@ void selectSubapts(wfs_t *wfsinfo, float samini, int samxr) {
 	logInfo("Subaperture definition image saved in file %s",cfn);*/
 }
 
-void cogTrack(wfs_t *wfsinfo, float *aver, float *max, float coords[][2]) {
+void modCogTrack(wfs_t *wfsinfo, float *aver, float *max, float coords[][2]) {
 	// center of gravity tracking here (easy)
 	int ix, iy, sn=0;
 	float csx, csy, csum, fi; 			// variables for center-of-gravity
@@ -220,12 +234,11 @@ void cogTrack(wfs_t *wfsinfo, float *aver, float *max, float coords[][2]) {
 	int nsubap = wfsinfo->nsubap;
 	int (*subc)[2] = wfsinfo->subc;	// TODO: does this work?
 	
-	int *res, *cells, shsize[2];
+	int *res, *cells, *shsize;
 	res = wfsinfo->res;					// shortcuts to resolution
 	cells = wfsinfo->cells;				// number of x-cells y-cells
+	shsize = wfsinfo->shsize;			// subapt pixel resolution
 
-	shsize[0] = res[0]/cells[0]; 		// size of subapt cell in x (width)
-	shsize[1] = res[1]/cells[1];		// size of subapt cell in y (height)
 	int track[] = {shsize[0]/2, shsize[1]/2}; // size of the tracker windows. TODO: GLOBALIZE THIS!!
 
 	*max = 0; // set maximum of all raw subapertures to 0
@@ -233,7 +246,7 @@ void cogTrack(wfs_t *wfsinfo, float *aver, float *max, float coords[][2]) {
 //	uint16_t *gp, *dp; // pointers to gain and dark
 	float  *ip, *cp; // pointers to raw, processed image
 
-	logDebug("Starting cogTrack for %d subapts (CoG mode)", nsubap);
+	logDebug("Starting modCogTrack for %d subapts (CoG mode)", nsubap);
 	
 	// Process the rest of the subapertures here:		
 	// loop over all subapertures, except sn=0 (ref subapt)
@@ -281,7 +294,7 @@ void cogTrack(wfs_t *wfsinfo, float *aver, float *max, float coords[][2]) {
 	*aver = sum / ((float) (track[0]*track[1]*nsubap));
 }
 
-void corrTrack(wfs_t *wfsinfo, float *aver, float *max, float coords[][2]) {
+void modCorrTrack(wfs_t *wfsinfo, float *aver, float *max, float coords[][2]) {
 	// this will contain correlation tracking, but first we need to get reference images
 
 #define NP 5
@@ -549,7 +562,85 @@ void corrTrack(wfs_t *wfsinfo, float *aver, float *max, float coords[][2]) {
 
 }
 
-float sae(float *subapt, float *refapt, int len) {
+void modGetRef(wfs_t *wfsinfo) {
+	float sharp, aver, bestsharp=0;			// store some stats in here
+	int i, refcount;
+	int *shsize = wfsinfo->shsize;			// subapt pixel resolution
+	
+	float refbest[shsize[0] * shsize[1]]; 	// best reference image storage
+
+	for (refcount=0; refcount<1024; refcount++) {
+		procRef(wfsinfo, &sharp, &aver);
+		if (sharp > bestsharp) { // the new potential reference is sharper
+			for (i=0; i<shsize[1]*shsize[0]; i++)
+				refbest[i] = wfsinfo->refim[i];
+				
+		}
+	}
+	
+	// store the best reference image
+	for (i=0; i<shsize[0]*shsize[1]; i++)
+		wfsinfo->refim[i] = refbest[i];
+
+	logInfo("Got new reference image, sharp: %f, aver: %f", sharp, aver);
+	// We have a new ref, check the displacement vectors for this new ref
+	// TvW: TODO
+}
+
+int modParseSH(wfs_t *wfsinfo) {
+	// now calculate the offsets 
+	float aver=0.0, max=0.0;
+	float coords[wfsinfo->nsubap][2];
+	int i;
+	
+	// track the maxima
+	modCogTrack(wfsinfo, &aver, &max, coords);
+	
+	// note: coords is relative to the center of the tracker window
+	// therefore we can simply update the lower left coord by subtracting the coordinates.
+	
+	logInfo("Coords: ");
+	for (i=0; i<wfsinfo->nsubap; i++) {
+		wfsinfo->subc[i][0] -= coords[i][0];//-wfsinfo->res[0]/wfsinfo->cells[0]/4;
+		wfsinfo->subc[i][1] -= coords[i][1];//-wfsinfo->res[1]/wfsinfo->cells[1]/4;
+		logDirect("(%d, %d) ", wfsinfo->subc[i][0]+wfsinfo->res[0]/wfsinfo->cells[0]/4, \
+			wfsinfo->subc[i][1]+wfsinfo->res[1]/wfsinfo->cells[1]/4);
+	}
+	logDirect("\n");
+	
+	return EXIT_SUCCESS;
+}
+
+int modDrawSubapts(wfs_t *wfsinfo, SDL_Surface *screen) {
+	if (wfsinfo->nsubap == 0)
+		return EXIT_SUCCESS;	// if there's nothing to draw, don't draw (shouldn't happen)
+		
+	int *shsize;			// size of whole image, nr of cells. will hold an int[2] array
+	int (*subc)[2] = wfsinfo->subc;		// lower-left coordinates of the subapts
+
+	shsize = wfsinfo->shsize;
+	int subsize[2] = {wfsinfo->shsize[0]/2, wfsinfo->shsize[1]/2};
+		
+	int sn=0;
+	Slock(screen);
+		
+	// we draw the reference subaperture rectangle bigger than the rest, with lower left coord:
+	int refcoord[] = {subc[0][0]-shsize[0]/4, subc[0][1]-shsize[1]/4};
+	drawRect(refcoord, shsize, screen);
+	
+	for (sn=1; sn< wfsinfo->nsubap; sn++) {
+		// subapt with lower coordinates (subc[sn][0],subc[sn][1])
+		// first subapt has size (shsize[0],shsize[1]),
+		// the rest are (shsize[0]/2,shsize[1]/2)
+		drawRect(subc[sn], subsize, screen);
+	}
+	
+	Sulock(screen);
+	SDL_Flip(screen);	
+	return EXIT_SUCCESS;
+}
+
+static float sae(float *subapt, float *refapt, int len) {
 	// *ip     pointer to first pixel of each subaperture
 	// *rp     pointer to first pixel of (shifted) reference
 
@@ -563,7 +654,7 @@ float sae(float *subapt, float *refapt, int len) {
 	return sum;
 }
 
-void procRef(wfs_t *wfsinfo, float *sharp, float *aver) {
+static void procRef(wfs_t *wfsinfo, float *sharp, float *aver) {
 //	uint8_t  pixel;
 //	uint16_t in16, d16, g16;
 	float in, dd, gg;  // these types should be higher than the image type for internal calculation
@@ -579,7 +670,7 @@ void procRef(wfs_t *wfsinfo, float *sharp, float *aver) {
 	int ix, iy;	// counters
 
 	int *res = wfsinfo->res;		// resolution of *image
-	int shsize[] = {wfsinfo->res[0]/wfsinfo->cells[0], wfsinfo->res[1]/wfsinfo->cells[1]};
+	int *shsize = wfsinfo->shsize;	// subapt pixel resolution
 	int (*subc)[2] = wfsinfo->subc;		// coordinates of the tracker windows 
 	
 	for (iy=0; iy<shsize[1]; iy++) {
@@ -664,59 +755,8 @@ void procRef(wfs_t *wfsinfo, float *sharp, float *aver) {
 
 } // end of procref
 
-void modGetRef(wfs_t *wfsinfo) {
-	float sharp, aver, bestsharp=0;			// store some stats in here
-	int i, refcount;
-	int shsize[2];
-	shsize[0] = wfsinfo->res[0]/wfsinfo->cells[0]; 	// size of subapt cell in x
-	shsize[1] = wfsinfo->res[1]/wfsinfo->cells[1]; 	// size of subapt cell in y
-	
-	float refbest[shsize[0] * shsize[1]]; 	// best reference image storage
-
-	for (refcount=0; refcount<1024; refcount++) {
-		procRef(wfsinfo, &sharp, &aver);
-		if (sharp > bestsharp) { // the new potential reference is sharper
-			for (i=0; i<shsize[1]*shsize[0]; i++)
-				refbest[i] = wfsinfo->refim[i];
-				
-		}
-	}
-	
-	// store the best reference image
-	for (i=0; i<shsize[0]*shsize[1]; i++)
-		wfsinfo->refim[i] = refbest[i];
-
-	logInfo("Got new reference image, sharp: %f, aver: %f", sharp, aver);
-	// We have a new ref, check the displacement vectors for this new ref
-	// TvW: TODO
-}
-
-int modParseSH(wfs_t *wfsinfo) {
-	// now calculate the offsets 
-	float aver=0.0, max=0.0;
-	float coords[wfsinfo->nsubap][2];
-	int i;
-	
-	// track the maxima
-	cogTrack(wfsinfo, &aver, &max, coords);
-	
-	// note: coords is relative to the center of the tracker window
-	// therefore we can simply update the lower left coord by subtracting the coordinates.
-	
-	logInfo("Coords: ");
-	for (i=0; i<wfsinfo->nsubap; i++) {
-		wfsinfo->subc[i][0] -= coords[i][0];//-wfsinfo->res[0]/wfsinfo->cells[0]/4;
-		wfsinfo->subc[i][1] -= coords[i][1];//-wfsinfo->res[1]/wfsinfo->cells[1]/4;
-		logDirect("(%d, %d) ", wfsinfo->subc[i][0]+wfsinfo->res[0]/wfsinfo->cells[0]/4, \
-			wfsinfo->subc[i][1]+wfsinfo->res[1]/wfsinfo->cells[1]/4);
-	}
-	logDirect("\n");
-	
-	return EXIT_SUCCESS;
-}
-
 // TODO: on the one hand depends on int wfs, on the other hand needs int window[2], fix that
-void imcal(float *corrim, float *image, float *darkim, float *flatim, float *sum, float *max, int res[2], int window[2]) {
+static void imcal(float *corrim, float *image, float *darkim, float *flatim, float *sum, float *max, int res[2], int window[2]) {
 	// substract the dark, multiply with the flat (right?)
 	// TODO: dark and flat currently ignored, fix that
 	int i,j;
@@ -744,39 +784,4 @@ void imcal(float *corrim, float *image, float *darkim, float *flatim, float *sum
 		}
 	}			
 	
-}
-
-int drawSubapts(wfs_t *wfsinfo, SDL_Surface *screen) {
-	if (wfsinfo->nsubap == 0)
-		return EXIT_SUCCESS;	// if there's nothing to draw, don't draw (shouldn't happen)
-		
-	int shsize[2];			// size of one subapt (in pixels)
-	int *res, *cells;		// size of whole image, nr of cells. will hold an int[2] array
-	int (*subc)[2] = wfsinfo->subc;	// TODO: does this work?
-
-	res = wfsinfo->res;					// resolution of the big images for current WFS
-	cells = wfsinfo->cells;
-	shsize[0] = res[0]/cells[0]; 		// size of subapt cell in x
-	shsize[1] = res[1]/cells[1];		// size of subapt cell in y
-	
-	int sn=0;
-	Slock(screen);
-	
-	// this is the size for the tracker rectangles
-	int subsize[2] = {shsize[0]/2, shsize[1]/2};
-	
-	// we draw the reference subaperture rectangle bigger than the rest, with lower left coord:
-	int refcoord[] = {subc[0][0]-shsize[0]/4, subc[0][1]-shsize[1]/4};
-	drawRect(refcoord, shsize, screen);
-	
-	for (sn=1; sn< wfsinfo->nsubap; sn++) {
-		// subapt with lower coordinates (subc[sn][0],subc[sn][1])
-		// first subapt has size (shsize[0],shsize[1]),
-		// the rest are (shsize[0]/2,shsize[1]/2)
-		drawRect(subc[sn], subsize, screen);
-	}
-	
-	Sulock(screen);
-	SDL_Flip(screen);	
-	return EXIT_SUCCESS;
 }

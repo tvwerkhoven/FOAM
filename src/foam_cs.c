@@ -204,6 +204,7 @@ int parseConfig(char *var, char *value) {
 			logErr("Cannot initialize WFS_CELLS before initializing WFS_COUNT");
 			return EXIT_FAILURE;
 		}
+		
 		tmp = strtol(strstr(var,"[")+1, NULL, 10);
 		
 		if (strstr(value,"{") == NULL || strstr(value,"}") == NULL || strstr(value,",") == NULL) 
@@ -228,15 +229,18 @@ int parseConfig(char *var, char *value) {
 			logErr("Cannot initialize WFS_CELLS before WFS_RES");
 			return EXIT_FAILURE;
 		}
-
-		ptc.wfs[tmp].refim = calloc((ptc.wfs[tmp].res[0]/ ptc.wfs[tmp].cells[0]) * \
-			(ptc.wfs[tmp].res[1]/ptc.wfs[tmp].cells[1]), sizeof(ptc.wfs[tmp].corrim));
+		
+		ptc.wfs[tmp].shsize[0] = (ptc.wfs[tmp].res[0] / ptc.wfs[tmp].cells[0]);
+		ptc.wfs[tmp].shsize[1] = (ptc.wfs[tmp].res[1] / ptc.wfs[tmp].cells[1]);
+		ptc.wfs[tmp].refim = calloc(ptc.wfs[tmp].shsize[0] * \
+			ptc.wfs[tmp].shsize[1], sizeof(ptc.wfs[tmp].refim));
 		if (ptc.wfs[tmp].refim == NULL) {
 			logErr("Failed to allocate image memory for reference image.");
 			return EXIT_FAILURE;
 		}
 
-		logDebug("WFS_CELLS initialized for WFS %d: %d x %d", tmp, ptc.wfs[tmp].cells[0], ptc.wfs[tmp].cells[1]);
+		logDebug("WFS_CELLS initialized for WFS %d: (%dx%d). Subapt resolution is (%dx%d)", \ 
+			tmp, ptc.wfs[tmp].shsize[0], ptc.wfs[tmp].shsize[1], ptc.wfs[tmp].cells[0], ptc.wfs[tmp].cells[1]);
 	}
 	else if (strstr(var, "WFS_RES") != NULL){
 		if (ptc.wfs == NULL) {
@@ -441,6 +445,8 @@ void modeOpen() {
 		return;
 	}
 	
+	//modeOpenInit(&ptc);
+	
 	if (drvReadSensor() != EXIT_SUCCESS) {		// read the sensor output into ptc.image
 		logErr("Error, reading sensor failed.");
 		ptc.mode = AO_MODE_NONE;
@@ -448,7 +454,7 @@ void modeOpen() {
 	}
 	
 	logInfo("Selecting new subapts.");
-	selectSubapts(&ptc.wfs[0], 0, 0); 	// check samini (2nd param) and samxr (3d param)
+	modSelSubapts(&ptc.wfs[0], 0, 0); 	// check samini (2nd param) and samxr (3d param)
 
 
 //	logInfo("Getting initial reference");
@@ -469,7 +475,7 @@ void modeOpen() {
 		if (drvReadSensor() != EXIT_SUCCESS)		// read the sensor output into ptc.image
 			return;
 
-		//selectSubapts(&ptc.wfs[0], 0, 0); 	// check samini (2nd param) and samxr (3d param)				
+		//modSelSubapts(&ptc.wfs[0], 0, 0); 	// check samini (2nd param) and samxr (3d param)				
 		
 		if (modParseSH(&ptc.wfs[0]) != EXIT_SUCCESS)			// process SH sensor output, get displacements
 			return;
@@ -478,7 +484,7 @@ void modeOpen() {
 		
 		if (ptc.frames % 20 == 0) {
 			displayImg(ptc.wfs[0].image, ptc.wfs[0].res, screen);
-			drawSubapts(&ptc.wfs[0], screen);
+			modDrawSubapts(&ptc.wfs[0], screen);
 		}
 		
 		if (ptc.frames > 2000) // exit for debugging
