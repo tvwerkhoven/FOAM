@@ -13,6 +13,8 @@
 #include "foam_modules-sim.h"
 #include "foam_cs_library.h"
 
+#define FOAM_MODSIM_WAVEFRONT "../config/wavefront.fits"
+#define FOAM_MODSIM_APERTURE "../config/aperture.fits"
 
 struct simul {
 	int wind[2]; 			// 'windspeed' in pixels/cycle
@@ -53,7 +55,7 @@ int drvReadSensor() {
 	
 	// This reads in wavefront.fits to memory at the first call, and each consecutive call
 	// selects a subimage of that big image, defined by simparams.curorig
-	if (simAtm("wavefront.fits", ptc.wfs[0].res, simparams.curorig, ptc.wfs[0].image) != EXIT_SUCCESS) { 	
+	if (simAtm(FOAM_MODSIM_WAVEFRONT, ptc.wfs[0].res, simparams.curorig, ptc.wfs[0].image) != EXIT_SUCCESS) { 	
 		if (status > 0) {
 			fits_get_errstatus(status, errmsg);
 			logErr("fitsio error in simAtm(): (%d) %s", status, errmsg);
@@ -63,7 +65,7 @@ int drvReadSensor() {
 	}
 	logDebug("simAtm() done");
 
-	if (simTel("aperture.fits", ptc.wfs[0].res, ptc.wfs[0].image) != EXIT_SUCCESS) { // Simulate telescope (from aperture.fits)
+	if (simTel(FOAM_MODSIM_APERTURE, ptc.wfs[0].res, ptc.wfs[0].image) != EXIT_SUCCESS) { // Simulate telescope (from aperture.fits)
 		if (status > 0) {
 			fits_get_errstatus(status, errmsg);
 			logErr("fitsio error in simTel(): (%d) %s", status, errmsg);

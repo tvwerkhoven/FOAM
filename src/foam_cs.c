@@ -17,6 +17,8 @@
 #include "foam_cs_library.h"
 #include "foam_modules.h"
 
+#define FOAM_CONFIG_FILE "ao_config.cfg"
+
 // GLOBAL VARIABLES //
 /********************/	
 
@@ -76,7 +78,7 @@ int main(int argc, char *argv[]) {
 	}
 
 	// BEGIN LOADING CONFIG
-	if (loadConfig("ao_config.cfg") != EXIT_SUCCESS) {
+	if (loadConfig(FOAM_CONFIG_FILE) != EXIT_SUCCESS) {
 		logErr("Loading configuration failed, aborting");
 		return EXIT_FAILURE;
 	}
