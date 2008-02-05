@@ -17,7 +17,7 @@
 #include "foam_cs_library.h"
 #include "foam_modules.h"
 
-#define FOAM_CONFIG_FILE "ao_config.cfg"
+#define FOAM_CONFIG_FILE "../config/ao_config.cfg"
 
 // GLOBAL VARIABLES //
 /********************/	
@@ -422,7 +422,7 @@ int writeFits(char *file, float *image, long *naxes) {
 	
 	fits_create_file(&fptr, file, &status);   /* create new file */
 
-	//	fits_open_file(&fptr, "foam.fits", READWRITE, &status); // TODO: how to write files?
+	//	fits_open_file(&fptr, "foam.fits", READWRITE, &status);
 	fits_create_img(fptr, -32, 2, naxes, &status);
 	fits_write_pix(fptr, TFLOAT, fpixel, \
 	               naxes[0] * naxes[1], image, &status);
@@ -438,11 +438,13 @@ void modeOpen() {
 	if (ptc.wfs_count == 0) {				// we need wave front sensors
 		logErr("Error, no WFSs defined.");
 		ptc.mode = AO_MODE_NONE;
+		return;
 	}
 	
 	if (drvReadSensor() != EXIT_SUCCESS) {		// read the sensor output into ptc.image
 		logErr("Error, reading sensor failed.");
 		ptc.mode = AO_MODE_NONE;
+		return;
 	}
 	
 	logInfo("Selecting new subapts.");
@@ -518,9 +520,9 @@ void modeListen() {
 		case AO_MODE_CAL:
 		modeCal();
 		break;
-		default:
-		modeListen(); // re-run if nothing was found
-	}	
+	}
+	
+	modeListen();// re-run if nothing was found
 }
 
 void modeCal() {

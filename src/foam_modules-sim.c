@@ -60,6 +60,7 @@ int drvReadSensor() {
 			fits_get_errstatus(status, errmsg);
 			logErr("fitsio error in simAtm(): (%d) %s", status, errmsg);
 			status = 0;
+			return EXIT_FAILURE;
 		}
 		else logErr("error in simAtm().");
 	}
@@ -70,6 +71,7 @@ int drvReadSensor() {
 			fits_get_errstatus(status, errmsg);
 			logErr("fitsio error in simTel(): (%d) %s", status, errmsg);
 			status = 0;
+			return EXIT_FAILURE;
 		}
 		else logErr("error in simTel().");
 	}

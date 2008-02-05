@@ -100,7 +100,7 @@ else
 fi
 AC_SUBST(ITIFG_LIBS)
 AC_SUBST(ITIFG_CFLAGS)
-AM_CONDITIONAL([ITIFG], [test x$ui = xtrue])
+AM_CONDITIONAL([ITIFG], [test x$itifg = xtrue])
 
 ### UI MODE ###
 ###############

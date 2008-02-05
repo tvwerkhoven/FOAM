@@ -17,7 +17,7 @@ endif
 # programs depend on whether or not we want simulation...
 if SIMULATION
 bin_PROGRAMS += foamcs-sim
-foamcs_sim_SOURCES = foam_cs.c foam_library.c foam_cs_library.c foam_modules-dm.c  foam_modules-sh.c  foam_modules-sim.c
+foamcs_sim_SOURCES = foam_cs.c foam_library.c foam_cs_library.c foam_modules-dm.c  foam_modules-sh.c foam_modules-sim.c
 foamcs_sim_SOURCES += foam_cs_library.h foam_library.h foam_modules-sh.h foam_modules-sim.h
 foamcs_sim_CFLAGS = $(SIMULATION_CFLAGS)
 foamcs_sim_LDFLAGS = $(SIMULATION_LIBS)
