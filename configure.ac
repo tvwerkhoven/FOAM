@@ -28,7 +28,9 @@ AC_SUBST(COMMON_LIBS)
 
 ### BEGIN PKG_CONFIG ###
 ########################
-PKG_CHECK_MODULES(SDL, sdl)
+PKG_CHECK_MODULES(SDL, sdl) # seems to give errors some times
+#SDL_CFLAGS = $(pkg-config SDL --cflags)
+#SDL_LIBS = $(pkg-config SDL --libs)
 
 # Test if we want to run as simulation or not
 AC_ARG_ENABLE([simulation],
@@ -128,6 +130,25 @@ AM_CONDITIONAL([UI], [test x$ui = xtrue])
 LIBS=""
 ### END CHECKING FOR MODES ###
 ##############################
+
+AC_MSG_NOTICE([Configuration summary follows:])
+if test "$simul" = true ; then
+	AC_MSG_NOTICE([Simulation mode: available])
+else
+	AC_MSG_NOTICE([Simulation mode: not available])
+fi
+
+if test "$ui" = true ; then
+	AC_MSG_NOTICE([UI: available])
+else
+	AC_MSG_NOTICE([UI: not available])
+fi
+
+if test "$itifg" = true ; then
+	AC_MSG_NOTICE([ITIFG mode: available])
+else
+	AC_MSG_NOTICE([ITIFG mode: not available])
+fi
 
 
 AC_OUTPUT
