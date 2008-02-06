@@ -13,6 +13,7 @@ src/Makefile
 ])
 
 # We always need these libs
+AC_SEARCH_LIBS([m], [sin] ,[], AC_MSG_ERROR([This package needs libm.]) ) 
 AC_SEARCH_LIBS([event_init], [event] ,[], AC_MSG_ERROR([This package needs libevent.]) ) 
 AC_SEARCH_LIBS([pthread_create], [pthread] ,[], AC_MSG_ERROR([This package needs libpthread.]) ) 
 
