@@ -65,18 +65,24 @@ if test "$simul" = true ; then
 	# search for simulation libraries here, exit if not found
 	AC_MSG_NOTICE([simulation enabled, checking for extra libs])
 	# this is kinda ugly
+	simulmissing=""
 	LIBS=""
 	AC_SEARCH_LIBS([ffopen], [cfitsio] ,[], 
 		[AC_MSG_WARN([This package needs libfitsio in simulation mode, disabling simulation.])]
 		simul=false
+		simulmissing+=" cfitsio"
 	) 
 	AC_SEARCH_LIBS([fftw_execute], [fftw3] ,[], 
 		[AC_MSG_WARN([This package needs libfftw3 in simulation mode, disabling simulation.])
-		simul=false]
+		simul=false
+		simulmissing+=" fftw3"
+		]
 	) 
 	AC_SEARCH_LIBS([SDL_Init], [sdl] ,[], 
 		[AC_MSG_WARN([This package needs libsdl in simulation mode, disabling simulation.])
-		simul=false]
+		simul=false
+		simulmissing+=" sdl"
+		]
 	) 
  
 	# fix simulation Cflags (mainly SDL)
@@ -94,6 +100,7 @@ AM_CONDITIONAL([SIMULATION], [test x$simul = xtrue])
 ##################
 if test "$itifg" = true ; then
 	# search for itifg libs here
+	itifgmissing=""
 	AC_MSG_NOTICE([itifg enabled, checking for extra libs])
 	LIBS=""
 else 
@@ -107,12 +114,15 @@ AM_CONDITIONAL([ITIFG], [test x$itifg = xtrue])
 ### UI MODE ###
 ###############
 if test "$ui" = true ; then
+	uimissing=""
 	# search for itifg libs here
 	AC_MSG_NOTICE([Cheking UI libs])
 	LIBS=""
 	AC_SEARCH_LIBS([SDL_Init], [sdl] ,[], 
 		[AC_MSG_WARN([This package needs libsdl in ui mode, disabling simulation.])
-		ui=false]
+		ui=false
+		uimissing+=" sdl"
+		]
 	) 
  
 	# fix simulation Cflags (mainly SDL)
@@ -132,23 +142,29 @@ LIBS=""
 ##############################
 
 AC_MSG_NOTICE([Configuration summary follows:])
+AC_MSG_NOTICE([==============================])
 if test "$simul" = true ; then
 	AC_MSG_NOTICE([Simulation mode: available])
 else
 	AC_MSG_NOTICE([Simulation mode: not available])
+	AC_MSG_NOTICE([Simulation mode: missing: $simulmissing])
 fi
 
 if test "$ui" = true ; then
-	AC_MSG_NOTICE([UI: available])
+	AC_MSG_NOTICE([UI:              available])
 else
-	AC_MSG_NOTICE([UI: not available])
+	AC_MSG_NOTICE([UI:              not available])
+	AC_MSG_NOTICE([UI:              missing: $uimissing])
 fi
 
 if test "$itifg" = true ; then
-	AC_MSG_NOTICE([ITIFG mode: available])
+	AC_MSG_NOTICE([ITIFG mode:      available])
 else
-	AC_MSG_NOTICE([ITIFG mode: not available])
+	AC_MSG_NOTICE([ITIFG mode:      not available])
+	AC_MSG_NOTICE([ITIFG mode:      missing: $itifgmissing])
 fi
+
+AC_MSG_NOTICE([==============================])
 
 
 AC_OUTPUT
