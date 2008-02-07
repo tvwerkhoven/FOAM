@@ -8,13 +8,15 @@
 #ifndef FOAM_MODULES_SIM
 #define FOAM_MODULES_SIM
 
-#include "foam_cs_library.h"
+#include "foam_cs_library.h"		// we link to the main program here (i.e. we use common (log) functions)
+#include "foam_modules-display.h"	// we need the display module to show debug output
+#include "foam_modules-sh.h"		// we want the SH subroutines so we can track targets
+#include "foam_modules-dm.h"		// we want the DM subroutines here too
 #include <fftw3.h> // we need this for modParseSH()
 
 // These are defined in foam_cs_library.c
 extern control_t ptc;
 extern config_t cs_config;
-extern SDL_Surface *screen;	// Global surface to draw on
 
 /*!
 @brief Simulates sensor(s) read-out and outputs to ptc.wfs[n].image.

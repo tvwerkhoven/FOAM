@@ -5,8 +5,6 @@
 
 	@brief This is the main file for the @name Control Software.
 
- 	(was proto_ao_cs.c)
-
 	Partially functional alpha version of the @name Control Software\n\n
 	TODO tags are used for work in progress or things that are unclear.
 */
@@ -15,7 +13,6 @@
 /***********/
 
 #include "foam_cs_library.h"
-#include "foam_modules.h"
 
 #define FOAM_CONFIG_FILE "../config/ao_config.cfg"
 
@@ -26,9 +23,6 @@
 extern control_t ptc;
 extern config_t cs_config;
 extern conntrack_t clientlist;
-
-extern SDL_Surface *screen;	// Global surface to draw on
-SDL_Event event;		// Global SDL event struct to catch user IO
 
 	/*! 
 	@brief Initialisation function.
@@ -63,19 +57,8 @@ int main(int argc, char *argv[]) {
 	strftime (date, 64, "%A, %B %d %H:%M:%S, %Y (%Z).", loctime);	
 	logInfo("at %s", date);
 		
-	// Init SDL
-	if (SDL_Init(SDL_INIT_VIDEO) < 0)
-		logErr("SDL init error");
-	atexit(SDL_Quit);
-	
-	SDL_WM_SetCaption("WFS output","WFS output");
-
-	// TODO: hardcoded resolution is not nice :(
-	screen = SDL_SetVideoMode(256, 256, 0, SDL_HWSURFACE|SDL_DOUBLEBUF);
-	if ( screen == NULL ) {
-		logErr("Unable to set video, SDL error was: %s", SDL_GetError());
-		return EXIT_FAILURE;
-	}
+	// Initialise module
+	modInitModule();
 
 	// BEGIN LOADING CONFIG
 	if (loadConfig(FOAM_CONFIG_FILE) != EXIT_SUCCESS) {
@@ -91,7 +74,6 @@ int main(int argc, char *argv[]) {
 		(void *) sockListen, // TODO: can we process a return value here?
 		NULL)
 		) != 0)
-		//TODO: rework I/O (where do we print errors?)
 		logErr("Error in pthread_create: %s.", strerror(errno));
 		
 	modeListen(); 			// After initialization, start in open mode
@@ -135,7 +117,7 @@ int parseConfig(char *var, char *value) {
 	}
 	else if (strcmp(var, "WFC_COUNT") == 0) {
 		ptc.wfc_count = (int) strtol(value, NULL, 10);
-		ptc.wfc = malloc(ptc.wfc_count * sizeof(*ptc.wfc));	// allocate memory TODO: this does NOT work, why?
+		ptc.wfc = malloc(ptc.wfc_count * sizeof(*ptc.wfc));
 		if (ptc.wfc == NULL) return EXIT_FAILURE;
 
 		logDebug("WFC_COUNT initialized: %d", ptc.wfc_count);
@@ -445,17 +427,10 @@ void modeOpen() {
 		return;
 	}
 	
-	//modeOpenInit(&ptc);
+	// Run the initialisation function of the modules used, pass
+	// along a pointer to ptc
+	modOpenInit(&ptc);
 	
-	if (drvReadSensor() != EXIT_SUCCESS) {		// read the sensor output into ptc.image
-		logErr("Error, reading sensor failed.");
-		ptc.mode = AO_MODE_NONE;
-		return;
-	}
-	
-	logInfo("Selecting new subapts.");
-	modSelSubapts(&ptc.wfs[0], 0, 0); 	// check samini (2nd param) and samxr (3d param)
-
 
 //	logInfo("Getting initial reference");
 //	modGetRef(&ptc.wfs[0]);
@@ -470,31 +445,16 @@ void modeOpen() {
 	int tmp[] = {32, 32};
 	ptc.frames++;
 	while (ptc.mode == AO_MODE_OPEN) {
-		logInfo("Operating in open loop"); 			// TODO
+		logInfo("Operating in open loop"); 
 		
-		if (drvReadSensor() != EXIT_SUCCESS)		// read the sensor output into ptc.image
-			return;
-
-		//modSelSubapts(&ptc.wfs[0], 0, 0); 	// check samini (2nd param) and samxr (3d param)				
-		
-		if (modParseSH(&ptc.wfs[0]) != EXIT_SUCCESS)			// process SH sensor output, get displacements
-			return;
-		
-		displayImg(ptc.wfs[0].refim, tmp, screen);
-		
-		if (ptc.frames % 20 == 0) {
-			displayImg(ptc.wfs[0].image, ptc.wfs[0].res, screen);
-			modDrawSubapts(&ptc.wfs[0], screen);
-		}
+		modOpenLoop(&ptc);
+				
 		
 		if (ptc.frames > 2000) // exit for debugging
 			exit(EXIT_SUCCESS);
 				
 		ptc.frames++;								// increment the amount of frames parsed		
 
-		if (SDL_PollEvent(&event))
-			if (event.type == SDL_QUIT)
-				stopFOAM();
 //		sleep(DEBUG_SLEEP);
 	}
 	
@@ -505,7 +465,7 @@ void modeClosed() {
 	logInfo("entering closed loop");
 	while (ptc.mode == AO_MODE_CLOSED) {
 
-		logInfo("Operating in closed loop"); // TODO, make faster for fast loop
+		logInfo("Operating in closed loop"); 
 		sleep(DEBUG_SLEEP);
 	}
 	
@@ -564,7 +524,7 @@ int sockListen() {
 	serv_addr.sin_family = AF_INET;
 	serv_addr.sin_addr.s_addr = inet_addr(cs_config.listenip);
 	serv_addr.sin_port = htons(cs_config.listenport);
-	memset(serv_addr.sin_zero, '\0', sizeof(serv_addr.sin_zero)); // TODO: we need to set this padding to zero?
+	memset(serv_addr.sin_zero, '\0', sizeof(serv_addr.sin_zero));
 	
 	logDebug("Mem set to zero for serv_addr.");
 	
@@ -659,7 +619,6 @@ void sockAccept(const int sock, const short event, void *arg) {
 	clientlist.connlist[i] = client;
 
 	// We have to enable it before our callbacks will be
-	// TODO: also write?
 	bufferevent_enable(client->buf_ev, EV_READ);
 
 	logInfo("Succesfully accepted connection from %s", inet_ntoa(cli_addr.sin_addr));

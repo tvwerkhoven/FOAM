@@ -15,6 +15,8 @@
 
 #define FOAM_MODSIM_WAVEFRONT "../config/wavefront.fits"
 #define FOAM_MODSIM_APERTURE "../config/aperture.fits"
+#define FOAM_MODSIM_APTMASK "../config/apert15-256.pgm"
+#define FOAM_MODSIM_ACTPAT "../config/dm37-256.pgm"
 
 struct simul {
 	int wind[2]; 			// 'windspeed' in pixels/cycle
@@ -37,16 +39,78 @@ struct simul simparams = {
 	.wisdomfile = "fftw_wisdom.dat",
 };
 
+extern SDL_Surface *screen;	// Global surface to draw on
+extern SDL_Event event;		// Global SDL event struct to catch user IO
+
+
 // We need these every time, declare them globally
 char errmsg[FLEN_STATUS]; 		// FLEN_STATUS is from fitsio.h
 int status = 0;  				// MUST initialize status
 float nulval = 0.0;
 int anynul = 0;
 
+
+// TODO: document these:
+int modInitModule() {
+	// Init SDL
+	if (SDL_Init(SDL_INIT_VIDEO) < 0)
+		logErr("SDL init error");
+	atexit(SDL_Quit);
+	
+	SDL_WM_SetCaption("WFS output","WFS output");
+
+	// TODO: hardcoded resolution is not nice :(
+	screen = SDL_SetVideoMode(256, 256, 0, SDL_HWSURFACE|SDL_DOUBLEBUF);
+	if (screen == NULL) {
+		logErr("Unable to set video, SDL error was: %s", SDL_GetError());
+		return EXIT_FAILURE;
+	}
+}
+
+int modOpenInit(control_t *ptc) {
+	if (drvReadSensor(ptc) != EXIT_SUCCESS) {		// read the sensor output into ptc.image
+		logErr("Error, reading sensor failed.");
+		ptc->mode = AO_MODE_NONE;
+		return EXIT_FAILURE;
+	}
+	
+	logInfo("Selecting new subapts.");
+	modSelSubapts(&(ptc->wfs[0]), 0, 0); 			// check samini (2nd param) and samxr (3d param)
+}
+
+int modOpenLoop(control_t *ptc) {
+	drvSetActuator(ptc->wfc, ptc->wfc_count);
+	
+	if (drvReadSensor(ptc) != EXIT_SUCCESS)			// read the sensor output into ptc.image
+		return;
+
+	//modSelSubapts(&ptc.wfs[0], 0, 0); 			// check samini (2nd param) and samxr (3d param)				
+	
+	if (modParseSH((&ptc->wfs[0])) != EXIT_SUCCESS)			// process SH sensor output, get displacements
+		return;
+	
+	if (ptc->frames % 20 == 0) {
+		displayImg(ptc->wfs[0].image, ptc->wfs[0].res, screen);
+		modDrawSubapts(&(ptc->wfs[0]), screen);
+	}
+	
+	if (SDL_PollEvent(&event))
+		if (event.type == SDL_QUIT)
+			stopFOAM();
+
+}
+
+int modClosedInit(control_t *ptc) {
+	
+}
+
+int modClosedLoop() {
+}
+
+	
 int drvReadSensor() {
 	int i;
 	logDebug("Now reading %d sensors, origin is at (%d,%d).", ptc.wfs_count, simparams.curorig[0], simparams.curorig[1]);
-	// TODO: TT, DM 
 	
 	if (ptc.wfs_count < 1) {
 		logErr("Nothing to process, no WFSs defined.");
@@ -80,6 +144,10 @@ int drvReadSensor() {
 	for (i=0; i < ptc.wfc_count; i++)
 		simWFC(i, ptc.wfc[i].nact, ptc.wfc[i].ctrl, ptc.wfs[0].image); // Simulate every WFC in series
 	
+	displayImg(ptc.wfs[0].image, ptc.wfs[0].res, screen);
+	sleep(1);
+	//modDrawSubapts(&(ptc->wfs[0]), screen);
+
 	
 	// Simulate the WFS here.
 	if (modSimSH() != EXIT_SUCCESS) {
@@ -143,8 +211,8 @@ int simObj(char *file, float *image) {
 int simWFC(int wfcid, int nact, float *ctrl, float *image) {
 	// we want to simulate the tip tilt mirror here. What does it do
 	logDebug("WFC %d (%s) has %d actuators, simulating", wfcid, ptc.wfc[wfcid].name, ptc.wfc[wfcid].nact);
-	//if (wfcid == 1)
-	//	modSimDM("dm37/apert15-256.pgm", "dm37/dm37-256.pgm", nact, ctrl, image, 0);
+	if (wfcid == 1)
+		modSimDM(FOAM_MODSIM_APTMASK, FOAM_MODSIM_ACTPAT, nact, ctrl, image, 10);
 //	if (wfcid == 1)
 		//modSimTT();
 	
@@ -241,10 +309,8 @@ int simAtm(char *file, int res[2], int origin[2], float *image) {
 			logDebug("Allocated memory for simparams.simimg (%d x %d x %d byte).", 
 				naxes[0], naxes[1], sizeof(simparams.simimg));
 			
-			// TODO: can be done in one go?
 			simparams.simimgres[0] = naxes[0];
 			simparams.simimgres[1] = naxes[1];
-		
 		}
 		
 		logDebug("Now reading image with size (%dx%d) from file %s.", naxes[0], naxes[1], newfile);
@@ -267,7 +333,6 @@ int simAtm(char *file, int res[2], int origin[2], float *image) {
 		return EXIT_FAILURE;
 	}
 	
-	// TODO: How do we copy this efficiently?
 	for (i=0; i<res[1]; i++) { // y coordinate
 		for (j=0; j<res[0]; j++) { // x coordinate 
 			image[i*res[0] + j] = simparams.simimg[(i+origin[1])*simparams.simimgres[0] + (j+origin[0])];
@@ -278,13 +343,16 @@ int simAtm(char *file, int res[2], int origin[2], float *image) {
 }
 
 int drvSetActuator() {
-	int i;
+	int i,j;
+	 
+	// TODO: internal 'voltages' will be [-1,1]
+	// we need to rescale those into something linear (like Sqrt ( 255*(i+1)*.5 )
 	
-	logDebug("%d WFCs to set.", ptc.wfc_count);
-	
-	for(i=0; i < ptc.wfc_count; i++)
+	for(i=0; i < ptc.wfc_count; i++) {
 		logDebug("Setting WFC %d with %d acts.", i, ptc.wfc[i].nact);
-		
+		for (j=0; j<ptc.wfc[i].nact; j++)
+			ptc.wfc[i].ctrl[j] = (random()/(RAND_MAX/2))-1; // order is important, prevent overflow
+	}
 	return EXIT_SUCCESS;
 }
 
@@ -345,7 +413,7 @@ int modSimSH() {
 				logDebug("Importing wisdom failed.");
 				return EXIT_FAILURE;
 			}
-			// regenerating plan using wisdom imported above. TODO: no extra flags needed?
+			// regenerating plan using wisdom imported above.
 			simparams.plan_forward = fftw_plan_dft_2d(nx, ny, simparams.shin, simparams.shout, FFTW_FORWARD, FFTW_EXHAUSTIVE);
 			fclose(fp);
 		}

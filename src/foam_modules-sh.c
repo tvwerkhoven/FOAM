@@ -13,7 +13,6 @@
 	
 	The functions provided to the outside world are:
 	\li modSelSubapts
-	\li modDrawSubapts
 	\li modCogTrack
 	\li modCorrTrack
 	\li modGetRef
@@ -608,35 +607,6 @@ int modParseSH(wfs_t *wfsinfo) {
 	}
 	logDirect("\n");
 	
-	return EXIT_SUCCESS;
-}
-
-int modDrawSubapts(wfs_t *wfsinfo, SDL_Surface *screen) {
-	if (wfsinfo->nsubap == 0)
-		return EXIT_SUCCESS;	// if there's nothing to draw, don't draw (shouldn't happen)
-		
-	int *shsize;			// size of whole image, nr of cells. will hold an int[2] array
-	int (*subc)[2] = wfsinfo->subc;		// lower-left coordinates of the subapts
-
-	shsize = wfsinfo->shsize;
-	int subsize[2] = {wfsinfo->shsize[0]/2, wfsinfo->shsize[1]/2};
-		
-	int sn=0;
-	Slock(screen);
-		
-	// we draw the reference subaperture rectangle bigger than the rest, with lower left coord:
-	int refcoord[] = {subc[0][0]-shsize[0]/4, subc[0][1]-shsize[1]/4};
-	drawRect(refcoord, shsize, screen);
-	
-	for (sn=1; sn< wfsinfo->nsubap; sn++) {
-		// subapt with lower coordinates (subc[sn][0],subc[sn][1])
-		// first subapt has size (shsize[0],shsize[1]),
-		// the rest are (shsize[0]/2,shsize[1]/2)
-		drawRect(subc[sn], subsize, screen);
-	}
-	
-	Sulock(screen);
-	SDL_Flip(screen);	
 	return EXIT_SUCCESS;
 }
 

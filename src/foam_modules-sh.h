@@ -20,7 +20,6 @@
 // These are defined in foam_cs_library.c
 extern control_t ptc;
 extern config_t cs_config;
-extern SDL_Surface *screen;	// Global surface to draw on
 
 // DEFINITIONS //
 /***************/
@@ -118,13 +117,5 @@ static void procRef(wfs_t *wfsinfo, float *sharp, float *aver);
 TODO: doc
 */
 void modGetRef(wfs_t *wfsinfo);	
-
-/*!
-@brief This draws all subapertures for a certain wfs
-
-@param [in] *wfsinfo wfs_t struct with info on the current wfs
-@param [in] *screen SDL_Surface to draw on
-*/
-int modDrawSubapts(wfs_t *wfsinfo, SDL_Surface *screen);
 
 #endif /* FOAM_MODULES_SH */

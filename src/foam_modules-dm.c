@@ -32,71 +32,47 @@ ovdluhe@kis.uni-freiburg.de
 
 // include files
 
-#include "foam_cs_library.h"
+#include "foam_modules-dm.h"
 
-
-// constants
-
-#define	SOR_LIM	  (1.e-8)  // limit value for SOR iteration
-//#define NACT      37       // number of actuators
-
-// local prototypes
-/*!
-@brief Reads a pgm file from disk into memory
-
-@param [in] *fname the filename to read
-@param [out] **dbuf the buffer that the image will be read to (will be allocated dynamically)
-@param [out] *t_nx will hold the x resolution of the image
-@param [out] *t_ny will hold the y resolution of the image
-@param [out] *t_ngray will hold the number of different graylevels in the image
-*/
-static int read_pgm(char *fname, double **dbuf, int *t_nx, int *t_ny, int *t_ngray);
-
-/*!
-@brief Simulates the DM shape as function of input voltages.
-
-This routine, based on response2.c by C.U. Keller, takes a boundarymask,
-an actuatorpattern for the DM being simulated, the number of actuators
-and the voltages as input. It then calculates the shape of the mirror
-in the output variable image. Additionally, niter can be set to limit the 
-amount of iterations (0 is auto).
-
-@param [in] *boundarymask The pgm-file containing the boundary mask (aperture)
-@param [in] *actuatorpat The pgm-file containing the DM-actuator pattern
-@param [in] nact The number of actuators, must be the same as used in \a *actuatorpat
-@param [in] *ctrl The control commands array, \a nact long
-@param [in] niter The number of iterations, pass 0 for automatic choice
-@param [out] *image The DM wavefront correction in um, 2d array.
-@return EXIT_SUCCESS on success, EXIT_FAILURE otherwise.
-*/
-int modSimDM(char *boundarymask, char *actuatorpat, int nact, float *ctrl, float *image, int niter);
+// Global, we only want to read this once (but keep it local with static)
 
 // FUNCTIONS BEGIN //
 /*******************/
 
 int modSimDM(char *boundarymask, char *actuatorpat, int nact, float *ctrl, float *image, int niter) {
-	int	 i, j, status, nx, ny, ngray1, ngray2;
+	int	 i, j, status;
 	long	 ii, i_1j, i1j, ij_1, ij1;
 	int    voltage[nact]; // voltage settings for electrodes (in digital units)
-	double *act, *boundary, *resp;
+	double *resp=NULL;
 	double pi, rho, omega = 1.0, sum, sdif, update;
 	long   ik;
+	
+	double *boundary=NULL, *act=NULL;
+	int nx, ny, ngray1, ngray2;
+
+
 
 	pi = 4.0*atan(1);
 
-// read boundary mask file 
-
-	if ((status = read_pgm(boundarymask,&boundary,&nx,&ny,&ngray1)) != EXIT_SUCCESS) {
-		logErr("Cannot read boundary mask");
-		return EXIT_FAILURE;
+	// read boundary mask file 
+	if (boundary == NULL) {
+		if ((status = read_pgm(boundarymask,&boundary,&nx,&ny,&ngray1)) != EXIT_SUCCESS) {
+			logErr("Cannot read boundary mask");
+			return EXIT_FAILURE;
+		}	
 	}
-
+	logDebug("DM controls are:");
+	for(ik = 0; ik < nact; ik++)
+		logDirect("%3f ", ctrl[ik]);
+		
+	// Input linear and c=[-1,1], 'output' must be v=[0,255] and linear in v^2
 	logDebug("Simulating DM with voltages:");
 	for(ik = 0; ik < nact; ik++) {
-		voltage[ik] = (int) round(ctrl[ik]);
-		printf("%d ", voltage[ik]); // TODO: we don't want printf here
+		// we do Sqrt(255^2 (i+1) * 0.5) here to convert from [-1,1] to [0,255] 
+		voltage[ik] = (int) round( sqrt(65025*(ctrl[ik]+1)*0.5 ) ); //65025 = 255^2
+		logDirect("%d ", voltage[ik]); // TODO: we don't want printf here
 	}
-	printf("\n");
+	logDirect("\n");
 
 	for (ik = 0; ik < ny*nx; ik++) {
 		if (*(boundary + ik) > 0) {
@@ -107,10 +83,11 @@ int modSimDM(char *boundarymask, char *actuatorpat, int nact, float *ctrl, float
 	}
 
 // read actuator pattern file
-
-	if ((status = read_pgm(actuatorpat,&act,&nx,&ny,&ngray2)) != EXIT_SUCCESS) {
-		logErr("Cannot read actuator pattern file");
-		return EXIT_FAILURE;
+	if (act == NULL) {
+		if ((status = read_pgm(actuatorpat,&act,&nx,&ny,&ngray2)) != EXIT_SUCCESS) {
+			logErr("Cannot read actuator pattern file");
+			return EXIT_FAILURE;
+		}
 	}
 
 // set actuator voltages on electrodes
@@ -124,7 +101,6 @@ int modSimDM(char *boundarymask, char *actuatorpat, int nact, float *ctrl, float
 // the surface deformation, we simply put a factor of two here
 	}
 
-
 // compute spectral radius rho and SOR omega factor. These are appro-
 // ximate values. Get the number of iterations.
 
@@ -137,7 +113,6 @@ int modSimDM(char *boundarymask, char *actuatorpat, int nact, float *ctrl, float
 
 // fprintf(stderr,"Number of iterations:\t%d\n", niter);
 
-
 // Calculation of the response. This is a Poisson PDE problem
 // where the actuator pattern represents the source term and and
 // mirror boundary a Dirichlet boundary condition. Because of the
@@ -145,10 +120,15 @@ int modSimDM(char *boundarymask, char *actuatorpat, int nact, float *ctrl, float
 // This is a Simultaneous Over-Relaxation (SOR) algorithm described
 // in Press et al., "Numerical Recipes", Section 17.
 
-	resp = (double *) calloc(nx*ny, sizeof(double));
-	if(resp == NULL) {
-		logErr("Allocation error, exiting");
-		return EXIT_FAILURE;
+
+	
+	if (resp == NULL) {
+		logDebug("Allocating memory for resp: %dx%d.", nx, ny);
+		resp = (double *) calloc(nx*ny, sizeof(double));
+		if (resp == NULL) {
+			logErr("Allocation error, exiting");
+			return EXIT_FAILURE;
+		}
 	}
 
 	/*  fprintf(stderr,"Iterating:\n"); */
@@ -157,7 +137,6 @@ int modSimDM(char *boundarymask, char *actuatorpat, int nact, float *ctrl, float
 		for (ii = 1; ii <= niter; ii++) {
 			sum = 0.0;
 			sdif = 0.0;
-
 			for (i = 2; i <= nx-1; i += 1) { /* loops over 2-D aperture */
 				for (j = 2; j <= ny-1; j += 1) {
 	/* --->>> might need to be nx instead of ny, also everywhere below */
@@ -168,6 +147,7 @@ int modSimDM(char *boundarymask, char *actuatorpat, int nact, float *ctrl, float
 					i1j = i*ny + j - 1;
 					ij_1 = (i - 1)*ny + j - 2;
 					ij1 = (i - 1)*ny + j;
+
 					update = -resp[ik] - (act[ik] - resp[i_1j] - resp[i1j] - 
 					resp[ij1] - resp[ij_1])/4.;
 					resp[ik] = resp[ik] + omega*update;
@@ -176,6 +156,7 @@ int modSimDM(char *boundarymask, char *actuatorpat, int nact, float *ctrl, float
 				} 
 				else
 					resp[ik] = 0.0;
+
 				}
 			} /* end of loop over aperture */
 
@@ -184,6 +165,7 @@ int modSimDM(char *boundarymask, char *actuatorpat, int nact, float *ctrl, float
 		if (sdif < SOR_LIM)		/* stop iteration if changes are */
 			break;			/* small enough			 */
 	}
+
 
 
 	// response output

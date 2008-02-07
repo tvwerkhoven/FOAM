@@ -13,7 +13,7 @@ src/Makefile
 ])
 
 # We always need these libs
-AC_SEARCH_LIBS([m], [sin] ,[], AC_MSG_ERROR([This package needs libm.]) ) 
+AC_SEARCH_LIBS([sin], [m] ,[], AC_MSG_ERROR([This package needs libm.]) ) 
 AC_SEARCH_LIBS([event_init], [event] ,[], AC_MSG_ERROR([This package needs libevent.]) ) 
 AC_SEARCH_LIBS([pthread_create], [pthread] ,[], AC_MSG_ERROR([This package needs libpthread.]) ) 
 
@@ -29,6 +29,7 @@ AC_SUBST(COMMON_LIBS)
 
 ### BEGIN PKG_CONFIG ###
 ########################
+# TvW: meer PKG_CHECK_MODULES
 PKG_CHECK_MODULES(SDL, sdl) # seems to give errors some times
 #SDL_CFLAGS = $(pkg-config SDL --cflags)
 #SDL_LIBS = $(pkg-config SDL --libs)
@@ -38,7 +39,7 @@ AC_ARG_ENABLE([simulation],
 		AC_HELP_STRING([--enable-simulation], [enable simulation mode])],
 		[case "${enableval}" in
 		yes) simul=true ;;
-		no)  simul=false ;;
+		no)  simul=disabled ;;
 		*) AC_MSG_ERROR([bad value ${enableval} for --enable-simulation]) ;;
 	esac],[simul=true])
 
@@ -47,18 +48,18 @@ AC_ARG_ENABLE([ui],
 		AC_HELP_STRING([--enable-ui], [enable the UI]),
 		[case "${enableval}" in
 		yes) ui=true ;;
-		no)  ui=false ;;
+		no)  ui=disabled ;;
 		*) AC_MSG_ERROR([bad value ${enableval} for --enable-ui]) ;;
 	esac],[ui=true])
 
-# Test if we want ITIFG enabled 
+# Test if we want ITIFG enabled (default no, unfinished stuff)
 AC_ARG_ENABLE([itifg],
 		AC_HELP_STRING([--enable-itifg], [enable itifg mode]),
 		[case "${enableval}" in
 		yes) itifg=true ;;
-		no)  itifg=false ;;
+		no)  itifg=disabled ;;
 		*) AC_MSG_ERROR([bad value ${enableval} for --enable-itifg]) ;;
-	esac],[itifg=true])
+	esac],[itifg=disabled])
 
 ### SIMULATION MODE ###
 #######################
@@ -78,7 +79,8 @@ if test "$simul" = true ; then
 		simul=false
 		simulmissing+=" fftw3"
 		]
-	) 
+	) 	
+	 
 	AC_SEARCH_LIBS([SDL_Init], [sdl] ,[], 
 		[AC_MSG_WARN([This package needs libsdl in simulation mode, disabling simulation.])
 		simul=false
@@ -146,13 +148,18 @@ AC_MSG_NOTICE([Configuration summary follows:])
 AC_MSG_NOTICE([==============================])
 if test "$simul" = true ; then
 	AC_MSG_NOTICE([Simulation mode: available])
+elif test "$simul" = disabled; then
+	AC_MSG_NOTICE([Simulation mode: disabled])
 else
-	AC_MSG_NOTICE([Simulation mode: not available])
-	AC_MSG_NOTICE([Simulation mode: missing: $simulmissing])
+# TvW: errors 
+	AC_MSG_ERROR([Simulation mode: not available])
+	AC_MSG_ERROR([Simulation mode: missing: $simulmissing])
 fi
 
 if test "$ui" = true ; then
 	AC_MSG_NOTICE([UI:              available])
+elif test "$ui" = disabled; then
+	AC_MSG_NOTICE([UI:              disabled])
 else
 	AC_MSG_NOTICE([UI:              not available])
 	AC_MSG_NOTICE([UI:              missing: $uimissing])
@@ -160,6 +167,8 @@ fi
 
 if test "$itifg" = true ; then
 	AC_MSG_NOTICE([ITIFG mode:      available])
+elif test "$itifg" = disabled; then
+	AC_MSG_NOTICE([ITIFG mode:      disabled])
 else
 	AC_MSG_NOTICE([ITIFG mode:      not available])
 	AC_MSG_NOTICE([ITIFG mode:      missing: $itifgmissing])
