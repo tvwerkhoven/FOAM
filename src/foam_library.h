@@ -18,6 +18,7 @@ Last: 2008-01-21
 #ifdef __linux__ 
 #include <bits/posix2_lim.h> /* we need this for LINE_MAX? */
 #endif
+// TvW: TODO bufferend events zonder LINE_MAX
 
 #include <string.h>
 #include <unistd.h>

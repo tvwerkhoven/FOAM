@@ -29,7 +29,7 @@ AC_SUBST(COMMON_LIBS)
 
 ### BEGIN PKG_CONFIG ###
 ########################
-# TvW: meer PKG_CHECK_MODULES
+# TvW: meer PKG_CHECK_MODULES, check docs
 PKG_CHECK_MODULES(SDL, sdl) # seems to give errors some times
 #SDL_CFLAGS = $(pkg-config SDL --cflags)
 #SDL_LIBS = $(pkg-config SDL --libs)
@@ -81,7 +81,7 @@ if test "$simul" = true ; then
 		]
 	) 	
 	 
-	AC_SEARCH_LIBS([SDL_Init], [sdl] ,[], 
+	AC_SEARCH_LIBS([SDL_Init], [SDL] ,[], 
 		[AC_MSG_WARN([This package needs libsdl in simulation mode, disabling simulation.])
 		simul=false
 		simulmissing+=" sdl"

@@ -7,6 +7,9 @@ AM_CFLAGS=-pipe -Wall -Wextra -std=c99 -O3 -ftree-vectorize -lc
 AM_CFLAGS+=-g -DDEBUG_ITIFG=255
 AM_LDFLAGS=$(COMMON_LIBS)
 
+# extra files buiten compilen om
+# EXTRA_DIST =
+
 # did we enable UI support or not?
 if UI
 bin_PROGRAMS += foamui
