@@ -74,6 +74,10 @@ int main(int argc, char *argv[]) {
 
 	logInfo("Configuration successfully loaded...");	
 
+	sockListen();
+	
+	return EXIT_SUCCESS;
+	
 	// Create thread which listens to clients on a socket		
 	if ((pthread_create(&thread,
 		NULL,
