@@ -632,7 +632,7 @@ void sockAccept(const int sock, const short event, void *arg) {
 	logInfo("Succesfully accepted connection from %s (using sock %d and buf_ev %p)", \
 		inet_ntoa(cli_addr.sin_addr), newsock, client->buf_ev);
 	
-	usleep(50000);
+	sleep(DEBUG_SLEEP);
 	bufferevent_write(client->buf_ev,"200 OK CONNECTION ESTABLISHED\n", sizeof("200 OK CONNECTION ESTABLISHED\n"));
 
 }

@@ -1,11 +1,12 @@
 # init the bin_programs variable
 bin_PROGRAMS = 
 
-# some shared compiler flags
-AM_CFLAGS=-pipe -Wall -Wextra -std=c99 -O3 -ftree-vectorize -lc
+# some shared compiler flags which must always be used
+# (not using AM_* flags because of http://sourceware.org/automake/automake.html#Flag-Variables-Ordering)
+CFLAGS=-pipe -Wall -Wextra -std=c99 -O3 -ftree-vectorize -lc
 # (un)comment this to toggle debugging
-AM_CFLAGS+=-g -DDEBUG_ITIFG=255
-AM_LDFLAGS=$(COMMON_LIBS)
+CFLAGS+=-g -DDEBUG_ITIFG=255
+LDFLAGS=$(COMMON_LIBS)
 
 # extra files buiten compilen om
 # EXTRA_DIST =
