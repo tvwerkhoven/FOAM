@@ -18,6 +18,7 @@
 #define FOAM_MODSIM_APTMASK "../config/apert15-256.pgm"
 #define FOAM_MODSIM_ACTPAT "../config/dm37-256.pgm"
 
+
 struct simul {
 	int wind[2]; 			// 'windspeed' in pixels/cycle
 	int curorig[2]; 		// current origin

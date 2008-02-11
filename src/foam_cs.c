@@ -24,6 +24,12 @@ extern control_t ptc;
 extern config_t cs_config;
 extern conntrack_t clientlist;
 
+extern int modInitModule();
+extern int modOpenInit(control_t *ptc);
+extern int modOpenLoop(control_t *ptc);
+extern int modClosedInit(control_t *ptc);
+extern int modClosedLoop(control_t *ptc);
+
 	/*! 
 	@brief Initialisation function.
 	
@@ -221,7 +227,7 @@ int parseConfig(char *var, char *value) {
 			return EXIT_FAILURE;
 		}
 
-		logDebug("WFS_CELLS initialized for WFS %d: (%dx%d). Subapt resolution is (%dx%d)", \ 
+		logDebug("WFS_CELLS initialized for WFS %d: (%dx%d). Subapt resolution is (%dx%d)", \
 			tmp, ptc.wfs[tmp].shsize[0], ptc.wfs[tmp].shsize[1], ptc.wfs[tmp].cells[0], ptc.wfs[tmp].cells[1]);
 	}
 	else if (strstr(var, "WFS_RES") != NULL){
@@ -400,13 +406,13 @@ int saveConfig(char *file) {
 	return EXIT_SUCCESS;
 }
 
-int writeFits(char *file, float *image, long *naxes) {
+/*int writeFits(char *file, float *image, long *naxes) {
 	// only writes float images at the moment
 	fitsfile *fptr;
 	int status = 0;
 	long fpixel[] = {1,1};
 	
-	fits_create_file(&fptr, file, &status);   /* create new file */
+	fits_create_file(&fptr, file, &status);   // create new file 
 
 	//	fits_open_file(&fptr, "foam.fits", READWRITE, &status);
 	fits_create_img(fptr, -32, 2, naxes, &status);
@@ -414,7 +420,7 @@ int writeFits(char *file, float *image, long *naxes) {
 	               naxes[0] * naxes[1], image, &status);
 	fits_close_file(fptr, &status);
 	return status;
-}
+}*/
 
 void modeOpen() {
 	logInfo("Entering open loop.");
@@ -429,7 +435,7 @@ void modeOpen() {
 	
 	// Run the initialisation function of the modules used, pass
 	// along a pointer to ptc
-	modOpenInit(&ptc);
+	//modOpenInit(&ptc);
 	
 
 //	logInfo("Getting initial reference");
@@ -447,7 +453,7 @@ void modeOpen() {
 	while (ptc.mode == AO_MODE_OPEN) {
 		logInfo("Operating in open loop"); 
 		
-		modOpenLoop(&ptc);
+		//modOpenLoop(&ptc);
 				
 		
 		if (ptc.frames > 2000) // exit for debugging
@@ -455,7 +461,7 @@ void modeOpen() {
 				
 		ptc.frames++;								// increment the amount of frames parsed		
 
-//		sleep(DEBUG_SLEEP);
+		sleep(DEBUG_SLEEP);
 	}
 	
 	modeListen();		// mode is not open anymore, decide what to to next
@@ -542,8 +548,8 @@ int sockListen() {
 	// Set reusable and nosigpipe flags so we don't get into trouble later on. TODO: doesn't work?
 	if (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval)) != 0)
 		logErr("Could not set socket flag SO_REUSEADDR, continuing.");
-//	if (setsockopt(sock, SOL_SOCKET, SO_NOSIGPIPE, &optval, sizeof(optval)) != 0) // TODO: this is a BSD feature! not unix! 
-//		logErr("Could not set socket flag SO_NOSIGPIPE, continuing.");
+	if (setsockopt(sock, SOL_SOCKET, SO_NOSIGPIPE, &optval, sizeof(optval)) != 0) // TODO: this is a BSD feature! not unix! 
+		logErr("Could not set socket flag SO_NOSIGPIPE, continuing.");
 		
 	// Set socket to non-blocking mode, nice for events
 	if (setnonblock(sock) != 0)
@@ -598,15 +604,14 @@ void sockAccept(const int sock, const short event, void *arg) {
 	// TODO: this is (was) fishy...
 //if (clientlist.nconn >= 0) {
 	if (clientlist.nconn >= MAX_CLIENTS) {
-		logErr("Refused connection, maximum clients reached1 (%s)", MAX_CLIENTS);
+		logErr("Refused connection, maximum clients reached (%s)", MAX_CLIENTS);
 		close(sock);
-		logErr("Refused connection, maximum clients reached2 (%s)", MAX_CLIENTS);
 		return;
 	}
 	
 	client = calloc(1, sizeof(*client));
 	if (client == NULL)
-		logErr("Malloc failed.");
+		logErr("Malloc failed in sockAccept.");
 
 	client->fd = newsock;			// Add socket to the client struct
 	client->buf_ev = bufferevent_new(newsock, sockOnRead, NULL, sockOnErr, client);
@@ -619,9 +624,16 @@ void sockAccept(const int sock, const short event, void *arg) {
 	clientlist.connlist[i] = client;
 
 	// We have to enable it before our callbacks will be
-	bufferevent_enable(client->buf_ev, EV_READ);
+	if (bufferevent_enable(client->buf_ev, EV_READ) != 0) {
+		logErr("Failed to enable buffered event.");
+		return;
+	}
 
-	logInfo("Succesfully accepted connection from %s", inet_ntoa(cli_addr.sin_addr));
+	logInfo("Succesfully accepted connection from %s (using sock %d and buf_ev %p)", \
+		inet_ntoa(cli_addr.sin_addr), newsock, client->buf_ev);
+	
+	usleep(50000);
+	bufferevent_write(client->buf_ev,"200 OK CONNECTION ESTABLISHED\n", sizeof("200 OK CONNECTION ESTABLISHED\n"));
 
 }
 
@@ -645,10 +657,11 @@ void sockOnErr(struct bufferevent *bev, short event, void *arg) {
 void sockOnRead(struct bufferevent *bev, void *arg) {
 	client_t *client = (client_t *)arg;
 	char msg[LINE_MAX];
+	//char *msg;
 	char *tmp;
 	int nbytes;
 	
-	nbytes = bufferevent_read(bev, msg, (size_t) (LINE_MAX-1));
+	nbytes = bufferevent_read(bev, msg, (size_t) LINE_MAX-1);
 	msg[nbytes] = '\0';
 	// TODO: this still requires a neat solution, does not work with TELNET.
 	if ((tmp = strchr(msg, '\n')) != NULL) // there might be a trailing newline which we don't want
@@ -691,14 +704,14 @@ int parseCmd(char *msg, const int len, client_t *client) {
 		
 	if (popword(&msg, tmp) > 0)
 		logDebug("First word: '%s'", tmp);
-	
+		
+
 	if (strcmp(tmp,"help") == 0) {
 		// Show the help command
 		if (popword(&msg, tmp) > 0) // Does the user want help on a specific command?
 			showHelp(client, tmp);
 		else
-			showHelp(client, NULL);
-			
+			showHelp(client, NULL);			
 		logInfo("Got help command & sent it! (subhelp %s)", tmp);
 	}
 	else if (strcmp(tmp,"mode") == 0) {
@@ -727,14 +740,17 @@ int parseCmd(char *msg, const int len, client_t *client) {
 		logInfo("subcommand: '%s'", tmp);
 	}
 	else {
-		bufferevent_write(client->buf_ev,"400 UNKNOWN\n", sizeof("400 UNKNOWN\n"));
+		return bufferevent_write(client->buf_ev,"test", 4);
+		return bufferevent_write(client->buf_ev,"400 UNKNOWN\n", sizeof("400 UNKNOWN\n"));
 	}
 	
 	return EXIT_SUCCESS;
 }
 
 int showHelp(const client_t *client, const char *subhelp) {
+	logDebug("showHelp running");
 	if (subhelp == NULL) {
+		logDebug("generic help %p", client->buf_ev);	
 		char help[] = "200 OK HELP\n\
 help [command]: help (on a certain command, if available).\n\
 mode <open|closed>: close or open the loop.\n\

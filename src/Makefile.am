@@ -3,12 +3,18 @@ bin_PROGRAMS =
 
 # some shared compiler flags
 AM_CFLAGS=-pipe -Wall -Wextra -std=c99 -O3 -ftree-vectorize -lc
-# uncomment this for debugging
+# (un)comment this to toggle debugging
 AM_CFLAGS+=-g -DDEBUG_ITIFG=255
 AM_LDFLAGS=$(COMMON_LIBS)
 
 # extra files buiten compilen om
 # EXTRA_DIST =
+
+# dummy moduleset
+bin_PROGRAMS += foamcs-dummy
+foamcs_dummy_SOURCES = foam_cs.c foam_library.c foam_cs_library.c foam_modules-dummy.c
+foamcs_dummy_SOURCES += foam_cs_library.h foam_library.h
+
 
 # did we enable UI support or not?
 if UI
