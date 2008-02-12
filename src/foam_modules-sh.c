@@ -218,6 +218,7 @@ int modSelSubapts(wfs_t *wfsinfo, float samini, int samxr) {
 
 	close(cfd);
 	logInfo("Subaperture definition image saved in file %s",cfn);*/
+	return EXIT_SUCCESS;
 }
 
 void modCogTrack(wfs_t *wfsinfo, float *aver, float *max, float coords[][2]) {
@@ -610,7 +611,7 @@ int modParseSH(wfs_t *wfsinfo) {
 	return EXIT_SUCCESS;
 }
 
-static float sae(float *subapt, float *refapt, int len) {
+float sae(float *subapt, float *refapt, int len) {
 	// *ip     pointer to first pixel of each subaperture
 	// *rp     pointer to first pixel of (shifted) reference
 
@@ -624,7 +625,7 @@ static float sae(float *subapt, float *refapt, int len) {
 	return sum;
 }
 
-static void procRef(wfs_t *wfsinfo, float *sharp, float *aver) {
+void procRef(wfs_t *wfsinfo, float *sharp, float *aver) {
 //	uint8_t  pixel;
 //	uint16_t in16, d16, g16;
 	float in, dd, gg;  // these types should be higher than the image type for internal calculation
@@ -726,7 +727,7 @@ static void procRef(wfs_t *wfsinfo, float *sharp, float *aver) {
 } // end of procref
 
 // TODO: on the one hand depends on int wfs, on the other hand needs int window[2], fix that
-static void imcal(float *corrim, float *image, float *darkim, float *flatim, float *sum, float *max, int res[2], int window[2]) {
+void imcal(float *corrim, float *image, float *darkim, float *flatim, float *sum, float *max, int res[2], int window[2]) {
 	// substract the dark, multiply with the flat (right?)
 	// TODO: dark and flat currently ignored, fix that
 	int i,j;

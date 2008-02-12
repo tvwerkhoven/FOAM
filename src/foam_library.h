@@ -15,36 +15,35 @@ Last: 2008-01-21
 // HEADER FILES //
 /****************/
 
-#ifdef __linux__ 
-#include <bits/posix2_lim.h> /* we need this for LINE_MAX? */
-#endif
 // TvW: TODO bufferend events zonder LINE_MAX
+#ifndef LINE_MAX
+#define LINE_MAX 2048
+#endif
+
 
 #include <string.h>
 #include <unistd.h>
 #include <sys/time.h>
 #include <stdio.h>
-#include <math.h>
-#include <sys/socket.h>
-#include <arpa/inet.h>
+#include <math.h>		// we need math
+#include <sys/socket.h>	// networking
+#include <arpa/inet.h>	// networking
 #include <sys/types.h>
 #include <sys/errno.h>
-#include <sys/select.h>
+//#include <sys/select.h> //?
 #include <stdlib.h>
-#include <syslog.h>
+#include <syslog.h> 	// used for syslogging
 #include <stdarg.h>
-#include <pthread.h>
-#include <limits.h>
-#include <stdbool.h>
-#include <signal.h>
-// This is a hack, u_char needed by event.h but not defined on all systems. TODO
-typedef unsigned char u_char;
-#include <event.h>
-#include <sys/uio.h> //?
-#include <inttypes.h> //?
-#include <time.h>
+#include <pthread.h> 	// threads
+#include <limits.h> 	// LINE_MAX
+#include <stdbool.h> 	// true/false
+#include <signal.h> 	// signal handlers
+#include <time.h> 		// needed by libevent/event.h
+typedef unsigned char u_char
+#include <event.h> 		// include AFTER stdlib.h (which defined u_char needed by event.h)
+//#include <sys/uio.h> //?
+//#include <inttypes.h> //?
 //#include <xlocale.h> //?
-
 
 
 // STRUCTS ETC //

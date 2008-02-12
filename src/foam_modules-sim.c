@@ -66,6 +66,7 @@ int modInitModule() {
 		logErr("Unable to set video, SDL error was: %s", SDL_GetError());
 		return EXIT_FAILURE;
 	}
+	return EXIT_SUCCESS;
 }
 
 int modOpenInit(control_t *ptc) {
@@ -77,18 +78,20 @@ int modOpenInit(control_t *ptc) {
 	
 	logInfo("Selecting new subapts.");
 	modSelSubapts(&(ptc->wfs[0]), 0, 0); 			// check samini (2nd param) and samxr (3d param)
+	
+	return EXIT_SUCCESS;
 }
 
 int modOpenLoop(control_t *ptc) {
 	drvSetActuator(ptc->wfc, ptc->wfc_count);
 	
 	if (drvReadSensor(ptc) != EXIT_SUCCESS)			// read the sensor output into ptc.image
-		return;
+		return EXIT_SUCCESS;
 
 	//modSelSubapts(&ptc.wfs[0], 0, 0); 			// check samini (2nd param) and samxr (3d param)				
 	
 	if (modParseSH((&ptc->wfs[0])) != EXIT_SUCCESS)			// process SH sensor output, get displacements
-		return;
+		return EXIT_SUCCESS;
 	
 	if (ptc->frames % 20 == 0) {
 		displayImg(ptc->wfs[0].image, ptc->wfs[0].res, screen);
@@ -98,14 +101,16 @@ int modOpenLoop(control_t *ptc) {
 	if (SDL_PollEvent(&event))
 		if (event.type == SDL_QUIT)
 			stopFOAM();
-
+	return EXIT_SUCCESS;
 }
 
 int modClosedInit(control_t *ptc) {
 	
+	return EXIT_SUCCESS;
 }
 
 int modClosedLoop() {
+	return EXIT_SUCCESS;
 }
 
 	

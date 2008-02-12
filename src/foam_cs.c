@@ -73,10 +73,6 @@ int main(int argc, char *argv[]) {
 	}
 
 	logInfo("Configuration successfully loaded...");	
-
-	sockListen();
-	
-	return EXIT_SUCCESS;
 	
 	// Create thread which listens to clients on a socket		
 	if ((pthread_create(&thread,
@@ -439,7 +435,7 @@ void modeOpen() {
 	
 	// Run the initialisation function of the modules used, pass
 	// along a pointer to ptc
-	//modOpenInit(&ptc);
+	modOpenInit(&ptc);
 	
 
 //	logInfo("Getting initial reference");
@@ -457,7 +453,7 @@ void modeOpen() {
 	while (ptc.mode == AO_MODE_OPEN) {
 		logInfo("Operating in open loop"); 
 		
-		//modOpenLoop(&ptc);
+		modOpenLoop(&ptc);
 				
 		
 		if (ptc.frames > 2000) // exit for debugging
@@ -618,7 +614,7 @@ void sockAccept(const int sock, const short event, void *arg) {
 		logErr("Malloc failed in sockAccept.");
 
 	client->fd = newsock;			// Add socket to the client struct
-	client->buf_ev = bufferevent_new(newsock, sockOnRead, NULL, sockOnErr, client);
+	client->buf_ev = bufferevent_new(newsock, sockOnRead, sockOnWrite, sockOnErr, client);
 
 	clientlist.nconn++;
 	for (i=0; clientlist.connlist[i] != NULL && i < 16; i++) 
@@ -636,7 +632,6 @@ void sockAccept(const int sock, const short event, void *arg) {
 	logInfo("Succesfully accepted connection from %s (using sock %d and buf_ev %p)", \
 		inet_ntoa(cli_addr.sin_addr), newsock, client->buf_ev);
 	
-	sleep(DEBUG_SLEEP);
 	bufferevent_write(client->buf_ev,"200 OK CONNECTION ESTABLISHED\n", sizeof("200 OK CONNECTION ESTABLISHED\n"));
 
 }
@@ -658,10 +653,16 @@ void sockOnErr(struct bufferevent *bev, short event, void *arg) {
 	free(client);
 }
 
+// TODO: document
+// placeholder so that we don't crash :P
+void sockOnWrite(struct bufferevent *bev, void *arg) {
+}
+
 void sockOnRead(struct bufferevent *bev, void *arg) {
 	client_t *client = (client_t *)arg;
+	// TODO, LINE_MAX niet netjes, maar is wel nodig :(
 	char msg[LINE_MAX];
-	//char *msg;
+//	char *msg;
 	char *tmp;
 	int nbytes;
 	
@@ -730,21 +731,21 @@ int parseCmd(char *msg, const int len, client_t *client) {
 			}
 			else if (strcmp(tmp,"cal") == 0) {
 				ptc.mode = AO_MODE_CAL;
-				bufferevent_write(client->buf_ev,"200 OK MODE OPEN\n", sizeof("200 OK MODE OPEN\n"));
+				bufferevent_write(client->buf_ev,"200 OK MODE CALIBRATION\n", sizeof("200 OK MODE CALIBRATION\n"));
 			}
 			else 
 				bufferevent_write(client->buf_ev,"400 UNKNOWN MODE\n", sizeof("400 UNKNOWN MODE\n"));
 		}
 		else {
 			bufferevent_write(client->buf_ev,"400 MODE REQUIRES ARG\n", sizeof("400 MODE REQUIRES ARG\n"));
-			showHelp(client, "mode");
-			logInfo("showing help...");
 		}
 
 		logInfo("subcommand: '%s'", tmp);
 	}
+	else if (strcmp(tmp,"image") == 0) {
+		bufferevent_write(client->buf_ev,"200 OK IMAGE\n", sizeof("200 OK IMAGE\n"));
+	}
 	else {
-		return bufferevent_write(client->buf_ev,"test", 4);
 		return bufferevent_write(client->buf_ev,"400 UNKNOWN\n", sizeof("400 UNKNOWN\n"));
 	}
 	
@@ -752,39 +753,38 @@ int parseCmd(char *msg, const int len, client_t *client) {
 }
 
 int showHelp(const client_t *client, const char *subhelp) {
-	logDebug("showHelp running");
 	if (subhelp == NULL) {
-		logDebug("generic help %p", client->buf_ev);	
-		char help[] = "200 OK HELP\n\
-help [command]: help (on a certain command, if available).\n\
-mode <open|closed>: close or open the loop.\n\
-simulate: toggle simulation mode.\n";
-
+		char help[] = "\
+help [command]:         help (on a certain command, if available).\n\
+mode <open|closed>:     close or open the loop.\n\
+set <var> <value:       set a certain setting.\n\
+simulate:               toggle simulation mode.\n";
+		char code[] = "200 OK HELP\n";
 		return bufferevent_write(client->buf_ev, help, sizeof(help));
 	}
 	else if (strcmp(subhelp, "mode") == 0) {
 		char help[] = "200 OK HELP MODE\n\
 mode <open|closed>: close or open the loop.\n\
-mode open: opens the loop and only records what's happening with the AO system\n\
-and does not actually drive anything.\n\
-mode closed: closes the loop and starts the feedbackloop, correcting the wavefront as fast\n\
-as possible.\n";
-
+mode open:\n\
+   opens the loop and only records what's happening with the AO system and\n\
+   does not actually drive anything.\n\
+mode closed:\n\
+   closes the loop and starts the feedbackloop, correcting the wavefront as\n\
+   fast as possible.\n";
 		return bufferevent_write(client->buf_ev, help, sizeof(help));
 	}
 	else if (strcmp(subhelp, "set") == 0) {
-		char help[] = "200 OK HELP MODE\n\
+		char help[] = "200 OK HELP SET\n\
 set <var> <value>\n\
-This changes the value of a run-time variable.\
-";
+   this changes the value of a run-time variable.\n";
 		return bufferevent_write(client->buf_ev, help, sizeof(help));
 	}
-
 	else {
-		return bufferevent_write(client->buf_ev, "400 UNKOWN HELP\n", sizeof("400 UNKOWN HELP\n"));
+		char help[] = "400 UNKOWN HELP\n";
+		return bufferevent_write(client->buf_ev, help, sizeof(help));
 	}
 	
-	return EXIT_FAILURE;
+
 }
 
 // DOXYGEN GENERAL DOCUMENTATION //

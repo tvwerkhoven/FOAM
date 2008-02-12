@@ -316,6 +316,11 @@ void sockOnErr(struct bufferevent *bev, short event, void *arg);
 void sockOnRead(struct bufferevent *bev, void *arg);
 
 /*!
+@brief This function is called if the socket is ready for writing (placeholder)
+*/
+void sockOnWrite(struct bufferevent *bev, void *arg);
+	
+/*!
 @brief Pop off a word from a space-seperated (" \t\n") string. Used to parse commands (see parseCmd()).
 */
 int popword(char **msg, char *cmd);

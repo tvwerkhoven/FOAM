@@ -3,8 +3,8 @@ bin_PROGRAMS =
 
 # some shared compiler flags which must always be used
 # (not using AM_* flags because of http://sourceware.org/automake/automake.html#Flag-Variables-Ordering)
-CFLAGS=-pipe -Wall -Wextra -std=c99 -O3 -ftree-vectorize -lc
-LDFLAGS=$(COMMON_LIBS)
+CFLAGS=-pipe -Wall -Wextra -std=c99 -O3 -ftree-vectorize
+LDFLAGS=$(COMMON_LIBS) -lc
 
 # (un)comment this to toggle debugging
 CFLAGS+=-g -DDEBUG_ITIFG=255

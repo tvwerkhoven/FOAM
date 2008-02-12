@@ -34,8 +34,6 @@ ovdluhe@kis.uni-freiburg.de
 
 #include "foam_modules-dm.h"
 
-// Global, we only want to read this once (but keep it local with static)
-
 // FUNCTIONS BEGIN //
 /*******************/
 
@@ -202,7 +200,7 @@ int modSimDM(char *boundarymask, char *actuatorpat, int nact, float *ctrl, float
  *============================================================================
  */
 
-static int read_pgm(char *fname, double **dbuf, int *t_nx, int *t_ny, int *t_ngray) {
+int read_pgm(char *fname, double **dbuf, int *t_nx, int *t_ny, int *t_ngray) {
 	char		c_int, first_string[110];
 	unsigned char	b_in;
 	int		i, j, bin_ind, nx, ny, ngray;

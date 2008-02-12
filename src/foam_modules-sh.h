@@ -62,7 +62,7 @@ the pointers given to the function.
 @param [in] len number of pixels to check (usually SX*SY, i.e. the total amount of pixels in a subapt)
 @return Sum of absolute differences
 */
-static float sae(float *subapt, float *refapt, int len);
+float sae(float *subapt, float *refapt, int len);
 
 /*!
 @brief Calibrates the image for dark- and flatfield, returns some statistics
@@ -82,7 +82,7 @@ subaperture.
 @param [in] res the resolution of the big images (corrim, image, darkim, flatim)
 @param [in] window The resolution of the individual subapertures, used to reformat *corrim
 */
-static void imcal(float *corrim, float *image, float *darkim, float *flatim, float *sum, float *max, int res[2], int window[2]);
+void imcal(float *corrim, float *image, float *darkim, float *flatim, float *sum, float *max, int res[2], int window[2]);
 
 /*!
 @brief Tracks the seeing using center of gravity tracking
@@ -110,7 +110,7 @@ void modCorrTrack(wfs_t *wfsinfo, float *aver, float *max, float coords[][2]);
 @brief Process a reference image stored in *image, old refim *ref
 TODO: doc
 */
-static void procRef(wfs_t *wfsinfo, float *sharp, float *aver);
+void procRef(wfs_t *wfsinfo, float *sharp, float *aver);
 
 /*!
 @brief Module to get a (new) reference image 
