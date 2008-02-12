@@ -32,7 +32,7 @@ endif
 # programs depend on whether or not we want simulation...
 if SIMULATION
 bin_PROGRAMS += foamcs-sim
-foamcs_sim_SOURCES = foam_cs.c foam_library.c foam_cs_library.c foam_modules-dm.c  foam_modules-sh.c foam_modules-sim.c foam_modules-display.c
+foamcs_sim_SOURCES = foam_cs.c foam_library.c foam_cs_library.c foam_modules-dm.c  foam_modules-sh.c foam_modules-sim.c foam_modules-display.c foam_modules-calib.c
 foamcs_sim_SOURCES += foam_cs_library.h foam_library.h foam_modules-sh.h foam_modules-sim.h foam_modules-display.h
 foamcs_sim_CPPFLAGS = -include "foam_modules-sim.h"
 foamcs_sim_CFLAGS = $(SIMULATION_CFLAGS)

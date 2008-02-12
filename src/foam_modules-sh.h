@@ -21,8 +21,8 @@
 extern control_t ptc;
 extern config_t cs_config;
 
-// DEFINITIONS //
-/***************/
+// PROTOTYPES //
+/**************/
 
 /*!
 @brief Selects suitable subapts to work with

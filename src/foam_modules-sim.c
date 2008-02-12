@@ -11,7 +11,6 @@
 /***********/
 
 #include "foam_modules-sim.h"
-#include "foam_cs_library.h"
 
 #define FOAM_MODSIM_WAVEFRONT "../config/wavefront.fits"
 #define FOAM_MODSIM_APERTURE "../config/aperture.fits"
@@ -50,7 +49,6 @@ int status = 0;  				// MUST initialize status
 float nulval = 0.0;
 int anynul = 0;
 
-
 // TODO: document these:
 int modInitModule() {
 	// Init SDL
@@ -83,8 +81,6 @@ int modOpenInit(control_t *ptc) {
 }
 
 int modOpenLoop(control_t *ptc) {
-	drvSetActuator(ptc->wfc, ptc->wfc_count);
-	
 	if (drvReadSensor(ptc) != EXIT_SUCCESS)			// read the sensor output into ptc.image
 		return EXIT_SUCCESS;
 
@@ -105,15 +101,46 @@ int modOpenLoop(control_t *ptc) {
 }
 
 int modClosedInit(control_t *ptc) {
-	
+	// this is the same for open and closed modes, don't rewrite stuff
+	modOpenInit(ptc);
 	return EXIT_SUCCESS;
 }
 
-int modClosedLoop() {
+int modClosedLoop(control_t *ptc) {
+	// set both actuators to something random
+	int i,j;
+	
+	for (i=0; i<ptc->wfc_count; i++) {
+		logDebug("Setting WFC %d with %d acts.", i, ptc->wfc[i].nact);
+		for (j=0; j<ptc->wfc[i].nact; j++)
+			ptc->wfc[i].ctrl[j] = drand48()*2-1; // order is important, prevent overflow
+	}
+
+	if (drvReadSensor(ptc) != EXIT_SUCCESS)			// read the sensor output into ptc.image
+		return EXIT_SUCCESS;
+
+	//modSelSubapts(&ptc.wfs[0], 0, 0); 			// check samini (2nd param) and samxr (3d param)				
+	
+	if (modParseSH((&ptc->wfs[0])) != EXIT_SUCCESS)			// process SH sensor output, get displacements
+		return EXIT_SUCCESS;
+	
+	if (ptc->frames % 20 == 0) {
+		displayImg(ptc->wfs[0].image, ptc->wfs[0].res, screen);
+		modDrawSubapts(&(ptc->wfs[0]), screen);
+	}
+	
+	if (SDL_PollEvent(&event))
+		if (event.type == SDL_QUIT)
+			stopFOAM();
+		
 	return EXIT_SUCCESS;
 }
 
-	
+int modCalibrate(control_t *ptc) {
+	logDebug("now in simulate module");
+	return modCalWFC(&ptc, 0, 0); // arguments: (control_t *ptc, int wfc, int wfs)
+}
+
 int drvReadSensor() {
 	int i;
 	logDebug("Now reading %d sensors, origin is at (%d,%d).", ptc.wfs_count, simparams.curorig[0], simparams.curorig[1]);
@@ -218,7 +245,7 @@ int simWFC(int wfcid, int nact, float *ctrl, float *image) {
 	// we want to simulate the tip tilt mirror here. What does it do
 	logDebug("WFC %d (%s) has %d actuators, simulating", wfcid, ptc.wfc[wfcid].name, ptc.wfc[wfcid].nact);
 	if (wfcid == 1)
-		modSimDM(FOAM_MODSIM_APTMASK, FOAM_MODSIM_ACTPAT, nact, ctrl, image, 10);
+		modSimDM(FOAM_MODSIM_APTMASK, FOAM_MODSIM_ACTPAT, nact, ctrl, image, 10); // last arg (10) is for niter
 //	if (wfcid == 1)
 		//modSimTT();
 	
@@ -348,17 +375,9 @@ int simAtm(char *file, int res[2], int origin[2], float *image) {
 	return EXIT_SUCCESS;
 }
 
-int drvSetActuator() {
-	int i,j;
-	 
-	// TODO: internal 'voltages' will be [-1,1]
-	// we need to rescale those into something linear (like Sqrt ( 255*(i+1)*.5 )
-	
-	for(i=0; i < ptc.wfc_count; i++) {
-		logDebug("Setting WFC %d with %d acts.", i, ptc.wfc[i].nact);
-		for (j=0; j<ptc.wfc[i].nact; j++)
-			ptc.wfc[i].ctrl[j] = (random()/(RAND_MAX/2))-1; // order is important, prevent overflow
-	}
+int drvSetActuator(control_t *ptc, int wfc) {
+	// this is a placeholder, since we simulate the DM, we don't need to do 
+	// anything here. 
 	return EXIT_SUCCESS;
 }
 

@@ -12,11 +12,15 @@
 #include "foam_modules-display.h"	// we need the display module to show debug output
 #include "foam_modules-sh.h"		// we want the SH subroutines so we can track targets
 #include "foam_modules-dm.h"		// we want the DM subroutines here too
-#include <fftw3.h> // we need this for modParseSH()
+#include "foam_modules-calib.h"		// we want the calibration
+#include <fftw3.h> 					// we need this for modParseSH()
 
 // These are defined in foam_cs_library.c
 extern control_t ptc;
 extern config_t cs_config;
+
+// PROTOTYPES //
+/**************/
 
 /*!
 @brief Simulates sensor(s) read-out and outputs to ptc.wfs[n].image.

@@ -39,7 +39,7 @@ Last: 2008-01-21
 #include <stdbool.h> 	// true/false
 #include <signal.h> 	// signal handlers
 #include <time.h> 		// needed by libevent/event.h
-typedef unsigned char u_char
+typedef unsigned char u_char;
 #include <event.h> 		// include AFTER stdlib.h (which defined u_char needed by event.h)
 //#include <sys/uio.h> //?
 //#include <inttypes.h> //?

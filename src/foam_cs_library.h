@@ -167,6 +167,15 @@ typedef struct {
 // PROTOTYPES //
 /**************/
 
+// THESE MUST BE DEFINED IN SOME MODULE!!!!
+// TODO: document
+int modInitModule();
+int modClosedLoop(control_t *ptc);
+int modClosedInit(control_t *ptc);
+int modOpenLoop(control_t *ptc);
+int modOpenInit(control_t *ptc);
+int modCalibrate(control_t *ptc);
+
 /*!
 @brief logInfo() prints out info messages to the appropriate streams.
 

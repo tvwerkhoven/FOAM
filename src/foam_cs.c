@@ -426,7 +426,6 @@ void modeOpen() {
 	logInfo("Entering open loop.");
 
 	// perform some sanity checks before actually entering the open loop
-	
 	if (ptc.wfs_count == 0) {				// we need wave front sensors
 		logErr("Error, no WFSs defined.");
 		ptc.mode = AO_MODE_NONE;
@@ -437,17 +436,6 @@ void modeOpen() {
 	// along a pointer to ptc
 	modOpenInit(&ptc);
 	
-
-//	logInfo("Getting initial reference");
-//	modGetRef(&ptc.wfs[0]);
-
-// TvW continue here
-//	if (ptc.wfs[0].nsubap == NULL)				// we need to a reference image
-//		getRef();
-		
-		
-//	if (modParseSH(0) != EXIT_SUCCESS)			// process SH sensor output, get displacements
-//		return;
 	int tmp[] = {32, 32};
 	ptc.frames++;
 	while (ptc.mode == AO_MODE_OPEN) {
@@ -461,21 +449,41 @@ void modeOpen() {
 				
 		ptc.frames++;								// increment the amount of frames parsed		
 
-		sleep(DEBUG_SLEEP);
+		//sleep(DEBUG_SLEEP);
 	}
 	
 	modeListen();		// mode is not open anymore, decide what to to next
 }
 
 void modeClosed() {	
-	logInfo("entering closed loop");
-	while (ptc.mode == AO_MODE_CLOSED) {
+	logInfo("Entering closed loop.");
 
-		logInfo("Operating in closed loop"); 
-		sleep(DEBUG_SLEEP);
+	// perform some sanity checks before actually entering the open loop
+	if (ptc.wfs_count == 0) {				// we need wave front sensors
+		logErr("Error, no WFSs defined.");
+		ptc.mode = AO_MODE_NONE;
+		return;
 	}
 	
-	modeListen();		// mode is not closed anymore, decide what to do
+	// Run the initialisation function of the modules used, pass
+	// along a pointer to ptc
+	modClosedInit(&ptc);
+	
+	ptc.frames++;
+	while (ptc.mode == AO_MODE_CLOSED) {
+		logInfo("Operating in closed loop"); 
+		
+		modClosedLoop(&ptc);
+						
+		if (ptc.frames > 2000) // exit for debugging
+			exit(EXIT_SUCCESS);
+				
+		ptc.frames++;								// increment the amount of frames parsed		
+
+		//sleep(DEBUG_SLEEP);
+	}
+	
+	modeListen();		// mode is not open anymore, decide what to to next
 }
 
 void modeListen() {
@@ -500,11 +508,12 @@ void modeListen() {
 void modeCal() {
 	logInfo("Entering calibration loop");
 	
+	// this links to the module
+	modCalibrate(&ptc);
+	
 	logDebug("Calibration loop done, switching to open loop (was %d).", ptc.mode);
 	ptc.mode = AO_MODE_OPEN;
-	logDebug("mode now is %d", ptc.mode);
-	sleep(DEBUG_SLEEP);
-	
+		
 	modeListen();
 }
 
@@ -548,8 +557,8 @@ int sockListen() {
 	// Set reusable and nosigpipe flags so we don't get into trouble later on. TODO: doesn't work?
 	if (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval)) != 0)
 		logErr("Could not set socket flag SO_REUSEADDR, continuing.");
-	if (setsockopt(sock, SOL_SOCKET, SO_NOSIGPIPE, &optval, sizeof(optval)) != 0) // TODO: this is a BSD feature! not unix! 
-		logErr("Could not set socket flag SO_NOSIGPIPE, continuing.");
+//	if (setsockopt(sock, SOL_SOCKET, SO_NOSIGPIPE, &optval, sizeof(optval)) != 0) // TODO: this is a BSD feature! not unix! 
+//		logErr("Could not set socket flag SO_NOSIGPIPE, continuing.");
 		
 	// Set socket to non-blocking mode, nice for events
 	if (setnonblock(sock) != 0)

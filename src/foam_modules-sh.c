@@ -599,14 +599,14 @@ int modParseSH(wfs_t *wfsinfo) {
 	// note: coords is relative to the center of the tracker window
 	// therefore we can simply update the lower left coord by subtracting the coordinates.
 	
-	logInfo("Coords: ");
+//	logInfo("Coords: ");
 	for (i=0; i<wfsinfo->nsubap; i++) {
 		wfsinfo->subc[i][0] -= coords[i][0];//-wfsinfo->res[0]/wfsinfo->cells[0]/4;
 		wfsinfo->subc[i][1] -= coords[i][1];//-wfsinfo->res[1]/wfsinfo->cells[1]/4;
-		logDirect("(%d, %d) ", wfsinfo->subc[i][0]+wfsinfo->res[0]/wfsinfo->cells[0]/4, \
+//		logDirect("(%d, %d) ", wfsinfo->subc[i][0]+wfsinfo->res[0]/wfsinfo->cells[0]/4, \
 			wfsinfo->subc[i][1]+wfsinfo->res[1]/wfsinfo->cells[1]/4);
 	}
-	logDirect("\n");
+//	logDirect("\n");
 	
 	return EXIT_SUCCESS;
 }

@@ -59,14 +59,14 @@ int modSimDM(char *boundarymask, char *actuatorpat, int nact, float *ctrl, float
 			return EXIT_FAILURE;
 		}	
 	}
-	logDebug("DM controls are:");
-	for(ik = 0; ik < nact; ik++)
-		logDirect("%3f ", ctrl[ik]);
+	// for(ik = 0; ik < nact; ik++)
+	// 	logDirect("%f ", ctrl[ik]);
+	// logDebug("\n");	
 		
 	// Input linear and c=[-1,1], 'output' must be v=[0,255] and linear in v^2
 	logDebug("Simulating DM with voltages:");
 	for(ik = 0; ik < nact; ik++) {
-		// we do Sqrt(255^2 (i+1) * 0.5) here to convert from [-1,1] to [0,255] 
+		// we do Sqrt(255^2 (i+1) * 0.5) here to convert from [-1,1] (linear) to [0,255] (quadratic)
 		voltage[ik] = (int) round( sqrt(65025*(ctrl[ik]+1)*0.5 ) ); //65025 = 255^2
 		logDirect("%d ", voltage[ik]); // TODO: we don't want printf here
 	}
