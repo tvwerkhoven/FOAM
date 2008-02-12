@@ -44,6 +44,17 @@ This simulates setting the actuators to the right voltages etc.
 int drvSetActuator();
 
 /*!
+@brief This drives the filterwheel.
+
+This simulates setting the filterwheel. The actual simulation is not done here,
+but in drvReadSensor() which checks which filterwheel is being used and 
+acts accordingly. With a real filterwheel, this would set some hardware address.
+
+@return EXIT_SUCCESS on success, EXIT_FAILURE otherwise.
+*/
+int drvFilterWheel(control_t *ptc, fwheel_t mode);
+
+/*!
 @brief Simulates the SH sensor
 
 This simulates the SH WFS
@@ -89,7 +100,7 @@ int simTel(char *file, int res[2], float *image);
 
 This fuction works in wavefront-space.
 */
-int simWFC(int wfcid, int nact, float *ctrl, float *image);
+int simWFC(control_t *ptc, int wfcid, int nact, float *ctrl, float *image);
 
 
 #endif /* FOAM_MODULES_SIM */

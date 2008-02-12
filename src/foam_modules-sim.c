@@ -32,8 +32,8 @@ struct simul {
 struct simul simparams = {
 	.wind[0] = 10,
 	.wind[1] = 5,
-	.curorig[0] = 1,
-	.curorig[1] = 1,
+	.curorig[0] = 0,
+	.curorig[1] = 0,
 	.simimg = NULL,
 	.plan_forward = NULL,
 	.wisdomfile = "fftw_wisdom.dat",
@@ -68,14 +68,14 @@ int modInitModule() {
 }
 
 int modOpenInit(control_t *ptc) {
+
 	if (drvReadSensor(ptc) != EXIT_SUCCESS) {		// read the sensor output into ptc.image
 		logErr("Error, reading sensor failed.");
 		ptc->mode = AO_MODE_NONE;
 		return EXIT_FAILURE;
 	}
 	
-	logInfo("Selecting new subapts.");
-	modSelSubapts(&(ptc->wfs[0]), 0, 0); 			// check samini (2nd param) and samxr (3d param)
+	modSelSubapts(&(ptc->wfs[0]), 0, -1); 			// check samini (2nd param) and samxr (3d param)
 	
 	return EXIT_SUCCESS;
 }
@@ -89,10 +89,11 @@ int modOpenLoop(control_t *ptc) {
 	if (modParseSH((&ptc->wfs[0])) != EXIT_SUCCESS)			// process SH sensor output, get displacements
 		return EXIT_SUCCESS;
 	
-	if (ptc->frames % 20 == 0) {
+//	if (ptc->frames % 20 == 0) {
 		displayImg(ptc->wfs[0].image, ptc->wfs[0].res, screen);
 		modDrawSubapts(&(ptc->wfs[0]), screen);
-	}
+		sleep(2);
+//	}
 	
 	if (SDL_PollEvent(&event))
 		if (event.type == SDL_QUIT)
@@ -113,7 +114,7 @@ int modClosedLoop(control_t *ptc) {
 	for (i=0; i<ptc->wfc_count; i++) {
 		logDebug("Setting WFC %d with %d acts.", i, ptc->wfc[i].nact);
 		for (j=0; j<ptc->wfc[i].nact; j++)
-			ptc->wfc[i].ctrl[j] = drand48()*2-1; // order is important, prevent overflow
+			ptc->wfc[i].ctrl[j] = drand48()*2-1;
 	}
 
 	if (drvReadSensor(ptc) != EXIT_SUCCESS)			// read the sensor output into ptc.image
@@ -137,8 +138,29 @@ int modClosedLoop(control_t *ptc) {
 }
 
 int modCalibrate(control_t *ptc) {
-	logDebug("now in simulate module");
-	return modCalWFC(&ptc, 0, 0); // arguments: (control_t *ptc, int wfc, int wfs)
+	// todo: add dark/flat field calibrations
+	// dark:
+	//  add calibration enum
+	//  add function to calib.c with defined FILENAME
+	//  add switch to drvReadSensor which gives a black image (1)
+	// flat:
+	//  whats flat? how to do with SH sensor in place? --> take them out
+	//  add calib enum
+	//  add switch/ function / drvreadsensor
+	// sky:
+	//  same as flat
+	switch (ptc->calmode) {
+		case CAL_PINHOLE: // pinhole WFS calibration
+			return modCalPinhole(ptc, 0);
+			break;
+		case CAL_INFL: // influence matrix
+			return modCalWFC(ptc, 1, 0); // arguments: (control_t *ptc, int wfc, int wfs)
+			break;
+		default:
+			logErr("Unsupported calibrate mode encountered.");
+			return EXIT_FAILURE;
+			break;			
+	}
 }
 
 int drvReadSensor() {
@@ -150,19 +172,30 @@ int drvReadSensor() {
 		return EXIT_FAILURE;
 	}
 	
-	// This reads in wavefront.fits to memory at the first call, and each consecutive call
-	// selects a subimage of that big image, defined by simparams.curorig
-	if (simAtm(FOAM_MODSIM_WAVEFRONT, ptc.wfs[0].res, simparams.curorig, ptc.wfs[0].image) != EXIT_SUCCESS) { 	
-		if (status > 0) {
-			fits_get_errstatus(status, errmsg);
-			logErr("fitsio error in simAtm(): (%d) %s", status, errmsg);
-			status = 0;
-			return EXIT_FAILURE;
-		}
-		else logErr("error in simAtm().");
+	// if filterwheel is set to pinhole, simulate a coherent image
+	if (ptc.filter == FILT_PINHOLE) {
+		for (i=0; i<ptc.wfs[0].res[0]*ptc.wfs[0].res[1]; i++)
+			ptc.wfs[0].image[i] = 1;
+			
 	}
-	logDebug("simAtm() done");
-
+	else {
+		// This reads in wavefront.fits to memory at the first call, and each consecutive call
+		// selects a subimage of that big image, defined by simparams.curorig
+		if (simAtm(FOAM_MODSIM_WAVEFRONT, ptc.wfs[0].res, simparams.curorig, ptc.wfs[0].image) != EXIT_SUCCESS) { 	
+			if (status > 0) {
+				fits_get_errstatus(status, errmsg);
+				logErr("fitsio error in simAtm(): (%d) %s", status, errmsg);
+				status = 0;
+				return EXIT_FAILURE;
+			}
+			else logErr("error in simAtm().");
+		}
+		// This function simulates wind by changing the origin we want read at simAtm().
+		modSimWind();
+		
+		logDebug("simAtm() done");
+	} // end for (ptc.filter == FILT_PINHOLE)
+	
 	if (simTel(FOAM_MODSIM_APERTURE, ptc.wfs[0].res, ptc.wfs[0].image) != EXIT_SUCCESS) { // Simulate telescope (from aperture.fits)
 		if (status > 0) {
 			fits_get_errstatus(status, errmsg);
@@ -172,25 +205,19 @@ int drvReadSensor() {
 		}
 		else logErr("error in simTel().");
 	}
-
+	
 	logDebug("Now simulating %d WFC(s).", ptc.wfc_count);
 	for (i=0; i < ptc.wfc_count; i++)
-		simWFC(i, ptc.wfc[i].nact, ptc.wfc[i].ctrl, ptc.wfs[0].image); // Simulate every WFC in series
-	
-	displayImg(ptc.wfs[0].image, ptc.wfs[0].res, screen);
-	sleep(1);
-	//modDrawSubapts(&(ptc->wfs[0]), screen);
+		simWFC(&ptc, i, ptc.wfc[i].nact, ptc.wfc[i].ctrl, ptc.wfs[0].image); // Simulate every WFC in series
 
-	
+
 	// Simulate the WFS here.
 	if (modSimSH() != EXIT_SUCCESS) {
 		logDebug("Simulating SH WFSs failed.");
 		return EXIT_FAILURE;
 	}	
-	
-	// This function simulates wind by changing the origin we want read at simAtm().
-	modSimWind();
 
+	//modDrawSubapts(&(ptc->wfs[0]), screen);
 	
 	return EXIT_SUCCESS;
 }
@@ -240,14 +267,14 @@ int simObj(char *file, float *image) {
 	return EXIT_SUCCESS;
 }
 
-// TODO: this only works with 256x256 images...
-int simWFC(int wfcid, int nact, float *ctrl, float *image) {
+// TODO: this only works with 256x256 images... (only works with resolution of wfs[0])
+int simWFC(control_t *ptc, int wfcid, int nact, float *ctrl, float *image) {
 	// we want to simulate the tip tilt mirror here. What does it do
-	logDebug("WFC %d (%s) has %d actuators, simulating", wfcid, ptc.wfc[wfcid].name, ptc.wfc[wfcid].nact);
+	logDebug("WFC %d (%s) has %d actuators, simulating", wfcid, ptc->wfc[wfcid].name, ptc->wfc[wfcid].nact);
+	if (wfcid == 0)
+		modSimTT(ctrl, image, ptc->wfs[0].res);
 	if (wfcid == 1)
 		modSimDM(FOAM_MODSIM_APTMASK, FOAM_MODSIM_ACTPAT, nact, ctrl, image, 10); // last arg (10) is for niter
-//	if (wfcid == 1)
-		//modSimTT();
 	
 	return EXIT_SUCCESS;
 }
@@ -581,5 +608,12 @@ int modSimSH() {
 
 int modCalcDMVolt() {
 	logDebug("Calculating DM voltages");
+	return EXIT_SUCCESS;
+}
+
+// TODO: document this
+int drvFilterWheel(control_t *ptc, fwheel_t mode) {
+	// in simulation this is easy, just set mode in ptc
+	ptc->filter = mode;
 	return EXIT_SUCCESS;
 }

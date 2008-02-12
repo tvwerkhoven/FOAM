@@ -55,6 +55,22 @@ typedef enum { // aomode_t
 } aomode_t;
 
 /*!
+@brief Helper enum for filter wheel identification
+*/
+typedef enum {
+	FILT_PINHOLE,
+	FILT_NORMAL
+} fwheel_t;
+
+/*!
+@brief Helper enum for ao calibration mode operation.
+*/
+typedef enum { // calmode_t
+	CAL_PINHOLE,	//!< determine reference shifts after inserting a pinhole
+	CAL_INFL		//!< determin the influence functions for each WFS-WFC pair
+} calmode_t;
+
+/*!
 @brief Helper enum for ao scanning mode (i.e. in X and/or Y direction).
 */
 typedef enum { // axes_t
@@ -80,12 +96,15 @@ typedef struct { // wfs_t
 	int res[2];			//!< x,y-resolution of this WFS
 	int cells[2];		//!< number of cells in this WFS (SH only)
 	int shsize[2];		//!< cells/res, resolution per cell (redundant, but easy)
+	
 	int (*subc)[2];		//!< this will hold the coordinates of each subapt
-						// TODO: how to make a pointer to an array which holds pairs of ints as elements?
-						// e.g. pointer to: { {x1,y1}, {x2,y2} ... {xn,yn}}
-						// where ptr[i] = {xi,yi} ? GUUS
+	float (*refc)[2];	//!< reference displacements
+	float (*disp)[2];	//!< measured displacements (compare with refence for actual shift)
+	char pinhole[FILENAMELEN];		//!< filename to store the pinhole calibration (in *(refc))
+	
 	int nsubap;			//!< amount of subapertures used (coordinates stored in subc)
 	axes_t scandir; 	//!< scanning direction(s) used (see \c axes_t type)
+	
 	float *image;		//!< pointer to the WFS output, stored in row-major format
 	float *darkim;		//!< darkfield (byte image), stored in row-major format \b per \b subapt
 	float *flatim;		//!< flatfield (byte image), stored in row-major format \b per \b subapt
@@ -93,7 +112,9 @@ typedef struct { // wfs_t
 	float *refim;		//!< reference image for correlation tracking
 	char darkfile[FILENAMELEN];		//!< filename for the darkfield calibration
 	char flatfile[FILENAMELEN];		//!< filename for the flatfield calibration
+	char skyfile[FILENAMELEN];		//!< filename for the flatfield calibration
 } wfs_t;
+
 
 
 /*! 
@@ -110,6 +131,7 @@ This struct is globally available.
 */
 typedef struct { // control_t
 	aomode_t mode;	//!< defines the mode the AO system is in (see \c aomode_t type)
+	calmode_t calmode;	//!< defines the possible calibration modes (see \c calmode_t type)
 	time_t starttime;	//!< stores the starting time of the system
 	long frames;	//!< store the number of frames parsed
 	
@@ -120,6 +142,8 @@ typedef struct { // control_t
 					// WFC variables
 	int wfc_count;	//!< number of WFCs in the system
 	wfc_t *wfc;		//!< pointer to a number of \c wfc_t structs
+	
+	fwheel_t filter;	//!< stores the filterwheel currently in place
 	
 } control_t;
 

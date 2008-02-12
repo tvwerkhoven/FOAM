@@ -37,6 +37,34 @@ ovdluhe@kis.uni-freiburg.de
 // FUNCTIONS BEGIN //
 /*******************/
 
+int modSimTT(float *ctrl, float *image, int res[2]) {
+	// ctrl is between -1 and 1, and should be linear, and is a 2 element array
+	// image is the output we want to add to
+	// simulating the TT is very simple, it just tilts if ctrl != [0,0]
+	
+	// tilting is done as:
+	// from -amp to +amp over res[0] or res[1], with 0 in the middle and multiplied with ctrl[0]
+	// i.e. over i (y direction, res[1], ctrl[1]):
+	// ((i/res[1])-0.5) * 2 * amp * ctrl[1]
+	// and for j (over x)
+	// ((j/res[0])-0.5) * 2 * amp * ctrl[0]
+	int i,j;
+	float amp = 5;
+	
+	// first simulate rails (i.e. crop ctrl above abs(1))
+	// TODO: can be done faster?
+	if (ctrl[0] > 1.0) ctrl[0] = 1.0;
+	if (ctrl[0] < -1.0) ctrl[0] = -1.0;
+	if (ctrl[1] > 1.0) ctrl[1] = 1.0;
+	if (ctrl[1] < -1.0) ctrl[1] = -1.0;
+	
+	for (i=0; i<res[1]; i++)
+		for (j=0; j<res[0]; j++)
+			image[i*res[0] + j] += (((i/res[1])-0.5) * 2 * amp * ctrl[1]) + (((j/res[0])-0.5) * 2 * amp * ctrl[0]);
+	
+	return EXIT_SUCCESS;	
+}
+
 int modSimDM(char *boundarymask, char *actuatorpat, int nact, float *ctrl, float *image, int niter) {
 	int	 i, j, status;
 	long	 ii, i_1j, i1j, ij_1, ij1;
@@ -68,9 +96,9 @@ int modSimDM(char *boundarymask, char *actuatorpat, int nact, float *ctrl, float
 	for(ik = 0; ik < nact; ik++) {
 		// we do Sqrt(255^2 (i+1) * 0.5) here to convert from [-1,1] (linear) to [0,255] (quadratic)
 		voltage[ik] = (int) round( sqrt(65025*(ctrl[ik]+1)*0.5 ) ); //65025 = 255^2
-		logDirect("%d ", voltage[ik]); // TODO: we don't want printf here
+		//logDirect("%d ", voltage[ik]); // TODO: we don't want printf here
 	}
-	logDirect("\n");
+//	logDirect("\n");
 
 	for (ik = 0; ik < ny*nx; ik++) {
 		if (*(boundary + ik) > 0) {
@@ -167,11 +195,11 @@ int modSimDM(char *boundarymask, char *actuatorpat, int nact, float *ctrl, float
 
 
 	// response output
-
 	ik = 0;
 	for (i = 1; i <= nx; i += 1){
 		for (j = 1; j <= ny; j += 1){
-			image[ik] = resp[ik];
+			// TvW: += UPDATES the image, so there should be an image in image, or it should be zero
+			image[ik] += resp[ik];
 	//printf("%e\n",resp[ik]);
 			ik ++;
 		} 

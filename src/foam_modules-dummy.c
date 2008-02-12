@@ -31,3 +31,7 @@ int modClosedInit(control_t *ptc) {
 int modClosedLoop(control_t *ptc) {
 	return EXIT_SUCCESS;
 }
+
+int modCalibrate(control_t *ptc) {
+	return EXIT_SUCCESS;
+}

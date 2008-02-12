@@ -14,9 +14,11 @@ This file contains things necessary to run the Control Software that are not rel
 
 control_t ptc = { //!< Global struct to hold system characteristics and other data. Initialize with complete but minimal configuration
 	.mode = AO_MODE_CAL,
+	.calmode = CAL_PINHOLE,
 	.wfs_count = 0,
 	.wfc_count = 0,
-	.frames = 0
+	.frames = 0,
+	.filter = FILT_NORMAL
 };
 
 config_t cs_config = { 

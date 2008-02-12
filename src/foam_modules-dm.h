@@ -46,4 +46,7 @@ amount of iterations (0 is auto).
 */
 int modSimDM(char *boundarymask, char *actuatorpat, int nact, float *ctrl, float *image, int niter);
 
+// TODO: document (simple function anyway)
+int modSimTT(float *ctrl, float *image, int res[2]);
+
 #endif /* FOAM_MODULES_SIM */

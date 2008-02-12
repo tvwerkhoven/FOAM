@@ -14,7 +14,7 @@
 	The functions provided to the outside world are:
 	\li modSelSubapts
 	\li modCogTrack
-	\li modCorrTrack
+	\li modCorrTrack (broken atm)
 	\li modGetRef
 	\li modParseSH
 	
@@ -164,9 +164,9 @@ int modSelSubapts(wfs_t *wfsinfo, float samini, int samxr) {
 		// print ASCII map of aperture
 		for (isy=0; isy<cells[1]; isy++) {
 			for (isx=0; isx<cells[0]; isx++)
-				if (apmap[isx][isy] == 0) printf(" "); 
-				else printf("X");
-			printf("\n");
+				if (apmap[isx][isy] == 0) logDirect(" "); 
+				else logDirect("X");
+			logDirect("\n");
 		}
 		
 		sn = 1; // start with subaperture 1 since subaperture 0 is the reference
@@ -232,7 +232,7 @@ void modCogTrack(wfs_t *wfsinfo, float *aver, float *max, float coords[][2]) {
 //	float *flat = wfsinfo->flatim
 	float *corr = wfsinfo->corrim;
 	int nsubap = wfsinfo->nsubap;
-	int (*subc)[2] = wfsinfo->subc;	// TODO: does this work?
+	int (*subc)[2] = wfsinfo->subc;		// shortcut to the coordinates of the tracker windows
 	
 	int *res, *cells, *shsize;
 	res = wfsinfo->res;					// shortcuts to resolution
@@ -601,10 +601,23 @@ int modParseSH(wfs_t *wfsinfo) {
 	
 //	logInfo("Coords: ");
 	for (i=0; i<wfsinfo->nsubap; i++) {
+		// store the displacement vectors (wrt center of subaperture grid):
+		// we get subc which is the coordinate of the tracker window wrt the complete sensor image
+		// we calculate the remainder of this coordinate with the subaperture grid, such that we get the 
+		// coordinate of the tracker window wrt the subaperture grid.
+		// After we have this coordinate, we add the displacement we just found which is wrt the center of 
+		// the tracker window.
+		// Finally we subtract half the size of the tracker window  ( = subaperture grid/4) to fix everything.
+		wfsinfo->disp[i][0] = (wfsinfo->subc[i][0] % wfsinfo->shsize[0]);
+		wfsinfo->disp[i][0] += coords[i][0];
+		wfsinfo->disp[i][0] -= wfsinfo->shsize[0]/4;
+		wfsinfo->disp[i][1] = (wfsinfo->subc[i][1] % wfsinfo->shsize[1]) + coords[i][1] - wfsinfo->shsize[1]/4;
+		
+		// update the tracker window coordinates:
 		wfsinfo->subc[i][0] -= coords[i][0];//-wfsinfo->res[0]/wfsinfo->cells[0]/4;
 		wfsinfo->subc[i][1] -= coords[i][1];//-wfsinfo->res[1]/wfsinfo->cells[1]/4;
-//		logDirect("(%d, %d) ", wfsinfo->subc[i][0]+wfsinfo->res[0]/wfsinfo->cells[0]/4, \
-			wfsinfo->subc[i][1]+wfsinfo->res[1]/wfsinfo->cells[1]/4);
+//		logDirect("(%d, %d) ", wfsinfo->subc[i][0]+wfsinfo->shsize[0]/4, \
+			wfsinfo->subc[i][1]+wfsinfo->shsize[1]/4);
 	}
 //	logDirect("\n");
 	

@@ -65,7 +65,7 @@ int main(int argc, char *argv[]) {
 		
 	// Initialise module
 	modInitModule();
-
+	
 	// BEGIN LOADING CONFIG
 	if (loadConfig(FOAM_CONFIG_FILE) != EXIT_SUCCESS) {
 		logErr("Loading configuration failed, aborting");
@@ -175,6 +175,30 @@ int parseConfig(char *var, char *value) {
 		
 		logDebug("WFS_DF initialized for WFS %d: %s", tmp, ptc.wfs[tmp].darkfile);
 	}
+	else if (strstr(var, "WFS_SKY") != NULL) {
+		if (ptc.wfs == NULL) {
+			logErr("Cannot initialize WFS_SKY before initializing WFS_COUNT");
+			return EXIT_FAILURE;
+		}
+		// Get the SKY for which WFS?
+		tmp = strtol(strstr(var,"[")+1, NULL, 10);
+		strncpy(ptc.wfs[tmp].skyfile, value, (size_t) FILENAMELEN);
+		ptc.wfs[tmp].skyfile[FILENAMELEN-1] = '\0'; // This might not be necessary
+		
+		logDebug("WFS_SKY initialized for WFS %d: %s", tmp, ptc.wfs[tmp].skyfile);
+	}
+	else if (strstr(var, "WFS_PINHOLE") != NULL) {
+		if (ptc.wfs == NULL) {
+			logErr("Cannot initialize WFS_PIN before initializing WFS_COUNT");
+			return EXIT_FAILURE;
+		}
+		// Get the PIN for which WFS?
+		tmp = strtol(strstr(var,"[")+1, NULL, 10);
+		strncpy(ptc.wfs[tmp].pinhole, value, (size_t) FILENAMELEN);
+		ptc.wfs[tmp].pinhole[FILENAMELEN-1] = '\0'; // This might not be necessary
+		
+		logDebug("WFS_PINHOLE initialized for WFS %d: %s", tmp, ptc.wfs[tmp].pinhole);
+	}
 	else if (strstr(var, "WFS_FF") != NULL) {
 		if (ptc.wfs == NULL) {
 			logErr("Cannot initialize WFS_FF before initializing WFS_COUNT");
@@ -208,8 +232,10 @@ int parseConfig(char *var, char *value) {
 		}
 		
 		ptc.wfs[tmp].subc = calloc(ptc.wfs[tmp].cells[0] * ptc.wfs[tmp].cells[1], sizeof(*ptc.wfs[tmp].subc));
-		if (ptc.wfs[tmp].subc == NULL) {
-			logErr("Cannot allocate memory for subaperture coordinates");
+		ptc.wfs[tmp].refc = calloc(ptc.wfs[tmp].cells[0] * ptc.wfs[tmp].cells[1], sizeof(*ptc.wfs[tmp].refc));
+		ptc.wfs[tmp].disp = calloc(ptc.wfs[tmp].cells[0] * ptc.wfs[tmp].cells[1], sizeof(*ptc.wfs[tmp].disp));
+		if (ptc.wfs[tmp].subc == NULL || ptc.wfs[tmp].refc == NULL || ptc.wfs[tmp].disp == NULL) {
+			logErr("Cannot allocate memory for tracker window coordinates, or other tracking vectors.");
 			return EXIT_FAILURE;
 		}
 		
@@ -492,14 +518,16 @@ void modeListen() {
 		
 	switch (ptc.mode) {
 		case AO_MODE_OPEN:
-		modeOpen();
-		break;
+			modeOpen();
+			break;
 		case AO_MODE_CLOSED:
-		modeClosed();
-		break;
+			modeClosed();
+			break;
 		case AO_MODE_CAL:
-		modeCal();
-		break;
+			modeCal();
+			break;
+		case AO_MODE_NONE: // this does nothing but is here for completeness
+			break;
 	}
 	
 	modeListen();// re-run if nothing was found
@@ -511,8 +539,8 @@ void modeCal() {
 	// this links to the module
 	modCalibrate(&ptc);
 	
-	logDebug("Calibration loop done, switching to open loop (was %d).", ptc.mode);
-	ptc.mode = AO_MODE_OPEN;
+	logDebug("Calibration loop done, switching to listen mode");
+	ptc.mode = AO_MODE_NONE;
 		
 	modeListen();
 }

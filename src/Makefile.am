@@ -9,7 +9,9 @@ LDFLAGS=$(COMMON_LIBS) -lc
 # (un)comment this to toggle debugging
 CFLAGS+=-g -DDEBUG_ITIFG=255
 # (un)comment this to toggle malloc debugging
+HAVE_DMALLOC=1
 LDFLAGS+=-ldmalloc
+
 
 # extra files buiten compilen om
 # EXTRA_DIST =
