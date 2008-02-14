@@ -454,7 +454,7 @@ void modeOpen() {
 	// perform some sanity checks before actually entering the open loop
 	if (ptc.wfs_count == 0) {				// we need wave front sensors
 		logErr("Error, no WFSs defined.");
-		ptc.mode = AO_MODE_NONE;
+		ptc.mode = AO_MODE_LISTEN;
 		return;
 	}
 	
@@ -487,7 +487,7 @@ void modeClosed() {
 	// perform some sanity checks before actually entering the open loop
 	if (ptc.wfs_count == 0) {				// we need wave front sensors
 		logErr("Error, no WFSs defined.");
-		ptc.mode = AO_MODE_NONE;
+		ptc.mode = AO_MODE_LISTEN;
 		return;
 	}
 	
@@ -526,7 +526,7 @@ void modeListen() {
 		case AO_MODE_CAL:
 			modeCal();
 			break;
-		case AO_MODE_NONE: // this does nothing but is here for completeness
+		case AO_MODE_LISTEN: // this does nothing but is here for completeness
 			break;
 	}
 	
@@ -540,7 +540,7 @@ void modeCal() {
 	modCalibrate(&ptc);
 	
 	logDebug("Calibration loop done, switching to listen mode");
-	ptc.mode = AO_MODE_NONE;
+	ptc.mode = AO_MODE_LISTEN;
 		
 	modeListen();
 }
@@ -766,21 +766,33 @@ int parseCmd(char *msg, const int len, client_t *client) {
 				ptc.mode = AO_MODE_OPEN;
 				bufferevent_write(client->buf_ev,"200 OK MODE OPEN\n", sizeof("200 OK MODE OPEN\n"));
 			}
-			else if (strcmp(tmp,"cal") == 0) {
-				ptc.mode = AO_MODE_CAL;
-				bufferevent_write(client->buf_ev,"200 OK MODE CALIBRATION\n", sizeof("200 OK MODE CALIBRATION\n"));
-			}
+			// else if (strcmp(tmp,"cal") == 0) {
+			// 	ptc.mode = AO_MODE_CAL;
+			// 	bufferevent_write(client->buf_ev,"200 OK MODE CALIBRATION\n", sizeof("200 OK MODE CALIBRATION\n"));
+			// }
 			else 
 				bufferevent_write(client->buf_ev,"400 UNKNOWN MODE\n", sizeof("400 UNKNOWN MODE\n"));
 		}
 		else {
 			bufferevent_write(client->buf_ev,"400 MODE REQUIRES ARG\n", sizeof("400 MODE REQUIRES ARG\n"));
 		}
-
-		logInfo("subcommand: '%s'", tmp);
 	}
-	else if (strcmp(tmp,"image") == 0) {
-		bufferevent_write(client->buf_ev,"200 OK IMAGE\n", sizeof("200 OK IMAGE\n"));
+	else if (strcmp(tmp,"calibrate") == 0) {
+		if (popword(&msg, tmp) > 0) {
+			if (strcmp(tmp,"pinhole") == 0) {
+				ptc.mode = AO_MODE_CAL;
+				ptc.calmode = AO_MODE_PINHOLE;
+				bufferevent_write(client->buf_ev,"200 OK CALIBRATE PINHOLE\n", sizeof("200 OK CALIBRATE PINHOLE\n"));
+			}
+			else if (strcmp(tmp,"influence") == 0) {
+				ptc.mode = AO_MODE_CAL;
+				ptc.calmode = AO_MODE_INFL;				
+				bufferevent_write(client->buf_ev,"200 OK CALIBRATE INFLUENCE\n", sizeof("200 OK CALIBRATE INFLUENCE\n"));
+			}
+		}
+		else {
+			bufferevent_write(client->buf_ev,"400 CALIBRATE REQUIRES ARG\n", sizeof("400 MODE CALIBRATE ARG\n"));
+		}
 	}
 	else {
 		return bufferevent_write(client->buf_ev,"400 UNKNOWN\n", sizeof("400 UNKNOWN\n"));
@@ -795,7 +807,8 @@ int showHelp(const client_t *client, const char *subhelp) {
 help [command]:         help (on a certain command, if available).\n\
 mode <open|closed>:     close or open the loop.\n\
 set <var> <value:       set a certain setting.\n\
-simulate:               toggle simulation mode.\n";
+simulate:               toggle simulation mode.\n\
+calibrate [mode]:       calibrate a component.\n";
 		char code[] = "200 OK HELP\n";
 		return bufferevent_write(client->buf_ev, help, sizeof(help));
 	}
@@ -814,6 +827,13 @@ mode closed:\n\
 		char help[] = "200 OK HELP SET\n\
 set <var> <value>\n\
    this changes the value of a run-time variable.\n";
+		return bufferevent_write(client->buf_ev, help, sizeof(help));
+	}
+	else if (strcmp(subhelp, "calibrate") == 0) {
+		char help[] = "200 OK HELP CALIBRATE\n\
+calibrate [mode]\n\
+   mode=pinhole: do a pinhole calibration.\n\
+   mode=influence: do a WFC influence matrix calibration.\n";
 		return bufferevent_write(client->buf_ev, help, sizeof(help));
 	}
 	else {

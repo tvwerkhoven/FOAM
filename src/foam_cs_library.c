@@ -13,8 +13,8 @@ This file contains things necessary to run the Control Software that are not rel
 #include "foam_cs_library.h"
 
 control_t ptc = { //!< Global struct to hold system characteristics and other data. Initialize with complete but minimal configuration
-	.mode = AO_MODE_OPEN,
-	.calmode = CAL_PINHOLE,
+	.mode = AO_MODE_LISTEN,
+	.calmode = CAL_INFL, //CAL_PINHOLE
 	.wfs_count = 0,
 	.wfc_count = 0,
 	.frames = 0,
@@ -30,7 +30,7 @@ config_t cs_config = {
 	.use_syslog = false,
 	.syslog_prepend = "foam",
 	.use_stderr = true,
-	.loglevel = LOGDEBUG
+	.loglevel = LOGINFO
 };
 
 conntrack_t clientlist;

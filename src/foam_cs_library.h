@@ -45,13 +45,13 @@ char logmessage[LINE_MAX];
 /*********************/
 
 /*!
-@brief Helper enum for ao mode operation. Modes include AO_MODE_OPEN, AO_MODE_CLOSED and AO_MODE_CAL.
+@brief Helper enum for ao mode operation. Modes include AO_MODE_OPEN, AO_MODE_CLOSED, AO_MODE_CAL and AO_MODE_LISTEN
 */
 typedef enum { // aomode_t
 	AO_MODE_OPEN,
 	AO_MODE_CLOSED,
 	AO_MODE_CAL,
-	AO_MODE_NONE
+	AO_MODE_LISTEN
 } aomode_t;
 
 /*!

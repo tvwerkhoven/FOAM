@@ -91,7 +91,6 @@ int modOpenLoop(control_t *ptc) {
 //	if (ptc->frames % 20 == 0) {
 		displayImg(ptc->wfs[0].image, ptc->wfs[0].res, screen);
 		modDrawSubapts(&(ptc->wfs[0]), screen);
-		sleep(2);
 //	}
 	
 	if (SDL_PollEvent(&event))
@@ -148,12 +147,14 @@ int modCalibrate(control_t *ptc) {
 	//  add switch/ function / drvreadsensor
 	// sky:
 	//  same as flat
+	
+	logInfo("Switching calibration");
 	switch (ptc->calmode) {
 		case CAL_PINHOLE: // pinhole WFS calibration
 			return modCalPinhole(ptc, 0);
 			break;
 		case CAL_INFL: // influence matrix
-			return modCalWFC(ptc, 1, 0); // arguments: (control_t *ptc, int wfc, int wfs)
+			return modCalWFC(ptc); // arguments: (control_t *ptc)
 			break;
 		default:
 			logErr("Unsupported calibrate mode encountered.");
@@ -212,7 +213,6 @@ int drvReadSensor() {
 	}
 	
 	displayImg(ptc.wfs[0].image, ptc.wfs[0].res, screen);
-	sleep(3);
 
 	
 	// Simulate the WFS here.

@@ -24,7 +24,7 @@
 // PROTOTYPES //
 /**************/
 
-int modCalWFC(control_t *ptc, int wfc, int wfs);
+int modCalWFC(control_t *ptc);
 
 int modCalPinhole(control_t *ptc, int wfs);
 #endif
