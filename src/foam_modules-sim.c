@@ -81,10 +81,9 @@ int modOpenInit(control_t *ptc) {
 }
 
 int modOpenLoop(control_t *ptc) {
+	
 	if (drvReadSensor(ptc) != EXIT_SUCCESS)			// read the sensor output into ptc.image
 		return EXIT_SUCCESS;
-
-	//modSelSubapts(&ptc.wfs[0], 0, 0); 			// check samini (2nd param) and samxr (3d param)				
 	
 	if (modParseSH((&ptc->wfs[0])) != EXIT_SUCCESS)			// process SH sensor output, get displacements
 		return EXIT_SUCCESS;
@@ -125,10 +124,10 @@ int modClosedLoop(control_t *ptc) {
 	if (modParseSH((&ptc->wfs[0])) != EXIT_SUCCESS)			// process SH sensor output, get displacements
 		return EXIT_SUCCESS;
 	
-	if (ptc->frames % 20 == 0) {
+//	if (ptc->frames % 20 == 0) {
 		displayImg(ptc->wfs[0].image, ptc->wfs[0].res, screen);
 		modDrawSubapts(&(ptc->wfs[0]), screen);
-	}
+//	}
 	
 	if (SDL_PollEvent(&event))
 		if (event.type == SDL_QUIT)
@@ -191,11 +190,17 @@ int drvReadSensor() {
 			else logErr("error in simAtm().");
 		}
 		// This function simulates wind by changing the origin we want read at simAtm().
+		// TODO: incorporate in simAtm?
 		modSimWind();
 		
 		logDebug("simAtm() done");
 	} // end for (ptc.filter == FILT_PINHOLE)
-	
+
+	// we simulate WFCs before the telescope to make sure they outer region is zero (Which is done by simTel())
+	logDebug("Now simulating %d WFC(s).", ptc.wfc_count);
+	for (i=0; i < ptc.wfc_count; i++)
+		simWFC(&ptc, i, ptc.wfc[i].nact, ptc.wfc[i].ctrl, ptc.wfs[0].image); // Simulate every WFC in series
+		
 	if (simTel(FOAM_MODSIM_APERTURE, ptc.wfs[0].res, ptc.wfs[0].image) != EXIT_SUCCESS) { // Simulate telescope (from aperture.fits)
 		if (status > 0) {
 			fits_get_errstatus(status, errmsg);
@@ -206,11 +211,10 @@ int drvReadSensor() {
 		else logErr("error in simTel().");
 	}
 	
-	logDebug("Now simulating %d WFC(s).", ptc.wfc_count);
-	for (i=0; i < ptc.wfc_count; i++)
-		simWFC(&ptc, i, ptc.wfc[i].nact, ptc.wfc[i].ctrl, ptc.wfs[0].image); // Simulate every WFC in series
+	displayImg(ptc.wfs[0].image, ptc.wfs[0].res, screen);
+	sleep(3);
 
-
+	
 	// Simulate the WFS here.
 	if (modSimSH() != EXIT_SUCCESS) {
 		logDebug("Simulating SH WFSs failed.");
@@ -274,8 +278,8 @@ int simWFC(control_t *ptc, int wfcid, int nact, float *ctrl, float *image) {
 	if (wfcid == 0)
 		modSimTT(ctrl, image, ptc->wfs[0].res);
 	if (wfcid == 1)
-		modSimDM(FOAM_MODSIM_APTMASK, FOAM_MODSIM_ACTPAT, nact, ctrl, image, 10); // last arg (10) is for niter
-	
+		modSimDM(FOAM_MODSIM_APTMASK, FOAM_MODSIM_ACTPAT, nact, ctrl, image, -1); // last arg is for niter. -1 for autoset
+					
 	return EXIT_SUCCESS;
 }
 

@@ -36,7 +36,8 @@ int modCalPinhole(control_t *ptc, int wfs) {
 	
 	// run open loop once
 	modOpenLoop(ptc);
-	
+		
+		
 	// open file to store vectors
 	fp = fopen(ptc->wfs[wfs].pinhole,"w+");
 	if (fp == NULL)

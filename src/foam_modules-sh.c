@@ -71,8 +71,9 @@ int modSelSubapts(wfs_t *wfsinfo, float samini, int samxr) {
 			}
 			// check if the summed subapt intensity is above zero (e.g. do we use it?)
 			if (csum > 0.0) { // good as long as pixels above background exist
-				subc[sn][0] = isx*shsize[0]+shsize[0]/4 + (int) (cs[0]/csum) - shsize[0]/2;	// subapt coordinates
-				subc[sn][1] = isy*shsize[1]+shsize[1]/4 + (int) (cs[1]/csum) - shsize[1]/2;	// TODO: sort this out
+				// we add 0.5 to make sure the integer division is 'fair' (e.g. simulate round(), but faster)
+				subc[sn][0] = isx*shsize[0]+shsize[0]/4 + (int) (cs[0]/csum+0.5) - shsize[0]/2;	// subapt coordinates
+				subc[sn][1] = isy*shsize[1]+shsize[1]/4 + (int) (cs[1]/csum+0.5) - shsize[1]/2;	// TODO: sort this out
 							// ^^ coordinate in big image,  ^^ CoG of one subapt, 							
 																				// why /4? (partial subapt?)
 				cx += isx*shsize[0];
@@ -104,6 +105,7 @@ int modSelSubapts(wfs_t *wfsinfo, float samini, int samxr) {
 			csa = i; 		// new best guess for central subaperture
 		}
 	}
+	logDebug("ref best guess: %d (%d,%d)", csa, subc[csa][0], subc[csa][1]);
 	// put reference subaperture as subaperture 0
 	cs[0]        = subc[0][0]; 		cs[1] 			= subc[0][1];
 	subc[0][0]   = subc[csa][0]; 	subc[0][1] 		= subc[csa][1];
@@ -114,6 +116,7 @@ int modSelSubapts(wfs_t *wfsinfo, float samini, int samxr) {
 	apcoo[0][0]   = apcoo[csa][0]; 	apcoo[0][1] 	= apcoo[csa][1];
 	apcoo[csa][0] = cs[0];			apcoo[csa][1] 	= cs[1];
 
+	logDebug("refapt in 0: (%d,%d)", subc[0][0], subc[0][1]);
 	// center central subaperture; it might not be centered if there is
 	// a large shift between the expected and the actual position in the
 	// center of gravity approach above
@@ -121,7 +124,9 @@ int modSelSubapts(wfs_t *wfsinfo, float samini, int samxr) {
 	cs[0] = 0.0; cs[1] = 0.0; csum = 0.0;
 	for (iy=0; iy<shsize[1]; iy++) {
 		for (ix=0; ix<shsize[0]; ix++) {
-			fi = (float) image[(subc[0][1]-0+iy)*res[0]+subc[0][0]-0+ix]; // TODO: fix the static '4' --> -0 works, but *why*?
+				// loop over the whole shsize^2 big ref subapt here, so subc-shsize/4 is the beginning coordinate
+			fi = (float) image[(subc[0][1]-shsize[1]/4+iy)*res[0]+subc[0][0]-shsize[0]/4+ix];
+			
 			
 			/* for center of gravity, only pixels above the threshold are used;
 			otherwise the position estimate always gets pulled to the center;
@@ -135,8 +140,8 @@ int modSelSubapts(wfs_t *wfsinfo, float samini, int samxr) {
 	}
 	
 	logDebug("old subx=%d, old suby=%d",subc[0][0],subc[0][1]);
-	subc[0][0] += (int) (cs[0]/csum+0.5) - shsize[0]/4; // +0.5 rounding error
-	subc[0][1] += (int) (cs[1]/csum+0.5) - shsize[1]/4; // also the reference subapt is the same size as the rest
+	subc[0][0] += (int) (cs[0]/csum+0.5) - shsize[0]/2; // +0.5 to prevent integer cropping rounding error
+	subc[0][1] += (int) (cs[1]/csum+0.5) - shsize[1]/2; // use shsize/2 because or CoG is for a larger subapt (shsize and not shsize/2)
 	logDebug("new subx=%d, new suby=%d",subc[0][0],subc[0][1]);
 
 	// enforce maximum radial distance from center of gravity of all
@@ -614,10 +619,12 @@ int modParseSH(wfs_t *wfsinfo) {
 		wfsinfo->disp[i][1] = (wfsinfo->subc[i][1] % wfsinfo->shsize[1]) + coords[i][1] - wfsinfo->shsize[1]/4;
 		
 		// update the tracker window coordinates:
-		wfsinfo->subc[i][0] -= coords[i][0];//-wfsinfo->res[0]/wfsinfo->cells[0]/4;
-		wfsinfo->subc[i][1] -= coords[i][1];//-wfsinfo->res[1]/wfsinfo->cells[1]/4;
-//		logDirect("(%d, %d) ", wfsinfo->subc[i][0]+wfsinfo->shsize[0]/4, \
-			wfsinfo->subc[i][1]+wfsinfo->shsize[1]/4);
+		// +0.5 to make sure rounding (integer clipping) is fair. 
+		// Don't forget to cast to int, otherwise problems occur!
+		// TODO: this works, is this fast?
+		wfsinfo->subc[i][0] -= (int) (coords[i][0]+0.5);//-wfsinfo->res[0]/wfsinfo->cells[0]/4;
+		wfsinfo->subc[i][1] -= (int) (coords[i][1]+0.5);//-wfsinfo->res[1]/wfsinfo->cells[1]/4;
+//		logDirect("(%f, %f) ", coords[i][0], coords[i][1]);
 	}
 //	logDirect("\n");
 	

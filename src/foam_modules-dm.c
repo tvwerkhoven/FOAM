@@ -49,7 +49,7 @@ int modSimTT(float *ctrl, float *image, int res[2]) {
 	// and for j (over x)
 	// ((j/res[0])-0.5) * 2 * amp * ctrl[0]
 	int i,j;
-	float amp = 5;
+	float amp = 4;
 	
 	// first simulate rails (i.e. crop ctrl above abs(1))
 	// TODO: can be done faster?
@@ -60,7 +60,11 @@ int modSimTT(float *ctrl, float *image, int res[2]) {
 	
 	for (i=0; i<res[1]; i++)
 		for (j=0; j<res[0]; j++)
-			image[i*res[0] + j] += (((i/res[1])-0.5) * 2 * amp * ctrl[1]) + (((j/res[0])-0.5) * 2 * amp * ctrl[0]);
+			image[i*res[0] + j] += ((((float) i/(res[1]-1))-0.5) * 2 * amp * ctrl[1]) + \
+								((((float) j/(res[0]-1) )-0.5) * 2 * amp * ctrl[0]);
+
+	// this had problems with integer divisions:
+	//image[i*res[0] + j] += (((i/res[1])-0.5) * 2 * amp * ctrl[1]) + (((j/res[0])-0.5) * 2 * amp * ctrl[0]);
 	
 	return EXIT_SUCCESS;	
 }
@@ -75,8 +79,8 @@ int modSimDM(char *boundarymask, char *actuatorpat, int nact, float *ctrl, float
 	
 	double *boundary=NULL, *act=NULL;
 	int nx, ny, ngray1, ngray2;
-
-
+	
+	float amp=0.3;
 
 	pi = 4.0*atan(1);
 
@@ -92,11 +96,11 @@ int modSimDM(char *boundarymask, char *actuatorpat, int nact, float *ctrl, float
 	// logDebug("\n");	
 		
 	// Input linear and c=[-1,1], 'output' must be v=[0,255] and linear in v^2
-	logDebug("Simulating DM with voltages:");
+//	logDebug("Simulating DM with voltages:");
 	for(ik = 0; ik < nact; ik++) {
 		// we do Sqrt(255^2 (i+1) * 0.5) here to convert from [-1,1] (linear) to [0,255] (quadratic)
 		voltage[ik] = (int) round( sqrt(65025*(ctrl[ik]+1)*0.5 ) ); //65025 = 255^2
-		//logDirect("%d ", voltage[ik]); // TODO: we don't want printf here
+//		logDirect("%d ", voltage[ik]); // TODO: we don't want printf here
 	}
 //	logDirect("\n");
 
@@ -199,7 +203,7 @@ int modSimDM(char *boundarymask, char *actuatorpat, int nact, float *ctrl, float
 	for (i = 1; i <= nx; i += 1){
 		for (j = 1; j <= ny; j += 1){
 			// TvW: += UPDATES the image, so there should be an image in image, or it should be zero
-			image[ik] += resp[ik];
+			image[ik] += amp*resp[ik];
 	//printf("%e\n",resp[ik]);
 			ik ++;
 		} 
