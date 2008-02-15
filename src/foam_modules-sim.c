@@ -71,7 +71,7 @@ int modOpenInit(control_t *ptc) {
 
 	if (drvReadSensor(ptc) != EXIT_SUCCESS) {		// read the sensor output into ptc.image
 		logErr("Error, reading sensor failed.");
-		ptc->mode = AO_MODE_NONE;
+		ptc->mode = AO_MODE_LISTEN;
 		return EXIT_FAILURE;
 	}
 	
@@ -212,7 +212,7 @@ int drvReadSensor() {
 		else logErr("error in simTel().");
 	}
 	
-	displayImg(ptc.wfs[0].image, ptc.wfs[0].res, screen);
+//	displayImg(ptc.wfs[0].image, ptc.wfs[0].res, screen);
 
 	
 	// Simulate the WFS here.

@@ -766,6 +766,10 @@ int parseCmd(char *msg, const int len, client_t *client) {
 				ptc.mode = AO_MODE_OPEN;
 				bufferevent_write(client->buf_ev,"200 OK MODE OPEN\n", sizeof("200 OK MODE OPEN\n"));
 			}
+			else if (strcmp(tmp,"listen") == 0) {
+				ptc.mode = AO_MODE_LISTEN;
+				bufferevent_write(client->buf_ev,"200 OK MODE LISTEN\n", sizeof("200 OK MODE LISTEN\n"));
+			}
 			// else if (strcmp(tmp,"cal") == 0) {
 			// 	ptc.mode = AO_MODE_CAL;
 			// 	bufferevent_write(client->buf_ev,"200 OK MODE CALIBRATION\n", sizeof("200 OK MODE CALIBRATION\n"));
@@ -781,17 +785,17 @@ int parseCmd(char *msg, const int len, client_t *client) {
 		if (popword(&msg, tmp) > 0) {
 			if (strcmp(tmp,"pinhole") == 0) {
 				ptc.mode = AO_MODE_CAL;
-				ptc.calmode = AO_MODE_PINHOLE;
+				ptc.calmode = CAL_PINHOLE;
 				bufferevent_write(client->buf_ev,"200 OK CALIBRATE PINHOLE\n", sizeof("200 OK CALIBRATE PINHOLE\n"));
 			}
 			else if (strcmp(tmp,"influence") == 0) {
 				ptc.mode = AO_MODE_CAL;
-				ptc.calmode = AO_MODE_INFL;				
+				ptc.calmode = CAL_INFL;				
 				bufferevent_write(client->buf_ev,"200 OK CALIBRATE INFLUENCE\n", sizeof("200 OK CALIBRATE INFLUENCE\n"));
 			}
 		}
 		else {
-			bufferevent_write(client->buf_ev,"400 CALIBRATE REQUIRES ARG\n", sizeof("400 MODE CALIBRATE ARG\n"));
+			bufferevent_write(client->buf_ev,"400 CALIBRATE REQUIRES ARG\n", sizeof("400 MODE CALIBRATE REQUIRES ARG\n"));
 		}
 	}
 	else {
