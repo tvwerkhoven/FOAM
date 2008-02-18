@@ -205,20 +205,21 @@ int drvReadSensor() {
 	
 	// we simulate WFCs before the telescope to make sure they outer region is zero (Which is done by simTel())
 	logDebug("Now simulating %d WFC(s).", ptc.wfc_count);
-	// for (i=0; i < ptc.wfc_count; i++)
-	// 	simWFC(&ptc, i, ptc.wfc[i].nact, ptc.wfc[i].ctrl, ptc.wfs[0].image); // Simulate every WFC in series
+	for (i=0; i < ptc.wfc_count; i++)
+		simWFC(&ptc, i, ptc.wfc[i].nact, ptc.wfc[i].ctrl, ptc.wfs[0].image); // Simulate every WFC in series
 	
 	displayImg(ptc.wfs[0].image, ptc.wfs[0].res, screen);
 	sleep(1);
 		
 	if (simTel(FOAM_MODSIM_APERTURE, ptc.wfs[0].image) != EXIT_SUCCESS) { // Simulate telescope (from aperture.fits)
-		if (status > 0) {
-			fits_get_errstatus(status, errmsg);
-			logErr("fitsio error in simTel(): (%d) %s", status, errmsg);
-			status = 0;
-			return EXIT_FAILURE;
-		}
-		else logErr("error in simTel().");
+			// if (status > 0) {
+			// 	fits_get_errstatus(status, errmsg);
+			// 	logErr("fitsio error in simTel(): (%d) %s", status, errmsg);
+			// 	status = 0;
+			// 	return EXIT_FAILURE;
+			// }
+			// else 
+			logErr("error in simTel().");
 	}
 	
 	displayImg(ptc.wfs[0].image, ptc.wfs[0].res, screen);
@@ -306,7 +307,7 @@ int simTel(char *file, float *image) {
 	
 	// Multiply wavefront with aperture
 	for (i=0; i < nx*ny; i++)
-		image[i] *= aperture[i];
+		image[i] *= ceil(aperture[i]/ngray); // make sure the output is only multiplied by 0 or 1
 	
 	return EXIT_SUCCESS;
 }
