@@ -66,9 +66,6 @@ int main(int argc, char *argv[]) {
 	strftime (date, 64, "%A, %B %d %H:%M:%S, %Y (%Z).", loctime);	
 	logInfo("at %s", date);
 		
-	// Initialise module
-	modInitModule();
-	
 	// BEGIN LOADING CONFIG
 	if (loadConfig(FOAM_CONFIG_FILE) != EXIT_SUCCESS) {
 		logErr("Loading configuration failed, aborting");
@@ -76,6 +73,9 @@ int main(int argc, char *argv[]) {
 	}
 
 	logInfo("Configuration successfully loaded...");	
+	
+	// Initialise module
+	modInitModule(&ptc);
 	
 	// Create thread which listens to clients on a socket		
 	if ((pthread_create(&thread,
@@ -917,8 +917,7 @@ ALIASES += cslib="foam_cs_library.*"
 	\li The subaperture resolution must be a multiple of 4,
 	\li The configuration file linelength is at max 1024 characters,
 	\li Commands given to @name over the socket/network can be at most 1024 characters,
-	\li At the moment, only 256x256 pixel images can be simulated
-	\li At the moment, only float images are processed
+	\li At the moment, most modules work with floats to process data (no bytes or doubles)
 	
 	Points with the 'at the moment' prefix will hopefully be resolved in the future, other constraints will not be `fixed' because
 	these pose no big problems for most to all working setups.

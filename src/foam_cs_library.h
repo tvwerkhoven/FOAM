@@ -203,7 +203,7 @@ a standardized means to initialize the module before anything has been done, lik
 some configuration files, start cameras or anything else. It is called without arguments and should return
 EXIT_SUCCESS or EXIT_FAILURE depening on success or not.
 */
-int modInitModule();
+int modInitModule(control_t *ptc);
 
 /*!
 @brief This routine is run at the very end of the FOAM program.

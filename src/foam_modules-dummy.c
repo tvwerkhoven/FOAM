@@ -11,7 +11,7 @@
 
 #include "foam_cs_library.h"
 
-int modInitModule() {
+int modInitModule(control_t *ptc) {
 	logDebug("Running in dummy mode, don't expect great AO results :)");
 	return EXIT_SUCCESS;
 }

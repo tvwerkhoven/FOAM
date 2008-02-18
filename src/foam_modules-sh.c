@@ -33,12 +33,12 @@ int modSelSubapts(wfs_t *wfsinfo, float samini, int samxr) {
 
 	// stolen from ao3.c by CUK
 	int isy, isx, iy, ix, i, sn=0, nsubap=0; //init sn to zero!!
-	float sum=0.0, fi;			// check 'intensity' of a subapt
-	float csum=0.0, cs[] = {0.0, 0.0}; // for center of gravity
-	float cx=0, cy=0;		// for CoG
-	float dist, rmin;		// minimum distance
-	int csa=0;				// estimate for best subapt
-	int (*subc)[2] = wfsinfo->subc;	// lower left coordinates of the tracker windows
+	float sum=0.0, fi;					// check 'intensity' of a subapt
+	float csum=0.0, cs[] = {0.0, 0.0}; 	// for center of gravity
+	float cx=0, cy=0;					// for CoG
+	float dist, rmin;					// minimum distance
+	int csa=0;							// estimate for best subapt
+	int (*subc)[2] = wfsinfo->subc;		// lower left coordinates of the tracker windows
 
 	float *image = wfsinfo->image;		// source image from sensor
 	int *res = wfsinfo->res;			// image resolution
@@ -49,6 +49,8 @@ int modSelSubapts(wfs_t *wfsinfo, float samini, int samxr) {
 	int apmap[cells[0]][cells[1]];		// aperture map
 	int apmap2[cells[0]][cells[1]];		// aperture map 2
 	int apcoo[cells[0] * cells[1]][2];  // subaperture coordinates in apmap
+	
+	int usable=0;
 	
 	logInfo("Selecting subapertures.");
 	for (isy=0; isy<cells[1]; isy++) { // loops over all potential subapertures
@@ -71,6 +73,7 @@ int modSelSubapts(wfs_t *wfsinfo, float samini, int samxr) {
 			}
 			// check if the summed subapt intensity is above zero (e.g. do we use it?)
 			if (csum > 0.0) { // good as long as pixels above background exist
+				usable++;
 				// we add 0.5 to make sure the integer division is 'fair' (e.g. simulate round(), but faster)
 				subc[sn][0] = isx*shsize[0]+shsize[0]/4 + (int) (cs[0]/csum+0.5) - shsize[0]/2;	// subapt coordinates
 				subc[sn][1] = isy*shsize[1]+shsize[1]/4 + (int) (cs[1]/csum+0.5) - shsize[1]/2;	// TODO: sort this out
@@ -87,7 +90,7 @@ int modSelSubapts(wfs_t *wfsinfo, float samini, int samxr) {
 			}
 		}
 	}
-	logInfo("CoG for subapts done.");
+	logInfo("CoG for subapts done, found %d usable ones.", sn);
 	
 	nsubap = sn; 			// nsubap: variable that contains number of subapertures
 	cx = cx / (float) sn; 	// TODO what does this do? why?
@@ -116,7 +119,7 @@ int modSelSubapts(wfs_t *wfsinfo, float samini, int samxr) {
 	apcoo[0][0]   = apcoo[csa][0]; 	apcoo[0][1] 	= apcoo[csa][1];
 	apcoo[csa][0] = cs[0];			apcoo[csa][1] 	= cs[1];
 
-	logDebug("refapt in 0: (%d,%d)", subc[0][0], subc[0][1]);
+	logDebug("refapt in 0: (%d,%d), nsubap %d", subc[0][0], subc[0][1], nsubap);
 	// center central subaperture; it might not be centered if there is
 	// a large shift between the expected and the actual position in the
 	// center of gravity approach above
@@ -124,7 +127,7 @@ int modSelSubapts(wfs_t *wfsinfo, float samini, int samxr) {
 	cs[0] = 0.0; cs[1] = 0.0; csum = 0.0;
 	for (iy=0; iy<shsize[1]; iy++) {
 		for (ix=0; ix<shsize[0]; ix++) {
-				// loop over the whole shsize^2 big ref subapt here, so subc-shsize/4 is the beginning coordinate
+			// loop over the whole shsize^2 big ref subapt here, so subc-shsize/4 is the beginning coordinate
 			fi = (float) image[(subc[0][1]-shsize[1]/4+iy)*res[0]+subc[0][0]-shsize[0]/4+ix];
 			
 			
@@ -177,7 +180,7 @@ int modSelSubapts(wfs_t *wfsinfo, float samini, int samxr) {
 		sn = 1; // start with subaperture 1 since subaperture 0 is the reference
 		while (sn < nsubap) {
 			isx = apcoo[sn][0]; isy = apcoo[sn][1];
-			if ((isx == 0) || (isx >= 15) || (isy == 0) || (isy >= 15) ||
+			if ((isx == 0) || (isx >= cells[0]) || (isy == 0) || (isy >= cells[1]) ||
 				(apmap[isx-1][isy] == 0) ||
 				(apmap[isx+1][isy] == 0) ||
 				(apmap[isx][isy-1] == 0) ||

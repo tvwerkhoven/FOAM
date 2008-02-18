@@ -49,7 +49,7 @@ int status = 0;  				// MUST initialize status
 float nulval = 0.0;
 int anynul = 0;
 
-int modInitModule() {
+int modInitModule(control_t *ptc) {
 	// Init SDL
 	if (SDL_Init(SDL_INIT_VIDEO) < 0)
 		logErr("SDL init error");
@@ -57,8 +57,8 @@ int modInitModule() {
 	
 	SDL_WM_SetCaption("WFS output","WFS output");
 
-	// TODO: hardcoded resolution is not nice :(
-	screen = SDL_SetVideoMode(256, 256, 0, SDL_HWSURFACE|SDL_DOUBLEBUF);
+
+	screen = SDL_SetVideoMode(ptc->wfs[0].res[0], ptc->wfs[0].res[1], 0, SDL_HWSURFACE|SDL_DOUBLEBUF);
 	if (screen == NULL) {
 		logErr("Unable to set video, SDL error was: %s", SDL_GetError());
 		return EXIT_FAILURE;
@@ -200,16 +200,16 @@ int drvReadSensor() {
 		logDebug("simAtm() done");
 	} // end for (ptc.filter == FILT_PINHOLE)
 
-	displayImg(ptc.wfs[0].image, ptc.wfs[0].res, screen);
-	sleep(1);
+	// displayImg(ptc.wfs[0].image, ptc.wfs[0].res, screen);
+	// sleep(1);
 	
 	// we simulate WFCs before the telescope to make sure they outer region is zero (Which is done by simTel())
-	logDebug("Now simulating %d WFC(s).", ptc.wfc_count);
-	for (i=0; i < ptc.wfc_count; i++)
-		simWFC(&ptc, i, ptc.wfc[i].nact, ptc.wfc[i].ctrl, ptc.wfs[0].image); // Simulate every WFC in series
+	// logDebug("Now simulating %d WFC(s).", ptc.wfc_count);
+	// for (i=0; i < ptc.wfc_count; i++)
+	// 	simWFC(&ptc, i, ptc.wfc[i].nact, ptc.wfc[i].ctrl, ptc.wfs[0].image); // Simulate every WFC in series
 	
-	displayImg(ptc.wfs[0].image, ptc.wfs[0].res, screen);
-	sleep(1);
+	// displayImg(ptc.wfs[0].image, ptc.wfs[0].res, screen);
+	// sleep(1);
 		
 	if (simTel(FOAM_MODSIM_APERTURE, ptc.wfs[0].image) != EXIT_SUCCESS) { // Simulate telescope (from aperture.fits)
 			// if (status > 0) {
@@ -222,8 +222,8 @@ int drvReadSensor() {
 			logErr("error in simTel().");
 	}
 	
-	displayImg(ptc.wfs[0].image, ptc.wfs[0].res, screen);
-	sleep(1);
+	// displayImg(ptc.wfs[0].image, ptc.wfs[0].res, screen);
+	// sleep(1);
 
 	
 	// Simulate the WFS here.
@@ -232,8 +232,8 @@ int drvReadSensor() {
 		return EXIT_FAILURE;
 	}	
 
-	displayImg(ptc.wfs[0].image, ptc.wfs[0].res, screen);
-	sleep(1);
+	// displayImg(ptc.wfs[0].image, ptc.wfs[0].res, screen);
+	// sleep(1);
 	
 	return EXIT_SUCCESS;
 }
@@ -283,7 +283,6 @@ int simObj(char *file, float *image) {
 	return EXIT_SUCCESS;
 }
 
-// TODO: this only works with 256x256 images... (only works with resolution of wfs[0])
 int simWFC(control_t *ptc, int wfcid, int nact, float *ctrl, float *image) {
 	// we want to simulate the tip tilt mirror here. What does it do
 	logDebug("WFC %d (%s) has %d actuators, simulating", wfcid, ptc->wfc[wfcid].name, ptc->wfc[wfcid].nact);
@@ -544,7 +543,7 @@ int modSimSH() {
 			// TODO dit kan hierboven al gedaan worden
 			for (ip=shsize[1]/2; ip<shsize[1] + shsize[1]/2; ip++) {
 				for (jp=shsize[0]/2; jp<shsize[0]+shsize[0]/2; jp++) {
-					tmp = 6.0*simparams.shin[ip*nx + jp][0]; // multiply for worse seeing
+					tmp = 24.0*simparams.shin[ip*nx + jp][0]; // multiply for worse seeing
 					//use fftw_complex datatype, i.e. [0] is real, [1] is imaginary
 					
 					// SPEED: cos and sin are SLOW, replace by taylor series
