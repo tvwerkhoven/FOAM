@@ -93,6 +93,7 @@ int modOpenLoop(control_t *ptc) {
 	
 //	if (ptc->frames % 20 == 0) {
 		displayImg(ptc->wfs[0].image, ptc->wfs[0].res, screen);
+//		modDrawGrid(&(ptc->wfs[0]), screen);
 		modDrawSubapts(&(ptc->wfs[0]), screen);
 //	}
 	

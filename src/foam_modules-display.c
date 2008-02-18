@@ -45,7 +45,6 @@ void drawLine(int x0, int y0, int x1, int y1, SDL_Surface *screen) {
 	}
 }
 
-
 int displayImg(float *img, int res[2], SDL_Surface *screen) {
 	// ONLY does float images
 	int x, y, i;
@@ -160,4 +159,24 @@ int modDrawSubapts(wfs_t *wfsinfo, SDL_Surface *screen) {
 	SDL_Flip(screen);	
 	return EXIT_SUCCESS;
 }
+// 
+// int modDrawGrid(wfs_t *wfsinfo, SDL_Surface *screen) {
+// 	if (wfsinfo->nsubap == 0)
+// 		return EXIT_SUCCESS;			// if there's nothing to draw, don't draw (shouldn't happen)
+// 		
+// 	int *shsize = wfsinfo->shsize; 		// size of the grid
+// 	int *cells = wfsinfo->cells; 		// number of cells
+// 		
+// 	Slock(screen);
+// 			
+// 	for (xc=1; xc < cells[0]; xc++)
+// 		drawLine(xc*shsize[0], 0, xc*shsize[0], cells[1]*shsize[1], screen);
+// 	
+// 	for (yc=1; yc< cells[1]; yc++) {
+// 		drawLine(0, yc*shsize[1], cells[0]*shsize[0], yc*shsize[1], screen);
+// 			
+// 	Sulock(screen);
+// 	SDL_Flip(screen);	
+// 	return EXIT_SUCCESS;
+// }
 

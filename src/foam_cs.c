@@ -55,7 +55,8 @@ int main(int argc, char *argv[]) {
 	/*******************/
 
 	signal(SIGINT, catchSIGINT);
-
+	signal(SIGPIPE, SIG_IGN);
+	
 	// BEGIN FOAM //
 	/**************/
 	
@@ -560,6 +561,11 @@ int sockListen() {
 	memset(serv_addr.sin_zero, '\0', sizeof(serv_addr.sin_zero));
 	
 	logDebug("Mem set to zero for serv_addr.");
+
+	logDebug("Setting SO_REUSEADDR, SO_NOSIGPIPE and nonblocking...");
+	// Set reusable and nosigpipe flags so we don't get into trouble later on. TODO: doesn't work?
+	if (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval)) != 0)
+		logErr("Could not set socket flag SO_REUSEADDR, continuing.");
 	
 	// We now actually bind the socket to something
 	if (bind(sock, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) != 0) {
@@ -571,12 +577,6 @@ int sockListen() {
 		logErr("Listen failed: %s", strerror(errno));
 		exit(EXIT_FAILURE);
 	}
-	logDebug("Setting SO_REUSEADDR, SO_NOSIGPIPE and nonblocking...");
-	// Set reusable and nosigpipe flags so we don't get into trouble later on. TODO: doesn't work?
-	if (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval)) != 0)
-		logErr("Could not set socket flag SO_REUSEADDR, continuing.");
-//	if (setsockopt(sock, SOL_SOCKET, SO_NOSIGPIPE, &optval, sizeof(optval)) != 0) // TODO: this is a BSD feature! not unix! 
-//		logErr("Could not set socket flag SO_NOSIGPIPE, continuing.");
 		
 	// Set socket to non-blocking mode, nice for events
 	if (setnonblock(sock) != 0)

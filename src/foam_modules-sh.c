@@ -50,8 +50,6 @@ int modSelSubapts(wfs_t *wfsinfo, float samini, int samxr) {
 	int apmap2[cells[0]][cells[1]];		// aperture map 2
 	int apcoo[cells[0] * cells[1]][2];  // subaperture coordinates in apmap
 	
-	int usable=0;
-	
 	logInfo("Selecting subapertures.");
 	for (isy=0; isy<cells[1]; isy++) { // loops over all potential subapertures
 		for (isx=0; isx<cells[0]; isx++) {
@@ -73,7 +71,6 @@ int modSelSubapts(wfs_t *wfsinfo, float samini, int samxr) {
 			}
 			// check if the summed subapt intensity is above zero (e.g. do we use it?)
 			if (csum > 0.0) { // good as long as pixels above background exist
-				usable++;
 				// we add 0.5 to make sure the integer division is 'fair' (e.g. simulate round(), but faster)
 				subc[sn][0] = isx*shsize[0]+shsize[0]/4 + (int) (cs[0]/csum+0.5) - shsize[0]/2;	// subapt coordinates
 				subc[sn][1] = isy*shsize[1]+shsize[1]/4 + (int) (cs[1]/csum+0.5) - shsize[1]/2;	// TODO: sort this out
@@ -90,7 +87,7 @@ int modSelSubapts(wfs_t *wfsinfo, float samini, int samxr) {
 			}
 		}
 	}
-	logInfo("CoG for subapts done, found %d usable ones.", sn);
+	logInfo("CoG for subapts done, found %d with intensity > 0.", sn);
 	
 	nsubap = sn; 			// nsubap: variable that contains number of subapertures
 	cx = cx / (float) sn; 	// TODO what does this do? why?
@@ -282,16 +279,16 @@ void modCogTrack(wfs_t *wfsinfo, float *aver, float *max, float coords[][2]) {
 				csx += + fi * ix; // center of gravity of subaperture intensity 
 				csy += + fi * iy;
 			}
+		} // end loop over pixels to get CoG
 
-			if (csum > 0.0) { // if there is any signal at all
-				coords[sn][0] = -csx/csum + track[0]/2; // negative for consistency with CT 
-				coords[sn][1] = -csy/csum + track[1]/2; // /2 because our tracker cells are track[] wide and high
-			//	if (sn<0) printf("%d %f %f\n",sn,stx[sn],sty[sn]);
-			} 
-			else {
-				coords[sn][0] = 0.0;
-				coords[sn][1] = 0.0;
-			}
+		if (csum > 0.0) { // if there is any signal at all
+			coords[sn][0] = -csx/csum + track[0]/2; // negative for consistency with CT 
+			coords[sn][1] = -csy/csum + track[1]/2; // /2 because our tracker cells are track[] wide and high
+		//	if (sn<0) printf("%d %f %f\n",sn,stx[sn],sty[sn]);
+		} 
+		else {
+			coords[sn][0] = 0.0;
+			coords[sn][1] = 0.0;
 		}
 
 	} // end of loop over all subapertures
@@ -300,6 +297,34 @@ void modCogTrack(wfs_t *wfsinfo, float *aver, float *max, float coords[][2]) {
 	// this is incorrect, should be shsize[0]*shsize[1] + track[0]*track[1]*(nsubap-1)
 	// TODO:
 	*aver = sum / ((float) (track[0]*track[1]*nsubap));
+}
+
+void modCogFind(wfs_t *wfsinfo, int xc, int yc, int width, int height, float samini, float *sumout, float *cog) {
+	int ix, iy;
+	int *res = wfsinfo->res;			// image resolution
+	float *image = wfsinfo->image;		// source image from sensor
+	image += yc * res[0] + xc;				// forward the pointer to the right coordinate
+
+	float sum=0.0; float cs[] = {0.0, 0.0}; float csum = 0.0;
+	float fi;
+	
+	for (iy=0; iy<height; iy++) { // sum all pixels in the subapt
+		for (ix=0; ix<width; ix++) {
+			fi = (float) image[ix+ iy*res[0]];
+			sum += fi;
+			/* for center of gravity, only pixels above the threshold are used;
+			otherwise the position estimate always gets pulled to the center;
+			good background elimination is crucial for this to work !!! */
+			fi -= samini;    		// subtract threshold
+			if (fi<0.0) fi = 0.0;	// clip
+			csum = csum + fi;		// add this pixel's intensity to sum
+			cs[0] += + fi * ix;	// center of gravity of subaperture intensity 
+			cs[1] += + fi * iy;
+		}
+	}
+	*sumout = csum;
+	cog[0] = cs[0]/csum;
+	cog[1] = cs[1]/csum;
 }
 
 void modCorrTrack(wfs_t *wfsinfo, float *aver, float *max, float coords[][2]) {
@@ -599,15 +624,16 @@ int modParseSH(wfs_t *wfsinfo) {
 	// now calculate the offsets 
 	float aver=0.0, max=0.0;
 	float coords[wfsinfo->nsubap][2];
-	int i;
-	
+	int i, xc, yc;
+
 	// track the maxima
 	modCogTrack(wfsinfo, &aver, &max, coords);
 	
 	// note: coords is relative to the center of the tracker window
 	// therefore we can simply update the lower left coord by subtracting the coordinates.
+	float sum, cog[2];
+	logInfo("Coords: ");
 	
-//	logInfo("Coords: ");
 	for (i=0; i<wfsinfo->nsubap; i++) {
 		// store the displacement vectors (wrt center of subaperture grid):
 		// we get subc which is the coordinate of the tracker window wrt the complete sensor image
@@ -616,10 +642,31 @@ int modParseSH(wfs_t *wfsinfo) {
 		// After we have this coordinate, we add the displacement we just found which is wrt the center of 
 		// the tracker window.
 		// Finally we subtract half the size of the tracker window  ( = subaperture grid/4) to fix everything.
+
 		wfsinfo->disp[i][0] = (wfsinfo->subc[i][0] % wfsinfo->shsize[0]);
 		wfsinfo->disp[i][0] += coords[i][0];
 		wfsinfo->disp[i][0] -= wfsinfo->shsize[0]/4;
 		wfsinfo->disp[i][1] = (wfsinfo->subc[i][1] % wfsinfo->shsize[1]) + coords[i][1] - wfsinfo->shsize[1]/4;
+
+		logDirect("(%f, %f) ", wfsinfo->disp[i][0], wfsinfo->disp[i][1]);
+				
+		// check for runaway subapts and recover them:
+		if (wfsinfo->disp[i][0] > wfsinfo->shsize[0]/2 || wfsinfo->disp[i][0] < -wfsinfo->shsize[0]/2
+			|| wfsinfo->disp[i][1] > wfsinfo->shsize[1]/2 || wfsinfo->disp[i][1] < -wfsinfo->shsize[0]/2) {
+		
+			logDebug("Runaway subapt detected! (%f,%f)", wfsinfo->disp[i][0], wfsinfo->disp[i][1]);
+			// xc = (wfsinfo->subc[i][0] / wfsinfo->shsize[0]) * wfsinfo->shsize[0];
+			// yc = (wfsinfo->subc[i][1] / wfsinfo->shsize[1]) * wfsinfo->shsize[1];
+			// modCogFind(wfsinfo, xc, yc, wfsinfo->shsize[0], wfsinfo->shsize[1], 0.0, &sum, cog);
+			// 		
+			// wfsinfo->subc[i][0] = xc + (int) (cog[0]+0.5) - wfsinfo->shsize[0]/4;	// subapt coordinates
+			// wfsinfo->subc[i][1] = yc + (int) (cog[1]+0.5) - wfsinfo->shsize[1]/4;	// subapt coordinates
+			// 
+			// wfsinfo->disp[i][0] = cog[0];
+			// coords[i][1] = cog[1];
+			// logDebug("Runaway subapt saved! (%f,%f)", cog[0], cog[1]);
+			// exit(0);
+		}
 		
 		// update the tracker window coordinates:
 		// +0.5 to make sure rounding (integer clipping) is fair. 
@@ -627,7 +674,7 @@ int modParseSH(wfs_t *wfsinfo) {
 		// TODO: this works, is this fast?
 		wfsinfo->subc[i][0] -= (int) (coords[i][0]+0.5);//-wfsinfo->res[0]/wfsinfo->cells[0]/4;
 		wfsinfo->subc[i][1] -= (int) (coords[i][1]+0.5);//-wfsinfo->res[1]/wfsinfo->cells[1]/4;
-//		logDirect("(%f, %f) ", coords[i][0], coords[i][1]);
+
 	}
 //	logDirect("\n");
 	

@@ -100,6 +100,11 @@ images will not work.
 void modCogTrack(wfs_t *wfsinfo, float *aver, float *max, float coords[][2]);
 
 /*!
+@brief Search for a maxium within (xc, yc) -> (xc+width, yc+height) in a certain wfs output.
+*/
+void modCogFind(wfs_t *wfsinfo, int xc, int yc, int width, int height, float samini, float *sum, float *cog);
+
+/*!
 @brief Tracks the seeing using correlation tracking (works on extended objects)
 
 Work in progress as of 2008-01-28

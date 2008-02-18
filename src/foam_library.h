@@ -15,11 +15,6 @@ Last: 2008-01-21
 // HEADER FILES //
 /****************/
 
-// TvW: TODO bufferend events zonder LINE_MAX
-#ifndef LINE_MAX
-#define LINE_MAX 2048
-#endif
-
 
 #include <string.h>
 #include <unistd.h>
