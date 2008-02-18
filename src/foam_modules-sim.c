@@ -13,7 +13,7 @@
 #include "foam_modules-sim.h"
 
 #define FOAM_MODSIM_WAVEFRONT "../config/wavefront.fits"
-#define FOAM_MODSIM_APERTURE "../config/aperture.fits"
+#define FOAM_MODSIM_APERTURE "../config/apert15-256.pgm"
 #define FOAM_MODSIM_APTMASK "../config/apert15-256.pgm"
 #define FOAM_MODSIM_ACTPAT "../config/dm37-256.pgm"
 
@@ -49,7 +49,6 @@ int status = 0;  				// MUST initialize status
 float nulval = 0.0;
 int anynul = 0;
 
-// TODO: document these:
 int modInitModule() {
 	// Init SDL
 	if (SDL_Init(SDL_INIT_VIDEO) < 0)
@@ -65,6 +64,10 @@ int modInitModule() {
 		return EXIT_FAILURE;
 	}
 	return EXIT_SUCCESS;
+}
+
+void modStopModule(control_t *ptc) {
+	// let's just do nothing here because we're done anyway :P
 }
 
 int modOpenInit(control_t *ptc) {
@@ -197,12 +200,18 @@ int drvReadSensor() {
 		logDebug("simAtm() done");
 	} // end for (ptc.filter == FILT_PINHOLE)
 
+	displayImg(ptc.wfs[0].image, ptc.wfs[0].res, screen);
+	sleep(1);
+	
 	// we simulate WFCs before the telescope to make sure they outer region is zero (Which is done by simTel())
 	logDebug("Now simulating %d WFC(s).", ptc.wfc_count);
-	for (i=0; i < ptc.wfc_count; i++)
-		simWFC(&ptc, i, ptc.wfc[i].nact, ptc.wfc[i].ctrl, ptc.wfs[0].image); // Simulate every WFC in series
+	// for (i=0; i < ptc.wfc_count; i++)
+	// 	simWFC(&ptc, i, ptc.wfc[i].nact, ptc.wfc[i].ctrl, ptc.wfs[0].image); // Simulate every WFC in series
+	
+	displayImg(ptc.wfs[0].image, ptc.wfs[0].res, screen);
+	sleep(1);
 		
-	if (simTel(FOAM_MODSIM_APERTURE, ptc.wfs[0].res, ptc.wfs[0].image) != EXIT_SUCCESS) { // Simulate telescope (from aperture.fits)
+	if (simTel(FOAM_MODSIM_APERTURE, ptc.wfs[0].image) != EXIT_SUCCESS) { // Simulate telescope (from aperture.fits)
 		if (status > 0) {
 			fits_get_errstatus(status, errmsg);
 			logErr("fitsio error in simTel(): (%d) %s", status, errmsg);
@@ -212,7 +221,8 @@ int drvReadSensor() {
 		else logErr("error in simTel().");
 	}
 	
-//	displayImg(ptc.wfs[0].image, ptc.wfs[0].res, screen);
+	displayImg(ptc.wfs[0].image, ptc.wfs[0].res, screen);
+	sleep(1);
 
 	
 	// Simulate the WFS here.
@@ -221,7 +231,8 @@ int drvReadSensor() {
 		return EXIT_FAILURE;
 	}	
 
-	//modDrawSubapts(&(ptc->wfs[0]), screen);
+	displayImg(ptc.wfs[0].image, ptc.wfs[0].res, screen);
+	sleep(1);
 	
 	return EXIT_SUCCESS;
 }
@@ -283,43 +294,20 @@ int simWFC(control_t *ptc, int wfcid, int nact, float *ctrl, float *image) {
 	return EXIT_SUCCESS;
 }
 
-int simTel(char *file, int res[2], float *image) {
-	fitsfile *fptr;
-	int bitpix, naxis, i;
-	long naxes[2], fpixel[] = {1,1};
-	long nelements = res[0] * res[1];
-	float *aperture;
-	if ((aperture = malloc(nelements * sizeof(*aperture))) == NULL)
-		return EXIT_FAILURE;
+int simTel(char *file, float *image) {
+	double *aperture;
+	int nx, ny, ngray;
+	int i;
+
+	// we read the file in here (only pgm now)
+	modReadPGM(file, &aperture, &nx, &ny, &ngray);
 	
-	// file should have exactly the same resolution as *image (res[0] x res[1])
-	fits_open_file(&fptr, file, READONLY, &status);				// Open FITS file
-	if (status > 0)
-		return EXIT_FAILURE;
-	
-	fits_get_img_param(fptr, 2,  &bitpix, \
-						&naxis, naxes, &status);				// Read header
-	if (status > 0)
-		return EXIT_FAILURE;
-	if (naxes[0] * naxes[1] != nelements) {
-		logErr("Error in simTel(), fitsfile not the same dimension as image (%dx%d vs %dx%d)", \
-		naxes[0], naxes[1], res[0], res[1]);
-		return EXIT_FAILURE;
-	}
-					
-	fits_read_pix(fptr, TFLOAT, fpixel, \
-						nelements, &nulval, aperture, \
-						&anynul, &status);						// Read image to image
-	if (status > 0)
-		return EXIT_FAILURE;
-	
-	logDebug("Aperture read successfully, processing with image.");
+	logDebug("Aperture read successfully (%dx%d), processing with image.", nx, ny);
 	
 	// Multiply wavefront with aperture
-	for (i=0; i < nelements; i++)
+	for (i=0; i < nx*ny; i++)
 		image[i] *= aperture[i];
 	
-	fits_close_file(fptr, &status);
 	return EXIT_SUCCESS;
 }
 
@@ -514,7 +502,6 @@ int modSimSH() {
 				continue;
 			}
 			
-			
 			// We want to set the helper arrays to zero first
 			// otherwise we get trouble? TODO: check this out
 			for (i=0; i< nx*ny; i++)
@@ -529,7 +516,6 @@ int modSimSH() {
 			for (i=0; i< ny; i++)
 				simparams.shin[nx/2+i*nx][0] = 1;
 
-							
 			// loop over all pixels in the subaperture, copy them to subapt:
 			// I'm pretty sure these index gymnastics are correct (2008-01-18)
 			for (ip=0; ip<shsize[1]; ip++) { 
@@ -560,7 +546,7 @@ int modSimSH() {
 					tmp = 6.0*simparams.shin[ip*nx + jp][0]; // multiply for worse seeing
 					//use fftw_complex datatype, i.e. [0] is real, [1] is imaginary
 					
-					// PROF: cos and sin are SLOW, replace by taylor series
+					// SPEED: cos and sin are SLOW, replace by taylor series
 					// optimilization with parabola, see http://www.devmaster.net/forums/showthread.php?t=5784
 					// and http://lab.polygonal.de/2007/07/18/fast-and-accurate-sinecosine-approximation/
 					// wrap tmp to (-pi, pi):
@@ -620,4 +606,118 @@ int drvFilterWheel(control_t *ptc, fwheel_t mode) {
 	// in simulation this is easy, just set mode in ptc
 	ptc->filter = mode;
 	return EXIT_SUCCESS;
+}
+
+/*
+ *============================================================================
+ *
+ *	read_pgm:	read a portable gray map into double buffer pointed
+ *			to by dbuf, leaves dimensions and no. of graylevels.
+ *
+ *	return value:	0 	normal return
+ *			-1	error return
+ *
+ *============================================================================
+ */
+int modReadPGM(char *fname, double **dbuf, int *t_nx, int *t_ny, int *t_ngray) {
+	char		c_int, first_string[110];
+	unsigned char	b_in;
+	int		i, j, bin_ind, nx, ny, ngray;
+	long		ik;
+	double		fi;
+	FILE		*fp;
+
+	if((fp = fopen(fname,"r"))==NULL){
+	    logErr("Error opening pgm file %s!", fname);
+		return EXIT_FAILURE;
+	}
+
+	// Read magic number
+
+	i = 0;
+	while((c_int = getc(fp)) != '\n') {
+	    first_string[i] = c_int;
+	    i++;
+	    if(i > 100) i = 100;
+	}
+	
+	if((strstr(first_string, "P2")) != NULL ) {
+	  /*	    fprintf(stderr,
+		    "\tPortable ASCII graymap aperture mask detected \n"); */
+	    bin_ind = 0;
+	} else if((strstr(first_string, "P5")) != NULL ){
+	    //logDebug("Portable binary graymap aperture mask detected."); 
+	    bin_ind = 1;
+	} else {
+	    logErr("Unknown magic in pgm file: %s, should be P2 or P5",first_string);
+		return EXIT_FAILURE;
+	}
+	
+/*
+ *	Skip comments which start with a "#" and read the picture dimensions
+ */
+
+l1:
+	i = 0;
+	while ((c_int = getc(fp)) != '\n') {
+		first_string[i] = c_int;
+		i++;
+		if (i > 100) i = 100;
+	}
+	if (first_string[0] == '#')
+		goto l1;
+	else
+		sscanf(first_string, "%d %d", &nx, &ny);
+		
+		/*  	fprintf(stderr, "\tX and Y dimensions: %d %d\n", nx, ny); */
+	*t_nx = nx;
+	*t_ny = ny;
+
+/*
+	*	Read the number of grayscales 
+*/
+
+	i = 0;
+	while((c_int=getc(fp)) != '\n') {
+		first_string[i] = c_int;
+		i++;
+		if(i > 100) i = 100;
+	}
+	sscanf(first_string, "%d", &ngray);
+		/*	fprintf(stderr, "\tNumber of gray levels:\t%d\n", ngray); */
+	*t_ngray = ngray;
+
+/*
+	*	Read in graylevel data
+*/
+
+	*dbuf = (double *) calloc(nx*ny, sizeof(double));
+	if(dbuf == NULL){
+		logErr("Buffer allocation error!");
+		return EXIT_FAILURE;
+	}
+
+	ik = 0;
+	for (i = 1; i <= nx; i += 1){
+		for (j = 1; j <= ny; j += 1){
+			if(bin_ind) {
+				if(fread (&b_in, sizeof(unsigned char), 1, fp) != 1){
+					logErr("Error reading portable bitmap!");
+					return EXIT_FAILURE;
+				}
+				fi = (double) b_in;
+			} else {
+				if ((fscanf(fp,"%le",&fi)) == EOF){
+					logErr("End of input file reached!");
+					return EXIT_FAILURE;
+				}
+			}
+			*(*dbuf + ik) = fi;
+			ik ++;
+		}  
+	}
+
+	fclose(fp);
+	return EXIT_SUCCESS;
+	
 }

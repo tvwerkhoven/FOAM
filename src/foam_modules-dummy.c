@@ -19,6 +19,9 @@ int modInitModule() {
 int modOpenInit(control_t *ptc) {
 	return EXIT_SUCCESS;
 }
+void modStopModule(control_t *ptc) {
+	// placeholder ftw!
+}
 
 int modOpenLoop(control_t *ptc) {
 	return EXIT_SUCCESS;

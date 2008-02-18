@@ -16,16 +16,6 @@
 //#define NACT      37       // number of actuators
 
 // local prototypes
-/*!
-@brief Reads a pgm file from disk into memory
-
-@param [in] *fname the filename to read
-@param [out] **dbuf the buffer that the image will be read to (will be allocated dynamically)
-@param [out] *t_nx will hold the x resolution of the image
-@param [out] *t_ny will hold the y resolution of the image
-@param [out] *t_ngray will hold the number of different graylevels in the image
-*/
-int read_pgm(char *fname, double **dbuf, int *t_nx, int *t_ny, int *t_ngray);
 
 /*!
 @brief Simulates the DM shape as function of input voltages.

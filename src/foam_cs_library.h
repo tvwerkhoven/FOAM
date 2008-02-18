@@ -28,6 +28,7 @@ Last: 2008-01-21
 
 #define DEBUG_SLEEP 1 				// sleep time (sec) for loops in debug mode
 #define FILENAMELEN 32				// maximum length for logfile names
+#define COMMANDLEN 1024				// maximum length for commands we read over the socket
 
 #define FOAM_NAME "FOAM CS"			// some info about FOAM
 #define FOAM_VERSION "v0.2 Dec"
@@ -192,12 +193,63 @@ typedef struct {
 /**************/
 
 // THESE MUST BE DEFINED IN SOME MODULE!!!!
-// TODO: document
+
+/*!
+@brief This routine is run at the very beginning of the FOAM program, after configuration has been read.
+
+modInitModule() is one of the cornerstones of the modular design of FOAM. This routine is not defined in
+FOAM itself, but must be provided by the modules compiled with FOAM (i.e. in simulation). This `hook' provides
+a standardized means to initialize the module before anything has been done, like allocate memory, read in 
+some configuration files, start cameras or anything else. It is called without arguments and should return
+EXIT_SUCCESS or EXIT_FAILURE depening on success or not.
+*/
 int modInitModule();
+
+/*!
+@brief This routine is run at the very end of the FOAM program.
+
+modStopModule() can be used to wrap up things related to the module, like stop cameras, set
+filterwheels back or anything else. If this module fails, FOAM *will* exit anyway.
+*/
+void modStopModule(control_t *ptc);
+
+/*! 
+@brief This routine is run during closed loop.
+
+modClosedLoop() should be provided by a module which does the necessary things in closed loop. Before this
+routine is called in a loop, modClosedInit() is first called once to initialize things related to closed loop
+operation.
+*/
 int modClosedLoop(control_t *ptc);
+
+/*! 
+@brief This routine is run once before entering closed loop.
+
+modClosedInit() should be provided by a module which does the necessary things just before closed loop.
+*/
 int modClosedInit(control_t *ptc);
+
+/*! 
+@brief This routine is run during open loop.
+
+modOpenLoop() should be provided by a module which does the necessary things in open loop.
+*/
 int modOpenLoop(control_t *ptc);
+
+/*! 
+@brief This routine is run once before entering open loop.
+
+modOpenInit() should be provided by a module which does the necessary things just before open loop.
+*/
 int modOpenInit(control_t *ptc);
+
+/*! 
+@brief This routine is run in calibration mode.
+
+Slightly different from open and closed mode is the calibration mode. This mode does not have
+a loop which runs forever, but only calls modCalibrate once. It is left to the programmer to decide 
+what to do in this mode. control_t provides a flag (.calmode) to distinguish between different calibration modes.
+*/
 int modCalibrate(control_t *ptc);
 
 /*!
@@ -245,7 +297,6 @@ This function is used for debug logging. See documentation on logInfo() for more
 */
 void logDebug(const char *msg, ...);
 
-
 /*!
 @brief Parse a \a var = \a value configuration pair stored in a config file.
 
@@ -258,19 +309,18 @@ int parseConfig(char *var, char *value);
 /*! 
 @brief Runs the AO open-loop mode.
 
-Runs the AO system in open loop mode, it reads out 
-the sensors, calculates stuff and displays this to the user, but 
-it does not control anything. Communcation is done via global variables,
-in particular \a ptc (also see control_t).
+Runs the AO system in open loop mode, which is basically a skeleton which 
+calls modOpenInit() once, then enters a loop which runs as long as ptc.mode is 
+set to open and (see aomode_t) calls modOpenLoop() each run.
 */
 void modeOpen();
 
 /*! 
 @brief Runs the AO closed-loop mode.
 
-This function runs the AO system in closed loop mode and drives all 
-components that the user wants to use. Communication is again done via
-global variables, in particular \a ptc (also see control_t).
+Runs the AO system in closed loop mode, which is basically a skeleton which 
+calls modClosedInit() once, then enters a loop which runs as long as ptc.mode is 
+set to closed (see aomode_t) and calls modClosedLoop() each run.
 */
 void modeClosed();
 
@@ -286,7 +336,7 @@ void modeListen();
 /*! 
 @brief Runs the AO calibration-loop mode.
 
-This calibrates some components of the AO system, and then returns to open loop mode.
+This skeleton 
 */
 void modeCal();
 
@@ -399,7 +449,7 @@ This function gives help to the cliet which sent a HELP command over the socket.
 int showHelp(const client_t *client, const char *subhelp);
 
 /*!
-@brief Function which wraps up  @name  (gives some stats)
+@brief Function which wraps up  @name (free some memory, gives some stats)
 */
 void stopFOAM();
 

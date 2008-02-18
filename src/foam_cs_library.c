@@ -4,17 +4,14 @@
 @author @authortim
 @date November 13 2007
 
-(was cs_library.c)
-
 This file contains things necessary to run the Control Software that are not related to adaptive optics itself. 
-
 */
 
 #include "foam_cs_library.h"
 
 control_t ptc = { //!< Global struct to hold system characteristics and other data. Initialize with complete but minimal configuration
-	.mode = AO_MODE_LISTEN,
-	.calmode = CAL_INFL, //CAL_PINHOLE
+	.mode = AO_MODE_OPEN,
+	.calmode = CAL_INFL, 	// or CAL_PINHOLE
 	.wfs_count = 0,
 	.wfc_count = 0,
 	.frames = 0,
@@ -22,15 +19,15 @@ control_t ptc = { //!< Global struct to hold system characteristics and other da
 };
 
 config_t cs_config = { 
-	.listenip = "0.0.0.0", // listen on any IP by default, can be overridden by config file
-	.listenport = 10000,
+	.listenip = "0.0.0.0", 	// listen on any IP by default, can be overridden by config file
+	.listenport = 10000,	// listen on port 10000 by default
 	.infofd = NULL,
 	.errfd = NULL,
 	.debugfd = NULL,
 	.use_syslog = false,
 	.syslog_prepend = "foam",
 	.use_stderr = true,
-	.loglevel = LOGINFO
+	.loglevel = LOGDEBUG
 };
 
 conntrack_t clientlist;

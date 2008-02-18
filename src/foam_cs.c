@@ -24,6 +24,9 @@ extern control_t ptc;
 extern config_t cs_config;
 extern conntrack_t clientlist;
 
+
+// These come from modules
+extern void modStopModule(control_t *ptc);
 extern int modInitModule();
 extern int modOpenInit(control_t *ptc);
 extern int modOpenLoop(control_t *ptc);
@@ -104,11 +107,14 @@ void stopFOAM() {
 	loctime = localtime (&end);
 	strftime (date, 64, "%A, %B %d %H:%M:%S, %Y (%Z).", loctime);	
 	
+	logInfo("Trying to stop modules...");
+	modStopModule(&ptc);
+	
 	logInfo("Stopping FOAM at %s", date);
 	logInfo("Ran for %ld seconds and parsed %ld frames (framerate: %f).", \
 		end-ptc.starttime, ptc.frames, ptc.frames/(float) (end-ptc.starttime));
 
-	exit(0);
+	exit(EXIT_SUCCESS);
 }
 
 int parseConfig(char *var, char *value) {
@@ -335,14 +341,14 @@ int parseConfig(char *var, char *value) {
 int loadConfig(char *file) {
 	logDebug("Reading configuration from file: %s",file);
 	FILE *fp;
-	char line[LINE_MAX];
-	char var[LINE_MAX], value[LINE_MAX];
+	char line[COMMANDLEN];
+	char var[COMMANDLEN], value[COMMANDLEN];
 	
 	fp = fopen(file,"r");
 	if (fp == NULL)		// We can't open the file?
 		return EXIT_FAILURE;
 	
-	while (fgets(line, LINE_MAX, fp) != NULL) {	// Read while there is no error
+	while (fgets(line, COMMANDLEN, fp) != NULL) {	// Read while there is no error
 		if (*line == ' ' || *line == '\t' || *line == '\n' || *line == '#')
 			continue;	// Skip bogus lines
 		
@@ -432,22 +438,6 @@ int saveConfig(char *file) {
 	return EXIT_SUCCESS;
 }
 
-/*int writeFits(char *file, float *image, long *naxes) {
-	// only writes float images at the moment
-	fitsfile *fptr;
-	int status = 0;
-	long fpixel[] = {1,1};
-	
-	fits_create_file(&fptr, file, &status);   // create new file 
-
-	//	fits_open_file(&fptr, "foam.fits", READWRITE, &status);
-	fits_create_img(fptr, -32, 2, naxes, &status);
-	fits_write_pix(fptr, TFLOAT, fpixel, \
-	               naxes[0] * naxes[1], image, &status);
-	fits_close_file(fptr, &status);
-	return status;
-}*/
-
 void modeOpen() {
 	logInfo("Entering open loop.");
 
@@ -485,7 +475,7 @@ void modeClosed() {
 	logInfo("Entering closed loop.");
 
 	// perform some sanity checks before actually entering the open loop
-	if (ptc.wfs_count == 0) {				// we need wave front sensors
+	if (ptc.wfs_count == 0) {						// we need wave front sensors
 		logErr("Error, no WFSs defined.");
 		ptc.mode = AO_MODE_LISTEN;
 		return;
@@ -530,13 +520,13 @@ void modeListen() {
 			break;
 	}
 	
-	modeListen();// re-run if nothing was found
+	modeListen(); // re-run if nothing was found
 }
 
 void modeCal() {
 	logInfo("Entering calibration loop");
 	
-	// this links to the module
+	// this links to a module
 	modCalibrate(&ptc);
 	
 	logDebug("Calibration loop done, switching to listen mode");
@@ -690,20 +680,20 @@ void sockOnErr(struct bufferevent *bev, short event, void *arg) {
 	free(client);
 }
 
-// TODO: document
-// placeholder so that we don't crash :P
+// This does nothing, but libevent really wants an onwrite function, NULL pointers crash it
 void sockOnWrite(struct bufferevent *bev, void *arg) {
 }
 
 void sockOnRead(struct bufferevent *bev, void *arg) {
 	client_t *client = (client_t *)arg;
-	// TODO, LINE_MAX niet netjes, maar is wel nodig :(
-	char msg[LINE_MAX];
-//	char *msg;
+
+	char msg[COMMANDLEN];
 	char *tmp;
 	int nbytes;
 	
-	nbytes = bufferevent_read(bev, msg, (size_t) LINE_MAX-1);
+	while ((nbytes = bufferevent_read(bev, msg, (size_t) COMMANDLEN-1)) == COMMANDLEN-1) // detect very long messages
+		logErr("Received very long command over socket which got cropped.");
+		
 	msg[nbytes] = '\0';
 	// TODO: this still requires a neat solution, does not work with TELNET.
 	if ((tmp = strchr(msg, '\n')) != NULL) // there might be a trailing newline which we don't want
@@ -756,6 +746,10 @@ int parseCmd(char *msg, const int len, client_t *client) {
 			showHelp(client, NULL);			
 		logInfo("Got help command & sent it! (subhelp %s)", tmp);
 	}
+	else if ((strcmp(tmp,"exit") == 0) || (strcmp(tmp,"quit") == 0)) {
+		bufferevent_write(client->buf_ev,"200 OK EXIT\n", sizeof("200 OK EXIT\n"));
+		sockOnErr(client->buf_ev, EVBUFFER_EOF, client);
+	}
 	else if (strcmp(tmp,"mode") == 0) {
 		if (popword(&msg, tmp) > 0) {
 			if (strcmp(tmp,"closed") == 0) {
@@ -770,12 +764,9 @@ int parseCmd(char *msg, const int len, client_t *client) {
 				ptc.mode = AO_MODE_LISTEN;
 				bufferevent_write(client->buf_ev,"200 OK MODE LISTEN\n", sizeof("200 OK MODE LISTEN\n"));
 			}
-			// else if (strcmp(tmp,"cal") == 0) {
-			// 	ptc.mode = AO_MODE_CAL;
-			// 	bufferevent_write(client->buf_ev,"200 OK MODE CALIBRATION\n", sizeof("200 OK MODE CALIBRATION\n"));
-			// }
-			else 
+			else {
 				bufferevent_write(client->buf_ev,"400 UNKNOWN MODE\n", sizeof("400 UNKNOWN MODE\n"));
+			}
 		}
 		else {
 			bufferevent_write(client->buf_ev,"400 MODE REQUIRES ARG\n", sizeof("400 MODE REQUIRES ARG\n"));
@@ -792,6 +783,9 @@ int parseCmd(char *msg, const int len, client_t *client) {
 				ptc.mode = AO_MODE_CAL;
 				ptc.calmode = CAL_INFL;				
 				bufferevent_write(client->buf_ev,"200 OK CALIBRATE INFLUENCE\n", sizeof("200 OK CALIBRATE INFLUENCE\n"));
+			}
+			else {
+				bufferevent_write(client->buf_ev,"400 UNKNOWN CALIBRATION\n", sizeof("400 UNKNOWN CALIBRATION\n"));
 			}
 		}
 		else {
@@ -811,8 +805,9 @@ int showHelp(const client_t *client, const char *subhelp) {
 help [command]:         help (on a certain command, if available).\n\
 mode <open|closed>:     close or open the loop.\n\
 set <var> <value:       set a certain setting.\n\
-simulate:               toggle simulation mode.\n\
+exit or quit:           disconnect from daemon.\n\
 calibrate [mode]:       calibrate a component.\n";
+
 		char code[] = "200 OK HELP\n";
 		return bufferevent_write(client->buf_ev, help, sizeof(help));
 	}
@@ -900,13 +895,9 @@ ALIASES += cslib="foam_cs_library.*"
 	\li \a fftw3 which is used to compute FFT's to simulate the SH lenslet array	
 	
 	Furthermore @name requires basic things like a hosted compilation environment, pthreads, etc. For a full list of dependencies,
-	see the header files (notably cs_library.h and ao_library.h).
+	see the header files. @name is however supplied with an (auto-)configure script which checks these
+	basic things and tells you what the capabilities of @name on your system will be. 
 	
-	Other run-time requirements/limitations of @name are:
-	\li The subaperture resolution must be a multiple of 4.
-	\li At the moment, only 256x256 pixel images can be simulated
-	\li At the moment, only float images are processed
-
 	\subsection drivers Write drivers
 	
 	You'll have to write your own drivers for all hardware components that 
@@ -917,6 +908,19 @@ ALIASES += cslib="foam_cs_library.*"
 	
 	Configure @name, especially ao_config.cfg. Make sure you do \b not copy the FFTW wisdom file 'fftw_wisdom.dat' to new machines,
 	this file contains some simple benchmarking results done by FFTW and are very machine dependent. @name will regenerate the file
-	if necessary, but it cannot detect 'wrong' wisdom files.
+	if necessary, but it cannot detect `wrong' wisdom files. Copying bad files is worse than deleting.
+
+	\section limit_sec Limitations/bugs
 	
+	There are some limitations to @name which are discussed in this section. The list includes:
+
+	\li The subaperture resolution must be a multiple of 4,
+	\li The configuration file linelength is at max 1024 characters,
+	\li Commands given to @name over the socket/network can be at most 1024 characters,
+	\li At the moment, only 256x256 pixel images can be simulated
+	\li At the moment, only float images are processed
+	
+	Points with the 'at the moment' prefix will hopefully be resolved in the future, other constraints will not be `fixed' because
+	these pose no big problems for most to all working setups.
+			
 */

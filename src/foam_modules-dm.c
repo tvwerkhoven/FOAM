@@ -78,6 +78,7 @@ int modSimDM(char *boundarymask, char *actuatorpat, int nact, float *ctrl, float
 	long   ik;
 	
 	double *boundary=NULL, *act=NULL;
+	//double *boundary, *act;
 	int nx, ny, ngray1, ngray2;
 	
 	float amp=0.3;
@@ -86,7 +87,7 @@ int modSimDM(char *boundarymask, char *actuatorpat, int nact, float *ctrl, float
 
 	// read boundary mask file 
 	if (boundary == NULL) {
-		if ((status = read_pgm(boundarymask,&boundary,&nx,&ny,&ngray1)) != EXIT_SUCCESS) {
+		if ((status = modReadPGM(boundarymask, &boundary, &nx, &ny, &ngray1)) != EXIT_SUCCESS) {
 			logErr("Cannot read boundary mask");
 			return EXIT_FAILURE;
 		}	
@@ -114,7 +115,7 @@ int modSimDM(char *boundarymask, char *actuatorpat, int nact, float *ctrl, float
 
 // read actuator pattern file
 	if (act == NULL) {
-		if ((status = read_pgm(actuatorpat,&act,&nx,&ny,&ngray2)) != EXIT_SUCCESS) {
+		if ((status = modReadPGM(actuatorpat,&act,&nx,&ny,&ngray2)) != EXIT_SUCCESS) {
 			logErr("Cannot read actuator pattern file");
 			return EXIT_FAILURE;
 		}
@@ -219,119 +220,4 @@ int modSimDM(char *boundarymask, char *actuatorpat, int nact, float *ctrl, float
 	return EXIT_SUCCESS; // successful completion
 }
 
-
-/*
- *============================================================================
- *
- *	read_pgm:	read a portable gray map into double buffer pointed
- *			to by dbuf, leaves dimensions and no. of graylevels.
- *
- *	return value:	0 	normal return
- *			-1	error return
- *
- *============================================================================
- */
-
-int read_pgm(char *fname, double **dbuf, int *t_nx, int *t_ny, int *t_ngray) {
-	char		c_int, first_string[110];
-	unsigned char	b_in;
-	int		i, j, bin_ind, nx, ny, ngray;
-	long		ik;
-	double		fi;
-	FILE		*fp;
-
-	if((fp = fopen(fname,"r"))==NULL){
-	    logErr("Error opening pgm file %s!", fname);
-		return EXIT_FAILURE;
-	}
-
-	// Read magic number
-
-	i = 0;
-	while((c_int = getc(fp)) != '\n') {
-	    first_string[i] = c_int;
-	    i++;
-	    if(i > 100) i = 100;
-	}
-	
-	if((strstr(first_string, "P2")) != NULL ) {
-	  /*	    fprintf(stderr,
-		    "\tPortable ASCII graymap aperture mask detected \n"); */
-	    bin_ind = 0;
-	} else if((strstr(first_string, "P5")) != NULL ){
-	    //logDebug("Portable binary graymap aperture mask detected."); 
-	    bin_ind = 1;
-	} else {
-	    logErr("Unknown magic in pgm file: %s, should be P2 or P5",first_string);
-		return EXIT_FAILURE;
-	}
-	
-/*
- *	Skip comments which start with a "#" and read the picture dimensions
- */
-
-l1:
-	i = 0;
-	while ((c_int = getc(fp)) != '\n') {
-		first_string[i] = c_int;
-		i++;
-		if (i > 100) i = 100;
-	}
-	if (first_string[0] == '#')
-		goto l1;
-	else
-		sscanf(first_string, "%d %d", &nx, &ny);
-		
-		/*  	fprintf(stderr, "\tX and Y dimensions: %d %d\n", nx, ny); */
-	*t_nx = nx;
-	*t_ny = ny;
-
-/*
-	*	Read the number of grayscales 
-*/
-
-	i = 0;
-	while((c_int=getc(fp)) != '\n') {
-		first_string[i] = c_int;
-		i++;
-		if(i > 100) i = 100;
-	}
-	sscanf(first_string, "%d", &ngray);
-		/*	fprintf(stderr, "\tNumber of gray levels:\t%d\n", ngray); */
-	*t_ngray = ngray;
-
-/*
-	*	Read in graylevel data
-*/
-
-	*dbuf = (double *) calloc(nx*ny, sizeof(double));
-	if(dbuf == NULL){
-		logErr("Buffer allocation error!");
-		return EXIT_FAILURE;
-	}
-
-	ik = 0;
-	for (i = 1; i <= nx; i += 1){
-		for (j = 1; j <= ny; j += 1){
-			if(bin_ind) {
-				if(fread (&b_in, sizeof(unsigned char), 1, fp) != 1){
-					logErr("Error reading portable bitmap!");
-					return EXIT_FAILURE;
-				}
-				fi = (double) b_in;
-			} else {
-				if ((fscanf(fp,"%le",&fi)) == EOF){
-					logErr("End of input file reached!");
-					return EXIT_FAILURE;
-				}
-			}
-			*(*dbuf + ik) = fi;
-			ik ++;
-		}  
-	}
-
-	fclose(fp);
-	return EXIT_SUCCESS;
-	
-}
 
