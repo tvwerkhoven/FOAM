@@ -750,6 +750,12 @@ int parseCmd(char *msg, const int len, client_t *client) {
 		bufferevent_write(client->buf_ev,"200 OK EXIT\n", sizeof("200 OK EXIT\n"));
 		sockOnErr(client->buf_ev, EVBUFFER_EOF, client);
 	}
+	else if (strcmp(tmp,"shutdown") == 0) {
+		bufferevent_write(client->buf_ev,"200 OK SHUTDOWN\n", sizeof("200 OK SHUTDOWN\n"));
+		sockOnErr(client->buf_ev, EVBUFFER_EOF, client);
+		stopFOAM();
+	}
+
 	else if (strcmp(tmp,"mode") == 0) {
 		if (popword(&msg, tmp) > 0) {
 			if (strcmp(tmp,"closed") == 0) {
@@ -806,6 +812,7 @@ help [command]:         help (on a certain command, if available).\n\
 mode <open|closed>:     close or open the loop.\n\
 set <var> <value:       set a certain setting.\n\
 exit or quit:           disconnect from daemon.\n\
+shutdown:               shutdown the FOAM progra.\n\
 calibrate [mode]:       calibrate a component.\n";
 
 		char code[] = "200 OK HELP\n";

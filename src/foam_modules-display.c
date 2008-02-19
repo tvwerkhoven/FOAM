@@ -39,7 +39,7 @@ void drawLine(int x0, int y0, int x1, int y1, SDL_Surface *screen) {
 
 	DrawPixel(screen, x0, y0, 255, 255, 255);
 	for(i=0; i<step; i++) {
-		x0 = round(x0+dx); // round because integer casting would floor, resulting in an ugly line (?)
+		x0 = round(x0+dx); // TODO: round because integer casting would floor, resulting in an ugly line (?)
 		y0 = round(y0+dy);
 		DrawPixel(screen, x0, y0, 255, 255, 255); // draw directly to the screen in white
 	}
@@ -51,8 +51,7 @@ int displayImg(float *img, int res[2], SDL_Surface *screen) {
 	float max=img[0];
 	float min=img[0];
 	
-	
-	// we need this loop to check the maximum and minimum intensity. Do we need that? can't SDL do that?	
+	// we need this loop to check the maximum and minimum intensity. TODO: Do we need that? can't SDL do that?	
 	for (x=0; x < res[0]*res[1]; x++) {
 		if (img[x] > max)
 			max = img[x];
@@ -62,15 +61,74 @@ int displayImg(float *img, int res[2], SDL_Surface *screen) {
 	
 	logDebug("Displaying image, min: %f, max: %f.", min, max);
 	Slock(screen);
-	for (x=0; x<res[0]; x++) {
-		for (y=0; y<res[1]; y++) {
-			i = (int) ((img[y*res[0] + x]-min)/(max-min)*255);
-			DrawPixel(screen, x, y, \
-				i, \
-				i, \
-				i);
-		}
+							
+	Uint32 color;
+	// trust me, i'm not proud of this code either ;) TODO
+	switch (screen->format->BytesPerPixel) {
+		case 1: { // Assuming 8-bpp
+				Uint8 *bufp;
+
+				for (x=0; x<res[0]; x++) {
+					for (y=0; y<res[1]; y++) {
+						i = (int) ((img[y*res[0] + x]-min)/(max-min)*255);
+						color = SDL_MapRGB(screen->format, i, i, i);
+						bufp = (Uint8 *)screen->pixels + y*screen->pitch + x;
+						*bufp = color;
+					}
+				}
+			}
+			break;
+		case 2: {// Probably 15-bpp or 16-bpp
+				Uint16 *bufp;
+
+				for (x=0; x<res[0]; x++) {
+					for (y=0; y<res[1]; y++) {
+						i = (int) ((img[y*res[0] + x]-min)/(max-min)*255);
+						color = SDL_MapRGB(screen->format, i, i, i);
+						bufp = (Uint16 *)screen->pixels + y*screen->pitch/2 + x;
+						*bufp = color;
+					}
+				}
+			}
+			break;
+		case 3: { // Slow 24-bpp mode, usually not used
+				Uint8 *bufp;
+				
+				for (x=0; x<res[0]; x++) {
+					for (y=0; y<res[1]; y++) {
+						i = (int) ((img[y*res[0] + x]-min)/(max-min)*255);
+						color = SDL_MapRGB(screen->format, i, i, i);
+						bufp = (Uint8 *)screen->pixels + y*screen->pitch + x * 3;
+						if(SDL_BYTEORDER == SDL_LIL_ENDIAN) {
+							bufp[0] = color;
+							bufp[1] = color >> 8;
+							bufp[2] = color >> 16;
+						} else {
+							bufp[2] = color;
+							bufp[1] = color >> 8;
+							bufp[0] = color >> 16;
+						}
+					}
+				}
+			}
+			break;
+		case 4: { // Probably 32-bpp
+				Uint32 *bufp;
+
+				// draw the image itself
+				for (x=0; x<res[0]; x++) {
+					for (y=0; y<res[1]; y++) {
+						i = (int) ((img[y*res[0] + x]-min)/(max-min)*255);
+						color = SDL_MapRGB(screen->format, i, i, i);
+						bufp = (Uint32 *)screen->pixels + y*screen->pitch/4 + x;
+						*bufp = color;
+					}
+				}
+			}
+			break;
 	}
+
+	
 	Sulock(screen);
 	SDL_Flip(screen);
 	
