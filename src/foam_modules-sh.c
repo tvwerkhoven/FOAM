@@ -39,6 +39,7 @@ int modSelSubapts(wfs_t *wfsinfo, float samini, int samxr) {
 	float dist, rmin;					// minimum distance
 	int csa=0;							// estimate for best subapt
 	int (*subc)[2] = wfsinfo->subc;		// lower left coordinates of the tracker windows
+	int (*apcoo)[2] = wfsinfo->gridc;	// lower left coordinates of the tracker windows
 
 	float *image = wfsinfo->image;		// source image from sensor
 	int *res = wfsinfo->res;			// image resolution
@@ -48,7 +49,7 @@ int modSelSubapts(wfs_t *wfsinfo, float samini, int samxr) {
 	// we store our subaperture map in here when deciding which subapts to use
 	int apmap[cells[0]][cells[1]];		// aperture map
 	int apmap2[cells[0]][cells[1]];		// aperture map 2
-	int apcoo[cells[0] * cells[1]][2];  // subaperture coordinates in apmap
+//	int apcoo[cells[0] * cells[1]][2];  // subaperture coordinates in apmap
 	
 	logInfo("Selecting subapertures.");
 	for (isy=0; isy<cells[1]; isy++) { // loops over all potential subapertures
@@ -74,8 +75,8 @@ int modSelSubapts(wfs_t *wfsinfo, float samini, int samxr) {
 				// we add 0.5 to make sure the integer division is 'fair' (e.g. simulate round(), but faster)
 				subc[sn][0] = isx*shsize[0]+shsize[0]/4 + (int) (cs[0]/csum+0.5) - shsize[0]/2;	// subapt coordinates
 				subc[sn][1] = isy*shsize[1]+shsize[1]/4 + (int) (cs[1]/csum+0.5) - shsize[1]/2;	// TODO: sort this out
-							// ^^ coordinate in big image,  ^^ CoG of one subapt, 							
-																				// why /4? (partial subapt?)
+							// ^^ coordinate in big image,  ^^ CoG of one subapt, /4 because that's half a trakcer windows
+
 				cx += isx*shsize[0];
 				cy += isy*shsize[1];
 				apmap[isx][isy] = 1; // set aperture map
@@ -152,8 +153,10 @@ int modSelSubapts(wfs_t *wfsinfo, float samini, int samxr) {
 			if (sqrt((subc[sn][0]-cx)*(subc[sn][0]-cx) + \
 				(subc[sn][1]-cy)*(subc[sn][1]-cy)) > samxr) { // TODO: why remove subapts? might be bad subapts
 				for (i=sn; i<(nsubap-1); i++) {
-					subc[i][0] = subc[i+1][0];
+					subc[i][0] = subc[i+1][0]; // remove erroneous subapts
 					subc[i][1] = subc[i+1][1];
+					apcoo[i][0] = apcoo[i+1][0]; // and remove erroneous grid coordinates
+					apcoo[i][1] = apcoo[i+1][1];
 				}
 				nsubap--;
 			} else {
@@ -210,7 +213,17 @@ int modSelSubapts(wfs_t *wfsinfo, float samini, int samxr) {
 	for (sn=nsubap; sn<cells[0]*cells[1]; sn++) {
 		subc[sn][0] = 0; 
 		subc[sn][1] = 0;
+		apcoo[sn][0] = 0; 
+		apcoo[sn][1] = 0;
 	}
+	
+	logDebug("final gridcs:");
+	for (sn=0; sn<nsubap; sn++) {
+		apcoo[sn][1] *= shsize[1];
+		apcoo[sn][0] *= shsize[0];
+		logDirect("%d (%d,%d) ", sn, wfsinfo->gridc[sn][0], wfsinfo->gridc[sn][1]);
+	}
+	logDirect("\n");
 	
 /*	int cfd;
 	char *cfn;
@@ -643,10 +656,14 @@ int modParseSH(wfs_t *wfsinfo) {
 		// the tracker window.
 		// Finally we subtract half the size of the tracker window  ( = subaperture grid/4) to fix everything.
 
-		wfsinfo->disp[i][0] = (wfsinfo->subc[i][0] % wfsinfo->shsize[0]);
-		wfsinfo->disp[i][0] += coords[i][0];
+//		logDirect("%d (%d,%d) ", i, wfsinfo->gridc[i][0], wfsinfo->gridc[i][1]);
+		wfsinfo->disp[i][0] = (wfsinfo->subc[i][0] - wfsinfo->gridc[i][0]);
+		wfsinfo->disp[i][0] -= coords[i][0];
 		wfsinfo->disp[i][0] -= wfsinfo->shsize[0]/4;
-		wfsinfo->disp[i][1] = (wfsinfo->subc[i][1] % wfsinfo->shsize[1]) + coords[i][1] - wfsinfo->shsize[1]/4;
+
+		wfsinfo->disp[i][1] = (wfsinfo->subc[i][1] - wfsinfo->gridc[i][1]);
+		wfsinfo->disp[i][1] -= coords[i][1];
+		wfsinfo->disp[i][1] -= wfsinfo->shsize[1]/4;
 
 		logDirect("(%f, %f) ", wfsinfo->disp[i][0], wfsinfo->disp[i][1]);
 				
@@ -654,7 +671,7 @@ int modParseSH(wfs_t *wfsinfo) {
 		if (wfsinfo->disp[i][0] > wfsinfo->shsize[0]/2 || wfsinfo->disp[i][0] < -wfsinfo->shsize[0]/2
 			|| wfsinfo->disp[i][1] > wfsinfo->shsize[1]/2 || wfsinfo->disp[i][1] < -wfsinfo->shsize[0]/2) {
 		
-			logDebug("Runaway subapt detected! (%f,%f)", wfsinfo->disp[i][0], wfsinfo->disp[i][1]);
+//			logDebug("Runaway subapt detected! (%f,%f)", wfsinfo->disp[i][0], wfsinfo->disp[i][1]);
 			// xc = (wfsinfo->subc[i][0] / wfsinfo->shsize[0]) * wfsinfo->shsize[0];
 			// yc = (wfsinfo->subc[i][1] / wfsinfo->shsize[1]) * wfsinfo->shsize[1];
 			// modCogFind(wfsinfo, xc, yc, wfsinfo->shsize[0], wfsinfo->shsize[1], 0.0, &sum, cog);
@@ -676,7 +693,7 @@ int modParseSH(wfs_t *wfsinfo) {
 		wfsinfo->subc[i][1] -= (int) (coords[i][1]+0.5);//-wfsinfo->res[1]/wfsinfo->cells[1]/4;
 
 	}
-//	logDirect("\n");
+	logDirect("\n");
 	
 	return EXIT_SUCCESS;
 }

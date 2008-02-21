@@ -39,10 +39,14 @@ void drawLine(int x0, int y0, int x1, int y1, SDL_Surface *screen) {
 
 	DrawPixel(screen, x0, y0, 255, 255, 255);
 	for(i=0; i<step; i++) {
-		x0 = round(x0+dx); // TODO: round because integer casting would floor, resulting in an ugly line (?)
-		y0 = round(y0+dy);
-		DrawPixel(screen, x0, y0, 255, 255, 255); // draw directly to the screen in white
+		x1 = x0+i*dx; // since x1 is an integer, we can't just increment this, steps of 0.7 pixels wouldn't work...
+		y1 = y0+i*dy;
+		DrawPixel(screen, x1, y1, 255, 255, 255); // draw directly to the screen in white
 	}
+}
+
+void drawDeltaLine(int x0, int y0, int dx, int dy, SDL_Surface *screen) {
+	drawLine(x0, y0, x0+dx, y0+dy, screen);
 }
 
 int displayImg(float *img, int res[2], SDL_Surface *screen) {
@@ -60,7 +64,7 @@ int displayImg(float *img, int res[2], SDL_Surface *screen) {
 	}
 	
 	logDebug("Displaying image, min: %f, max: %f.", min, max);
-	Slock(screen);
+
 							
 	Uint32 color;
 	// trust me, i'm not proud of this code either ;) TODO
@@ -127,10 +131,6 @@ int displayImg(float *img, int res[2], SDL_Surface *screen) {
 			}
 			break;
 	}
-
-	
-	Sulock(screen);
-	SDL_Flip(screen);
 	
 	return EXIT_SUCCESS;
 }
@@ -200,7 +200,6 @@ int modDrawSubapts(wfs_t *wfsinfo, SDL_Surface *screen) {
 	int subsize[2] = {wfsinfo->shsize[0]/2, wfsinfo->shsize[1]/2};
 		
 	int sn=0;
-	Slock(screen);
 		
 	// we draw the reference subaperture rectangle bigger than the rest, with lower left coord:
 	int refcoord[] = {subc[0][0]-shsize[0]/4, subc[0][1]-shsize[1]/4};
@@ -213,28 +212,43 @@ int modDrawSubapts(wfs_t *wfsinfo, SDL_Surface *screen) {
 		drawRect(subc[sn], subsize, screen);
 	}
 	
-	Sulock(screen);
-	SDL_Flip(screen);	
 	return EXIT_SUCCESS;
 }
-// 
-// int modDrawGrid(wfs_t *wfsinfo, SDL_Surface *screen) {
-// 	if (wfsinfo->nsubap == 0)
-// 		return EXIT_SUCCESS;			// if there's nothing to draw, don't draw (shouldn't happen)
-// 		
-// 	int *shsize = wfsinfo->shsize; 		// size of the grid
-// 	int *cells = wfsinfo->cells; 		// number of cells
-// 		
-// 	Slock(screen);
-// 			
-// 	for (xc=1; xc < cells[0]; xc++)
-// 		drawLine(xc*shsize[0], 0, xc*shsize[0], cells[1]*shsize[1], screen);
-// 	
-// 	for (yc=1; yc< cells[1]; yc++) {
-// 		drawLine(0, yc*shsize[1], cells[0]*shsize[0], yc*shsize[1], screen);
-// 			
-// 	Sulock(screen);
-// 	SDL_Flip(screen);	
-// 	return EXIT_SUCCESS;
-// }
+
+int modDrawVecs(wfs_t *wfsinfo, SDL_Surface *screen) {
+	if (wfsinfo->nsubap == 0)
+		return EXIT_SUCCESS;	// if there's nothing to draw, don't draw (shouldn't happen)
+		
+	int (*subc)[2] = wfsinfo->subc;		// lower-left coordinates of the subapts
+	int (*gridc)[2] = wfsinfo->gridc;	// lower-left coordinates of the grid in which the subapt resides
+	int *shsize = wfsinfo->shsize;
+	int sn=0;
+	
+
+
+	for (sn=0; sn<wfsinfo->nsubap; sn++)
+		drawDeltaLine( gridc[sn][0] + (shsize[0]/2), gridc[sn][1] + (shsize[1]/2), \
+			(int) wfsinfo->disp[sn][0], (int) wfsinfo->disp[sn][1], \
+			screen);
+	
+	return EXIT_SUCCESS;
+}
+
+int modDrawGrid(wfs_t *wfsinfo, SDL_Surface *screen) {
+	if (wfsinfo->nsubap == 0)
+		return EXIT_SUCCESS;			// if there's nothing to draw, don't draw (shouldn't happen)
+		
+	int *shsize = wfsinfo->shsize; 		// size of the grid
+	int *cells = wfsinfo->cells; 		// number of cells
+	int xc, yc;
+		
+			
+	for (xc=1; xc < cells[0]; xc++)
+		drawLine(xc*shsize[0], 0, xc*shsize[0], cells[1]*shsize[1], screen);
+	
+	for (yc=1; yc< cells[1]; yc++)
+		drawLine(0, yc*shsize[1], cells[0]*shsize[0], yc*shsize[1], screen);
+			
+	return EXIT_SUCCESS;
+}
 

@@ -10,8 +10,8 @@ This file contains things necessary to run the Control Software that are not rel
 #include "foam_cs_library.h"
 
 control_t ptc = { //!< Global struct to hold system characteristics and other data. Initialize with complete but minimal configuration
-	.mode = AO_MODE_LISTEN,
-	.calmode = CAL_INFL, 	// or CAL_PINHOLE
+	.mode = AO_MODE_CAL,
+	.calmode = CAL_PINHOLE, 	// or CAL_PINHOLE
 	.wfs_count = 0,
 	.wfc_count = 0,
 	.frames = 0,

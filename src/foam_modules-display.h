@@ -41,8 +41,29 @@ void drawLine(int x0, int y0, int x1, int y1, SDL_Surface*screen);
 */
 int modDrawSubapts(wfs_t *wfsinfo, SDL_Surface *screen);
 
+/*!
+@brief This draws vectors from the center of the grid to the detected center of gravity
 
+@param [in] *wfsinfo wfs_t struct with info on the current wfs
+@param [in] *screen SDL_Surface to draw on
+*/
+int modDrawVecs(wfs_t *wfsinfo, SDL_Surface *screen);
 
+/*!
+@brief This draws the subaperture grid
+
+@param [in] *wfsinfo wfs_t struct with info on the current wfs
+@param [in] *screen SDL_Surface to draw on
+*/
+int modDrawGrid(wfs_t *wfsinfo, SDL_Surface *screen);
+
+/*!
+@brief This displays an image img with resolution res
+
+@param [in] *img pointer to the image
+@param [in] res resolution of the image
+@param [in] *screen SDL_Surface to draw on
+*/
 int displayImg(float *img, int res[2], SDL_Surface *screen);
 void DrawPixel(SDL_Surface *screen, int x, int y, Uint8 R, Uint8 G, Uint8 B);
 void Sulock(SDL_Surface *screen);

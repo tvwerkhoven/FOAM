@@ -31,10 +31,10 @@ Last: 2008-01-21
 #define COMMANDLEN 1024				// maximum length for commands we read over the socket
 
 #define FOAM_NAME "FOAM CS"			// some info about FOAM
-#define FOAM_VERSION "v0.2 Dec"
+#define FOAM_VERSION "v0.3.0-91 Feb"
 #define FOAM_AUTHOR "Tim van Werkhoven"
 
-#define MAX_CLIENTS 16				// maximum number of clients that can connect
+#define MAX_CLIENTS 1				// maximum number of clients that can connect
  									// (allows for easy implementation of connection tracking)
 
 // GLOBAL VARIABLES //
@@ -99,6 +99,7 @@ typedef struct { // wfs_t
 	int shsize[2];		//!< cells/res, resolution per cell (redundant, but easy)
 	
 	int (*subc)[2];		//!< this will hold the coordinates of each subapt
+	int (*gridc)[2];	//!< this will hold the grid origina for a certain subaperture
 	float (*refc)[2];	//!< reference displacements
 	float (*disp)[2];	//!< measured displacements (compare with refence for actual shift)
 	char pinhole[FILENAMELEN];		//!< filename to store the pinhole calibration (in *(refc))

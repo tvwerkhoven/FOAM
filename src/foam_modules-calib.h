@@ -18,13 +18,14 @@
 /**************/
 
 #include "foam_cs_library.h"
+#include <sys/stat.h>
 
-//#define NS 256 // maximum number of subapts (TODO: do we need this?)
 
 // PROTOTYPES //
 /**************/
 
-int modCalWFC(control_t *ptc);
+int modCalWFC(control_t *ptc, int wfs);
 
 int modCalPinhole(control_t *ptc, int wfs);
+
 #endif

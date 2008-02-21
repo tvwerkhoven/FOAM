@@ -70,40 +70,42 @@ int modSimTT(float *ctrl, float *image, int res[2]) {
 }
 
 int modSimDM(char *boundarymask, char *actuatorpat, int nact, float *ctrl, float *image, int niter) {
-	int	 i, j, status;
-	long	 ii, i_1j, i1j, ij_1, ij1;
-	int    voltage[nact]; // voltage settings for electrodes (in digital units)
-	double *resp=NULL;
+	int i, j, status;
+	long ii, i_1j, i1j, ij_1, ij1;
+	int voltage[nact]; // voltage settings for electrodes (in digital units)
+	// double *resp=NULL;
+	double *resp;
 	double pi, rho, omega = 1.0, sum, sdif, update;
-	long   ik;
+	long ik;
 	
-	double *boundary=NULL, *act=NULL;
+	double *boundary, *act;
 	//double *boundary, *act;
 	int nx, ny, ngray1, ngray2;
 	
-	float amp=0.3;
-
+	float amp=0.1;
 	pi = 4.0*atan(1);
+	
+	logDebug("boundary %s, act %s", boundarymask, actuatorpat);
 
 	// read boundary mask file 
-	if (boundary == NULL) {
-		if ((status = modReadPGM(boundarymask, &boundary, &nx, &ny, &ngray1)) != EXIT_SUCCESS) {
-			logErr("Cannot read boundary mask");
-			return EXIT_FAILURE;
-		}	
+	if (modReadPGM(boundarymask, &boundary, &nx, &ny, &ngray1) != EXIT_SUCCESS) {
+		logErr("Cannot read boundary mask");
+		return EXIT_FAILURE;
 	}
 	// for(ik = 0; ik < nact; ik++)
 	// 	logDirect("%f ", ctrl[ik]);
 	// logDebug("\n");	
 		
 	// Input linear and c=[-1,1], 'output' must be v=[0,255] and linear in v^2
-//	logDebug("Simulating DM with voltages:");
-	for(ik = 0; ik < nact; ik++) {
+	logDebug("Simulating DM with voltages:");
+	for (ik = 0; ik < nact; ik++) {
 		// we do Sqrt(255^2 (i+1) * 0.5) here to convert from [-1,1] (linear) to [0,255] (quadratic)
 		voltage[ik] = (int) round( sqrt(65025*(ctrl[ik]+1)*0.5 ) ); //65025 = 255^2
-//		logDirect("%d ", voltage[ik]); // TODO: we don't want printf here
+
+		// TODO: this line is fishy, uncommenthing it results in crap 
+		 logDirect("%d ", voltage[ik]); // TODO: we don't want printf here
 	}
-//	logDirect("\n");
+	logDirect("\n");
 
 	for (ik = 0; ik < ny*nx; ik++) {
 		if (*(boundary + ik) > 0) {
@@ -114,11 +116,9 @@ int modSimDM(char *boundarymask, char *actuatorpat, int nact, float *ctrl, float
 	}
 
 // read actuator pattern file
-	if (act == NULL) {
-		if ((status = modReadPGM(actuatorpat,&act,&nx,&ny,&ngray2)) != EXIT_SUCCESS) {
-			logErr("Cannot read actuator pattern file");
-			return EXIT_FAILURE;
-		}
+	if (modReadPGM(actuatorpat,&act,&nx,&ny,&ngray2) != EXIT_SUCCESS) {
+		logErr("Cannot read actuator pattern file");
+		return EXIT_FAILURE;
 	}
 
 // set actuator voltages on electrodes
@@ -150,17 +150,13 @@ int modSimDM(char *boundarymask, char *actuatorpat, int nact, float *ctrl, float
 // arbitrary nature of the latter we use a relaxation algorithm.
 // This is a Simultaneous Over-Relaxation (SOR) algorithm described
 // in Press et al., "Numerical Recipes", Section 17.
-
-
 	
-	if (resp == NULL) {
 		logDebug("Allocating memory for resp: %dx%d.", nx, ny);
 		resp = (double *) calloc(nx*ny, sizeof(double));
 		if (resp == NULL) {
 			logErr("Allocation error, exiting");
 			return EXIT_FAILURE;
 		}
-	}
 
 	/*  fprintf(stderr,"Iterating:\n"); */
 

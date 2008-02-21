@@ -6,15 +6,18 @@
 	@brief This file is used to calibrate actuators like the DM and TT mirrors used in AO systems.
 	Works on any combination of WFC and WFS, and uses generic controls in the [-1,1] range
 	
+	This only works on SH WFs\n
+	
 	TODO: document further
 	
 */
+
+#include "foam_modules-calib.h"
 
 #define DM_MAXVOLT 1	// these are normalized and converted to the right values by drvSetActuator()
 #define DM_MIDVOLT 0
 #define DM_MINVOLT -1
 #define FOAM_MODCALIB_DMIF "../config/ao_dmif"
-#define FOAM_MODCALIB_PINHOLE "../config/ao_pinhole"
 
 // TODO: document
 int modCalPinhole(control_t *ptc, int wfs) {
@@ -64,18 +67,36 @@ int modCalPinhole(control_t *ptc, int wfs) {
 }
 
 // TODO: document
-// TODO: might need to set EVERY wfc to zero, instead of just the one
-//       being measured
-int modCalWFC(control_t *ptc) {
+int modCalWFC(control_t *ptc, int wfs) {
 	int j, i, k, skip;
-	int nact=0;			// total nr of acts
-	int nsubap=0;		// total nr of subapts
-	int wfc, wfs; 		// counters to loop over the WFSs and WFCs
+	int nact=0;			// total nr of acts for all WFCs
+	int nsubap=0;		// nr of subapts for specific WFS
+	int wfc; 			// counters to loop over the WFCs
 	float origvolt;
 	int measurecount=1;
 	int skipframes=1;
 	FILE *fp;
 	char *filename;
+	int fildes;
+	struct stat *buf;
+	
+	// check if the file is OK
+	if ((fildes = open(ptc->wfs[wfs].pinhole, O_RDONLY)) == -1) {
+		logErr("Pinhole calibration file %s not found: %s", ptc->wfs[wfs].pinhole, strerror(errno));
+		return EXIT_FAILURE;
+	}
+	else {
+		if (fstat(fildes, buf) == 0) {
+			if (buf->st_size < 5) {
+				logErr("Pinhole calibration file %s is corrupt (filesize %d).", ptc->wfs[wfs].pinhole, buf->st_size);
+				return EXIT_FAILURE;
+			}
+		}
+		else {
+			logErr("Cannot stat pinhole calibration file %s: %s", ptc->wfs[wfs].pinhole, strerror(errno));
+			return EXIT_FAILURE;
+		}
+	}
 	
 	logDebug("Starting WFC calibration");
 	
@@ -91,74 +112,70 @@ int modCalWFC(control_t *ptc) {
 	}
 	
 	// get total nr of subapertures in the complete system
-	for (i=0; i < ptc->wfs_count; i++)
-		nsubap += ptc->wfs[i].nsubap;
+	nsubap = ptc->wfs[wfs].nsubap;
 
 	// this stores some vectors :P
 	float q0x[nsubap], q0y[nsubap];
 			
-	if (asprintf(&filename, "%s_nact%d_nsens%d.txt", FOAM_MODCALIB_DMIF, nact, nsubap) < 0)
+	if (asprintf(&filename, "%s_nact%d_wfs%d.txt", FOAM_MODCALIB_DMIF, nact, wfs) < 0)
 		logErr("Failed to construct filename.");
 			
-	logInfo("Calibrating WFC's using %d actuators and %d subapts, storing in %s.", nact, nsubap, filename);
+	logInfo("Calibrating WFC's using %d actuators and wfs %d with %d subapts, storing in %s.", nact, wfs, nsubap, filename);
 	fp = fopen(filename,"w+");
 	fprintf(fp,"%d\n%d\n", nact, nsubap*2); // we have nact actuators (variables) and nsubap*2 measurements
 	
 	for (wfc=0; wfc < ptc->wfc_count; wfc++) { // loop over all wave front correctors 
-		for (wfs=0; wfs < ptc->wfs_count; wfs++) { // loop over all wave front sensors
-			nact = ptc->wfc[wfc].nact;
-			nsubap = ptc->wfs[wfs].nsubap;
-			for (j=0; j<nact; j++) { /* loop over all actuators  and all subapts for (wfc,wfs) */
-		
-				for (i=0; i<nsubap; i++) { // set averaging buffer to zero
-					q0x[i] = 0.0;
-					q0y[i] = 0.0;
-				}
+		nact = ptc->wfc[wfc].nact;
+		for (j=0; j<nact; j++) { /* loop over all actuators  and all subapts for (wfc,wfs) */
 	
-				logInfo("Act %d/%d (WFC %d/%d)", j+1, ptc->wfc[wfc].nact, wfc+1, ptc->wfc_count);
+			for (i=0; i<nsubap; i++) { // set averaging buffer to zero
+				q0x[i] = 0.0;
+				q0y[i] = 0.0;
+			}
+
+			logInfo("Act %d/%d (WFC %d/%d)", j+1, ptc->wfc[wfc].nact, wfc+1, ptc->wfc_count);
+	
+			origvolt = ptc->wfc[wfc].ctrl[j];
+	
+			for (k=0; k < measurecount; k++) {
+
+				// we set the voltage and then set the actuators manually
+				ptc->wfc[wfc].ctrl[j] = DM_MAXVOLT;
+				
+				drvSetActuator(ptc, wfc);
+				// run the open loop *once*, which will approx do the following:
+				// read sensor, apply some SH WF sensing, set actuators, 
+				// TODO: open or closed loop? --> open?
 		
-				origvolt = ptc->wfc[wfc].ctrl[j];
+				for (skip=0; skip<skipframes+1; skip++) // skip some frames here
+					modOpenLoop(ptc);
 		
-				for (k=0; k < measurecount; k++) {
-
-					// we set the voltage and then set the actuators manually
-					ptc->wfc[wfc].ctrl[j] = DM_MAXVOLT;
-					
-					drvSetActuator(ptc, wfc);
-					// run the open loop *once*, which will approx do the following:
-					// read sensor, apply some SH WF sensing, set actuators, 
-					// TODO: open or closed loop? --> open?
-			
-					for (skip=0; skip<skipframes+1; skip++) // skip some frames here
-						modOpenLoop(ptc);
-			
-					// take the shifts and store those (wrt to reference shifts)
-		    		for (i=0;i<nsubap;i++) { 	
-						q0x[i] += (ptc->wfs[wfs].disp[i][0] - ptc->wfs[wfs].refc[i][0]) / (float) measurecount;
-						q0y[i] += (ptc->wfs[wfs].disp[i][1] - ptc->wfs[wfs].refc[i][1]) / (float) measurecount;
-					}
-			
-					ptc->wfc[wfc].ctrl[j] = DM_MINVOLT;
-					drvSetActuator(ptc, wfc);			
-					for (skip=0; skip<skipframes; skip++) // skip some frames here
-						modOpenLoop(ptc);
-			
-					// take the shifts and subtract those store those (wrt to reference shifts)
-		    		for (i=0;i<nsubap;i++) { 
-						q0x[i] -= (ptc->wfs[wfs].disp[i][0] - ptc->wfs[wfs].refc[i][0]) / (float) measurecount;
-						q0y[i] -= (ptc->wfs[wfs].disp[i][1] - ptc->wfs[wfs].refc[i][1]) / (float) measurecount;
-					}
-
-				} // end measurecount loop
-
-				// store the measurements for actuator j (for all subapts) 
-				for (i=0; i<nsubap; i++) { // set averaging buffer to zero
-					fprintf(fp,"%.12g\n%.12g\n", (double) q0x[i], (double) q0y[i]);
+				// take the shifts and store those (wrt to reference shifts)
+	    		for (i=0;i<nsubap;i++) { 	
+					q0x[i] += (ptc->wfs[wfs].disp[i][0] - ptc->wfs[wfs].refc[i][0]) / (float) measurecount;
+					q0y[i] += (ptc->wfs[wfs].disp[i][1] - ptc->wfs[wfs].refc[i][1]) / (float) measurecount;
 				}
 		
-				ptc->wfc[wfc].ctrl[j] = origvolt;
-			} // end loop over actuators
-		} // end loop over wfss
+				ptc->wfc[wfc].ctrl[j] = DM_MINVOLT;
+				drvSetActuator(ptc, wfc);			
+				for (skip=0; skip<skipframes; skip++) // skip some frames here
+					modOpenLoop(ptc);
+		
+				// take the shifts and subtract those store those (wrt to reference shifts)
+	    		for (i=0;i<nsubap;i++) { 
+					q0x[i] -= (ptc->wfs[wfs].disp[i][0] - ptc->wfs[wfs].refc[i][0]) / (float) measurecount;
+					q0y[i] -= (ptc->wfs[wfs].disp[i][1] - ptc->wfs[wfs].refc[i][1]) / (float) measurecount;
+				}
+
+			} // end measurecount loop
+
+			// store the measurements for actuator j (for all subapts) 
+			for (i=0; i<nsubap; i++) { // set averaging buffer to zero
+				fprintf(fp,"%.12g\n%.12g\n", (double) q0x[i], (double) q0y[i]);
+			}
+	
+			ptc->wfc[wfc].ctrl[j] = origvolt;
+		} // end loop over actuators
 	} // end loop over wfcs
 	fclose(fp);
 	logInfo("WFC %d (%s) influence function saved for in file %s", wfc, ptc->wfc[wfc].name, filename);

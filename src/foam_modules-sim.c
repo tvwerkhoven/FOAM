@@ -50,17 +50,19 @@ float nulval = 0.0;
 int anynul = 0;
 
 int modInitModule(control_t *ptc) {
-	// Init SDL
-	if (SDL_Init(SDL_INIT_VIDEO) < 0)
-		logErr("SDL init error");
+
+    /* Initialize defaults, Video and Audio */
+    if((SDL_Init(SDL_INIT_VIDEO) == -1)) { 
+        logErr("Could not initialize SDL: %s.\n", SDL_GetError());
+		return EXIT_FAILURE;
+    }
 	atexit(SDL_Quit);
 	
-	SDL_WM_SetCaption("WFS output","WFS output");
-
+	SDL_WM_SetCaption("WFS output", "WFS output");
 
 	screen = SDL_SetVideoMode(ptc->wfs[0].res[0], ptc->wfs[0].res[1], 0, SDL_HWSURFACE|SDL_DOUBLEBUF);
 	if (screen == NULL) {
-		logErr("Unable to set video, SDL error was: %s", SDL_GetError());
+		logErr("Unable to set video: %s", SDL_GetError());
 		return EXIT_FAILURE;
 	}
 	return EXIT_SUCCESS;
@@ -86,15 +88,20 @@ int modOpenInit(control_t *ptc) {
 int modOpenLoop(control_t *ptc) {
 	
 	if (drvReadSensor(ptc) != EXIT_SUCCESS)			// read the sensor output into ptc.image
-		return EXIT_SUCCESS;
+		return EXIT_FAILURE;
 	
 	if (modParseSH((&ptc->wfs[0])) != EXIT_SUCCESS)			// process SH sensor output, get displacements
-		return EXIT_SUCCESS;
+		return EXIT_FAILURE;
 	
 //	if (ptc->frames % 20 == 0) {
+		Slock(screen);
 		displayImg(ptc->wfs[0].image, ptc->wfs[0].res, screen);
-//		modDrawGrid(&(ptc->wfs[0]), screen);
+		modDrawGrid(&(ptc->wfs[0]), screen);
 		modDrawSubapts(&(ptc->wfs[0]), screen);
+		modDrawVecs(&(ptc->wfs[0]), screen);
+		Sulock(screen);
+		SDL_Flip(screen);	
+		
 //	}
 	
 	if (SDL_PollEvent(&event))
@@ -158,7 +165,7 @@ int modCalibrate(control_t *ptc) {
 			return modCalPinhole(ptc, 0);
 			break;
 		case CAL_INFL: // influence matrix
-			return modCalWFC(ptc); // arguments: (control_t *ptc)
+			return modCalWFC(ptc, 0); // arguments: (control_t *ptc, int wfs)
 			break;
 		default:
 			logErr("Unsupported calibrate mode encountered.");
@@ -205,9 +212,9 @@ int drvReadSensor() {
 	// sleep(1);
 	
 	// we simulate WFCs before the telescope to make sure they outer region is zero (Which is done by simTel())
-	// logDebug("Now simulating %d WFC(s).", ptc.wfc_count);
-	// for (i=0; i < ptc.wfc_count; i++)
-	// 	simWFC(&ptc, i, ptc.wfc[i].nact, ptc.wfc[i].ctrl, ptc.wfs[0].image); // Simulate every WFC in series
+	logDebug("Now simulating %d WFC(s).", ptc.wfc_count);
+	for (i=0; i < ptc.wfc_count; i++)
+		simWFC(&ptc, i, ptc.wfc[i].nact, ptc.wfc[i].ctrl, ptc.wfs[0].image); // Simulate every WFC in series
 	
 	// displayImg(ptc.wfs[0].image, ptc.wfs[0].res, screen);
 	// sleep(1);
@@ -289,8 +296,10 @@ int simWFC(control_t *ptc, int wfcid, int nact, float *ctrl, float *image) {
 	logDebug("WFC %d (%s) has %d actuators, simulating", wfcid, ptc->wfc[wfcid].name, ptc->wfc[wfcid].nact);
 	if (wfcid == 0)
 		modSimTT(ctrl, image, ptc->wfs[0].res);
-	if (wfcid == 1)
+	if (wfcid == 1) {
+		logDebug("Running modSimDM with %s and %s, nact %d", FOAM_MODSIM_APTMASK, FOAM_MODSIM_ACTPAT, nact);
 		modSimDM(FOAM_MODSIM_APTMASK, FOAM_MODSIM_ACTPAT, nact, ctrl, image, -1); // last arg is for niter. -1 for autoset
+		}
 					
 	return EXIT_SUCCESS;
 }
@@ -620,105 +629,199 @@ int drvFilterWheel(control_t *ptc, fwheel_t mode) {
  *
  *============================================================================
  */
-int modReadPGM(char *fname, double **dbuf, int *t_nx, int *t_ny, int *t_ngray) {
-	char		c_int, first_string[110];
-	unsigned char	b_in;
-	int		i, j, bin_ind, nx, ny, ngray;
-	long		ik;
-	double		fi;
-	FILE		*fp;
+// this routine needs updating/fixing
+int modReadPGM(char *fname, double **dbuf, int *t_nx, int *t_ny, int *t_ngray)
+{
+	FILE *file;
+	int binary, i;
+	char line[256];
+	unsigned char pixel;
+	unsigned char *tmpimg;
 
-	if((fp = fopen(fname,"r"))==NULL){
-	    logErr("Error opening pgm file %s!", fname);
-		return EXIT_FAILURE;
+	file = fopen(fname, "r");
+	if (!file)
+		logErr("modReadPGM, could not read file");
+
+	// get magic 
+	fgets(line, 256, file);
+	if (strncmp(line,"P5", 2)) {
+		if (strncmp(line,"P2", 2)) {
+			logErr("modReadPGM: not a pgm file");
+			*t_nx = *t_ny = 0;
+			return EXIT_FAILURE;
+		}
+		else 
+			binary = 0;
 	}
+	else 
+		binary = 1;
+	
+	// skip comments
+	fgets(line, 256, file);
+	while (line[0] == '#')
+		fgets(line, 256, file);
+	
+	// read width & height
+	sscanf(line,"%d %d", t_nx, t_ny);
+	
+	// skip comments
+	fgets(line, 256, file);
+	while (line[0] == '#')
+		fgets(line, 256, file);
+	
+	// read nr of grays
+	sscanf(line, "%d", t_ngray);
 
-	// Read magic number
-
-	i = 0;
-	while((c_int = getc(fp)) != '\n') {
-	    first_string[i] = c_int;
-	    i++;
-	    if(i > 100) i = 100;
+	logInfo("Ok, I got a pgm file (binary? %d), (%dx%d) and %d grays", binary, *t_nx, *t_ny, *t_ngray);
+	
+	*dbuf = calloc((*t_nx)*(*t_ny), sizeof(double));
+	tmpimg = calloc((*t_nx)*(*t_ny), sizeof(unsigned char));
+	
+	if (*dbuf == NULL) {
+		logErr("Allocating memory in modReadPGM failed");
+		return EXIT_FAILURE;
 	}
 	
-	if((strstr(first_string, "P2")) != NULL ) {
-	  /*	    fprintf(stderr,
-		    "\tPortable ASCII graymap aperture mask detected \n"); */
-	    bin_ind = 0;
-	} else if((strstr(first_string, "P5")) != NULL ){
-	    //logDebug("Portable binary graymap aperture mask detected."); 
-	    bin_ind = 1;
-	} else {
-	    logErr("Unknown magic in pgm file: %s, should be P2 or P5",first_string);
-		return EXIT_FAILURE;
+	// TODO: should seek to end-imagesize here, could be comments in between
+	
+	// TODO: still doesn't work, damnit!
+	// continue here
+	if (binary) {
+		if (fread(tmpimg, sizeof(unsigned char), (*t_nx)*(*t_ny), file) != (*t_nx)*(*t_ny)) {
+			logErr("Reading file failed");
+			return EXIT_FAILURE;
+		}
+		for (i = 0; i < (*t_nx)*(*t_ny); i++){
+			(*dbuf)[i] = (double) tmpimg[i];
+			printf("%d ", (int) tmpimg[i]);
+		}
+	}
+	else {
+		for (i = 0; i < (*t_nx)*(*t_ny); i++) {
+			fscanf(file,"%c", &pixel);
+			(*dbuf)[i] = (double) pixel;
+			printf("%c ", pixel);
+		}
 	}
 	
-/*
- *	Skip comments which start with a "#" and read the picture dimensions
- */
-
-l1:
-	i = 0;
-	while ((c_int = getc(fp)) != '\n') {
-		first_string[i] = c_int;
-		i++;
-		if (i > 100) i = 100;
+	logDebug("middle row:");
+	for (i = 0; i < (*t_nx); i++) {
+		printf("%d ", (int) *dbuf[(*t_ny)/2 + i]);
 	}
-	if (first_string[0] == '#')
-		goto l1;
-	else
-		sscanf(first_string, "%d %d", &nx, &ny);
-		
-		/*  	fprintf(stderr, "\tX and Y dimensions: %d %d\n", nx, ny); */
-	*t_nx = nx;
-	*t_ny = ny;
-
-/*
-	*	Read the number of grayscales 
-*/
-
-	i = 0;
-	while((c_int=getc(fp)) != '\n') {
-		first_string[i] = c_int;
-		i++;
-		if(i > 100) i = 100;
-	}
-	sscanf(first_string, "%d", &ngray);
-		/*	fprintf(stderr, "\tNumber of gray levels:\t%d\n", ngray); */
-	*t_ngray = ngray;
-
-/*
-	*	Read in graylevel data
-*/
-
-	*dbuf = (double *) calloc(nx*ny, sizeof(double));
-	if(dbuf == NULL){
-		logErr("Buffer allocation error!");
-		return EXIT_FAILURE;
-	}
-
-	ik = 0;
-	for (i = 1; i <= nx; i += 1){
-		for (j = 1; j <= ny; j += 1){
-			if(bin_ind) {
-				if(fread (&b_in, sizeof(unsigned char), 1, fp) != 1){
-					logErr("Error reading portable bitmap!");
-					return EXIT_FAILURE;
-				}
-				fi = (double) b_in;
-			} else {
-				if ((fscanf(fp,"%le",&fi)) == EOF){
-					logErr("End of input file reached!");
-					return EXIT_FAILURE;
-				}
-			}
-			*(*dbuf + ik) = fi;
-			ik ++;
-		}  
-	}
-
-	fclose(fp);
+	exit(0);
+	
+	fclose(file);
 	return EXIT_SUCCESS;
-	
 }
+
+// int modReadPGM(char *fname, double **dbuf, int *t_nx, int *t_ny, int *t_ngray) {
+// 	char		c_int, first_string[110];
+// 	unsigned char	b_in;
+// 	int		i, j, bin_ind, nx=0, ny=0, ngray;
+// 	long		ik;
+// 	double		fi;
+// 	FILE		*fp;
+// 
+// 	logDebug("modReadPGM reading %s", fname);
+// 	if ((fp = fopen(fname,"r")) == NULL) {
+// 	    logErr("Error opening pgm file %s!", fname);
+// 		return EXIT_FAILURE;
+// 	}
+// 
+// 	// Read magic number
+// 
+// 	i = 0;
+// 	while((c_int = getc(fp)) != '\n') {
+// 	    first_string[i] = c_int;
+// 	    i++;
+// 	    if(i > 100) i = 100;
+// 	}
+// 	first_string[i] = 0;
+// 	// TvW null char \0
+// 	
+// 	// strcmp, moet op positie 0 staan
+// 	if((strstr(first_string, "P2")) != NULL ) {
+// 	  /*	    fprintf(stderr,
+// 		    "\tPortable ASCII graymap aperture mask detected \n"); */
+// 	    bin_ind = 0;
+// 	} else if((strstr(first_string, "P5")) != NULL ){
+// 	    //logDebug("Portable binary graymap aperture mask detected."); 
+// 	    bin_ind = 1;
+// 	} else {
+// 	    logErr("Unknown magic in pgm file: %s, should be P2 or P5",first_string);
+// 		return EXIT_FAILURE;
+// 	}
+// 	
+// /*
+//  *	Skip comments which start with a "#" and read the picture dimensions
+//  */
+// 
+// l1:
+// 	i = 0;
+// 	while ((c_int = getc(fp)) != '\n') {
+// 		first_string[i] = c_int;
+// 		i++;
+// 		if (i > 100) i = 100;
+// 	}
+// 	first_string[i] = 0;
+// 	
+// 	if (first_string[0] == '#')
+// 		goto l1;
+// 	else
+// 		sscanf(first_string, "%d %d", &nx, &ny);
+// 	
+// 	logDebug("string 1: %s in %s", first_string, fname);
+// 		/*  	fprintf(stderr, "\tX and Y dimensions: %d %d\n", nx, ny); */
+// 	*t_nx = nx;
+// 	*t_ny = ny;
+// 
+// /*
+// 	*	Read the number of grayscales 
+// */
+// 
+// 	i = 0;
+// 	while((c_int=getc(fp)) != '\n') {
+// 		first_string[i] = c_int;
+// 		i++;
+// 		if(i > 100) i = 100;
+// 	}
+// 	first_string[i] = 0;
+// 	sscanf(first_string, "%d", &ngray);
+// 		/*	fprintf(stderr, "\tNumber of gray levels:\t%d\n", ngray); */
+// 	*t_ngray = ngray;
+// 
+// /*
+// 	*	Read in graylevel data
+// */
+// 
+// 	*dbuf = (double *) calloc(nx*ny, sizeof(double));
+// 	if(*dbuf == NULL){
+// 		logErr("Buffer allocation error!");
+// 		return EXIT_FAILURE;
+// 	}
+// 	logDebug("%p is %d,%d big, storing %s", *dbuf, nx,ny, fname);
+// 
+// 	ik = 0;
+// 	for (i = 1; i <= nx; i += 1) {
+// 		for (j = 1; j <= ny; j += 1) {
+// 			if (bin_ind) {
+// 				if (fread (&b_in, sizeof(unsigned char), 1, fp) != 1) {
+// 					logErr("Error reading portable bitmap!");
+// 					return EXIT_FAILURE;
+// 				}
+// 				fi = (double) b_in;
+// 			} else {
+// 				if ((fscanf(fp,"%le",&fi)) == EOF){
+// 					logErr("End of input file reached!");
+// 					return EXIT_FAILURE;
+// 				}
+// 			}
+// 			*(*dbuf + ik) = fi;
+// 			ik ++;
+// 		}  
+// 	}
+// 
+// 	fclose(fp);
+// 	return EXIT_SUCCESS;
+// 	
+// }

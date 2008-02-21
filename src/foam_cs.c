@@ -33,6 +33,9 @@ extern int modOpenLoop(control_t *ptc);
 extern int modClosedInit(control_t *ptc);
 extern int modClosedLoop(control_t *ptc);
 
+pthread_mutex_t mode_mutex;
+pthread_cond_t mode_cond;
+
 	/*! 
 	@brief Initialisation function.
 	
@@ -46,6 +49,9 @@ int main(int argc, char *argv[]) {
 	/*************/
 	
 	pthread_t thread;
+	pthread_mutex_init(&mode_mutex, NULL);
+	pthread_cond_init (&mode_cond, NULL);
+	
 	clientlist.nconn = 0;	// Init number of connections to zero
 
 	char date[64];
@@ -75,7 +81,8 @@ int main(int argc, char *argv[]) {
 
 	logInfo("Configuration successfully loaded...");	
 	
-	// Initialise module
+	// INITIALIZE MODULES //
+	/**********************/
 	modInitModule(&ptc);
 	
 	// Create thread which listens to clients on a socket		
@@ -111,6 +118,11 @@ void stopFOAM() {
 	logInfo("Trying to stop modules...");
 	modStopModule(&ptc);
 	
+	logInfo("Stopping threads...");
+	pthread_mutex_destroy(&mode_mutex);
+	pthread_cond_destroy(&mode_cond);
+//	pthread_exit(NULL);
+	
 	logInfo("Stopping FOAM at %s", date);
 	logInfo("Ran for %ld seconds and parsed %ld frames (framerate: %f).", \
 		end-ptc.starttime, ptc.frames, ptc.frames/(float) (end-ptc.starttime));
@@ -123,14 +135,14 @@ int parseConfig(char *var, char *value) {
 
 	if (strcmp(var, "WFS_COUNT") == 0) {
 		ptc.wfs_count = (int) strtol(value, NULL, 10);
-		ptc.wfs = malloc(ptc.wfs_count * sizeof(*ptc.wfs));	// allocate memory
+		ptc.wfs = calloc(ptc.wfs_count, sizeof(*ptc.wfs));	// allocate memory
 		if (ptc.wfs == NULL) return EXIT_FAILURE;		
 		
 		logDebug("WFS_COUNT initialized: %d", ptc.wfs_count);
 	}
 	else if (strcmp(var, "WFC_COUNT") == 0) {
 		ptc.wfc_count = (int) strtol(value, NULL, 10);
-		ptc.wfc = malloc(ptc.wfc_count * sizeof(*ptc.wfc));
+		ptc.wfc = calloc(ptc.wfc_count, sizeof(*ptc.wfc));
 		if (ptc.wfc == NULL) return EXIT_FAILURE;
 
 		logDebug("WFC_COUNT initialized: %d", ptc.wfc_count);
@@ -239,6 +251,7 @@ int parseConfig(char *var, char *value) {
 		}
 		
 		ptc.wfs[tmp].subc = calloc(ptc.wfs[tmp].cells[0] * ptc.wfs[tmp].cells[1], sizeof(*ptc.wfs[tmp].subc));
+		ptc.wfs[tmp].gridc = calloc(ptc.wfs[tmp].cells[0] * ptc.wfs[tmp].cells[1], sizeof(*ptc.wfs[tmp].gridc));
 		ptc.wfs[tmp].refc = calloc(ptc.wfs[tmp].cells[0] * ptc.wfs[tmp].cells[1], sizeof(*ptc.wfs[tmp].refc));
 		ptc.wfs[tmp].disp = calloc(ptc.wfs[tmp].cells[0] * ptc.wfs[tmp].cells[1], sizeof(*ptc.wfs[tmp].disp));
 		if (ptc.wfs[tmp].subc == NULL || ptc.wfs[tmp].refc == NULL || ptc.wfs[tmp].disp == NULL) {
@@ -469,7 +482,7 @@ void modeOpen() {
 		//sleep(DEBUG_SLEEP);
 	}
 	
-	modeListen();		// mode is not open anymore, decide what to to next
+	return; // mode is not open anymore, decide what to to next
 }
 
 void modeClosed() {	
@@ -500,28 +513,32 @@ void modeClosed() {
 		//sleep(DEBUG_SLEEP);
 	}
 	
-	modeListen();		// mode is not open anymore, decide what to to next
+	return;					// back to modeListen (or where we came from)
 }
 
 void modeListen() {
 	logInfo("Entering listen mode");
-	sleep(DEBUG_SLEEP);
-		
-	switch (ptc.mode) {
-		case AO_MODE_OPEN:
-			modeOpen();
-			break;
-		case AO_MODE_CLOSED:
-			modeClosed();
-			break;
-		case AO_MODE_CAL:
-			modeCal();
-			break;
-		case AO_MODE_LISTEN: // this does nothing but is here for completeness
-			break;
-	}
 	
-	modeListen(); // re-run if nothing was found
+	while (true) {
+		switch (ptc.mode) {
+			case AO_MODE_OPEN:
+				modeOpen();
+				break;
+			case AO_MODE_CLOSED:
+				modeClosed();
+				break;
+			case AO_MODE_CAL:
+				modeCal();
+				break;
+			case AO_MODE_LISTEN: // this does nothing but is here for completeness
+				break;
+		}
+		// we wait until the mode changed
+		pthread_mutex_lock(&mode_mutex);
+		pthread_cond_wait(&mode_cond, &mode_mutex);
+		pthread_mutex_unlock(&mode_mutex);
+
+	}
 }
 
 void modeCal() {
@@ -533,7 +550,7 @@ void modeCal() {
 	logDebug("Calibration loop done, switching to listen mode");
 	ptc.mode = AO_MODE_LISTEN;
 		
-	modeListen();
+	return;
 }
 
 int sockListen() {
@@ -627,12 +644,9 @@ void sockAccept(const int sock, const short event, void *arg) {
 	logDebug("Accepted & set to nonblock.");
 	
 	// Check if we do not exceed the maximum number of connections:
-	// TODO: how can we REFUSE connections?
-	// TODO: this is (was) fishy...
-//if (clientlist.nconn >= 0) {
 	if (clientlist.nconn >= MAX_CLIENTS) {
-		logErr("Refused connection, maximum clients reached (%s)", MAX_CLIENTS);
-		close(sock);
+		logErr("Refused connection, maximum clients reached (%d)", MAX_CLIENTS);
+		close(newsock);
 		return;
 	}
 	
@@ -732,7 +746,7 @@ int parseCmd(char *msg, const int len, client_t *client) {
 	char tmp[len+1];	// reserve space for the command (TODO: can be shorter using strchr. Can it? wordlength can vary...)	
 	tmp[0] = '\0';
 	
-	logDebug("Command was: '%s'",msg);
+//	logDebug("Command was: '%s'",msg);
 		
 	if (popword(&msg, tmp) > 0)
 		logDebug("First word: '%s'", tmp);
@@ -744,7 +758,7 @@ int parseCmd(char *msg, const int len, client_t *client) {
 			showHelp(client, tmp);
 		else
 			showHelp(client, NULL);			
-		logInfo("Got help command & sent it! (subhelp %s)", tmp);
+//		logDebug("Got help command & sent it! (subhelp %s)", tmp);
 	}
 	else if ((strcmp(tmp,"exit") == 0) || (strcmp(tmp,"quit") == 0)) {
 		bufferevent_write(client->buf_ev,"200 OK EXIT\n", sizeof("200 OK EXIT\n"));
@@ -760,14 +774,23 @@ int parseCmd(char *msg, const int len, client_t *client) {
 		if (popword(&msg, tmp) > 0) {
 			if (strcmp(tmp,"closed") == 0) {
 				ptc.mode = AO_MODE_CLOSED;
+				pthread_mutex_lock(&mode_mutex); // signal a change to the main thread
+				pthread_cond_signal(&mode_cond);
+				pthread_mutex_unlock(&mode_mutex);
 				bufferevent_write(client->buf_ev,"200 OK MODE CLOSED\n", sizeof("200 OK MODE CLOSED\n"));
 			}
 			else if (strcmp(tmp,"open") == 0) {
 				ptc.mode = AO_MODE_OPEN;
+				pthread_mutex_lock(&mode_mutex);
+				pthread_cond_signal(&mode_cond);
+				pthread_mutex_unlock(&mode_mutex);
 				bufferevent_write(client->buf_ev,"200 OK MODE OPEN\n", sizeof("200 OK MODE OPEN\n"));
 			}
 			else if (strcmp(tmp,"listen") == 0) {
 				ptc.mode = AO_MODE_LISTEN;
+				pthread_mutex_lock(&mode_mutex);
+				pthread_cond_signal(&mode_cond);
+				pthread_mutex_unlock(&mode_mutex);
 				bufferevent_write(client->buf_ev,"200 OK MODE LISTEN\n", sizeof("200 OK MODE LISTEN\n"));
 			}
 			else {
@@ -826,7 +849,9 @@ mode open:\n\
    does not actually drive anything.\n\
 mode closed:\n\
    closes the loop and starts the feedbackloop, correcting the wavefront as\n\
-   fast as possible.\n";
+   fast as possible.\n\
+mode listen:\n\
+   stops looping and waits for input from the users. Basically does nothing\n";
 		return bufferevent_write(client->buf_ev, help, sizeof(help));
 	}
 	else if (strcmp(subhelp, "set") == 0) {
