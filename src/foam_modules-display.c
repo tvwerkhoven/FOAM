@@ -4,6 +4,8 @@
 	@date 2008-02-06 
 
 	@brief This file contains some functions to display stuff.
+	
+	This file contains some graphical routines. Needs cleaning badly
 */
 
 // HEADERS //
@@ -26,7 +28,6 @@ void drawRect(int coord[2], int size[2], SDL_Surface *screen) {
 	drawLine(coord[0] + size[0], coord[1], coord[0] + size[0], coord[1] + size[1], screen);
 	// done
 
-
 }
 
 void drawLine(int x0, int y0, int x1, int y1, SDL_Surface *screen) {
@@ -39,6 +40,25 @@ void drawLine(int x0, int y0, int x1, int y1, SDL_Surface *screen) {
 
 	DrawPixel(screen, x0, y0, 255, 255, 255);
 	for(i=0; i<step; i++) {
+		x1 = x0+i*dx; // since x1 is an integer, we can't just increment this, steps of 0.7 pixels wouldn't work...
+		y1 = y0+i*dy;
+		DrawPixel(screen, x1, y1, 255, 255, 255); // draw directly to the screen in white
+	}
+}
+
+void drawDash(int x0, int y0, int x1, int y1, SDL_Surface *screen) {
+	int step = abs(x1-x0);
+	int i;
+	if (abs(y1-y0) > step) step = abs(y1-y0); // this can be done faster?
+
+	float dx = (x1-x0)/(float) step;
+	float dy = (y1-y0)/(float) step;
+
+	DrawPixel(screen, x0, y0, 255, 255, 255);
+	for(i=0; i<step; i++) {
+		if ((i / 10) % 2 == 1)
+			continue;
+			
 		x1 = x0+i*dx; // since x1 is an integer, we can't just increment this, steps of 0.7 pixels wouldn't work...
 		y1 = y0+i*dy;
 		DrawPixel(screen, x1, y1, 255, 255, 255); // draw directly to the screen in white
@@ -244,10 +264,10 @@ int modDrawGrid(wfs_t *wfsinfo, SDL_Surface *screen) {
 		
 			
 	for (xc=1; xc < cells[0]; xc++)
-		drawLine(xc*shsize[0], 0, xc*shsize[0], cells[1]*shsize[1], screen);
+		drawDash(xc*shsize[0], 0, xc*shsize[0], cells[1]*shsize[1], screen);
 	
 	for (yc=1; yc< cells[1]; yc++)
-		drawLine(0, yc*shsize[1], cells[0]*shsize[0], yc*shsize[1], screen);
+		drawDash(0, yc*shsize[1], cells[0]*shsize[0], yc*shsize[1], screen);
 			
 	return EXIT_SUCCESS;
 }

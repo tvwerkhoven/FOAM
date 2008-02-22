@@ -32,9 +32,10 @@ amount of iterations (0 is auto).
 @param [in] *ctrl The control commands array, \a nact long
 @param [in] niter The number of iterations, pass 0 for automatic choice
 @param [out] *image The DM wavefront correction in um, 2d array.
+@param [in] res The resolution of the image to be processed
 @return EXIT_SUCCESS on success, EXIT_FAILURE otherwise.
 */
-int modSimDM(char *boundarymask, char *actuatorpat, int nact, float *ctrl, float *image, int niter);
+int modSimDM(char *boundarymask, char *actuatorpat, int nact, float *ctrl, float *image, int res[2], int niter);
 
 // TODO: document (simple function anyway)
 int modSimTT(float *ctrl, float *image, int res[2]);

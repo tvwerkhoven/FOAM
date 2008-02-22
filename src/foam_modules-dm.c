@@ -69,32 +69,92 @@ int modSimTT(float *ctrl, float *image, int res[2]) {
 	return EXIT_SUCCESS;	
 }
 
-int modSimDM(char *boundarymask, char *actuatorpat, int nact, float *ctrl, float *image, int niter) {
-	int i, j, status;
-	long ii, i_1j, i1j, ij_1, ij1;
+// globals for modSimDM so we don't need to read in the PGM files every time
+float *resp=NULL;		// we store the mirror response here
+float *boundary=NULL;	// we store the aperture here
+float *act=NULL;		// we store the actuator pattern here
+float *actvolt=NULL;	// we store the actuator pattern with voltages applied here
+
+
+int modSimDM(char *boundarymask, char *actuatorpat, int nact, float *ctrl, float *image, int res[2], int niter) {
+	int i, j, x, y;
+	int ii, i_1j, i1j, ij_1, ij1;
+//int nx=0, ny=0;	
 	int voltage[nact]; // voltage settings for electrodes (in digital units)
-	// double *resp=NULL;
-	double *resp;
-	double pi, rho, omega = 1.0, sum, sdif, update;
-	long ik;
+
+	float pi, rho, omega = 1.0, sum, sdif, update;
+	int ik;
 	
-	double *boundary, *act;
-	//double *boundary, *act;
-	int nx, ny, ngray1, ngray2;
-	
-	float amp=0.1;
+	SDL_Surface *boundarysurf, *actsurf;
+
+	float amp=0.5;	
 	pi = 4.0*atan(1);
-	
-	logDebug("boundary %s, act %s", boundarymask, actuatorpat);
+
+	logDebug("Boundarymask: %s, actuator pattern file: %s", boundarymask, actuatorpat);
 
 	// read boundary mask file 
-	if (modReadPGM(boundarymask, &boundary, &nx, &ny, &ngray1) != EXIT_SUCCESS) {
-		logErr("Cannot read boundary mask");
-		return EXIT_FAILURE;
+	if (boundary == NULL) {
+		if (modReadPGM(boundarymask, &boundarysurf) != EXIT_SUCCESS) {
+			logErr("Cannot read boundary mask");
+			return EXIT_FAILURE;
+		}
+		if (boundarysurf->w != res[0] || boundarysurf->h != res[1]) {
+			logErr("Boundary mask resolution incorrect! (%dx%d vs %dx%d)", res[0], res[1], boundarysurf->w, boundarysurf->h);
+			return EXIT_FAILURE;			
+		}
+		// copy from SDL_Surface to array
+		boundary = calloc( res[0]*res[1], sizeof(*boundary));
+		if (boundary == NULL) {
+			logErr("Error allocating memory for boundary image");
+			return EXIT_FAILURE;
+		}
+		else {
+			for (y=0; y<res[1]; y++)
+				for (x=0; x<res[0]; x++)
+					boundary[y*res[0] + x] = (float) getpixel(boundarysurf, x, y);
+		}
+		
+		logInfo("Read boundary '%s' succesfully (%dx%d)", boundarymask, res[0], res[1]);
 	}
-	// for(ik = 0; ik < nact; ik++)
-	// 	logDirect("%f ", ctrl[ik]);
-	// logDebug("\n");	
+	
+
+	
+	// read actuator pattern file 
+	if (act == NULL) {
+		if (modReadPGM(actuatorpat, &actsurf) != EXIT_SUCCESS) {
+			logErr("Cannot read boundary mask");
+			return EXIT_FAILURE;
+		}
+
+		if (actsurf->w != res[0] || actsurf->h != res[1]) {
+			logErr("Actuatorn pattern resolution incorrect! (%dx%d vs %dx%d)", res[0], res[1], actsurf->w, actsurf->h);
+			return EXIT_FAILURE;			
+		}
+		
+		// copy from SDL_Surface to array
+		act = calloc((res[0]) * (res[1]), sizeof(*act));
+		if (act == NULL) {
+			logErr("Error allocating memory for actuator image");
+			return EXIT_FAILURE;
+		}
+		else {
+			for (y=0; y<res[1]; y++)
+				for (x=0; x<res[0]; x++)
+					act[y*res[0] + x] = (float) getpixel(actsurf, x, y);
+		}
+		logInfo("Read actuator pattern '%s' succesfully (%dx%d)", actuatorpat, res[0], res[1]);
+	}
+
+	// allocate memory for actuator pattern with voltages
+	if (actvolt == NULL) {
+		actvolt = calloc((res[0]) * (res[1]), sizeof(*actvolt));
+		if (actvolt == NULL) {
+			logErr("Error allocating memory for actuator voltage image");
+			return EXIT_FAILURE;
+		}
+	}
+	
+
 		
 	// Input linear and c=[-1,1], 'output' must be v=[0,255] and linear in v^2
 	logDebug("Simulating DM with voltages:");
@@ -106,8 +166,9 @@ int modSimDM(char *boundarymask, char *actuatorpat, int nact, float *ctrl, float
 		 logDirect("%d ", voltage[ik]); // TODO: we don't want printf here
 	}
 	logDirect("\n");
+	
 
-	for (ik = 0; ik < ny*nx; ik++) {
+	for (ik = 0; ik < res[0]*res[1]; ik++) {
 		if (*(boundary + ik) > 0) {
 			*(boundary + ik) = 1.;
 		} else {
@@ -116,33 +177,36 @@ int modSimDM(char *boundarymask, char *actuatorpat, int nact, float *ctrl, float
 	}
 
 // read actuator pattern file
-	if (modReadPGM(actuatorpat,&act,&nx,&ny,&ngray2) != EXIT_SUCCESS) {
-		logErr("Cannot read actuator pattern file");
-		return EXIT_FAILURE;
-	}
+	// if (modReadPGM(actuatorpat,&act,&nx,&ny,&ngray2) != EXIT_SUCCESS) {
+	// 	logErr("Cannot read actuator pattern file");
+	// 	return EXIT_FAILURE;
+	// }
 
-// set actuator voltages on electrodes
-	for (ik = 0; ik < nx*ny; ik++){
+
+	// set actuator voltages on electrodes
+	for (ik = 0; ik < res[0]*res[1]; ik++){
 		i = (int) act[ik];
-		if(i>0) {
-			act[ik] = pow(voltage[i-1] / 255.0, 2.0) / 75.7856;
+//		logDirect("%f ",act[ik]);
+		if(i > 0) {
+			// 75.7856*2 gets 3 um deflection when all voltages 
+			// are set to 180; however, since the reflected wavefront sees twice
+			// the surface deformation, we simply put a factor of two here
+			actvolt[ik] = pow(voltage[i-1] / 255.0, 2.0) / 75.7856;
+			
 		}
-// 75.7856*2 gets 3 um deflection when all voltages 
-// are set to 180; however, since the reflected wavefront sees twice
-// the surface deformation, we simply put a factor of two here
 	}
 
-// compute spectral radius rho and SOR omega factor. These are appro-
-// ximate values. Get the number of iterations.
+	// compute spectral radius rho and SOR omega factor. These are appro-
+	// ximate values. Get the number of iterations.
 
-	rho = (cos(pi/((double)nx)) + cos(pi/((double)ny)))/2.0;
+	rho = (cos(pi/((double)res[0])) + cos(pi/((double)res[1])))/2.0;
 	omega = 2.0/(1.0 + sqrt(1.0 - rho*rho));
-// fprintf(stderr,"Spectral radius:\t%g\tSOR Omega:\t%g\n",rho,omega);
+	// fprintf(stderr,"Spectral radius:\t%g\tSOR Omega:\t%g\n",rho,omega);
 
 	if (niter <= 0) // Set the number of iterations if the argument was <= 0
-		niter = (int)(2.0*sqrt((double)nx*ny));
+		niter = (int)(2.0*sqrt((double) res[0]*res[1]));
 
-// fprintf(stderr,"Number of iterations:\t%d\n", niter);
+	// fprintf(stderr,"Number of iterations:\t%d\n", niter);
 
 // Calculation of the response. This is a Poisson PDE problem
 // where the actuator pattern represents the source term and and
@@ -151,12 +215,14 @@ int modSimDM(char *boundarymask, char *actuatorpat, int nact, float *ctrl, float
 // This is a Simultaneous Over-Relaxation (SOR) algorithm described
 // in Press et al., "Numerical Recipes", Section 17.
 	
-		logDebug("Allocating memory for resp: %dx%d.", nx, ny);
-		resp = (double *) calloc(nx*ny, sizeof(double));
+	if (resp == NULL) {
+		logDebug("Allocating memory for resp: %dx%d.", res[0], res[1]);
+		resp = calloc(res[0]*res[1], sizeof(*resp));
 		if (resp == NULL) {
 			logErr("Allocation error, exiting");
 			return EXIT_FAILURE;
 		}
+	}
 
 	/*  fprintf(stderr,"Iterating:\n"); */
 
@@ -164,19 +230,18 @@ int modSimDM(char *boundarymask, char *actuatorpat, int nact, float *ctrl, float
 		for (ii = 1; ii <= niter; ii++) {
 			sum = 0.0;
 			sdif = 0.0;
-			for (i = 2; i <= nx-1; i += 1) { /* loops over 2-D aperture */
-				for (j = 2; j <= ny-1; j += 1) {
-	/* --->>> might need to be nx instead of ny, also everywhere below */
-				ik = (i - 1)*ny + j - 1; /* the pixel location in the 1-d array */
+			for (i = 2; i <= res[0]-1; i += 1) { /* loops over 2-D aperture */
+				for (j = 2; j <= res[1]-1; j += 1) {
+	/* --->>> might need to be res[0] instead of res[1], also everywhere below */
+				ik = (i - 1)*res[1] + j - 1; /* the pixel location in the 1-d array */
 				if (*(boundary + ik) > 0) { /* pixel is within membrane boundary */
 	/* calculate locations of neighbouring pixels */
-					i_1j = (i - 2)*ny + j - 1;
-					i1j = i*ny + j - 1;
-					ij_1 = (i - 1)*ny + j - 2;
-					ij1 = (i - 1)*ny + j;
+					i_1j = (i - 2)*res[1] + j - 1;
+					i1j = i*res[1] + j - 1;
+					ij_1 = (i - 1)*res[1] + j - 2;
+					ij1 = (i - 1)*res[1] + j;
 
-					update = -resp[ik] - (act[ik] - resp[i_1j] - resp[i1j] - 
-					resp[ij1] - resp[ij_1])/4.;
+					update = -resp[ik] - (actvolt[ik] - resp[i_1j] - resp[i1j] - resp[ij1] - resp[ij_1])/4.;
 					resp[ik] = resp[ik] + omega*update;
 					sum += resp[ik];
 					sdif += (omega*update)*(omega*update);
@@ -196,22 +261,19 @@ int modSimDM(char *boundarymask, char *actuatorpat, int nact, float *ctrl, float
 
 
 	// response output
-	ik = 0;
-	for (i = 1; i <= nx; i += 1){
-		for (j = 1; j <= ny; j += 1){
-			// TvW: += UPDATES the image, so there should be an image in image, or it should be zero
-			image[ik] += amp*resp[ik];
-	//printf("%e\n",resp[ik]);
-			ik ++;
-		} 
+	for (i = 0; i < res[0]*res[1]; i++){
+		// TvW: += UPDATES the image, so there should be an image in image, or it should be zero
+		image[i] += amp*resp[i];
+		// printf("%e\n",resp[ik]);
 	//printf("\n");
 	}
 
+
 	//stat = write_pgm("response2.pgm",resp,nx,ny,255);
 
-	free(act);
-	free(boundary);
-	free(resp);
+	// free(act);
+	// free(boundary);
+	// free(resp);
 
 	return EXIT_SUCCESS; // successful completion
 }

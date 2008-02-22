@@ -20,6 +20,9 @@ AC_SEARCH_LIBS([pthread_create], [pthread] ,[], AC_MSG_ERROR([This package needs
 # save common libs (this is kinda ugly)
 COMMON_LIBS=$LIBS
 AC_SUBST(COMMON_LIBS)
+# add common libs to the compilation tests lateron
+# this is at least necessary for cfitsio
+CFLAGS+=" $LIBS"
 
 ### DEVELOPER SECTION ###
 #########################
@@ -86,8 +89,15 @@ if test "$simul" = true ; then
 		simul=false
 		simulmissing+=" sdl"
 		]
-	) 
- 
+	)
+
+	AC_SEARCH_LIBS([IMG_Load], [SDL_image] ,[], 
+		[AC_MSG_WARN([This package needs sdl-image in simulation mode, disabling simulation.])
+		simul=false
+		simulmissing+=" sdl-image"
+		]
+	)
+	
 	# fix simulation Cflags (mainly SDL)
 	SIMULATION_CFLAGS+="$SDL_CFLAGS"
 	SIMULATION_LIBS+="$LIBS $SDL_LIBS"

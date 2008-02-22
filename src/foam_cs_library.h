@@ -103,6 +103,7 @@ typedef struct { // wfs_t
 	float (*refc)[2];	//!< reference displacements
 	float (*disp)[2];	//!< measured displacements (compare with refence for actual shift)
 	char pinhole[FILENAMELEN];		//!< filename to store the pinhole calibration (in *(refc))
+	char influence[FILENAMELEN];	//!< filename to store the influence matrix
 	
 	int nsubap;			//!< amount of subapertures used (coordinates stored in subc)
 	axes_t scandir; 	//!< scanning direction(s) used (see \c axes_t type)

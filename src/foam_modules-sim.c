@@ -23,6 +23,7 @@ struct simul {
 	int curorig[2]; 		// current origin
 	float *simimg; 			// pointer to the image we use to simulate stuff
 	int simimgres[2];		// resolution of the simulation image
+	float seeingfac;		// factor to worsen seeing (2--20)
 	fftw_complex *shin;		// input for fft algorithm
 	fftw_complex *shout;	// output for fft (but shin can be used if fft is inplace)
 	fftw_plan plan_forward; // plan, one time calculation on how to calculate ffts fastest
@@ -34,6 +35,7 @@ struct simul simparams = {
 	.wind[1] = 5,
 	.curorig[0] = 0,
 	.curorig[1] = 0,
+	.seeingfac = 3.,
 	.simimg = NULL,
 	.plan_forward = NULL,
 	.wisdomfile = "fftw_wisdom.dat",
@@ -86,10 +88,13 @@ int modOpenInit(control_t *ptc) {
 }
 
 int modOpenLoop(control_t *ptc) {
-	
+	int i;
+	// for (i=0; i<ptc->wfc[1].nact; i++)
+	// 	ptc->wfc[1].ctrl[i] = ((ptc->frames % 50) / 25.0 - 1);
+				
 	if (drvReadSensor(ptc) != EXIT_SUCCESS)			// read the sensor output into ptc.image
 		return EXIT_FAILURE;
-	
+		
 	if (modParseSH((&ptc->wfs[0])) != EXIT_SUCCESS)			// process SH sensor output, get displacements
 		return EXIT_FAILURE;
 	
@@ -100,9 +105,10 @@ int modOpenLoop(control_t *ptc) {
 		modDrawSubapts(&(ptc->wfs[0]), screen);
 		modDrawVecs(&(ptc->wfs[0]), screen);
 		Sulock(screen);
-		SDL_Flip(screen);	
+		SDL_Flip(screen);
 		
 //	}
+
 	
 	if (SDL_PollEvent(&event))
 		if (event.type == SDL_QUIT)
@@ -135,8 +141,13 @@ int modClosedLoop(control_t *ptc) {
 		return EXIT_SUCCESS;
 	
 //	if (ptc->frames % 20 == 0) {
-		displayImg(ptc->wfs[0].image, ptc->wfs[0].res, screen);
-		modDrawSubapts(&(ptc->wfs[0]), screen);
+	Slock(screen);
+	displayImg(ptc->wfs[0].image, ptc->wfs[0].res, screen);
+	modDrawGrid(&(ptc->wfs[0]), screen);
+	modDrawSubapts(&(ptc->wfs[0]), screen);
+	modDrawVecs(&(ptc->wfs[0]), screen);
+	Sulock(screen);
+	SDL_Flip(screen);
 //	}
 	
 	if (SDL_PollEvent(&event))
@@ -184,7 +195,7 @@ int drvReadSensor() {
 	}
 	
 	// if filterwheel is set to pinhole, simulate a coherent image
-	if (ptc.filter == FILT_PINHOLE) {
+	if (ptc.mode == AO_MODE_CAL && ptc.filter == FILT_PINHOLE) {
 		for (i=0; i<ptc.wfs[0].res[0]*ptc.wfs[0].res[1]; i++)
 			ptc.wfs[0].image[i] = 1;
 			
@@ -208,31 +219,23 @@ int drvReadSensor() {
 		logDebug("simAtm() done");
 	} // end for (ptc.filter == FILT_PINHOLE)
 
-	// displayImg(ptc.wfs[0].image, ptc.wfs[0].res, screen);
-	// sleep(1);
-	
+
 	// we simulate WFCs before the telescope to make sure they outer region is zero (Which is done by simTel())
 	logDebug("Now simulating %d WFC(s).", ptc.wfc_count);
 	for (i=0; i < ptc.wfc_count; i++)
 		simWFC(&ptc, i, ptc.wfc[i].nact, ptc.wfc[i].ctrl, ptc.wfs[0].image); // Simulate every WFC in series
 	
+	// Slock(screen);
 	// displayImg(ptc.wfs[0].image, ptc.wfs[0].res, screen);
+	// modDrawGrid(&(ptc.wfs[0]), screen);
+	// Sulock(screen);
+	// SDL_Flip(screen);
 	// sleep(1);
-		
-	if (simTel(FOAM_MODSIM_APERTURE, ptc.wfs[0].image) != EXIT_SUCCESS) { // Simulate telescope (from aperture.fits)
-			// if (status > 0) {
-			// 	fits_get_errstatus(status, errmsg);
-			// 	logErr("fitsio error in simTel(): (%d) %s", status, errmsg);
-			// 	status = 0;
-			// 	return EXIT_FAILURE;
-			// }
-			// else 
+	if (simTel(FOAM_MODSIM_APERTURE, ptc.wfs[0].image, ptc.wfs[0].res) != EXIT_SUCCESS) { // Simulate telescope (from aperture.fits)
 			logErr("error in simTel().");
 	}
 	
 	// displayImg(ptc.wfs[0].image, ptc.wfs[0].res, screen);
-	// sleep(1);
-
 	
 	// Simulate the WFS here.
 	if (modSimSH() != EXIT_SUCCESS) {
@@ -240,7 +243,11 @@ int drvReadSensor() {
 		return EXIT_FAILURE;
 	}	
 
+	// Slock(screen);
 	// displayImg(ptc.wfs[0].image, ptc.wfs[0].res, screen);
+	// modDrawGrid(&(ptc.wfs[0]), screen);
+	// Sulock(screen);
+	// SDL_Flip(screen);
 	// sleep(1);
 	
 	return EXIT_SUCCESS;
@@ -298,25 +305,52 @@ int simWFC(control_t *ptc, int wfcid, int nact, float *ctrl, float *image) {
 		modSimTT(ctrl, image, ptc->wfs[0].res);
 	if (wfcid == 1) {
 		logDebug("Running modSimDM with %s and %s, nact %d", FOAM_MODSIM_APTMASK, FOAM_MODSIM_ACTPAT, nact);
-		modSimDM(FOAM_MODSIM_APTMASK, FOAM_MODSIM_ACTPAT, nact, ctrl, image, -1); // last arg is for niter. -1 for autoset
-		}
+		modSimDM(FOAM_MODSIM_APTMASK, FOAM_MODSIM_ACTPAT, nact, ctrl, image, ptc->wfs[0].res, -1); // last arg is for niter. -1 for autoset
+	}
 					
 	return EXIT_SUCCESS;
 }
 
-int simTel(char *file, float *image) {
-	double *aperture;
-	int nx, ny, ngray;
+// global to hold telescope aperture
+float *aperture=NULL;
+
+int simTel(char *file, float *image, int res[2]) {
 	int i;
+	int x, y;
 
 	// we read the file in here (only pgm now)
-	modReadPGM(file, &aperture, &nx, &ny, &ngray);
+//	modReadPGM(file, &aperture, &nx, &ny, &ngray);
 	
-	logDebug("Aperture read successfully (%dx%d), processing with image.", nx, ny);
+	SDL_Surface *aperturesurf;
+	// read boundary mask file 
+	// float *aperture is globally defined and initialized to NULL.
+	if (aperture == NULL) {
+		if (modReadPGM(file, &aperturesurf) != EXIT_SUCCESS) {
+			logErr("Cannot read telescope aperture");
+			return EXIT_FAILURE;
+		}
+		if (res[0] != aperturesurf->w || res[1] != aperturesurf->h) {
+			logErr("Telescope aperture resolution incorrect! (%dx%d vs %dx%d)", res[0], res[1], aperturesurf->w, aperturesurf->h);
+			return EXIT_FAILURE;
+		}
+		// copy from SDL_Surface to array
+		aperture = calloc(aperturesurf->w *aperturesurf->h, sizeof(*aperture));
+		if (aperture == NULL) {
+			logErr("Error allocating memory for aperture image");
+			return EXIT_FAILURE;
+		}
+		else {
+			for (y=0; y<aperturesurf->h; y++)
+				for (x=0; x<aperturesurf->w; x++)
+					aperture[y*aperturesurf->w + x] = (float) getpixel(aperturesurf, x, y);
+		}
+	}
+	
+	logDebug("Aperture read successfully (%dx%d), processing with image.",  res[0], res[1]);
 	
 	// Multiply wavefront with aperture
-	for (i=0; i < nx*ny; i++)
-		image[i] *= ceil(aperture[i]/ngray); // make sure the output is only multiplied by 0 or 1
+	for (i=0; i < res[0]*res[1]; i++)
+	 	if (aperture[i] == 0) image[i] = 0;
 	
 	return EXIT_SUCCESS;
 }
@@ -553,7 +587,7 @@ int modSimSH() {
 			// TODO dit kan hierboven al gedaan worden
 			for (ip=shsize[1]/2; ip<shsize[1] + shsize[1]/2; ip++) {
 				for (jp=shsize[0]/2; jp<shsize[0]+shsize[0]/2; jp++) {
-					tmp = 24.0*simparams.shin[ip*nx + jp][0]; // multiply for worse seeing
+					tmp = simparams.seeingfac * simparams.shin[ip*nx + jp][0]; // multiply for worse seeing
 					//use fftw_complex datatype, i.e. [0] is real, [1] is imaginary
 					
 					// SPEED: cos and sin are SLOW, replace by taylor series
@@ -618,101 +652,41 @@ int drvFilterWheel(control_t *ptc, fwheel_t mode) {
 	return EXIT_SUCCESS;
 }
 
-/*
- *============================================================================
- *
- *	read_pgm:	read a portable gray map into double buffer pointed
- *			to by dbuf, leaves dimensions and no. of graylevels.
- *
- *	return value:	0 	normal return
- *			-1	error return
- *
- *============================================================================
- */
-// this routine needs updating/fixing
-int modReadPGM(char *fname, double **dbuf, int *t_nx, int *t_ny, int *t_ngray)
-{
-	FILE *file;
-	int binary, i;
-	char line[256];
-	unsigned char pixel;
-	unsigned char *tmpimg;
+Uint32 getpixel(SDL_Surface *surface, int x, int y) {
+    int bpp = surface->format->BytesPerPixel;
+    /* Here p is the address to the pixel we want to retrieve */
+    Uint8 *p = (Uint8 *)surface->pixels + y * surface->pitch + x * bpp;
+    switch(bpp) {
+    case 1:
+        return *p;
+    case 2:
+        return *(Uint16 *)p;
+    case 3:
+        if (SDL_BYTEORDER == SDL_BIG_ENDIAN)
+            return p[0] << 16 | p[1] << 8 | p[2];
+        else
+            return p[0] | p[1] << 8 | p[2] << 16;
+    case 4:
+        return *(Uint32 *)p;
+    default:
+        return 0;       /* shouldn't happen, but avoids warnings */
+    }
+}
 
-	file = fopen(fname, "r");
-	if (!file)
-		logErr("modReadPGM, could not read file");
-
-	// get magic 
-	fgets(line, 256, file);
-	if (strncmp(line,"P5", 2)) {
-		if (strncmp(line,"P2", 2)) {
-			logErr("modReadPGM: not a pgm file");
-			*t_nx = *t_ny = 0;
-			return EXIT_FAILURE;
-		}
-		else 
-			binary = 0;
-	}
-	else 
-		binary = 1;
+int modReadPGM(char *fname, SDL_Surface **img) {
 	
-	// skip comments
-	fgets(line, 256, file);
-	while (line[0] == '#')
-		fgets(line, 256, file);
-	
-	// read width & height
-	sscanf(line,"%d %d", t_nx, t_ny);
-	
-	// skip comments
-	fgets(line, 256, file);
-	while (line[0] == '#')
-		fgets(line, 256, file);
-	
-	// read nr of grays
-	sscanf(line, "%d", t_ngray);
-
-	logInfo("Ok, I got a pgm file (binary? %d), (%dx%d) and %d grays", binary, *t_nx, *t_ny, *t_ngray);
-	
-	*dbuf = calloc((*t_nx)*(*t_ny), sizeof(double));
-	tmpimg = calloc((*t_nx)*(*t_ny), sizeof(unsigned char));
-	
-	if (*dbuf == NULL) {
-		logErr("Allocating memory in modReadPGM failed");
+	*img = IMG_Load(fname);
+	if (!img) {
+		logErr("Error in IMG_Load: %s\n", IMG_GetError());
 		return EXIT_FAILURE;
 	}
 	
-	// TODO: should seek to end-imagesize here, could be comments in between
-	
-	// TODO: still doesn't work, damnit!
-	// continue here
-	if (binary) {
-		if (fread(tmpimg, sizeof(unsigned char), (*t_nx)*(*t_ny), file) != (*t_nx)*(*t_ny)) {
-			logErr("Reading file failed");
-			return EXIT_FAILURE;
-		}
-		for (i = 0; i < (*t_nx)*(*t_ny); i++){
-			(*dbuf)[i] = (double) tmpimg[i];
-			printf("%d ", (int) tmpimg[i]);
-		}
-	}
-	else {
-		for (i = 0; i < (*t_nx)*(*t_ny); i++) {
-			fscanf(file,"%c", &pixel);
-			(*dbuf)[i] = (double) pixel;
-			printf("%c ", pixel);
-		}
-	}
-	
-	logDebug("middle row:");
-	for (i = 0; i < (*t_nx); i++) {
-		printf("%d ", (int) *dbuf[(*t_ny)/2 + i]);
-	}
-	exit(0);
-	
-	fclose(file);
+	logDebug("Loaded image %s (%dx%d)", fname, (*img)->w, (*img)->h);
+
 	return EXIT_SUCCESS;
 }
+
+
 
 // int modReadPGM(char *fname, double **dbuf, int *t_nx, int *t_ny, int *t_ngray) {
 // 	char		c_int, first_string[110];

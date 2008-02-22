@@ -14,6 +14,7 @@
 #include "foam_modules-dm.h"		// we want the DM subroutines here too
 #include "foam_modules-calib.h"		// we want the calibration
 #include <fftw3.h> 					// we need this for modParseSH()
+#include "SDL_image.h"				// we need this to read PGM files
 
 // These are defined in foam_cs_library.c
 extern control_t ptc;
@@ -93,7 +94,7 @@ int modSimWind();
 This fuction works in wavefront-space, and basically multiplies the aperture function with
 the wavefront from \a simAtm().
 */
-int simTel(char *file, float *image);
+int simTel(char *file, float *image, int res[2]);
 
 /*!
 @brief \a simWFC() simulates a certain wave front corrector, like a TT or a DM.
@@ -106,12 +107,12 @@ int simWFC(control_t *ptc, int wfcid, int nact, float *ctrl, float *image);
 @brief Reads a pgm file from disk into memory
 
 @param [in] *fname the filename to read
-@param [out] **dbuf the buffer that the image will be read to (will be allocated dynamically)
-@param [out] *t_nx will hold the x resolution of the image
-@param [out] *t_ny will hold the y resolution of the image
-@param [out] *t_ngray will hold the number of different graylevels in the image
+@param [out] **image the SDL_Surface that will hold the image
 */
-int modReadPGM(char *fname, double **dbuf, int *t_nx, int *t_ny, int *t_ngray);
+int modReadPGM(char *fname, SDL_Surface **img);
+
+// TODO: doc
+Uint32 getpixel(SDL_Surface *surface, int x, int y);
 
 #endif /* FOAM_MODULES_SIM */
 

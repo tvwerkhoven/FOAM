@@ -218,6 +218,18 @@ int parseConfig(char *var, char *value) {
 		
 		logDebug("WFS_PINHOLE initialized for WFS %d: %s", tmp, ptc.wfs[tmp].pinhole);
 	}
+	else if (strstr(var, "WFS_INFL") != NULL) {
+		if (ptc.wfs == NULL) {
+			logErr("Cannot initialize WFS_INFL before initializing WFS_COUNT");
+			return EXIT_FAILURE;
+		}
+		// Get the WFS_INFL for which WFS?
+		tmp = strtol(strstr(var,"[")+1, NULL, 10);
+		strncpy(ptc.wfs[tmp].influence, value, (size_t) FILENAMELEN);
+		ptc.wfs[tmp].influence[FILENAMELEN-1] = '\0'; // This might not be necessary
+		
+		logDebug("WFS_INFL initialized for WFS %d: %s", tmp, ptc.wfs[tmp].influence);
+	}
 	else if (strstr(var, "WFS_FF") != NULL) {
 		if (ptc.wfs == NULL) {
 			logErr("Cannot initialize WFS_FF before initializing WFS_COUNT");
@@ -806,11 +818,17 @@ int parseCmd(char *msg, const int len, client_t *client) {
 			if (strcmp(tmp,"pinhole") == 0) {
 				ptc.mode = AO_MODE_CAL;
 				ptc.calmode = CAL_PINHOLE;
+				pthread_mutex_lock(&mode_mutex);
+				pthread_cond_signal(&mode_cond);
+				pthread_mutex_unlock(&mode_mutex);
 				bufferevent_write(client->buf_ev,"200 OK CALIBRATE PINHOLE\n", sizeof("200 OK CALIBRATE PINHOLE\n"));
 			}
 			else if (strcmp(tmp,"influence") == 0) {
 				ptc.mode = AO_MODE_CAL;
-				ptc.calmode = CAL_INFL;				
+				ptc.calmode = CAL_INFL;
+				pthread_mutex_lock(&mode_mutex);
+				pthread_cond_signal(&mode_cond);
+				pthread_mutex_unlock(&mode_mutex);	
 				bufferevent_write(client->buf_ev,"200 OK CALIBRATE INFLUENCE\n", sizeof("200 OK CALIBRATE INFLUENCE\n"));
 			}
 			else {
@@ -832,26 +850,24 @@ int showHelp(const client_t *client, const char *subhelp) {
 	if (subhelp == NULL) {
 		char help[] = "\
 help [command]:         help (on a certain command, if available).\n\
-mode <open|closed>:     close or open the loop.\n\
+mode <mode>:            close or open the loop.\n\
 set <var> <value:       set a certain setting.\n\
 exit or quit:           disconnect from daemon.\n\
 shutdown:               shutdown the FOAM progra.\n\
-calibrate [mode]:       calibrate a component.\n";
+calibrate <mode>:       calibrate a component.\n";
 
 		char code[] = "200 OK HELP\n";
 		return bufferevent_write(client->buf_ev, help, sizeof(help));
 	}
 	else if (strcmp(subhelp, "mode") == 0) {
 		char help[] = "200 OK HELP MODE\n\
-mode <open|closed>: close or open the loop.\n\
-mode open:\n\
-   opens the loop and only records what's happening with the AO system and\n\
-   does not actually drive anything.\n\
-mode closed:\n\
-   closes the loop and starts the feedbackloop, correcting the wavefront as\n\
-   fast as possible.\n\
-mode listen:\n\
-   stops looping and waits for input from the users. Basically does nothing\n";
+mode <mode>: close or open the loop.\n\
+   mode=open: opens the loop and only records what's happening with the AO \n\
+        system and does not actually drive anything.\n\
+   mode=closed: closes the loop and starts the feedbackloop, correcting the\n\
+        wavefront as fast as possible.\n\
+   mode=listen: stops looping and waits for input from the users. Basically\n\
+        does nothing\n";
 		return bufferevent_write(client->buf_ev, help, sizeof(help));
 	}
 	else if (strcmp(subhelp, "set") == 0) {
@@ -862,7 +878,7 @@ set <var> <value>\n\
 	}
 	else if (strcmp(subhelp, "calibrate") == 0) {
 		char help[] = "200 OK HELP CALIBRATE\n\
-calibrate [mode]\n\
+calibrate <mode>\n\
    mode=pinhole: do a pinhole calibration.\n\
    mode=influence: do a WFC influence matrix calibration.\n";
 		return bufferevent_write(client->buf_ev, help, sizeof(help));

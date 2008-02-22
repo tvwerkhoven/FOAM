@@ -28,4 +28,6 @@ int modCalWFC(control_t *ptc, int wfs);
 
 int modCalPinhole(control_t *ptc, int wfs);
 
+int modSVD(control_t *ptc, int wfs);
+
 #endif
