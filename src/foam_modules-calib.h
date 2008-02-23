@@ -20,6 +20,10 @@
 #include "foam_cs_library.h"
 #include <sys/stat.h>
 
+// DEPENDENCIES //
+/****************/
+extern int drvFilterWheel(control_t *ptc, fwheel_t mode);
+extern int drvSetActuator();
 
 // PROTOTYPES //
 /**************/

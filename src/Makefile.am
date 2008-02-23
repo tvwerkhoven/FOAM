@@ -12,7 +12,6 @@ CFLAGS+=-g -DDEBUG_ITIFG=255
 HAVE_DMALLOC=1
 LDFLAGS+=-ldmalloc
 
-
 # extra files buiten compilen om
 # EXTRA_DIST =
 
@@ -30,6 +29,16 @@ foamui_SOURCES += foam_ui_library.h foam_library.h
 foamui_CFLAGS = $(UI_CFLAGS)
 foamui_LDFLAGS = $(UI_LIBS)
 endif
+
+# programs depend on whether or not we want static simulation...
+if STATSIMULATION
+bin_PROGRAMS += foamcs-statsim
+foamcs_statsim_SOURCES = foam_cs.c foam_library.c foam_cs_library.c foam_modules-sh.c foam_modules-simstatic.c foam_modules-display.c foam_modules-calib.c
+foamcs_statsim_SOURCES += foam_cs_library.h foam_library.h foam_modules-sh.h foam_modules-sim.h foam_modules-display.h
+foamcs_statsim_CFLAGS = $(SIMULATION_CFLAGS)
+foamcs_statsim_LDFLAGS = $(SIMULATION_LIBS)
+endif
+
 
 # programs depend on whether or not we want simulation...
 if SIMULATION

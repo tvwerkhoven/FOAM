@@ -46,6 +46,13 @@ char logmessage[LINE_MAX];
 /*********************/
 
 /*!
+@brief We use this to define 2-vectors (resolutions etc)
+*/
+typedef struct {
+	int x;
+	int y;
+} coord_t;
+/*!
 @brief Helper enum for ao mode operation. Modes include AO_MODE_OPEN, AO_MODE_CLOSED, AO_MODE_CAL and AO_MODE_LISTEN
 */
 typedef enum { // aomode_t

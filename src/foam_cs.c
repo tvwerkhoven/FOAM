@@ -83,6 +83,7 @@ int main(int argc, char *argv[]) {
 	
 	// INITIALIZE MODULES //
 	/**********************/
+
 	modInitModule(&ptc);
 	
 	// Create thread which listens to clients on a socket		
