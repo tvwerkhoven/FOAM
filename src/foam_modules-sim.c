@@ -129,8 +129,9 @@ int modClosedLoop(control_t *ptc) {
 	for (i=0; i<ptc->wfc_count; i++) {
 		logDebug("Setting WFC %d with %d acts.", i, ptc->wfc[i].nact);
 		for (j=0; j<ptc->wfc[i].nact; j++)
-			ptc->wfc[i].ctrl[j] = drand48()*2-1;
+			ptc->wfc[i].ctrl[j] = -1; drand48()*2-1;
 	}
+	ptc->wfc[1].ctrl[ptc->frames % 37] = 1;
 
 	if (drvReadSensor(ptc) != EXIT_SUCCESS)			// read the sensor output into ptc.image
 		return EXIT_SUCCESS;
@@ -225,12 +226,12 @@ int drvReadSensor() {
 	for (i=0; i < ptc.wfc_count; i++)
 		simWFC(&ptc, i, ptc.wfc[i].nact, ptc.wfc[i].ctrl, ptc.wfs[0].image); // Simulate every WFC in series
 	
-	// Slock(screen);
-	// displayImg(ptc.wfs[0].image, ptc.wfs[0].res, screen);
-	// modDrawGrid(&(ptc.wfs[0]), screen);
-	// Sulock(screen);
-	// SDL_Flip(screen);
-	// sleep(1);
+	Slock(screen);
+	displayImg(ptc.wfs[0].image, ptc.wfs[0].res, screen);
+	modDrawGrid(&(ptc.wfs[0]), screen);
+	Sulock(screen);
+	SDL_Flip(screen);
+	sleep(1);
 	if (simTel(FOAM_MODSIM_APERTURE, ptc.wfs[0].image, ptc.wfs[0].res) != EXIT_SUCCESS) { // Simulate telescope (from aperture.fits)
 			logErr("error in simTel().");
 	}
@@ -248,7 +249,7 @@ int drvReadSensor() {
 	// modDrawGrid(&(ptc.wfs[0]), screen);
 	// Sulock(screen);
 	// SDL_Flip(screen);
-	// sleep(1);
+	// sleep(1);	
 	
 	return EXIT_SUCCESS;
 }

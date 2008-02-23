@@ -29,6 +29,50 @@
 
 #include "foam_modules-sh.h"
 
+/*
+void modCalcWFCVolt(control_t *ptc, int wfs, int nmodes) {
+	//, float sdx[NS], float sdy[NS], float actvol[DM_ACTUATORS],
+	//                float modeamp[DM_ACTUATORS], )
+		// sdx     subaperture shifts in x
+		// sdy     subaperture shifts in y
+		// actvol  desired change in actuator voltage squared
+		// modeamp system mode amplitudes
+		// nmodes  number of system modes to use
+
+	int i,j;   // index variables
+	float sum; // temporary sum
+
+	int nact;
+	
+	// get total nr of actuators
+	for (i=0; i < ptc->wfc_count; i++)
+		nact += ptc->wfc[i].nact;
+
+	// TvW continue here:
+	/////////////////////
+	
+	// new code using system mode amplitudes
+	// first calculate mode amplitudes
+	for (i=0; i<nact ;i++) { // loop over all actuators
+		sum=0.0;
+		for (j=0;j<ptc->wfs[wfs].nsubap;j++) // loop over all subapertures
+			sum = sum + wfsmodes[i*2*NS+j*2]*sdx[j] + wfsmodes[i*2*NS+j*2+1]*sdy[j];
+			
+		modeamp[i] = sum;
+	}
+	
+	// apply inverse singular values and calculate actuator amplitudes
+	for (i=0;i<nact;i++) { // loop over all actuators
+		sum=0.0;
+		for (j=0;j<nmodes;j++) // loop over all system modes that are used
+			sum = sum + dmmodes[i*DM_ACTUATORS+j]*modeamp[j]/singval[j];
+			
+		ptc->wfs[wfs].ctrl[i] = sum;
+	}
+
+
+}
+*/	
 int modSelSubapts(wfs_t *wfsinfo, float samini, int samxr) {
 
 	// stolen from ao3.c by CUK
@@ -60,9 +104,9 @@ int modSelSubapts(wfs_t *wfsinfo, float samini, int samxr) {
 				for (ix=0; ix<shsize[0]; ix++) {
 					fi = (float) image[isy*shsize[1]*res[0] + isx*shsize[0] + ix+ iy*res[0]];
 					sum += fi;
-					/* for center of gravity, only pixels above the threshold are used;
-					otherwise the position estimate always gets pulled to the center;
-					good background elimination is crucial for this to work !!! */
+					// for center of gravity, only pixels above the threshold are used;
+					// otherwise the position estimate always gets pulled to the center;
+					// good background elimination is crucial for this to work !!!
 					fi -= samini;    		// subtract threshold
 					if (fi<0.0) fi = 0.0;	// clip
 					csum = csum + fi;		// add this pixel's intensity to sum
@@ -127,11 +171,10 @@ int modSelSubapts(wfs_t *wfsinfo, float samini, int samxr) {
 		for (ix=0; ix<shsize[0]; ix++) {
 			// loop over the whole shsize^2 big ref subapt here, so subc-shsize/4 is the beginning coordinate
 			fi = (float) image[(subc[0][1]-shsize[1]/4+iy)*res[0]+subc[0][0]-shsize[0]/4+ix];
-			
-			
-			/* for center of gravity, only pixels above the threshold are used;
-			otherwise the position estimate always gets pulled to the center;
-			good background elimination is crucial for this to work !!! */
+						
+			// for center of gravity, only pixels above the threshold are used;
+			// otherwise the position estimate always gets pulled to the center;
+			// good background elimination is crucial for this to work !!!
 			fi -= samini;
 			if (fi < 0.0) fi=0.0;
 			csum += fi;
@@ -325,9 +368,9 @@ void modCogFind(wfs_t *wfsinfo, int xc, int yc, int width, int height, float sam
 		for (ix=0; ix<width; ix++) {
 			fi = (float) image[ix+ iy*res[0]];
 			sum += fi;
-			/* for center of gravity, only pixels above the threshold are used;
-			otherwise the position estimate always gets pulled to the center;
-			good background elimination is crucial for this to work !!! */
+			// for center of gravity, only pixels above the threshold are used;
+			// otherwise the position estimate always gets pulled to the center;
+			// good background elimination is crucial for this to work !!!
 			fi -= samini;    		// subtract threshold
 			if (fi<0.0) fi = 0.0;	// clip
 			csum = csum + fi;		// add this pixel's intensity to sum
@@ -637,7 +680,7 @@ int modParseSH(wfs_t *wfsinfo) {
 	// now calculate the offsets 
 	float aver=0.0, max=0.0;
 	float coords[wfsinfo->nsubap][2];
-	int i, xc, yc;
+	int i;
 
 	// track the maxima
 	modCogTrack(wfsinfo, &aver, &max, coords);

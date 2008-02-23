@@ -70,7 +70,7 @@ void drawDeltaLine(int x0, int y0, int dx, int dy, SDL_Surface *screen) {
 }
 
 int displayImg(float *img, int res[2], SDL_Surface *screen) {
-	// ONLY does float images
+	// ONLY does float images as input
 	int x, y, i;
 	float max=img[0];
 	float min=img[0];
@@ -244,7 +244,6 @@ int modDrawVecs(wfs_t *wfsinfo, SDL_Surface *screen) {
 	int *shsize = wfsinfo->shsize;
 	int sn=0;
 	
-
 
 	for (sn=0; sn<wfsinfo->nsubap; sn++)
 		drawDeltaLine( gridc[sn][0] + (shsize[0]/2), gridc[sn][1] + (shsize[1]/2), \
