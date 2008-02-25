@@ -77,7 +77,9 @@ int modClosedInit(control_t *ptc) {
 	for (i=0; i < ptc->wfs_count; i++) {
 		logInfo("Checking if calibrations succeeded (WFS %d).", i);
 		if (modCalWFCChk(ptc, i) == EXIT_FAILURE) {
-			logErr("Calibration incomplete for WFS %d, please calibrate first", i);
+			logWarn("Calibration incomplete for WFS %d, please calibrate first", i);
+			ptc->mode = AO_MODE_LISTEN;
+			return EXIT_FAILURE;
 		}
 	}
 	return EXIT_SUCCESS;

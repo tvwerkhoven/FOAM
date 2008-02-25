@@ -140,6 +140,35 @@ void logErr(const char *msg, ...) {
 	exit(EXIT_FAILURE);
 }
 
+void logWarn(const char *msg, ...) {
+	if (cs_config.loglevel < LOGERR) 	// Do we need this loglevel?
+		return;
+
+	va_list ap, aq, ar;
+	
+	va_start(ap, msg);
+	va_copy(aq, ap);
+	va_copy(ar, ap);
+	
+	formatLog(logmessage, " <warning>: ", msg);
+
+	
+	if (cs_config.errfd != NULL)	// Do we want to log this to a file?
+		vfprintf(cs_config.errfd, logmessage, ap);
+
+	if (cs_config.use_stderr == true) // Do we want to log this to stderr?
+		vfprintf(stderr, logmessage, aq);
+	
+	if (cs_config.use_syslog == true) // Do we want to log this to syslog?
+		syslog(LOG_ERR, msg, ar);
+
+	va_end(ap);
+	va_end(aq);
+	va_end(ar);
+	
+}
+
+
 void logDebug(const char *msg, ...) {
 	if (cs_config.loglevel < LOGDEBUG) 	// Do we need this loglevel?
 		return;

@@ -70,7 +70,7 @@ int modCalPinholeChk(control_t *ptc, int wfs) {
 	FILE *fd;
 	
 	if (modFileChk(ptc->wfs[wfs].pinhole) != EXIT_SUCCESS) {
-		logErr("Could not open file %s", ptc->wfs[wfs].pinhole);
+		logWarn("Could not open file %s", ptc->wfs[wfs].pinhole);
 		return EXIT_FAILURE;
 	}
 	else {
@@ -78,13 +78,13 @@ int modCalPinholeChk(control_t *ptc, int wfs) {
 	
 		fd = fopen(ptc->wfs[wfs].pinhole,"r");
 		if (fd == NULL) {
-			logErr("Failed to open file %s", ptc->wfs[wfs].pinhole);
+			logWarn("Failed to open file %s", ptc->wfs[wfs].pinhole);
 			return EXIT_FAILURE;
 		}
 	
 		fscanf(fd,"%d\n", &nsubs);
 		if (nsubs != 2 * ptc->wfs[wfs].nsubap) {
-			logErr("Warning, number of subapertures found in %s incorrect (%d vs %d), wrong calibration file?", 
+			logWarn("Warning, number of subapertures found in %s incorrect (%d vs %d), wrong calibration file?", 
 				ptc->wfs[wfs].pinhole, nsubs/2,  ptc->wfs[wfs].nsubap);
 			return EXIT_FAILURE;
 		}
@@ -114,7 +114,7 @@ int modCalWFC(control_t *ptc, int wfs) {
 	logDebug("pinhole %s",ptc->wfs[wfs].pinhole);
 	
 	if (modCalPinholeChk(ptc, wfs) != EXIT_SUCCESS) {
-		logErr("WFC calibration failed, first perform Pinhole calibration.");
+		logWarn("WFC calibration failed, first perform pinhole calibration.");
 		return EXIT_FAILURE;
 	}
 	
@@ -222,20 +222,20 @@ int modCalWFCChk(control_t *ptc, int wfs) {
 		nacttot += ptc->wfc[i].nact;
 		
 	if (modFileChk(ptc->wfs[wfs].influence) != EXIT_SUCCESS) {
-		logErr("Could not open file %s", ptc->wfs[wfs].influence);
+		logWarn("Could not open file %s", ptc->wfs[wfs].influence);
 		return EXIT_FAILURE;
 	}
 	else {
 		//everything ok, import data from file to ptc here
 		fd = fopen(ptc->wfs[wfs].influence,"r");
 		if (fd == NULL) { // TODO: should we even check this? 
-			logErr("Failed to open file %s", ptc->wfs[wfs].influence);
+			logWarn("Failed to open file %s", ptc->wfs[wfs].influence);
 			return EXIT_FAILURE;
 		}
 
 		fscanf(fd,"%d\n%d\n", &nact, &nsubs);
 		if (nsubs != 2 * ptc->wfs[wfs].nsubap || nact != nacttot) {
-			logErr("Warning, number of subapertures or actuators found in %s incorrect (apts: %d vs %d, acts: %d vs %d), wrong calibration file?", 
+			logWarn("Warning, number of subapertures or actuators found in %s incorrect (apts: %d vs %d, acts: %d vs %d), wrong calibration file?", 
 				ptc->wfs[wfs].pinhole, nsubs/2,  ptc->wfs[wfs].nsubap, nact, nacttot);
 			return EXIT_FAILURE;
 		}
@@ -246,21 +246,21 @@ int modCalWFCChk(control_t *ptc, int wfs) {
 	asprintf(&outfile, "%s-singular", ptc->wfs[wfs].influence);
 	
 	if (modFileChk(outfile) != EXIT_SUCCESS) {
-		logErr("Could not open file %s", outfile);
+		logWarn("Could not open file %s", outfile);
 		return EXIT_FAILURE;
 	}
 	else {
 		//everything ok, import data from file to ptc here
 		fd = fopen(outfile,"r");
 		if (fd == NULL) { // TODO: should we even check this? 
-			logErr("Failed to open file %s", outfile);
+			logWarn("Failed to open file %s", outfile);
 			return EXIT_FAILURE;
 		}
 		
 		if (ptc->wfs[wfs].singular == NULL) {
 			ptc->wfs[wfs].singular = calloc(nacttot, sizeof( *(ptc->wfs[wfs].singular) ) );
 			if (ptc->wfs[wfs].singular == NULL) {
-				logErr("Failed to allocate memory for ptc->wfs[wfs].singular");
+				logWarn("Failed to allocate memory for ptc->wfs[wfs].singular");
 				return EXIT_FAILURE;
 			}
 		}
@@ -277,21 +277,21 @@ int modCalWFCChk(control_t *ptc, int wfs) {
 	asprintf(&outfile, "%s-dmmodes", ptc->wfs[wfs].influence);
 	
 	if (modFileChk(outfile) != EXIT_SUCCESS) {
-		logErr("Could not open file %s", outfile);
+		logWarn("Could not open file %s", outfile);
 		return EXIT_FAILURE;
 	}
 	else {
 		//everything ok, import data from file to ptc here
 		fd = fopen(outfile,"r");
 		if (fd == NULL) { // TODO: should we even check this? 
-			logErr("Failed to open file %s", outfile);
+			logWarn("Failed to open file %s", outfile);
 			return EXIT_FAILURE;
 		}
 		
 		if (ptc->wfs[wfs].dmmodes == NULL) {
 			ptc->wfs[wfs].dmmodes = calloc(nacttot*nacttot, sizeof( *(ptc->wfs[wfs].dmmodes) ) );
 			if (ptc->wfs[wfs].dmmodes == NULL) {
-				logErr("Failed to allocate memory for ptc->wfs[wfs].dmmodes");
+				logWarn("Failed to allocate memory for ptc->wfs[wfs].dmmodes");
 				return EXIT_FAILURE;
 			}
 		}
@@ -309,21 +309,21 @@ int modCalWFCChk(control_t *ptc, int wfs) {
 	asprintf(&outfile, "%s-wfsmodes", ptc->wfs[wfs].influence);
 	
 	if (modFileChk(outfile) != EXIT_SUCCESS) {
-		logErr("Could not open file %s", outfile);
+		logWarn("Could not open file %s", outfile);
 		return EXIT_FAILURE;
 	}
 	else {
 		//everything ok, import data from file to ptc here
 		fd = fopen(outfile,"r");
 		if (fd == NULL) { // TODO: should we even check this? 
-			logErr("Failed to open file %s", outfile);
+			logWarn("Failed to open file %s", outfile);
 			return EXIT_FAILURE;
 		}
 		
 		if (ptc->wfs[wfs].wfsmodes == NULL) {
 			ptc->wfs[wfs].wfsmodes = calloc(2*ptc->wfs[wfs].nsubap * nacttot, sizeof( *(ptc->wfs[wfs].dmmodes) ) );
 			if (ptc->wfs[wfs].dmmodes == NULL) {
-				logErr("Failed to allocate memory for ptc->wfs[wfs].dmmodes");
+				logWarn("Failed to allocate memory for ptc->wfs[wfs].dmmodes");
 				return EXIT_FAILURE;
 			}
 		}
@@ -349,19 +349,19 @@ int modFileChk(char *filename) {
 	
 	// check if the pinhole calibration worked ok file is OK
 	if ((fildes = open(filename, O_RDONLY)) == -1) {
-		logErr("File %s not found: %s", filename, strerror(errno));
+		logWarn("File %s not found: %s", filename, strerror(errno));
 		return EXIT_FAILURE;
 	}
 	else {
 		stat = fstat(fildes, &buf);
 		close(fildes);
 		if (stat != 0) {
-			logErr("Cannot stat file %s: %s", filename, strerror(errno));
+			logWarn("Cannot stat file %s: %s", filename, strerror(errno));
 			return EXIT_FAILURE;
 		}
 		else {
 			if (buf.st_size < 5) {
-				logErr("File %s is corrupt (filesize %d too small).", filename, buf.st_size);
+				logWarn("File %s is corrupt (filesize %d too small).", filename, buf.st_size);
 				return EXIT_FAILURE;
 			}
 			else {
