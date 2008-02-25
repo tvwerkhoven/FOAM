@@ -499,7 +499,12 @@ void modeOpen() {
 	
 	// Run the initialisation function of the modules used, pass
 	// along a pointer to ptc
-	modOpenInit(&ptc);
+	if (modOpenInit(&ptc) != EXIT_SUCCESS) {		// check if we can init the module
+		logWarn("modOpenInit failed");
+		ptc.mode = AO_MODE_LISTEN;
+		return;
+	}
+	
 	
 //	int tmp[] = {32, 32};
 
@@ -507,7 +512,11 @@ void modeOpen() {
 		ptc.frames++;								// increment the amount of frames parsed		
 		logInfo("Operating in open loop"); 
 		
-		modOpenLoop(&ptc);
+		if (modOpenLoop(&ptc) != EXIT_SUCCESS) {
+			logWarn("modOpenLoop failed");
+			ptc.mode = AO_MODE_LISTEN;
+			return;
+		}
 								
 
 		// if (ptc.frames > 500) 					// exit for debugging
@@ -531,14 +540,21 @@ void modeClosed() {
 	
 	// Run the initialisation function of the modules used, pass
 	// along a pointer to ptc
-	modClosedInit(&ptc);
+	if (modClosedInit(&ptc) != EXIT_SUCCESS) {
+		logWarn("modClosedInit failed");
+		ptc.mode = AO_MODE_LISTEN;
+		return;
+	}
 	
 	ptc.frames++;
 	while (ptc.mode == AO_MODE_CLOSED) {
 		logInfo("Operating in closed loop"); 
 		
-		modClosedLoop(&ptc);
-						
+		if (modClosedLoop(&ptc) != EXIT_SUCCESS) {
+			logWarn("modClosedLoop failed");
+			ptc.mode = AO_MODE_LISTEN;
+			return;
+		}			
 		// if (ptc.frames > 2000) // exit for debugging
 		// 	exit(EXIT_SUCCESS);
 				
@@ -548,6 +564,22 @@ void modeClosed() {
 	}
 	
 	return;					// back to modeListen (or where we came from)
+}
+
+void modeCal() {
+	logInfo("Entering calibration loop");
+	
+	// this links to a module
+	if (modCalibrate(&ptc) != EXIT_SUCCESS) {
+		logWarn("modCalibrate failed");
+		ptc.mode = AO_MODE_LISTEN;
+		return;
+	}
+	
+	logDebug("Calibration loop done, switching to listen mode");
+	ptc.mode = AO_MODE_LISTEN;
+		
+	return;
 }
 
 void modeListen() {
@@ -564,28 +596,14 @@ void modeListen() {
 			case AO_MODE_CAL:
 				modeCal();
 				break;
-			case AO_MODE_LISTEN: // this does nothing but is here for completeness
+			case AO_MODE_LISTEN:
 				// we wait until the mode changed
 				pthread_mutex_lock(&mode_mutex);
 				pthread_cond_wait(&mode_cond, &mode_mutex);
 				pthread_mutex_unlock(&mode_mutex);
 				break;
 		}
-
-		
-	}
-}
-
-void modeCal() {
-	logInfo("Entering calibration loop");
-	
-	// this links to a module
-	modCalibrate(&ptc);
-	
-	logDebug("Calibration loop done, switching to listen mode");
-	ptc.mode = AO_MODE_LISTEN;
-		
-	return;
+	} // end while(true)
 }
 
 int sockListen() {

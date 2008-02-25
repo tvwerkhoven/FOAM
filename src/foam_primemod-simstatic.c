@@ -45,8 +45,7 @@ void modStopModule(control_t *ptc) {
 int modOpenInit(control_t *ptc) {
 
 	if (drvReadSensor(ptc) != EXIT_SUCCESS) {		// read the sensor output into ptc.image
-		logErr("Error, reading sensor failed.");
-		ptc->mode = AO_MODE_LISTEN;
+		logWarn("Error, reading sensor failed.");
 		return EXIT_FAILURE;
 	}
 	
@@ -60,8 +59,10 @@ int modOpenLoop(control_t *ptc) {
 	// for (i=0; i<ptc->wfc[1].nact; i++)
 	// 	ptc->wfc[1].ctrl[i] = ((ptc->frames % 50) / 25.0 - 1);
 				
-	if (drvReadSensor(ptc) != EXIT_SUCCESS)			// read the sensor output into ptc.image
+	if (drvReadSensor(ptc) != EXIT_SUCCESS) {		// read the sensor output into ptc.image
+		logWarn("Error, reading sensor failed.");
 		return EXIT_FAILURE;
+	}
 		
 	if (modParseSH((&ptc->wfs[0])) != EXIT_SUCCESS)			// process SH sensor output, get displacements
 		return EXIT_FAILURE;
@@ -75,7 +76,6 @@ int modOpenLoop(control_t *ptc) {
 		modDrawVecs(&(ptc->wfs[0]), screen);
 		Sulock(screen);
 		SDL_Flip(screen);
-		
 	}
 
 	if (ptc->frames > 20000)
@@ -84,6 +84,7 @@ int modOpenLoop(control_t *ptc) {
 	if (SDL_PollEvent(&event))
 		if (event.type == SDL_QUIT)
 			stopFOAM();
+			
 	return EXIT_SUCCESS;
 }
 
@@ -103,8 +104,10 @@ int modClosedLoop(control_t *ptc) {
 			ptc->wfc[i].ctrl[j] = drand48()*2-1;
 	}
 
-	if (drvReadSensor(ptc) != EXIT_SUCCESS)			// read the sensor output into ptc.image
-		return EXIT_SUCCESS;
+	if (drvReadSensor(ptc) != EXIT_SUCCESS) {		// read the sensor output into ptc.image
+		logWarn("Error, reading sensor failed.");
+		return EXIT_FAILURE;
+	}
 
 	//modSelSubapts(&ptc.wfs[0], 0, 0); 			// check samini (2nd param) and samxr (3d param)				
 	
@@ -168,7 +171,7 @@ int drvReadSensor() {
 	logDebug("Now reading %d sensors", ptc.wfs_count);
 	
 	if (ptc.wfs_count < 1) {
-		logErr("Nothing to process, no WFSs defined.");
+		logWarn("Nothing to process, no WFSs defined.");
 		return EXIT_FAILURE;
 	}
 	
@@ -176,7 +179,7 @@ int drvReadSensor() {
 	
 	// if filterwheel is set to pinhole, simulate a coherent image
 	if (ptc.mode == AO_MODE_CAL && ptc.filter == FILT_PINHOLE) {
-		logErr("Calibration not supported in static simulation mode.");
+		logWarn("Calibration not supported in static simulation mode.");
 		return EXIT_FAILURE;
 	}
 	else {
@@ -186,7 +189,7 @@ int drvReadSensor() {
 				return EXIT_FAILURE;
 			}
 			if (simimgsurf->w != res.x || simimgsurf->h != res.y) {
-				logErr("Simulation resolution incorrect! (%dx%d vs %dx%d)", res.x, res.y, simimgsurf->w, simimgsurf->h);
+				logWarn("Simulation resolution incorrect! (%dx%d vs %dx%d)", res.x, res.y, simimgsurf->w, simimgsurf->h);
 				return EXIT_FAILURE;			
 			}
 			// copy from SDL_Surface to array so we can work with it

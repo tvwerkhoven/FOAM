@@ -15,7 +15,7 @@ int modReadPGM(char *fname, SDL_Surface **img) {
 	
 	*img = IMG_Load(fname);
 	if (!*img) {
-		logErr("Error in IMG_Load: %s\n", IMG_GetError());
+		logWarn("Error in IMG_Load: %s\n", IMG_GetError());
 		return EXIT_FAILURE;
 	}
 	
@@ -30,9 +30,11 @@ int modWritePGM(char *fname, SDL_Surface *img) {
 	int x, y;
 	
 	fd = fopen(fname,"w+");
-	if (!fd) 
-		logErr("Error, cannot open file %s: %s", fname, strerror(errno));
-
+	if (!fd) {
+		logWarn("Error, cannot open file %s: %s", fname, strerror(errno));
+		return EXIT_FAILURE;
+	}
+	
 	// check maximum
 	for (x=0; x<img->w; x++) 
 		for (y=0; y<img->h; y++) 
