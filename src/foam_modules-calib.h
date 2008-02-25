@@ -30,8 +30,14 @@ extern int drvSetActuator();
 
 int modCalWFC(control_t *ptc, int wfs);
 
+int modCalWFCChk(control_t *ptc, int wfs);
+
 int modCalPinhole(control_t *ptc, int wfs);
 
+int modCalPinholeChk(control_t *ptc, int wfs);
+
 int modSVD(control_t *ptc, int wfs);
+
+int modFileChk(char *filename);
 
 #endif

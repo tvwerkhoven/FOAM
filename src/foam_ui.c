@@ -34,7 +34,7 @@ int main (int argc, char *argv[]) {
 	in_addr_t host;
 	int port;
 	fd_set read_fd_set, active_fd_set;
-	char msg[LINE_MAX];
+	char msg[1024];
 	int nbytes;
 	
 //	printf("level: %d and deb: %d info: %d err: %d\n", ui_config.loglevel, LOGDEBUG, LOGINFO, LOGERR);

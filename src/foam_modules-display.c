@@ -13,9 +13,6 @@
 
 #include "foam_modules-display.h"
 
-SDL_Surface *screen;	// Global surface to draw on
-SDL_Event event;		// Global SDL event struct to catch user IO
-
 void drawRect(int coord[2], int size[2], SDL_Surface *screen) {
 
 	// lower line
@@ -69,14 +66,14 @@ void drawDeltaLine(int x0, int y0, int dx, int dy, SDL_Surface *screen) {
 	drawLine(x0, y0, x0+dx, y0+dy, screen);
 }
 
-int displayImg(float *img, int res[2], SDL_Surface *screen) {
+int displayImg(float *img, coord_t res, SDL_Surface *screen) {
 	// ONLY does float images as input
 	int x, y, i;
 	float max=img[0];
 	float min=img[0];
 	
 	// we need this loop to check the maximum and minimum intensity. TODO: Do we need that? can't SDL do that?	
-	for (x=0; x < res[0]*res[1]; x++) {
+	for (x=0; x < res.x*res.y; x++) {
 		if (img[x] > max)
 			max = img[x];
 		if (img[x] < min)
@@ -92,9 +89,9 @@ int displayImg(float *img, int res[2], SDL_Surface *screen) {
 		case 1: { // Assuming 8-bpp
 				Uint8 *bufp;
 
-				for (x=0; x<res[0]; x++) {
-					for (y=0; y<res[1]; y++) {
-						i = (int) ((img[y*res[0] + x]-min)/(max-min)*255);
+				for (x=0; x<res.x; x++) {
+					for (y=0; y<res.y; y++) {
+						i = (int) ((img[y*res.x + x]-min)/(max-min)*255);
 						color = SDL_MapRGB(screen->format, i, i, i);
 						bufp = (Uint8 *)screen->pixels + y*screen->pitch + x;
 						*bufp = color;
@@ -105,9 +102,9 @@ int displayImg(float *img, int res[2], SDL_Surface *screen) {
 		case 2: {// Probably 15-bpp or 16-bpp
 				Uint16 *bufp;
 
-				for (x=0; x<res[0]; x++) {
-					for (y=0; y<res[1]; y++) {
-						i = (int) ((img[y*res[0] + x]-min)/(max-min)*255);
+				for (x=0; x<res.x; x++) {
+					for (y=0; y<res.y; y++) {
+						i = (int) ((img[y*res.x + x]-min)/(max-min)*255);
 						color = SDL_MapRGB(screen->format, i, i, i);
 						bufp = (Uint16 *)screen->pixels + y*screen->pitch/2 + x;
 						*bufp = color;
@@ -118,9 +115,9 @@ int displayImg(float *img, int res[2], SDL_Surface *screen) {
 		case 3: { // Slow 24-bpp mode, usually not used
 				Uint8 *bufp;
 				
-				for (x=0; x<res[0]; x++) {
-					for (y=0; y<res[1]; y++) {
-						i = (int) ((img[y*res[0] + x]-min)/(max-min)*255);
+				for (x=0; x<res.x; x++) {
+					for (y=0; y<res.y; y++) {
+						i = (int) ((img[y*res.x + x]-min)/(max-min)*255);
 						color = SDL_MapRGB(screen->format, i, i, i);
 						bufp = (Uint8 *)screen->pixels + y*screen->pitch + x * 3;
 						if(SDL_BYTEORDER == SDL_LIL_ENDIAN) {
@@ -140,9 +137,9 @@ int displayImg(float *img, int res[2], SDL_Surface *screen) {
 				Uint32 *bufp;
 
 				// draw the image itself
-				for (x=0; x<res[0]; x++) {
-					for (y=0; y<res[1]; y++) {
-						i = (int) ((img[y*res[0] + x]-min)/(max-min)*255);
+				for (x=0; x<res.x; x++) {
+					for (y=0; y<res.y; y++) {
+						i = (int) ((img[y*res.x + x]-min)/(max-min)*255);
 						color = SDL_MapRGB(screen->format, i, i, i);
 						bufp = (Uint32 *)screen->pixels + y*screen->pitch/4 + x;
 						*bufp = color;
@@ -269,5 +266,26 @@ int modDrawGrid(wfs_t *wfsinfo, SDL_Surface *screen) {
 		drawDash(0, yc*shsize[1], cells[0]*shsize[0], yc*shsize[1], screen);
 			
 	return EXIT_SUCCESS;
+}
+
+Uint32 getpixel(SDL_Surface *surface, int x, int y) {
+    int bpp = surface->format->BytesPerPixel;
+    /* Here p is the address to the pixel we want to retrieve */
+    Uint8 *p = (Uint8 *)surface->pixels + y * surface->pitch + x * bpp;
+    switch(bpp) {
+    case 1:
+        return *p;
+    case 2:
+        return *(Uint16 *)p;
+    case 3:
+        if (SDL_BYTEORDER == SDL_BIG_ENDIAN)
+            return p[0] << 16 | p[1] << 8 | p[2];
+        else
+            return p[0] | p[1] << 8 | p[2] << 16;
+    case 4:
+        return *(Uint32 *)p;
+    default:
+        return 0;       /* shouldn't happen, but avoids warnings */
+    }
 }
 

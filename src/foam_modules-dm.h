@@ -48,7 +48,7 @@ to be allocated once.
 @param [in] res The resolution of the image to be processed
 @return EXIT_SUCCESS on success, EXIT_FAILURE otherwise.
 */
-int modSimDM(char *boundarymask, char *actuatorpat, int nact, float *ctrl, float *image, int res[2], int niter);
+int modSimDM(char *boundarymask, char *actuatorpat, int nact, float *ctrl, float *image, coord_t res, int niter);
 
 // TODO: document (simple function anyway)
 /*!
@@ -56,7 +56,7 @@ int modSimDM(char *boundarymask, char *actuatorpat, int nact, float *ctrl, float
 
 Ctrl should be between -1 and 1, should be linear, and is a 2 element array.
 Like modSimDM, this routine updates the image stored in \a image. It again
-must already be allocated. \a res[2] is the resolution of the image.\n
+must already be allocated. \a res is the resolution of the image.\n
 \n
 Tilting itself is done as follows:
 The image is multiplied by values ranging from -amp to +amp over the whole resolution (res[0] or res[1]
@@ -68,6 +68,6 @@ with ctrl[0] and ctrl[1] for the x and y directions. If ctrl = {0,0}, no tip-til
 @param [in] res The resolution of the image
 @return EXIT_SUCCESS on success, EXIT_FAILURE otherwise.
 */
-int modSimTT(float *ctrl, float *image, int res[2]);
+int modSimTT(float *ctrl, float *image, coord_t res);
 
 #endif /* FOAM_MODULES_SIM */

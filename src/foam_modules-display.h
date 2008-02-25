@@ -64,9 +64,11 @@ int modDrawGrid(wfs_t *wfsinfo, SDL_Surface *screen);
 @param [in] res resolution of the image
 @param [in] *screen SDL_Surface to draw on
 */
-int displayImg(float *img, int res[2], SDL_Surface *screen);
+int displayImg(float *img, coord_t res, SDL_Surface *screen);
 void DrawPixel(SDL_Surface *screen, int x, int y, Uint8 R, Uint8 G, Uint8 B);
 void Sulock(SDL_Surface *screen);
 void Slock(SDL_Surface *screen);
+
+Uint32 getpixel(SDL_Surface *surface, int x, int y);
 
 #endif /* FOAM_MODULES_DISPLAY */

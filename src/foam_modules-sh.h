@@ -18,8 +18,8 @@
 #include "foam_cs_library.h"
 
 // These are defined in foam_cs_library.c
-extern control_t ptc;
-extern config_t cs_config;
+//extern control_t ptc;
+//extern config_t cs_config;
 
 // PROTOTYPES //
 /**************/
@@ -82,7 +82,7 @@ subaperture.
 @param [in] res the resolution of the big images (corrim, image, darkim, flatim)
 @param [in] window The resolution of the individual subapertures, used to reformat *corrim
 */
-void imcal(float *corrim, float *image, float *darkim, float *flatim, float *sum, float *max, int res[2], int window[2]);
+void imcal(float *corrim, float *image, float *darkim, float *flatim, float *sum, float *max, coord_t res, coord_t window);
 
 /*!
 @brief Tracks the seeing using center of gravity tracking
@@ -109,18 +109,18 @@ void modCogFind(wfs_t *wfsinfo, int xc, int yc, int width, int height, float sam
 
 Work in progress as of 2008-01-28
 */
-void modCorrTrack(wfs_t *wfsinfo, float *aver, float *max, float coords[][2]);
+//void modCorrTrack(wfs_t *wfsinfo, float *aver, float *max, float coords[][2]);
 
 /*!
 @brief Process a reference image stored in *image, old refim *ref
 TODO: doc
 */
-void procRef(wfs_t *wfsinfo, float *sharp, float *aver);
+//void procRef(wfs_t *wfsinfo, float *sharp, float *aver);
 
 /*!
 @brief Module to get a (new) reference image 
 TODO: doc
 */
-void modGetRef(wfs_t *wfsinfo);	
+//void modGetRef(wfs_t *wfsinfo);	
 
 #endif /* FOAM_MODULES_SH */

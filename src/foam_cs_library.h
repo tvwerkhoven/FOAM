@@ -40,7 +40,7 @@ Last: 2008-01-21
 // GLOBAL VARIABLES //
 /********************/
 
-char logmessage[LINE_MAX];
+char logmessage[COMMANDLEN];
 
 // STRUCTS AND TYPES //
 /*********************/
@@ -101,7 +101,27 @@ typedef struct { // wfc_t
 */
 typedef struct { // wfs_t
 	char name[FILENAMELEN];			//!< name of the specific WFS
-	int res[2];			//!< x,y-resolution of this WFS
+	coord_t res;		//!< x,y-resolution of this WFS
+
+	float *image;		//!< pointer to the WFS output, stored in row-major format
+	float *darkim;		//!< darkfield (byte image), stored in row-major format \b per \b subapt
+	float *flatim;		//!< flatfield (byte image), stored in row-major format \b per \b subapt
+	float *corrim;		//!< corrected image, stored in row-major format \b per \b subapt
+	
+	char darkfile[FILENAMELEN];		//!< filename for the darkfield calibration
+	char flatfile[FILENAMELEN];		//!< filename for the flatfield calibration
+	char skyfile[FILENAMELEN];		//!< filename for the flatfield calibration
+
+	axes_t scandir; 	//!< scanning direction(s) used (see \c axes_t type)
+	
+	// TODO: the below members SHOULD be exported to some different structure (these are SH specific)	
+	
+	float *refim;		//!< reference image for correlation tracking
+	
+	float *singular;	//!< stores singular values from SVD (nact big)
+	float *dmmodes;	//!< stores dmmodes from SVD (nact*nact big)
+	float *wfsmodes;	//!< stores wfsmodes from SVD (nact*nsubap*2 big)
+	
 	int cells[2];		//!< number of cells in this WFS (SH only)
 	int shsize[2];		//!< cells/res, resolution per cell (redundant, but easy)
 	
@@ -109,20 +129,12 @@ typedef struct { // wfs_t
 	int (*gridc)[2];	//!< this will hold the grid origina for a certain subaperture
 	float (*refc)[2];	//!< reference displacements
 	float (*disp)[2];	//!< measured displacements (compare with refence for actual shift)
+	
 	char pinhole[FILENAMELEN];		//!< filename to store the pinhole calibration (in *(refc))
 	char influence[FILENAMELEN];	//!< filename to store the influence matrix
 	
 	int nsubap;			//!< amount of subapertures used (coordinates stored in subc)
-	axes_t scandir; 	//!< scanning direction(s) used (see \c axes_t type)
 	
-	float *image;		//!< pointer to the WFS output, stored in row-major format
-	float *darkim;		//!< darkfield (byte image), stored in row-major format \b per \b subapt
-	float *flatim;		//!< flatfield (byte image), stored in row-major format \b per \b subapt
-	float *corrim;		//!< corrected image, stored in row-major format \b per \b subapt
-	float *refim;		//!< reference image for correlation tracking
-	char darkfile[FILENAMELEN];		//!< filename for the darkfield calibration
-	char flatfile[FILENAMELEN];		//!< filename for the flatfield calibration
-	char skyfile[FILENAMELEN];		//!< filename for the flatfield calibration
 } wfs_t;
 
 
@@ -165,18 +177,19 @@ files to log error, info and debug messages to and whether or not to use
 syslog.
 */
 typedef struct { // config_t
-	char listenip[16];	//!< IP to listen on, like 0.0.0.0
-	int listenport;	//!< port to listen on, like 10000
+	char listenip[16];			//!< IP to listen on, like "0.0.0.0"
+	int listenport;				//!< port to listen on, like 10000
 	char infofile[FILENAMELEN]; //!< file to log info messages to
-	FILE *infofd;	//!< associated filepointer
+	FILE *infofd;				//!< associated filepointer
 	char errfile[FILENAMELEN];
 	FILE *errfd;
 	char debugfile[FILENAMELEN];
 	FILE *debugfd;
-	bool use_syslog; //!< syslog usage flag
-	char syslog_prepend[32]; //!< string to prepend to syslogs
-	bool use_stderr; //!< stderr usage flag (for everything)
+	bool use_syslog; 			//!< syslog usage flag
+	char syslog_prepend[32]; 	//!< string to prepend to syslogs
+	bool use_stderr; 			//!< stderr usage flag (for everything)
 	level_t loglevel;
+	int logfrac;				//!< fraction to log for info and debug (1 is always, 50 is 1/50 times)
 } config_t;
 
 /* 

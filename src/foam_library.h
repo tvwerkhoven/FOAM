@@ -30,7 +30,7 @@ Last: 2008-01-21
 #include <syslog.h> 	// used for syslogging
 #include <stdarg.h>
 #include <pthread.h> 	// threads
-#include <limits.h> 	// LINE_MAX
+//#include <limits.h> 	// LINE_MAX
 #include <stdbool.h> 	// true/false
 #include <signal.h> 	// signal handlers
 #include <time.h> 		// needed by libevent/event.h

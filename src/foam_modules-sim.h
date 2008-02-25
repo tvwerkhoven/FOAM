@@ -10,15 +10,27 @@
 
 #include "foam_cs_library.h"		// we link to the main program here (i.e. we use common (log) functions)
 #include "foam_modules-display.h"	// we need the display module to show debug output
-#include "foam_modules-sh.h"		// we want the SH subroutines so we can track targets
+//#include "foam_modules-sh.h"		// we want the SH subroutines so we can track targets
 #include "foam_modules-dm.h"		// we want the DM subroutines here too
 #include "foam_modules-calib.h"		// we want the calibration
-#include <fftw3.h> 					// we need this for modParseSH()
+#include <fftw3.h> 					// we need this for modSimSH()
 #include "SDL_image.h"				// we need this to read PGM files
 
 // These are defined in foam_cs_library.c
 extern control_t ptc;
-extern config_t cs_config;
+//extern config_t cs_config;
+
+struct simul {
+	int wind[2]; 			// 'windspeed' in pixels/frame
+	int curorig[2]; 		// current origin
+	float *simimg; 			// pointer to the image we use to simulate stuff
+	int simimgres[2];		// resolution of the simulation image
+	float seeingfac;		// factor to worsen seeing (2--20)
+	fftw_complex *shin;		// input for fft algorithm
+	fftw_complex *shout;	// output for fft (but shin can be used if fft is inplace)
+	fftw_plan plan_forward; // plan, one time calculation on how to calculate ffts fastest
+	char wisdomfile[32];
+};
 
 // PROTOTYPES //
 /**************/
@@ -81,7 +93,7 @@ int simObj(char *file, float *image);
 This fuction works in wavefront-space.
 TODO: add doc
 */
-int simAtm(char *file, int res[2], int origin[2], float *image);
+int simAtm(char *file, coord_t res, int origin[2], float *image);
 
 /*!
 @brief Simulates wind by chaning the origin that simAtm reads in
@@ -94,7 +106,7 @@ int modSimWind();
 This fuction works in wavefront-space, and basically multiplies the aperture function with
 the wavefront from \a simAtm().
 */
-int simTel(char *file, float *image, int res[2]);
+int simTel(char *file, float *image, coord_t res);
 
 /*!
 @brief \a simWFC() simulates a certain wave front corrector, like a TT or a DM.
@@ -103,16 +115,5 @@ This fuction works in wavefront-space.
 */
 int simWFC(control_t *ptc, int wfcid, int nact, float *ctrl, float *image);
 
-/*!
-@brief Reads a pgm file from disk into memory
-
-@param [in] *fname the filename to read
-@param [out] **image the SDL_Surface that will hold the image
-*/
-int modReadPGM(char *fname, SDL_Surface **img);
-
-// TODO: doc
-Uint32 getpixel(SDL_Surface *surface, int x, int y);
 
 #endif /* FOAM_MODULES_SIM */
-

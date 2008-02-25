@@ -17,9 +17,9 @@ LDFLAGS+=-ldmalloc
 
 # dummy moduleset
 bin_PROGRAMS += foamcs-dummy
-foamcs_dummy_SOURCES = foam_cs.c foam_library.c foam_cs_library.c foam_modules-dummy.c
-foamcs_dummy_SOURCES += foam_cs_library.h foam_library.h
-
+foamcs_dummy_SOURCES = foam_cs.c foam_library.c foam_cs_library.c foam_primemod-dummy.c
+foamcs_dummy_SOURCES += foam_cs_library.h foam_library.h foam_primemod-dummy.h
+foamcs_dummy_CPPFLAGS = -include "foam_primemod-dummy.h"
 
 # did we enable UI support or not?
 if UI
@@ -33,8 +33,9 @@ endif
 # programs depend on whether or not we want static simulation...
 if STATSIMULATION
 bin_PROGRAMS += foamcs-statsim
-foamcs_statsim_SOURCES = foam_cs.c foam_library.c foam_cs_library.c foam_modules-sh.c foam_modules-simstatic.c foam_modules-display.c foam_modules-calib.c
-foamcs_statsim_SOURCES += foam_cs_library.h foam_library.h foam_modules-sh.h foam_modules-sim.h foam_modules-display.h
+foamcs_statsim_SOURCES = foam_cs.c foam_library.c foam_cs_library.c foam_modules-sh.c foam_modules-display.c foam_modules-pgm.c foam_primemod-simstatic.c
+foamcs_statsim_SOURCES += foam_cs_library.h foam_library.h foam_modules-sh.h foam_modules-display.h foam_modules-pgm.h foam_primemod-simstatic.h
+foamcs_statsim_CPPFLAGS = -include "foam_primemod-simstatic.h"
 foamcs_statsim_CFLAGS = $(SIMULATION_CFLAGS)
 foamcs_statsim_LDFLAGS = $(SIMULATION_LIBS)
 endif
@@ -43,9 +44,9 @@ endif
 # programs depend on whether or not we want simulation...
 if SIMULATION
 bin_PROGRAMS += foamcs-sim
-foamcs_sim_SOURCES = foam_cs.c foam_library.c foam_cs_library.c foam_modules-dm.c  foam_modules-sh.c foam_modules-sim.c foam_modules-display.c foam_modules-calib.c
-foamcs_sim_SOURCES += foam_cs_library.h foam_library.h foam_modules-sh.h foam_modules-sim.h foam_modules-display.h
-foamcs_sim_CPPFLAGS = -include "foam_modules-sim.h"
+foamcs_sim_SOURCES = foam_cs.c foam_library.c foam_cs_library.c foam_modules-dm.c  foam_modules-sh.c foam_modules-sim.c foam_modules-display.c foam_modules-calib.c foam_modules-pgm.c foam_primemod-sim.c
+foamcs_sim_SOURCES += foam_cs_library.h foam_library.h foam_modules-sh.h foam_modules-sim.h foam_modules-display.h foam_modules-pgm.h foam_primemod-sim.h
+foamcs_sim_CPPFLAGS = -include "foam_primemod-sim.h"
 foamcs_sim_CFLAGS = $(SIMULATION_CFLAGS)
 foamcs_sim_LDFLAGS = $(SIMULATION_LIBS)
 endif

@@ -49,7 +49,7 @@ float *actvolt=NULL;	// we store the actuator pattern with voltages applied here
 // FUNCTIONS BEGIN //
 /*******************/
 
-int modSimTT(float *ctrl, float *image, int res[2]) {
+int modSimTT(float *ctrl, float *image, coord_t res) {
 	int i,j;
 	float amp = 4;
 	
@@ -59,18 +59,18 @@ int modSimTT(float *ctrl, float *image, int res[2]) {
 	if (ctrl[1] > 1.0) ctrl[1] = 1.0;
 	if (ctrl[1] < -1.0) ctrl[1] = -1.0;
 	
-	for (i=0; i<res[1]; i++)
-		for (j=0; j<res[0]; j++)
-			image[i*res[0] + j] += ((((float) i/(res[1]-1))-0.5) * 2 * amp * ctrl[1]) + \
-								((((float) j/(res[0]-1) )-0.5) * 2 * amp * ctrl[0]);
+	for (i=0; i<res.y; i++)
+		for (j=0; j<res.x; j++)
+			image[i*res.x + j] += ((((float) i/(res.y-1))-0.5) * 2 * amp * ctrl[1]) + \
+								((((float) j/(res.x-1) )-0.5) * 2 * amp * ctrl[0]);
 
 	// this had problems with integer divisions:
-	//image[i*res[0] + j] += (((i/res[1])-0.5) * 2 * amp * ctrl[1]) + (((j/res[0])-0.5) * 2 * amp * ctrl[0]);
+	//image[i*res.x + j] += (((i/res.y)-0.5) * 2 * amp * ctrl[1]) + (((j/res.x)-0.5) * 2 * amp * ctrl[0]);
 	
 	return EXIT_SUCCESS;	
 }
 
-int modSimDM(char *boundarymask, char *actuatorpat, int nact, float *ctrl, float *image, int res[2], int niter) {
+int modSimDM(char *boundarymask, char *actuatorpat, int nact, float *ctrl, float *image, coord_t res, int niter) {
 	int i, x, y;							// random counters
 	int ii; 								// iteration counter
 	int voltage[nact]; 						// voltage settings for electrodes (in digital units)
@@ -88,30 +88,30 @@ int modSimDM(char *boundarymask, char *actuatorpat, int nact, float *ctrl, float
 			logErr("Cannot read boundary mask");
 			return EXIT_FAILURE;
 		}
-		if (boundarysurf->w != res[0] || boundarysurf->h != res[1]) {
-			logErr("Boundary mask resolution incorrect! (%dx%d vs %dx%d)", res[0], res[1], boundarysurf->w, boundarysurf->h);
+		if (boundarysurf->w != res.x || boundarysurf->h != res.y) {
+			logErr("Boundary mask resolution incorrect! (%dx%d vs %dx%d)", res.x, res.y, boundarysurf->w, boundarysurf->h);
 			return EXIT_FAILURE;			
 		}
 		
 		// copy from SDL_Surface to array so we can work with it
-		boundary = calloc( res[0]*res[1], sizeof(*boundary));
+		boundary = calloc( res.x*res.y, sizeof(*boundary));
 		if (boundary == NULL) {
 			logErr("Error allocating memory for boundary image");
 			return EXIT_FAILURE;
 		}
 		else {
-			for (y=0; y<res[1]; y++)
-				for (x=0; x<res[0]; x++)
-					boundary[y*res[0] + x] = (float) getpixel(boundarysurf, x, y);
+			for (y=0; y<res.y; y++)
+				for (x=0; x<res.x; x++)
+					boundary[y*res.x + x] = (float) getpixel(boundarysurf, x, y);
 		
 			// normalize the boundary pattern
-			for (ik = 0; ik < res[0]*res[1]; ik++) {
+			for (ik = 0; ik < res.x*res.y; ik++) {
 				if (*(boundary + ik) > 0) *(boundary + ik) = 1.;
 				else *(boundary + ik) = 0.;
 			}
 		}
 		
-		logInfo("Read boundary '%s' succesfully (%dx%d)", boundarymask, res[0], res[1]);
+		logInfo("Read boundary '%s' succesfully (%dx%d)", boundarymask, res.x, res.y);
 	}
 	
 	// read actuator pattern file if this has not already been done before
@@ -121,28 +121,28 @@ int modSimDM(char *boundarymask, char *actuatorpat, int nact, float *ctrl, float
 			return EXIT_FAILURE;
 		}
 
-		if (actsurf->w != res[0] || actsurf->h != res[1]) {
-			logErr("Actuatorn pattern resolution incorrect! (%dx%d vs %dx%d)", res[0], res[1], actsurf->w, actsurf->h);
+		if (actsurf->w != res.x || actsurf->h != res.y) {
+			logErr("Actuatorn pattern resolution incorrect! (%dx%d vs %dx%d)", res.x, res.y, actsurf->w, actsurf->h);
 			return EXIT_FAILURE;			
 		}
 		
 		// copy from SDL_Surface to array so we can work with it
-		act = calloc((res[0]) * (res[1]), sizeof(*act));
+		act = calloc((res.x) * (res.y), sizeof(*act));
 		if (act == NULL) {
 			logErr("Error allocating memory for actuator image");
 			return EXIT_FAILURE;
 		}
 		else {
-			for (y=0; y<res[1]; y++)
-				for (x=0; x<res[0]; x++)
-					act[y*res[0] + x] = (float) getpixel(actsurf, x, y);
+			for (y=0; y<res.y; y++)
+				for (x=0; x<res.x; x++)
+					act[y*res.x + x] = (float) getpixel(actsurf, x, y);
 		}
-		logInfo("Read actuator pattern '%s' succesfully (%dx%d)", actuatorpat, res[0], res[1]);
+		logInfo("Read actuator pattern '%s' succesfully (%dx%d)", actuatorpat, res.x, res.y);
 	}
 
 	// allocate memory for actuator pattern with voltages
 	if (actvolt == NULL) {
-		actvolt = calloc((res[0]) * (res[1]), sizeof(*actvolt));
+		actvolt = calloc((res.x) * (res.y), sizeof(*actvolt));
 		if (actvolt == NULL) {
 			logErr("Error allocating memory for actuator voltage image");
 			return EXIT_FAILURE;
@@ -151,19 +151,19 @@ int modSimDM(char *boundarymask, char *actuatorpat, int nact, float *ctrl, float
 	
 
 	// input linear and c=[-1,1], 'output' must be v=[0,255] and linear in v^2
-	logDebug("Simulating DM with voltages:");
+//	logDebug("Simulating DM with voltages:");
 	for (ik = 0; ik < nact; ik++) {
 		// we do Sqrt(255^2 (i+1) * 0.5) here to convert from [-1,1] (linear) to [0,255] (quadratic)
 		voltage[ik] = (int) round( sqrt(65025*(ctrl[ik]+1)*0.5 ) ); //65025 = 255^2
-		logDirect("%d ", voltage[ik]);
+//		logDirect("%d ", voltage[ik]);
 	}
-	logDirect("\n");
+//	logDirect("\n");
 	
 	// set actuator voltages on electrodes *act is the actuator pattern,
 	// where the value of the pixel associates that pixel with an actuator
 	// *actvolt will hold this same pattern, but then with voltage
 	// related values which serve as input for solving the mirror function
-	for (ik = 0; ik < res[0]*res[1]; ik++){
+	for (ik = 0; ik < res.x*res.y; ik++){
 		i = (int) act[ik];
 		if(i > 0)
 			actvolt[ik] = pow(voltage[i-1] / 255.0, 2.0) / 75.7856;
@@ -175,11 +175,11 @@ int modSimDM(char *boundarymask, char *actuatorpat, int nact, float *ctrl, float
 	// compute spectral radius rho and SOR omega factor. These are appro-
 	// ximate values. Get the number of iterations.
 
-	rho = (cos(pi/((double)res[0])) + cos(pi/((double)res[1])))/2.0;
+	rho = (cos(pi/((double)res.x)) + cos(pi/((double)res.y)))/2.0;
 	omega = 2.0/(1.0 + sqrt(1.0 - rho*rho));
 
 	if (niter <= 0) // Set the number of iterations if the argument was <= 0
-		niter = (int)(2.0*sqrt((double) res[0]*res[1]));
+		niter = (int)(2.0*sqrt((double) res.x*res.y));
 
 	// Calculation of the response. This is a Poisson PDE problem
 	// where the actuator pattern represents the source term and and
@@ -189,8 +189,8 @@ int modSimDM(char *boundarymask, char *actuatorpat, int nact, float *ctrl, float
 	// in Press et al., "Numerical Recipes", Section 17.
 	
 	if (resp == NULL) {
-		logDebug("Allocating memory for resp: %dx%d.", res[0], res[1]);
-		resp = calloc(res[0]*res[1], sizeof(*resp));
+		logDebug("Allocating memory for resp: %dx%d.", res.x, res.y);
+		resp = calloc(res.x*res.y, sizeof(*resp));
 		if (resp == NULL) {
 			logErr("Allocation error, exiting");
 			return EXIT_FAILURE;
@@ -202,11 +202,11 @@ int modSimDM(char *boundarymask, char *actuatorpat, int nact, float *ctrl, float
 		
 		sum = 0.0;
 		sdif = 0.0;
-		// new loop, hopefully a little smarter. start at 1+res[0] because this pixel has four neighbours,
-		// stop at the last but (1+res[0]) pixel but again this has four neighbours.
-		for (i=1+res[0]; i<(res[0]*res[1])-1-res[0]; i++) {
+		// new loop, hopefully a little smarter. start at 1+res.x because this pixel has four neighbours,
+		// stop at the last but (1+res.x) pixel but again this has four neighbours.
+		for (i=1+res.x; i<(res.x*res.y)-1-res.x; i++) {
 			if (*(boundary + i) > 0) { 		// pixel is in the boundary?
-				update = -resp[i] - (actvolt[i] - resp[i-res[0]] - resp[i+res[0]] - resp[i+1] - resp[i-1])/4.;
+				update = -resp[i] - (actvolt[i] - resp[i-res.x] - resp[i+res.x] - resp[i+1] - resp[i-1])/4.;
 				resp[i] = resp[i] + omega*update;
 				sum += resp[i];
 				sdif += (omega*update)*(omega*update);
@@ -224,7 +224,7 @@ int modSimDM(char *boundarymask, char *actuatorpat, int nact, float *ctrl, float
 	} // end iteration loop
 
 	// *update* the image, so there should already be an image
-	for (i = 0; i < res[0]*res[1]; i++)
+	for (i = 0; i < res.x*res.y; i++)
 		image[i] = amp*resp[i];
 
 	return EXIT_SUCCESS; // successful completion

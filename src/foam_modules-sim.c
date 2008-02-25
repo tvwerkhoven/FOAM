@@ -17,19 +17,6 @@
 #define FOAM_MODSIM_APTMASK "../config/apert15-256.pgm"
 #define FOAM_MODSIM_ACTPAT "../config/dm37-256.pgm"
 
-
-struct simul {
-	int wind[2]; 			// 'windspeed' in pixels/cycle
-	int curorig[2]; 		// current origin
-	float *simimg; 			// pointer to the image we use to simulate stuff
-	int simimgres[2];		// resolution of the simulation image
-	float seeingfac;		// factor to worsen seeing (2--20)
-	fftw_complex *shin;		// input for fft algorithm
-	fftw_complex *shout;	// output for fft (but shin can be used if fft is inplace)
-	fftw_plan plan_forward; // plan, one time calculation on how to calculate ffts fastest
-	char wisdomfile[32];
-};
-
 struct simul simparams = {
 	.wind[0] = 10,
 	.wind[1] = 5,
@@ -41,149 +28,12 @@ struct simul simparams = {
 	.wisdomfile = "fftw_wisdom.dat",
 };
 
-extern SDL_Surface *screen;	// Global surface to draw on
-extern SDL_Event event;		// Global SDL event struct to catch user IO
-
 
 // We need these every time, declare them globally
 char errmsg[FLEN_STATUS]; 		// FLEN_STATUS is from fitsio.h
 int status = 0;  				// MUST initialize status
 float nulval = 0.0;
 int anynul = 0;
-
-int modInitModule(control_t *ptc) {
-
-    /* Initialize defaults, Video and Audio */
-    if((SDL_Init(SDL_INIT_VIDEO) == -1)) { 
-        logErr("Could not initialize SDL: %s.\n", SDL_GetError());
-		return EXIT_FAILURE;
-    }
-	atexit(SDL_Quit);
-	
-	SDL_WM_SetCaption("WFS output", "WFS output");
-
-	screen = SDL_SetVideoMode(ptc->wfs[0].res[0], ptc->wfs[0].res[1], 0, SDL_HWSURFACE|SDL_DOUBLEBUF);
-	if (screen == NULL) {
-		logErr("Unable to set video: %s", SDL_GetError());
-		return EXIT_FAILURE;
-	}
-	return EXIT_SUCCESS;
-}
-
-void modStopModule(control_t *ptc) {
-	// let's just do nothing here because we're done anyway :P
-}
-
-int modOpenInit(control_t *ptc) {
-
-	if (drvReadSensor(ptc) != EXIT_SUCCESS) {		// read the sensor output into ptc.image
-		logErr("Error, reading sensor failed.");
-		ptc->mode = AO_MODE_LISTEN;
-		return EXIT_FAILURE;
-	}
-	
-	modSelSubapts(&(ptc->wfs[0]), 0, -1); 			// check samini (2nd param) and samxr (3d param)
-	
-	return EXIT_SUCCESS;
-}
-
-int modOpenLoop(control_t *ptc) {
-	int i;
-	// for (i=0; i<ptc->wfc[1].nact; i++)
-	// 	ptc->wfc[1].ctrl[i] = ((ptc->frames % 50) / 25.0 - 1);
-				
-	if (drvReadSensor(ptc) != EXIT_SUCCESS)			// read the sensor output into ptc.image
-		return EXIT_FAILURE;
-		
-	if (modParseSH((&ptc->wfs[0])) != EXIT_SUCCESS)			// process SH sensor output, get displacements
-		return EXIT_FAILURE;
-	
-//	if (ptc->frames % 20 == 0) {
-		Slock(screen);
-		displayImg(ptc->wfs[0].image, ptc->wfs[0].res, screen);
-		modDrawGrid(&(ptc->wfs[0]), screen);
-		modDrawSubapts(&(ptc->wfs[0]), screen);
-		modDrawVecs(&(ptc->wfs[0]), screen);
-		Sulock(screen);
-		SDL_Flip(screen);
-		
-//	}
-
-	
-	if (SDL_PollEvent(&event))
-		if (event.type == SDL_QUIT)
-			stopFOAM();
-	return EXIT_SUCCESS;
-}
-
-int modClosedInit(control_t *ptc) {
-	// this is the same for open and closed modes, don't rewrite stuff
-	modOpenInit(ptc);
-	return EXIT_SUCCESS;
-}
-
-int modClosedLoop(control_t *ptc) {
-	// set both actuators to something random
-	int i,j;
-	
-	for (i=0; i<ptc->wfc_count; i++) {
-		logDebug("Setting WFC %d with %d acts.", i, ptc->wfc[i].nact);
-		for (j=0; j<ptc->wfc[i].nact; j++)
-			ptc->wfc[i].ctrl[j] = drand48()*2-1;
-	}
-
-	if (drvReadSensor(ptc) != EXIT_SUCCESS)			// read the sensor output into ptc.image
-		return EXIT_SUCCESS;
-
-	//modSelSubapts(&ptc.wfs[0], 0, 0); 			// check samini (2nd param) and samxr (3d param)				
-	
-	if (modParseSH((&ptc->wfs[0])) != EXIT_SUCCESS)			// process SH sensor output, get displacements
-		return EXIT_SUCCESS;
-	
-//	if (ptc->frames % 20 == 0) {
-	Slock(screen);
-	displayImg(ptc->wfs[0].image, ptc->wfs[0].res, screen);
-	modDrawGrid(&(ptc->wfs[0]), screen);
-	modDrawSubapts(&(ptc->wfs[0]), screen);
-	modDrawVecs(&(ptc->wfs[0]), screen);
-	Sulock(screen);
-	SDL_Flip(screen);
-//	}
-	
-	if (SDL_PollEvent(&event))
-		if (event.type == SDL_QUIT)
-			stopFOAM();
-		
-	return EXIT_SUCCESS;
-}
-
-int modCalibrate(control_t *ptc) {
-	// todo: add dark/flat field calibrations
-	// dark:
-	//  add calibration enum
-	//  add function to calib.c with defined FILENAME
-	//  add switch to drvReadSensor which gives a black image (1)
-	// flat:
-	//  whats flat? how to do with SH sensor in place? --> take them out
-	//  add calib enum
-	//  add switch/ function / drvreadsensor
-	// sky:
-	//  same as flat
-	
-	logInfo("Switching calibration");
-	switch (ptc->calmode) {
-		case CAL_PINHOLE: // pinhole WFS calibration
-			return modCalPinhole(ptc, 0);
-			break;
-		case CAL_INFL: // influence matrix
-			return modCalWFC(ptc, 0); // arguments: (control_t *ptc, int wfs)
-			break;
-		default:
-			logErr("Unsupported calibrate mode encountered.");
-			return EXIT_FAILURE;
-			break;			
-	}
-}
 
 int drvReadSensor() {
 	int i;
@@ -196,7 +46,7 @@ int drvReadSensor() {
 	
 	// if filterwheel is set to pinhole, simulate a coherent image
 	if (ptc.mode == AO_MODE_CAL && ptc.filter == FILT_PINHOLE) {
-		for (i=0; i<ptc.wfs[0].res[0]*ptc.wfs[0].res[1]; i++)
+		for (i=0; i<ptc.wfs[0].res.x*ptc.wfs[0].res.y; i++)
 			ptc.wfs[0].image[i] = 1;
 			
 	}
@@ -254,12 +104,12 @@ int drvReadSensor() {
 }
 
 int modSimWind() {
-	if (simparams.simimgres[0] < ptc.wfs[0].res[0] + 2*simparams.wind[0]) {
+	if (simparams.simimgres[0] < ptc.wfs[0].res.x + 2*simparams.wind[0]) {
 		logErr("Simulated wavefront too small for current x-wind, setting to zero.");
 		simparams.wind[0] = 0;
 	}
 		
-	if (simparams.simimgres[1] < ptc.wfs[0].res[1] + 2*simparams.wind[1]) {
+	if (simparams.simimgres[1] < ptc.wfs[0].res.y + 2*simparams.wind[1]) {
 		logErr("Simulated wavefront too small for current y-wind, setting to zero.");
 		simparams.wind[1] = 0;
 	}
@@ -270,7 +120,7 @@ int modSimWind() {
 
  	// if the origin is out of bound, reverse the wind direction and move that way
 	// X ORIGIN TOO BIG:
-	if (simparams.wind[0] != 0 && simparams.curorig[0] > simparams.simimgres[0]-ptc.wfs[0].res[0]) {
+	if (simparams.wind[0] != 0 && simparams.curorig[0] > simparams.simimgres[0]-ptc.wfs[0].res.x) {
 		simparams.wind[0] *= -1;						// Reverse X wind speed
 		simparams.curorig[0] += 2*simparams.wind[0];	// move in the new wind direction
 	}
@@ -281,7 +131,7 @@ int modSimWind() {
 	}
 	
 	// Y ORIGIN TOO BIG
-	if (simparams.wind[1] != 0 && simparams.curorig[1] > simparams.simimgres[1]-ptc.wfs[0].res[1]) {
+	if (simparams.wind[1] != 0 && simparams.curorig[1] > simparams.simimgres[1]-ptc.wfs[0].res.y) {
 		simparams.wind[1] *= -1;						// Reverse Y wind speed
 		simparams.curorig[1] += 2*simparams.wind[1];	// move in the new wind direction
 	}
@@ -314,7 +164,7 @@ int simWFC(control_t *ptc, int wfcid, int nact, float *ctrl, float *image) {
 // global to hold telescope aperture
 float *aperture=NULL;
 
-int simTel(char *file, float *image, int res[2]) {
+int simTel(char *file, float *image, coord_t res) {
 	int i;
 	int x, y;
 
@@ -329,8 +179,8 @@ int simTel(char *file, float *image, int res[2]) {
 			logErr("Cannot read telescope aperture");
 			return EXIT_FAILURE;
 		}
-		if (res[0] != aperturesurf->w || res[1] != aperturesurf->h) {
-			logErr("Telescope aperture resolution incorrect! (%dx%d vs %dx%d)", res[0], res[1], aperturesurf->w, aperturesurf->h);
+		if (res.x != aperturesurf->w || res.y != aperturesurf->h) {
+			logErr("Telescope aperture resolution incorrect! (%dx%d vs %dx%d)", res.x, res.y, aperturesurf->w, aperturesurf->h);
 			return EXIT_FAILURE;
 		}
 		// copy from SDL_Surface to array
@@ -346,16 +196,16 @@ int simTel(char *file, float *image, int res[2]) {
 		}
 	}
 	
-	logDebug("Aperture read successfully (%dx%d), processing with image.",  res[0], res[1]);
+	logDebug("Aperture read successfully (%dx%d), processing with image.",  res.x, res.y);
 	
 	// Multiply wavefront with aperture
-	for (i=0; i < res[0]*res[1]; i++)
+	for (i=0; i < res.x*res.y; i++)
 	 	if (aperture[i] == 0) image[i] = 0;
 	
 	return EXIT_SUCCESS;
 }
 
-int simAtm(char *file, int res[2], int origin[2], float *image) {
+int simAtm(char *file, coord_t res, int origin[2], float *image) {
 	// ASSUMES WFS_COUNT > 0
 	// ASSUMES ptc.wfs[0].image is initialized to float 
 	// ASSUMES simparams.simimg is also float
@@ -373,7 +223,7 @@ int simAtm(char *file, int res[2], int origin[2], float *image) {
 	// If we haven't loaded the simulated wavefront yet, load it now
 	if (simparams.simimg == NULL) {
 		// Loading was different, loaded only part of a file, slower.
-		// sprintf(newfile, "%s[%ld:%ld,%ld:%ld]", file, origin[0], origin[0]+res[0]-1, origin[1], origin[1]+res[1]-1);
+		// sprintf(newfile, "%s[%ld:%ld,%ld:%ld]", file, origin[0], origin[0]+res.x-1, origin[1], origin[1]+res.y-1);
 		
 		// THIS IS A TEMPORARY THING
 		// limit the size of the file read, only read 512x512 instead of full 1024x1024 img
@@ -423,15 +273,15 @@ int simAtm(char *file, int res[2], int origin[2], float *image) {
 	
 	// If we move outside the simulated wavefront, reverse the 'windspeed'
 	// TODO: this is already handled in modSimWind? should not be necessary?
-	if ((origin[0] + res[0] >= simparams.simimgres[0]) || (origin[1] + res[1] >= simparams.simimgres[1]) 
+	if ((origin[0] + res.x >= simparams.simimgres[0]) || (origin[1] + res.y >= simparams.simimgres[1]) 
 		|| (origin[0] < 0) || (origin[1] < 0)) {
 		logErr("Simulation out of bound, wind reset failed. (%f,%f) ", origin[0], origin[1]);
 		return EXIT_FAILURE;
 	}
 	
-	for (i=0; i<res[1]; i++) { // y coordinate
-		for (j=0; j<res[0]; j++) { // x coordinate 
-			image[i*res[0] + j] = simparams.simimg[(i+origin[1])*simparams.simimgres[0] + (j+origin[0])];
+	for (i=0; i<res.y; i++) { // y coordinate
+		for (j=0; j<res.x; j++) { // x coordinate 
+			image[i*res.x + j] = simparams.simimg[(i+origin[1])*simparams.simimgres[0] + (j+origin[0])];
 		}
 	}	
 
@@ -513,10 +363,10 @@ int modSimSH() {
 		return EXIT_FAILURE;
 	}
 	
-	if (ptc.wfs[0].cells[0] * shsize[0] != ptc.wfs[0].res[0] || \
-		ptc.wfs[0].cells[1] * shsize[1] != ptc.wfs[0].res[1])
+	if (ptc.wfs[0].cells[0] * shsize[0] != ptc.wfs[0].res.x || \
+		ptc.wfs[0].cells[1] * shsize[1] != ptc.wfs[0].res.y)
 		logErr("Incomplete SH cell coverage! This means that nx_subapt * width_subapt != width_img x: (%d*%d,%d) y: (%d*%d,%d)", \
-			ptc.wfs[0].cells[0], shsize[0], ptc.wfs[0].res[0], ptc.wfs[0].cells[1], shsize[1], ptc.wfs[0].res[1]);
+			ptc.wfs[0].cells[0], shsize[0], ptc.wfs[0].res.x, ptc.wfs[0].cells[1], shsize[1], ptc.wfs[0].res.y);
 
 	
 	logDebug("Beginning imaging simulation.");
@@ -533,7 +383,7 @@ int modSimSH() {
 			i = 0;
 			for (ip=0; ip<shsize[1]; ip++)
 				for (jp=0; jp<shsize[0]; jp++)
-					 	if (ptc.wfs[0].image[yc*shsize[1]*ptc.wfs[0].res[0] + xc*shsize[0] + ip*ptc.wfs[0].res[0] + jp] == 0)
+					 	if (ptc.wfs[0].image[yc*shsize[1]*ptc.wfs[0].res.x + xc*shsize[0] + ip*ptc.wfs[0].res.x + jp] == 0)
 							i++;
 			
 			// allow one quarter of the pixels to be zero, otherwise set subapt to zero and continue
@@ -541,7 +391,7 @@ int modSimSH() {
 			if (i > shsize[1]*shsize[0]/4) {
 				for (ip=0; ip<shsize[1]; ip++)
 					for (jp=0; jp<shsize[0]; jp++)
-						ptc.wfs[0].image[yc*shsize[1]*ptc.wfs[0].res[0] + xc*shsize[0] + ip*ptc.wfs[0].res[0] + jp] = 0;
+						ptc.wfs[0].image[yc*shsize[1]*ptc.wfs[0].res.x + xc*shsize[0] + ip*ptc.wfs[0].res.x + jp] = 0;
 								
 				continue;
 			}
@@ -575,7 +425,7 @@ int modSimSH() {
 					// pixel ip * the width of the whole image plus the x coordinate
 
 					simparams.shin[(ip+ ny/4)*nx + (jp + nx/4)][0] = \
-						ptc.wfs[0].image[yc*shsize[1]*ptc.wfs[0].res[0] + xc*shsize[0] + ip*ptc.wfs[0].res[0] + jp];
+						ptc.wfs[0].image[yc*shsize[1]*ptc.wfs[0].res.x + xc*shsize[0] + ip*ptc.wfs[0].res.x + jp];
 					// old: simparams.shin[(ip+ shsize[1]/2 +1)*nx + jp + shsize[0]/2 + 1][0] = 
 				}
 			}
@@ -626,7 +476,7 @@ int modSimSH() {
 			// if (ip,jp) starts at (0,0)
 			for (ip=ny/4; ip<ny*3/4; ip++) { 
 				for (jp=nx/4; jp<nx*3/4; jp++) {
-					ptc.wfs[0].image[yc*shsize[1]*ptc.wfs[0].res[0] + xc*shsize[0] + (ip-ny/4)*ptc.wfs[0].res[0] + (jp-nx/4)] = \
+					ptc.wfs[0].image[yc*shsize[1]*ptc.wfs[0].res.x + xc*shsize[0] + (ip-ny/4)*ptc.wfs[0].res.x + (jp-nx/4)] = \
 						simparams.shin[((ip+ny/2)%ny)*nx + (jp+nx/2)%nx][0];
 				}
 			}
@@ -651,41 +501,6 @@ int drvFilterWheel(control_t *ptc, fwheel_t mode) {
 	ptc->filter = mode;
 	return EXIT_SUCCESS;
 }
-
-Uint32 getpixel(SDL_Surface *surface, int x, int y) {
-    int bpp = surface->format->BytesPerPixel;
-    /* Here p is the address to the pixel we want to retrieve */
-    Uint8 *p = (Uint8 *)surface->pixels + y * surface->pitch + x * bpp;
-    switch(bpp) {
-    case 1:
-        return *p;
-    case 2:
-        return *(Uint16 *)p;
-    case 3:
-        if (SDL_BYTEORDER == SDL_BIG_ENDIAN)
-            return p[0] << 16 | p[1] << 8 | p[2];
-        else
-            return p[0] | p[1] << 8 | p[2] << 16;
-    case 4:
-        return *(Uint32 *)p;
-    default:
-        return 0;       /* shouldn't happen, but avoids warnings */
-    }
-}
-
-int modReadPGM(char *fname, SDL_Surface **img) {
-	
-	*img = IMG_Load(fname);
-	if (!img) {
-		logErr("Error in IMG_Load: %s\n", IMG_GetError());
-		return EXIT_FAILURE;
-	}
-	
-	logDebug("Loaded image %s (%dx%d)", fname, (*img)->w, (*img)->h);
-
-	return EXIT_SUCCESS;
-}
-
 
 
 // int modReadPGM(char *fname, double **dbuf, int *t_nx, int *t_ny, int *t_ngray) {

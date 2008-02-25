@@ -27,7 +27,8 @@ config_t cs_config = {
 	.use_syslog = false,
 	.syslog_prepend = "foam",
 	.use_stderr = true,
-	.loglevel = LOGDEBUG
+	.loglevel = LOGINFO,
+	.logfrac = 1
 };
 
 conntrack_t clientlist;
@@ -55,6 +56,9 @@ static int formatLog(char *output, const char *prepend, const char *msg) {
 void logInfo(const char *msg, ...) {
 	if (cs_config.loglevel < LOGINFO) 		// Do we need this loglevel?
 		return;
+		
+	if (ptc.frames % cs_config.logfrac != 0)	// We only print log messages every logmod frames
+		return;
 	
 	va_list ap, aq, ar; // We need three of these because we cannot re-use a va_list variable
 	
@@ -80,7 +84,12 @@ void logInfo(const char *msg, ...) {
 
 void logDirect(const char *msg, ...) {
 	// this log command is always logged and without any additional formatting on the loginfo level
+	if (cs_config.loglevel < LOGINFO) 		// Do we need this loglevel?
+		return;
 		
+	if (ptc.frames % cs_config.logfrac != 0)	// We only print log messages every logmod frames
+		return;
+				
 	va_list ap, aq, ar; // We need three of these because we cannot re-use a va_list variable
 	
 	va_start(ap, msg);
@@ -126,10 +135,16 @@ void logErr(const char *msg, ...) {
 	va_end(ap);
 	va_end(aq);
 	va_end(ar);
+	
+	// There was an error, stop immediately
+	exit(EXIT_FAILURE);
 }
 
 void logDebug(const char *msg, ...) {
 	if (cs_config.loglevel < LOGDEBUG) 	// Do we need this loglevel?
+		return;
+		
+	if (ptc.frames % cs_config.logfrac != 0)	// We only print log messages every logmod frames
 		return;
 		
 	va_list ap, aq, ar;

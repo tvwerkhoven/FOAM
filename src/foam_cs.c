@@ -24,10 +24,12 @@ extern control_t ptc;
 extern config_t cs_config;
 extern conntrack_t clientlist;
 
+// PROTOTYPES //
+/**************/	
 
-// These come from modules
+// These come from modules, these MUST be defined there
 extern void modStopModule(control_t *ptc);
-extern int modInitModule();
+extern int modInitModule(control_t *ptc);
 extern int modOpenInit(control_t *ptc);
 extern int modOpenLoop(control_t *ptc);
 extern int modClosedInit(control_t *ptc);
@@ -49,8 +51,10 @@ int main(int argc, char *argv[]) {
 	/*************/
 	
 	pthread_t thread;
-	pthread_mutex_init(&mode_mutex, NULL);
-	pthread_cond_init (&mode_cond, NULL);
+	if (pthread_mutex_init(&mode_mutex, NULL) != 0)
+		logErr("pthread_mutex_init failed.");
+	if (pthread_cond_init (&mode_cond, NULL) != 0)
+		logErr("pthread_cond_init failed.");
 	
 	clientlist.nconn = 0;	// Init number of connections to zero
 
@@ -74,10 +78,8 @@ int main(int argc, char *argv[]) {
 	logInfo("at %s", date);
 		
 	// BEGIN LOADING CONFIG
-	if (loadConfig(FOAM_CONFIG_FILE) != EXIT_SUCCESS) {
-		logErr("Loading configuration failed, aborting");
-		return EXIT_FAILURE;
-	}
+	if (loadConfig(FOAM_CONFIG_FILE) != EXIT_SUCCESS)
+		logErr("Loading configuration failed");
 
 	logInfo("Configuration successfully loaded...");	
 	
@@ -128,23 +130,40 @@ void stopFOAM() {
 	logInfo("Ran for %ld seconds and parsed %ld frames (framerate: %f).", \
 		end-ptc.starttime, ptc.frames, ptc.frames/(float) (end-ptc.starttime));
 
+	fclose(cs_config.infofd);
+	fclose(cs_config.errfd);
+	fclose(cs_config.debugfd);
 	exit(EXIT_SUCCESS);
 }
 
 int parseConfig(char *var, char *value) {
-	int tmp;
+	int tmp, i;
 
 	if (strcmp(var, "WFS_COUNT") == 0) {
 		ptc.wfs_count = (int) strtol(value, NULL, 10);
 		ptc.wfs = calloc(ptc.wfs_count, sizeof(*ptc.wfs));	// allocate memory
-		if (ptc.wfs == NULL) return EXIT_FAILURE;		
+		if (ptc.wfs == NULL) {
+			logErr("Failed to allocate ptc.wfs");
+			return EXIT_FAILURE;		
+		}
+		
+		// initialize some things to zero
+		for (i=0; i<ptc.wfs_count; i++) {
+			ptc.wfs[i].singular = NULL;
+			ptc.wfs[i].dmmodes = NULL;
+			ptc.wfs[i].wfsmodes = NULL;
+		}
 		
 		logDebug("WFS_COUNT initialized: %d", ptc.wfs_count);
 	}
 	else if (strcmp(var, "WFC_COUNT") == 0) {
 		ptc.wfc_count = (int) strtol(value, NULL, 10);
 		ptc.wfc = calloc(ptc.wfc_count, sizeof(*ptc.wfc));
-		if (ptc.wfc == NULL) return EXIT_FAILURE;
+		
+		if (ptc.wfc == NULL) {
+			logErr("Failed to allocate ptc.wfc");
+			return EXIT_FAILURE;
+		}
 
 		logDebug("WFC_COUNT initialized: %d", ptc.wfc_count);
 	}
@@ -272,13 +291,13 @@ int parseConfig(char *var, char *value) {
 			return EXIT_FAILURE;
 		}
 		
-		if (ptc.wfs[tmp].res[0] * ptc.wfs[tmp].res[1] <= 0) {
+		if (ptc.wfs[tmp].res.x * ptc.wfs[tmp].res.y <= 0) {
 			logErr("Cannot initialize WFS_CELLS before WFS_RES");
 			return EXIT_FAILURE;
 		}
 		
-		ptc.wfs[tmp].shsize[0] = (ptc.wfs[tmp].res[0] / ptc.wfs[tmp].cells[0]);
-		ptc.wfs[tmp].shsize[1] = (ptc.wfs[tmp].res[1] / ptc.wfs[tmp].cells[1]);
+		ptc.wfs[tmp].shsize[0] = (ptc.wfs[tmp].res.x / ptc.wfs[tmp].cells[0]);
+		ptc.wfs[tmp].shsize[1] = (ptc.wfs[tmp].res.y / ptc.wfs[tmp].cells[1]);
 		ptc.wfs[tmp].refim = calloc(ptc.wfs[tmp].shsize[0] * \
 			ptc.wfs[tmp].shsize[1], sizeof(ptc.wfs[tmp].refim));
 		if (ptc.wfs[tmp].refim == NULL) {
@@ -299,20 +318,20 @@ int parseConfig(char *var, char *value) {
 		if (strstr(value,"{") == NULL || strstr(value,"}") == NULL || strstr(value,",") == NULL) 
 			return EXIT_FAILURE;
 
-		ptc.wfs[tmp].res[0] = strtol(strtok(value,"{,}"), NULL, 10);
-		ptc.wfs[tmp].res[1] = strtol(strtok(NULL ,"{,}"), NULL, 10);
+		ptc.wfs[tmp].res.x = strtol(strtok(value,"{,}"), NULL, 10);
+		ptc.wfs[tmp].res.y = strtol(strtok(NULL ,"{,}"), NULL, 10);
 		
-		if (ptc.wfs[tmp].res[0] % 2 != 0 || ptc.wfs[tmp].res[1] % 4 != 0) {
+		if (ptc.wfs[tmp].res.x % 2 != 0 || ptc.wfs[tmp].res.y % 4 != 0) {
 			logErr("WFS %d has an odd resolution (%dx%d), not supported. Please only use 2nx2n pixels.", \
-				tmp, ptc.wfs[tmp].res[0], ptc.wfs[tmp].res[1]);
+				tmp, ptc.wfs[tmp].res.x, ptc.wfs[tmp].res.y);
 			return EXIT_FAILURE;
 		}		
 		
 		// Allocate memory for all images we need lateron
-		ptc.wfs[tmp].image = calloc(ptc.wfs[tmp].res[0] * ptc.wfs[tmp].res[1], sizeof(ptc.wfs[tmp].image));
-		ptc.wfs[tmp].darkim = calloc(ptc.wfs[tmp].res[0] * ptc.wfs[tmp].res[1], sizeof(ptc.wfs[tmp].darkim));
-		ptc.wfs[tmp].flatim = calloc(ptc.wfs[tmp].res[0] * ptc.wfs[tmp].res[1], sizeof(ptc.wfs[tmp].flatim));
-		ptc.wfs[tmp].corrim = calloc(ptc.wfs[tmp].res[0] * ptc.wfs[tmp].res[1], sizeof(ptc.wfs[tmp].corrim));
+		ptc.wfs[tmp].image = calloc(ptc.wfs[tmp].res.x * ptc.wfs[tmp].res.y, sizeof(ptc.wfs[tmp].image));
+		ptc.wfs[tmp].darkim = calloc(ptc.wfs[tmp].res.x * ptc.wfs[tmp].res.y, sizeof(ptc.wfs[tmp].darkim));
+		ptc.wfs[tmp].flatim = calloc(ptc.wfs[tmp].res.x * ptc.wfs[tmp].res.y, sizeof(ptc.wfs[tmp].flatim));
+		ptc.wfs[tmp].corrim = calloc(ptc.wfs[tmp].res.x * ptc.wfs[tmp].res.y, sizeof(ptc.wfs[tmp].corrim));
 		
 		// check if everything worked out ok
 		if ((ptc.wfs[tmp].image == NULL) ||
@@ -323,7 +342,7 @@ int parseConfig(char *var, char *value) {
 			return EXIT_FAILURE;
 		}
 		
-		logDebug("WFS_RES initialized for WFS %d: %d x %d", tmp, ptc.wfs[tmp].res[0], ptc.wfs[tmp].res[1]);
+		logDebug("WFS_RES initialized for WFS %d: %d x %d", tmp, ptc.wfs[tmp].res.x, ptc.wfs[tmp].res.y);
 	}
 
 	else if (strcmp(var, "CS_LISTEN_IP") == 0) {
@@ -390,9 +409,11 @@ int loadConfig(char *file) {
 	
 	if (!feof(fp)) 		// Oops, not everything was read?
 		return EXIT_FAILURE;
+	else 
+		fclose(fp);
 		
 	// begin postconfig check
-	// TvW: todo
+	// TvW: TODO
 	
 	// Check the info, error and debug files that we possibly have to log to
 	initLogFiles();
@@ -466,6 +487,7 @@ int saveConfig(char *file) {
 }
 
 void modeOpen() {
+	ptc.frames++;
 	logInfo("Entering open loop.");
 
 	// perform some sanity checks before actually entering the open loop
@@ -479,18 +501,17 @@ void modeOpen() {
 	// along a pointer to ptc
 	modOpenInit(&ptc);
 	
-	int tmp[] = {32, 32};
-	ptc.frames++;
+//	int tmp[] = {32, 32};
+
 	while (ptc.mode == AO_MODE_OPEN) {
+		ptc.frames++;								// increment the amount of frames parsed		
 		logInfo("Operating in open loop"); 
 		
 		modOpenLoop(&ptc);
-				
-		
-		if (ptc.frames > 2000) // exit for debugging
-			exit(EXIT_SUCCESS);
-				
-		ptc.frames++;								// increment the amount of frames parsed		
+								
+
+		// if (ptc.frames > 500) 					// exit for debugging
+		// 	stopFOAM();
 
 		//sleep(DEBUG_SLEEP);
 	}
@@ -518,8 +539,8 @@ void modeClosed() {
 		
 		modClosedLoop(&ptc);
 						
-		if (ptc.frames > 2000) // exit for debugging
-			exit(EXIT_SUCCESS);
+		// if (ptc.frames > 2000) // exit for debugging
+		// 	exit(EXIT_SUCCESS);
 				
 		ptc.frames++;								// increment the amount of frames parsed		
 
@@ -544,13 +565,14 @@ void modeListen() {
 				modeCal();
 				break;
 			case AO_MODE_LISTEN: // this does nothing but is here for completeness
+				// we wait until the mode changed
+				pthread_mutex_lock(&mode_mutex);
+				pthread_cond_wait(&mode_cond, &mode_mutex);
+				pthread_mutex_unlock(&mode_mutex);
 				break;
 		}
-		// we wait until the mode changed
-		pthread_mutex_lock(&mode_mutex);
-		pthread_cond_wait(&mode_cond, &mode_mutex);
-		pthread_mutex_unlock(&mode_mutex);
 
+		
 	}
 }
 
