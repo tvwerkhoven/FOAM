@@ -583,9 +583,9 @@ void modeCal() {
 }
 
 void modeListen() {
-	logInfo("Entering listen mode");
 	
 	while (true) {
+		logInfo("Entering listen mode");
 		switch (ptc.mode) {
 			case AO_MODE_OPEN:
 				modeOpen();
