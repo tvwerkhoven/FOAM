@@ -46,6 +46,15 @@ AC_ARG_ENABLE([simulation],
 		*) AC_MSG_ERROR([bad value ${enableval} for --enable-simulation]) ;;
 	esac],[simul=true])
 
+# Test if we want to run as simulation or not
+AC_ARG_ENABLE([statsimulation],
+		AC_HELP_STRING([--enable-statsimulation], [enable static simulation mode])],
+		[case "${enableval}" in
+		yes) statsimul=true ;;
+		no)  statsimul=disabled ;;
+		*) AC_MSG_ERROR([bad value ${enableval} for --enable-statsimulation]) ;;
+	esac],[statsimul=true])
+		
 # Test if we want to include the UI or not
 AC_ARG_ENABLE([ui],
 		AC_HELP_STRING([--enable-ui], [enable the UI]),
@@ -109,6 +118,39 @@ AC_SUBST(SIMULATION_CFLAGS)
 AC_SUBST(SIMULATION_LIBS)
 AM_CONDITIONAL([SIMULATION], [test x$simul = xtrue])
 
+### STATIC SIMULATION MODE ###
+##############################
+if test "$statsimul" = true ; then
+	# search for static simulation libraries here, exit if not found
+	AC_MSG_NOTICE([static simulation enabled, checking for extra libs])
+	# this is kinda ugly
+	statsimulmissing=""
+	LIBS=""
+	AC_SEARCH_LIBS([SDL_Init], [SDL] ,[], 
+		[AC_MSG_WARN([This package needs libsdl in static simulation mode, disabling static simulation.])
+		statsimul=false
+		statsimulmissing+=" sdl"
+		]
+	)
+
+	AC_SEARCH_LIBS([IMG_Load], [SDL_image] ,[], 
+		[AC_MSG_WARN([This package needs sdl-image in static simulation mode, disabling static simulation.])
+		statsimul=false
+		statsimulmissing+=" sdl-image"
+		]
+	)
+	
+	# fix simulation Cflags (mainly SDL)
+	STATSIMULATION_CFLAGS+="$SDL_CFLAGS"
+	STATSIMULATION_LIBS+="$LIBS $SDL_LIBS"
+else 
+	# search for runtime libs here (camera stuff), exit if not found
+	AC_MSG_NOTICE([static simulation disabled])
+fi
+AC_SUBST(STATSIMULATION_CFLAGS)
+AC_SUBST(STATSIMULATION_LIBS)
+AM_CONDITIONAL([STATSIMULATION], [test x$statsimul = xtrue])
+
 ### ITIFG MODE ### 
 ##################
 if test "$itifg" = true ; then
@@ -166,13 +208,23 @@ else
 	AC_MSG_ERROR([Simulation mode: missing: $simulmissing])
 fi
 
+if test "$statsimul" = true ; then
+	AC_MSG_NOTICE([Static sim mode: available])
+elif test "$statsimul" = disabled; then
+	AC_MSG_NOTICE([Static sim mode: disabled])
+else
+# TvW: errors 
+	AC_MSG_ERROR([Static sim mode: not available])
+	AC_MSG_ERROR([Static sim mode: missing: $statsimulmissing])
+fi
+
 if test "$ui" = true ; then
 	AC_MSG_NOTICE([UI:              available])
 elif test "$ui" = disabled; then
 	AC_MSG_NOTICE([UI:              disabled])
 else
-	AC_MSG_NOTICE([UI:              not available])
-	AC_MSG_NOTICE([UI:              missing: $uimissing])
+	AC_MSG_ERROR([UI:              not available])
+	AC_MSG_ERROR([UI:              missing: $uimissing])
 fi
 
 if test "$itifg" = true ; then
@@ -180,8 +232,8 @@ if test "$itifg" = true ; then
 elif test "$itifg" = disabled; then
 	AC_MSG_NOTICE([ITIFG mode:      disabled])
 else
-	AC_MSG_NOTICE([ITIFG mode:      not available])
-	AC_MSG_NOTICE([ITIFG mode:      missing: $itifgmissing])
+	AC_MSG_ERROR([ITIFG mode:      not available])
+	AC_MSG_ERROR([ITIFG mode:      missing: $itifgmissing])
 fi
 
 AC_MSG_NOTICE([==============================])
