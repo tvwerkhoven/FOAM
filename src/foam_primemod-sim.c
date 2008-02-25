@@ -96,12 +96,16 @@ int modClosedLoop(control_t *ptc) {
 	}
 
 	if (drvReadSensor(ptc) != EXIT_SUCCESS)			// read the sensor output into ptc.image
-		return EXIT_SUCCESS;
+		return EXIT_FAILURE;
 
 	//modSelSubapts(&ptc.wfs[0], 0, 0); 			// check samini (2nd param) and samxr (3d param)				
 	
 	if (modParseSH((&ptc->wfs[0])) != EXIT_SUCCESS)			// process SH sensor output, get displacements
-		return EXIT_SUCCESS;
+		return EXIT_FAILURE;
+		
+	if (modCalcCtrl(ptc, 0) != EXIT_SUCCESS)		// parse displacements, get ctrls for WFC's
+		return EXIT_FAILURE;
+
 	
 //	if (ptc->frames % 20 == 0) {
 	Slock(screen);

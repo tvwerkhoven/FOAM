@@ -75,14 +75,6 @@ This simulates the SH WFS
 int modSimSH();
 
 /*!
-@brief Calculates DM output voltages, which are in turn set by drvSetActuator().
-
-@return EXIT_SUCCESS on success, EXIT_FAILURE otherwise.
-*/
-int modCalcDMVolt();
-
-
-/*!
 @brief This routine, currently not used, can be used to simulate an object (e.g. wavefront)
 */
 int simObj(char *file, float *image);

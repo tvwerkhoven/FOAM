@@ -490,11 +490,6 @@ int modSimSH() {
 	return EXIT_SUCCESS;
 }
 
-int modCalcDMVolt() {
-	logDebug("Calculating DM voltages");
-	return EXIT_SUCCESS;
-}
-
 // TODO: document this
 int drvFilterWheel(control_t *ptc, fwheel_t mode) {
 	// in simulation this is easy, just set mode in ptc

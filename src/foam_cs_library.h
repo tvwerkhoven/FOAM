@@ -301,14 +301,26 @@ Works the same as logInfo() in the sense that it uses the same files/streams etc
 void logDirect(const char *msg, ...);
 
 /*!
-@brief logErr() prints out error messages to the appropriate streams.
+@brief logErr() prints out error messages to the appropriate streams, and exits.
 
 This function assumes there was an error as it checks errno and appends 
-this to the error message. See documentation on logInfo() for more information.
+this to the error message. This function should be used for fatal errors, because
+this function exits after printing. See documentation on logInfo() for more information.
 
 @param [in] msg The string to be passed on to vfprintf.
 */
 void logErr(const char *msg, ...);
+
+/*!
+@brief logWarn() prints out error messages to the appropriate streams.
+
+This function assumes there was an error as it checks errno and appends 
+this to the error message. This function does not exit, and should be used
+for non-fatal errors. See documentation on logInfo() for more information.
+
+@param [in] msg The string to be passed on to vfprintf.
+*/
+void logWarn(const char *msg, ...);
 
 /*!
 @brief logDebug() prints out debug messages to the appropriate streams.
