@@ -14,7 +14,7 @@
 int modReadPGM(char *fname, SDL_Surface **img) {
 	
 	*img = IMG_Load(fname);
-	if (!img) {
+	if (!*img) {
 		logErr("Error in IMG_Load: %s\n", IMG_GetError());
 		return EXIT_FAILURE;
 	}
