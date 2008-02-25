@@ -831,6 +831,14 @@ int modSVD(control_t *ptc, int wfs) {
 		logErr("Error opening output file %s", outfile);
 		return EXIT_FAILURE;
 	}
+	if (ptc->wfs[wfs].singular == NULL) {
+		ptc->wfs[wfs].singular = calloc(n, sizeof( *(ptc->wfs[wfs].singular) ) );
+		if (ptc->wfs[wfs].singular == NULL) {
+			logErr("Failed to allocate memory for ptc->wfs[wfs].singular");
+			return EXIT_FAILURE;
+		}
+	}
+
 
 	for (i = 0; i < n; ++i) {
 		fprintf(out2,"%f\n",diag[i]);
@@ -848,6 +856,14 @@ int modSVD(control_t *ptc, int wfs) {
 		return EXIT_FAILURE;
 	}
 
+	if (ptc->wfs[wfs].dmmodes == NULL) {
+		ptc->wfs[wfs].dmmodes = calloc(n*n, sizeof( *(ptc->wfs[wfs].dmmodes) ) );
+		if (ptc->wfs[wfs].dmmodes == NULL) {
+			logErr("Failed to allocate memory for ptc->wfs[wfs].dmmodes");
+			return EXIT_FAILURE;
+		}
+	}
+	
 	for (i = 0; i < n; ++i) {
 		for (j=0;j<n;j++) {
 			fprintf(out2,"%f\n",R[i][j]);
@@ -865,6 +881,15 @@ int modSVD(control_t *ptc, int wfs) {
 		logErr("Error opening output file %s", outfile);
 		return EXIT_FAILURE;
 	}
+
+	if (ptc->wfs[wfs].wfsmodes == NULL) {
+		ptc->wfs[wfs].wfsmodes = calloc(n*m, sizeof( *(ptc->wfs[wfs].wfsmodes) ) );
+		if (ptc->wfs[wfs].wfsmodes == NULL) {
+			logErr("Failed to allocate memory for ptc->wfs[wfs].dmmodes");
+			return EXIT_FAILURE;
+		}
+	}
+	
 	fprintf(out2,"%d\n%d\n",nact, 2 * nsubap);
 	for (r = 0; r < n; ++r) {
 		for (t = 0; t < m; ++t) {
