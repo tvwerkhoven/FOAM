@@ -9,7 +9,7 @@
 // HEADERS //
 /***********/
 
-#include "foam_cs_library.h"
+#include "foam_primemod-dummy.h"
 
 int modInitModule(control_t *ptc) {
 	logDebug("Running in dummy mode, don't expect great AO results :)");
