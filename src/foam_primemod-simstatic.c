@@ -90,7 +90,9 @@ int modOpenLoop(control_t *ptc) {
 
 int modClosedInit(control_t *ptc) {
 	// this is the same for open and closed modes, don't rewrite stuff
-	modOpenInit(ptc);
+	if (modOpenInit(ptc) != EXIT_SUCCESS)
+		return EXIT_FAILURE;
+		
 	return EXIT_SUCCESS;
 }
 
@@ -189,7 +191,8 @@ int drvReadSensor() {
 				return EXIT_FAILURE;
 			}
 			if (simimgsurf->w != res.x || simimgsurf->h != res.y) {
-				logWarn("Simulation resolution incorrect! (%dx%d vs %dx%d)", res.x, res.y, simimgsurf->w, simimgsurf->h);
+				logWarn("Simulation resolution incorrect for %s! (%dx%d vs %dx%d)", \
+					FOAM_MODSIM_STATIC, res.x, res.y, simimgsurf->w, simimgsurf->h);
 				return EXIT_FAILURE;			
 			}
 			// copy from SDL_Surface to array so we can work with it

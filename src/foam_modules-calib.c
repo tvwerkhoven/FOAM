@@ -18,6 +18,7 @@
 #define DM_MIDVOLT 0
 #define DM_MINVOLT -1
 #define FOAM_MODCALIB_DMIF "../config/ao_dmif"
+#define FOAM_MODCALIB_LIN "../config/ao_linearity"
 
 // TODO: document
 int modCalPinhole(control_t *ptc, int wfs) {
@@ -95,6 +96,85 @@ int modCalPinholeChk(control_t *ptc, int wfs) {
 	
 		fclose(fd);
 	}
+	
+	return EXIT_SUCCESS;
+}
+
+int modLinTest(control_t *ptc, int wfs) {
+	int i, j, k, wfc;			// some counters
+	int nsubap, nact;
+	int skip, skipframes=3;		// skip this amount of frames before measuring
+	int niter=50;				// number of measurements for linearity test
+	char *outfile;
+	float origvolt;
+	FILE *fp;
+	
+	logDebug("Performing linearity test WFS %d", wfs);
+
+	// get total nr of subapertures in the complete system
+	nsubap = ptc->wfs[wfs].nsubap;
+
+	// this stores some vectors :P
+	float q0x[nsubap], q0y[nsubap];
+	
+	// set filterwheel to pinhole
+	drvFilterWheel(ptc, FILT_PINHOLE);
+	
+	// run openInit once to read the sensors and get subapertures
+	modOpenInit(ptc);
+
+	// get total nr of actuators, set all actuators to zero (180 volt for an okotech DM)
+	for (i=0; i < ptc->wfc_count; i++) {
+		for (j=0; j < ptc->wfc[i].nact; j++) {
+			ptc->wfc[i].ctrl[j] = 0;
+		}
+//		nacttot += ptc->wfc[i].nact;
+	}
+
+	for (wfc=0; wfc < ptc->wfc_count; wfc++) { // loop over all wave front correctors 
+		nact = ptc->wfc[wfc].nact;
+		// write linearity test to file
+		asprintf(&outfile, "%s_wfs%d_wfc%d", FOAM_MODCALIB_LIN, wfs, wfc);
+		fp = fopen(outfile,"w+");
+		if (!fp) {
+			logWarn("Cannot open file %s for writing linearity test.", outfile);
+			return EXIT_FAILURE;
+		}
+		
+		fprintf(fp,"%d\n%d\n%d\n", nact, niter, nsubap); // we have nact actuators (variables) and nsubap*2 measurements
+		
+		for (j=0; j<nact; j++) { // loop over all actuators and all subapts for (wfc,wfs)
+	
+			for (i=0; i<nsubap; i++) { // set averaging buffer to zero
+				q0x[i] = 0.0;
+				q0y[i] = 0.0;
+			}
+	
+			origvolt = ptc->wfc[wfc].ctrl[j];
+			
+			for (k=0; k<niter; k++) {	// split up the range DM_MAXVOLT - DM_MINVOLT in niter pieces
+				ptc->wfc[wfc].ctrl[j] = (k+1)/(niter) * (DM_MAXVOLT - DM_MINVOLT) + DM_MINVOLT;
+
+				drvSetActuator(ptc, wfc);
+				
+				for (skip=0; skip<skipframes+1; skip++) // skip some frames here
+					modOpenLoop(ptc);
+				
+				// take the shifts and store those (wrt to reference shifts)
+	    		for (i=0;i<nsubap;i++) {
+					fprintf(fp,"%.12f\n%.12f\n", \
+						(ptc->wfs[wfs].disp[i][0] - ptc->wfs[wfs].refc[i][0]),
+						(ptc->wfs[wfs].disp[i][1] - ptc->wfs[wfs].refc[i][1]));
+				}
+			} // end iteration loop 
+			
+			ptc->wfc[wfc].ctrl[j] = origvolt;
+		} // end actuator loop
+		
+		fclose(fp);
+	} // end wfc loop
+	
+	logInfo("Linearity test using WFS %d (%s) done, stored in file %s", wfs, ptc->wfs[wfs].name, FOAM_MODCALIB_LIN);
 	
 	return EXIT_SUCCESS;
 }
@@ -184,8 +264,9 @@ int modCalWFC(control_t *ptc, int wfs) {
 				}
 		
 				ptc->wfc[wfc].ctrl[j] = DM_MINVOLT;
-				drvSetActuator(ptc, wfc);			
-				for (skip=0; skip<skipframes; skip++) // skip some frames here
+				drvSetActuator(ptc, wfc);
+						
+				for (skip=0; skip<skipframes+1; skip++) // skip some frames here
 					modOpenLoop(ptc);
 		
 				// take the shifts and subtract those store those (wrt to reference shifts)
@@ -239,6 +320,7 @@ int modCalWFCChk(control_t *ptc, int wfs) {
 				ptc->wfs[wfs].pinhole, nsubs/2,  ptc->wfs[wfs].nsubap, nact, nacttot);
 			return EXIT_FAILURE;
 		}
+		fclose(fd);
 	}
 	
 	// CHECK SINGVAL //
@@ -425,70 +507,70 @@ int modSVD(control_t *ptc, int wfs) {
   // ptc->wfs[wfs].scandir    defines whether x,y,or both axes are to be used
   //         possible values for axis are defined in ctrla2.h
 
-  int i, j, k, l=0, p, q, r, t, iter; // counters for decomposition
-  int nact=0, nsubap=0;
-  int n, m;
+	int i, j, k, l=0, p, q, r, t, iter;	// counters for decomposition
+	int nact=0, nsubap=0;
+	int n, m;
 
-  FILE *in; 			    // input Q from "influence.dat" (ptc->wfs[wfs].pinhole)
-//  FILE *out;	 // output inverse matrix to "inverse.dat" (ptc->wfs[wfs].pinhole . inverse)
-  FILE *out2;    // output singular values to "singular.dat" (ptc->wfs[wfs].pinhole . singular)
+	FILE *in;							// input Q from "influence.dat" (ptc->wfs[wfs].pinhole)
+//  FILE *out;							// output inverse matrix to "inverse.dat" (ptc->wfs[wfs].pinhole . inverse)
+	FILE *out2;							// output singular values to "singular.dat" (ptc->wfs[wfs].pinhole . singular)
 
-  // get nsubap and nact in two different ways (from file and from *ptc), these should match
-  in = fopen(ptc->wfs[wfs].influence, "r");
-  if (in == NULL) {
-    logErr("error opening input file %s", ptc->wfs[wfs].influence);
-    return EXIT_FAILURE;
-  }
-  fscanf(in,"%d\n",&n);
-  fscanf(in,"%d\n",&m);
+	// get nsubap and nact in two different ways (from file and from *ptc), these should match
+	in = fopen(ptc->wfs[wfs].influence, "r");
+	if (in == NULL) {
+		logErr("error opening input file %s", ptc->wfs[wfs].influence);
+		return EXIT_FAILURE;
+	}
+	fscanf(in,"%d\n",&n);
+	fscanf(in,"%d\n",&m);
 
 	for (i=0; i < ptc->wfc_count; i++) {
 		nact += ptc->wfc[i].nact;
 	}
-  nsubap = ptc->wfs[wfs].nsubap;
+	nsubap = ptc->wfs[wfs].nsubap;
 
-  int bindex;			    // row/col of the largest singular value
-  int jump=0;			    // variable used for decomposition
-//  int modes;                        // number of singular values to keep
+	int bindex;							// row/col of the largest singular value
+	int jump=0;							// variable used for decomposition
+//  int modes;							// number of singular values to keep
 
-  double c, f, h, s, x, y, z;	    // variable used for decomposition
-  double norm  = 0.0;		    // variable used for decomposition
-  double g     = 0.0;		    // variable used for decomposition
-  double scale = 0.0;		    // variable used for decomposition
-  double biggest;		    // largest singular value
-  double value;			    // used to swap singular value entries
-  
-  double Q[2 * nsubap][nact];         // influence matrix
-  double R[nact][nact];   // result matrix of decomposition
-  double D[nact][nact];   // matrix containing singular values
+	double c, f, h, s, x, y, z;			// variable used for decomposition
+	double norm  = 0.0;					// variable used for decomposition
+	double g     = 0.0;					// variable used for decomposition
+	double scale = 0.0;					// variable used for decomposition
+	double biggest;						// largest singular value
+	double value;						// used to swap singular value entries
 
-  double solution1[nact][nact];    // result of (R * D')
-  double solution2[nact][2 * nsubap]; // pseudo-inverse
+	double Q[2 * nsubap][nact];			// influence matrix
+	double R[nact][nact];				// result matrix of decomposition
+	double D[nact][nact];				// matrix containing singular values
+
+	double solution1[nact][nact];		// result of (R * D')
+	double solution2[nact][2 * nsubap];	// pseudo-inverse
+
+	double Temp[nact];					// vector used for decomposition
+	double diag[nact];					// vector storing singular values
+
   
-  double Temp[nact];	    // vector used for decomposition
-  double diag[nact];	    // vector storing singular values
-	
-  
-//  int flag;		   // 0 if Q cannot be input from "influence.dat"
-//  char string[256];	   //stores error message
+//  int flag;							// 0 if Q cannot be input from "influence.dat"
+//  char string[256];					//stores error message
 
     
   //Initialize variables and matrices
 
-  for (r = 0; r < m; ++r) {
-    for (t = 0; t < n; ++t) {
-      Q[r][t] = 0.0;
-      solution2[t][r] = 0.0;
-    }
-  }
+	for (r = 0; r < m; ++r) {
+		for (t = 0; t < n; ++t) {
+			Q[r][t] = 0.0;
+			solution2[t][r] = 0.0;
+		}
+	}
 
-  for (r = 0; r < n; ++r) {
-    for (t = 0; t < n; ++t) {
-      solution1[r][t] = 0.0;
-      D[r][t] = 0.0;
-      R[r][t] = 0.0;
-    }
-  }
+	for (r = 0; r < n; ++r) {
+		for (t = 0; t < n; ++t) {
+			solution1[r][t] = 0.0;
+			D[r][t] = 0.0;
+			R[r][t] = 0.0;
+		}
+	}
 
   //--------------------------------------------------------------------------
   //   get the influence matrix

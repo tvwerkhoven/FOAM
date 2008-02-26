@@ -40,4 +40,6 @@ int modSVD(control_t *ptc, int wfs);
 
 int modFileChk(char *filename);
 
+int modLinTest(control_t *ptc, int wfs);
+
 #endif

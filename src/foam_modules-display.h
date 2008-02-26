@@ -69,6 +69,8 @@ void DrawPixel(SDL_Surface *screen, int x, int y, Uint8 R, Uint8 G, Uint8 B);
 void Sulock(SDL_Surface *screen);
 void Slock(SDL_Surface *screen);
 
+void drawStuff(control_t *ptc, int wfs, SDL_Surface *screen);
+
 Uint32 getpixel(SDL_Surface *surface, int x, int y);
 
 #endif /* FOAM_MODULES_DISPLAY */

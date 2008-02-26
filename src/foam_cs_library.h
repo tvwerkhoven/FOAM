@@ -75,7 +75,8 @@ typedef enum {
 */
 typedef enum { // calmode_t
 	CAL_PINHOLE,	//!< determine reference shifts after inserting a pinhole
-	CAL_INFL		//!< determin the influence functions for each WFS-WFC pair
+	CAL_INFL,		//!< determine the influence functions for each WFS-WFC pair
+	CAL_LINTEST		//!< linearity test for WFCs
 } calmode_t;
 
 /*!

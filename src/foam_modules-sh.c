@@ -413,7 +413,7 @@ int modParseSH(wfs_t *wfsinfo) {
 	return EXIT_SUCCESS;
 }
 
-int modCalcCtrl(control_t *ptc, int wfs) {
+int modCalcCtrl(control_t *ptc, int wfs, int nmodes) {
 	logDebug("Calculating WFC ctrls");
 	// function assumes presence of dmmodes, 
 	if (ptc->wfs[wfs].dmmodes == NULL || ptc->wfs[wfs].singular == NULL || ptc->wfs[wfs].wfsmodes == NULL) {
@@ -421,33 +421,45 @@ int modCalcCtrl(control_t *ptc, int wfs) {
 		return EXIT_FAILURE;
 	}
 	
-	int i,j;   		// index variables
-	float sum; 		// temporary sum
+	int i,j, wfc, act;   		// index variables
+	float sum; 					// temporary sum
 	int nacttot=0;
 	int nsubap = ptc->wfs[wfs].nsubap;
-
+	
 	// calculate total nr of act for all wfc
+	for (wfc=0; wfc< ptc->wfc_count; wfc++)
+		nacttot += ptc->wfc[wfc].nact;
+
+	float modeamp[nacttot];
+	
+
 	i=0;
+	// first calculate mode amplitudes
 	for (wfc=0; wfc< ptc->wfc_count; wfc++) { // loop over all WFCs
-		for (act=0; act <  ptc->wfc[wfc].nact; act++) { // loop over all acts for WFC 'wfc'
+		for (act=0; act < ptc->wfc[wfc].nact; act++) { // loop over all acts for WFC 'wfc'
 			sum=0.0;
+
+			// TODO: what coordinate of wfsmodes do we need?
 			for (j=0; j<nsubap; j++) // loop over all subapertures
-				// TODO: what coordinate of wfsmodes do we need?
-				// ptc->wfs[wfs].wfsmodes[]
-				sum = sum + wfsmodes[i*2*NS+j*2]*sdx[j] + wfsmodes[i*2*NS+j*2+1]*sdy[j];
+				sum = sum + ptc->wfs[wfs].wfsmodes[i*2*nsubap+j*2] * (ptc->wfs[wfs].disp[j][0]-ptc->wfs[wfs].refc[j][0]) \
+					+ ptc->wfs[wfs].wfsmodes[i*2*nsubap+j*2+1] * (ptc->wfs[wfs].disp[j][1]-ptc->wfs[wfs].refc[j][1]);
 			
 			modeamp[i] = sum;
 			i++;
 		}
 	}
-		
-	// apply inverse singular values and calculate actuator amplitudes
-	for (i=0;i<nacttot;i++) { // loop over all actuators
-		sum=0.0;
-		for (j=0;j<nmodes;j++) // loop over all system modes that are used
-			sum = sum + dmmodes[i*DM_ACTUATORS+j]*modeamp[j]/singval[j];
-			
-		actvol[i] = sum;
+	
+	// apply inverse singular values and calculate actuator amplitudes	
+	i=0;
+	for (wfc=0; wfc< ptc->wfc_count; wfc++) { // loop over all WFCs
+		for (act=0; act < ptc->wfc[wfc].nact; act++) { // loop over all acts for WFC 'wfc'
+			sum=0.0;
+			for (j=0;j<nmodes;j++) // loop over all system modes that are used
+				sum += ptc->wfs[wfs].dmmodes[i*nacttot+j]*modeamp[j]/ptc->wfs[wfs].singular[j];
+
+			ptc->wfc[wfc].ctrl[act] = sum;
+			i++;
+		}
 	}
 	
 	return EXIT_SUCCESS;

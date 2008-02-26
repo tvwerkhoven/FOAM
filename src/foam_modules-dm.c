@@ -225,7 +225,7 @@ int modSimDM(char *boundarymask, char *actuatorpat, int nact, float *ctrl, float
 
 	// *update* the image, so there should already be an image
 	for (i = 0; i < res.x*res.y; i++)
-		image[i] = amp*resp[i];
+		image[i] += amp*resp[i];
 
 	return EXIT_SUCCESS; // successful completion
 }

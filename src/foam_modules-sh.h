@@ -104,7 +104,7 @@ void modCogTrack(wfs_t *wfsinfo, float *aver, float *max, float coords[][2]);
 
 TODO: doc
 */
-int modCalcCtrl(control_t *ptc, int wfs);
+int modCalcCtrl(control_t *ptc, int wfs, int nmodes);
 
 /*!
 @brief Search for a maxium within (xc, yc) -> (xc+width, yc+height) in a certain wfs output.

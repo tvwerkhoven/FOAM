@@ -28,7 +28,6 @@ struct simul simparams = {
 	.wisdomfile = "fftw_wisdom.dat",
 };
 
-
 // We need these every time, declare them globally
 char errmsg[FLEN_STATUS]; 		// FLEN_STATUS is from fitsio.h
 int status = 0;  				// MUST initialize status

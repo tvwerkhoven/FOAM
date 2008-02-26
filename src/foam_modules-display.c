@@ -268,6 +268,17 @@ int modDrawGrid(wfs_t *wfsinfo, SDL_Surface *screen) {
 	return EXIT_SUCCESS;
 }
 
+void drawStuff(control_t *ptc, int wfs, SDL_Surface *screen) {
+//	Slock(screen);
+//	displayImg(ptc->wfs[wfs].image, ptc->wfs[wfs].res, screen);
+//	modDrawGrid(&(ptc->wfs[wfs]), screen);
+	// modDrawSubapts(&(ptc->wfs[0]), screen);
+	// modDrawVecs(&(ptc->wfs[0]), screen);
+	// Sulock(screen);
+	// SDL_Flip(screen);
+}
+
+
 Uint32 getpixel(SDL_Surface *surface, int x, int y) {
     int bpp = surface->format->BytesPerPixel;
     /* Here p is the address to the pixel we want to retrieve */

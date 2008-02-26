@@ -89,12 +89,12 @@ int main(int argc, char *argv[]) {
 	modInitModule(&ptc);
 	
 	// Create thread which listens to clients on a socket		
-	if ((pthread_create(&thread,
-		NULL,
-		(void *) sockListen, // TODO: can we process a return value here?
-		NULL)
-		) != 0)
-		logErr("Error in pthread_create: %s.", strerror(errno));
+	// if ((pthread_create(&thread,
+	// 	NULL,
+	// 	(void *) sockListen, // TODO: can we process a return value here?
+	// 	NULL)
+	// 	) != 0)
+	// 	logErr("Error in pthread_create: %s.", strerror(errno));
 		
 	modeListen(); 			// After initialization, start in open mode
 
@@ -154,7 +154,7 @@ int parseConfig(char *var, char *value) {
 			ptc.wfs[i].wfsmodes = NULL;
 		}
 		
-		logDebug("WFS_COUNT initialized: %d", ptc.wfs_count);
+		logInfo("WFS_COUNT initialized: %d", ptc.wfs_count);
 	}
 	else if (strcmp(var, "WFC_COUNT") == 0) {
 		ptc.wfc_count = (int) strtol(value, NULL, 10);
@@ -165,7 +165,7 @@ int parseConfig(char *var, char *value) {
 			return EXIT_FAILURE;
 		}
 
-		logDebug("WFC_COUNT initialized: %d", ptc.wfc_count);
+		logInfo("WFC_COUNT initialized: %d", ptc.wfc_count);
 	}
 	else if (strstr(var, "WFC_NAME") != NULL){
 		if (ptc.wfc == NULL) {
@@ -176,7 +176,7 @@ int parseConfig(char *var, char *value) {
 		strncpy(ptc.wfc[tmp].name, value, (size_t) FILENAMELEN);
 		ptc.wfc[tmp].name[FILENAMELEN-1] = '\0'; // TODO: This might not be necessary
 		
-		logDebug("WFC_NAME initialized for WFC %d: %s", tmp, ptc.wfc[tmp].name);
+		logInfo("WFC_NAME initialized for WFC %d: %s", tmp, ptc.wfc[tmp].name);
 	}
 	else if (strstr(var, "WFS_NAME") != NULL){
 		if (ptc.wfs == NULL) {
@@ -187,20 +187,20 @@ int parseConfig(char *var, char *value) {
 		strncpy(ptc.wfs[tmp].name, value, (size_t) FILENAMELEN);
 		ptc.wfs[tmp].name[FILENAMELEN-1] = '\0'; // This might not be necessary
 				
-		logDebug("WFS_NAME initialized for WFS %d: %s", tmp, ptc.wfs[tmp].name);
+		logInfo("WFS_NAME initialized for WFS %d: %s", tmp, ptc.wfs[tmp].name);
 	}
     else if (strstr(var, "WFC_NACT") != NULL) {
-            if (ptc.wfc == NULL) {
-                    logErr("Cannot initialize WFC_NACT before initializing WFC_COUNT");
-                    return EXIT_FAILURE;
-            }
-            // Get the number of actuators for which WFC?
-            tmp = strtol(strstr(var,"[")+1, NULL, 10);
-            ptc.wfc[tmp].nact = strtol(value, NULL, 10);
-            ptc.wfc[tmp].ctrl = calloc(ptc.wfc[tmp].nact, sizeof(ptc.wfc[tmp].ctrl));
-            if (ptc.wfc[tmp].ctrl == NULL) return EXIT_FAILURE;
+		if (ptc.wfc == NULL) {
+			logErr("Cannot initialize WFC_NACT before initializing WFC_COUNT");
+			return EXIT_FAILURE;
+		}
+		// Get the number of actuators for which WFC?
+		tmp = strtol(strstr(var,"[")+1, NULL, 10);
+		ptc.wfc[tmp].nact = strtol(value, NULL, 10);
+		ptc.wfc[tmp].ctrl = calloc(ptc.wfc[tmp].nact, sizeof(ptc.wfc[tmp].ctrl));
+		if (ptc.wfc[tmp].ctrl == NULL) return EXIT_FAILURE;
 
-            logDebug("WFS_NACT initialized for WFS %d: %d", tmp, ptc.wfc[tmp].nact);
+		logInfo("WFS_NACT initialized for WFS %d: %d", tmp, ptc.wfc[tmp].nact);
     }
 	else if (strstr(var, "WFS_DF") != NULL) {
 		if (ptc.wfs == NULL) {
@@ -212,7 +212,7 @@ int parseConfig(char *var, char *value) {
 		strncpy(ptc.wfs[tmp].darkfile, value, (size_t) FILENAMELEN);
 		ptc.wfs[tmp].darkfile[FILENAMELEN-1] = '\0'; // This might not be necessary
 		
-		logDebug("WFS_DF initialized for WFS %d: %s", tmp, ptc.wfs[tmp].darkfile);
+		logInfo("WFS_DF initialized for WFS %d: %s", tmp, ptc.wfs[tmp].darkfile);
 	}
 	else if (strstr(var, "WFS_SKY") != NULL) {
 		if (ptc.wfs == NULL) {
@@ -224,7 +224,7 @@ int parseConfig(char *var, char *value) {
 		strncpy(ptc.wfs[tmp].skyfile, value, (size_t) FILENAMELEN);
 		ptc.wfs[tmp].skyfile[FILENAMELEN-1] = '\0'; // This might not be necessary
 		
-		logDebug("WFS_SKY initialized for WFS %d: %s", tmp, ptc.wfs[tmp].skyfile);
+		logInfo("WFS_SKY initialized for WFS %d: %s", tmp, ptc.wfs[tmp].skyfile);
 	}
 	else if (strstr(var, "WFS_PINHOLE") != NULL) {
 		if (ptc.wfs == NULL) {
@@ -236,7 +236,7 @@ int parseConfig(char *var, char *value) {
 		strncpy(ptc.wfs[tmp].pinhole, value, (size_t) FILENAMELEN);
 		ptc.wfs[tmp].pinhole[FILENAMELEN-1] = '\0'; // This might not be necessary
 		
-		logDebug("WFS_PINHOLE initialized for WFS %d: %s", tmp, ptc.wfs[tmp].pinhole);
+		logInfo("WFS_PINHOLE initialized for WFS %d: %s", tmp, ptc.wfs[tmp].pinhole);
 	}
 	else if (strstr(var, "WFS_INFL") != NULL) {
 		if (ptc.wfs == NULL) {
@@ -248,7 +248,7 @@ int parseConfig(char *var, char *value) {
 		strncpy(ptc.wfs[tmp].influence, value, (size_t) FILENAMELEN);
 		ptc.wfs[tmp].influence[FILENAMELEN-1] = '\0'; // This might not be necessary
 		
-		logDebug("WFS_INFL initialized for WFS %d: %s", tmp, ptc.wfs[tmp].influence);
+		logInfo("WFS_INFL initialized for WFS %d: %s", tmp, ptc.wfs[tmp].influence);
 	}
 	else if (strstr(var, "WFS_FF") != NULL) {
 		if (ptc.wfs == NULL) {
@@ -260,7 +260,7 @@ int parseConfig(char *var, char *value) {
 		ptc.wfs[tmp].flatfile[FILENAMELEN-1] = '\0'; // This might not be necessary
 
 		
-		logDebug("WFS_FF initialized for WFS %d: %s", tmp, ptc.wfs[tmp].flatfile);
+		logInfo("WFS_FF initialized for WFS %d: %s", tmp, ptc.wfs[tmp].flatfile);
 	}
 	else if (strstr(var, "WFS_CELLS") != NULL){
 		if (ptc.wfs == NULL) {
@@ -305,8 +305,8 @@ int parseConfig(char *var, char *value) {
 			return EXIT_FAILURE;
 		}
 
-		logDebug("WFS_CELLS initialized for WFS %d: (%dx%d). Subapt resolution is (%dx%d)", \
-			tmp, ptc.wfs[tmp].shsize[0], ptc.wfs[tmp].shsize[1], ptc.wfs[tmp].cells[0], ptc.wfs[tmp].cells[1]);
+		logInfo("WFS_CELLS initialized for WFS %d: (%dx%d). Subapt resolution is (%dx%d) pixels", \
+			tmp, ptc.wfs[tmp].cells[0], ptc.wfs[tmp].cells[1], ptc.wfs[tmp].shsize[0], ptc.wfs[tmp].shsize[1]);
 	}
 	else if (strstr(var, "WFS_RES") != NULL){
 		if (ptc.wfs == NULL) {
@@ -342,43 +342,43 @@ int parseConfig(char *var, char *value) {
 			return EXIT_FAILURE;
 		}
 		
-		logDebug("WFS_RES initialized for WFS %d: %d x %d", tmp, ptc.wfs[tmp].res.x, ptc.wfs[tmp].res.y);
+		logInfo("WFS_RES initialized for WFS %d: %d x %d", tmp, ptc.wfs[tmp].res.x, ptc.wfs[tmp].res.y);
 	}
 
 	else if (strcmp(var, "CS_LISTEN_IP") == 0) {
 		strncpy(cs_config.listenip, value, 16);
 		
-		logDebug("CS_LISTEN_IP initialized: %s", cs_config.listenip);
+		logInfo("CS_LISTEN_IP initialized: %s", cs_config.listenip);
 	}
 	else if (strcmp(var, "CS_LISTEN_PORT") == 0) {
 		cs_config.listenport = (int) strtol(value, NULL, 10);
 		
-		logDebug("CS_LISTEN_PORT initialized: %d", cs_config.listenport);
+		logInfo("CS_LISTEN_PORT initialized: %d", cs_config.listenport);
 	}
 	else if (strcmp(var, "CS_USE_SYSLOG") == 0) {
 		cs_config.use_syslog = ((int) strtol(value, NULL, 10) == 0) ? false : true;
 		
-		logDebug("CS_USE_SYSLOG initialized: %d", cs_config.use_syslog);
+		logInfo("CS_USE_SYSLOG initialized: %d", cs_config.use_syslog);
 	}
 	else if (strcmp(var, "CS_USE_STDERR") == 0) {
 		cs_config.use_stderr = ((int) strtol(value, NULL, 10) == 0) ? false : true;
 		
-		logDebug("CS_USE_STDERR initialized: %d", cs_config.use_stderr);
+		logInfo("CS_USE_STDERR initialized: %d", cs_config.use_stderr);
 	}
 	else if (strcmp(var, "CS_INFOFILE") == 0) {
 		strncpy(cs_config.infofile,value, (size_t) FILENAMELEN);
 		cs_config.infofile[FILENAMELEN-1] = '\0'; // TODO: is this necessary?
-		logDebug("CS_INFOFILE initialized: %s", cs_config.infofile);
+		logInfo("CS_INFOFILE initialized: %s", cs_config.infofile);
 	}
 	else if (strcmp(var, "CS_ERRFILE") == 0) {
 		strncpy(cs_config.errfile,value, (size_t) FILENAMELEN);
 		cs_config.errfile[FILENAMELEN-1] = '\0'; // TODO: is this necessary?
-		logDebug("CS_ERRFILE initialized: %s", cs_config.errfile);
+		logInfo("CS_ERRFILE initialized: %s", cs_config.errfile);
 	}
 	else if (strcmp(var, "CS_DEBUGFILE") == 0) {
 		strncpy(cs_config.debugfile, value, (size_t) FILENAMELEN);
 		cs_config.debugfile[FILENAMELEN-1] = '\0'; // TODO: is this necessary?
-		logDebug("CS_DEBUGFILE initialized: %s", cs_config.debugfile);
+		logInfo("CS_DEBUGFILE initialized: %s", cs_config.debugfile);
 	}
 
 	return EXIT_SUCCESS;
@@ -434,6 +434,10 @@ int initLogFiles() {
 		}	
 		else logDebug("Info logfile '%s' successfully opened.", cs_config.infofile);
 	}
+	else {
+		logDebug("Not logging general info to disk.");
+	}
+
 	if (strlen(cs_config.errfile) > 0) {
 		if (strcmp(cs_config.errfile, cs_config.infofile) == 0) {	// If the errorfile is the same as the infofile, use the same FD
 			cs_config.errfd = cs_config.infofd;
@@ -445,6 +449,11 @@ int initLogFiles() {
 		}
 		else logDebug("Error logfile '%s' successfully opened.", cs_config.errfile);
 	}
+	else {
+		logDebug("Not logging errors to disk.");
+	}
+
+
 	if (strlen(cs_config.debugfile) > 0) {
 		if (strcmp(cs_config.debugfile,cs_config.infofile) == 0) {
 			cs_config.debugfd = cs_config.infofd;	
@@ -459,6 +468,9 @@ int initLogFiles() {
 			cs_config.debugfile[0] = '\0';
 		}
 		else logDebug("Debug logfile '%s' successfully opened.", cs_config.debugfile);
+	}
+	else {
+		logDebug("Not logging debug to disk.");
 	}
 
 	return EXIT_SUCCESS;
@@ -856,6 +868,7 @@ int parseCmd(char *msg, const int len, client_t *client) {
 	}
 	else if (strcmp(tmp,"calibrate") == 0) {
 		if (popword(&msg, tmp) > 0) {
+
 			if (strcmp(tmp,"pinhole") == 0) {
 				ptc.mode = AO_MODE_CAL;
 				ptc.calmode = CAL_PINHOLE;
@@ -863,6 +876,14 @@ int parseCmd(char *msg, const int len, client_t *client) {
 				pthread_cond_signal(&mode_cond);
 				pthread_mutex_unlock(&mode_mutex);
 				bufferevent_write(client->buf_ev,"200 OK CALIBRATE PINHOLE\n", sizeof("200 OK CALIBRATE PINHOLE\n"));
+			}
+			if (strcmp(tmp,"lintest") == 0) {
+				ptc.mode = AO_MODE_CAL;
+				ptc.calmode = CAL_LINTEST;
+				pthread_mutex_lock(&mode_mutex);
+				pthread_cond_signal(&mode_cond);
+				pthread_mutex_unlock(&mode_mutex);
+				bufferevent_write(client->buf_ev,"200 OK CALIBRATE LINTEST\n", sizeof("200 OK CALIBRATE LINTEST\n"));
 			}
 			else if (strcmp(tmp,"influence") == 0) {
 				ptc.mode = AO_MODE_CAL;
@@ -877,7 +898,7 @@ int parseCmd(char *msg, const int len, client_t *client) {
 			}
 		}
 		else {
-			bufferevent_write(client->buf_ev,"400 CALIBRATE REQUIRES ARG\n", sizeof("400 MODE CALIBRATE REQUIRES ARG\n"));
+			bufferevent_write(client->buf_ev,"400 CALIBRATE REQUIRES ARG\n", sizeof("400 CALIBRATE REQUIRES ARG\n"));
 		}
 	}
 	else {

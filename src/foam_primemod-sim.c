@@ -51,29 +51,25 @@ int modOpenLoop(control_t *ptc) {
 		return EXIT_FAILURE;
 	
 //	if (ptc->frames % 20 == 0) {
-		Slock(screen);
-		displayImg(ptc->wfs[0].image, ptc->wfs[0].res, screen);
-		modDrawGrid(&(ptc->wfs[0]), screen);
-		modDrawSubapts(&(ptc->wfs[0]), screen);
-		modDrawVecs(&(ptc->wfs[0]), screen);
-		Sulock(screen);
-		SDL_Flip(screen);
-		
+	drawStuff(ptc, 0, screen);
+
 //	}
 
-	
 	if (SDL_PollEvent(&event))
 		if (event.type == SDL_QUIT)
 			stopFOAM();
+			
 	return EXIT_SUCCESS;
 }
 
 int modClosedInit(control_t *ptc) {
 	int i;
 	// this is the same for open and closed modes, don't rewrite stuff
-	modOpenInit(ptc);
+	if (modOpenInit(ptc) != EXIT_SUCCESS)
+		return EXIT_FAILURE;
+
 	
-	// check if calibration is done
+	// // check if calibration is done
 	for (i=0; i < ptc->wfs_count; i++) {
 		logInfo("Checking if calibrations succeeded (WFS %d).", i);
 		if (modCalWFCChk(ptc, i) == EXIT_FAILURE) {
@@ -82,6 +78,7 @@ int modClosedInit(control_t *ptc) {
 			return EXIT_FAILURE;
 		}
 	}
+	sleep(1);
 	return EXIT_SUCCESS;
 }
 
@@ -89,32 +86,29 @@ int modClosedLoop(control_t *ptc) {
 	// set both actuators to something random
 	int i,j;
 	
-	for (i=0; i<ptc->wfc_count; i++) {
-		logDebug("Setting WFC %d with %d acts.", i, ptc->wfc[i].nact);
-		for (j=0; j<ptc->wfc[i].nact; j++)
-			ptc->wfc[i].ctrl[j] = drand48()*2-1;
-	}
+	// for (i=0; i<ptc->wfc_count; i++) {
+	// 	logDebug("Setting WFC %d with %d acts.", i, ptc->wfc[i].nact);
+	// 	for (j=0; j<ptc->wfc[i].nact; j++)
+	// 		ptc->wfc[i].ctrl[j] = drand48()*2-1;
+	// }
 
-	if (drvReadSensor(ptc) != EXIT_SUCCESS)			// read the sensor output into ptc.image
+	if (drvReadSensor(ptc) != EXIT_SUCCESS)				// read the sensor output into ptc.image
 		return EXIT_FAILURE;
-
-	//modSelSubapts(&ptc.wfs[0], 0, 0); 			// check samini (2nd param) and samxr (3d param)				
 	
-	if (modParseSH((&ptc->wfs[0])) != EXIT_SUCCESS)			// process SH sensor output, get displacements
+	if (modParseSH((&ptc->wfs[0])) != EXIT_SUCCESS)		// process SH sensor output, get displacements
 		return EXIT_FAILURE;
 		
-	if (modCalcCtrl(ptc, 0) != EXIT_SUCCESS)		// parse displacements, get ctrls for WFC's
-		return EXIT_FAILURE;
+	// if (modCalcCtrl(ptc, 0, 10) != EXIT_SUCCESS)		// parse displacements, get ctrls for WFC's
+	// 	return EXIT_FAILURE;
 
+	// for (i=0; i<ptc->wfc_count; i++) {
+	// 	logDebug("Setting WFC %d with %d acts.", i, ptc->wfc[i].nact);
+	// 	for (j=0; j<ptc->wfc[i].nact; j++)
+	// 		logDirect("%f ",ptc->wfc[i].ctrl[j]);
+	// }
 	
 //	if (ptc->frames % 20 == 0) {
-	Slock(screen);
-	displayImg(ptc->wfs[0].image, ptc->wfs[0].res, screen);
-	modDrawGrid(&(ptc->wfs[0]), screen);
-	modDrawSubapts(&(ptc->wfs[0]), screen);
-	modDrawVecs(&(ptc->wfs[0]), screen);
-	Sulock(screen);
-	SDL_Flip(screen);
+ 	drawStuff(ptc, 0, screen);
 //	}
 	// if (ptc->frames % 20 == 0) {	
 	// 	logInfo("Dumping output...");
@@ -122,8 +116,7 @@ int modClosedLoop(control_t *ptc) {
 	// 	exit(0);
 	// }
 	
-	
-	
+
 	if (SDL_PollEvent(&event))
 		if (event.type == SDL_QUIT)
 			stopFOAM();
@@ -151,6 +144,9 @@ int modCalibrate(control_t *ptc) {
 			break;
 		case CAL_INFL: // influence matrix
 			return modCalWFC(ptc, 0); // arguments: (control_t *ptc, int wfs)
+			break;
+		case CAL_LINTEST: // influence matrix
+			return modLinTest(ptc, 0); // arguments: (control_t *ptc, int wfs)
 			break;
 		default:
 			logErr("Unsupported calibrate mode encountered.");
