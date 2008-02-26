@@ -89,12 +89,12 @@ int main(int argc, char *argv[]) {
 	modInitModule(&ptc);
 	
 	// Create thread which listens to clients on a socket		
-	// if ((pthread_create(&thread,
-	// 	NULL,
-	// 	(void *) sockListen, // TODO: can we process a return value here?
-	// 	NULL)
-	// 	) != 0)
-	// 	logErr("Error in pthread_create: %s.", strerror(errno));
+	if ((pthread_create(&thread,
+		NULL,
+		(void *) sockListen,
+		NULL)
+		) != 0)
+		logErr("Error in pthread_create: %s.", strerror(errno));
 		
 	modeListen(); 			// After initialization, start in open mode
 
@@ -130,9 +130,9 @@ void stopFOAM() {
 	logInfo("Ran for %ld seconds and parsed %ld frames (framerate: %f).", \
 		end-ptc.starttime, ptc.frames, ptc.frames/(float) (end-ptc.starttime));
 
-	fclose(cs_config.infofd);
-	fclose(cs_config.errfd);
-	fclose(cs_config.debugfd);
+	// fclose(cs_config.infofd);
+	// fclose(cs_config.errfd);
+	// fclose(cs_config.debugfd);
 	exit(EXIT_SUCCESS);
 }
 

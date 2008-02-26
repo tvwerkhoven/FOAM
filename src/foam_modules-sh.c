@@ -430,9 +430,15 @@ int modCalcCtrl(control_t *ptc, int wfs, int nmodes) {
 	for (wfc=0; wfc< ptc->wfc_count; wfc++)
 		nacttot += ptc->wfc[wfc].nact;
 
+	if (nmodes > nacttot) {
+		logWarn("nmodes cannot be higher than the total number of actuators, cropping");
+		nmodes = nacttot;
+	}
+	
 	float modeamp[nacttot];
 	
-
+	logDebug("calculating control stuff for WFS %d (modes: %d)", wfs, nmodes);
+	
 	i=0;
 	// first calculate mode amplitudes
 	for (wfc=0; wfc< ptc->wfc_count; wfc++) { // loop over all WFCs
@@ -444,6 +450,7 @@ int modCalcCtrl(control_t *ptc, int wfs, int nmodes) {
 				sum = sum + ptc->wfs[wfs].wfsmodes[i*2*nsubap+j*2] * (ptc->wfs[wfs].disp[j][0]-ptc->wfs[wfs].refc[j][0]) \
 					+ ptc->wfs[wfs].wfsmodes[i*2*nsubap+j*2+1] * (ptc->wfs[wfs].disp[j][1]-ptc->wfs[wfs].refc[j][1]);
 			
+			logDirect("%f ", sum);
 			modeamp[i] = sum;
 			i++;
 		}
@@ -457,10 +464,12 @@ int modCalcCtrl(control_t *ptc, int wfs, int nmodes) {
 			for (j=0;j<nmodes;j++) // loop over all system modes that are used
 				sum += ptc->wfs[wfs].dmmodes[i*nacttot+j]*modeamp[j]/ptc->wfs[wfs].singular[j];
 
+			logDirect("%f ", sum);
 			ptc->wfc[wfc].ctrl[act] = sum;
 			i++;
 		}
 	}
+	logDirect("\n");
 	
 	return EXIT_SUCCESS;
 }

@@ -46,7 +46,8 @@ int modCalPinhole(control_t *ptc, int wfs) {
 	if (fp == NULL)
 		logErr("Error opening pinhole calibration file for wfs %d (%s)", wfs, strerror(errno));
 		
-	fprintf(fp,"%d\n", ptc->wfs[wfs].nsubap * 2);
+	fprintf(fp,"2\n"); 			// we have 2 dimensions
+	fprintf(fp,"%d\n%d\n", ptc->wfs[wfs].nsubap, 2); //outer dimension is nsubap, inner 2 (vectors)
 
 	// collect displacement vectors and store as reference
 	logInfo("Found following reference coordinates:");
@@ -54,7 +55,7 @@ int modCalPinhole(control_t *ptc, int wfs) {
 		ptc->wfs[wfs].refc[j][0] = ptc->wfs[wfs].disp[j][0];
 		ptc->wfs[wfs].refc[j][1] = ptc->wfs[wfs].disp[j][1];
 		logDirect("(%f,%f) ", ptc->wfs[wfs].refc[j][0], ptc->wfs[wfs].refc[j][1]);
-		fprintf(fp,"%f %f\n", (double) ptc->wfs[wfs].refc[j][0], (double) ptc->wfs[wfs].refc[j][1]);
+		fprintf(fp,"%f\n%f\n", (double) ptc->wfs[wfs].refc[j][0], (double) ptc->wfs[wfs].refc[j][1]);
 	}
 	// set the rest to zero
 	// for (j=ptc->wfs[wfs].nsubap; j < ptc->wfs[wfs].cells[0] * ptc->wfs[wfs].cells[1]; j++)
@@ -67,7 +68,7 @@ int modCalPinhole(control_t *ptc, int wfs) {
 }
 
 int modCalPinholeChk(control_t *ptc, int wfs) {
-	int nsubs, j;
+	int nsubs, j, chk1, chk2;
 	FILE *fd;
 	
 	if (modFileChk(ptc->wfs[wfs].pinhole) != EXIT_SUCCESS) {
@@ -83,15 +84,16 @@ int modCalPinholeChk(control_t *ptc, int wfs) {
 			return EXIT_FAILURE;
 		}
 	
-		fscanf(fd,"%d\n", &nsubs);
-		if (nsubs != 2 * ptc->wfs[wfs].nsubap) {
+		fscanf(fd,"%d\n", &chk1); 				// read the dimension (should be 2)
+		fscanf(fd,"%d\n%d\n", &nsubs, &chk2);	// read the sizes of each dimension (should be nsubap and 2)
+		if (nsubs != ptc->wfs[wfs].nsubap || chk1 != 2 || chk2 != 2) {
 			logWarn("Warning, number of subapertures found in %s incorrect (%d vs %d), wrong calibration file?", 
-				ptc->wfs[wfs].pinhole, nsubs/2,  ptc->wfs[wfs].nsubap);
+				ptc->wfs[wfs].pinhole, nsubs,  ptc->wfs[wfs].nsubap);
 			return EXIT_FAILURE;
 		}
 	
 		for (j=0; j < ptc->wfs[wfs].nsubap; j++) {
-			fscanf(fd, "%f %f\n", &(ptc->wfs[wfs].refc[j][0]), &(ptc->wfs[wfs].refc[j][1]) );
+			fscanf(fd, "%f\n%f\n", &(ptc->wfs[wfs].refc[j][0]), &(ptc->wfs[wfs].refc[j][1]) );
 		}
 	
 		fclose(fd);
@@ -140,7 +142,7 @@ int modLinTest(control_t *ptc, int wfs) {
 			logWarn("Cannot open file %s for writing linearity test.", outfile);
 			return EXIT_FAILURE;
 		}
-		
+		fprintf(fp,"3\n");
 		fprintf(fp,"%d\n%d\n%d\n", nact, niter, nsubap); // we have nact actuators (variables) and nsubap*2 measurements
 		
 		for (j=0; j<nact; j++) { // loop over all actuators and all subapts for (wfc,wfs)
@@ -190,6 +192,8 @@ int modCalWFC(control_t *ptc, int wfs) {
 	int skipframes=1;
 	FILE *fp;
 
+	// run open loop initialisation once
+	modOpenInit(ptc);
 	
 	logDebug("pinhole %s",ptc->wfs[wfs].pinhole);
 	
@@ -209,9 +213,7 @@ int modCalWFC(control_t *ptc, int wfs) {
 			ptc->wfc[i].ctrl[j] = 0;
 		}
 	}
-	// run openInit once to read the sensors and get subapertures
-	modOpenInit(ptc);
-
+	
 	// get total nr of actuators, set all actuators to zero (180 volt for an okotech DM)
 	for (i=0; i < ptc->wfc_count; i++) {
 		for (j=0; j < ptc->wfc[i].nact; j++) {
@@ -229,7 +231,8 @@ int modCalWFC(control_t *ptc, int wfs) {
 	logInfo("Calibrating WFC's using %d actuators and wfs %d with %d subapts, storing in %s.", \
 		nact, wfs, nsubap, ptc->wfs[wfs].influence);
 	fp = fopen(ptc->wfs[wfs].influence,"w+");
-	fprintf(fp,"%d\n%d\n", nact, nsubap*2); // we have nact actuators (variables) and nsubap*2 measurements
+	fprintf(fp,"3\n");								// 3 dimensions (nact, nsub, 2d-vectors)
+	fprintf(fp,"%d\n%d\n%d\n", nact, nsubap, 2); 	// we have nact actuators (variables) and nsubap*2 measurements
 	
 	for (wfc=0; wfc < ptc->wfc_count; wfc++) { // loop over all wave front correctors 
 		nact = ptc->wfc[wfc].nact;
@@ -295,6 +298,7 @@ int modCalWFC(control_t *ptc, int wfs) {
 
 int modCalWFCChk(control_t *ptc, int wfs) {
 	int nsubs, nact, nacttot=0, i, j;
+	int chk1, chk2, chk3;
 	char *outfile;
 	FILE *fd;
 	
@@ -314,14 +318,17 @@ int modCalWFCChk(control_t *ptc, int wfs) {
 			return EXIT_FAILURE;
 		}
 
-		fscanf(fd,"%d\n%d\n", &nact, &nsubs);
-		if (nsubs != 2 * ptc->wfs[wfs].nsubap || nact != nacttot) {
+		fscanf(fd,"%d", &chk1);					// read the dimension
+		fscanf(fd,"%d\n%d\n%d\n", &nact, &nsubs, &chk2);	// read the dimension sizes
+		if (nsubs != ptc->wfs[wfs].nsubap || nact != nacttot || chk1 != 3 || chk2 != 2) {
 			logWarn("Warning, number of subapertures or actuators found in %s incorrect (apts: %d vs %d, acts: %d vs %d), wrong calibration file?", 
 				ptc->wfs[wfs].pinhole, nsubs/2,  ptc->wfs[wfs].nsubap, nact, nacttot);
 			return EXIT_FAILURE;
 		}
 		fclose(fd);
 	}
+	
+
 	
 	// CHECK SINGVAL //
 	///////////////////
@@ -347,11 +354,32 @@ int modCalWFCChk(control_t *ptc, int wfs) {
 			}
 		}
 		
+		// fscanf(fd,"%d\n%d\n", &chk1, &chk2);
+		// if (chk1 != 1 || chk2 != nacttot) {
+		// 	logWarn("%s format seems incorrect, found %d dimensions, expected %d, found %d datapoints, expected %d", \
+		// 		chk1, 1, chk2, nacttot);
+		// 	return EXIT_FAILURE;
+		// }
+		
+		fscanf(fd,"%d\n",&chk1);
+		if (chk1 != 1) {
+			logWarn("%s format seems incorrect, found %d dimensions, expected %d", outfile, chk1, 1);
+			return EXIT_FAILURE;
+		}
+		
+		fscanf(fd,"%d\n",&chk1);
+		if (chk1 != nacttot) {
+			logWarn("%s format seems incorrect, found %d datapts, expected %d", outfile, chk1, nacttot);
+			return EXIT_FAILURE;
+		}
+		
 		for (i=0; i<nacttot; i++)
 			fscanf(fd,"%f\n", &(ptc->wfs[wfs].singular[i]));
 			
 		fclose(fd);
 	}
+	
+
 	
 	// CHECK DMMODES //
 	///////////////////
@@ -377,7 +405,18 @@ int modCalWFCChk(control_t *ptc, int wfs) {
 				return EXIT_FAILURE;
 			}
 		}
-
+		fscanf(fd,"%d\n",&chk1);
+		if (chk1 != 2) {
+			logWarn("%s format seems incorrect, found %d dimensions, expected %d", outfile, chk1, 2);
+			return EXIT_FAILURE;
+		}
+		
+		fscanf(fd,"%d\n%d\n",&chk1, &chk2);
+		if (chk1 != nacttot || chk2 != nacttot) {
+			logWarn("%s format seems incorrect, found %dx%d datapts, expected %dx%d", outfile, chk1, chk2, nacttot, nacttot);
+			return EXIT_FAILURE;
+		}
+		
 		for (i = 0; i < nacttot; i++)
 			for (j = 0; j < nacttot; j++)
 				fscanf(fd,"%f\n", &(ptc->wfs[wfs].dmmodes[i*nacttot + j]) );
@@ -394,6 +433,7 @@ int modCalWFCChk(control_t *ptc, int wfs) {
 		logWarn("Could not open file %s", outfile);
 		return EXIT_FAILURE;
 	}
+	
 	else {
 		//everything ok, import data from file to ptc here
 		fd = fopen(outfile,"r");
@@ -410,12 +450,22 @@ int modCalWFCChk(control_t *ptc, int wfs) {
 			}
 		}
 		
-		fscanf(fd,"%d\n%d\n",&nact, &nsubs);
+		fscanf(fd,"%d\n",&chk1);
+		if (chk1 != 3) {
+			logWarn("%s format seems incorrect, found %d dimensions, expected %d", outfile, chk1, 3);
+			return EXIT_FAILURE;
+		}
+		
+		fscanf(fd,"%d\n%d\n%d\n", &chk1, &chk2, &chk3);
+		if (chk1 != nacttot || chk2 != nsubs || chk3 != 2) {
+			logWarn("%s format seems incorrect, found %dx%dx%d datapts, expected %dx%dx%d", outfile, chk1, chk2, nacttot, nacttot);
+			return EXIT_FAILURE;
+		}
 
-		for (i = 0; i < nsubs*2; i++) {
-			for (j = 0; j < nact; j++) {
-//				fscanf(out2,"%.12g\n",Q[i][j]);
-				fscanf(fd,"%12g\n", &(ptc->wfs[wfs].wfsmodes[i*nact + j]) );
+		// TODO: check this code out (matches ao3.c, but might be a little weird)
+		for (j = 0; j < nacttot; j++) {
+			for (i = 0; i < nsubs*2; i++) {
+				fscanf(fd,"%12g\n", &(ptc->wfs[wfs].wfsmodes[j*nsubs*2 + i]) );
 			}
 		}
 
@@ -509,7 +559,7 @@ int modSVD(control_t *ptc, int wfs) {
 
 	int i, j, k, l=0, p, q, r, t, iter;	// counters for decomposition
 	int nact=0, nsubap=0;
-	int n, m;
+	int n, m, chk1;
 
 	FILE *in;							// input Q from "influence.dat" (ptc->wfs[wfs].pinhole)
 //  FILE *out;							// output inverse matrix to "inverse.dat" (ptc->wfs[wfs].pinhole . inverse)
@@ -518,11 +568,26 @@ int modSVD(control_t *ptc, int wfs) {
 	// get nsubap and nact in two different ways (from file and from *ptc), these should match
 	in = fopen(ptc->wfs[wfs].influence, "r");
 	if (in == NULL) {
-		logErr("error opening input file %s", ptc->wfs[wfs].influence);
+		logWarn("Error opening input file %s: %s", ptc->wfs[wfs].influence, strerror(errno));
 		return EXIT_FAILURE;
 	}
-	fscanf(in,"%d\n",&n);
-	fscanf(in,"%d\n",&m);
+	
+	// check if the dimensions match
+	fscanf(in,"%d\n", &n);
+	if (n != 3) {
+		logWarn("%s not in correct format (dimensions expected: %d found: %d)", ptc->wfs[wfs].influence, 3, n);
+		return EXIT_FAILURE;
+	}
+	
+	// check if the dimension values match
+	fscanf(in,"%d\n%d\n", &n, &m);
+	fscanf(in,"%d\n", &chk1);
+	if (chk1 != 2) {
+		logWarn("%s not in correct format (dimension 3 appears to be incorrect (%d vs %d))", 2, chk1);
+		return EXIT_FAILURE;
+	}
+	
+	m *= 2;
 
 	for (i=0; i < ptc->wfc_count; i++) {
 		nact += ptc->wfc[i].nact;
@@ -921,7 +986,7 @@ int modSVD(control_t *ptc, int wfs) {
 		}
 	}
 
-
+	fprintf(out2,"%d\n%d\n", 1, n);
 	for (i = 0; i < n; ++i) {
 		fprintf(out2,"%f\n",diag[i]);
 		ptc->wfs[wfs].singular[i] = diag[i];
@@ -945,6 +1010,8 @@ int modSVD(control_t *ptc, int wfs) {
 			return EXIT_FAILURE;
 		}
 	}
+	
+	fprintf(out2,"%d\n%d\n%d\n",2, n, n);
 	
 	for (i = 0; i < n; ++i) {
 		for (j=0;j<n;j++) {
@@ -971,12 +1038,13 @@ int modSVD(control_t *ptc, int wfs) {
 			return EXIT_FAILURE;
 		}
 	}
-	
-	fprintf(out2,"%d\n%d\n",nact, 2 * nsubap);
+	fprintf(out2,"%d\n", 3);
+	fprintf(out2,"%d\n%d\n%d\n",n, m/2, 2);
+	// TvW: todo: check if this storage format is OK
 	for (r = 0; r < n; ++r) {
 		for (t = 0; t < m; ++t) {
 			fprintf(out2,"%.12g\n",Q[t][r]);
-			ptc->wfs[wfs].wfsmodes[t*n + r] = Q[t][r];
+			ptc->wfs[wfs].wfsmodes[r*m + t] = Q[t][r];
 		}
 	}
 

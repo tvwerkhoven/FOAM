@@ -24,6 +24,9 @@ int modInitModule(control_t *ptc) {
 
 void modStopModule(control_t *ptc) {
 	// let's just do nothing here because we're done anyway :P
+	
+	// we need to unlock the screen or else something might go wrong
+	Sulock(screen);
 }
 
 int modOpenInit(control_t *ptc) {
@@ -71,14 +74,13 @@ int modClosedInit(control_t *ptc) {
 	
 	// // check if calibration is done
 	for (i=0; i < ptc->wfs_count; i++) {
-		logInfo("Checking if calibrations succeeded (WFS %d).", i);
+		logInfo("Checking if calibrations necessary for closed loop succeeded (WFS %d/%d).", i, ptc->wfs_count);
 		if (modCalWFCChk(ptc, i) == EXIT_FAILURE) {
 			logWarn("Calibration incomplete for WFS %d, please calibrate first", i);
 			ptc->mode = AO_MODE_LISTEN;
 			return EXIT_FAILURE;
 		}
 	}
-	sleep(1);
 	return EXIT_SUCCESS;
 }
 
@@ -98,8 +100,8 @@ int modClosedLoop(control_t *ptc) {
 	if (modParseSH((&ptc->wfs[0])) != EXIT_SUCCESS)		// process SH sensor output, get displacements
 		return EXIT_FAILURE;
 		
-	// if (modCalcCtrl(ptc, 0, 10) != EXIT_SUCCESS)		// parse displacements, get ctrls for WFC's
-	// 	return EXIT_FAILURE;
+	if (modCalcCtrl(ptc, 0, 10) != EXIT_SUCCESS)		// parse displacements, get ctrls for WFC's
+		return EXIT_FAILURE;
 
 	// for (i=0; i<ptc->wfc_count; i++) {
 	// 	logDebug("Setting WFC %d with %d acts.", i, ptc->wfc[i].nact);

@@ -152,17 +152,7 @@ int displayImg(float *img, coord_t res, SDL_Surface *screen) {
 	return EXIT_SUCCESS;
 }
 
-void Slock(SDL_Surface *screen) {
-	if ( SDL_MUSTLOCK(screen) )	{
-		if ( SDL_LockSurface(screen) < 0 )
-			return;
-	}
-}
 
-void Sulock(SDL_Surface *screen) {
-	if ( SDL_MUSTLOCK(screen) )
-		SDL_UnlockSurface(screen);
-}
 
 void DrawPixel(SDL_Surface *screen, int x, int y, Uint8 R, Uint8 G, Uint8 B) {
 	Uint32 color = SDL_MapRGB(screen->format, R, G, B);
@@ -269,13 +259,13 @@ int modDrawGrid(wfs_t *wfsinfo, SDL_Surface *screen) {
 }
 
 void drawStuff(control_t *ptc, int wfs, SDL_Surface *screen) {
-//	Slock(screen);
-//	displayImg(ptc->wfs[wfs].image, ptc->wfs[wfs].res, screen);
-//	modDrawGrid(&(ptc->wfs[wfs]), screen);
-	// modDrawSubapts(&(ptc->wfs[0]), screen);
-	// modDrawVecs(&(ptc->wfs[0]), screen);
-	// Sulock(screen);
-	// SDL_Flip(screen);
+	Slock(screen);
+	displayImg(ptc->wfs[wfs].image, ptc->wfs[wfs].res, screen);
+	modDrawGrid(&(ptc->wfs[wfs]), screen);
+	modDrawSubapts(&(ptc->wfs[0]), screen);
+	modDrawVecs(&(ptc->wfs[0]), screen);
+	Sulock(screen);
+	SDL_Flip(screen);
 }
 
 
@@ -300,3 +290,14 @@ Uint32 getpixel(SDL_Surface *surface, int x, int y) {
     }
 }
 
+void Slock(SDL_Surface *screen) {
+	if ( SDL_MUSTLOCK(screen) )	{
+		if ( SDL_LockSurface(screen) < 0 )
+			return;
+	}
+}
+
+void Sulock(SDL_Surface *screen) {
+	if ( SDL_MUSTLOCK(screen) )
+		SDL_UnlockSurface(screen);
+}
