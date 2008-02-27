@@ -18,11 +18,11 @@
 #define FOAM_MODSIM_ACTPAT "../config/dm37-256.pgm"
 
 struct simul simparams = {
-	.wind[0] = 10,
-	.wind[1] = 5,
+	.wind[0] = 0,
+	.wind[1] = 0,
 	.curorig[0] = 0,
 	.curorig[1] = 0,
-	.seeingfac = 3.,
+	.seeingfac = 8.,
 	.simimg = NULL,
 	.plan_forward = NULL,
 	.wisdomfile = "fftw_wisdom.dat",
@@ -68,6 +68,11 @@ int drvReadSensor() {
 		logDebug("simAtm() done");
 	} // end for (ptc.filter == FILT_PINHOLE)
 
+	// we're faking some drift here
+	float tmpctrl[] = {((ptc.frames % 20)/20.0 - 0.5) * ( round( (ptc.frames % 20)/20.0 )*2 - 1) + 0.5, 0.0};
+//	([0 - 1 ] * 2 - 1) *(round ([0 - 1])*2 - 1)
+	logDebug("TT: faking tt with : %f, %f", tmpctrl[0], tmpctrl[1]);
+	modSimTT(tmpctrl, ptc.wfs[0].image, ptc.wfs[0].res);
 
 	// we simulate WFCs before the telescope to make sure they outer region is zero (Which is done by simTel())
 	logDebug("Now simulating %d WFC(s).", ptc.wfc_count);
@@ -150,6 +155,7 @@ int simObj(char *file, float *image) {
 int simWFC(control_t *ptc, int wfcid, int nact, float *ctrl, float *image) {
 	// we want to simulate the tip tilt mirror here. What does it do
 	logDebug("WFC %d (%s) has %d actuators, simulating", wfcid, ptc->wfc[wfcid].name, ptc->wfc[wfcid].nact);
+	logDebug("TT: Control is: %f, %f", ctrl[0], ctrl[1]);
 	if (wfcid == 0)
 		modSimTT(ctrl, image, ptc->wfs[0].res);
 	if (wfcid == 1) {

@@ -34,7 +34,7 @@ Last: 2008-01-21
 #define FOAM_VERSION "v0.3.0-91 Feb"
 #define FOAM_AUTHOR "Tim van Werkhoven"
 
-#define MAX_CLIENTS 1				// maximum number of clients that can connect
+#define MAX_CLIENTS 8				// maximum number of clients that can connect
  									// (allows for easy implementation of connection tracking)
 
 // GLOBAL VARIABLES //
@@ -492,6 +492,8 @@ void stopFOAM();
 @brief Catches \c SIGINT signals and decides what to do with it.
 */
 void catchSIGINT();
+
+int tellClients(char *msg);
 
 
 #endif /* FOAM_CS_LIBRARY */

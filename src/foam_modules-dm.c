@@ -52,7 +52,7 @@ float *actvolt=NULL;	// we store the actuator pattern with voltages applied here
 int modSimTT(float *ctrl, float *image, coord_t res) {
 	int i,j;
 	float amp = 4;
-	
+		
 	// first simulate rails (i.e. crop ctrl above abs(1))
 	if (ctrl[0] > 1.0) ctrl[0] = 1.0;
 	if (ctrl[0] < -1.0) ctrl[0] = -1.0;
@@ -148,16 +148,18 @@ int modSimDM(char *boundarymask, char *actuatorpat, int nact, float *ctrl, float
 			return EXIT_FAILURE;
 		}
 	}
-	
 
 	// input linear and c=[-1,1], 'output' must be v=[0,255] and linear in v^2
-//	logDebug("Simulating DM with voltages:");
+	logDebug("Simulating DM with voltages:");
 	for (ik = 0; ik < nact; ik++) {
+		// first simulate rails (i.e. crop ctrl above abs(1))
+		if (ctrl[ik] > 1.0) ctrl[ik] = 1.0;
+		if (ctrl[ik] < -1.0) ctrl[ik] = -1.0;
 		// we do Sqrt(255^2 (i+1) * 0.5) here to convert from [-1,1] (linear) to [0,255] (quadratic)
 		voltage[ik] = (int) round( sqrt(65025*(ctrl[ik]+1)*0.5 ) ); //65025 = 255^2
-//		logDirect("%d ", voltage[ik]);
+		logDirect("%d ", voltage[ik]);
 	}
-//	logDirect("\n");
+	logDirect("\n");
 	
 	// set actuator voltages on electrodes *act is the actuator pattern,
 	// where the value of the pixel associates that pixel with an actuator

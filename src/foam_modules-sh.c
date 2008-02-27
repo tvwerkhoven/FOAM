@@ -439,6 +439,24 @@ int modCalcCtrl(control_t *ptc, int wfs, int nmodes) {
 	
 	logDebug("calculating control stuff for WFS %d (modes: %d)", wfs, nmodes);
 	
+	// logDebug("Linear output of wfsmodes:");
+	// for (i=0; i<2*nacttot*nsubap; i++)
+	// 	logDirect("%f ", ptc->wfs[wfs].wfsmodes[i]);
+	// logDirect("\n");
+	// 
+	// logDebug("Linear output of dmmodes:");
+	// for (i=0; i<nacttot*nacttot; i++)
+	// 	logDirect("%f ", ptc->wfs[wfs].dmmodes[i]);
+	// logDirect("\n");
+	// 
+	// 
+	// logDebug("Linear output of singval:");
+	// for (i=0; i<nacttot; i++)
+	// 	logDirect("%f ", ptc->wfs[wfs].singular[i]);
+	// logDirect("\n");
+		
+
+	
 	i=0;
 	// first calculate mode amplitudes
 	for (wfc=0; wfc< ptc->wfc_count; wfc++) { // loop over all WFCs
@@ -446,11 +464,15 @@ int modCalcCtrl(control_t *ptc, int wfs, int nmodes) {
 			sum=0.0;
 
 			// TODO: what coordinate of wfsmodes do we need?
+			// TODO: this code is ugly, reformat the data-readout please!
 			for (j=0; j<nsubap; j++) // loop over all subapertures
-				sum = sum + ptc->wfs[wfs].wfsmodes[i*2*nsubap+j*2] * (ptc->wfs[wfs].disp[j][0]-ptc->wfs[wfs].refc[j][0]) \
+				sum = sum + ptc->wfs[wfs].wfsmodes[j*nacttot+i] * (ptc->wfs[wfs].disp[j][0]-ptc->wfs[wfs].refc[j][0]) \
+					+ ptc->wfs[wfs].wfsmodes[nacttot*nsubap+j*nacttot+i] * (ptc->wfs[wfs].disp[j][1]-ptc->wfs[wfs].refc[j][1]);
+// this was wrong:
+//				sum = sum + ptc->wfs[wfs].wfsmodes[i*2*nsubap+j*2] * (ptc->wfs[wfs].disp[j][0]-ptc->wfs[wfs].refc[j][0]) \
 					+ ptc->wfs[wfs].wfsmodes[i*2*nsubap+j*2+1] * (ptc->wfs[wfs].disp[j][1]-ptc->wfs[wfs].refc[j][1]);
-			
-			logDirect("%f ", sum);
+				
+//			logDirect("%f ", sum);
 			modeamp[i] = sum;
 			i++;
 		}
@@ -462,14 +484,15 @@ int modCalcCtrl(control_t *ptc, int wfs, int nmodes) {
 		for (act=0; act < ptc->wfc[wfc].nact; act++) { // loop over all acts for WFC 'wfc'
 			sum=0.0;
 			for (j=0;j<nmodes;j++) // loop over all system modes that are used
-				sum += ptc->wfs[wfs].dmmodes[i*nacttot+j]*modeamp[j]/ptc->wfs[wfs].singular[j];
+				sum += ptc->wfs[wfs].dmmodes[j*nacttot+i]*modeamp[j]/ptc->wfs[wfs].singular[j];
 
-			logDirect("%f ", sum);
-			ptc->wfc[wfc].ctrl[act] = sum;
+//			logDirect("%f ", sum);
+			// TODO: negative?
+			ptc->wfc[wfc].ctrl[act] = -sum*2.5;
 			i++;
 		}
 	}
-	logDirect("\n");
+//	logDirect("\n");
 	
 	return EXIT_SUCCESS;
 }

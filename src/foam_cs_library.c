@@ -72,7 +72,7 @@ void logInfo(const char *msg, ...) {
 		vfprintf(cs_config.infofd, logmessage , ap);
 	
 	if (cs_config.use_stderr == true) // Do we want to log this to stderr
-		vfprintf(stderr, logmessage, aq);
+		vfprintf(stdout, logmessage, aq);
 		
 	if (cs_config.use_syslog == true) 	// Do we want to log this to syslog?
 		syslog(LOG_INFO, msg, ar);
@@ -100,7 +100,7 @@ void logDirect(const char *msg, ...) {
 		vfprintf(cs_config.infofd, msg , ap);
 	
 	if (cs_config.use_stderr == true) // Do we want to log this to stderr
-		vfprintf(stderr, msg, aq);
+		vfprintf(stdout, msg, aq);
 		
 	if (cs_config.use_syslog == true) 	// Do we want to log this to syslog?
 		syslog(LOG_INFO, msg, ar);
@@ -127,7 +127,7 @@ void logErr(const char *msg, ...) {
 		vfprintf(cs_config.errfd, logmessage, ap);
 
 	if (cs_config.use_stderr == true) // Do we want to log this to stderr?
-		vfprintf(stderr, logmessage, aq);
+		vfprintf(stdout, logmessage, aq);
 	
 	if (cs_config.use_syslog == true) // Do we want to log this to syslog?
 		syslog(LOG_ERR, msg, ar);
@@ -137,6 +137,7 @@ void logErr(const char *msg, ...) {
 	va_end(ar);
 	
 	// There was an error, stop immediately
+//	stopFOAM();
 	exit(EXIT_FAILURE);
 }
 
@@ -157,7 +158,7 @@ void logWarn(const char *msg, ...) {
 		vfprintf(cs_config.errfd, logmessage, ap);
 
 	if (cs_config.use_stderr == true) // Do we want to log this to stderr?
-		vfprintf(stderr, logmessage, aq);
+		vfprintf(stdout, logmessage, aq);
 	
 	if (cs_config.use_syslog == true) // Do we want to log this to syslog?
 		syslog(LOG_ERR, msg, ar);
@@ -167,7 +168,6 @@ void logWarn(const char *msg, ...) {
 	va_end(ar);
 	
 }
-
 
 void logDebug(const char *msg, ...) {
 	if (cs_config.loglevel < LOGDEBUG) 	// Do we need this loglevel?
@@ -188,7 +188,7 @@ void logDebug(const char *msg, ...) {
 		vfprintf(cs_config.debugfd, logmessage, ap);
 	
 	if (cs_config.use_stderr == true)	// Do we want to log this to stderr?
-		vfprintf(stderr, logmessage, aq);
+		vfprintf(stdout, logmessage, aq);
 
 	
 	if (cs_config.use_syslog == true) 	// Do we want to log this to syslog?

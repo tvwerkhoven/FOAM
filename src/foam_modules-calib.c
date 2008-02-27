@@ -462,10 +462,10 @@ int modCalWFCChk(control_t *ptc, int wfs) {
 			return EXIT_FAILURE;
 		}
 
-		// TODO: check this code out (matches ao3.c, but might be a little weird)
+		// TODO: check this code out (matches ao3.c, but might be a little weird)		
 		for (j = 0; j < nacttot; j++) {
 			for (i = 0; i < nsubs*2; i++) {
-				fscanf(fd,"%12g\n", &(ptc->wfs[wfs].wfsmodes[j*nsubs*2 + i]) );
+				fscanf(fd,"%f\n", &(ptc->wfs[wfs].wfsmodes[j*nsubs*2 + i]) );
 			}
 		}
 

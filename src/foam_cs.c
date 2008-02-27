@@ -710,10 +710,12 @@ void sockAccept(const int sock, const short event, void *arg) {
 	
 	// Check if we do not exceed the maximum number of connections:
 	if (clientlist.nconn >= MAX_CLIENTS) {
-		logErr("Refused connection, maximum clients reached (%d)", MAX_CLIENTS);
+		sleep(1);
 		close(newsock);
+		logWarn("Refused connection, maximum clients reached (%d)", MAX_CLIENTS);
 		return;
 	}
+
 	
 	client = calloc(1, sizeof(*client));
 	if (client == NULL)
@@ -826,11 +828,13 @@ int parseCmd(char *msg, const int len, client_t *client) {
 //		logDebug("Got help command & sent it! (subhelp %s)", tmp);
 	}
 	else if ((strcmp(tmp,"exit") == 0) || (strcmp(tmp,"quit") == 0)) {
-		bufferevent_write(client->buf_ev,"200 OK EXIT\n", sizeof("200 OK EXIT\n"));
+		tellClients("200 OK EXIT\n");
+//		bufferevent_write(client->buf_ev,"200 OK EXIT\n", sizeof("200 OK EXIT\n"));
 		sockOnErr(client->buf_ev, EVBUFFER_EOF, client);
 	}
 	else if (strcmp(tmp,"shutdown") == 0) {
-		bufferevent_write(client->buf_ev,"200 OK SHUTDOWN\n", sizeof("200 OK SHUTDOWN\n"));
+		tellClients("200 OK SHUTDOWN\n");
+//		bufferevent_write(client->buf_ev,"200 OK SHUTDOWN\n", sizeof("200 OK SHUTDOWN\n"));
 		sockOnErr(client->buf_ev, EVBUFFER_EOF, client);
 		stopFOAM();
 	}
@@ -842,21 +846,24 @@ int parseCmd(char *msg, const int len, client_t *client) {
 				pthread_mutex_lock(&mode_mutex); // signal a change to the main thread
 				pthread_cond_signal(&mode_cond);
 				pthread_mutex_unlock(&mode_mutex);
-				bufferevent_write(client->buf_ev,"200 OK MODE CLOSED\n", sizeof("200 OK MODE CLOSED\n"));
+				tellClients("200 OK MODE CLOSED\n");
+//				bufferevent_write(client->buf_ev,"200 OK MODE CLOSED\n", sizeof("200 OK MODE CLOSED\n"));
 			}
 			else if (strcmp(tmp,"open") == 0) {
 				ptc.mode = AO_MODE_OPEN;
 				pthread_mutex_lock(&mode_mutex);
 				pthread_cond_signal(&mode_cond);
 				pthread_mutex_unlock(&mode_mutex);
-				bufferevent_write(client->buf_ev,"200 OK MODE OPEN\n", sizeof("200 OK MODE OPEN\n"));
+				tellClients("200 OK MODE OPEN\n");
+//				bufferevent_write(client->buf_ev,"200 OK MODE OPEN\n", sizeof("200 OK MODE OPEN\n"));
 			}
 			else if (strcmp(tmp,"listen") == 0) {
 				ptc.mode = AO_MODE_LISTEN;
 				pthread_mutex_lock(&mode_mutex);
 				pthread_cond_signal(&mode_cond);
 				pthread_mutex_unlock(&mode_mutex);
-				bufferevent_write(client->buf_ev,"200 OK MODE LISTEN\n", sizeof("200 OK MODE LISTEN\n"));
+				tellClients("200 OK MODE LISTEN\n");
+//				bufferevent_write(client->buf_ev,"200 OK MODE LISTEN\n", sizeof("200 OK MODE LISTEN\n"));
 			}
 			else {
 				bufferevent_write(client->buf_ev,"400 UNKNOWN MODE\n", sizeof("400 UNKNOWN MODE\n"));
@@ -875,15 +882,17 @@ int parseCmd(char *msg, const int len, client_t *client) {
 				pthread_mutex_lock(&mode_mutex);
 				pthread_cond_signal(&mode_cond);
 				pthread_mutex_unlock(&mode_mutex);
-				bufferevent_write(client->buf_ev,"200 OK CALIBRATE PINHOLE\n", sizeof("200 OK CALIBRATE PINHOLE\n"));
+				tellClients("200 OK CALIBRATE PINHOLE\n");
+//				bufferevent_write(client->buf_ev,"200 OK CALIBRATE PINHOLE\n", sizeof("200 OK CALIBRATE PINHOLE\n"));
 			}
-			if (strcmp(tmp,"lintest") == 0) {
+			else if (strcmp(tmp,"lintest") == 0) {
 				ptc.mode = AO_MODE_CAL;
 				ptc.calmode = CAL_LINTEST;
 				pthread_mutex_lock(&mode_mutex);
 				pthread_cond_signal(&mode_cond);
 				pthread_mutex_unlock(&mode_mutex);
-				bufferevent_write(client->buf_ev,"200 OK CALIBRATE LINTEST\n", sizeof("200 OK CALIBRATE LINTEST\n"));
+				tellClients("200 OK CALIBRATE LINTEST\n");
+//				bufferevent_write(client->buf_ev,"200 OK CALIBRATE LINTEST\n", sizeof("200 OK CALIBRATE LINTEST\n"));
 			}
 			else if (strcmp(tmp,"influence") == 0) {
 				ptc.mode = AO_MODE_CAL;
@@ -891,7 +900,8 @@ int parseCmd(char *msg, const int len, client_t *client) {
 				pthread_mutex_lock(&mode_mutex);
 				pthread_cond_signal(&mode_cond);
 				pthread_mutex_unlock(&mode_mutex);	
-				bufferevent_write(client->buf_ev,"200 OK CALIBRATE INFLUENCE\n", sizeof("200 OK CALIBRATE INFLUENCE\n"));
+				tellClients("200 OK CALIBRATE INFLUENCE\n");
+//				bufferevent_write(client->buf_ev,"200 OK CALIBRATE INFLUENCE\n", sizeof("200 OK CALIBRATE INFLUENCE\n"));
 			}
 			else {
 				bufferevent_write(client->buf_ev,"400 UNKNOWN CALIBRATION\n", sizeof("400 UNKNOWN CALIBRATION\n"));
@@ -905,6 +915,16 @@ int parseCmd(char *msg, const int len, client_t *client) {
 		return bufferevent_write(client->buf_ev,"400 UNKNOWN\n", sizeof("400 UNKNOWN\n"));
 	}
 	
+	return EXIT_SUCCESS;
+}
+
+int tellClients(char *msg) {
+	int i;
+	
+//	logDebug("message was: %s length %d and %d", msg, strlen(msg), strlen(msg));
+	for (i=0; i < clientlist.nconn; i++)
+		bufferevent_write(clientlist.connlist[i]->buf_ev, msg, strlen(msg)+1); // +1 for \0
+		
 	return EXIT_SUCCESS;
 }
 

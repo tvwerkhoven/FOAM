@@ -30,7 +30,8 @@ void modStopModule(control_t *ptc) {
 }
 
 int modOpenInit(control_t *ptc) {
-
+	int i;
+	
 	if (drvReadSensor(ptc) != EXIT_SUCCESS) {		// read the sensor output into ptc.image
 		logErr("Error, reading sensor failed.");
 		ptc->mode = AO_MODE_LISTEN;
@@ -38,6 +39,10 @@ int modOpenInit(control_t *ptc) {
 	}
 	
 	modSelSubapts(&(ptc->wfs[0]), 0, -1); 			// check samini (2nd param) and samxr (3d param)
+
+
+	// for (i=0; i<ptc->wfc[1].nact; i++)
+	// 	ptc->wfc[1].ctrl[i] = 0;
 	
 	return EXIT_SUCCESS;
 }
