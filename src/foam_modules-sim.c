@@ -34,6 +34,8 @@ int status = 0;  				// MUST initialize status
 float nulval = 0.0;
 int anynul = 0;
 
+float tmpctrl[] = {0.3,-0.3};
+
 int drvReadSensor() {
 	int i;
 	logDebug("Now reading %d sensors, origin is at (%d,%d).", ptc.wfs_count, simparams.curorig[0], simparams.curorig[1]);
@@ -68,8 +70,16 @@ int drvReadSensor() {
 		logDebug("simAtm() done");
 	} // end for (ptc.filter == FILT_PINHOLE)
 
-	// we're faking some drift here
-	float tmpctrl[] = {((ptc.frames % 20)/20.0 - 0.5) * ( round( (ptc.frames % 20)/20.0 )*2 - 1) + 0.5, 0.0};
+	// we're faking some random drift here
+	tmpctrl[0] = tmpctrl[0] + (drand48()*2-1)*0.1;
+	tmpctrl[1] = tmpctrl[1] + (drand48()*2-1)*0.1;
+	// make sure we don't drift too far...
+	if (tmpctrl[0] > 1) tmpctrl[0] = 1;
+	if (tmpctrl[0] < -1) tmpctrl[0] = -1;
+	if (tmpctrl[1] > 1) tmpctrl[1] = 1;
+	if (tmpctrl[1] < -1) tmpctrl[1] = -1;
+	// regular sawtooth drift is here:
+	// {((ptc.frames % 20)/20.0 *2 - 1) * ( round( (ptc.frames % 20)/20.0 )*2 - 1), 0.0};
 //	([0 - 1 ] * 2 - 1) *(round ([0 - 1])*2 - 1)
 	logDebug("TT: faking tt with : %f, %f", tmpctrl[0], tmpctrl[1]);
 	modSimTT(tmpctrl, ptc.wfs[0].image, ptc.wfs[0].res);

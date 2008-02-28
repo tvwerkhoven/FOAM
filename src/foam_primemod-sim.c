@@ -107,7 +107,6 @@ int modClosedLoop(control_t *ptc) {
 		
 	if (modCalcCtrl(ptc, 0, 10) != EXIT_SUCCESS)		// parse displacements, get ctrls for WFC's
 		return EXIT_FAILURE;
-
 	// for (i=0; i<ptc->wfc_count; i++) {
 	// 	logDebug("Setting WFC %d with %d acts.", i, ptc->wfc[i].nact);
 	// 	for (j=0; j<ptc->wfc[i].nact; j++)

@@ -45,7 +45,7 @@ endif
 if SIMULATION
 bin_PROGRAMS += foamcs-sim
 foamcs_sim_SOURCES = foam_cs.c foam_library.c foam_cs_library.c foam_modules-dm.c  foam_modules-sh.c foam_modules-sim.c foam_modules-display.c foam_modules-calib.c foam_modules-pgm.c foam_primemod-sim.c
-foamcs_sim_SOURCES += foam_cs_library.h foam_library.h foam_modules-sh.h foam_modules-sim.h foam_modules-display.h foam_modules-pgm.h foam_primemod-sim.h
+foamcs_sim_SOURCES += foam_cs_library.h foam_library.h foam_modules-sh.h foam_modules-sim.h foam_modules-display.h foam_modules-pgm.h foam_primemod-sim.h foam_modules-dm.h foam_modules-calib.h
 foamcs_sim_CPPFLAGS = -include "foam_primemod-sim.h"
 foamcs_sim_CFLAGS = $(SIMULATION_CFLAGS)
 foamcs_sim_LDFLAGS = $(SIMULATION_LIBS)

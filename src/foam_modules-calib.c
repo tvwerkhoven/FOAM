@@ -282,7 +282,7 @@ int modCalWFC(control_t *ptc, int wfs) {
 
 			// store the measurements for actuator j (for all subapts) 
 			for (i=0; i<nsubap; i++) { 
-				fprintf(fp,"%.12g\n%.12g\n", (double) q0x[i], (double) q0y[i]);
+				fprintf(fp,"%.12g\n%.12g\n", (double) q0x[i]/(DM_MAXVOLT - DM_MINVOLT), (double) q0y[i]/(DM_MAXVOLT - DM_MINVOLT));
 			}
 	
 			ptc->wfc[wfc].ctrl[j] = origvolt;
