@@ -34,6 +34,7 @@ extern int modOpenInit(control_t *ptc);
 extern int modOpenLoop(control_t *ptc);
 extern int modClosedInit(control_t *ptc);
 extern int modClosedLoop(control_t *ptc);
+extern int modCalibrate(control_t *ptc);
 
 pthread_mutex_t mode_mutex;
 pthread_cond_t mode_cond;
