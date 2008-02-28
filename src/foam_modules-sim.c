@@ -69,7 +69,8 @@ int drvReadSensor() {
 		
 		logDebug("simAtm() done");
 	} // end for (ptc.filter == FILT_PINHOLE)
-
+	
+		
 	// we're faking some random drift here
 	tmpctrl[0] = tmpctrl[0] + (drand48()*2-1)*0.1;
 	tmpctrl[1] = tmpctrl[1] + (drand48()*2-1)*0.1;
@@ -82,6 +83,8 @@ int drvReadSensor() {
 	// tmpctrl[0] = ((ptc.frames % 20)/20.0 *2 - 1) * ( round( (ptc.frames % 20)/20.0 )*2 - 1);
 	// tmpctrl[1] = 0.0;
 //	([0 - 1 ] * 2 - 1) *(round ([0 - 1])*2 - 1)
+
+	// and apply the DM
 	logDebug("TT: faking tt with : %f, %f", tmpctrl[0], tmpctrl[1]);
 	modSimTT(tmpctrl, ptc.wfs[0].image, ptc.wfs[0].res);
 

@@ -31,9 +31,10 @@ int modCalPinhole(control_t *ptc, int wfs) {
 	drvFilterWheel(ptc, FILT_PINHOLE);
 	
 	// set control vector to zero (+-180 volt for an okotech DM)
+	// TODO: we wrongly set the actuators to 0.5, so that our pinhole calibration is wrong. Let's see what this does
 	for (i=0; i < ptc->wfc_count; i++)
 		for (j=0; j < ptc->wfc[i].nact; j++)
-			ptc->wfc[i].ctrl[j] = 0;
+			ptc->wfc[i].ctrl[j] = 0.0;
 		
 	// run open loop initialisation once
 	modOpenInit(ptc);
