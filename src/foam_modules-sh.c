@@ -488,7 +488,7 @@ int modCalcCtrl(control_t *ptc, int wfs, int nmodes) {
 
 //			logDirect("%f ", sum);
 			// TODO: negative?
-			ptc->wfc[wfc].ctrl[act] = -sum;
+			ptc->wfc[wfc].ctrl[act] += -sum * ptc->wfc[wfc].gain;
 			i++;
 		}
 	}

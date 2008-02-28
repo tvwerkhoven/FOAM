@@ -79,7 +79,8 @@ int drvReadSensor() {
 	if (tmpctrl[1] > 1) tmpctrl[1] = 1;
 	if (tmpctrl[1] < -1) tmpctrl[1] = -1;
 	// regular sawtooth drift is here:
-	// {((ptc.frames % 20)/20.0 *2 - 1) * ( round( (ptc.frames % 20)/20.0 )*2 - 1), 0.0};
+	// tmpctrl[0] = ((ptc.frames % 20)/20.0 *2 - 1) * ( round( (ptc.frames % 20)/20.0 )*2 - 1);
+	// tmpctrl[1] = 0.0;
 //	([0 - 1 ] * 2 - 1) *(round ([0 - 1])*2 - 1)
 	logDebug("TT: faking tt with : %f, %f", tmpctrl[0], tmpctrl[1]);
 	modSimTT(tmpctrl, ptc.wfs[0].image, ptc.wfs[0].res);

@@ -202,6 +202,17 @@ int parseConfig(char *var, char *value) {
 
 		logInfo("WFS_NACT initialized for WFS %d: %d", tmp, ptc.wfc[tmp].nact);
     }
+    else if (strstr(var, "WFC_GAIN") != NULL) {
+		if (ptc.wfc == NULL) {
+			logErr("Cannot initialize WFC_GAIN before initializing WFC_COUNT");
+			return EXIT_FAILURE;
+		}
+		// Get the gain for which WFC?
+		tmp = strtol(strstr(var,"[")+1, NULL, 10);
+		ptc.wfc[tmp].gain = strtof(value, NULL);
+
+		logInfo("WFC_GAIN initialized for WFS %d: %f", tmp, ptc.wfc[tmp].gain);
+    }
 	else if (strstr(var, "WFS_DF") != NULL) {
 		if (ptc.wfs == NULL) {
 			logErr("Cannot initialize WFS_DF before initializing WFS_COUNT");

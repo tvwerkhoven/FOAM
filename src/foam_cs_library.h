@@ -95,6 +95,7 @@ typedef struct { // wfc_t
 	char name[FILENAMELEN];			//!< name for the specific WFC
 	int nact;			//!< number of actuators in this WFC
 	float *ctrl;		//!< pointer to array of controls for the WFS (i.e. voltages)
+	float gain;			//!< gain used in calculating the new controls
 } wfc_t;
 
 /*!
