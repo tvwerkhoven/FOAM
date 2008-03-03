@@ -468,8 +468,8 @@ int modCalcCtrl(control_t *ptc, int wfs, int nmodes) {
 			// TODO: what coordinate of wfsmodes do we need?
 			// TODO: this code is ugly, reformat the data-readout please!
 			for (j=0; j<nsubap; j++) // loop over all subapertures
-				sum = sum + ptc->wfs[wfs].wfsmodes[j*nacttot+i] * (ptc->wfs[wfs].disp[j][0]-5) \
-					+ ptc->wfs[wfs].wfsmodes[nacttot*nsubap+j*nacttot+i] * (ptc->wfs[wfs].disp[j][1]-5);
+				sum = sum + ptc->wfs[wfs].wfsmodes[j*nacttot+i] * (ptc->wfs[wfs].disp[j][0]-ptc->wfs[wfs].refc[j][0]-ptc->wfs[wfs].stepc.x) \
+					+ ptc->wfs[wfs].wfsmodes[nacttot*nsubap+j*nacttot+i] * (ptc->wfs[wfs].disp[j][1]-ptc->wfs[wfs].refc[j][1]-ptc->wfs[wfs].stepc.y);
 
 				// sum = sum + ptc->wfs[wfs].wfsmodes[j*nacttot+i] * (ptc->wfs[wfs].disp[j][0]-ptc->wfs[wfs].refc[j][0]-ptc->wfs[wfs].stepc.x) \
 				// 	+ ptc->wfs[wfs].wfsmodes[nacttot*nsubap+j*nacttot+i] * (ptc->wfs[wfs].disp[j][1]-ptc->wfs[wfs].refc[j][1]-ptc->wfs[wfs].stepc.y);

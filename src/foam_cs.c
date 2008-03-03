@@ -802,7 +802,7 @@ void sockOnRead(struct bufferevent *bev, void *arg) {
 	parseCmd(msg, nbytes, client);
 }
 
-int explode(char *msg, char **arr) {
+/*int explode(char *msg, char **arr) {
 	size_t begin, end;	
 	int i, maxlen=0;
 	char *orig=msg;
@@ -836,7 +836,7 @@ int explode(char *msg, char **arr) {
 	}
 	
 	return EXIT_SUCCESS;
-}
+}*/
 
 int popword(char **msg, char *cmd) {
 	size_t begin, end;
@@ -864,7 +864,8 @@ int popword(char **msg, char *cmd) {
 int parseCmd(char *msg, const int len, client_t *client) {
 	char tmp[len+1];	// reserve space for the command (TODO: can be shorter using strchr. Can it? wordlength can vary...)	
 	tmp[0] = '\0';
-	
+	char *chk;
+
 //	logDebug("Command was: '%s'",msg);
 		
 	if (popword(&msg, tmp) > 0)
@@ -930,21 +931,43 @@ int parseCmd(char *msg, const int len, client_t *client) {
 		else if (popword(&msg, tmp) > 0) {
 			if (strcmp(tmp,"x") == 0) {
 				if (popword(&msg, tmp) > 0) {
+					if (strtof(tmp, NULL) > -10 && strtof(tmp, NULL) < 10) {
+						ptc.wfs[0].stepc.x = strtof(tmp, NULL);
+						tellClients("200 OK STEP X\n");
+					}
+					else bufferevent_write(client->buf_ev,"401 UNKNOWN STEPSIZE\n", sizeof("401 UNKNOWN STEPSIZE\n"));
+				}
+				else {
 					ptc.wfs[0].stepc.x += 1;
 					tellClients("200 OK STEP X +1\n");
 				}
-				else bufferevent_write(client->buf_ev,"402 STEP X REQUIRES ARG\n", sizeof("400 STEP X REQUIRES ARG\n"));
 			}
-			else if (strcmp(tmp,"y") == 0) {
+			if (strcmp(tmp,"y") == 0) {
 				if (popword(&msg, tmp) > 0) {
+					if (strtof(tmp, NULL) > -10 && strtof(tmp, NULL) < 10) {
+						ptc.wfs[0].stepc.y = strtof(tmp, NULL);
+						tellClients("200 OK STEP Y\n");
+					}
+					else bufferevent_write(client->buf_ev,"401 UNKNOWN STEPSIZE\n", sizeof("401 UNKNOWN STEPSIZE\n"));
+				}
+				else {
 					ptc.wfs[0].stepc.y += 1;
 					tellClients("200 OK STEP Y +1\n");
 				}
-				else bufferevent_write(client->buf_ev,"402 STEP Y REQUIRES ARG\n", sizeof("400 STEP Y REQUIRES ARG\n"));
 			}
-			else bufferevent_write(client->buf_ev,"401 UNKNOWN STEP\n", sizeof("400 UNKNOWN STEP\n"));
+			else bufferevent_write(client->buf_ev,"401 UNKNOWN STEP\n", sizeof("401 UNKNOWN STEP\n"));
 		}
-		else bufferevent_write(client->buf_ev,"402 STEP REQUIRES ARG\n", sizeof("400 STEP REQUIRES ARG\n"));
+		else bufferevent_write(client->buf_ev,"402 STEP REQUIRES ARG\n", sizeof("402 STEP REQUIRES ARG\n"));
+	}
+	else if (strcmp(tmp,"gain") == 0) {
+		if (popword(&msg, tmp) > 0) {
+			if (strtof(tmp, NULL) > -5 && strtof(tmp, NULL) < 5) {
+				tellClients("200 OK GAIN\n");
+				ptc.wfc[0].gain = strtof(tmp, NULL);
+			}
+			else bufferevent_write(client->buf_ev,"401 UNKNOWN GAIN\n", sizeof("401 UNKNOWN GAIN\n"));
+		}
+		else bufferevent_write(client->buf_ev,"402 GAIN REQUIRES ARG\n", sizeof("402 GAIN REQUIRES ARG\n"));
 	}
 	else if (strcmp(tmp,"calibrate") == 0) {
 		if (popword(&msg, tmp) > 0) {
@@ -991,12 +1014,18 @@ int parseCmd(char *msg, const int len, client_t *client) {
 	return EXIT_SUCCESS;
 }
 
-int tellClients(char *msg) {
+int tellClients(char *msg, ...) {
+	va_list ap;
 	int i;
-	
+	char *out;
+
+	va_start(ap, msg);
+
+	vasprintf(&out, msg, ap);
+
 //	logDebug("message was: %s length %d and %d", msg, strlen(msg), strlen(msg));
 	for (i=0; i < clientlist.nconn; i++)
-		if (bufferevent_write(clientlist.connlist[i]->buf_ev, msg, strlen(msg)+1) != 0) return EXIT_FAILURE; // +1 for \0
+		if (bufferevent_write(clientlist.connlist[i]->buf_ev, out, strlen(out)+1) != 0) return EXIT_FAILURE; // +1 for \0
 		
 	return EXIT_SUCCESS;
 }
@@ -1007,10 +1036,12 @@ int showHelp(const client_t *client, const char *subhelp) {
 200 OK HELP\n\
 help [command]:         help (on a certain command, if available).\n\
 mode <mode>:            close or open the loop.\n\
-set <var> <value:       set a certain setting.\n\
+calibrate <mode>:       calibrate a component.\n\
+gain <value>:           sets gain for wfc 0 (TT).\n\
+step <x|y> [value]:     moves corrected frame of reference\n\
+info <wfc|wfs>:         gives information on the wfcs or wfss\n\
 exit or quit:           disconnect from daemon.\n\
-shutdown:               shutdown the FOAM progra.\n\
-calibrate <mode>:       calibrate a component.\n";
+shutdown:               shutdown the FOAM progra.\n";
 
 		return bufferevent_write(client->buf_ev, help, sizeof(help));
 	}

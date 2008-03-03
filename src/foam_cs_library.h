@@ -510,7 +510,7 @@ void catchSIGINT();
 @param [in] *msg The message to send to the clients
 @return EXIT_SUCCESS on success, EXIT_FAILURE otherwise.
 */
-int tellClients(char *msg);
+int tellClients(char *msg, ...);
 
 
 #endif /* FOAM_CS_LIBRARY */

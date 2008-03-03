@@ -74,18 +74,22 @@ int drvReadSensor() {
 	
 		
 	// we're faking some random drift here
-	tmpctrl[0] = tmpctrl[0] + (drand48()*2-1)*0.1;
-	tmpctrl[1] = tmpctrl[1] + (drand48()*2-1)*0.1;
+	tmpctrl[0] = tmpctrl[0] + (drand48()*2-1)*0.4;
+	tmpctrl[1] = tmpctrl[1] + (drand48()*2-1)*0.4;
 	// make sure we don't drift too far...
 	if (tmpctrl[0] > 1) tmpctrl[0] = 1;
 	if (tmpctrl[0] < -1) tmpctrl[0] = -1;
 	if (tmpctrl[1] > 1) tmpctrl[1] = 1;
 	if (tmpctrl[1] < -1) tmpctrl[1] = -1;
+	
 	// regular sawtooth drift is here:
-	// tmpctrl[0] = ((ptc.frames % 20)/20.0 *2 - 1) * ( round( (ptc.frames % 20)/20.0 )*2 - 1);
-	// tmpctrl[1] = 0.0;
+	tmpctrl[0] = ((ptc.frames % 40)/40.0 * 4 - 2) * ( round( (ptc.frames % 40)/40.0 )*2 - 1);
+	tmpctrl[1] = 0.0;
 //	([0 - 1 ] * 2 - 1) *(round ([0 - 1])*2 - 1)
 
+	// disable here:
+	// tmpctrl[0] = 0;
+	// tmpctrl[1] = 0;
 	// and apply the DM
 	logDebug("TT: faking tt with : %f, %f", tmpctrl[0], tmpctrl[1]);
 	if (ttfd == NULL) ttfd = fopen("ttdebug.dat", "w+");
@@ -143,7 +147,7 @@ int modSimWind() {
 
  	// if the origin is out of bound, reverse the wind direction and move that way
 	// X ORIGIN TOO BIG:
-	if (simparams.wind[0] != 0 && simparams.curorig[0] > simparams.simimgres[0]-ptc.wfs[0].res.x) {
+	if (simparams.wind[0] != 0 && simparams.curorig[0] + ptc.wfs[0].res.x >= simparams.simimgres[0]) {
 		simparams.wind[0] *= -1;						// Reverse X wind speed
 		simparams.curorig[0] += 2*simparams.wind[0];	// move in the new wind direction
 	}
@@ -154,7 +158,7 @@ int modSimWind() {
 	}
 	
 	// Y ORIGIN TOO BIG
-	if (simparams.wind[1] != 0 && simparams.curorig[1] > simparams.simimgres[1]-ptc.wfs[0].res.y) {
+	if (simparams.wind[1] != 0 && simparams.curorig[1] + ptc.wfs[0].res.y >= simparams.simimgres[1]) {
 		simparams.wind[1] *= -1;						// Reverse Y wind speed
 		simparams.curorig[1] += 2*simparams.wind[1];	// move in the new wind direction
 	}

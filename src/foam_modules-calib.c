@@ -54,8 +54,8 @@ int modCalPinhole(control_t *ptc, int wfs) {
 	logInfo("Found following reference coordinates:");
 	for (j=0; j < ptc->wfs[wfs].nsubap; j++) {
 		// TvW TODO: temp disabled reference coordinates
-		ptc->wfs[wfs].refc[j][0] = 3; //ptc->wfs[wfs].disp[j][0];
-		ptc->wfs[wfs].refc[j][1] = 3; //ptc->wfs[wfs].disp[j][1];
+		ptc->wfs[wfs].refc[j][0] = ptc->wfs[wfs].disp[j][0];
+		ptc->wfs[wfs].refc[j][1] = ptc->wfs[wfs].disp[j][1];
 		logDirect("(%f,%f) ", ptc->wfs[wfs].refc[j][0], ptc->wfs[wfs].refc[j][1]);
 		fprintf(fp,"%f\n%f\n", (double) ptc->wfs[wfs].refc[j][0], (double) ptc->wfs[wfs].refc[j][1]);
 	}
