@@ -46,12 +46,21 @@ char logmessage[COMMANDLEN];
 /*********************/
 
 /*!
-@brief We use this to define 2-vectors (resolutions etc)
+@brief We use this to define integer 2-vectors (resolutions etc)
 */
 typedef struct {
 	int x;
 	int y;
 } coord_t;
+
+/*!
+@brief We use this to define floating point 2-vectors (resolutions etc)
+*/
+typedef struct {
+	float x;
+	float y;
+} fcoord_t;
+
 /*!
 @brief Helper enum for ao mode operation. Modes include AO_MODE_OPEN, AO_MODE_CLOSED, AO_MODE_CAL and AO_MODE_LISTEN
 */
@@ -131,6 +140,7 @@ typedef struct { // wfs_t
 	int (*gridc)[2];	//!< this will hold the grid origina for a certain subaperture
 	float (*refc)[2];	//!< reference displacements
 	float (*disp)[2];	//!< measured displacements (compare with refence for actual shift)
+	fcoord_t stepc;		//!< add this to the reference displacement during correction
 	
 	char pinhole[FILENAMELEN];		//!< filename to store the pinhole calibration (in *(refc))
 	char influence[FILENAMELEN];	//!< filename to store the influence matrix
@@ -494,6 +504,12 @@ void stopFOAM();
 */
 void catchSIGINT();
 
+/*!
+@brief This sends a message 'msg' to all connected clients.
+
+@param [in] *msg The message to send to the clients
+@return EXIT_SUCCESS on success, EXIT_FAILURE otherwise.
+*/
 int tellClients(char *msg);
 
 

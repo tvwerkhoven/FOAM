@@ -53,8 +53,9 @@ int modCalPinhole(control_t *ptc, int wfs) {
 	// collect displacement vectors and store as reference
 	logInfo("Found following reference coordinates:");
 	for (j=0; j < ptc->wfs[wfs].nsubap; j++) {
-		ptc->wfs[wfs].refc[j][0] = ptc->wfs[wfs].disp[j][0];
-		ptc->wfs[wfs].refc[j][1] = ptc->wfs[wfs].disp[j][1];
+		// TvW TODO: temp disabled reference coordinates
+		ptc->wfs[wfs].refc[j][0] = 3; //ptc->wfs[wfs].disp[j][0];
+		ptc->wfs[wfs].refc[j][1] = 3; //ptc->wfs[wfs].disp[j][1];
 		logDirect("(%f,%f) ", ptc->wfs[wfs].refc[j][0], ptc->wfs[wfs].refc[j][1]);
 		fprintf(fp,"%f\n%f\n", (double) ptc->wfs[wfs].refc[j][0], (double) ptc->wfs[wfs].refc[j][1]);
 	}
@@ -263,8 +264,11 @@ int modCalWFC(control_t *ptc, int wfs) {
 		
 				// take the shifts and store those (wrt to reference shifts)
 	    		for (i=0;i<nsubap;i++) { 	
-					q0x[i] += (ptc->wfs[wfs].disp[i][0] - ptc->wfs[wfs].refc[i][0]) / (float) measurecount;
-					q0y[i] += (ptc->wfs[wfs].disp[i][1] - ptc->wfs[wfs].refc[i][1]) / (float) measurecount;
+					q0x[i] += (ptc->wfs[wfs].disp[i][0]) / (float) measurecount;
+					q0y[i] += (ptc->wfs[wfs].disp[i][1]) / (float) measurecount;
+					// q0x[i] += (ptc->wfs[wfs].disp[i][0] - ptc->wfs[wfs].refc[i][0]) / (float) measurecount;
+					// q0y[i] += (ptc->wfs[wfs].disp[i][1] - ptc->wfs[wfs].refc[i][1]) / (float) measurecount;
+
 				}
 		
 				ptc->wfc[wfc].ctrl[j] = DM_MINVOLT;
@@ -275,8 +279,10 @@ int modCalWFC(control_t *ptc, int wfs) {
 		
 				// take the shifts and subtract those store those (wrt to reference shifts)
 	    		for (i=0;i<nsubap;i++) { 
-					q0x[i] -= (ptc->wfs[wfs].disp[i][0] - ptc->wfs[wfs].refc[i][0]) / (float) measurecount;
-					q0y[i] -= (ptc->wfs[wfs].disp[i][1] - ptc->wfs[wfs].refc[i][1]) / (float) measurecount;
+					q0x[i] -= (ptc->wfs[wfs].disp[i][0]) / (float) measurecount;
+					q0y[i] -= (ptc->wfs[wfs].disp[i][1]) / (float) measurecount;
+					// q0x[i] -= (ptc->wfs[wfs].disp[i][0] - ptc->wfs[wfs].refc[i][0]) / (float) measurecount;
+					// q0y[i] -= (ptc->wfs[wfs].disp[i][1] - ptc->wfs[wfs].refc[i][1]) / (float) measurecount;
 				}
 
 			} // end measurecount loop
@@ -354,14 +360,7 @@ int modCalWFCChk(control_t *ptc, int wfs) {
 				return EXIT_FAILURE;
 			}
 		}
-		
-		// fscanf(fd,"%d\n%d\n", &chk1, &chk2);
-		// if (chk1 != 1 || chk2 != nacttot) {
-		// 	logWarn("%s format seems incorrect, found %d dimensions, expected %d, found %d datapoints, expected %d", \
-		// 		chk1, 1, chk2, nacttot);
-		// 	return EXIT_FAILURE;
-		// }
-		
+				
 		fscanf(fd,"%d\n",&chk1);
 		if (chk1 != 1) {
 			logWarn("%s format seems incorrect, found %d dimensions, expected %d", outfile, chk1, 1);

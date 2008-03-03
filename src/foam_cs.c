@@ -153,6 +153,8 @@ int parseConfig(char *var, char *value) {
 			ptc.wfs[i].singular = NULL;
 			ptc.wfs[i].dmmodes = NULL;
 			ptc.wfs[i].wfsmodes = NULL;
+			ptc.wfs[i].stepc.x = 0;
+			ptc.wfs[i].stepc.y = 0;
 		}
 		
 		logInfo("WFS_COUNT initialized: %d", ptc.wfs_count);
@@ -596,11 +598,13 @@ void modeCal() {
 	// this links to a module
 	if (modCalibrate(&ptc) != EXIT_SUCCESS) {
 		logWarn("modCalibrate failed");
+		tellClients("400 ERROR CALIBRATION FAILED");
 		ptc.mode = AO_MODE_LISTEN;
 		return;
 	}
 	
 	logDebug("Calibration loop done, switching to listen mode");
+	tellClients("200 CALIBRATION SUCCESSFUL");
 	ptc.mode = AO_MODE_LISTEN;
 		
 	return;
@@ -798,19 +802,55 @@ void sockOnRead(struct bufferevent *bev, void *arg) {
 	parseCmd(msg, nbytes, client);
 }
 
+int explode(char *msg, char **arr) {
+	size_t begin, end;	
+	int i, maxlen=0;
+	char *orig=msg;
+	
+	for(i=0; end != 0; i++) {
+		begin = strspn(msg, " \t\n");
+		if (begin > 0) msg = msg+begin;
+		
+		// get first next position of a space
+		end = strcspn(msg, " \t\n");
+
+		msg = msg+end+1;
+		if ((int) end > maxlen) maxlen = (int) end;
+	}
+	
+	if (i == 0) return EXIT_FAILURE;
+	
+	char array[i][maxlen+1];
+	
+	for(i=0; end != 0; i++) {
+		begin = strspn(orig, " \t\n");
+		if (begin > 0) orig = orig+begin;
+		
+		// get first next position of a space
+		end = strcspn(orig, " \t\n");
+		
+		strncpy(array[i], orig, end);
+		array[i][end] = '\0';
+		
+		orig = orig+end+1;
+	}
+	
+	return EXIT_SUCCESS;
+}
+
 int popword(char **msg, char *cmd) {
 	size_t begin, end;
 	
 	// remove initial whitespace
 	begin = strspn(*msg, " \t\n");
 	if (begin > 0) {
-		logDebug("Trimmin string begin %d chars", begin);
+		logDebug("Trimming string begin %d chars", begin);
 		*msg = *msg+begin;
 	}
 	
 	// get first next position of a space
 	end = strcspn(*msg, " \t\n");
-	if (end == begin) { // No characters? return 0 to the calling function
+	if (end == 0) { // No characters? return 0 to the calling function
 		cmd[0] = '\0';
 		return 0;
 	}
@@ -878,12 +918,33 @@ int parseCmd(char *msg, const int len, client_t *client) {
 //				bufferevent_write(client->buf_ev,"200 OK MODE LISTEN\n", sizeof("200 OK MODE LISTEN\n"));
 			}
 			else {
-				bufferevent_write(client->buf_ev,"400 UNKNOWN MODE\n", sizeof("400 UNKNOWN MODE\n"));
+				bufferevent_write(client->buf_ev,"401 UNKNOWN MODE\n", sizeof("400 UNKNOWN MODE\n"));
 			}
 		}
 		else {
-			bufferevent_write(client->buf_ev,"400 MODE REQUIRES ARG\n", sizeof("400 MODE REQUIRES ARG\n"));
+			bufferevent_write(client->buf_ev,"402 MODE REQUIRES ARG\n", sizeof("400 MODE REQUIRES ARG\n"));
 		}
+	}
+	else if (strcmp(tmp,"step") == 0) {
+		if (ptc.mode == AO_MODE_CAL) bufferevent_write(client->buf_ev,"403 STEP NOT ALLOWED DURING CALIBRATION\n", sizeof("403 STEP NOT ALLOWED DURING CALIBRATION\n"));
+		else if (popword(&msg, tmp) > 0) {
+			if (strcmp(tmp,"x") == 0) {
+				if (popword(&msg, tmp) > 0) {
+					ptc.wfs[0].stepc.x += 1;
+					tellClients("200 OK STEP X +1\n");
+				}
+				else bufferevent_write(client->buf_ev,"402 STEP X REQUIRES ARG\n", sizeof("400 STEP X REQUIRES ARG\n"));
+			}
+			else if (strcmp(tmp,"y") == 0) {
+				if (popword(&msg, tmp) > 0) {
+					ptc.wfs[0].stepc.y += 1;
+					tellClients("200 OK STEP Y +1\n");
+				}
+				else bufferevent_write(client->buf_ev,"402 STEP Y REQUIRES ARG\n", sizeof("400 STEP Y REQUIRES ARG\n"));
+			}
+			else bufferevent_write(client->buf_ev,"401 UNKNOWN STEP\n", sizeof("400 UNKNOWN STEP\n"));
+		}
+		else bufferevent_write(client->buf_ev,"402 STEP REQUIRES ARG\n", sizeof("400 STEP REQUIRES ARG\n"));
 	}
 	else if (strcmp(tmp,"calibrate") == 0) {
 		if (popword(&msg, tmp) > 0) {
@@ -916,11 +977,11 @@ int parseCmd(char *msg, const int len, client_t *client) {
 //				bufferevent_write(client->buf_ev,"200 OK CALIBRATE INFLUENCE\n", sizeof("200 OK CALIBRATE INFLUENCE\n"));
 			}
 			else {
-				bufferevent_write(client->buf_ev,"400 UNKNOWN CALIBRATION\n", sizeof("400 UNKNOWN CALIBRATION\n"));
+				bufferevent_write(client->buf_ev,"401 UNKNOWN CALIBRATION\n", sizeof("400 UNKNOWN CALIBRATION\n"));
 			}
 		}
 		else {
-			bufferevent_write(client->buf_ev,"400 CALIBRATE REQUIRES ARG\n", sizeof("400 CALIBRATE REQUIRES ARG\n"));
+			bufferevent_write(client->buf_ev,"402 CALIBRATE REQUIRES ARG\n", sizeof("400 CALIBRATE REQUIRES ARG\n"));
 		}
 	}
 	else {
@@ -935,7 +996,7 @@ int tellClients(char *msg) {
 	
 //	logDebug("message was: %s length %d and %d", msg, strlen(msg), strlen(msg));
 	for (i=0; i < clientlist.nconn; i++)
-		bufferevent_write(clientlist.connlist[i]->buf_ev, msg, strlen(msg)+1); // +1 for \0
+		if (bufferevent_write(clientlist.connlist[i]->buf_ev, msg, strlen(msg)+1) != 0) return EXIT_FAILURE; // +1 for \0
 		
 	return EXIT_SUCCESS;
 }
@@ -943,6 +1004,7 @@ int tellClients(char *msg) {
 int showHelp(const client_t *client, const char *subhelp) {
 	if (subhelp == NULL) {
 		char help[] = "\
+200 OK HELP\n\
 help [command]:         help (on a certain command, if available).\n\
 mode <mode>:            close or open the loop.\n\
 set <var> <value:       set a certain setting.\n\
@@ -950,7 +1012,6 @@ exit or quit:           disconnect from daemon.\n\
 shutdown:               shutdown the FOAM progra.\n\
 calibrate <mode>:       calibrate a component.\n";
 
-		char code[] = "200 OK HELP\n";
 		return bufferevent_write(client->buf_ev, help, sizeof(help));
 	}
 	else if (strcmp(subhelp, "mode") == 0) {
@@ -978,7 +1039,7 @@ calibrate <mode>\n\
 		return bufferevent_write(client->buf_ev, help, sizeof(help));
 	}
 	else {
-		char help[] = "400 UNKOWN HELP\n";
+		char help[] = "401 UNKOWN HELP\n";
 		return bufferevent_write(client->buf_ev, help, sizeof(help));
 	}
 	
@@ -1052,6 +1113,14 @@ ALIASES += cslib="foam_cs_library.*"
 	this file contains some simple benchmarking results done by FFTW and are very machine dependent. @name will regenerate the file
 	if necessary, but it cannot detect `wrong' wisdom files. Copying bad files is worse than deleting.
 
+	\section network Networking
+	
+	<info on networking interface>
+	200: Succesful reception of command, executing immediately.
+	400: General error, something is wrong
+	401: Argument is not known
+	402: Command is incomplete (missing argument)
+	
 	\section limit_sec Limitations/bugs
 	
 	There are some limitations to @name which are discussed in this section. The list includes:

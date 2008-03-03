@@ -225,8 +225,7 @@ int modDrawSubapts(wfs_t *wfsinfo, SDL_Surface *screen) {
 int modDrawVecs(wfs_t *wfsinfo, SDL_Surface *screen) {
 	if (wfsinfo->nsubap == 0)
 		return EXIT_SUCCESS;	// if there's nothing to draw, don't draw (shouldn't happen)
-		
-	int (*subc)[2] = wfsinfo->subc;		// lower-left coordinates of the subapts
+	
 	int (*gridc)[2] = wfsinfo->gridc;	// lower-left coordinates of the grid in which the subapt resides
 	int *shsize = wfsinfo->shsize;
 	int sn=0;

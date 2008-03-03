@@ -166,6 +166,7 @@ int modCalibrate(control_t *ptc) {
 	// 		return EXIT_FAILURE;
 	// 		break;			
 	// }
+	return EXIT_SUCCESS;
 }
 
 int drvReadSensor() {

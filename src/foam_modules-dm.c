@@ -51,13 +51,13 @@ float *actvolt=NULL;	// we store the actuator pattern with voltages applied here
 
 int modSimTT(float *ctrl, float *image, coord_t res) {
 	int i,j;
-	float amp = 4;
+	float amp = 2;
 		
 	// first simulate rails (i.e. crop ctrl above abs(1))
-	if (ctrl[0] > 1.0) ctrl[0] = 1.0;
-	if (ctrl[0] < -1.0) ctrl[0] = -1.0;
-	if (ctrl[1] > 1.0) ctrl[1] = 1.0;
-	if (ctrl[1] < -1.0) ctrl[1] = -1.0;
+	// if (ctrl[0] > 1.0) ctrl[0] = 1.0;
+	// if (ctrl[0] < -1.0) ctrl[0] = -1.0;
+	// if (ctrl[1] > 1.0) ctrl[1] = 1.0;
+	// if (ctrl[1] < -1.0) ctrl[1] = -1.0;
 	
 	for (i=0; i<res.y; i++)
 		for (j=0; j<res.x; j++)

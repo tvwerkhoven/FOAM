@@ -121,7 +121,9 @@ int parseArgs(int argc, char *argv[], in_addr_t *host, int *port) {
 		logDebug("Parsing host: %s and port: %s", argv[1], argv[2]);
 		*port = strtol(argv[2], NULL, 10); 				// atoi() replacement, supposed to be better
 		*host = inet_addr(argv[1]);
-		if (*host == -1 || *port <= 0 || *port > 65536) // TODO:  comparison between signed and unsigned?
+		if (*host == INADDR_NONE || \
+		    *port < 1 || \
+		    *port > 65535) // TODO:  comparison between signed and unsigned?
 			return EXIT_FAILURE;
 	}
 	return EXIT_SUCCESS;

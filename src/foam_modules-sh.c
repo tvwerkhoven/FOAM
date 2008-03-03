@@ -29,6 +29,8 @@
 
 #include "foam_modules-sh.h"
 
+FILE *rmsfp;
+
 int modSelSubapts(wfs_t *wfsinfo, float samini, int samxr) {
 
 	// stolen from ao3.c by CUK
@@ -309,8 +311,6 @@ void modCogTrack(wfs_t *wfsinfo, float *aver, float *max, float coords[][2]) {
 	} // end of loop over all subapertures
 
 	// average intensity over all subapertures
-	// this is incorrect, should be shsize[0]*shsize[1] + track.x*track.y*(nsubap-1)
-	// TODO:
 	*aver = sum / ((float) (track.x*track.y*nsubap));
 }
 
@@ -409,6 +409,8 @@ int modParseSH(wfs_t *wfsinfo) {
 	rmsx = sqrt(rmsx/wfsinfo->nsubap);
 	rmsy = sqrt(rmsy/wfsinfo->nsubap);
 	logInfo("RMS displacement: x: %f, y: %f", rmsx, rmsy);
+	if (rmsfp == NULL) rmsfp = fopen("ttdebug-rms.dat", "w+");
+	fprintf(rmsfp, "%f, %f\n", rmsx, rmsy);
 	
 	return EXIT_SUCCESS;
 }
@@ -466,11 +468,14 @@ int modCalcCtrl(control_t *ptc, int wfs, int nmodes) {
 			// TODO: what coordinate of wfsmodes do we need?
 			// TODO: this code is ugly, reformat the data-readout please!
 			for (j=0; j<nsubap; j++) // loop over all subapertures
-				sum = sum + ptc->wfs[wfs].wfsmodes[j*nacttot+i] * (ptc->wfs[wfs].disp[j][0]-ptc->wfs[wfs].refc[j][0]) \
-					+ ptc->wfs[wfs].wfsmodes[nacttot*nsubap+j*nacttot+i] * (ptc->wfs[wfs].disp[j][1]-ptc->wfs[wfs].refc[j][1]);
+				sum = sum + ptc->wfs[wfs].wfsmodes[j*nacttot+i] * (ptc->wfs[wfs].disp[j][0]-5) \
+					+ ptc->wfs[wfs].wfsmodes[nacttot*nsubap+j*nacttot+i] * (ptc->wfs[wfs].disp[j][1]-5);
+
+				// sum = sum + ptc->wfs[wfs].wfsmodes[j*nacttot+i] * (ptc->wfs[wfs].disp[j][0]-ptc->wfs[wfs].refc[j][0]-ptc->wfs[wfs].stepc.x) \
+				// 	+ ptc->wfs[wfs].wfsmodes[nacttot*nsubap+j*nacttot+i] * (ptc->wfs[wfs].disp[j][1]-ptc->wfs[wfs].refc[j][1]-ptc->wfs[wfs].stepc.y);
 // this was wrong:
-//				sum = sum + ptc->wfs[wfs].wfsmodes[i*2*nsubap+j*2] * (ptc->wfs[wfs].disp[j][0]-ptc->wfs[wfs].refc[j][0]) \
-					+ ptc->wfs[wfs].wfsmodes[i*2*nsubap+j*2+1] * (ptc->wfs[wfs].disp[j][1]-ptc->wfs[wfs].refc[j][1]);
+//				sum = sum + ptc->wfs[wfs].wfsmodes[i*2*nsubap+j*2] * (ptc->wfs[wfs].disp[j][0]-ptc->wfs[wfs].refc[j][0])
+//					+ ptc->wfs[wfs].wfsmodes[i*2*nsubap+j*2+1] * (ptc->wfs[wfs].disp[j][1]-ptc->wfs[wfs].refc[j][1]);
 				
 //			logDirect("%f ", sum);
 			modeamp[i] = sum;
@@ -511,6 +516,7 @@ float sae(float *subapt, float *refapt, int len) {
 	return sum;
 }
 
+/*
 void procRef(wfs_t *wfsinfo, float *sharp, float *aver) {
 //	uint8_t  pixel;
 //	uint16_t in16, d16, g16;
@@ -535,18 +541,18 @@ void procRef(wfs_t *wfsinfo, float *sharp, float *aver) {
 			// TvW: why *256 and /4?
 			// TvW: TODO this! 
 			// Also: combine this with imcal? same procedure right?
-			/*
-			in = (float) image[(subc[0][1]-shsize[1]/4+iy)*res.x+subc[0][0]-shsize[0]/4+ix]*256;
-			dd = (float) dark[(subc[0][1]-shsize[1]/4+iy)*res.x+subc[0][0]-shsize[0]/4+ix]/4;
-			if (in > dd) in -= dd;
-			else in = 0;
-			gg = (float) (1.07374182E+09 / (float) 
-				( flat[(subc[0][1]-shsize[1]/4+iy)*res.x+subc[0][0]-shsize[0]/4+ix] - 
-				dark[(subc[0][1]-shsize[1]/4+iy)*res.x+subc[0][0]-shsize[0]/4+ix]));
-			// 1.07374182E+09 is 2^30 
-			// What's this? Only works on ints?
-			pixel = (float) (((double) in * (double) gg) / (1 << 21));
-			*/
+			
+			// in = (float) image[(subc[0][1]-shsize[1]/4+iy)*res.x+subc[0][0]-shsize[0]/4+ix]*256;
+			// dd = (float) dark[(subc[0][1]-shsize[1]/4+iy)*res.x+subc[0][0]-shsize[0]/4+ix]/4;
+			// if (in > dd) in -= dd;
+			// else in = 0;
+			// gg = (float) (1.07374182E+09 / (float) 
+			// 	( flat[(subc[0][1]-shsize[1]/4+iy)*res.x+subc[0][0]-shsize[0]/4+ix] - 
+			// 	dark[(subc[0][1]-shsize[1]/4+iy)*res.x+subc[0][0]-shsize[0]/4+ix]));
+			// // 1.07374182E+09 is 2^30 
+			// // What's this? Only works on ints?
+			// pixel = (float) (((double) in * (double) gg) / (1 << 21));
+			
 			pixel = image[(subc[0][1]-shsize[1]/4+iy)*res.x+subc[0][0]-shsize[0]/4+ix];
 			
 			ref[iy* shsize[0] + ix] = pixel;
@@ -611,6 +617,7 @@ void procRef(wfs_t *wfsinfo, float *sharp, float *aver) {
 	*aver = (float) (si) / (float) (shsize[0]/2*shsize[1]/2);
 
 } // end of procref
+*/
 
 // TODO: on the one hand depends on int wfs, on the other hand needs int window[2], fix that
 void imcal(float *corrim, float *image, float *darkim, float *flatim, float *sum, float *max, coord_t res, coord_t window) {

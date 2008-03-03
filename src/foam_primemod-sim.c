@@ -2,6 +2,7 @@
 
 SDL_Surface *screen;	// Global surface to draw on
 SDL_Event event;		// Global SDL event struct to catch user IO
+extern FILE *ttfd;
 
 int modInitModule(control_t *ptc) {
 
@@ -25,6 +26,7 @@ int modInitModule(control_t *ptc) {
 void modStopModule(control_t *ptc) {
 	// let's just do nothing here because we're done anyway :P
 	
+	fclose(ttfd);
 	// we need to unlock the screen or else something might go wrong
 	Sulock(screen);
 }
