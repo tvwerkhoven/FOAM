@@ -80,7 +80,7 @@ int modSimDM(char *boundarymask, char *actuatorpat, int nact, float *ctrl, float
 	pi = 4.0*atan(1);
 
 	SDL_Surface *boundarysurf, *actsurf;	// we load the aperture and actuator images in these SDL surfaces
-	float amp=0.5;							// amplitude of the DM response (used for calibration)
+	float amp=0.3;							// amplitude of the DM response (used for calibration)
 
 	// read boundary mask file if this has not already been done before
 	if (boundary == NULL) {

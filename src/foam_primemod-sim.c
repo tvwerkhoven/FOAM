@@ -40,7 +40,7 @@ int modOpenInit(control_t *ptc) {
 		return EXIT_FAILURE;
 	}
 	
-	modSelSubapts(&(ptc->wfs[0]), 0, -1); 			// check samini (2nd param) and samxr (3d param)
+	modSelSubapts(&(ptc->wfs[0]), 0, 0); 			// check samini (2nd param) and samxr (3d param)
 
 
 	// for (i=0; i<ptc->wfc[1].nact; i++)
@@ -107,7 +107,7 @@ int modClosedLoop(control_t *ptc) {
 	if (modParseSH((&ptc->wfs[0])) != EXIT_SUCCESS)		// process SH sensor output, get displacements
 		return EXIT_FAILURE;
 		
-	if (modCalcCtrl(ptc, 0, 10) != EXIT_SUCCESS)		// parse displacements, get ctrls for WFC's
+	if (modCalcCtrl(ptc, 0, 2) != EXIT_SUCCESS)		// parse displacements, get ctrls for WFC's
 		return EXIT_FAILURE;
 	// for (i=0; i<ptc->wfc_count; i++) {
 	// 	logDebug("Setting WFC %d with %d acts.", i, ptc->wfc[i].nact);
@@ -148,12 +148,15 @@ int modCalibrate(control_t *ptc) {
 	logInfo("Switching calibration");
 	switch (ptc->calmode) {
 		case CAL_PINHOLE: // pinhole WFS calibration
+			logInfo("Performing pinhole calibration for WFS %d", 0);
 			return modCalPinhole(ptc, 0);
 			break;
 		case CAL_INFL: // influence matrix
+			logInfo("Performing influence matrix calibration for WFS %d", 0);
 			return modCalWFC(ptc, 0); // arguments: (control_t *ptc, int wfs)
 			break;
 		case CAL_LINTEST: // influence matrix
+			logInfo("Performing linearity test using WFS %d", 0);
 			return modLinTest(ptc, 0); // arguments: (control_t *ptc, int wfs)
 			break;
 		default:

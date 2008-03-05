@@ -997,6 +997,7 @@ int parseCmd(char *msg, const int len, client_t *client) {
 				pthread_cond_signal(&mode_cond);
 				pthread_mutex_unlock(&mode_mutex);	
 				tellClients("200 OK CALIBRATE INFLUENCE\n");
+				sleep(1);
 //				bufferevent_write(client->buf_ev,"200 OK CALIBRATE INFLUENCE\n", sizeof("200 OK CALIBRATE INFLUENCE\n"));
 			}
 			else {

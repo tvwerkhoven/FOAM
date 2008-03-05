@@ -156,6 +156,12 @@ int displayImg(float *img, coord_t res, SDL_Surface *screen) {
 
 void DrawPixel(SDL_Surface *screen, int x, int y, Uint8 R, Uint8 G, Uint8 B) {
 	Uint32 color = SDL_MapRGB(screen->format, R, G, B);
+	if (x<0) x=0;
+	else if (x>screen->w) x=screen->w;
+	
+	if (y<0) y=0;
+	else if (y>screen->h) y=screen->h;
+		
 	switch (screen->format->BytesPerPixel) {
 		case 1: // Assuming 8-bpp
 			{

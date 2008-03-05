@@ -24,8 +24,7 @@
 int modCalPinhole(control_t *ptc, int wfs) {
 	int i, j;
 	FILE *fp;
-	
-	logDebug("Performing pinhole calibration for WFS %d", wfs);
+
 		
 	// set filterwheel to pinhole
 	drvFilterWheel(ptc, FILT_PINHOLE);
@@ -112,8 +111,7 @@ int modLinTest(control_t *ptc, int wfs) {
 	char *outfile;
 	float origvolt;
 	FILE *fp;
-	
-	logDebug("Performing linearity test WFS %d", wfs);
+
 
 	// get total nr of subapertures in the complete system
 	nsubap = ptc->wfs[wfs].nsubap;
@@ -238,7 +236,7 @@ int modCalWFC(control_t *ptc, int wfs) {
 	
 	for (wfc=0; wfc < ptc->wfc_count; wfc++) { // loop over all wave front correctors 
 		nact = ptc->wfc[wfc].nact;
-		for (j=0; j<nact; j++) { /* loop over all actuators  and all subapts for (wfc,wfs) */
+		for (j=0; j<nact; j++) { // loop over all actuators  and all subapts for (wfc,wfs)
 	
 			for (i=0; i<nsubap; i++) { // set averaging buffer to zero
 				q0x[i] = 0.0;
@@ -268,7 +266,6 @@ int modCalWFC(control_t *ptc, int wfs) {
 					q0y[i] += (ptc->wfs[wfs].disp[i][1]) / (float) measurecount;
 					// q0x[i] += (ptc->wfs[wfs].disp[i][0] - ptc->wfs[wfs].refc[i][0]) / (float) measurecount;
 					// q0y[i] += (ptc->wfs[wfs].disp[i][1] - ptc->wfs[wfs].refc[i][1]) / (float) measurecount;
-
 				}
 		
 				ptc->wfc[wfc].ctrl[j] = DM_MINVOLT;
@@ -284,7 +281,6 @@ int modCalWFC(control_t *ptc, int wfs) {
 					// q0x[i] -= (ptc->wfs[wfs].disp[i][0] - ptc->wfs[wfs].refc[i][0]) / (float) measurecount;
 					// q0y[i] -= (ptc->wfs[wfs].disp[i][1] - ptc->wfs[wfs].refc[i][1]) / (float) measurecount;
 				}
-
 			} // end measurecount loop
 
 			// store the measurements for actuator j (for all subapts) 
@@ -550,7 +546,7 @@ int modFileChk(char *filename) {
 
 // This constant defines how many iterations that the singular
 // value decomposition algorithm in "svdcmp" will use.
-#define MAXITERATIONS 50
+#define MAXITERATIONS 500
 
 
 int modSVD(control_t *ptc, int wfs) {

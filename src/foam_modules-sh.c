@@ -431,7 +431,10 @@ int modCalcCtrl(control_t *ptc, int wfs, int nmodes) {
 	// calculate total nr of act for all wfc
 	for (wfc=0; wfc< ptc->wfc_count; wfc++)
 		nacttot += ptc->wfc[wfc].nact;
-
+	
+	// set to maxmimum if 0 is passed.
+	if (nmodes == 0) nmodes = nacttot;
+	
 	if (nmodes > nacttot) {
 		logWarn("nmodes cannot be higher than the total number of actuators, cropping");
 		nmodes = nacttot;
@@ -495,6 +498,7 @@ int modCalcCtrl(control_t *ptc, int wfs, int nmodes) {
 			// TODO: negative?
 			ptc->wfc[wfc].ctrl[act] += -sum * ptc->wfc[wfc].gain;
 			i++;
+			if (i >= 2) return EXIT_SUCCESS;
 		}
 	}
 //	logDirect("\n");
