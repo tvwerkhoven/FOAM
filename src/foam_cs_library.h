@@ -130,7 +130,7 @@ typedef struct { // wfs_t
 	float *refim;		//!< reference image for correlation tracking
 	
 	float *singular;	//!< stores singular values from SVD (nact big)
-	float *dmmodes;	//!< stores dmmodes from SVD (nact*nact big)
+	float *dmmodes;		//!< stores dmmodes from SVD (nact*nact big)
 	float *wfsmodes;	//!< stores wfsmodes from SVD (nact*nsubap*2 big)
 	
 	int cells[2];		//!< number of cells in this WFS (SH only)
