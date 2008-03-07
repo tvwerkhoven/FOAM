@@ -48,7 +48,7 @@ to be allocated once.
 @param [in] res The resolution of the image to be processed
 @return EXIT_SUCCESS on success, EXIT_FAILURE otherwise.
 */
-int modSimDM(char *boundarymask, char *actuatorpat, int nact, float *ctrl, float *image, coord_t res, int niter);
+int modSimDM(char *boundarymask, char *actuatorpat, int nact, gsl_vector_float *ctrl, float *image, coord_t res, int niter);
 
 // TODO: document (simple function anyway)
 /*!
@@ -68,6 +68,6 @@ with ctrl[0] and ctrl[1] for the x and y directions. If ctrl = {0,0}, no tip-til
 @param [in] res The resolution of the image
 @return EXIT_SUCCESS on success, EXIT_FAILURE otherwise.
 */
-int modSimTT(float *ctrl, float *image, coord_t res);
+int modSimTT(gsl_vector_float *ctrl, float *image, coord_t res);
 
 #endif /* FOAM_MODULES_SIM */

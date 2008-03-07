@@ -23,7 +23,7 @@
 // TODO: document
 int modCalPinhole(control_t *ptc, int wfs) {
 	int i, j;
-	FILE *fp;
+	FILE *fd;
 
 		
 	// set filterwheel to pinhole
@@ -33,7 +33,7 @@ int modCalPinhole(control_t *ptc, int wfs) {
 	// TODO: we wrongly set the actuators to 0.5, so that our pinhole calibration is wrong. Let's see what this does
 	for (i=0; i < ptc->wfc_count; i++)
 		for (j=0; j < ptc->wfc[i].nact; j++)
-			ptc->wfc[i].ctrl[j] = 0.0;
+			gsl_vector_float_set(ptc->wfc[i].ctrl, j , 0.0);
 		
 	// run open loop initialisation once
 	modOpenInit(ptc);
@@ -42,21 +42,25 @@ int modCalPinhole(control_t *ptc, int wfs) {
 	modOpenLoop(ptc);
 	
 	// open file to store vectors
-	fp = fopen(ptc->wfs[wfs].pinhole,"w+");
-	if (fp == NULL)
-		logErr("Error opening pinhole calibration file for wfs %d (%s)", wfs, strerror(errno));
+	// fp = fopen(ptc->wfs[wfs].pinhole,"w+");
+	// if (fp == NULL)
+	// 	logErr("Error opening pinhole calibration file for wfs %d (%s)", wfs, strerror(errno));
 		
-	fprintf(fp,"2\n"); 			// we have 2 dimensions
-	fprintf(fp,"%d\n%d\n", ptc->wfs[wfs].nsubap, 2); //outer dimension is nsubap, inner 2 (vectors)
+	// fprintf(fp,"2\n"); 			// we have 2 dimensions
+	// fprintf(fp,"%d\n%d\n", ptc->wfs[wfs].nsubap, 2); //outer dimension is nsubap, inner 2 (vectors)
 
 	// collect displacement vectors and store as reference
 	logInfo("Found following reference coordinates:");
 	for (j=0; j < ptc->wfs[wfs].nsubap; j++) {
 		// TvW TODO: temp disabled reference coordinates
-		ptc->wfs[wfs].refc[j][0] = ptc->wfs[wfs].disp[j][0];
-		ptc->wfs[wfs].refc[j][1] = ptc->wfs[wfs].disp[j][1];
-		logDirect("(%f,%f) ", ptc->wfs[wfs].refc[j][0], ptc->wfs[wfs].refc[j][1]);
-		fprintf(fp,"%f\n%f\n", (double) ptc->wfs[wfs].refc[j][0], (double) ptc->wfs[wfs].refc[j][1]);
+		gsl_vector_float_set(ptc->wfs[wfs].refc, 2*j+0, gsl_vector_float_get(ptc->wfs[wfs].disp, 2*j+0)); // x
+		gsl_vector_float_set(ptc->wfs[wfs].refc, 2*j+1, gsl_vector_float_get(ptc->wfs[wfs].disp, 2*j+1)); // y
+		
+//		ptc->wfs[wfs].refc[j][0] = ptc->wfs[wfs].disp[j][0];
+//		ptc->wfs[wfs].refc[j][1] = ptc->wfs[wfs].disp[j][1];
+		
+		logDirect("(%f,%f) ", gsl_vector_float_get(ptc->wfs[wfs].refc, 2*j+0), gsl_vector_float_get(ptc->wfs[wfs].refc, 2*j+1));
+//		fprintf(fp,"%f\n%f\n", (double) ptc->wfs[wfs].refc[j][0], (double) ptc->wfs[wfs].refc[j][1]);
 	}
 	// set the rest to zero
 	// for (j=ptc->wfs[wfs].nsubap; j < ptc->wfs[wfs].cells[0] * ptc->wfs[wfs].cells[1]; j++)
@@ -64,45 +68,39 @@ int modCalPinhole(control_t *ptc, int wfs) {
 	
 	logDirect("\n");
 	
-	fclose(fp);
+	// storing to file:
+	logInfo("Storing reference coordinates to %s.", ptc->wfs[wfs].pinhole);
+	fd = fopen(ptc->wfs[wfs].pinhole, "w+");
+	if (!fd) logErr("Could not open file %s: %s", ptc->wfs[wfs].pinhole, strerror(errno));
+	gsl_vector_float_fprintf(fd, ptc->wfs[wfs].refc, "%.10f"); // TvW TODO: 10 digits enough? too much?
+	fclose(fd);
+	
 	return EXIT_SUCCESS;
 }
 
 int modCalPinholeChk(control_t *ptc, int wfs) {
-	int nsubs, j, chk1, chk2;
+	int nsubap = ptc->wfs[wfs].nsubap;
 	FILE *fd;
 	
-	if (modFileChk(ptc->wfs[wfs].pinhole) != EXIT_SUCCESS) {
-		logWarn("Could not open file %s", ptc->wfs[wfs].pinhole);
+	fd = fopen(ptc->wfs[wfs].pinhole, "r");
+	if (!fd) {
+		logWarn("Could not open file %s: %s", ptc->wfs[wfs].pinhole, strerror(errno));
 		return EXIT_FAILURE;
 	}
-	else {
-		//everything ok, import data from file to ptc here
-	
-		fd = fopen(ptc->wfs[wfs].pinhole,"r");
-		if (fd == NULL) {
-			logWarn("Failed to open file %s", ptc->wfs[wfs].pinhole);
-			return EXIT_FAILURE;
-		}
-	
-		fscanf(fd,"%d\n", &chk1); 				// read the dimension (should be 2)
-		fscanf(fd,"%d\n%d\n", &nsubs, &chk2);	// read the sizes of each dimension (should be nsubap and 2)
-		if (nsubs != ptc->wfs[wfs].nsubap || chk1 != 2 || chk2 != 2) {
-			logWarn("Warning, number of subapertures found in %s incorrect (%d vs %d), wrong calibration file?", 
-				ptc->wfs[wfs].pinhole, nsubs,  ptc->wfs[wfs].nsubap);
-			return EXIT_FAILURE;
-		}
-	
-		for (j=0; j < ptc->wfs[wfs].nsubap; j++) {
-			fscanf(fd, "%f\n%f\n", &(ptc->wfs[wfs].refc[j][0]), &(ptc->wfs[wfs].refc[j][1]) );
-		}
-	
-		fclose(fd);
+	if (ptc->wfs[wfs].refc == NULL) {
+		ptc->wfs[wfs].refc = gsl_vector_float_calloc(nsubap*2);
+		if (ptc->wfs[wfs].refc == NULL) 
+			logErr("Unable to allocate data for ptc->wfs[wfs].refc for wfs %d (tried to allocate %d elements)", wfs, nsubap*2);
 	}
+	else gsl_vector_float_fscanf(fd, ptc->wfs[wfs].refc);
+	fclose(fd);
 	
 	return EXIT_SUCCESS;
 }
 
+
+// TODO: incomplete
+/*
 int modLinTest(control_t *ptc, int wfs) {
 	int i, j, k, wfc;			// some counters
 	int nsubap, nact;
@@ -180,22 +178,24 @@ int modLinTest(control_t *ptc, int wfs) {
 	
 	return EXIT_SUCCESS;
 }
+*/
 
 // TODO: document
 int modCalWFC(control_t *ptc, int wfs) {
 	int j, i, k, skip;
 	int nact=0;			// total nr of acts for all WFCs
-	int nsubap=0;		// nr of subapts for specific WFS
+	int nsubap=0; 		// nr of subapts for specific WFS
 	int wfc; 			// counters to loop over the WFCs
 	float origvolt;
-	int measurecount=1;
-	int skipframes=1;
-	FILE *fp;
-
-	// run open loop initialisation once
+	int measurecount=1;	// measure this many times
+	int skipframes=1;	// skip this many frames before measuring
+	FILE *fd;
+	gsl_matrix_float *infl;
+		
+	// run open loop initialisation once (to get subapertures etc)
 	modOpenInit(ptc);
 	
-	logDebug("pinhole %s",ptc->wfs[wfs].pinhole);
+	logDebug("Pinhole file %s",ptc->wfs[wfs].pinhole);
 	
 	if (modCalPinholeChk(ptc, wfs) != EXIT_SUCCESS) {
 		logWarn("WFC calibration failed, first perform pinhole calibration.");
@@ -206,33 +206,26 @@ int modCalWFC(control_t *ptc, int wfs) {
 	
 	// set filterwheel to pinhole
 	drvFilterWheel(ptc, FILT_PINHOLE);
-	
-	// set control vector to zero (+-180 volt for an okotech DM)
-	for (i=0; i < ptc->wfc_count; i++) {
-		for (j=0; j < ptc->wfc[i].nact; j++) {
-			ptc->wfc[i].ctrl[j] = 0;
-		}
-	}
-	
+		
 	// get total nr of actuators, set all actuators to zero (180 volt for an okotech DM)
 	for (i=0; i < ptc->wfc_count; i++) {
-		for (j=0; j < ptc->wfc[i].nact; j++) {
-			ptc->wfc[i].ctrl[j] = 0;
-		}
+		gsl_vector_float_set_zero(ptc->wfc[i].ctrl);
 		nact += ptc->wfc[i].nact;
 	}
 	
-	// get total nr of subapertures in the complete system
+	// total subapts for WFS
 	nsubap = ptc->wfs[wfs].nsubap;
-
-	// this stores some vectors :P
 	float q0x[nsubap], q0y[nsubap];
+
+	logInfo("Allocating temporary matrix to store influence function (%d, %d x %d)", nsubap, nsubap*2, nact);
+	// this will store the influence matrix (which calculates displacements given actuator signals)
+	infl = gsl_matrix_float_calloc(nsubap*2, nact);
 				
-	logInfo("Calibrating WFC's using %d actuators and wfs %d with %d subapts, storing in %s.", \
+	logInfo("Calibrating WFC's using %d actuators and WFS %d with %d subapts, storing in %s.", \
 		nact, wfs, nsubap, ptc->wfs[wfs].influence);
-	fp = fopen(ptc->wfs[wfs].influence,"w+");
-	fprintf(fp,"3\n");								// 3 dimensions (nact, nsub, 2d-vectors)
-	fprintf(fp,"%d\n%d\n%d\n", nact, nsubap, 2); 	// we have nact actuators (variables) and nsubap*2 measurements
+	// fp = fopen(ptc->wfs[wfs].influence,"w+");
+	// fprintf(fp,"3\n");								// 3 dimensions (nact, nsub, 2d-vectors)
+	// fprintf(fp,"%d\n%d\n%d\n", nact, nsubap, 2); 	// we have nact actuators (variables) and nsubap*2 measurements
 	
 	for (wfc=0; wfc < ptc->wfc_count; wfc++) { // loop over all wave front correctors 
 		nact = ptc->wfc[wfc].nact;
@@ -245,12 +238,13 @@ int modCalWFC(control_t *ptc, int wfs) {
 
 			logInfo("Act %d/%d (WFC %d/%d)", j+1, ptc->wfc[wfc].nact, wfc+1, ptc->wfc_count);
 	
-			origvolt = ptc->wfc[wfc].ctrl[j];
+			origvolt = gsl_vector_float_get(ptc->wfc[wfc].ctrl, j);
 	
 			for (k=0; k < measurecount; k++) {
 
 				// we set the voltage and then set the actuators manually
-				ptc->wfc[wfc].ctrl[j] = DM_MAXVOLT;
+//				ptc->wfc[wfc].ctrl[j] = DM_MAXVOLT;
+				gsl_vector_float_set(ptc->wfc[wfc].ctrl, j, DM_MAXVOLT);
 				
 				drvSetActuator(ptc, wfc);
 				// run the open loop *once*, which will approx do the following:
@@ -262,13 +256,14 @@ int modCalWFC(control_t *ptc, int wfs) {
 		
 				// take the shifts and store those (wrt to reference shifts)
 	    		for (i=0;i<nsubap;i++) { 	
-					q0x[i] += (ptc->wfs[wfs].disp[i][0]) / (float) measurecount;
-					q0y[i] += (ptc->wfs[wfs].disp[i][1]) / (float) measurecount;
+					q0x[i] += gsl_vector_float_get(ptc->wfs[wfs].disp, 2*i+0) / (float) measurecount; // x
+					q0y[i] += gsl_vector_float_get(ptc->wfs[wfs].disp, 2*i+1) / (float) measurecount; // y
 					// q0x[i] += (ptc->wfs[wfs].disp[i][0] - ptc->wfs[wfs].refc[i][0]) / (float) measurecount;
 					// q0y[i] += (ptc->wfs[wfs].disp[i][1] - ptc->wfs[wfs].refc[i][1]) / (float) measurecount;
 				}
 		
-				ptc->wfc[wfc].ctrl[j] = DM_MINVOLT;
+//				ptc->wfc[wfc].ctrl[j] = DM_MINVOLT;
+				gsl_vector_float_set(ptc->wfc[wfc].ctrl, j, DM_MINVOLT);
 				drvSetActuator(ptc, wfc);
 						
 				for (skip=0; skip<skipframes+1; skip++) // skip some frames here
@@ -276,197 +271,110 @@ int modCalWFC(control_t *ptc, int wfs) {
 		
 				// take the shifts and subtract those store those (wrt to reference shifts)
 	    		for (i=0;i<nsubap;i++) { 
-					q0x[i] -= (ptc->wfs[wfs].disp[i][0]) / (float) measurecount;
-					q0y[i] -= (ptc->wfs[wfs].disp[i][1]) / (float) measurecount;
+					q0x[i] -= gsl_vector_float_get(ptc->wfs[wfs].disp, 2*i+0) / (float) measurecount; // x
+					q0y[i] -= gsl_vector_float_get(ptc->wfs[wfs].disp, 2*i+1) / (float) measurecount; // y
 					// q0x[i] -= (ptc->wfs[wfs].disp[i][0] - ptc->wfs[wfs].refc[i][0]) / (float) measurecount;
 					// q0y[i] -= (ptc->wfs[wfs].disp[i][1] - ptc->wfs[wfs].refc[i][1]) / (float) measurecount;
 				}
 			} // end measurecount loop
 
 			// store the measurements for actuator j (for all subapts) 
+			
+			
 			for (i=0; i<nsubap; i++) { 
-				fprintf(fp,"%.12g\n%.12g\n", (double) q0x[i]/(DM_MAXVOLT - DM_MINVOLT), (double) q0y[i]/(DM_MAXVOLT - DM_MINVOLT));
+				gsl_matrix_float_set(infl, 2*i+0, j, (float) q0x[i]/(DM_MAXVOLT - DM_MINVOLT));
+				gsl_matrix_float_set(infl, 2*i+1, j, (float) q0y[i]/(DM_MAXVOLT - DM_MINVOLT));
+//				fprintf(fp,"%.12g\n%.12g\n", (double) q0x[i]/(DM_MAXVOLT - DM_MINVOLT), (double) q0y[i]/(DM_MAXVOLT - DM_MINVOLT));
 			}
 	
-			ptc->wfc[wfc].ctrl[j] = origvolt;
+//			ptc->wfc[wfc].ctrl[j] = origvolt;
+			gsl_vector_float_set(ptc->wfc[wfc].ctrl, j, origvolt);
 		} // end loop over actuators
 	} // end loop over wfcs
-	fclose(fp);
+//	fclose(fp);
+	
+	fd = fopen(ptc->wfs[wfs].influence, "w+");
+	if (!fd) logErr("Could not open file %s: %s", ptc->wfs[wfs].pinhole, strerror(errno));
+	gsl_matrix_float_fprintf(fd, infl, "%.10f");
+	fclose(fd);
+
 	logInfo("WFS %d (%s) influence function saved for in file %s", wfs, ptc->wfs[wfs].name, ptc->wfs[wfs].influence);
 	
-	modSVD(ptc, wfs);
+	modSVDGSL(ptc, wfs);
 	
 	return EXIT_SUCCESS;
 }
 
 int modCalWFCChk(control_t *ptc, int wfs) {
-	int nsubs, nact, nacttot=0, i, j;
-	int chk1, chk2, chk3;
+	int i;
+	int nsubap=ptc->wfs[wfs].nsubap, nacttot=0;
 	char *outfile;
 	FILE *fd;
 	
 	// calculate total nr of act for all wfc
 	for (i=0; i< ptc->wfc_count; i++)
 		nacttot += ptc->wfc[i].nact;
-		
+	
 	if (modFileChk(ptc->wfs[wfs].influence) != EXIT_SUCCESS) {
 		logWarn("Could not open file %s", ptc->wfs[wfs].influence);
 		return EXIT_FAILURE;
 	}
-	else {
-		//everything ok, import data from file to ptc here
-		fd = fopen(ptc->wfs[wfs].influence,"r");
-		if (fd == NULL) { // TODO: should we even check this? 
-			logWarn("Failed to open file %s", ptc->wfs[wfs].influence);
-			return EXIT_FAILURE;
-		}
-
-		fscanf(fd,"%d", &chk1);					// read the dimension
-		fscanf(fd,"%d\n%d\n%d\n", &nact, &nsubs, &chk2);	// read the dimension sizes
-		if (nsubs != ptc->wfs[wfs].nsubap || nact != nacttot || chk1 != 3 || chk2 != 2) {
-			logWarn("Warning, number of subapertures or actuators found in %s incorrect (apts: %d vs %d, acts: %d vs %d), wrong calibration file?", 
-				ptc->wfs[wfs].pinhole, nsubs/2,  ptc->wfs[wfs].nsubap, nact, nacttot);
-			return EXIT_FAILURE;
-		}
-		fclose(fd);
-	}
-	
-
 	
 	// CHECK SINGVAL //
 	///////////////////
 	asprintf(&outfile, "%s-singular", ptc->wfs[wfs].influence);
 	
-	if (modFileChk(outfile) != EXIT_SUCCESS) {
-		logWarn("Could not open file %s", outfile);
+	// read vector from file (from modSVDGSL)
+	fd = fopen(outfile, "r");
+	if (!fd) {
+		logWarn("Could not open file %s: %s", outfile, strerror(errno));
 		return EXIT_FAILURE;
 	}
-	else {
-		//everything ok, import data from file to ptc here
-		fd = fopen(outfile,"r");
-		if (fd == NULL) { // TODO: should we even check this? 
-			logWarn("Failed to open file %s", outfile);
-			return EXIT_FAILURE;
-		}
-		
-		if (ptc->wfs[wfs].singular == NULL) {
-			ptc->wfs[wfs].singular = calloc(nacttot, sizeof( *(ptc->wfs[wfs].singular) ) );
-			if (ptc->wfs[wfs].singular == NULL) {
-				logWarn("Failed to allocate memory for ptc->wfs[wfs].singular");
-				return EXIT_FAILURE;
-			}
-		}
-				
-		fscanf(fd,"%d\n",&chk1);
-		if (chk1 != 1) {
-			logWarn("%s format seems incorrect, found %d dimensions, expected %d", outfile, chk1, 1);
-			return EXIT_FAILURE;
-		}
-		
-		fscanf(fd,"%d\n",&chk1);
-		if (chk1 != nacttot) {
-			logWarn("%s format seems incorrect, found %d datapts, expected %d", outfile, chk1, nacttot);
-			return EXIT_FAILURE;
-		}
-		
-		for (i=0; i<nacttot; i++)
-			fscanf(fd,"%f\n", &(ptc->wfs[wfs].singular[i]));
-			
-		fclose(fd);
+	if (ptc->wfs[wfs].singular == NULL) {
+		ptc->wfs[wfs].singular = gsl_vector_float_calloc(nacttot);
+		if (ptc->wfs[wfs].singular == NULL) logErr("Failed to allocate memory for singular values vector.");
 	}
-	
+	gsl_vector_float_fscanf(fd, ptc->wfs[wfs].singular);
+	fclose(fd);
 
+
+	// CHECK WFSMODES //
+	////////////////////
+	asprintf(&outfile, "%s-wfsmodes", ptc->wfs[wfs].influence);
+	
+	// read vector from file (from modSVDGSL)
+	fd = fopen(outfile, "r");
+	if (!fd) {
+		logWarn("Could not open file %s: %s", outfile, strerror(errno));
+		return EXIT_FAILURE;
+	}
+	if (ptc->wfs[wfs].wfsmodes == NULL) {
+		ptc->wfs[wfs].wfsmodes = gsl_matrix_float_calloc(nsubap*2, nacttot);
+		if (ptc->wfs[wfs].wfsmodes == NULL) logErr("Failed to allocate memory for wfsmodes matrix.");
+	}
+
+	gsl_matrix_float_fscanf(fd, ptc->wfs[wfs].wfsmodes);
+	fclose(fd);
+	
 	
 	// CHECK DMMODES //
 	///////////////////
-	
+
 	asprintf(&outfile, "%s-dmmodes", ptc->wfs[wfs].influence);
 	
-	if (modFileChk(outfile) != EXIT_SUCCESS) {
-		logWarn("Could not open file %s", outfile);
+	// read vector from file (from modSVDGSL)
+	fd = fopen(outfile, "r");
+	if (!fd) {
+		logWarn("Could not open file %s: %s", outfile, strerror(errno));
 		return EXIT_FAILURE;
 	}
-	else {
-		//everything ok, import data from file to ptc here
-		fd = fopen(outfile,"r");
-		if (fd == NULL) { // TODO: should we even check this? 
-			logWarn("Failed to open file %s", outfile);
-			return EXIT_FAILURE;
-		}
-		
-		if (ptc->wfs[wfs].dmmodes == NULL) {
-			ptc->wfs[wfs].dmmodes = calloc(nacttot*nacttot, sizeof( *(ptc->wfs[wfs].dmmodes) ) );
-			if (ptc->wfs[wfs].dmmodes == NULL) {
-				logWarn("Failed to allocate memory for ptc->wfs[wfs].dmmodes");
-				return EXIT_FAILURE;
-			}
-		}
-		fscanf(fd,"%d\n",&chk1);
-		if (chk1 != 2) {
-			logWarn("%s format seems incorrect, found %d dimensions, expected %d", outfile, chk1, 2);
-			return EXIT_FAILURE;
-		}
-		
-		fscanf(fd,"%d\n%d\n",&chk1, &chk2);
-		if (chk1 != nacttot || chk2 != nacttot) {
-			logWarn("%s format seems incorrect, found %dx%d datapts, expected %dx%d", outfile, chk1, chk2, nacttot, nacttot);
-			return EXIT_FAILURE;
-		}
-		
-		for (i = 0; i < nacttot; i++)
-			for (j = 0; j < nacttot; j++)
-				fscanf(fd,"%f\n", &(ptc->wfs[wfs].dmmodes[i*nacttot + j]) );
-					
-		fclose(fd);
+	if (ptc->wfs[wfs].dmmodes == NULL) {
+		ptc->wfs[wfs].dmmodes = gsl_matrix_float_calloc(nacttot, nacttot);
+		if (ptc->wfs[wfs].dmmodes == NULL) logErr("Failed to allocate memory for dmmodes matrix.");
 	}
-	
-	// CHECK WFSMODES //
-	////////////////////
-	
-	asprintf(&outfile, "%s-wfsmodes", ptc->wfs[wfs].influence);
-	
-	if (modFileChk(outfile) != EXIT_SUCCESS) {
-		logWarn("Could not open file %s", outfile);
-		return EXIT_FAILURE;
-	}
-	
-	else {
-		//everything ok, import data from file to ptc here
-		fd = fopen(outfile,"r");
-		if (fd == NULL) { // TODO: should we even check this? 
-			logWarn("Failed to open file %s", outfile);
-			return EXIT_FAILURE;
-		}
-		
-		if (ptc->wfs[wfs].wfsmodes == NULL) {
-			ptc->wfs[wfs].wfsmodes = calloc(2*ptc->wfs[wfs].nsubap * nacttot, sizeof( *(ptc->wfs[wfs].dmmodes) ) );
-			if (ptc->wfs[wfs].dmmodes == NULL) {
-				logWarn("Failed to allocate memory for ptc->wfs[wfs].dmmodes");
-				return EXIT_FAILURE;
-			}
-		}
-		
-		fscanf(fd,"%d\n",&chk1);
-		if (chk1 != 3) {
-			logWarn("%s format seems incorrect, found %d dimensions, expected %d", outfile, chk1, 3);
-			return EXIT_FAILURE;
-		}
-		
-		fscanf(fd,"%d\n%d\n%d\n", &chk1, &chk2, &chk3);
-		if (chk1 != nacttot || chk2 != nsubs || chk3 != 2) {
-			logWarn("%s format seems incorrect, found %dx%dx%d datapts, expected %dx%dx%d", outfile, chk1, chk2, nacttot, nacttot);
-			return EXIT_FAILURE;
-		}
 
-		// TODO: check this code out (matches ao3.c, but might be a little weird)		
-		for (j = 0; j < nacttot; j++) {
-			for (i = 0; i < nsubs*2; i++) {
-				fscanf(fd,"%f\n", &(ptc->wfs[wfs].wfsmodes[j*nsubs*2 + i]) );
-			}
-		}
-
-		fclose(fd);
-	}
+	gsl_matrix_float_fscanf(fd, ptc->wfs[wfs].dmmodes);
+	fclose(fd);
 
  	return EXIT_SUCCESS;
 }
@@ -501,6 +409,117 @@ int modFileChk(char *filename) {
 	// this should never happen
 	return EXIT_FAILURE;
 }
+
+int modSVDGSL(control_t *ptc, int wfs) {
+	FILE *fd;
+	int i, j, nact=0, nsubap;
+	gsl_matrix *mat, *v;
+	gsl_vector *sing, *work, *testin, *testout;
+	gsl_vector *testinrec, *testoutrec;
+	char *outfile;
+
+	// get total nr of actuators, set all actuators to zero (180 volt for an okotech DM)
+	for (i=0; i < ptc->wfc_count; i++) {
+		gsl_vector_float_set_zero(ptc->wfc[i].ctrl);
+		nact += ptc->wfc[i].nact;
+	}
+	
+	// get total nr of subapertures for this WFS
+	nsubap = ptc->wfs[wfs].nsubap;
+	
+	// allocating space for SVD:
+	mat = gsl_matrix_calloc(nsubap*2, nact);
+	v = gsl_matrix_calloc(nact, nact);
+	sing = gsl_vector_calloc(nact);
+	work = gsl_vector_calloc(nact);
+	testin = gsl_vector_calloc(nact); // test input vector
+	testout = gsl_vector_calloc(nsubap*2); // test output vector (calculate using normal matrix)
+
+	testinrec = gsl_vector_calloc(nact); // reconstrcuted input vector (use pseudo inverse from SVD)
+	testoutrec = gsl_vector_calloc(nsubap*2); // test output vector (calculate using SVD)
+	
+	// generate test input:
+	for (j=0; j<nact; j++)
+		gsl_vector_set(testin, j, drand48()*2-1);
+	
+	// read matrix from file (from modCalWFC)
+	fd = fopen(ptc->wfs[wfs].influence, "r");
+	if (!fd) {
+		logWarn("Could not open file %s: %s", ptc->wfs[wfs].influence, strerror(errno));
+		return EXIT_FAILURE;
+	}
+	gsl_matrix_fscanf(fd, mat);
+	fclose(fd);
+
+	// calculate test output vector
+	gsl_blas_dgemv(CblasNoTrans, 1.0, mat, testin, 0.0, testout);
+	
+	logInfo("Performing SVD on matrix from %s. nsubap: %d, nact: %d.",ptc->wfs[wfs].influence, nsubap, nact);
+	
+	// perform SVD
+	gsl_linalg_SV_decomp(mat, v, sing, work);
+	
+	logInfo("SVD complete, sanity checking begins");
+	// check if the SVD worked:
+	// V^T . testin
+	gsl_blas_dgemv(CblasTrans, 1.0, v, testin, 0.0, work);
+	
+	// singular . (V^T . testin)
+	for (j=0; j<nact; j++)
+		gsl_vector_set(work, j, gsl_vector_get(work, j) *gsl_vector_get(sing, j));
+		
+	// U . (singular . (V^T . testin))
+	gsl_blas_dgemv(CblasNoTrans, 1.0, mat, work, 0.0, testoutrec);
+
+	// calculate inverse
+	gsl_linalg_SV_solve(mat, v, sing, testout, testinrec);	
+	
+	// calculate difference
+	double diffin=0, diffout=0, cond, min, max;
+	
+	for (j=0; j<nact; j++) {
+		diffin += gsl_vector_get(testinrec, j)/gsl_vector_get(testin, j);
+		logDirect("%f, %f\n", gsl_vector_get(testinrec, j), gsl_vector_get(testin, j));
+	}
+	diffin /= nact;
+	
+	logInfo("and other vectors:");
+	for (j=0; j<nsubap; j++) {
+		diffout += gsl_vector_get(testoutrec, j)/gsl_vector_get(testout, j);
+		logDirect("%f, %f\n", gsl_vector_get(testoutrec, j), gsl_vector_get(testout, j));
+	}
+	diffout /= nsubap;
+	// get max and min to calculate condition
+	gsl_vector_minmax(sing, &min, &max);
+	cond = max/min;
+	
+	// write matrix U to file (wfs modes):
+	asprintf(&outfile, "%s-wfsmodes", ptc->wfs[wfs].influence);
+	fd = fopen(outfile, "w+");
+	if (!fd) logErr("Error opening output file %s: %s", outfile, strerror(errno));
+	gsl_matrix_fprintf (fd, mat, "%.15lf");
+	fclose(fd);
+	
+	// write matrix V to file (wfs dmmodes):
+	asprintf(&outfile, "%s-dmmodes", ptc->wfs[wfs].influence);
+	fd = fopen(outfile, "w+");
+	if (!fd) logErr("Error opening output file %s: %s", outfile, strerror(errno));
+	gsl_matrix_fprintf (fd, v, "%.15lf");
+	fclose(fd);
+
+	// write out singular values:
+	asprintf(&outfile, "%s-singular", ptc->wfs[wfs].influence);
+	fd = fopen(outfile, "w+");
+	if (!fd) logErr("Error opening output file %s: %s", outfile, strerror(errno));
+	gsl_vector_fprintf (fd, sing, "%.15lf");
+	fclose(fd);
+
+	logInfo("SVD Succeeded, decomposition (U, V and Sing) stored to files.");
+	logInfo("SVD quality: in, out ratio (should be 1): %lf and %lf, SVD condition (close to 1 would be nice): %lf.", diffin, diffout, cond);
+	
+	return EXIT_SUCCESS;
+}
+
 /* ---------------------------------------------------------------------------
  * file: svdproc3.c
  *
@@ -546,9 +565,11 @@ int modFileChk(char *filename) {
 
 // This constant defines how many iterations that the singular
 // value decomposition algorithm in "svdcmp" will use.
+
+
+
+/*
 #define MAXITERATIONS 500
-
-
 int modSVD(control_t *ptc, int wfs) {
   // ptc->wfs[wfs].scandir    defines whether x,y,or both axes are to be used
   //         possible values for axis are defined in ctrla2.h
@@ -1052,3 +1073,4 @@ int modSVD(control_t *ptc, int wfs) {
 	return EXIT_SUCCESS;
   
 }
+*/

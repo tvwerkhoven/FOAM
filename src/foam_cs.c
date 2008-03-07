@@ -137,6 +137,44 @@ void stopFOAM() {
 	exit(EXIT_SUCCESS);
 }
 
+// tiny helper function
+int issetWFC(char *var) {
+	if (ptc.wfc == NULL) {
+		logWarn("Cannot initialize %s before initializing WFC_COUNT", var);
+		return EXIT_FAILURE;
+	}
+	return EXIT_SUCCESS;
+}
+
+int issetWFS(char *var) {
+	if (ptc.wfs == NULL) {
+		logWarn("Cannot initialize %s before initializing WFS_COUNT", var);
+		return EXIT_FAILURE;
+	}
+	return EXIT_SUCCESS;
+}
+
+int validWFC(char *var) {
+	int tmp;
+	tmp = strtol(strstr(var,"[")+1, NULL, 10);
+	if (tmp >= ptc.wfc_count) {
+		logWarn("Corrupt configuration, found config for WFC %d (%s) while WFC count is only %d.", tmp, var, ptc.wfc_count);
+		return -1; // TODO: we deviate from errorcodes here, acceptable?
+	}
+	return tmp;
+}
+
+int validWFS(char *var) {
+	int tmp;
+	tmp = strtol(strstr(var,"[")+1, NULL, 10);
+	if (tmp >= ptc.wfs_count) {
+		logWarn("Corrupt configuration, found config for WFS %d (%s) while WFS count is only %d.", tmp, var, ptc.wfs_count);
+		return -1; // TODO: we deviate from errorcodes here, acceptable?
+	}
+	return tmp;
+}
+
+
 int parseConfig(char *var, char *value) {
 	int tmp, i;
 
@@ -170,119 +208,92 @@ int parseConfig(char *var, char *value) {
 
 		logInfo("WFC_COUNT initialized: %d", ptc.wfc_count);
 	}
-	else if (strstr(var, "WFC_NAME") != NULL){
-		if (ptc.wfc == NULL) {
-			logErr("Cannot initialize WFC_NAME before initializing WFC_COUNT");
-			return EXIT_FAILURE;
-		}
-		tmp = strtol(strstr(var,"[")+1, NULL, 10);
+	else if (strstr(var, "WFC_NAME") != NULL) {
+		if (issetWFC(var) != EXIT_SUCCESS) return EXIT_FAILURE;
+		if ((tmp = validWFC(var)) < 0) return EXIT_FAILURE;
+		
 		strncpy(ptc.wfc[tmp].name, value, (size_t) FILENAMELEN);
 		ptc.wfc[tmp].name[FILENAMELEN-1] = '\0'; // TODO: This might not be necessary
 		
 		logInfo("WFC_NAME initialized for WFC %d: %s", tmp, ptc.wfc[tmp].name);
 	}
-	else if (strstr(var, "WFS_NAME") != NULL){
-		if (ptc.wfs == NULL) {
-			logErr("Cannot initialize WFS_NAME before initializing WFS_COUNT");
-			return EXIT_FAILURE;
-		}
-		tmp = strtol(strstr(var,"[")+1, NULL, 10);
-		strncpy(ptc.wfs[tmp].name, value, (size_t) FILENAMELEN);
-		ptc.wfs[tmp].name[FILENAMELEN-1] = '\0'; // This might not be necessary
-				
-		logInfo("WFS_NAME initialized for WFS %d: %s", tmp, ptc.wfs[tmp].name);
-	}
     else if (strstr(var, "WFC_NACT") != NULL) {
-		if (ptc.wfc == NULL) {
-			logErr("Cannot initialize WFC_NACT before initializing WFC_COUNT");
-			return EXIT_FAILURE;
-		}
+		if (issetWFC(var) != EXIT_SUCCESS) return EXIT_FAILURE;
+		if ((tmp = validWFC(var)) < 0) return EXIT_FAILURE;
+
 		// Get the number of actuators for which WFC?
-		tmp = strtol(strstr(var,"[")+1, NULL, 10);
+		// tmp = strtol(strstr(var,"[")+1, NULL, 10);
 		ptc.wfc[tmp].nact = strtol(value, NULL, 10);
-		ptc.wfc[tmp].ctrl = calloc(ptc.wfc[tmp].nact, sizeof(ptc.wfc[tmp].ctrl));
+		ptc.wfc[tmp].ctrl = gsl_vector_float_calloc(ptc.wfc[tmp].nact);
 		if (ptc.wfc[tmp].ctrl == NULL) return EXIT_FAILURE;
 
 		logInfo("WFS_NACT initialized for WFS %d: %d", tmp, ptc.wfc[tmp].nact);
     }
     else if (strstr(var, "WFC_GAIN") != NULL) {
-		if (ptc.wfc == NULL) {
-			logErr("Cannot initialize WFC_GAIN before initializing WFC_COUNT");
-			return EXIT_FAILURE;
-		}
-		// Get the gain for which WFC?
-		tmp = strtol(strstr(var,"[")+1, NULL, 10);
+		if (issetWFC(var) != EXIT_SUCCESS) return EXIT_FAILURE;
+		if ((tmp = validWFC(var)) < 0) return EXIT_FAILURE;
+		
 		ptc.wfc[tmp].gain = strtof(value, NULL);
 
 		logInfo("WFC_GAIN initialized for WFS %d: %f", tmp, ptc.wfc[tmp].gain);
     }
+	else if (strstr(var, "WFS_NAME") != NULL) {
+		if (issetWFS(var) != EXIT_SUCCESS) return EXIT_FAILURE;
+		if ((tmp = validWFS(var)) < 0) return EXIT_FAILURE;
+		
+		strncpy(ptc.wfs[tmp].name, value, (size_t) FILENAMELEN);
+		ptc.wfs[tmp].name[FILENAMELEN-1] = '\0'; // This might not be necessary
+				
+		logInfo("WFS_NAME initialized for WFS %d: %s", tmp, ptc.wfs[tmp].name);
+	}
 	else if (strstr(var, "WFS_DF") != NULL) {
-		if (ptc.wfs == NULL) {
-			logErr("Cannot initialize WFS_DF before initializing WFS_COUNT");
-			return EXIT_FAILURE;
-		}
-		// Get the DF for which WFS?
-		tmp = strtol(strstr(var,"[")+1, NULL, 10);
+		if (issetWFS(var) != EXIT_SUCCESS) return EXIT_FAILURE;
+		if ((tmp = validWFS(var)) < 0) return EXIT_FAILURE;
+
 		strncpy(ptc.wfs[tmp].darkfile, value, (size_t) FILENAMELEN);
 		ptc.wfs[tmp].darkfile[FILENAMELEN-1] = '\0'; // This might not be necessary
 		
 		logInfo("WFS_DF initialized for WFS %d: %s", tmp, ptc.wfs[tmp].darkfile);
 	}
 	else if (strstr(var, "WFS_SKY") != NULL) {
-		if (ptc.wfs == NULL) {
-			logErr("Cannot initialize WFS_SKY before initializing WFS_COUNT");
-			return EXIT_FAILURE;
-		}
-		// Get the SKY for which WFS?
-		tmp = strtol(strstr(var,"[")+1, NULL, 10);
+		if (issetWFS(var) != EXIT_SUCCESS) return EXIT_FAILURE;
+		if ((tmp = validWFS(var)) < 0) return EXIT_FAILURE;
+
 		strncpy(ptc.wfs[tmp].skyfile, value, (size_t) FILENAMELEN);
 		ptc.wfs[tmp].skyfile[FILENAMELEN-1] = '\0'; // This might not be necessary
 		
 		logInfo("WFS_SKY initialized for WFS %d: %s", tmp, ptc.wfs[tmp].skyfile);
 	}
 	else if (strstr(var, "WFS_PINHOLE") != NULL) {
-		if (ptc.wfs == NULL) {
-			logErr("Cannot initialize WFS_PIN before initializing WFS_COUNT");
-			return EXIT_FAILURE;
-		}
-		// Get the PIN for which WFS?
-		tmp = strtol(strstr(var,"[")+1, NULL, 10);
+		if (issetWFS(var) != EXIT_SUCCESS) return EXIT_FAILURE;
+		if ((tmp = validWFS(var)) < 0) return EXIT_FAILURE;
+
 		strncpy(ptc.wfs[tmp].pinhole, value, (size_t) FILENAMELEN);
 		ptc.wfs[tmp].pinhole[FILENAMELEN-1] = '\0'; // This might not be necessary
 		
 		logInfo("WFS_PINHOLE initialized for WFS %d: %s", tmp, ptc.wfs[tmp].pinhole);
 	}
 	else if (strstr(var, "WFS_INFL") != NULL) {
-		if (ptc.wfs == NULL) {
-			logErr("Cannot initialize WFS_INFL before initializing WFS_COUNT");
-			return EXIT_FAILURE;
-		}
-		// Get the WFS_INFL for which WFS?
-		tmp = strtol(strstr(var,"[")+1, NULL, 10);
+		if (issetWFS(var) != EXIT_SUCCESS) return EXIT_FAILURE;
+		if ((tmp = validWFS(var)) < 0) return EXIT_FAILURE;
+
 		strncpy(ptc.wfs[tmp].influence, value, (size_t) FILENAMELEN);
 		ptc.wfs[tmp].influence[FILENAMELEN-1] = '\0'; // This might not be necessary
 		
 		logInfo("WFS_INFL initialized for WFS %d: %s", tmp, ptc.wfs[tmp].influence);
 	}
 	else if (strstr(var, "WFS_FF") != NULL) {
-		if (ptc.wfs == NULL) {
-			logErr("Cannot initialize WFS_FF before initializing WFS_COUNT");
-			return EXIT_FAILURE;
-		}
-		tmp = strtol(strstr(var,"[")+1, NULL, 10);
+		if (issetWFS(var) != EXIT_SUCCESS) return EXIT_FAILURE;
+		if ((tmp = validWFS(var)) < 0) return EXIT_FAILURE;
+
 		strncpy(ptc.wfs[tmp].flatfile, value, (size_t) FILENAMELEN);
 		ptc.wfs[tmp].flatfile[FILENAMELEN-1] = '\0'; // This might not be necessary
 
-		
 		logInfo("WFS_FF initialized for WFS %d: %s", tmp, ptc.wfs[tmp].flatfile);
 	}
 	else if (strstr(var, "WFS_CELLS") != NULL){
-		if (ptc.wfs == NULL) {
-			logErr("Cannot initialize WFS_CELLS before initializing WFS_COUNT");
-			return EXIT_FAILURE;
-		}
-		
-		tmp = strtol(strstr(var,"[")+1, NULL, 10);
+		if (issetWFS(var) != EXIT_SUCCESS) return EXIT_FAILURE;
+		if ((tmp = validWFS(var)) < 0) return EXIT_FAILURE;
 		
 		if (strstr(value,"{") == NULL || strstr(value,"}") == NULL || strstr(value,",") == NULL) 
 			return EXIT_FAILURE; // return if we don't have the {x,y} syntax
@@ -298,8 +309,9 @@ int parseConfig(char *var, char *value) {
 		
 		ptc.wfs[tmp].subc = calloc(ptc.wfs[tmp].cells[0] * ptc.wfs[tmp].cells[1], sizeof(*ptc.wfs[tmp].subc));
 		ptc.wfs[tmp].gridc = calloc(ptc.wfs[tmp].cells[0] * ptc.wfs[tmp].cells[1], sizeof(*ptc.wfs[tmp].gridc));
-		ptc.wfs[tmp].refc = calloc(ptc.wfs[tmp].cells[0] * ptc.wfs[tmp].cells[1], sizeof(*ptc.wfs[tmp].refc));
-		ptc.wfs[tmp].disp = calloc(ptc.wfs[tmp].cells[0] * ptc.wfs[tmp].cells[1], sizeof(*ptc.wfs[tmp].disp));
+		
+		ptc.wfs[tmp].refc = gsl_vector_float_calloc(ptc.wfs[tmp].cells[0] * ptc.wfs[tmp].cells[1] * 2);
+		ptc.wfs[tmp].disp = gsl_vector_float_calloc(ptc.wfs[tmp].cells[0] * ptc.wfs[tmp].cells[1] * 2);
 		if (ptc.wfs[tmp].subc == NULL || ptc.wfs[tmp].refc == NULL || ptc.wfs[tmp].disp == NULL) {
 			logErr("Cannot allocate memory for tracker window coordinates, or other tracking vectors.");
 			return EXIT_FAILURE;
@@ -323,11 +335,8 @@ int parseConfig(char *var, char *value) {
 			tmp, ptc.wfs[tmp].cells[0], ptc.wfs[tmp].cells[1], ptc.wfs[tmp].shsize[0], ptc.wfs[tmp].shsize[1]);
 	}
 	else if (strstr(var, "WFS_RES") != NULL){
-		if (ptc.wfs == NULL) {
-			logErr("Cannot initialize WFS_RES before initializing WFS_COUNT");
-			return EXIT_FAILURE;
-		}
-		tmp = strtol(strstr(var,"[")+1, NULL, 10);
+		if (issetWFS(var) != EXIT_SUCCESS) return EXIT_FAILURE;
+		if ((tmp = validWFS(var)) < 0) return EXIT_FAILURE;
 		
 		if (strstr(value,"{") == NULL || strstr(value,"}") == NULL || strstr(value,",") == NULL) 
 			return EXIT_FAILURE;
@@ -881,12 +890,12 @@ int parseCmd(char *msg, const int len, client_t *client) {
 //		logDebug("Got help command & sent it! (subhelp %s)", tmp);
 	}
 	else if ((strcmp(tmp,"exit") == 0) || (strcmp(tmp,"quit") == 0)) {
-		tellClients("200 OK EXIT\n");
+		tellClients("200 OK EXIT");
 //		bufferevent_write(client->buf_ev,"200 OK EXIT\n", sizeof("200 OK EXIT\n"));
 		sockOnErr(client->buf_ev, EVBUFFER_EOF, client);
 	}
 	else if (strcmp(tmp,"shutdown") == 0) {
-		tellClients("200 OK SHUTDOWN\n");
+		tellClients("200 OK SHUTDOWN");
 //		bufferevent_write(client->buf_ev,"200 OK SHUTDOWN\n", sizeof("200 OK SHUTDOWN\n"));
 		sockOnErr(client->buf_ev, EVBUFFER_EOF, client);
 		stopFOAM();
@@ -899,7 +908,7 @@ int parseCmd(char *msg, const int len, client_t *client) {
 				pthread_mutex_lock(&mode_mutex); // signal a change to the main thread
 				pthread_cond_signal(&mode_cond);
 				pthread_mutex_unlock(&mode_mutex);
-				tellClients("200 OK MODE CLOSED\n");
+				tellClients("200 OK MODE CLOSED");
 //				bufferevent_write(client->buf_ev,"200 OK MODE CLOSED\n", sizeof("200 OK MODE CLOSED\n"));
 			}
 			else if (strcmp(tmp,"open") == 0) {
@@ -907,7 +916,7 @@ int parseCmd(char *msg, const int len, client_t *client) {
 				pthread_mutex_lock(&mode_mutex);
 				pthread_cond_signal(&mode_cond);
 				pthread_mutex_unlock(&mode_mutex);
-				tellClients("200 OK MODE OPEN\n");
+				tellClients("200 OK MODE OPEN");
 //				bufferevent_write(client->buf_ev,"200 OK MODE OPEN\n", sizeof("200 OK MODE OPEN\n"));
 			}
 			else if (strcmp(tmp,"listen") == 0) {
@@ -915,7 +924,7 @@ int parseCmd(char *msg, const int len, client_t *client) {
 				pthread_mutex_lock(&mode_mutex);
 				pthread_cond_signal(&mode_cond);
 				pthread_mutex_unlock(&mode_mutex);
-				tellClients("200 OK MODE LISTEN\n");
+				tellClients("200 OK MODE LISTEN");
 //				bufferevent_write(client->buf_ev,"200 OK MODE LISTEN\n", sizeof("200 OK MODE LISTEN\n"));
 			}
 			else {
@@ -933,26 +942,26 @@ int parseCmd(char *msg, const int len, client_t *client) {
 				if (popword(&msg, tmp) > 0) {
 					if (strtof(tmp, NULL) > -10 && strtof(tmp, NULL) < 10) {
 						ptc.wfs[0].stepc.x = strtof(tmp, NULL);
-						tellClients("200 OK STEP X\n");
+						tellClients("200 OK STEP X");
 					}
 					else bufferevent_write(client->buf_ev,"401 UNKNOWN STEPSIZE\n", sizeof("401 UNKNOWN STEPSIZE\n"));
 				}
 				else {
 					ptc.wfs[0].stepc.x += 1;
-					tellClients("200 OK STEP X +1\n");
+					tellClients("200 OK STEP X +1");
 				}
 			}
 			if (strcmp(tmp,"y") == 0) {
 				if (popword(&msg, tmp) > 0) {
 					if (strtof(tmp, NULL) > -10 && strtof(tmp, NULL) < 10) {
 						ptc.wfs[0].stepc.y = strtof(tmp, NULL);
-						tellClients("200 OK STEP Y\n");
+						tellClients("200 OK STEP Y");
 					}
 					else bufferevent_write(client->buf_ev,"401 UNKNOWN STEPSIZE\n", sizeof("401 UNKNOWN STEPSIZE\n"));
 				}
 				else {
 					ptc.wfs[0].stepc.y += 1;
-					tellClients("200 OK STEP Y +1\n");
+					tellClients("200 OK STEP Y +1");
 				}
 			}
 			else bufferevent_write(client->buf_ev,"401 UNKNOWN STEP\n", sizeof("401 UNKNOWN STEP\n"));
@@ -962,7 +971,7 @@ int parseCmd(char *msg, const int len, client_t *client) {
 	else if (strcmp(tmp,"gain") == 0) {
 		if (popword(&msg, tmp) > 0) {
 			if (strtof(tmp, NULL) > -5 && strtof(tmp, NULL) < 5) {
-				tellClients("200 OK GAIN\n");
+				tellClients("200 OK GAIN");
 				ptc.wfc[0].gain = strtof(tmp, NULL);
 			}
 			else bufferevent_write(client->buf_ev,"401 UNKNOWN GAIN\n", sizeof("401 UNKNOWN GAIN\n"));
@@ -978,7 +987,7 @@ int parseCmd(char *msg, const int len, client_t *client) {
 				pthread_mutex_lock(&mode_mutex);
 				pthread_cond_signal(&mode_cond);
 				pthread_mutex_unlock(&mode_mutex);
-				tellClients("200 OK CALIBRATE PINHOLE\n");
+				tellClients("200 OK CALIBRATE PINHOLE");
 //				bufferevent_write(client->buf_ev,"200 OK CALIBRATE PINHOLE\n", sizeof("200 OK CALIBRATE PINHOLE\n"));
 			}
 			else if (strcmp(tmp,"lintest") == 0) {
@@ -987,7 +996,7 @@ int parseCmd(char *msg, const int len, client_t *client) {
 				pthread_mutex_lock(&mode_mutex);
 				pthread_cond_signal(&mode_cond);
 				pthread_mutex_unlock(&mode_mutex);
-				tellClients("200 OK CALIBRATE LINTEST\n");
+				tellClients("200 OK CALIBRATE LINTEST");
 //				bufferevent_write(client->buf_ev,"200 OK CALIBRATE LINTEST\n", sizeof("200 OK CALIBRATE LINTEST\n"));
 			}
 			else if (strcmp(tmp,"influence") == 0) {
@@ -996,7 +1005,7 @@ int parseCmd(char *msg, const int len, client_t *client) {
 				pthread_mutex_lock(&mode_mutex);
 				pthread_cond_signal(&mode_cond);
 				pthread_mutex_unlock(&mode_mutex);	
-				tellClients("200 OK CALIBRATE INFLUENCE\n");
+				tellClients("200 OK CALIBRATE INFLUENCE");
 				sleep(1);
 //				bufferevent_write(client->buf_ev,"200 OK CALIBRATE INFLUENCE\n", sizeof("200 OK CALIBRATE INFLUENCE\n"));
 			}
@@ -1018,15 +1027,16 @@ int parseCmd(char *msg, const int len, client_t *client) {
 int tellClients(char *msg, ...) {
 	va_list ap;
 	int i;
-	char *out;
+	char *out, *out2;
 
 	va_start(ap, msg);
 
 	vasprintf(&out, msg, ap);
+	asprintf(&out2, "%s\n", out);
 
 //	logDebug("message was: %s length %d and %d", msg, strlen(msg), strlen(msg));
 	for (i=0; i < clientlist.nconn; i++)
-		if (bufferevent_write(clientlist.connlist[i]->buf_ev, out, strlen(out)+1) != 0) return EXIT_FAILURE; // +1 for \0
+		if (bufferevent_write(clientlist.connlist[i]->buf_ev, out2, strlen(out2)+1) != 0) return EXIT_FAILURE; // +1 for \0
 		
 	return EXIT_SUCCESS;
 }

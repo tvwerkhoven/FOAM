@@ -239,7 +239,7 @@ int modDrawVecs(wfs_t *wfsinfo, SDL_Surface *screen) {
 
 	for (sn=0; sn<wfsinfo->nsubap; sn++)
 		drawDeltaLine( gridc[sn][0] + (shsize[0]/2), gridc[sn][1] + (shsize[1]/2), \
-			(int) wfsinfo->disp[sn][0], (int) wfsinfo->disp[sn][1], \
+			(int) gsl_vector_float_get(wfsinfo->disp, sn*2+0), (int) gsl_vector_float_get(wfsinfo->disp, sn*2+1), \
 			screen);
 	
 	return EXIT_SUCCESS;

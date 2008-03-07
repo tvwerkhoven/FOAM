@@ -35,7 +35,7 @@ float nulval = 0.0;
 int anynul = 0;
 
 // temporary for TT correction calibration
-float tmpctrl[] = {0.3,-0.3};
+
 FILE *ttfd;
 	
 int drvReadSensor() {
@@ -72,28 +72,35 @@ int drvReadSensor() {
 		logDebug("simAtm() done");
 	} // end for (ptc.filter == FILT_PINHOLE)
 	
-		
+	gsl_vector_float *tmpctrl;
+	tmpctrl = gsl_vector_float_calloc(2);
+	
 	// we're faking some random drift here
-	tmpctrl[0] = tmpctrl[0] + (drand48()*2-1)*0.4;
-	tmpctrl[1] = tmpctrl[1] + (drand48()*2-1)*0.4;
+	gsl_vector_float_set(tmpctrl, 0, (drand48()*2-1)*0.4);
+	gsl_vector_float_set(tmpctrl, 1, (drand48()*2-1)*0.4);
+
+	// tmpctrl[0] = tmpctrl[0] + (drand48()*2-1)*0.4;
+	// tmpctrl[1] = tmpctrl[1] + (drand48()*2-1)*0.4;
 	// make sure we don't drift too far...
-	if (tmpctrl[0] > 1) tmpctrl[0] = 1;
-	if (tmpctrl[0] < -1) tmpctrl[0] = -1;
-	if (tmpctrl[1] > 1) tmpctrl[1] = 1;
-	if (tmpctrl[1] < -1) tmpctrl[1] = -1;
+	// if (tmpctrl[0] > 1) tmpctrl[0] = 1;
+	// if (tmpctrl[0] < -1) tmpctrl[0] = -1;
+	// if (tmpctrl[1] > 1) tmpctrl[1] = 1;
+	// if (tmpctrl[1] < -1) tmpctrl[1] = -1;
 	
 	// regular sawtooth drift is here:
-	tmpctrl[0] = ((ptc.frames % 40)/40.0 * 4 - 2) * ( round( (ptc.frames % 40)/40.0 )*2 - 1);
-	tmpctrl[1] = 0.0;
+	gsl_vector_float_set(tmpctrl, 0, ((ptc.frames % 40)/40.0 * 4 - 2) * ( round( (ptc.frames % 40)/40.0 )*2 - 1));
+	gsl_vector_float_set(tmpctrl, 1, 0.0);
+	// tmpctrl[0] = ((ptc.frames % 40)/40.0 * 4 - 2) * ( round( (ptc.frames % 40)/40.0 )*2 - 1);
+	// tmpctrl[1] = 0.0;
 //	([0 - 1 ] * 2 - 1) *(round ([0 - 1])*2 - 1)
 
 	// disable here:
 	// tmpctrl[0] = 0;
 	// tmpctrl[1] = 0;
 	// and apply the DM
-	logDebug("TT: faking tt with : %f, %f", tmpctrl[0], tmpctrl[1]);
+	logDebug("TT: faking tt with : %f, %f", gsl_vector_float_get(tmpctrl, 0), gsl_vector_float_get(tmpctrl, 1));
 	if (ttfd == NULL) ttfd = fopen("ttdebug.dat", "w+");
-	fprintf(ttfd, "%f, %f\n", tmpctrl[0], tmpctrl[1]);
+	fprintf(ttfd, "%f, %f\n", gsl_vector_float_get(tmpctrl, 0), gsl_vector_float_get(tmpctrl, 1));
 
 	modSimTT(tmpctrl, ptc.wfs[0].image, ptc.wfs[0].res);
 
@@ -175,13 +182,13 @@ int simObj(char *file, float *image) {
 	return EXIT_SUCCESS;
 }
 
-int simWFC(control_t *ptc, int wfcid, int nact, float *ctrl, float *image) {
+int simWFC(control_t *ptc, int wfcid, int nact, gsl_vector_float *ctrl, float *image) {
 	// we want to simulate the tip tilt mirror here. What does it do
 	logDebug("WFC %d (%s) has %d actuators, simulating", wfcid, ptc->wfc[wfcid].name, ptc->wfc[wfcid].nact);
-	logDebug("TT: Control is: %f, %f", ctrl[0], ctrl[1]);
+	logDebug("TT: Control is: %f, %f", gsl_vector_float_get(ctrl,0), gsl_vector_float_get(ctrl,1));
 	if (ttfd == NULL) ttfd = fopen("ttdebug.dat", "w+");
-	fprintf(ttfd, "%f, %f\n", ctrl[0], ctrl[1]);
-	
+	fprintf(ttfd, "%f, %f\n", gsl_vector_float_get(ctrl,0), gsl_vector_float_get(ctrl,1));
+
 	if (wfcid == 0)
 		modSimTT(ctrl, image, ptc->wfs[0].res);
 	if (wfcid == 1) {

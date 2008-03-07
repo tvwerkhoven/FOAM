@@ -105,7 +105,7 @@ int simTel(char *file, float *image, coord_t res);
 
 This fuction works in wavefront-space.
 */
-int simWFC(control_t *ptc, int wfcid, int nact, float *ctrl, float *image);
+int simWFC(control_t *ptc, int wfcid, int nact, gsl_vector_float *ctrl, float *image);
 
 
 #endif /* FOAM_MODULES_SIM */

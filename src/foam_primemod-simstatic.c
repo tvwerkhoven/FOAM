@@ -12,7 +12,7 @@
 
 #include "foam_primemod-simstatic.h"
 
-#define FOAM_MODSIM_STATIC "../config/simstaticrect.pgm"
+#define FOAM_MODSIM_STATIC "../config/simstatic.pgm"
 
 SDL_Surface *simimgsurf=NULL;	// Global surface to draw on
 
@@ -56,8 +56,6 @@ int modOpenInit(control_t *ptc) {
 
 int modOpenLoop(control_t *ptc) {
 	int i;
-	// for (i=0; i<ptc->wfc[1].nact; i++)
-	// 	ptc->wfc[1].ctrl[i] = ((ptc->frames % 50) / 25.0 - 1);
 				
 	if (drvReadSensor(ptc) != EXIT_SUCCESS) {		// read the sensor output into ptc.image
 		logWarn("Error, reading sensor failed.");
@@ -103,7 +101,7 @@ int modClosedLoop(control_t *ptc) {
 	for (i=0; i<ptc->wfc_count; i++) {
 		logDebug("Setting WFC %d with %d acts.", i, ptc->wfc[i].nact);
 		for (j=0; j<ptc->wfc[i].nact; j++)
-			ptc->wfc[i].ctrl[j] = drand48()*2-1;
+			gsl_vector_float_set(ptc->wfc[i].ctrl, j , (float) drand48()*2-1);
 	}
 
 	if (drvReadSensor(ptc) != EXIT_SUCCESS) {		// read the sensor output into ptc.image

@@ -310,6 +310,7 @@ void modCogTrack(wfs_t *wfsinfo, float *aver, float *max, float coords[][2]) {
 
 	} // end of loop over all subapertures
 
+
 	// average intensity over all subapertures
 	*aver = sum / ((float) (track.x*track.y*nsubap));
 }
@@ -367,21 +368,26 @@ int modParseSH(wfs_t *wfsinfo) {
 		// Finally we subtract half the size of the tracker window  ( = subaperture grid/4) to fix everything.
 
 //		logDirect("%d (%d,%d) ", i, wfsinfo->gridc[i][0], wfsinfo->gridc[i][1]);
-		wfsinfo->disp[i][0] = (wfsinfo->subc[i][0] - wfsinfo->gridc[i][0]);
-		wfsinfo->disp[i][0] -= coords[i][0];
-		wfsinfo->disp[i][0] -= wfsinfo->shsize[0]/4;
+		gsl_vector_float_set(wfsinfo->disp, 2*i+0, wfsinfo->subc[i][0] - wfsinfo->gridc[i][0] - coords[i][0] - wfsinfo->shsize[0]/4);
+		
+		// wfsinfo->disp[i][0] = (wfsinfo->subc[i][0] - wfsinfo->gridc[i][0]);
+		// wfsinfo->disp[i][0] -= coords[i][0];
+		// wfsinfo->disp[i][0] -= wfsinfo->shsize[0]/4;
+		gsl_vector_float_set(wfsinfo->disp, 2*i+1, wfsinfo->subc[i][1] - wfsinfo->gridc[i][1] - coords[i][1] - wfsinfo->shsize[1]/4);
+		
+		// wfsinfo->disp[i][1] = (wfsinfo->subc[i][1] - wfsinfo->gridc[i][1]);
+		// wfsinfo->disp[i][1] -= coords[i][1];
+		// wfsinfo->disp[i][1] -= wfsinfo->shsize[1]/4;
 
-		wfsinfo->disp[i][1] = (wfsinfo->subc[i][1] - wfsinfo->gridc[i][1]);
-		wfsinfo->disp[i][1] -= coords[i][1];
-		wfsinfo->disp[i][1] -= wfsinfo->shsize[1]/4;
-
-		//logDirect("(%f, %f) ", wfsinfo->disp[i][0], wfsinfo->disp[i][1]);
-		rmsx += wfsinfo->disp[i][0] * wfsinfo->disp[i][0];
-		rmsy += wfsinfo->disp[i][1] * wfsinfo->disp[i][1];
+//		logDirect("(%f, %f) ", gsl_vector_float_get(wfsinfo->disp, 2*i+0), gsl_vector_float_get(wfsinfo->disp, 2*i+1));
+		rmsx += gsl_pow_2((double) gsl_vector_float_get(wfsinfo->disp, 2*i+0));
+		rmsy += gsl_pow_2((double) gsl_vector_float_get(wfsinfo->disp, 2*i+1));
 		
 		// check for runaway subapts and recover them:
-		if (wfsinfo->disp[i][0] > wfsinfo->shsize[0]/2 || wfsinfo->disp[i][0] < -wfsinfo->shsize[0]/2
-			|| wfsinfo->disp[i][1] > wfsinfo->shsize[1]/2 || wfsinfo->disp[i][1] < -wfsinfo->shsize[0]/2) {
+		if (gsl_vector_float_get(wfsinfo->disp, 2*i+0) > wfsinfo->shsize[0]/2 || 
+			gsl_vector_float_get(wfsinfo->disp, 2*i+0) < -wfsinfo->shsize[0]/2 ||
+			gsl_vector_float_get(wfsinfo->disp, 2*i+1) > wfsinfo->shsize[1]/2 || 
+			gsl_vector_float_get(wfsinfo->disp, 2*i+1) < -wfsinfo->shsize[0]/2) {
 		
 //			logDebug("Runaway subapt detected! (%f,%f)", wfsinfo->disp[i][0], wfsinfo->disp[i][1]);
 			// xc = (wfsinfo->subc[i][0] / wfsinfo->shsize[0]) * wfsinfo->shsize[0];
@@ -405,7 +411,7 @@ int modParseSH(wfs_t *wfsinfo) {
 		wfsinfo->subc[i][1] -= (int) (coords[i][1]+0.5);//-wfsinfo->res.y/wfsinfo->cells[1]/4;
 
 	}
-	//logDirect("\n");
+//	logDirect("\n");
 	rmsx = sqrt(rmsx/wfsinfo->nsubap);
 	rmsy = sqrt(rmsy/wfsinfo->nsubap);
 	logInfo("RMS displacement: x: %f, y: %f", rmsx, rmsy);
@@ -415,17 +421,18 @@ int modParseSH(wfs_t *wfsinfo) {
 	return EXIT_SUCCESS;
 }
 
-int modCalcCtrl(control_t *ptc, int wfs, int nmodes) {
+int modCalcCtrl(control_t *ptc, const int wfs, int nmodes) {
 	logDebug("Calculating WFC ctrls");
-	// function assumes presence of dmmodes, 
+	// function assumes presence of dmmodes, singular and wfsmodes...
 	if (ptc->wfs[wfs].dmmodes == NULL || ptc->wfs[wfs].singular == NULL || ptc->wfs[wfs].wfsmodes == NULL) {
 		logWarn("Cannot calculate WFC ctrls, calibration incomplete.");
 		return EXIT_FAILURE;
 	}
 	
-	int i,j, wfc, act;   		// index variables
-	float sum; 					// temporary sum
+	int i,j, wfc;   		// index variables
+//	float sum; 					// temporary sum
 	int nacttot=0;
+	size_t oldsize;
 	int nsubap = ptc->wfs[wfs].nsubap;
 	
 	// calculate total nr of act for all wfc
@@ -436,13 +443,43 @@ int modCalcCtrl(control_t *ptc, int wfs, int nmodes) {
 	if (nmodes == 0) nmodes = nacttot;
 	
 	if (nmodes > nacttot) {
-		logWarn("nmodes cannot be higher than the total number of actuators, cropping");
+		logWarn("nmodes cannot be higher than the total number of actuators, cropping.");
 		nmodes = nacttot;
 	}
 	
 	float modeamp[nacttot];
 	
-	logDebug("calculating control stuff for WFS %d (modes: %d)", wfs, nmodes);
+	gsl_vector_float *work, *total; // temp work vector and vector to store all control commands for all WFCs
+	work = gsl_vector_float_calloc(nacttot);
+	total = gsl_vector_float_calloc(nacttot);
+	
+//	gsl_vector_float_view shortdisp = gsl_vector_float_subvector(ptc->wfs[wfs].disp, 0, nsubap*2);
+
+	// TODO: this is a hack :P
+	oldsize = ptc->wfs[wfs].disp->size;
+	ptc->wfs[wfs].disp->size = nsubap*2;
+	
+	logDebug("Calculating control stuff for WFS %d (modes: %d)", wfs, nmodes);
+	
+	// U^T . meas:
+	gsl_blas_sgemv(CblasTrans, 1.0, ptc->wfs[wfs].wfsmodes, ptc->wfs[wfs].disp, 0.0, total);
+
+	// diag(1/w_j) . (U^T . meas):
+	for (j=0; j<nmodes; j++)
+		gsl_vector_float_set(work, j, gsl_vector_float_get(total, j) /gsl_vector_float_get(ptc->wfs[wfs].singular, j));
+	
+	// V . (diag(1/w_j) . (U^T . meas)):
+	gsl_blas_sgemv(CblasNoTrans, 1.0, ptc->wfs[wfs].dmmodes, work, 0.0, total);
+	
+	// copy complete control vector to seperate vectors
+	j=0;
+	for (wfc=0; wfc< ptc->wfc_count; wfc++) {
+		for (i=0; i<ptc->wfc[wfc].nact; i++) {
+			gsl_vector_float_set(ptc->wfc[wfc].ctrl, i, gsl_vector_float_get(total, j));
+			j++;
+		}
+	}
+	ptc->wfs[wfs].disp->size = oldsize;
 	
 	// logDebug("Linear output of wfsmodes:");
 	// for (i=0; i<2*nacttot*nsubap; i++)
@@ -461,46 +498,47 @@ int modCalcCtrl(control_t *ptc, int wfs, int nmodes) {
 	// logDirect("\n");
 		
 
+	// THIS IS OLD CODE, DIDN'T REALLY WORK ^_^ REPLACED BY GSL ROUTINES
 	
-	i=0;
-	// first calculate mode amplitudes
-	for (wfc=0; wfc< ptc->wfc_count; wfc++) { // loop over all WFCs
-		for (act=0; act < ptc->wfc[wfc].nact; act++) { // loop over all acts for WFC 'wfc'
-			sum=0.0;
-
-			// TODO: what coordinate of wfsmodes do we need?
-			// TODO: this code is ugly, reformat the data-readout please!
-			for (j=0; j<nsubap; j++) // loop over all subapertures
-				sum = sum + ptc->wfs[wfs].wfsmodes[j*nacttot+i] * (ptc->wfs[wfs].disp[j][0]-ptc->wfs[wfs].refc[j][0]-ptc->wfs[wfs].stepc.x) \
-					+ ptc->wfs[wfs].wfsmodes[nacttot*nsubap+j*nacttot+i] * (ptc->wfs[wfs].disp[j][1]-ptc->wfs[wfs].refc[j][1]-ptc->wfs[wfs].stepc.y);
-
-				// sum = sum + ptc->wfs[wfs].wfsmodes[j*nacttot+i] * (ptc->wfs[wfs].disp[j][0]-ptc->wfs[wfs].refc[j][0]-ptc->wfs[wfs].stepc.x) \
-				// 	+ ptc->wfs[wfs].wfsmodes[nacttot*nsubap+j*nacttot+i] * (ptc->wfs[wfs].disp[j][1]-ptc->wfs[wfs].refc[j][1]-ptc->wfs[wfs].stepc.y);
-// this was wrong:
-//				sum = sum + ptc->wfs[wfs].wfsmodes[i*2*nsubap+j*2] * (ptc->wfs[wfs].disp[j][0]-ptc->wfs[wfs].refc[j][0])
-//					+ ptc->wfs[wfs].wfsmodes[i*2*nsubap+j*2+1] * (ptc->wfs[wfs].disp[j][1]-ptc->wfs[wfs].refc[j][1]);
-				
-//			logDirect("%f ", sum);
-			modeamp[i] = sum;
-			i++;
-		}
-	}
-	
-	// apply inverse singular values and calculate actuator amplitudes	
-	i=0;
-	for (wfc=0; wfc< ptc->wfc_count; wfc++) { // loop over all WFCs
-		for (act=0; act < ptc->wfc[wfc].nact; act++) { // loop over all acts for WFC 'wfc'
-			sum=0.0;
-			for (j=0;j<nmodes;j++) // loop over all system modes that are used
-				sum += ptc->wfs[wfs].dmmodes[j*nacttot+i]*modeamp[j]/ptc->wfs[wfs].singular[j];
-
-//			logDirect("%f ", sum);
-			// TODO: negative?
-			ptc->wfc[wfc].ctrl[act] += -sum * ptc->wfc[wfc].gain;
-			i++;
-			if (i >= 2) return EXIT_SUCCESS;
-		}
-	}
+// 	i=0;
+// 	// first calculate mode amplitudes
+// 	for (wfc=0; wfc< ptc->wfc_count; wfc++) { // loop over all WFCs
+// 		for (act=0; act < ptc->wfc[wfc].nact; act++) { // loop over all acts for WFC 'wfc'
+// 			sum=0.0;
+// 
+// 			// TODO: what coordinate of wfsmodes do we need?
+// 			// TODO: this code is ugly, reformat the data-readout please!
+// 			for (j=0; j<nsubap; j++) // loop over all subapertures
+// 				sum = sum + ptc->wfs[wfs].wfsmodes[j*nacttot+i] * (ptc->wfs[wfs].disp[j][0]-ptc->wfs[wfs].refc[j][0]-ptc->wfs[wfs].stepc.x) \
+// 					+ ptc->wfs[wfs].wfsmodes[nacttot*nsubap+j*nacttot+i] * (ptc->wfs[wfs].disp[j][1]-ptc->wfs[wfs].refc[j][1]-ptc->wfs[wfs].stepc.y);
+// 
+// 				// sum = sum + ptc->wfs[wfs].wfsmodes[j*nacttot+i] * (ptc->wfs[wfs].disp[j][0]-ptc->wfs[wfs].refc[j][0]-ptc->wfs[wfs].stepc.x) \
+// 				// 	+ ptc->wfs[wfs].wfsmodes[nacttot*nsubap+j*nacttot+i] * (ptc->wfs[wfs].disp[j][1]-ptc->wfs[wfs].refc[j][1]-ptc->wfs[wfs].stepc.y);
+// // this was wrong:
+// //				sum = sum + ptc->wfs[wfs].wfsmodes[i*2*nsubap+j*2] * (ptc->wfs[wfs].disp[j][0]-ptc->wfs[wfs].refc[j][0])
+// //					+ ptc->wfs[wfs].wfsmodes[i*2*nsubap+j*2+1] * (ptc->wfs[wfs].disp[j][1]-ptc->wfs[wfs].refc[j][1]);
+// 				
+// //			logDirect("%f ", sum);
+// 			modeamp[i] = sum;
+// 			i++;
+// 		}
+// 	}
+// 	
+// 	// apply inverse singular values and calculate actuator amplitudes	
+// 	i=0;
+// 	for (wfc=0; wfc< ptc->wfc_count; wfc++) { // loop over all WFCs
+// 		for (act=0; act < ptc->wfc[wfc].nact; act++) { // loop over all acts for WFC 'wfc'
+// 			sum=0.0;
+// 			for (j=0;j<nmodes;j++) // loop over all system modes that are used
+// 				sum += ptc->wfs[wfs].dmmodes[j*nacttot+i]*modeamp[j]/ptc->wfs[wfs].singular[j];
+// 
+// //			logDirect("%f ", sum);
+// 			// TODO: negative?
+// 			ptc->wfc[wfc].ctrl[act] += -sum * ptc->wfc[wfc].gain;
+// 			i++;
+// 			if (i >= 2) return EXIT_SUCCESS;
+// 		}
+// 	}
 //	logDirect("\n");
 	
 	return EXIT_SUCCESS;

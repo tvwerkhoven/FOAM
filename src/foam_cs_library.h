@@ -20,6 +20,8 @@ Last: 2008-01-21
 /************/
 #include <fcntl.h>
 #include <fitsio.h> // we need this to read FITS files
+#include <gsl/gsl_linalg.h> // this is for SVD / matrix datatype
+#include <gsl/gsl_blas.h> // this is for SVD
 #include "foam_library.h"
 
 
@@ -101,10 +103,10 @@ typedef enum { // axes_t
 @brief Helper struct to store WFC variables in \a ptc. Used by type \c control_t.
 */
 typedef struct { // wfc_t
-	char name[FILENAMELEN];			//!< name for the specific WFC
-	int nact;			//!< number of actuators in this WFC
-	float *ctrl;		//!< pointer to array of controls for the WFS (i.e. voltages)
-	float gain;			//!< gain used in calculating the new controls
+	char name[FILENAMELEN];		//!< name for the specific WFC
+	int nact;					//!< number of actuators in this WFC
+	gsl_vector_float *ctrl;		//!< pointer to array of controls for the WFC (i.e. `voltages')
+	float gain;					//!< gain used in calculating the new controls
 } wfc_t;
 
 /*!
@@ -112,35 +114,37 @@ typedef struct { // wfc_t
 */
 typedef struct { // wfs_t
 	char name[FILENAMELEN];			//!< name of the specific WFS
-	coord_t res;		//!< x,y-resolution of this WFS
+	coord_t res;					//!< x,y-resolution of this WFS
 
-	float *image;		//!< pointer to the WFS output, stored in row-major format
-	float *darkim;		//!< darkfield (byte image), stored in row-major format \b per \b subapt
-	float *flatim;		//!< flatfield (byte image), stored in row-major format \b per \b subapt
-	float *corrim;		//!< corrected image, stored in row-major format \b per \b subapt
+	float *image;					//!< pointer to the WFS output, stored in row-major format
+	float *darkim;					//!< darkfield (byte image), stored in row-major format \b per \b subapt
+	float *flatim;					//!< flatfield (byte image), stored in row-major format \b per \b subapt
+	float *corrim;					//!< corrected image, stored in row-major format \b per \b subapt
 	
 	char darkfile[FILENAMELEN];		//!< filename for the darkfield calibration
 	char flatfile[FILENAMELEN];		//!< filename for the flatfield calibration
 	char skyfile[FILENAMELEN];		//!< filename for the flatfield calibration
 
-	axes_t scandir; 	//!< scanning direction(s) used (see \c axes_t type)
+	axes_t scandir; 				//!< scanning direction(s) used (see \c axes_t type)
 	
 	// TODO: the below members SHOULD be exported to some different structure (these are SH specific)	
 	
-	float *refim;		//!< reference image for correlation tracking
+	float *refim;					//!< reference image for correlation tracking (unused now)
 	
-	float *singular;	//!< stores singular values from SVD (nact big)
-	float *dmmodes;		//!< stores dmmodes from SVD (nact*nact big)
-	float *wfsmodes;	//!< stores wfsmodes from SVD (nact*nsubap*2 big)
+	gsl_vector_float *singular;		//!< stores singular values from SVD (nact big)
+	gsl_matrix_float *dmmodes;		//!< stores dmmodes from SVD (nact*nact big)
+	gsl_matrix_float *wfsmodes;		//!< stores wfsmodes from SVD (nact*nsubap*2 big)
 	
-	int cells[2];		//!< number of cells in this WFS (SH only)
-	int shsize[2];		//!< cells/res, resolution per cell (redundant, but easy)
+	int cells[2];					//!< number of cells in this WFS (SH only)
+	int shsize[2];					//!< cells/res, resolution per cell (redundant, but easy)
 	
-	int (*subc)[2];		//!< this will hold the coordinates of each subapt
-	int (*gridc)[2];	//!< this will hold the grid origina for a certain subaperture
-	float (*refc)[2];	//!< reference displacements
-	float (*disp)[2];	//!< measured displacements (compare with refence for actual shift)
-	fcoord_t stepc;		//!< add this to the reference displacement during correction
+	int (*subc)[2];					//!< this will hold the coordinates of each subapt
+	int (*gridc)[2];				//!< this will hold the grid origina for a certain subaperture
+//	float (*refc)[2];				//!< reference displacements
+//	float (*disp)[2];				//!< measured displacements (compare with refence for actual shift)
+	gsl_vector_float *refc;			//!< reference displacements
+	gsl_vector_float *disp;			//!< measured displacements (compare with refence for actual shift)
+	fcoord_t stepc;					//!< add this to the reference displacement during correction
 	
 	char pinhole[FILENAMELEN];		//!< filename to store the pinhole calibration (in *(refc))
 	char influence[FILENAMELEN];	//!< filename to store the influence matrix

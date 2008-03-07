@@ -49,7 +49,7 @@ float *actvolt=NULL;	// we store the actuator pattern with voltages applied here
 // FUNCTIONS BEGIN //
 /*******************/
 
-int modSimTT(float *ctrl, float *image, coord_t res) {
+int modSimTT(gsl_vector_float *ctrl, float *image, coord_t res) {
 	int i,j;
 	float amp = 2;
 		
@@ -61,8 +61,8 @@ int modSimTT(float *ctrl, float *image, coord_t res) {
 	
 	for (i=0; i<res.y; i++)
 		for (j=0; j<res.x; j++)
-			image[i*res.x + j] += ((((float) i/(res.y-1))-0.5) * 2 * amp * ctrl[1]) + \
-								((((float) j/(res.x-1) )-0.5) * 2 * amp * ctrl[0]);
+			image[i*res.x + j] += ((((float) i/(res.y-1))-0.5) * 2 * amp * gsl_vector_float_get(ctrl, 1)) + \
+								((((float) j/(res.x-1) )-0.5) * 2 * amp * gsl_vector_float_get(ctrl, 0));
 
 	// this had problems with integer divisions:
 	//image[i*res.x + j] += (((i/res.y)-0.5) * 2 * amp * ctrl[1]) + (((j/res.x)-0.5) * 2 * amp * ctrl[0]);
@@ -70,7 +70,7 @@ int modSimTT(float *ctrl, float *image, coord_t res) {
 	return EXIT_SUCCESS;	
 }
 
-int modSimDM(char *boundarymask, char *actuatorpat, int nact, float *ctrl, float *image, coord_t res, int niter) {
+int modSimDM(char *boundarymask, char *actuatorpat, int nact, gsl_vector_float *ctrl, float *image, coord_t res, int niter) {
 	int i, x, y;							// random counters
 	int ii; 								// iteration counter
 	int voltage[nact]; 						// voltage settings for electrodes (in digital units)
@@ -153,10 +153,10 @@ int modSimDM(char *boundarymask, char *actuatorpat, int nact, float *ctrl, float
 	logDebug("Simulating DM with voltages:");
 	for (ik = 0; ik < nact; ik++) {
 		// first simulate rails (i.e. crop ctrl above abs(1))
-		if (ctrl[ik] > 1.0) ctrl[ik] = 1.0;
-		if (ctrl[ik] < -1.0) ctrl[ik] = -1.0;
+		if (gsl_vector_float_get(ctrl, ik) > 1.0) gsl_vector_float_set(ctrl, ik, 1.0);
+		if (gsl_vector_float_get(ctrl, ik) < -1.0) gsl_vector_float_set(ctrl, ik, -1.0);
 		// we do Sqrt(255^2 (i+1) * 0.5) here to convert from [-1,1] (linear) to [0,255] (quadratic)
-		voltage[ik] = (int) round( sqrt(65025*(ctrl[ik]+1)*0.5 ) ); //65025 = 255^2
+		voltage[ik] = (int) round( sqrt(65025*(gsl_vector_float_get(ctrl, ik)+1)*0.5 ) ); //65025 = 255^2
 		logDirect("%d ", voltage[ik]);
 	}
 	logDirect("\n");

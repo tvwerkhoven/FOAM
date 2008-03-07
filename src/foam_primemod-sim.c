@@ -155,10 +155,10 @@ int modCalibrate(control_t *ptc) {
 			logInfo("Performing influence matrix calibration for WFS %d", 0);
 			return modCalWFC(ptc, 0); // arguments: (control_t *ptc, int wfs)
 			break;
-		case CAL_LINTEST: // influence matrix
-			logInfo("Performing linearity test using WFS %d", 0);
-			return modLinTest(ptc, 0); // arguments: (control_t *ptc, int wfs)
-			break;
+		// case CAL_LINTEST: // influence matrix
+		// 	logInfo("Performing linearity test using WFS %d", 0);
+		// 	return modLinTest(ptc, 0); // arguments: (control_t *ptc, int wfs)
+		// 	break;
 		default:
 			logErr("Unsupported calibrate mode encountered.");
 			return EXIT_FAILURE;
