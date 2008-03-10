@@ -413,8 +413,11 @@ int modFileChk(char *filename) {
 int modSVDGSL(control_t *ptc, int wfs) {
 	FILE *fd;
 	int i, j, nact=0, nsubap;
+	double tmp;
 	gsl_matrix *mat, *v;
 	gsl_vector *sing, *work, *testin, *testout;
+	gsl_matrix_float *matf;
+	gsl_vector_float *testinf, *testoutf, *testinrecf, *workf;
 	gsl_vector *testinrec, *testoutrec;
 	char *outfile;
 
@@ -429,18 +432,27 @@ int modSVDGSL(control_t *ptc, int wfs) {
 	
 	// allocating space for SVD:
 	mat = gsl_matrix_calloc(nsubap*2, nact);
+	matf = gsl_matrix_float_calloc(nsubap*2, nact);	
 	v = gsl_matrix_calloc(nact, nact);
 	sing = gsl_vector_calloc(nact);
 	work = gsl_vector_calloc(nact);
 	testin = gsl_vector_calloc(nact); // test input vector
 	testout = gsl_vector_calloc(nsubap*2); // test output vector (calculate using normal matrix)
 
+	workf = gsl_vector_float_calloc(nact);
+	testinf = gsl_vector_float_calloc(nact); // test input vector
+	testinrecf = gsl_vector_float_calloc(nact); // reconstrcuted input vector (use pseudo inverse from SVD)
+	testoutf = gsl_vector_float_calloc(nsubap*2); // test output vector (calculate using normal matrix)
+
 	testinrec = gsl_vector_calloc(nact); // reconstrcuted input vector (use pseudo inverse from SVD)
 	testoutrec = gsl_vector_calloc(nsubap*2); // test output vector (calculate using SVD)
 	
 	// generate test input:
-	for (j=0; j<nact; j++)
-		gsl_vector_set(testin, j, drand48()*2-1);
+	for (j=0; j<nact; j++) {
+		tmp = drand48()*2-1;
+		gsl_vector_set(testin, j, tmp);
+		gsl_vector_float_set(testinf, j, tmp);
+	}
 	
 	// read matrix from file (from modCalWFC)
 	fd = fopen(ptc->wfs[wfs].influence, "r");
@@ -449,49 +461,26 @@ int modSVDGSL(control_t *ptc, int wfs) {
 		return EXIT_FAILURE;
 	}
 	gsl_matrix_fscanf(fd, mat);
+	
 	fclose(fd);
-
+	fd = fopen(ptc->wfs[wfs].influence, "r");
+	if (!fd) {
+		logWarn("Could not open file %s: %s", ptc->wfs[wfs].influence, strerror(errno));
+		return EXIT_FAILURE;
+	}
+	gsl_matrix_float_fscanf(fd, matf);
+	fclose(fd);
+	
 	// calculate test output vector
 	gsl_blas_dgemv(CblasNoTrans, 1.0, mat, testin, 0.0, testout);
+	gsl_blas_sgemv(CblasNoTrans, 1.0, matf, testinf, 0.0, testoutf);
 	
 	logInfo("Performing SVD on matrix from %s. nsubap: %d, nact: %d.",ptc->wfs[wfs].influence, nsubap, nact);
 	
 	// perform SVD
 	gsl_linalg_SV_decomp(mat, v, sing, work);
 	
-	logInfo("SVD complete, sanity checking begins");
-	// check if the SVD worked:
-	// V^T . testin
-	gsl_blas_dgemv(CblasTrans, 1.0, v, testin, 0.0, work);
-	
-	// singular . (V^T . testin)
-	for (j=0; j<nact; j++)
-		gsl_vector_set(work, j, gsl_vector_get(work, j) *gsl_vector_get(sing, j));
-		
-	// U . (singular . (V^T . testin))
-	gsl_blas_dgemv(CblasNoTrans, 1.0, mat, work, 0.0, testoutrec);
-
-	// calculate inverse
-	gsl_linalg_SV_solve(mat, v, sing, testout, testinrec);	
-	
-	// calculate difference
-	double diffin=0, diffout=0, cond, min, max;
-	
-	for (j=0; j<nact; j++) {
-		diffin += gsl_vector_get(testinrec, j)/gsl_vector_get(testin, j);
-		logDirect("%f, %f\n", gsl_vector_get(testinrec, j), gsl_vector_get(testin, j));
-	}
-	diffin /= nact;
-	
-	logInfo("and other vectors:");
-	for (j=0; j<nsubap; j++) {
-		diffout += gsl_vector_get(testoutrec, j)/gsl_vector_get(testout, j);
-		logDirect("%f, %f\n", gsl_vector_get(testoutrec, j), gsl_vector_get(testout, j));
-	}
-	diffout /= nsubap;
-	// get max and min to calculate condition
-	gsl_vector_minmax(sing, &min, &max);
-	cond = max/min;
+	// save stuff to file and re-read into float vector and matrices 
 	
 	// write matrix U to file (wfs modes):
 	asprintf(&outfile, "%s-wfsmodes", ptc->wfs[wfs].influence);
@@ -506,7 +495,7 @@ int modSVDGSL(control_t *ptc, int wfs) {
 	if (!fd) logErr("Error opening output file %s: %s", outfile, strerror(errno));
 	gsl_matrix_fprintf (fd, v, "%.15lf");
 	fclose(fd);
-
+	
 	// write out singular values:
 	asprintf(&outfile, "%s-singular", ptc->wfs[wfs].influence);
 	fd = fopen(outfile, "w+");
@@ -514,8 +503,66 @@ int modSVDGSL(control_t *ptc, int wfs) {
 	gsl_vector_fprintf (fd, sing, "%.15lf");
 	fclose(fd);
 
+	logDebug("Re-reading stored matrices and vector into memory");
+	if (modCalWFCChk(ptc, wfs) != EXIT_SUCCESS) {
+		logWarn("Re-reading stored SVD files failed.");
+		return EXIT_FAILURE;
+	}
+	
+	logInfo("SVD complete, sanity checking begins");
+	// check if the SVD worked:
+	// V^T . testin
+	// gsl_blas_sgemv(CblasTrans, 1.0, ptc->wfs[wfs].dmmodes, testin, 0.0, work);
+	// 
+	// // singular . (V^T . testin)
+	// for (j=0; j<nact; j++)
+	// 	gsl_vector_set(work, j, gsl_vector_get(work, j) *gsl_vector_get(ptc->wfs[wfs].singular, j));
+	// 	
+	// // U . (singular . (V^T . testin))
+	// gsl_blas_dgemv(CblasNoTrans, 1.0, ptc->wfs[wfs].wfsmodes, work, 0.0, testoutrec);
+	
+//    gsl_vector *workf = gsl_vector_calloc (N);
+
+    gsl_blas_sgemv (CblasTrans, 1.0, ptc->wfs[wfs].wfsmodes, testoutf, 0.0, workf);
+
+    for (i = 0; i < nact; i++) {
+        float wi = gsl_vector_float_get (workf, i);
+        float alpha = gsl_vector_float_get (ptc->wfs[wfs].singular, i);
+        if (alpha != 0)
+          alpha = 1.0 / alpha;
+        gsl_vector_float_set (workf, i, alpha * wi);
+      }
+
+    gsl_blas_sgemv (CblasNoTrans, 1.0, ptc->wfs[wfs].dmmodes, workf, 0.0, testinrecf);
+	// testinrecf should hold the float version of the reconstructed vector 'testinf'
+	
+	// calculate inverse
+	gsl_linalg_SV_solve(mat, v, sing, testout, testinrec);
+	
+	// testinrec should hold the double version of the recon vector 'testin'
+	
+	// calculate difference
+	double diffin=0, diffout=0;
+	float cond, min, max;
+	
+	for (j=0; j<nact; j++) {
+		diffin += gsl_vector_get(testinrec, j)/gsl_vector_get(testin, j);
+		logDirect("%f, %f\n", gsl_vector_get(testinrec, j), gsl_vector_get(testin, j));
+	}
+	diffin /= nact;
+	
+	logDebug("and other vectors:");
+	for (j=0; j<nact; j++) {
+		diffout += gsl_vector_float_get(testinrecf, j)/gsl_vector_float_get(testinf, j);
+		logDirect("%f, %f\n", gsl_vector_float_get(testinrecf, j), gsl_vector_float_get(testinf, j));
+	}
+	diffout /= nact;
+	// get max and min to calculate condition
+	gsl_vector_float_minmax(ptc->wfs[wfs].singular, &min, &max);
+	cond = max/min;
+
 	logInfo("SVD Succeeded, decomposition (U, V and Sing) stored to files.");
-	logInfo("SVD quality: in, out ratio (should be 1): %lf and %lf, SVD condition (close to 1 would be nice): %lf.", diffin, diffout, cond);
+	logInfo("SVD quality: in (double), in (float) ratio (should be 1): %lf and %lf, SVD condition (close to 1 would be nice): %lf.", diffin, diffout, cond);
 	
 	return EXIT_SUCCESS;
 }

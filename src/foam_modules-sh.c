@@ -455,31 +455,57 @@ int modCalcCtrl(control_t *ptc, const int wfs, int nmodes) {
 	
 //	gsl_vector_float_view shortdisp = gsl_vector_float_subvector(ptc->wfs[wfs].disp, 0, nsubap*2);
 
-	// TODO: this is a hack :P
+	// TODO: this is a hack :P (problem: disp vector is allocated more space than used, but at allocation time, this is unknown
+	// we now tell gsl that the vector is only as long as we're using, while the actual allocated space is more)
 	oldsize = ptc->wfs[wfs].disp->size;
 	ptc->wfs[wfs].disp->size = nsubap*2;
 	
 	logDebug("Calculating control stuff for WFS %d (modes: %d)", wfs, nmodes);
 	
-	// U^T . meas:
-	gsl_blas_sgemv(CblasTrans, 1.0, ptc->wfs[wfs].wfsmodes, ptc->wfs[wfs].disp, 0.0, total);
-
-	// diag(1/w_j) . (U^T . meas):
-	for (j=0; j<nmodes; j++)
-		gsl_vector_float_set(work, j, gsl_vector_float_get(total, j) /gsl_vector_float_get(ptc->wfs[wfs].singular, j));
+//	gsl_linalg_SV_solve(ptc->wfs[wfs].wfsmodes, v, sing, testout, testinrec);	
 	
-	// V . (diag(1/w_j) . (U^T . meas)):
-	gsl_blas_sgemv(CblasNoTrans, 1.0, ptc->wfs[wfs].dmmodes, work, 0.0, total);
+    gsl_blas_sgemv (CblasTrans, 1.0, ptc->wfs[wfs].wfsmodes, ptc->wfs[wfs].disp, 0.0, work);
+
+    for (i = 0; i < nmodes; i++) {
+        float wi = gsl_vector_float_get (work, i);
+        float alpha = gsl_vector_float_get (ptc->wfs[wfs].singular, i);
+        if (alpha != 0)
+          alpha = 1.0 / alpha;
+        gsl_vector_float_set (work, i, alpha * wi);
+      }
+
+    gsl_blas_sgemv (CblasNoTrans, 1.0, ptc->wfs[wfs].dmmodes, work, 0.0, total);
+	// testinrecf should hold the float version of the reconstructed vector 'testinf'
+	
+	
+	// // U^T . meas:
+	// gsl_blas_sgemv(CblasTrans, 1.0, ptc->wfs[wfs].wfsmodes, ptc->wfs[wfs].disp, 0.0, total);
+	// 
+	// // diag(1/w_j) . (U^T . meas):
+	// for (j=0; j<nmodes; j++)
+	// 	gsl_vector_float_set(work, j, gsl_vector_float_get(total, j) /gsl_vector_float_get(ptc->wfs[wfs].singular, j));
+	// 
+	// // V . (diag(1/w_j) . (U^T . meas)):
+	// gsl_blas_sgemv(CblasNoTrans, 1.0, ptc->wfs[wfs].dmmodes, work, 0.0, total);
 	
 	// copy complete control vector to seperate vectors
+	logDebug("Storing reconstructed actuator command to seperate vectors:");
 	j=0;
+	float old, ctrl;
 	for (wfc=0; wfc< ptc->wfc_count; wfc++) {
 		for (i=0; i<ptc->wfc[wfc].nact; i++) {
-			gsl_vector_float_set(ptc->wfc[wfc].ctrl, i, gsl_vector_float_get(total, j));
+			ctrl = gsl_vector_float_get(total, j);
+			old = gsl_vector_float_get(ptc->wfc[wfc].ctrl, i);
+			
+			gsl_vector_float_set(ptc->wfc[wfc].ctrl, i, old- (ctrl*ptc->wfc[wfc].gain)); //*ptc->wfc[wfc].gain
+			logDirect("%f -> (%d,%d) ", gsl_vector_float_get(ptc->wfc[wfc].ctrl, i), wfc, i);
 			j++;
 		}
+		logDirect("\n");
 	}
+	logDirect("\n");
 	ptc->wfs[wfs].disp->size = oldsize;
+
 	
 	// logDebug("Linear output of wfsmodes:");
 	// for (i=0; i<2*nacttot*nsubap; i++)

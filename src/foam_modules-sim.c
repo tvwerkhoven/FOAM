@@ -88,7 +88,7 @@ int drvReadSensor() {
 	// if (tmpctrl[1] < -1) tmpctrl[1] = -1;
 	
 	// regular sawtooth drift is here:
-	gsl_vector_float_set(tmpctrl, 0, ((ptc.frames % 40)/40.0 * 4 - 2) * ( round( (ptc.frames % 40)/40.0 )*2 - 1));
+	gsl_vector_float_set(tmpctrl, 0, ((ptc.frames % 20)/20.0 * 4 - 2) * ( round( (ptc.frames % 20)/20.0 )*2 - 1));
 	gsl_vector_float_set(tmpctrl, 1, 0.0);
 	// tmpctrl[0] = ((ptc.frames % 40)/40.0 * 4 - 2) * ( round( (ptc.frames % 40)/40.0 )*2 - 1);
 	// tmpctrl[1] = 0.0;
