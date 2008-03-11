@@ -16,7 +16,8 @@ src/Makefile
 AC_SEARCH_LIBS([sin], [m] ,[], AC_MSG_ERROR([This package needs libm.]) ) 
 AC_SEARCH_LIBS([event_init], [event] ,[], AC_MSG_ERROR([This package needs libevent.]) ) 
 AC_SEARCH_LIBS([pthread_create], [pthread] ,[], AC_MSG_ERROR([This package needs libpthread.]) ) 
-AC_SEARCH_LIBS([gsl_vector_set], [gsl] ,[], AC_MSG_ERROR([This package needs libgsl.]) ) 
+AC_SEARCH_LIBS([cblas_dgemm],[gslcblas], [], AC_MSG_ERROR([This package needs a cblas.]) ) 
+AC_SEARCH_LIBS([gsl_blas_dgemm],[gsl], [], AC_MSG_ERROR([This package needs libgsl.]) ) 
 
 # save common libs (this is kinda ugly)
 COMMON_LIBS=$LIBS

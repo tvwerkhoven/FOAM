@@ -211,11 +211,21 @@ int parseConfig(char *var, char *value) {
 	else if (strstr(var, "WFC_NAME") != NULL) {
 		if (issetWFC(var) != EXIT_SUCCESS) return EXIT_FAILURE;
 		if ((tmp = validWFC(var)) < 0) return EXIT_FAILURE;
-		
+				
 		strncpy(ptc.wfc[tmp].name, value, (size_t) FILENAMELEN);
 		ptc.wfc[tmp].name[FILENAMELEN-1] = '\0'; // TODO: This might not be necessary
 		
 		logInfo("WFC_NAME initialized for WFC %d: %s", tmp, ptc.wfc[tmp].name);
+	}
+	else if (strstr(var, "WFC_TYPE") != NULL) {
+		if (issetWFC(var) != EXIT_SUCCESS) return EXIT_FAILURE;
+		if ((tmp = validWFC(var)) < 0) return EXIT_FAILURE;
+		
+		ptc.wfc[tmp].type = (int) strtol(value, NULL, 10);
+//		strncpy(ptc.wfc[tmp].name, value, (size_t) FILENAMELEN);
+//		ptc.wfc[tmp].name[FILENAMELEN-1] = '\0'; // TODO: This might not be necessary
+		
+		logInfo("WFC_TYPE initialized for WFC %d: %d", tmp, ptc.wfc[tmp].type);
 	}
     else if (strstr(var, "WFC_NACT") != NULL) {
 		if (issetWFC(var) != EXIT_SUCCESS) return EXIT_FAILURE;
@@ -873,7 +883,7 @@ int popword(char **msg, char *cmd) {
 int parseCmd(char *msg, const int len, client_t *client) {
 	char tmp[len+1];	// reserve space for the command (TODO: can be shorter using strchr. Can it? wordlength can vary...)	
 	tmp[0] = '\0';
-	char *chk;
+//	char *chk;
 
 //	logDebug("Command was: '%s'",msg);
 		

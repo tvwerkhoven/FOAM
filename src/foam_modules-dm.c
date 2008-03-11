@@ -80,7 +80,7 @@ int modSimDM(char *boundarymask, char *actuatorpat, int nact, gsl_vector_float *
 	pi = 4.0*atan(1);
 
 	SDL_Surface *boundarysurf, *actsurf;	// we load the aperture and actuator images in these SDL surfaces
-	float amp=0.3;							// amplitude of the DM response (used for calibration)
+	float amp=0.1;							// amplitude of the DM response (used for calibration)
 
 	// read boundary mask file if this has not already been done before
 	if (boundary == NULL) {
@@ -154,7 +154,7 @@ int modSimDM(char *boundarymask, char *actuatorpat, int nact, gsl_vector_float *
 	for (ik = 0; ik < nact; ik++) {
 		// first simulate rails (i.e. crop ctrl above abs(1))
 		if (gsl_vector_float_get(ctrl, ik) > 1.0) gsl_vector_float_set(ctrl, ik, 1.0);
-		if (gsl_vector_float_get(ctrl, ik) < -1.0) gsl_vector_float_set(ctrl, ik, -1.0);
+		else if (gsl_vector_float_get(ctrl, ik) < -1.0) gsl_vector_float_set(ctrl, ik, -1.0);
 		// we do Sqrt(255^2 (i+1) * 0.5) here to convert from [-1,1] (linear) to [0,255] (quadratic)
 		voltage[ik] = (int) round( sqrt(65025*(gsl_vector_float_get(ctrl, ik)+1)*0.5 ) ); //65025 = 255^2
 		logDirect("%d ", voltage[ik]);

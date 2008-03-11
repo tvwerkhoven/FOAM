@@ -52,9 +52,10 @@ int modCalPinhole(control_t *ptc, int wfs) {
 	// collect displacement vectors and store as reference
 	logInfo("Found following reference coordinates:");
 	for (j=0; j < ptc->wfs[wfs].nsubap; j++) {
-		// TvW TODO: temp disabled reference coordinates
-		gsl_vector_float_set(ptc->wfs[wfs].refc, 2*j+0, gsl_vector_float_get(ptc->wfs[wfs].disp, 2*j+0)); // x
-		gsl_vector_float_set(ptc->wfs[wfs].refc, 2*j+1, gsl_vector_float_get(ptc->wfs[wfs].disp, 2*j+1)); // y
+		// gsl_vector_float_set(ptc->wfs[wfs].refc, 2*j+0, gsl_vector_float_get(ptc->wfs[wfs].disp, 2*j+0)); // x
+		// gsl_vector_float_set(ptc->wfs[wfs].refc, 2*j+1, gsl_vector_float_get(ptc->wfs[wfs].disp, 2*j+1)); // y
+		gsl_vector_float_set(ptc->wfs[wfs].refc, 2*j+0, 7); // x
+		gsl_vector_float_set(ptc->wfs[wfs].refc, 2*j+1, 7); // y
 		
 //		ptc->wfs[wfs].refc[j][0] = ptc->wfs[wfs].disp[j][0];
 //		ptc->wfs[wfs].refc[j][1] = ptc->wfs[wfs].disp[j][1];
@@ -183,19 +184,20 @@ int modLinTest(control_t *ptc, int wfs) {
 // TODO: document
 int modCalWFC(control_t *ptc, int wfs) {
 	int j, i, k, skip;
-	int nact=0;			// total nr of acts for all WFCs
+	int nact=0, nacttot=0;			// total nr of acts for all WFCs
 	int nsubap=0; 		// nr of subapts for specific WFS
 	int wfc; 			// counters to loop over the WFCs
 	float origvolt;
 	int measurecount=1;	// measure this many times
 	int skipframes=1;	// skip this many frames before measuring
 	FILE *fd;
+	char *file;
 	gsl_matrix_float *infl;
 		
 	// run open loop initialisation once (to get subapertures etc)
 	modOpenInit(ptc);
 	
-	logDebug("Pinhole file %s",ptc->wfs[wfs].pinhole);
+	logDebug("Checking pinhole calibration, file %s",ptc->wfs[wfs].pinhole);
 	
 	if (modCalPinholeChk(ptc, wfs) != EXIT_SUCCESS) {
 		logWarn("WFC calibration failed, first perform pinhole calibration.");
@@ -204,25 +206,38 @@ int modCalWFC(control_t *ptc, int wfs) {
 	
 	logDebug("Starting WFC calibration");
 	
+	// TvW: set to zero, what does that do?
+	for (i=0; i < ptc->wfc_count; i++)
+		for (j=0; j < ptc->wfc[i].nact; j++)
+			gsl_vector_float_set(ptc->wfc[i].ctrl, j , 0.0);
+	
+	// delete SVD files:
+	asprintf(&file, "%s-singular", ptc->wfs[wfs].influence);
+	if (unlink(file) != 0) logWarn("Problem removing old SVD files: %s", strerror(errno));
+	asprintf(&file, "%s-wfsmodes", ptc->wfs[wfs].influence);
+	if (unlink(file) != 0) logWarn("Problem removing old SVD files: %s", strerror(errno));
+	asprintf(&file, "%s-dmmodes", ptc->wfs[wfs].influence);
+	if (unlink(file) != 0) logWarn("Problem removing old SVD files: %s", strerror(errno));
+		
 	// set filterwheel to pinhole
 	drvFilterWheel(ptc, FILT_PINHOLE);
 		
 	// get total nr of actuators, set all actuators to zero (180 volt for an okotech DM)
 	for (i=0; i < ptc->wfc_count; i++) {
 		gsl_vector_float_set_zero(ptc->wfc[i].ctrl);
-		nact += ptc->wfc[i].nact;
+		nacttot += ptc->wfc[i].nact;
 	}
 	
 	// total subapts for WFS
 	nsubap = ptc->wfs[wfs].nsubap;
 	float q0x[nsubap], q0y[nsubap];
 
-	logInfo("Allocating temporary matrix to store influence function (%d, %d x %d)", nsubap, nsubap*2, nact);
+	logDebug("Allocating temporary matrix to store influence function (%d, %d x %d)", nsubap, nsubap*2, nact);
 	// this will store the influence matrix (which calculates displacements given actuator signals)
-	infl = gsl_matrix_float_calloc(nsubap*2, nact);
+	infl = gsl_matrix_float_calloc(nsubap*2, nacttot);
 				
 	logInfo("Calibrating WFC's using %d actuators and WFS %d with %d subapts, storing in %s.", \
-		nact, wfs, nsubap, ptc->wfs[wfs].influence);
+		nacttot, wfs, nsubap, ptc->wfs[wfs].influence);
 	// fp = fopen(ptc->wfs[wfs].influence,"w+");
 	// fprintf(fp,"3\n");								// 3 dimensions (nact, nsub, 2d-vectors)
 	// fprintf(fp,"%d\n%d\n%d\n", nact, nsubap, 2); 	// we have nact actuators (variables) and nsubap*2 measurements
@@ -297,6 +312,13 @@ int modCalWFC(control_t *ptc, int wfs) {
 	if (!fd) logErr("Could not open file %s: %s", ptc->wfs[wfs].pinhole, strerror(errno));
 	gsl_matrix_float_fprintf(fd, infl, "%.10f");
 	fclose(fd);
+	
+	// save metadata too (nact, n measurements, nsubap);
+	asprintf(&file, "%s-meta", ptc->wfs[wfs].influence);
+	fd = fopen(file, "w+");
+	if (!fd) logErr("Could not open file for saving metadata %s: %s", ptc->wfs[wfs].pinhole, strerror(errno));
+	fprintf(fd, "%d\n%d\n%d\n", nacttot, nsubap, 2*nsubap);
+	fclose(fd);
 
 	logInfo("WFS %d (%s) influence function saved for in file %s", wfs, ptc->wfs[wfs].name, ptc->wfs[wfs].influence);
 	
@@ -305,8 +327,14 @@ int modCalWFC(control_t *ptc, int wfs) {
 	return EXIT_SUCCESS;
 }
 
+// this will hold an offloading mechanism of some sort
+int modOffload() {
+	
+	return EXIT_SUCCESS;
+}
+
 int modCalWFCChk(control_t *ptc, int wfs) {
-	int i;
+	int i, chknact, chksubap;
 	int nsubap=ptc->wfs[wfs].nsubap, nacttot=0;
 	char *outfile;
 	FILE *fd;
@@ -320,6 +348,24 @@ int modCalWFCChk(control_t *ptc, int wfs) {
 		return EXIT_FAILURE;
 	}
 	
+	// CHECK GEOMETRY //
+	////////////////////
+	asprintf(&outfile, "%s-meta", ptc->wfs[wfs].influence);
+	fd = fopen(outfile, "r");
+	if (!fd) {
+		logWarn("Could not open file %s: %s", outfile, strerror(errno));
+		return EXIT_FAILURE;
+	}
+	if (fscanf(fd, "%d\n%d\n", &chknact, &chksubap) != 2) {
+		logWarn("Could not read metadata from %s on calibration, please re-calibrate.", outfile);
+		return EXIT_FAILURE;
+	}
+	if (chknact != nacttot || chksubap != nsubap) {
+		logWarn("Calibration appears to be old, please re-calibrate");
+		logDebug("calibration parameters do not match current system parameters: nact: %d vs %d, nsubap: %d vs %d", chknact, nacttot, chksubap, nsubap);
+		return EXIT_FAILURE;
+	}
+		
 	// CHECK SINGVAL //
 	///////////////////
 	asprintf(&outfile, "%s-singular", ptc->wfs[wfs].influence);
@@ -334,6 +380,7 @@ int modCalWFCChk(control_t *ptc, int wfs) {
 		ptc->wfs[wfs].singular = gsl_vector_float_calloc(nacttot);
 		if (ptc->wfs[wfs].singular == NULL) logErr("Failed to allocate memory for singular values vector.");
 	}
+	logDebug("Reading singular values into memory from %s now...", outfile);
 	gsl_vector_float_fscanf(fd, ptc->wfs[wfs].singular);
 	fclose(fd);
 
@@ -353,6 +400,7 @@ int modCalWFCChk(control_t *ptc, int wfs) {
 		if (ptc->wfs[wfs].wfsmodes == NULL) logErr("Failed to allocate memory for wfsmodes matrix.");
 	}
 
+	logDebug("Reading WFS modes into memory from %s now...", outfile);
 	gsl_matrix_float_fscanf(fd, ptc->wfs[wfs].wfsmodes);
 	fclose(fd);
 	
@@ -373,6 +421,7 @@ int modCalWFCChk(control_t *ptc, int wfs) {
 		if (ptc->wfs[wfs].dmmodes == NULL) logErr("Failed to allocate memory for dmmodes matrix.");
 	}
 
+	logDebug("Reading DM modes into memory from %s now...", outfile);
 	gsl_matrix_float_fscanf(fd, ptc->wfs[wfs].dmmodes);
 	fclose(fd);
 
@@ -525,13 +574,16 @@ int modSVDGSL(control_t *ptc, int wfs) {
 
     gsl_blas_sgemv (CblasTrans, 1.0, ptc->wfs[wfs].wfsmodes, testoutf, 0.0, workf);
 
-    for (i = 0; i < nact; i++) {
-        float wi = gsl_vector_float_get (workf, i);
-        float alpha = gsl_vector_float_get (ptc->wfs[wfs].singular, i);
-        if (alpha != 0)
-          alpha = 1.0 / alpha;
-        gsl_vector_float_set (workf, i, alpha * wi);
-      }
+	int singvals=nact;
+	for (i = 0; i < nact; i++) {
+		float wi = gsl_vector_float_get (workf, i);
+		float alpha = gsl_vector_float_get (ptc->wfs[wfs].singular, i);
+		if (alpha != 0) {
+			alpha = 1.0 / alpha;
+			singvals--;
+		}
+		gsl_vector_float_set (workf, i, alpha * wi);
+	}
 
     gsl_blas_sgemv (CblasNoTrans, 1.0, ptc->wfs[wfs].dmmodes, workf, 0.0, testinrecf);
 	// testinrecf should hold the float version of the reconstructed vector 'testinf'
@@ -562,7 +614,9 @@ int modSVDGSL(control_t *ptc, int wfs) {
 	cond = max/min;
 
 	logInfo("SVD Succeeded, decomposition (U, V and Sing) stored to files.");
-	logInfo("SVD quality: in (double), in (float) ratio (should be 1): %lf and %lf, SVD condition (close to 1 would be nice): %lf.", diffin, diffout, cond);
+	logInfo("SVD zero singvals (0 is good): %d. Condition (close to 1 would be nice): %lf.", singvals, cond);
+	logInfo("SVD quality: in (double), in (float) ratio (should be 1): %lf and %lf", diffin, diffout);
+
 	
 	return EXIT_SUCCESS;
 }

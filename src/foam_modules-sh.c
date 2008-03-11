@@ -354,7 +354,7 @@ int modParseSH(wfs_t *wfsinfo) {
 	
 	// note: coords is relative to the center of the tracker window
 	// therefore we can simply update the lower left coord by subtracting the coordinates.
-	float sum, cog[2];
+//	float sum, cog[2];
 	float rmsx=0.0, rmsy=0.0;
 	//logInfo("Coords: ");
 	
@@ -409,8 +409,10 @@ int modParseSH(wfs_t *wfsinfo) {
 		// TODO: this works, is this fast?
 		wfsinfo->subc[i][0] -= (int) (coords[i][0]+0.5);//-wfsinfo->res.x/wfsinfo->cells[0]/4;
 		wfsinfo->subc[i][1] -= (int) (coords[i][1]+0.5);//-wfsinfo->res.y/wfsinfo->cells[1]/4;
-
 	}
+	
+	gsl_vector_float_sub(wfsinfo->disp, wfsinfo->refc);
+		
 //	logDirect("\n");
 	rmsx = sqrt(rmsx/wfsinfo->nsubap);
 	rmsy = sqrt(rmsy/wfsinfo->nsubap);
@@ -439,21 +441,23 @@ int modCalcCtrl(control_t *ptc, const int wfs, int nmodes) {
 	for (wfc=0; wfc< ptc->wfc_count; wfc++)
 		nacttot += ptc->wfc[wfc].nact;
 	
-	// set to maxmimum if 0 is passed.
-	if (nmodes == 0) nmodes = nacttot;
+	// set to maxmimum if 0 or less is passed.
+	if (nmodes <= 0) nmodes = nacttot;
+	
+	// TvW: tmp hack, remove line lateron
+	// nmodes = 2;
 	
 	if (nmodes > nacttot) {
 		logWarn("nmodes cannot be higher than the total number of actuators, cropping.");
 		nmodes = nacttot;
 	}
 	
-	float modeamp[nacttot];
+//	float modeamp[nacttot];
 	
 	gsl_vector_float *work, *total; // temp work vector and vector to store all control commands for all WFCs
 	work = gsl_vector_float_calloc(nacttot);
 	total = gsl_vector_float_calloc(nacttot);
-	
-//	gsl_vector_float_view shortdisp = gsl_vector_float_subvector(ptc->wfs[wfs].disp, 0, nsubap*2);
+
 
 	// TODO: this is a hack :P (problem: disp vector is allocated more space than used, but at allocation time, this is unknown
 	// we now tell gsl that the vector is only as long as we're using, while the actual allocated space is more)
@@ -461,6 +465,10 @@ int modCalcCtrl(control_t *ptc, const int wfs, int nmodes) {
 	ptc->wfs[wfs].disp->size = nsubap*2;
 	
 	logDebug("Calculating control stuff for WFS %d (modes: %d)", wfs, nmodes);
+	for (i=0; i < nsubap; i++)
+		logDirect("(%f, %f)", gsl_vector_float_get(ptc->wfs[wfs].disp, 2*i+0), gsl_vector_float_get(ptc->wfs[wfs].disp, 2*i+1));
+		
+	logDirect("\n");
 	
 //	gsl_linalg_SV_solve(ptc->wfs[wfs].wfsmodes, v, sing, testout, testinrec);	
 	
@@ -500,13 +508,13 @@ int modCalcCtrl(control_t *ptc, const int wfs, int nmodes) {
 			gsl_vector_float_set(ptc->wfc[wfc].ctrl, i, old- (ctrl*ptc->wfc[wfc].gain)); //*ptc->wfc[wfc].gain
 			logDirect("%f -> (%d,%d) ", gsl_vector_float_get(ptc->wfc[wfc].ctrl, i), wfc, i);
 			j++;
+//			if (j >= nmodes) break;
 		}
 		logDirect("\n");
 	}
 	logDirect("\n");
 	ptc->wfs[wfs].disp->size = oldsize;
-
-	
+		
 	// logDebug("Linear output of wfsmodes:");
 	// for (i=0; i<2*nacttot*nsubap; i++)
 	// 	logDirect("%f ", ptc->wfs[wfs].wfsmodes[i]);
@@ -535,10 +543,10 @@ int modCalcCtrl(control_t *ptc, const int wfs, int nmodes) {
 // 			// TODO: what coordinate of wfsmodes do we need?
 // 			// TODO: this code is ugly, reformat the data-readout please!
 // 			for (j=0; j<nsubap; j++) // loop over all subapertures
-// 				sum = sum + ptc->wfs[wfs].wfsmodes[j*nacttot+i] * (ptc->wfs[wfs].disp[j][0]-ptc->wfs[wfs].refc[j][0]-ptc->wfs[wfs].stepc.x) \
+// 				sum = sum + ptc->wfs[wfs].wfsmodes[j*nacttot+i] * (ptc->wfs[wfs].disp[j][0]-ptc->wfs[wfs].refc[j][0]-ptc->wfs[wfs].stepc.x)
 // 					+ ptc->wfs[wfs].wfsmodes[nacttot*nsubap+j*nacttot+i] * (ptc->wfs[wfs].disp[j][1]-ptc->wfs[wfs].refc[j][1]-ptc->wfs[wfs].stepc.y);
 // 
-// 				// sum = sum + ptc->wfs[wfs].wfsmodes[j*nacttot+i] * (ptc->wfs[wfs].disp[j][0]-ptc->wfs[wfs].refc[j][0]-ptc->wfs[wfs].stepc.x) \
+// 				// sum = sum + ptc->wfs[wfs].wfsmodes[j*nacttot+i] * (ptc->wfs[wfs].disp[j][0]-ptc->wfs[wfs].refc[j][0]-ptc->wfs[wfs].stepc.x)
 // 				// 	+ ptc->wfs[wfs].wfsmodes[nacttot*nsubap+j*nacttot+i] * (ptc->wfs[wfs].disp[j][1]-ptc->wfs[wfs].refc[j][1]-ptc->wfs[wfs].stepc.y);
 // // this was wrong:
 // //				sum = sum + ptc->wfs[wfs].wfsmodes[i*2*nsubap+j*2] * (ptc->wfs[wfs].disp[j][0]-ptc->wfs[wfs].refc[j][0])

@@ -107,7 +107,7 @@ int modClosedLoop(control_t *ptc) {
 	if (modParseSH((&ptc->wfs[0])) != EXIT_SUCCESS)		// process SH sensor output, get displacements
 		return EXIT_FAILURE;
 		
-	if (modCalcCtrl(ptc, 0, 2) != EXIT_SUCCESS)		// parse displacements, get ctrls for WFC's
+	if (modCalcCtrl(ptc, 0, 0) != EXIT_SUCCESS)		// parse displacements, get ctrls for WFC's
 		return EXIT_FAILURE;
 	// for (i=0; i<ptc->wfc_count; i++) {
 	// 	logDebug("Setting WFC %d with %d acts.", i, ptc->wfc[i].nact);

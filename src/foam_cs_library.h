@@ -100,6 +100,14 @@ typedef enum { // axes_t
 } axes_t;
 
 /*!
+@brief Helper enum for WFC types
+*/
+typedef enum { // axes_t
+	WFC_TT=0,
+	WFC_DM=1
+} wfctype_t;
+
+/*!
 @brief Helper struct to store WFC variables in \a ptc. Used by type \c control_t.
 */
 typedef struct { // wfc_t
@@ -107,6 +115,7 @@ typedef struct { // wfc_t
 	int nact;					//!< number of actuators in this WFC
 	gsl_vector_float *ctrl;		//!< pointer to array of controls for the WFC (i.e. `voltages')
 	float gain;					//!< gain used in calculating the new controls
+	wfctype_t type;				//!< type of WFC we're dealing with (0 = TT, 1 = DM)
 } wfc_t;
 
 /*!

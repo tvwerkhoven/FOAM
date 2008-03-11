@@ -73,11 +73,11 @@ int drvReadSensor() {
 	} // end for (ptc.filter == FILT_PINHOLE)
 	
 	gsl_vector_float *tmpctrl;
-	tmpctrl = gsl_vector_float_calloc(2);
+	tmpctrl = gsl_vector_float_calloc(ptc.wfc[0].nact);
 	
 	// we're faking some random drift here
-	gsl_vector_float_set(tmpctrl, 0, (drand48()*2-1)*0.4);
-	gsl_vector_float_set(tmpctrl, 1, (drand48()*2-1)*0.4);
+	// gsl_vector_float_set(tmpctrl, 0, (drand48()*2-1)*0.4);
+	// gsl_vector_float_set(tmpctrl, 1, (drand48()*2-1)*0.4);
 
 	// tmpctrl[0] = tmpctrl[0] + (drand48()*2-1)*0.4;
 	// tmpctrl[1] = tmpctrl[1] + (drand48()*2-1)*0.4;
@@ -88,8 +88,11 @@ int drvReadSensor() {
 	// if (tmpctrl[1] < -1) tmpctrl[1] = -1;
 	
 	// regular sawtooth drift is here:
-	gsl_vector_float_set(tmpctrl, 0, ((ptc.frames % 20)/20.0 * 4 - 2) * ( round( (ptc.frames % 20)/20.0 )*2 - 1));
-	gsl_vector_float_set(tmpctrl, 1, 0.0);
+	// for (i=0; i<ptc.wfc[0].nact; i++) {
+	// 	gsl_vector_float_set(tmpctrl, i, ((ptc.frames % 20)/20.0 * 4 - 2) * ( round( (ptc.frames % 20)/20.0 )*2 - 1));
+	// }
+	// gsl_vector_float_set(tmpctrl, 0, ((ptc.frames % 20)/20.0 * 4 - 2) * ( round( (ptc.frames % 20)/20.0 )*2 - 1));
+	// gsl_vector_float_set(tmpctrl, 1, 0.0);
 	// tmpctrl[0] = ((ptc.frames % 40)/40.0 * 4 - 2) * ( round( (ptc.frames % 40)/40.0 )*2 - 1);
 	// tmpctrl[1] = 0.0;
 //	([0 - 1 ] * 2 - 1) *(round ([0 - 1])*2 - 1)
@@ -98,12 +101,13 @@ int drvReadSensor() {
 	// tmpctrl[0] = 0;
 	// tmpctrl[1] = 0;
 	// and apply the DM
-	logDebug("TT: faking tt with : %f, %f", gsl_vector_float_get(tmpctrl, 0), gsl_vector_float_get(tmpctrl, 1));
-	if (ttfd == NULL) ttfd = fopen("ttdebug.dat", "w+");
-	fprintf(ttfd, "%f, %f\n", gsl_vector_float_get(tmpctrl, 0), gsl_vector_float_get(tmpctrl, 1));
-
-	modSimTT(tmpctrl, ptc.wfs[0].image, ptc.wfs[0].res);
-
+	// logDebug("TT: faking tt with : %f, %f", gsl_vector_float_get(tmpctrl, 0), gsl_vector_float_get(tmpctrl, 1));
+	// if (ttfd == NULL) ttfd = fopen("ttdebug.dat", "w+");
+	// fprintf(ttfd, "%f, %f\n", gsl_vector_float_get(tmpctrl, 0), gsl_vector_float_get(tmpctrl, 1));
+	
+//	modSimDM(tmpctrl, ptc.wfs[0].image, ptc.wfs[0].res);
+//	modSimDM(FOAM_MODSIM_APTMASK, FOAM_MODSIM_ACTPAT, ptc.wfc[0].nact, tmpctrl, ptc.wfs[0].image, ptc.wfs[0].res, -1); // last arg is for niter. -1 for autoset
+	
 	// we simulate WFCs before the telescope to make sure they outer region is zero (Which is done by simTel())
 	logDebug("Now simulating %d WFC(s).", ptc.wfc_count);
 	for (i=0; i < ptc.wfc_count; i++)
@@ -189,11 +193,14 @@ int simWFC(control_t *ptc, int wfcid, int nact, gsl_vector_float *ctrl, float *i
 	if (ttfd == NULL) ttfd = fopen("ttdebug.dat", "w+");
 	fprintf(ttfd, "%f, %f\n", gsl_vector_float_get(ctrl,0), gsl_vector_float_get(ctrl,1));
 
-	if (wfcid == 0)
+	if (ptc->wfc[wfcid].type == WFC_TT)
 		modSimTT(ctrl, image, ptc->wfs[0].res);
-	if (wfcid == 1) {
+	else if (ptc->wfc[wfcid].type == WFC_DM) {
 		logDebug("Running modSimDM with %s and %s, nact %d", FOAM_MODSIM_APTMASK, FOAM_MODSIM_ACTPAT, nact);
 		modSimDM(FOAM_MODSIM_APTMASK, FOAM_MODSIM_ACTPAT, nact, ctrl, image, ptc->wfs[0].res, -1); // last arg is for niter. -1 for autoset
+	}
+	else {
+		logErr("Unknown WFC (%d) encountered (not TT or DM, type: %d, name: %s)", wfcid, ptc->wfc[wfcid].type, ptc->wfc[wfcid].name);
 	}
 					
 	return EXIT_SUCCESS;
