@@ -1167,7 +1167,7 @@ ALIASES += cslib="foam_cs_library.*"
 
 	\section network Networking
 	
-	<info on networking interface>
+	(info on networking interface)
 	200: Succesful reception of command, executing immediately.
 	400: General error, something is wrong
 	401: Argument is not known

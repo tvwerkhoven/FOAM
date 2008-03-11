@@ -1,5 +1,5 @@
 /*! 
-	@file foam_modules-dummy.c
+	@file foam_primemod-dummy.c
 	@author @authortim
 	@date November 30 2007
 
