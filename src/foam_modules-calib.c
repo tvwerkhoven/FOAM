@@ -4,12 +4,29 @@
 	@date 2008-02-07
 
 	@brief This file is used to calibrate actuators like the DM and TT mirrors used in AO systems.
-	Works on any combination of WFC and WFS, and uses generic controls in the [-1,1] range
+
+	\section Info
 	
-	This only works on SH WFs\n
+	The calibration works on any combination of WFC and WFS, and uses generic controls in the [-1,1] range. 
+	These controls must be translated to actual voltages by other routines in other modules. These must also
+	take care that the range [-1, 1] is linear. Currently calibration only works on SH WFS.
 	
-	TODO: document further
+	\section Functions	
 	
+	The functions provided to the outside world are:
+	\li modCalPinhole() - Calibrate pinhole coordinates, used as a reference when correcting
+	\li modCalPinholeChk() - Checks whether pinhole calibration has been performed
+	\li modCalWFC() - Measures the WFC influence function and inverts this. This calibration is done per WFS for all WFC's.
+	\li modCalWFCChk() - Checks whether WFC calibration has been performed.
+
+	\section Dependencies
+	
+	This module does not depend on other modules.
+
+	\section License
+	
+	This code is licensed under the GPL, version 2.
+			
 */
 
 #include "foam_modules-calib.h"
@@ -52,10 +69,10 @@ int modCalPinhole(control_t *ptc, int wfs) {
 	// collect displacement vectors and store as reference
 	logInfo("Found following reference coordinates:");
 	for (j=0; j < ptc->wfs[wfs].nsubap; j++) {
-		// gsl_vector_float_set(ptc->wfs[wfs].refc, 2*j+0, gsl_vector_float_get(ptc->wfs[wfs].disp, 2*j+0)); // x
-		// gsl_vector_float_set(ptc->wfs[wfs].refc, 2*j+1, gsl_vector_float_get(ptc->wfs[wfs].disp, 2*j+1)); // y
-		gsl_vector_float_set(ptc->wfs[wfs].refc, 2*j+0, 7); // x
-		gsl_vector_float_set(ptc->wfs[wfs].refc, 2*j+1, 7); // y
+		gsl_vector_float_set(ptc->wfs[wfs].refc, 2*j+0, gsl_vector_float_get(ptc->wfs[wfs].disp, 2*j+0)); // x
+		gsl_vector_float_set(ptc->wfs[wfs].refc, 2*j+1, gsl_vector_float_get(ptc->wfs[wfs].disp, 2*j+1)); // y
+		// gsl_vector_float_set(ptc->wfs[wfs].refc, 2*j+0, 7); // x
+		// gsl_vector_float_set(ptc->wfs[wfs].refc, 2*j+1, 7); // y
 		
 //		ptc->wfs[wfs].refc[j][0] = ptc->wfs[wfs].disp[j][0];
 //		ptc->wfs[wfs].refc[j][1] = ptc->wfs[wfs].disp[j][1];
@@ -343,11 +360,6 @@ int modCalWFCChk(control_t *ptc, int wfs) {
 	for (i=0; i< ptc->wfc_count; i++)
 		nacttot += ptc->wfc[i].nact;
 	
-	if (modFileChk(ptc->wfs[wfs].influence) != EXIT_SUCCESS) {
-		logWarn("Could not open file %s", ptc->wfs[wfs].influence);
-		return EXIT_FAILURE;
-	}
-	
 	// CHECK GEOMETRY //
 	////////////////////
 	asprintf(&outfile, "%s-meta", ptc->wfs[wfs].influence);
@@ -426,37 +438,6 @@ int modCalWFCChk(control_t *ptc, int wfs) {
 	fclose(fd);
 
  	return EXIT_SUCCESS;
-}
-
-int modFileChk(char *filename) {
-	int fildes, stat;
-	struct stat buf;
-	
-	// check if the pinhole calibration worked ok file is OK
-	if ((fildes = open(filename, O_RDONLY)) == -1) {
-		logWarn("File %s not found: %s", filename, strerror(errno));
-		return EXIT_FAILURE;
-	}
-	else {
-		stat = fstat(fildes, &buf);
-		close(fildes);
-		if (stat != 0) {
-			logWarn("Cannot stat file %s: %s", filename, strerror(errno));
-			return EXIT_FAILURE;
-		}
-		else {
-			if (buf.st_size < 5) {
-				logWarn("File %s is corrupt (filesize %d too small).", filename, buf.st_size);
-				return EXIT_FAILURE;
-			}
-			else {
-				return EXIT_SUCCESS;
-			}
-		}
-	}
-	
-	// this should never happen
-	return EXIT_FAILURE;
 }
 
 int modSVDGSL(control_t *ptc, int wfs) {
@@ -599,14 +580,14 @@ int modSVDGSL(control_t *ptc, int wfs) {
 	
 	for (j=0; j<nact; j++) {
 		diffin += gsl_vector_get(testinrec, j)/gsl_vector_get(testin, j);
-		logDirect("%f, %f\n", gsl_vector_get(testinrec, j), gsl_vector_get(testin, j));
+		// logDirect("%f, %f\n", gsl_vector_get(testinrec, j), gsl_vector_get(testin, j));
 	}
 	diffin /= nact;
 	
-	logDebug("and other vectors:");
+	// logDebug("and other vectors:");
 	for (j=0; j<nact; j++) {
 		diffout += gsl_vector_float_get(testinrecf, j)/gsl_vector_float_get(testinf, j);
-		logDirect("%f, %f\n", gsl_vector_float_get(testinrecf, j), gsl_vector_float_get(testinf, j));
+		// logDirect("%f, %f\n", gsl_vector_float_get(testinrecf, j), gsl_vector_float_get(testinf, j));
 	}
 	diffout /= nact;
 	// get max and min to calculate condition
@@ -614,564 +595,8 @@ int modSVDGSL(control_t *ptc, int wfs) {
 	cond = max/min;
 
 	logInfo("SVD Succeeded, decomposition (U, V and Sing) stored to files.");
-	logInfo("SVD zero singvals (0 is good): %d. Condition (close to 1 would be nice): %lf.", singvals, cond);
-	logInfo("SVD quality: in (double), in (float) ratio (should be 1): %lf and %lf", diffin, diffout);
+	logInfo("SVD # of zero singvals (0 is good): %d. Condition (close to 1 would be nice): %lf.", singvals, cond);
+	logInfo("SVD quality: in (double), in (float) ratio (must be 1): %lf and %lf", diffin, diffout);
 
-	
 	return EXIT_SUCCESS;
 }
-
-/* ---------------------------------------------------------------------------
- * file: svdproc3.c
- *
- * Calculates the pseudo-inverse of the influence matrix
- * through singular value decomposition.
- * This version is for all observation modes and is used as a procedure,
- * This is not a stand-alone program
- *
- * based on code created by Mark Ammons
- * last change: 21 January 2005 by ckeller@noao.edu
- * ---------------------------------------------------------------------------
- */
-
-// Singular Value Decomposition Algorithm Copyright (C) 2000, James Arvo  
-//
-// Given a matrix Q, this algorithm will find its singular value
-// decomposition Q = A * D * (R^T).  The algorithm replaces Q with A (they
-// have the same dimensions)  D is a diagonal matrix with the singular
-// values positioned, in decreasing order, along the main diagonal.
-// R is output in its transposed form (as R^T).
-
-// The program reads the input matrix Q from "influence.dat."  The first
-// two entries of "influence.dat" are ACTUATORS and 2 * TOTALSPOTS, or the
-// number of columns and rows of the influence matrix, respectively.
-
-// The program generates the pseudo-inverse of the influence matrix based
-// the SVD equation Q^-1 = R * D' * (A^T).  D' is a diagonal matrix with 
-// the reciprocal singular values on the main diagonal.  For an overdetermined
-// system (in which there are more spot offset measurements than actuators), 
-// the pseudo-inverse will produce the least-squares solution to a linear 
-// set of equations.  For an underdetermined system (in which there are
-// more actuators than spot offset measurements), no unique solution to the
-// set of linear equations is expected, but the pseudo-inverse will 
-// produce the result closest to the zero vector (which may not be the
-// desired result).
-
-// The program outputs the inverse of the influence matrix to "inverse.dat."
-// The first two entries of the file are ACTUATORS and 2 * TOTALSPOTS, or the
-// number of rows and columns of the inverse matrix, respectively.
-
-
-//#include "ctrla3.h"
-
-// This constant defines how many iterations that the singular
-// value decomposition algorithm in "svdcmp" will use.
-
-
-
-/*
-#define MAXITERATIONS 500
-int modSVD(control_t *ptc, int wfs) {
-  // ptc->wfs[wfs].scandir    defines whether x,y,or both axes are to be used
-  //         possible values for axis are defined in ctrla2.h
-
-	int i, j, k, l=0, p, q, r, t, iter;	// counters for decomposition
-	int nact=0, nsubap=0;
-	int n, m, chk1;
-
-	FILE *in;							// input Q from "influence.dat" (ptc->wfs[wfs].pinhole)
-//  FILE *out;							// output inverse matrix to "inverse.dat" (ptc->wfs[wfs].pinhole . inverse)
-	FILE *out2;							// output singular values to "singular.dat" (ptc->wfs[wfs].pinhole . singular)
-
-	// get nsubap and nact in two different ways (from file and from *ptc), these should match
-	in = fopen(ptc->wfs[wfs].influence, "r");
-	if (in == NULL) {
-		logWarn("Error opening input file %s: %s", ptc->wfs[wfs].influence, strerror(errno));
-		return EXIT_FAILURE;
-	}
-	
-	// check if the dimensions match
-	fscanf(in,"%d\n", &n);
-	if (n != 3) {
-		logWarn("%s not in correct format (dimensions expected: %d found: %d)", ptc->wfs[wfs].influence, 3, n);
-		return EXIT_FAILURE;
-	}
-	
-	// check if the dimension values match
-	fscanf(in,"%d\n%d\n", &n, &m);
-	fscanf(in,"%d\n", &chk1);
-	if (chk1 != 2) {
-		logWarn("%s not in correct format (dimension 3 appears to be incorrect (%d vs %d))", 2, chk1);
-		return EXIT_FAILURE;
-	}
-	
-	m *= 2;
-
-	for (i=0; i < ptc->wfc_count; i++) {
-		nact += ptc->wfc[i].nact;
-	}
-	nsubap = ptc->wfs[wfs].nsubap;
-
-	int bindex;							// row/col of the largest singular value
-	int jump=0;							// variable used for decomposition
-//  int modes;							// number of singular values to keep
-
-	double c, f, h, s, x, y, z;			// variable used for decomposition
-	double norm  = 0.0;					// variable used for decomposition
-	double g     = 0.0;					// variable used for decomposition
-	double scale = 0.0;					// variable used for decomposition
-	double biggest;						// largest singular value
-	double value;						// used to swap singular value entries
-
-	double Q[2 * nsubap][nact];			// influence matrix
-	double R[nact][nact];				// result matrix of decomposition
-	double D[nact][nact];				// matrix containing singular values
-
-	double solution1[nact][nact];		// result of (R * D')
-	double solution2[nact][2 * nsubap];	// pseudo-inverse
-
-	double Temp[nact];					// vector used for decomposition
-	double diag[nact];					// vector storing singular values
-
-  
-//  int flag;							// 0 if Q cannot be input from "influence.dat"
-//  char string[256];					//stores error message
-
-    
-  //Initialize variables and matrices
-
-	for (r = 0; r < m; ++r) {
-		for (t = 0; t < n; ++t) {
-			Q[r][t] = 0.0;
-			solution2[t][r] = 0.0;
-		}
-	}
-
-	for (r = 0; r < n; ++r) {
-		for (t = 0; t < n; ++t) {
-			solution1[r][t] = 0.0;
-			D[r][t] = 0.0;
-			R[r][t] = 0.0;
-		}
-	}
-
-  //--------------------------------------------------------------------------
-  //   get the influence matrix
-  //--------------------------------------------------------------------------
-
-	logInfo("Starting singular value decomposition for WFS %d (%s)", wfs, ptc->wfs[wfs].influence);
-	// printf("%d nact;   %d subapertures*2\n",n,m);
-	if (n == nact && m == 2*nsubap) {
-		for (t = 0; t < n; t++) {
-			for (r = 0; r < m; r++) {
-				fscanf(in,"%lg\n",&Q[r][t]);
-			}
-		}
-		fclose(in);
-	} else {
-		fclose(in);
-		logErr("input not in correct format. Program ended.");
-		return EXIT_FAILURE;
-	}
-
-// set values in one or the other axis to zero for 1-D operation
-	if (ptc->wfs[wfs].scandir == AO_AXES_X) {
-		for (t = 0; t < n; t++) 
-			for (r = 1; r < m; r = r + 2)
-			Q[r][t] = 0.0;
-	}
-	if (ptc->wfs[wfs].scandir == AO_AXES_Y) {
-		for (t = 0; t < n; t++) 
-			for (r = 0; r < m; r = r + 2)
-			Q[r][t] = 0.0;
-	}
-
-    
-//-----------------------------------------------------------------------
-//  singular value decomposition
-//-----------------------------------------------------------------------
-
-	for (i = 0; i < n; i++) {
-
-		Temp[i] = scale * g;
-		scale   = 0.0;
-		g       = 0.0;
-		s       = 0.0;
-		l       = i + 1;
-
-		if (i < m) {
-			for (k = i; k < m; k++) 
-				scale += fabs(Q[k][i]);
-			if (scale != 0.0) {
-				for(k = i; k < m; k++) {
-					Q[k][i] /= scale;
-					s += pow(Q[k][i], 2);
-				}
-				f = Q[i][i];
-				if (f >= 0.0) 
-					g = -1.0 * sqrt(s);
-				else
-					g = sqrt(s);
-				h = (f * g) - s;
-				Q[i][i] = f - g;
-				if (i != (n - 1)) {
-					for (j = l; j < n; j++) {
-						s = 0.0;
-						for(k = i; k < m; k++)
-							s += Q[k][i] * Q[k][j];
-						f = s / h;	
-						for(k = i; k < m; k++) 
-							Q[k][j] += f * Q[k][i];
-					}	
-				}
-				for (k = i; k < m; k++)
-					Q[k][i] *= scale;
-			}
-		}
-
-		diag[i] = scale * g;
-		g       = 0.0;
-		s       = 0.0;
-		scale   = 0.0;
-
-		if (i < m && i != n - 1) {
-			for (k = l; k < n; k++)
-				scale += fabs(Q[i][k]);
-			if (scale != 0.0) {
-				for( k = l; k < n; k++) {
-					Q[i][k] /= scale;
-					s += pow(Q[i][k], 2);
-				}
-				f = Q[i][l];
-				if (f >= 0.0) 
-					g = -1.0 * sqrt(s);
-				else
-					g = sqrt(s);
-				h = (f * g) - s;
-				Q[i][l] = f - g;
-				for (k = l; k < n; k++)
-					Temp[k] = Q[i][k] / h;
-				if (i != m - 1) {
-					for (j = l; j < m; j++) {
-						s = 0.0;
-						for (k = l; k < n; k++) 
-							s += Q[j][k] * Q[i][k];
-						for (k = l; k < n; k++)
-							Q[j][k] += s * Temp[k];
-					}
-				}
-				for (k = l; k < n; k++)
-					Q[i][k] *= scale;
-			}
-		}
-		if (norm < (fabs(diag[i]) + fabs(Temp[i]))) 
-			norm = fabs(diag[i]) + fabs(Temp[i]);
-	}
-
-	for (i = n - 1; i >= 0; i--) {
-		if (i < n - 1) {
-			if (g != 0.0) {
-				for (j = l; j < n; j++)
-					R[i][j] = (Q[i][j] / Q[i][l]) / g;
-				for (j = l; j < n; j++) {
-					s = 0.0;
-					for (k = l; k < n; k++)
-						s += Q[i][k] * R[j][k];
-					for (k = l; k < n; k++)
-						R[j][k] += s * R[i][k];
-				}
-			}
-			for (j = l; j < n; j++) {
-				R[i][j] = 0.0;
-				R[j][i] = 0.0;
-			}
-		}
-		R[i][i] = 1.0;
-		g = Temp[i];
-		l = i;
-	}
-
-	for (i = n - 1; i >= 0; i--) {
-		l = i + 1;
-		g = diag[i];
-
-		if (i < n - 1) {
-			for(j = l; j < n; j++){
-				Q[i][j] = 0.0;
-			}
-		}
-
-		if (g != 0.0) {
-			g = 1.0 / g;
-			if (i != n - 1) {
-				for (j = l; j < n; j++) {
-					s = 0.0;
-					for (k = l; k < m; k++)
-						s += Q[k][i] * Q[k][j];
-						
-					f = (s / Q[i][i]) * g;
-					for (k = i; k < m; k++)
-						Q[k][j] += f * Q[k][i];
-				}
-			}
-			for (j = i; j < m; j++)
-				Q[j][i] *= g;
-		} 
-		else {
-			for (j = i; j < m; j++)
-				Q[j][i] = 0.0;
-		}
-		Q[i][i] += 1.0;
-	}
-
-	for (k = n - 1; k >= 0; k--) {
-		for (iter = 1; iter <= MAXITERATIONS; iter++) {
-
-			for (l = k; l >= 0; l--) {
-				q = l - 1;
-				if (fabs(Temp[l]) + norm == norm) { 
-					jump = 1;
-					break;
-				}
-				if (fabs(diag[q]) + norm == norm) {
-					jump = 0;
-					break;
-				}
-			}
-
-			if(!jump) {
-				c = 0.0;
-				s = 1.0;
-				for (i = l; i <= k; i++) {
-					f = s * Temp[i];
-					Temp[i] *= c;
-					if (fabs(f) + norm == norm) 
-						break;
-					g = diag[i];
-
-					if (fabs(f) > fabs(g))
-						h = fabs(f) * sqrt(1.0 + pow((fabs(g) / fabs(f)), 2));
-					else if (fabs(g) > 0.0)
-						h = fabs(g) * sqrt(1.0 + pow((fabs(f) / fabs(g)), 2));
-					else 
-						h = 0.0;
-
-					diag[i] = h;
-					h = 1.0 / h;
-					c = g * h;
-					s = (-1.0 * f) * h;
-					for (j = 0; j < m; j++) {
-						y = Q[j][q];
-						z = Q[j][i];
-						Q[j][q] = (y * c) + (z * s);
-						Q[j][i] = (z * c) - (y * s);
-					}
-				}
-			}
-
-			z = diag[k];
-			if (l == k) {
-				if (z < 0.0) {
-					diag[k] = (-1.0 * z);
-					for (j = 0; j < n; j++)
-						R[k][j] *= -1.0; 
-				}
-				break;
-			}
-			if (iter >= MAXITERATIONS)
-				return 0;
-			x = diag[l];
-			q = k - 1;
-			y = diag[q];
-			g = Temp[q];
-			h = Temp[k];
-			f = (((y - z) * (y + z) + (g - h) * (g + h)) / (2.0 * h * y));
-
-			if (fabs(f) > 1.0)
-				g = fabs(f) * sqrt(1.0 + pow((1.0 / f), 2));
-			else
-				g = sqrt(1.0 + pow(f, 2));
-
-			if (f >= 0.0) 
-				f = ((x - z) * (x + z) + h * ((y / (f + fabs(g))) - h)) / x;
-			else
-				f = ((x - z) * (x + z) + h * ((y / (f - fabs(g))) - h)) / x;
-			c = 1.0;
-			s = 1.0;
-			for(j = l; j <= q; j++) {
-				i = j + 1;
-				g = Temp[i];
-				y = diag[i];
-				h = s * g;
-				g = c * g;
-
-				if (fabs(f) > fabs(h))
-					z = fabs(f) * sqrt(1.0 + pow((fabs(h) / fabs(f)), 2));
-				else if (fabs(h) > 0.0)
-					z = fabs(h) * sqrt(1.0 + pow((fabs(f) / fabs(h)), 2));
-				else 
-					z = 0.0;
-				Temp[j] = z;
-				c = f / z;
-				s = h / z;
-				f = (x * c) + (g * s);
-				g = (g * c) - (x * s);
-				h = y * s;
-				y = y * c;
-				for (p = 0; p < n; p++) {
-					x = R[j][p];
-					z = R[i][p];
-					R[j][p] = (x * c) + (z * s);
-					R[i][p] = (z * c) - (x * s);
-				}
-				if (fabs(f) > fabs(h))
-					z = fabs(f) * sqrt(1.0 + pow((fabs(h) / fabs(f)), 2));
-				else if (fabs(h) > 0.0)
-					z = fabs(h) * sqrt(1.0 + pow((fabs(f) / fabs(h)), 2));
-				else 
-					z = 0.0;
-				diag[j] = z;
-
-				if (z != 0.0) {
-					z = 1.0 / z;
-					c = f * z;
-					s = h * z;
-				}
-				f = (c * g) + (s * y);
-				x = (c * y) - (s * g);
-				for (p = 0; p < m; p++) {
-					y = Q[p][j];
-					z = Q[p][i];
-					Q[p][j] = (y * c) + (z * s);
-					Q[p][i] = (z * c) - (y * s);
-				}
-			}
-			Temp[l] = 0.0;
-			Temp[k] = f;
-			diag[k] = x;
-		}
-	}
-  
-  // Sort the singular values into descending order.
-
-	for (i = 0; i < n - 1; i++) {
-
-		biggest = diag[i];  		// Biggest singular value so far.
-		bindex  = i;        		// The row/col it occurred in.
-		for (j = i + 1; j < n; j++) {
-			if (diag[j] > biggest) {
-				biggest = diag[j];
-				bindex = j;
-			}            
-		}
-		if (bindex != i) { 	// Need to swap rows and columns.
-
-		// Swap columns in Q.
-			for (p = 0; p < m; ++p) {
-				value = Q[p][i];
-				Q[p][i] = Q[p][bindex];
-				Q[p][bindex] = value;
-			}
-
-		// Swap rows in R.
-			for (p = 0; p < n; ++p) {
-				value = R[i][p];
-				R[i][p] = R[bindex][p];
-				R[bindex][p] = value;
-			}
-
-		// Swap elements in diag
-			value = diag[i];
-			diag[i] = diag[bindex];
-			diag[bindex] = value;
-		}
-	}
-
-	// write decomposed inverse matrix into files
-	char *outfile;
-	asprintf(&outfile, "%s-singular", ptc->wfs[wfs].influence);
-
-	out2 = fopen(outfile, "w+");
-	if (out2==NULL) {
-		logErr("Error opening output file %s", outfile);
-		return EXIT_FAILURE;
-	}
-	if (ptc->wfs[wfs].singular == NULL) {
-		ptc->wfs[wfs].singular = calloc(n, sizeof( *(ptc->wfs[wfs].singular) ) );
-		if (ptc->wfs[wfs].singular == NULL) {
-			logErr("Failed to allocate memory for ptc->wfs[wfs].singular");
-			return EXIT_FAILURE;
-		}
-	}
-
-	fprintf(out2,"%d\n%d\n", 1, n);
-	for (i = 0; i < n; ++i) {
-		fprintf(out2,"%f\n",diag[i]);
-		ptc->wfs[wfs].singular[i] = diag[i];
-		//    printf("%d  %f\n",i+1,diag[i]);
-	}
-	fclose(out2);
-
-	// write mirror modes into file
-	asprintf(&outfile, "%s-dmmodes", ptc->wfs[wfs].influence);
-
-	out2 = fopen(outfile, "w+");
-	if (out2==NULL) {
-		logErr("Error opening output file %s", outfile);
-		return EXIT_FAILURE;
-	}
-
-	if (ptc->wfs[wfs].dmmodes == NULL) {
-		ptc->wfs[wfs].dmmodes = calloc(n*n, sizeof( *(ptc->wfs[wfs].dmmodes) ) );
-		if (ptc->wfs[wfs].dmmodes == NULL) {
-			logErr("Failed to allocate memory for ptc->wfs[wfs].dmmodes");
-			return EXIT_FAILURE;
-		}
-	}
-	
-	fprintf(out2,"%d\n%d\n%d\n",2, n, n);
-	
-	for (i = 0; i < n; ++i) {
-		for (j=0;j<n;j++) {
-			fprintf(out2,"%f\n",R[i][j]);
-			ptc->wfs[wfs].dmmodes[i*n + j] = R[i][j];
-		}
-	}
-	fclose(out2);
-
-
-	// write wavefront-sensor modes into file
-	asprintf(&outfile, "%s-wfsmodes", ptc->wfs[wfs].influence);
-
-	out2 = fopen(outfile, "w+");
-	if (out2==NULL) {
-		logErr("Error opening output file %s", outfile);
-		return EXIT_FAILURE;
-	}
-
-	if (ptc->wfs[wfs].wfsmodes == NULL) {
-		ptc->wfs[wfs].wfsmodes = calloc(n*m, sizeof( *(ptc->wfs[wfs].wfsmodes) ) );
-		if (ptc->wfs[wfs].wfsmodes == NULL) {
-			logErr("Failed to allocate memory for ptc->wfs[wfs].dmmodes");
-			return EXIT_FAILURE;
-		}
-	}
-	fprintf(out2,"%d\n", 3);
-	fprintf(out2,"%d\n%d\n%d\n",n, m/2, 2);
-	// TvW: todo: check if this storage format is OK
-	for (r = 0; r < n; ++r) {
-		for (t = 0; t < m; ++t) {
-			fprintf(out2,"%.12g\n",Q[t][r]);
-			ptc->wfs[wfs].wfsmodes[r*m + t] = Q[t][r];
-		}
-	}
-
-	fclose(out2);
-
-	logInfo("SVD complete, saved data to %s-singular, %s-dmmodes and %s-wfsmodes", \
-		ptc->wfs[wfs].influence, ptc->wfs[wfs].influence, ptc->wfs[wfs].influence);
-
-	return EXIT_SUCCESS;
-  
-}
-*/

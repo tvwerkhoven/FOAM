@@ -18,10 +18,6 @@
 #include <gsl/gsl_math.h>			// for small integer powers
 #include "foam_cs_library.h"
 
-// These are defined in foam_cs_library.c
-//extern control_t ptc;
-//extern config_t cs_config;
-
 // PROTOTYPES //
 /**************/
 

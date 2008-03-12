@@ -1,10 +1,17 @@
 /*! 
-	@file foam_modules-sim.c
+	@file foam_primemod-simstatic.c
 	@author @authortim
-	@date November 30 2007
+	@date 2008-03-12
 
-	@brief This file contains the functions to run @name in simulation mode, and 
-	links to other files like foam_modules-dm.c which simulates the DM.
+	@brief This is the prime module to run @name in static simulation.
+	
+	\section Info
+	
+	Static simulation in this sense means that only 1 image is loaded as simulated sensor output.
+	This can be useful to test actual system performance as this image is usually provided by 
+	the wavefront sensors themselves and thus costs no time. In simulation mode however, this 
+	image must be generated each time, and since this costs time, real benchmarking is not possible.
+	This static simulation tries to solve that.
 */
 
 // HEADERS //
@@ -14,32 +21,35 @@
 
 #define FOAM_MODSIM_STATIC "../config/simstatic.pgm"
 
-SDL_Surface *simimgsurf=NULL;	// Global surface to draw on
+// GLOBALS //
+/***********/
 
+float *simimgsurf=NULL;		// Global surface to draw on
 SDL_Surface *screen;		// Global surface to draw on
 SDL_Event event;			// Global SDL event struct to catch user IO
 
-int modInitModule(control_t *ptc) {
+// ROUTINES //
+/************/
 
-    /* Initialize defaults, Video and Audio */
-    if((SDL_Init(SDL_INIT_VIDEO) == -1)) { 
-        logErr("Could not initialize SDL: %s.\n", SDL_GetError());
-		return EXIT_FAILURE;
-    }
+int modInitModule(control_t *ptc) {
+    // initialize video
+    if (SDL_Init(SDL_INIT_VIDEO) == -1) 
+		logErr("Could not initialize SDL: %s", SDL_GetError());
+		
 	atexit(SDL_Quit);
 
 	SDL_WM_SetCaption("WFS output", "WFS output");
 
 	screen = SDL_SetVideoMode(ptc->wfs[0].res.x, ptc->wfs[0].res.y, 0, SDL_HWSURFACE|SDL_DOUBLEBUF);
-	if (screen == NULL) {
+	if (screen == NULL) 
 		logErr("Unable to set video: %s", SDL_GetError());
-		return EXIT_FAILURE;
-	}
+
 	return EXIT_SUCCESS;
 }
 
 void modStopModule(control_t *ptc) {
-	// let's just do nothing here because we're done anyway :P
+	// Unlock the screen, we might have stopped the module during drawing
+	modFinishDraw(screen);
 }
 
 int modOpenInit(control_t *ptc) {
@@ -65,16 +75,9 @@ int modOpenLoop(control_t *ptc) {
 	if (modParseSH((&ptc->wfs[0])) != EXIT_SUCCESS)			// process SH sensor output, get displacements
 		return EXIT_FAILURE;
 	
-	logInfo("frame: %ld", ptc->frames);
-	if (ptc->frames % 500 == 0) {
-		Slock(screen);
-		displayImg(ptc->wfs[0].image, ptc->wfs[0].res, screen);
-		modDrawGrid(&(ptc->wfs[0]), screen);
-		modDrawSubapts(&(ptc->wfs[0]), screen);
-		modDrawVecs(&(ptc->wfs[0]), screen);
-		Sulock(screen);
-		SDL_Flip(screen);
-	}
+	logInfo("Frame: %ld", ptc->frames);
+	if (ptc->frames % 500 == 0) 
+		modDrawStuff(ptc, 0, screen);
 
 	if (ptc->frames > 20000)
 		stopFOAM();
@@ -111,20 +114,12 @@ int modClosedLoop(control_t *ptc) {
 
 	//modSelSubapts(&ptc.wfs[0], 0, 0); 			// check samini (2nd param) and samxr (3d param)				
 	
-	if (modParseSH((&ptc->wfs[0])) != EXIT_SUCCESS)			// process SH sensor output, get displacements
+	if (modParseSH((&ptc->wfs[0])) != EXIT_SUCCESS)	// process SH sensor output, get displacements
 		return EXIT_SUCCESS;
 	
 	logInfo("frame: %ld", ptc->frames);
-	if (ptc->frames % 500 == 0) {
-		Slock(screen);
-		displayImg(ptc->wfs[0].image, ptc->wfs[0].res, screen);
-		modDrawGrid(&(ptc->wfs[0]), screen);
-		modDrawSubapts(&(ptc->wfs[0]), screen);
-		modDrawVecs(&(ptc->wfs[0]), screen);
-		Sulock(screen);
-		SDL_Flip(screen);
-		
-	}
+	if (ptc->frames % 500 == 0) 
+		modDrawStuff(ptc, 0, screen);
 	
 	if (ptc->frames > 20000)
 		stopFOAM();
@@ -138,37 +133,16 @@ int modClosedLoop(control_t *ptc) {
 }
 
 int modCalibrate(control_t *ptc) {
-	// todo: add dark/flat field calibrations
-	// dark:
-	//  add calibration enum
-	//  add function to calib.c with defined FILENAME
-	//  add switch to drvReadSensor which gives a black image (1)
-	// flat:
-	//  whats flat? how to do with SH sensor in place? --> take them out
-	//  add calib enum
-	//  add switch/ function / drvreadsensor
-	// sky:
-	//  same as flat
-	
+
 	logInfo("Switching calibration");
 	logInfo("No calibration in static simulation mode");	
-	// switch (ptc->calmode) {
-	// 	case CAL_PINHOLE: // pinhole WFS calibration
-	// 		return modCalPinhole(ptc, 0);
-	// 		break;
-	// 	case CAL_INFL: // influence matrix
-	// 		return modCalWFC(ptc, 0); // arguments: (control_t *ptc, int wfs)
-	// 		break;
-	// 	default:
-	// 		logErr("Unsupported calibrate mode encountered.");
-	// 		return EXIT_FAILURE;
-	// 		break;			
-	// }
+
 	return EXIT_SUCCESS;
 }
 
 int drvReadSensor() {
 	int i, x, y;
+	int simres[2];
 	logDebug("Now reading %d sensors", ptc.wfs_count);
 	
 	if (ptc.wfs_count < 1) {
@@ -185,27 +159,20 @@ int drvReadSensor() {
 	}
 	else {
 		if (simimgsurf == NULL) {
-			if (modReadPGM(FOAM_MODSIM_STATIC, &simimgsurf) != EXIT_SUCCESS) {
+			logDebug("Read PGM arr");
+			if (modReadPGMArr(FOAM_MODSIM_STATIC, &simimgsurf, simres) != EXIT_SUCCESS)
 				logErr("Cannot read static image.");
-				return EXIT_FAILURE;
-			}
-			if (simimgsurf->w != res.x || simimgsurf->h != res.y) {
+
+			if (simres[0] != res.x || simres[1] != res.y) {
 				logWarn("Simulation resolution incorrect for %s! (%dx%d vs %dx%d)", \
-					FOAM_MODSIM_STATIC, res.x, res.y, simimgsurf->w, simimgsurf->h);
+					FOAM_MODSIM_STATIC, res.x, res.y, simres[0], simres[1]);
 				return EXIT_FAILURE;			
 			}
-			// copy from SDL_Surface to array so we can work with it
-			//simimg = calloc( res.x*res.y, sizeof(*simimg));
-			// if (simimg == NULL) {
-			// 	logErr("Error allocating memory for simulation image");
-			// 	return EXIT_FAILURE;
-			// }
-			// else {
-			for (y=0; y<res.y; y++)
-				for (x=0; x<res.x; x++)
-					ptc.wfs[0].image[y*res.x + x] = (float) getpixel(simimgsurf, x, y);
-						
-			// }
+			
+			logDebug("Copying image to WFS image");
+			for (y=0; y<res.y*res.x; y++)
+				ptc.wfs[0].image[y] = simimgsurf[y];
+				
 		}
 	}
 

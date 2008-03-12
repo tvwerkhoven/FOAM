@@ -5,6 +5,11 @@ config_t ui_config = {
 	.use_syslog = false,
 };
 
+int sendMsg(const int sock, const char *buf) {
+	printf("sending, len: %d", (int) strlen(buf));
+	return write(sock, buf, strlen(buf)); // TODO non blocking maken
+}
+
 /* logging functions */
 void logInfo(const char *msg, ...) {
 	if (ui_config.loglevel < LOGINFO) 		// Do we need this loglevel?

@@ -1,10 +1,11 @@
 /*! 
-	@file foam_modules-sim.h
+	@file foam_primemod-simstatic.h
 	@author @authortim
-	@date November 30 2007
+	@date 2008-03-12
 
-	@brief This header file prototypes simulation functions.
+	@brief This header file links the prime module `simstatic' to various modules.
 */
+
 #ifndef FOAM_MODULES_SIMSTATIC
 #define FOAM_MODULES_SIMSTATIC
 

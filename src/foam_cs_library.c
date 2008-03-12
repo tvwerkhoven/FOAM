@@ -1,16 +1,16 @@
 /*! 
-@file foam_cs_library.c
-@brief Library file for the Control Software
-@author @authortim
-@date November 13 2007
+	@file foam_cs_library.c
+	@brief Library file for the Control Software
+	@author @authortim
+	@date November 13 2007
 
-This file contains things necessary to run the Control Software that are not related to adaptive optics itself. 
+	This file contains things necessary to run the Control Software that are not related to adaptive optics itself. 
 */
 
 #include "foam_cs_library.h"
 
 control_t ptc = { //!< Global struct to hold system characteristics and other data. Initialize with complete but minimal configuration
-	.mode = AO_MODE_LISTEN,
+	.mode = AO_MODE_OPEN,
 	.calmode = CAL_INFL, 	// or CAL_PINHOLE
 	.wfs_count = 0,
 	.wfc_count = 0,
@@ -137,7 +137,6 @@ void logErr(const char *msg, ...) {
 	va_end(ar);
 	
 	// There was an error, stop immediately
-//	stopFOAM();
 	exit(EXIT_FAILURE);
 }
 

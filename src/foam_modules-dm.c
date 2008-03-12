@@ -3,16 +3,18 @@
 	@author @authortim
 	@date December 7, 2007
 
-	@brief This file contains routines to simulate an n-actuator DM.
+	@brief This file contains routines to simulate TT mirrors and DM's.
 
 	\section Info
-	To run, see help at modSimDM(). This module can simulate the shape of an N-actuator piezo-electric driven membrane mirror.
+	This module can be used to simulate tip-tilt mirrors and deformable mirrors in wavefront-space.
 	
 	\section Functions
 	
-	\li modSimDM
+	\li modSimDM() - Simulates an n-actuator deformable mirror, given an actuator pattern, an aperture and voltages
+	\li modSimTT() - Simulates a tip-tilt mirror given a 2-element control vector.
 	
 	\section History
+	
 	This file is based on response2.c by C. Keller (ckeller@noao.edu)
 	which was last update on December 19, 2002. This code in turn was based
 	on response.c by Gleb Vdovin (gleb@okotech.com) with the following copyright notice:
@@ -26,15 +28,18 @@ by Prof. Oskar von der Luehe
 ovdluhe@kis.uni-freiburg.de
 \endverbatim 
 
+	\section Dependencies
+
+	This module does not depend on other modules.
+
 	\section License
 	Gleb Vdovin agreed to release his code into the public domain under the GPL on January 26, 2008.
 */
 
-// INCLUDES //
-/************/
+// HEADERS //
+/***********/
 
 #include "foam_modules-dm.h"
-
 
 // GLOBALS //
 /***********/
@@ -45,9 +50,8 @@ float *boundary=NULL;	// we store the aperture here
 float *act=NULL;		// we store the actuator pattern here
 float *actvolt=NULL;	// we store the actuator pattern with voltages applied here
 
-
-// FUNCTIONS BEGIN //
-/*******************/
+// ROUTINES //
+/*************/
 
 int modSimTT(gsl_vector_float *ctrl, float *image, coord_t res) {
 	int i,j;
@@ -78,75 +82,39 @@ int modSimDM(char *boundarymask, char *actuatorpat, int nact, gsl_vector_float *
 	float pi, rho, omega = 1.0, sum, sdif, update;
 	int ik;
 	pi = 4.0*atan(1);
-
-	SDL_Surface *boundarysurf, *actsurf;	// we load the aperture and actuator images in these SDL surfaces
+	
+	int boundaryres[2], actsurfres[2];
+//	SDL_Surface *boundarysurf, *actsurf;	// we load the aperture and actuator images in these SDL surfaces
 	float amp=0.1;							// amplitude of the DM response (used for calibration)
 
 	// read boundary mask file if this has not already been done before
 	if (boundary == NULL) {
-		if (modReadPGM(boundarymask, &boundarysurf) != EXIT_SUCCESS) {
+		if (modReadPGMArr(boundarymask, &boundary, boundaryres) != EXIT_SUCCESS)
 			logErr("Cannot read boundary mask");
-			return EXIT_FAILURE;
-		}
-		if (boundarysurf->w != res.x || boundarysurf->h != res.y) {
-			logErr("Boundary mask resolution incorrect! (%dx%d vs %dx%d)", res.x, res.y, boundarysurf->w, boundarysurf->h);
-			return EXIT_FAILURE;			
-		}
-		
-		// copy from SDL_Surface to array so we can work with it
-		boundary = calloc( res.x*res.y, sizeof(*boundary));
-		if (boundary == NULL) {
-			logErr("Error allocating memory for boundary image");
-			return EXIT_FAILURE;
-		}
-		else {
-			for (y=0; y<res.y; y++)
-				for (x=0; x<res.x; x++)
-					boundary[y*res.x + x] = (float) getpixel(boundarysurf, x, y);
-		
-			// normalize the boundary pattern
-			for (ik = 0; ik < res.x*res.y; ik++) {
-				if (*(boundary + ik) > 0) *(boundary + ik) = 1.;
-				else *(boundary + ik) = 0.;
-			}
-		}
-		
+			
+		if (boundaryres[0] != res.x || boundaryres[1] != res.y)
+			logErr("Boundary mask resolution incorrect! (%dx%d vs %dx%d)", res.x, res.y, boundaryres[0], boundaryres[1]);
+
 		logInfo("Read boundary '%s' succesfully (%dx%d)", boundarymask, res.x, res.y);
 	}
 	
 	// read actuator pattern file if this has not already been done before
 	if (act == NULL) {
-		if (modReadPGM(actuatorpat, &actsurf) != EXIT_SUCCESS) {
+		if (modReadPGMArr(actuatorpat, &act, actsurfres) != EXIT_SUCCESS)
 			logErr("Cannot read boundary mask");
-			return EXIT_FAILURE;
-		}
 
-		if (actsurf->w != res.x || actsurf->h != res.y) {
-			logErr("Actuatorn pattern resolution incorrect! (%dx%d vs %dx%d)", res.x, res.y, actsurf->w, actsurf->h);
-			return EXIT_FAILURE;			
-		}
-		
-		// copy from SDL_Surface to array so we can work with it
-		act = calloc((res.x) * (res.y), sizeof(*act));
-		if (act == NULL) {
-			logErr("Error allocating memory for actuator image");
-			return EXIT_FAILURE;
-		}
-		else {
-			for (y=0; y<res.y; y++)
-				for (x=0; x<res.x; x++)
-					act[y*res.x + x] = (float) getpixel(actsurf, x, y);
-		}
+		if (actsurfres[0] != res.x || actsurfres[1] != res.y)
+			logErr("Actuatorn pattern resolution incorrect! (%dx%d vs %dx%d)", res.x, res.y, actsurfres[0], actsurfres[1]);
+
 		logInfo("Read actuator pattern '%s' succesfully (%dx%d)", actuatorpat, res.x, res.y);
 	}
 
 	// allocate memory for actuator pattern with voltages
 	if (actvolt == NULL) {
 		actvolt = calloc((res.x) * (res.y), sizeof(*actvolt));
-		if (actvolt == NULL) {
+		if (actvolt == NULL)
 			logErr("Error allocating memory for actuator voltage image");
-			return EXIT_FAILURE;
-		}
+
 	}
 
 	// input linear and c=[-1,1], 'output' must be v=[0,255] and linear in v^2
@@ -193,10 +161,9 @@ int modSimDM(char *boundarymask, char *actuatorpat, int nact, gsl_vector_float *
 	if (resp == NULL) {
 		logDebug("Allocating memory for resp: %dx%d.", res.x, res.y);
 		resp = calloc(res.x*res.y, sizeof(*resp));
-		if (resp == NULL) {
+		if (resp == NULL)
 			logErr("Allocation error, exiting");
-			return EXIT_FAILURE;
-		}
+
 	}
 
 	// loop over all iterations

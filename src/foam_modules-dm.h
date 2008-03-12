@@ -1,5 +1,5 @@
 /*! 
-	@file foam_modules-sim.h
+	@file foam_modules-dm.h
 	@author @authortim
 	@date November 30 2007
 
@@ -9,13 +9,9 @@
 #define FOAM_MODULES_DM
 
 #include "foam_cs_library.h"
-
-// constants
+#include <math.h>
 
 #define	SOR_LIM	  (1.e-8)  // limit value for SOR iteration
-//#define NACT      37       // number of actuators
-
-// local prototypes
 
 /*!
 @brief Simulates the DM shape as function of input voltages.

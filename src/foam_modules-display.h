@@ -1,7 +1,9 @@
 /*! 
-@file foam_modules-display.h
-@brief This is the headerfile for graphics routines
-@author @authortim
+	@file foam_modules-display.h
+	@author @authortim
+	@date 2008-03-12
+
+	@brief This is the headerfile for graphics routines	
 */
 
 #ifndef FOAM_MODULES_DISPLAY
@@ -10,8 +12,6 @@
 #include "foam_cs_library.h"
 #include "SDL.h" 	// most portable way according to 
 					//http://www.libsdl.org/cgi/docwiki.cgi/FAQ_20Including_20SDL_20Headers
-
-
 
 /*!
 @brief This draws a rectangle starting at {coord[0], coord[1]} with size {size[0], size[1]} on screen *screen
@@ -36,6 +36,8 @@ void drawLine(int x0, int y0, int x1, int y1, SDL_Surface*screen);
 /*!
 @brief This draws all subapertures for a certain wfs
 
+Do not forget to call modBeginDraw()/modFinishDraw().
+
 @param [in] *wfsinfo wfs_t struct with info on the current wfs
 @param [in] *screen SDL_Surface to draw on
 */
@@ -44,13 +46,17 @@ int modDrawSubapts(wfs_t *wfsinfo, SDL_Surface *screen);
 /*!
 @brief This draws vectors from the center of the grid to the detected center of gravity
 
+Do not forget to call modBeginDraw()/modFinishDraw().
+
 @param [in] *wfsinfo wfs_t struct with info on the current wfs
 @param [in] *screen SDL_Surface to draw on
 */
 int modDrawVecs(wfs_t *wfsinfo, SDL_Surface *screen);
 
 /*!
-@brief This draws the subaperture grid
+@brief This draws the subaperture grid on a screen
+
+Do not forget to call modBeginDraw()/modFinishDraw().
 
 @param [in] *wfsinfo wfs_t struct with info on the current wfs
 @param [in] *screen SDL_Surface to draw on
@@ -58,19 +64,49 @@ int modDrawVecs(wfs_t *wfsinfo, SDL_Surface *screen);
 int modDrawGrid(wfs_t *wfsinfo, SDL_Surface *screen);
 
 /*!
-@brief This displays an image img with resolution res
+@brief This displays an image img with resolution res.
+
+This displays an image stored in row-major format in *img on the screen
+*screen. The resolution of the image to be drawn must also be specified, and
+this must not be bigger than the resolution of the SDL_Surface. Do not forget
+to call modBeginDraw()/modFinishDraw().
 
 @param [in] *img pointer to the image
 @param [in] res resolution of the image
 @param [in] *screen SDL_Surface to draw on
 */
-int displayImg(float *img, coord_t res, SDL_Surface *screen);
-void DrawPixel(SDL_Surface *screen, int x, int y, Uint8 R, Uint8 G, Uint8 B);
-void Sulock(SDL_Surface *screen);
-void Slock(SDL_Surface *screen);
+int modDisplayImg(float *img, coord_t res, SDL_Surface *screen);
 
-void drawStuff(control_t *ptc, int wfs, SDL_Surface *screen);
+/*!
+@brief This draws one RGB pixel at a specific coordinate
 
-Uint32 getpixel(SDL_Surface *surface, int x, int y);
+@param [in] *screen SDL_Surface to draw on
+@param [in] x x-coordinate to draw on
+@param [in] y y-coordinate to draw on
+@param [in] R red component of the colour
+@param [in] G green component of the colour
+@param [in] B blue component of the colour
+*/
+void drawPixel(SDL_Surface *screen, int x, int y, Uint8 R, Uint8 G, Uint8 B);
+
+/*!
+@brief Draw useful stuff on the screen
+
+This routine draws the sensor output, the lenslet grid,
+the tracker windows and the displacement vectors on the screen.
+You do \e not need to call modBeginDraw()/modFinishDraw() when using
+this routine.
+*/
+void modDrawStuff(control_t *ptc, int wfs, SDL_Surface *screen);
+
+/*!
+@brief Finish drawing (unlock the screen)
+*/
+void modFinishDraw(SDL_Surface *screen);
+
+/*!
+@brief Lock the screen, if necessary
+*/
+void modBeginDraw(SDL_Surface *screen);
 
 #endif /* FOAM_MODULES_DISPLAY */

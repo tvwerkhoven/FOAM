@@ -1,0 +1,19 @@
+Quick install howto:
+
+- Generate configure script:
+ $ autoreconf -s -i
+
+- Configure FOAM:
+ $ ./configure
+
+- Optionally: install missing libraries
+
+- Build the program:
+ $ make
+
+- Run FOAM:
+ $ cd src/
+ $ ./foamcs-<sim|dummy|statsim>
+
+- Connect to FOAM at default address:
+ $ telnet localhost 10000

@@ -39,6 +39,9 @@ PKG_CHECK_MODULES(SDL, sdl) # seems to give errors some times
 #SDL_CFLAGS = $(pkg-config SDL --cflags)
 #SDL_LIBS = $(pkg-config SDL --libs)
 
+### TEST FOR USER INPUT ###
+###########################
+
 # Test if we want to run as simulation or not
 AC_ARG_ENABLE([simulation],
 		AC_HELP_STRING([--enable-simulation], [enable simulation mode])],

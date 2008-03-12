@@ -8,12 +8,13 @@
 #ifndef FOAM_MODULES_SIM
 #define FOAM_MODULES_SIM
 
+#include <math.h>
+#include <fftw3.h> 					// we need this for modSimSH()
+#include <fitsio.h> 				// we need this to read FITS files
 #include "foam_cs_library.h"		// we link to the main program here (i.e. we use common (log) functions)
 #include "foam_modules-display.h"	// we need the display module to show debug output
-//#include "foam_modules-sh.h"		// we want the SH subroutines so we can track targets
 #include "foam_modules-dm.h"		// we want the DM subroutines here too
 #include "foam_modules-calib.h"		// we want the calibration
-#include <fftw3.h> 					// we need this for modSimSH()
 #include "SDL_image.h"				// we need this to read PGM files
 
 // These are defined in foam_cs_library.c
@@ -21,15 +22,15 @@ extern control_t ptc;
 //extern config_t cs_config;
 
 struct simul {
-	int wind[2]; 			// 'windspeed' in pixels/frame
-	int curorig[2]; 		// current origin
-	float *simimg; 			// pointer to the image we use to simulate stuff
-	int simimgres[2];		// resolution of the simulation image
-	float seeingfac;		// factor to worsen seeing (2--20)
-	fftw_complex *shin;		// input for fft algorithm
-	fftw_complex *shout;	// output for fft (but shin can be used if fft is inplace)
-	fftw_plan plan_forward; // plan, one time calculation on how to calculate ffts fastest
-	char wisdomfile[32];
+	int wind[2]; 			//!< 'windspeed' in pixels/frame
+	int curorig[2]; 		//!< current origin in the simulated wavefront image
+	float *simimg; 			//!< pointer to the image we use to simulate stuff
+	int simimgres[2];		//!< resolution of the simulation image
+	float seeingfac;		//!< factor to worsen seeing (2--20)
+	fftw_complex *shin;		//!< input for fft algorithm
+	fftw_complex *shout;	//!< output for fft (but shin can be used if fft is inplace)
+	fftw_plan plan_forward; //!< plan, one time calculation on how to calculate ffts fastest
+	char wisdomfile[32];	//!< filename to store the FFTW wisdom
 };
 
 // PROTOTYPES //

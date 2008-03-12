@@ -4,8 +4,6 @@
 	@date November 14 2007
 
 	@brief This is a client which can connect to the Control Software
-	
-	(was proto_ao_ui.c)
 
 	This file is a simple client which can connect to a CS running
 	on some computer over a socket. The program then reads user input

@@ -3,25 +3,26 @@
 	@author @authortim
 	@date January 28, 2008
 
-	@brief This file contains modules and functions related to Shack-Hartmann wavefront sensing used in 
-	adaptive optics setups.
+	@brief This file contains modules and functions related to Shack-Hartmann wavefront sensing.
 	
 	\section Info
-	This module can be used to do Shack Hartmann wavefront sensing.
+	This module can be used to do Shack Hartmann wavefront sensing and tracking.
 	
 	\section Functions
 	
 	The functions provided to the outside world are:
-	\li modSelSubapts
-	\li modCogTrack
-	\li modCorrTrack (broken atm)
-	\li modGetRef
-	\li modParseSH
+	\li modSelSubapts() - Selects subapertures suitable for tracking
+	\li modParseSH() - Tracks targets in previously selected subapertures
+	\li modCogTrack() - Center of Gravity tracking module
+	\li modCogFind() - Find target using a larger area, used for recovery 
+	\li modCalcCtrl() - Calculate WFC control vectors given target displacements
+
+	\section Dependencies
 	
-	
+	This module does not depend on other modules.
+
 	\section License
-	This code is licensed under the GPL, version 2.
-	
+	This code is licensed under the GPL, version 2.	
 */
 
 // HEADERS //
@@ -29,11 +30,16 @@
 
 #include "foam_modules-sh.h"
 
+// GLOBALS //
+/***********/
+
 FILE *rmsfp;
 
-int modSelSubapts(wfs_t *wfsinfo, float samini, int samxr) {
+// ROUTINES //
+/************/
 
-	// stolen from ao3.c by CUK
+int modSelSubapts(wfs_t *wfsinfo, float samini, int samxr) {
+	// stolen from ao3.c by CUK :)
 	int isy, isx, iy, ix, i, sn=0, nsubap=0; //init sn to zero!!
 	float sum=0.0, fi;					// check 'intensity' of a subapt
 	float csum=0.0, cs[] = {0.0, 0.0}; 	// for center of gravity
@@ -444,8 +450,7 @@ int modCalcCtrl(control_t *ptc, const int wfs, int nmodes) {
 	// set to maxmimum if 0 or less is passed.
 	if (nmodes <= 0) nmodes = nacttot;
 	
-	// TvW: tmp hack, remove line lateron
-	// nmodes = 2;
+
 	
 	if (nmodes > nacttot) {
 		logWarn("nmodes cannot be higher than the total number of actuators, cropping.");
@@ -453,7 +458,9 @@ int modCalcCtrl(control_t *ptc, const int wfs, int nmodes) {
 	}
 	
 //	float modeamp[nacttot];
-	
+
+	// TvW: tmp hack, remove line lateron
+	nmodes = 35;	
 	gsl_vector_float *work, *total; // temp work vector and vector to store all control commands for all WFCs
 	work = gsl_vector_float_calloc(nacttot);
 	total = gsl_vector_float_calloc(nacttot);

@@ -3,8 +3,27 @@
 	@author @authortim
 	@date November 30 2007
 
-	@brief This file contains the functions to run @name in simulation mode, and 
-	links to other files like foam_modules-dm.c which simulates the DM.
+	@brief This file contains the functions to run @name in simulation mode.
+	
+	\section Info
+	This module provides some functions to run an AO system in simulation mode.
+	
+	\section Functions
+
+	The functions provided to the outside world are:
+	\li drvFilterWheel() - Simulates setting a filterwheel to a certain position
+	\li drvReadSensor() - Simulates the readout of a wavefront sensor. This function in turn 
+	\li modSimSH() - Simulate a Shack Hartmann lenslet array (i.e. transform from wavefront space to image space)
+
+	\section Dependencies
+	
+	This module depends on:
+	\li foam_modules-display.c - to display the output
+	\li foam_modules-dm.c - to simulate TT and DM WFC's
+	\li foam_modules-calib.c - to calibrate the simulated WFC and TT mirror
+	
+	\section License
+	This code is licensed under the GPL, version 2.
 */
 
 // HEADERS //
@@ -17,12 +36,15 @@
 #define FOAM_MODSIM_APTMASK "../config/apert15-256.pgm"
 #define FOAM_MODSIM_ACTPAT "../config/dm37-256.pgm"
 
+// GLOBALS //
+/***********/
+
 struct simul simparams = {
-	.wind[0] = 0,
+	.wind[0] = 5,
 	.wind[1] = 0,
 	.curorig[0] = 0,
 	.curorig[1] = 0,
-	.seeingfac = 8.,
+	.seeingfac = 2.,
 	.simimg = NULL,
 	.plan_forward = NULL,
 	.wisdomfile = "fftw_wisdom.dat",
@@ -35,17 +57,19 @@ float nulval = 0.0;
 int anynul = 0;
 
 // temporary for TT correction calibration
-
 FILE *ttfd;
-	
+
+// global to hold telescope aperture
+float *aperture=NULL;
+
+// ROUTINES //
+/************/
+
 int drvReadSensor() {
 	int i;
 	logDebug("Now reading %d sensors, origin is at (%d,%d).", ptc.wfs_count, simparams.curorig[0], simparams.curorig[1]);
 	
-	if (ptc.wfs_count < 1) {
-		logErr("Nothing to process, no WFSs defined.");
-		return EXIT_FAILURE;
-	}
+	if (ptc.wfs_count < 1) logErr("Nothing to process, no WFSs defined.");
 	
 	// if filterwheel is set to pinhole, simulate a coherent image
 	if (ptc.mode == AO_MODE_CAL && ptc.filter == FILT_PINHOLE) {
@@ -54,8 +78,9 @@ int drvReadSensor() {
 			
 	}
 	else {
-		// This reads in wavefront.fits to memory at the first call, and each consecutive call
+		// This reads in wavefront.fits (FOAM_MODSIM_WAVEFRONT) to memory at the first call, and each consecutive call
 		// selects a subimage of that big image, defined by simparams.curorig
+		// TODO: replace with PGM
 		if (simAtm(FOAM_MODSIM_WAVEFRONT, ptc.wfs[0].res, simparams.curorig, ptc.wfs[0].image) != EXIT_SUCCESS) { 	
 			if (status > 0) {
 				fits_get_errstatus(status, errmsg);
@@ -72,83 +97,57 @@ int drvReadSensor() {
 		logDebug("simAtm() done");
 	} // end for (ptc.filter == FILT_PINHOLE)
 	
+	
+	// WE APPLY DM OR TT ERRORS HERE, 
+	// AND TEST IF THE WFC'S CAN CORRECT IT
+	///////////////////////////////////////
+
 	gsl_vector_float *tmpctrl;
 	tmpctrl = gsl_vector_float_calloc(ptc.wfc[0].nact);
-	
-	// we're faking some random drift here
-	// gsl_vector_float_set(tmpctrl, 0, (drand48()*2-1)*0.4);
-	// gsl_vector_float_set(tmpctrl, 1, (drand48()*2-1)*0.4);
-
-	// tmpctrl[0] = tmpctrl[0] + (drand48()*2-1)*0.4;
-	// tmpctrl[1] = tmpctrl[1] + (drand48()*2-1)*0.4;
-	// make sure we don't drift too far...
-	// if (tmpctrl[0] > 1) tmpctrl[0] = 1;
-	// if (tmpctrl[0] < -1) tmpctrl[0] = -1;
-	// if (tmpctrl[1] > 1) tmpctrl[1] = 1;
-	// if (tmpctrl[1] < -1) tmpctrl[1] = -1;
 	
 	// regular sawtooth drift is here:
 	// for (i=0; i<ptc.wfc[0].nact; i++) {
 	// 	gsl_vector_float_set(tmpctrl, i, ((ptc.frames % 20)/20.0 * 4 - 2) * ( round( (ptc.frames % 20)/20.0 )*2 - 1));
 	// }
-	// gsl_vector_float_set(tmpctrl, 0, ((ptc.frames % 20)/20.0 * 4 - 2) * ( round( (ptc.frames % 20)/20.0 )*2 - 1));
-	// gsl_vector_float_set(tmpctrl, 1, 0.0);
-	// tmpctrl[0] = ((ptc.frames % 40)/40.0 * 4 - 2) * ( round( (ptc.frames % 40)/40.0 )*2 - 1);
-	// tmpctrl[1] = 0.0;
-//	([0 - 1 ] * 2 - 1) *(round ([0 - 1])*2 - 1)
 
-	// disable here:
-	// tmpctrl[0] = 0;
-	// tmpctrl[1] = 0;
-	// and apply the DM
 	// logDebug("TT: faking tt with : %f, %f", gsl_vector_float_get(tmpctrl, 0), gsl_vector_float_get(tmpctrl, 1));
 	// if (ttfd == NULL) ttfd = fopen("ttdebug.dat", "w+");
 	// fprintf(ttfd, "%f, %f\n", gsl_vector_float_get(tmpctrl, 0), gsl_vector_float_get(tmpctrl, 1));
 	
-//	modSimDM(tmpctrl, ptc.wfs[0].image, ptc.wfs[0].res);
+//	modSimTT(tmpctrl, ptc.wfs[0].image, ptc.wfs[0].res);
 //	modSimDM(FOAM_MODSIM_APTMASK, FOAM_MODSIM_ACTPAT, ptc.wfc[0].nact, tmpctrl, ptc.wfs[0].image, ptc.wfs[0].res, -1); // last arg is for niter. -1 for autoset
+
+	// END OF FAKING ERRORS
+	///////////////////////
 	
 	// we simulate WFCs before the telescope to make sure they outer region is zero (Which is done by simTel())
 	logDebug("Now simulating %d WFC(s).", ptc.wfc_count);
 	for (i=0; i < ptc.wfc_count; i++)
 		simWFC(&ptc, i, ptc.wfc[i].nact, ptc.wfc[i].ctrl, ptc.wfs[0].image); // Simulate every WFC in series
 	
-	// Slock(screen);
-	// displayImg(ptc.wfs[0].image, ptc.wfs[0].res, screen);
-	// modDrawGrid(&(ptc.wfs[0]), screen);
-	// Sulock(screen);
-	// SDL_Flip(screen);
-	// sleep(1);
-	if (simTel(FOAM_MODSIM_APERTURE, ptc.wfs[0].image, ptc.wfs[0].res) != EXIT_SUCCESS) { // Simulate telescope (from aperture.fits)
+	// modStuff(ptc, 0, screen);
+	if (simTel(FOAM_MODSIM_APERTURE, ptc.wfs[0].image, ptc.wfs[0].res) != EXIT_SUCCESS) // Simulate telescope (from aperture.fits)
 			logErr("error in simTel().");
-	}
-	
-	// displayImg(ptc.wfs[0].image, ptc.wfs[0].res, screen);
 	
 	// Simulate the WFS here.
 	if (modSimSH() != EXIT_SUCCESS) {
-		logDebug("Simulating SH WFSs failed.");
+		logWarn("Simulating SH WFSs failed.");
 		return EXIT_FAILURE;
 	}	
 
-	// Slock(screen);
-	// displayImg(ptc.wfs[0].image, ptc.wfs[0].res, screen);
-	// modDrawGrid(&(ptc.wfs[0]), screen);
-	// Sulock(screen);
-	// SDL_Flip(screen);
-	// sleep(1);	
+	// modStuff(ptc, 0, screen);
 	
 	return EXIT_SUCCESS;
 }
 
 int modSimWind() {
 	if (simparams.simimgres[0] < ptc.wfs[0].res.x + 2*simparams.wind[0]) {
-		logErr("Simulated wavefront too small for current x-wind, setting to zero.");
+		logWarn("Simulated wavefront too small for current x-wind, setting to zero.");
 		simparams.wind[0] = 0;
 	}
 		
 	if (simparams.simimgres[1] < ptc.wfs[0].res.y + 2*simparams.wind[1]) {
-		logErr("Simulated wavefront too small for current y-wind, setting to zero.");
+		logWarn("Simulated wavefront too small for current y-wind, setting to zero.");
 		simparams.wind[1] = 0;
 	}
 	
@@ -188,6 +187,7 @@ int simObj(char *file, float *image) {
 
 int simWFC(control_t *ptc, int wfcid, int nact, gsl_vector_float *ctrl, float *image) {
 	// we want to simulate the tip tilt mirror here. What does it do
+	
 	logDebug("WFC %d (%s) has %d actuators, simulating", wfcid, ptc->wfc[wfcid].name, ptc->wfc[wfcid].nact);
 	logDebug("TT: Control is: %f, %f", gsl_vector_float_get(ctrl,0), gsl_vector_float_get(ctrl,1));
 	if (ttfd == NULL) ttfd = fopen("ttdebug.dat", "w+");
@@ -200,45 +200,27 @@ int simWFC(control_t *ptc, int wfcid, int nact, gsl_vector_float *ctrl, float *i
 		modSimDM(FOAM_MODSIM_APTMASK, FOAM_MODSIM_ACTPAT, nact, ctrl, image, ptc->wfs[0].res, -1); // last arg is for niter. -1 for autoset
 	}
 	else {
-		logErr("Unknown WFC (%d) encountered (not TT or DM, type: %d, name: %s)", wfcid, ptc->wfc[wfcid].type, ptc->wfc[wfcid].name);
+		logWarn("Unknown WFC (%d) encountered (not TT or DM, type: %d, name: %s)", wfcid, ptc->wfc[wfcid].type, ptc->wfc[wfcid].name);
+		return EXIT_FAILURE;
 	}
 					
 	return EXIT_SUCCESS;
 }
 
-// global to hold telescope aperture
-float *aperture=NULL;
 
 int simTel(char *file, float *image, coord_t res) {
 	int i;
-	int x, y;
-
-	// we read the file in here (only pgm now)
-//	modReadPGM(file, &aperture, &nx, &ny, &ngray);
+	int aptres[2];
 	
-	SDL_Surface *aperturesurf;
 	// read boundary mask file 
 	// float *aperture is globally defined and initialized to NULL.
 	if (aperture == NULL) {
-		if (modReadPGM(file, &aperturesurf) != EXIT_SUCCESS) {
+		if (modReadPGMArr(file, &aperture, aptres) != EXIT_SUCCESS)
 			logErr("Cannot read telescope aperture");
-			return EXIT_FAILURE;
-		}
-		if (res.x != aperturesurf->w || res.y != aperturesurf->h) {
-			logErr("Telescope aperture resolution incorrect! (%dx%d vs %dx%d)", res.x, res.y, aperturesurf->w, aperturesurf->h);
-			return EXIT_FAILURE;
-		}
-		// copy from SDL_Surface to array
-		aperture = calloc(aperturesurf->w *aperturesurf->h, sizeof(*aperture));
-		if (aperture == NULL) {
-			logErr("Error allocating memory for aperture image");
-			return EXIT_FAILURE;
-		}
-		else {
-			for (y=0; y<aperturesurf->h; y++)
-				for (x=0; x<aperturesurf->w; x++)
-					aperture[y*aperturesurf->w + x] = (float) getpixel(aperturesurf, x, y);
-		}
+
+		if (res.x != aptres[0] || res.y != aptres[1])
+			logErr("Telescope aperture resolution incorrect! (%dx%d vs %dx%d)", res.x, res.y, aptres[0], aptres[1]);
+
 	}
 	
 	logDebug("Aperture read successfully (%dx%d), processing with image.",  res.x, res.y);
@@ -528,7 +510,7 @@ int modSimSH() {
 			
 		} 
 	} // end looping over subapts
-	logDebug("Image simulation done.");	
+//	logDebug("Image simulation done.");	
 	//manually copy one subapt to check the alignment and shit
 	
 	
@@ -541,116 +523,3 @@ int drvFilterWheel(control_t *ptc, fwheel_t mode) {
 	ptc->filter = mode;
 	return EXIT_SUCCESS;
 }
-
-
-// int modReadPGM(char *fname, double **dbuf, int *t_nx, int *t_ny, int *t_ngray) {
-// 	char		c_int, first_string[110];
-// 	unsigned char	b_in;
-// 	int		i, j, bin_ind, nx=0, ny=0, ngray;
-// 	long		ik;
-// 	double		fi;
-// 	FILE		*fp;
-// 
-// 	logDebug("modReadPGM reading %s", fname);
-// 	if ((fp = fopen(fname,"r")) == NULL) {
-// 	    logErr("Error opening pgm file %s!", fname);
-// 		return EXIT_FAILURE;
-// 	}
-// 
-// 	// Read magic number
-// 
-// 	i = 0;
-// 	while((c_int = getc(fp)) != '\n') {
-// 	    first_string[i] = c_int;
-// 	    i++;
-// 	    if(i > 100) i = 100;
-// 	}
-// 	first_string[i] = 0;
-// 	// TvW null char \0
-// 	
-// 	// strcmp, moet op positie 0 staan
-// 	if((strstr(first_string, "P2")) != NULL ) {
-// 	  /*	    fprintf(stderr,
-// 		    "\tPortable ASCII graymap aperture mask detected \n"); */
-// 	    bin_ind = 0;
-// 	} else if((strstr(first_string, "P5")) != NULL ){
-// 	    //logDebug("Portable binary graymap aperture mask detected."); 
-// 	    bin_ind = 1;
-// 	} else {
-// 	    logErr("Unknown magic in pgm file: %s, should be P2 or P5",first_string);
-// 		return EXIT_FAILURE;
-// 	}
-// 	
-// /*
-//  *	Skip comments which start with a "#" and read the picture dimensions
-//  */
-// 
-// l1:
-// 	i = 0;
-// 	while ((c_int = getc(fp)) != '\n') {
-// 		first_string[i] = c_int;
-// 		i++;
-// 		if (i > 100) i = 100;
-// 	}
-// 	first_string[i] = 0;
-// 	
-// 	if (first_string[0] == '#')
-// 		goto l1;
-// 	else
-// 		sscanf(first_string, "%d %d", &nx, &ny);
-// 	
-// 	logDebug("string 1: %s in %s", first_string, fname);
-// 		/*  	fprintf(stderr, "\tX and Y dimensions: %d %d\n", nx, ny); */
-// 	*t_nx = nx;
-// 	*t_ny = ny;
-// 
-// /*
-// 	*	Read the number of grayscales 
-// */
-// 
-// 	i = 0;
-// 	while((c_int=getc(fp)) != '\n') {
-// 		first_string[i] = c_int;
-// 		i++;
-// 		if(i > 100) i = 100;
-// 	}
-// 	first_string[i] = 0;
-// 	sscanf(first_string, "%d", &ngray);
-// 		/*	fprintf(stderr, "\tNumber of gray levels:\t%d\n", ngray); */
-// 	*t_ngray = ngray;
-// 
-// /*
-// 	*	Read in graylevel data
-// */
-// 
-// 	*dbuf = (double *) calloc(nx*ny, sizeof(double));
-// 	if(*dbuf == NULL){
-// 		logErr("Buffer allocation error!");
-// 		return EXIT_FAILURE;
-// 	}
-// 	logDebug("%p is %d,%d big, storing %s", *dbuf, nx,ny, fname);
-// 
-// 	ik = 0;
-// 	for (i = 1; i <= nx; i += 1) {
-// 		for (j = 1; j <= ny; j += 1) {
-// 			if (bin_ind) {
-// 				if (fread (&b_in, sizeof(unsigned char), 1, fp) != 1) {
-// 					logErr("Error reading portable bitmap!");
-// 					return EXIT_FAILURE;
-// 				}
-// 				fi = (double) b_in;
-// 			} else {
-// 				if ((fscanf(fp,"%le",&fi)) == EOF){
-// 					logErr("End of input file reached!");
-// 					return EXIT_FAILURE;
-// 				}
-// 			}
-// 			*(*dbuf + ik) = fi;
-// 			ik ++;
-// 		}  
-// 	}
-// 
-// 	fclose(fp);
-// 	return EXIT_SUCCESS;
-// 	
-// }

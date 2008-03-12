@@ -3,13 +3,13 @@
 	@author @authortim
 	@date 2008-03-03 16:49
 
-	@brief This file contains routines to read out a PCDIG itifg camera
+	@brief This file contains routines to read out a PCDIG itifg camera.
 
 	\section Info
 	
 	\section Functions
 	
-	\li modSimDM
+	\li drvReadSensor() - Reads out a camera into the global ptc struct
 	
 	\section History
 	This file is based on itifg.cc, part of filter_control by Guus Sliepen <guus@sliepen.eu.org>

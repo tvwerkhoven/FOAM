@@ -13,12 +13,21 @@
 
 
 /*!
-@brief Reads a pgm file from disk into memory
+@brief Reads a pgm file from disk into an SDL_Surface
 
 @param [in] *fname the filename to read
 @param [out] **img the SDL_Surface that will hold the image
 */
-int modReadPGM(char *fname, SDL_Surface **img);
+// int modReadPGM(char *fname, SDL_Surface **img);
+
+/*!
+@brief Reads a pgm file from disk into an array
+
+@param [in] *fname the filename to read
+@param [out] **img the array that will hold the image (does not have to be allocated yet)
+@param [out] outres this will hold the resolution of img
+*/
+int modReadPGMArr(char *fname, float **img, int outres[2]);
 
 /*!
 @brief Writes a 8-bit ASCII PGM file from memory to disk
@@ -27,5 +36,14 @@ int modReadPGM(char *fname, SDL_Surface **img);
 @param [out] *img the SDL_Surface that will be written to disk
 */
 int modWritePGM(char *fname, SDL_Surface *img);
+
+/*!
+@brief Get the value of a specific pixel off a SDL_Surface
+
+@param [in] *surface SDL_Surface to read from
+@param [in] x x-coordinate to read
+@param [in] y y-coordinate to read
+*/
+Uint32 getPixel(SDL_Surface *surface, int x, int y);
 
 #endif /* FOAM_MODULES_PGM */

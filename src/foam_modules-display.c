@@ -5,7 +5,30 @@
 
 	@brief This file contains some functions to display stuff.
 	
-	This file contains some graphical routines. Needs cleaning badly
+	\section Info
+	This module can be used to display images, lines, rectangles etc. To draw everything in one go,
+	use modDrawStuff(). Otherwise, the seperate functions can be used. Make sure though, that before
+	drawing anything (except for modDrawStuff()), modBeginDraw() is called, and that drawing is finalized
+	with modFinishDraw().
+	
+	\section Functions
+	
+	The functions provided to the outside world are:
+	\li modBeginDraw() - Begin drawing/displaying data on a surface
+	\li modFinishDraw() - Finish drawing/displaying data on a surface and display
+	\li modDisplayImg() - Displays an image to an SDL_Surface
+	\li modDrawGrid() - Displays a square grid showing the lenslet array
+	\li modDrawSubapts() - Displays the current location of the subaperture tracking windows
+	\li modDrawVecs() - Draw vectors between the center of the Grid and the center of the tracker window
+	\li modDrawStuff() - Draw all of the above.
+
+	\section Dependencies
+	
+	This module does not depend on other modules.
+
+	\section License
+	
+	This code is licensed under the GPL, version 2.
 */
 
 // HEADERS //
@@ -13,10 +36,12 @@
 
 #include "foam_modules-display.h"
 
-void drawRect(int coord[2], int size[2], SDL_Surface *screen) {
+// ROUTINES //
+/************/
 
+void drawRect(int coord[2], int size[2], SDL_Surface *screen) {
 	// lower line
-	drawLine(coord[0], coord[1], coord[0] + size[0], coord[1], screen);
+	drawLine(coord[0], coord[1], coord[0] + size[0] + 1, coord[1], screen);
 	// top line
 	drawLine(coord[0], coord[1] + size[1], coord[0] + size[0], coord[1] + size[1], screen);
 	// left line
@@ -35,11 +60,11 @@ void drawLine(int x0, int y0, int x1, int y1, SDL_Surface *screen) {
 	float dx = (x1-x0)/(float) step;
 	float dy = (y1-y0)/(float) step;
 
-	DrawPixel(screen, x0, y0, 255, 255, 255);
+	drawPixel(screen, x0, y0, 255, 255, 255);
 	for(i=0; i<step; i++) {
 		x1 = x0+i*dx; // since x1 is an integer, we can't just increment this, steps of 0.7 pixels wouldn't work...
 		y1 = y0+i*dy;
-		DrawPixel(screen, x1, y1, 255, 255, 255); // draw directly to the screen in white
+		drawPixel(screen, x1, y1, 255, 255, 255); // draw directly to the screen in white
 	}
 }
 
@@ -51,14 +76,14 @@ void drawDash(int x0, int y0, int x1, int y1, SDL_Surface *screen) {
 	float dx = (x1-x0)/(float) step;
 	float dy = (y1-y0)/(float) step;
 
-	DrawPixel(screen, x0, y0, 255, 255, 255);
+	drawPixel(screen, x0, y0, 255, 255, 255);
 	for(i=0; i<step; i++) {
 		if ((i / 10) % 2 == 1)
 			continue;
 			
 		x1 = x0+i*dx; // since x1 is an integer, we can't just increment this, steps of 0.7 pixels wouldn't work...
 		y1 = y0+i*dy;
-		DrawPixel(screen, x1, y1, 255, 255, 255); // draw directly to the screen in white
+		drawPixel(screen, x1, y1, 255, 255, 255); // draw directly to the screen in white
 	}
 }
 
@@ -66,7 +91,7 @@ void drawDeltaLine(int x0, int y0, int dx, int dy, SDL_Surface *screen) {
 	drawLine(x0, y0, x0+dx, y0+dy, screen);
 }
 
-int displayImg(float *img, coord_t res, SDL_Surface *screen) {
+int modDisplayImg(float *img, coord_t res, SDL_Surface *screen) {
 	// ONLY does float images as input
 	int x, y, i;
 	float max=img[0];
@@ -81,7 +106,6 @@ int displayImg(float *img, coord_t res, SDL_Surface *screen) {
 	}
 	
 	logDebug("Displaying image, min: %f, max: %f.", min, max);
-
 							
 	Uint32 color;
 	// trust me, i'm not proud of this code either ;) TODO
@@ -152,9 +176,7 @@ int displayImg(float *img, coord_t res, SDL_Surface *screen) {
 	return EXIT_SUCCESS;
 }
 
-
-
-void DrawPixel(SDL_Surface *screen, int x, int y, Uint8 R, Uint8 G, Uint8 B) {
+void drawPixel(SDL_Surface *screen, int x, int y, Uint8 R, Uint8 G, Uint8 B) {
 	Uint32 color = SDL_MapRGB(screen->format, R, G, B);
 	if (x<0) x=0;
 	else if (x>screen->w) x=screen->w;
@@ -263,46 +285,25 @@ int modDrawGrid(wfs_t *wfsinfo, SDL_Surface *screen) {
 	return EXIT_SUCCESS;
 }
 
-void drawStuff(control_t *ptc, int wfs, SDL_Surface *screen) {
-	Slock(screen);
-	displayImg(ptc->wfs[wfs].image, ptc->wfs[wfs].res, screen);
+void modDrawStuff(control_t *ptc, int wfs, SDL_Surface *screen) {
+	modBeginDraw(screen);
+	modDisplayImg(ptc->wfs[wfs].image, ptc->wfs[wfs].res, screen);
 	modDrawGrid(&(ptc->wfs[wfs]), screen);
 	modDrawSubapts(&(ptc->wfs[0]), screen);
 	modDrawVecs(&(ptc->wfs[0]), screen);
-	Sulock(screen);
-	SDL_Flip(screen);
+	modFinishDraw(screen);
 }
 
-
-Uint32 getpixel(SDL_Surface *surface, int x, int y) {
-    int bpp = surface->format->BytesPerPixel;
-    /* Here p is the address to the pixel we want to retrieve */
-    Uint8 *p = (Uint8 *)surface->pixels + y * surface->pitch + x * bpp;
-    switch(bpp) {
-    case 1:
-        return *p;
-    case 2:
-        return *(Uint16 *)p;
-    case 3:
-        if (SDL_BYTEORDER == SDL_BIG_ENDIAN)
-            return p[0] << 16 | p[1] << 8 | p[2];
-        else
-            return p[0] | p[1] << 8 | p[2] << 16;
-    case 4:
-        return *(Uint32 *)p;
-    default:
-        return 0;       /* shouldn't happen, but avoids warnings */
-    }
-}
-
-void Slock(SDL_Surface *screen) {
+void modBeginDraw(SDL_Surface *screen) {
 	if ( SDL_MUSTLOCK(screen) )	{
 		if ( SDL_LockSurface(screen) < 0 )
 			return;
 	}
 }
 
-void Sulock(SDL_Surface *screen) {
+void modFinishDraw(SDL_Surface *screen) {
 	if ( SDL_MUSTLOCK(screen) )
 		SDL_UnlockSurface(screen);
+	
+	SDL_Flip(screen);
 }

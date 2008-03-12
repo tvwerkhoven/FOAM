@@ -12,7 +12,7 @@ CFLAGS+=-g -DDEBUG_ITIFG=255
 HAVE_DMALLOC=1
 LDFLAGS+=-ldmalloc
 
-# extra files buiten compilen om
+# extra files that are not compiled
 # EXTRA_DIST =
 
 # dummy moduleset

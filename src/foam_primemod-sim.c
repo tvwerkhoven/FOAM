@@ -1,25 +1,45 @@
+/*! 
+	@file foam_primemod-simstatic.c
+	@author @authortim
+	@date 2008-03-12
+
+	@brief This is the prime module to run @name in simulation mode.
+	
+	\section Info
+	
+	Simulation mode can be used to test the qualitative performance of certain modules. This simulation
+	starts with a statically generated wavefront and then simulates the telescope aperture, followed
+	by a simulation of the various wavefront correctors (TT and DM).
+	Finally, a Shack-Hartmann wavefront sensor (lenslet array) is simulated where the wavefront is converted
+	to an image. After that, the sensor output is available and from there on, simulation is not necessary anymore.
+	The simulated sensor output can be used to do correlation or center-of-gravity tracking on.
+*/
+
+// HEADERS //
+/***********/
+
 #include "foam_primemod-sim.h"
+
+// GLOBALS //
+/***********/
 
 SDL_Surface *screen;	// Global surface to draw on
 SDL_Event event;		// Global SDL event struct to catch user IO
 extern FILE *ttfd;
 
+// ROUTINES //
+/************/
+
 int modInitModule(control_t *ptc) {
 
     /* Initialize defaults, Video and Audio */
-    if((SDL_Init(SDL_INIT_VIDEO) == -1)) { 
-        logErr("Could not initialize SDL: %s.\n", SDL_GetError());
-		return EXIT_FAILURE;
-    }
+    if((SDL_Init(SDL_INIT_VIDEO) == -1)) logErr("Could not initialize SDL: %s.\n", SDL_GetError());
 	atexit(SDL_Quit);
 	
-	SDL_WM_SetCaption("WFS output", "WFS output");
+	SDL_WM_SetCaption("WFS 0 output", "WFS 0 output");
 
 	screen = SDL_SetVideoMode(ptc->wfs[0].res.x, ptc->wfs[0].res.y, 0, SDL_HWSURFACE|SDL_DOUBLEBUF);
-	if (screen == NULL) {
-		logErr("Unable to set video: %s", SDL_GetError());
-		return EXIT_FAILURE;
-	}
+	if (screen == NULL) logErr("Unable to set video: %s", SDL_GetError());
 	return EXIT_SUCCESS;
 }
 
@@ -28,7 +48,7 @@ void modStopModule(control_t *ptc) {
 	
 	fclose(ttfd);
 	// we need to unlock the screen or else something might go wrong
-	Sulock(screen);
+	modFinishDraw(screen);
 }
 
 int modOpenInit(control_t *ptc) {
@@ -61,7 +81,7 @@ int modOpenLoop(control_t *ptc) {
 		return EXIT_FAILURE;
 	
 //	if (ptc->frames % 20 == 0) {
-	drawStuff(ptc, 0, screen);
+	modDrawStuff(ptc, 0, screen);
 
 //	}
 
@@ -116,7 +136,7 @@ int modClosedLoop(control_t *ptc) {
 	// }
 	
 //	if (ptc->frames % 20 == 0) {
- 	drawStuff(ptc, 0, screen);
+ 	modDrawStuff(ptc, 0, screen);
 //	}
 	// if (ptc->frames % 20 == 0) {	
 	// 	logInfo("Dumping output...");
