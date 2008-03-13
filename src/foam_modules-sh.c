@@ -59,7 +59,7 @@ int modSelSubapts(wfs_t *wfsinfo, float samini, int samxr) {
 	int apmap2[cells[0]][cells[1]];		// aperture map 2
 //	int apcoo[cells[0] * cells[1]][2];  // subaperture coordinates in apmap
 	
-	logInfo("Selecting subapertures.");
+	logInfo(0, "Selecting subapertures.");
 	for (isy=0; isy<cells[1]; isy++) { // loops over all potential subapertures
 		for (isx=0; isx<cells[0]; isx++) {
 			// check one potential subapt (isy,isx)
@@ -96,7 +96,7 @@ int modSelSubapts(wfs_t *wfsinfo, float samini, int samxr) {
 			}
 		}
 	}
-	logInfo("CoG for subapts done, found %d with intensity > 0.", sn);
+	logInfo(0, "CoG for subapts done, found %d with intensity > 0.", sn);
 	
 	nsubap = sn; 			// nsubap: variable that contains number of subapertures
 	cx = cx / (float) sn; 	// TODO what does this do? why?
@@ -114,7 +114,7 @@ int modSelSubapts(wfs_t *wfsinfo, float samini, int samxr) {
 			csa = i; 		// new best guess for central subaperture
 		}
 	}
-	logDebug("ref best guess: %d (%d,%d)", csa, subc[csa][0], subc[csa][1]);
+	logInfo(0, "Reference apt best guess: %d (%d,%d)", csa, subc[csa][0], subc[csa][1]);
 	// put reference subaperture as subaperture 0
 	cs[0]        = subc[0][0]; 		cs[1] 			= subc[0][1];
 	subc[0][0]   = subc[csa][0]; 	subc[0][1] 		= subc[csa][1];
@@ -125,7 +125,6 @@ int modSelSubapts(wfs_t *wfsinfo, float samini, int samxr) {
 	apcoo[0][0]   = apcoo[csa][0]; 	apcoo[0][1] 	= apcoo[csa][1];
 	apcoo[csa][0] = cs[0];			apcoo[csa][1] 	= cs[1];
 
-	logDebug("refapt in 0: (%d,%d), nsubap %d", subc[0][0], subc[0][1], nsubap);
 	// center central subaperture; it might not be centered if there is
 	// a large shift between the expected and the actual position in the
 	// center of gravity approach above
@@ -147,10 +146,10 @@ int modSelSubapts(wfs_t *wfsinfo, float samini, int samxr) {
 		}
 	}
 	
-	logDebug("old subx=%d, old suby=%d",subc[0][0],subc[0][1]);
+	logInfo(0, "old subx=%d, old suby=%d",subc[0][0],subc[0][1]);
 	subc[0][0] += (int) (cs[0]/csum+0.5) - shsize[0]/2; // +0.5 to prevent integer cropping rounding error
 	subc[0][1] += (int) (cs[1]/csum+0.5) - shsize[1]/2; // use shsize/2 because or CoG is for a larger subapt (shsize and not shsize/2)
-	logDebug("new subx=%d, new suby=%d",subc[0][0],subc[0][1]);
+	logInfo(0, "new subx=%d, new suby=%d",subc[0][0],subc[0][1]);
 
 	// enforce maximum radial distance from center of gravity of all
 	// potential subapertures if samxr is positive
@@ -177,11 +176,12 @@ int modSelSubapts(wfs_t *wfsinfo, float samini, int samxr) {
 	while (samxr < 0) {
 		samxr = samxr + 1;
 		// print ASCII map of aperture
+		logInfo(0, "ASCII map of aperture:");
 		for (isy=0; isy<cells[1]; isy++) {
 			for (isx=0; isx<cells[0]; isx++)
-				if (apmap[isx][isy] == 0) logDirect(" "); 
-				else logDirect("X");
-			logDirect("\n");
+				if (apmap[isx][isy] == 0) logInfo(LOG_NOFORMAT, " "); 
+				else logInfo(LOG_NOFORMAT, "X");
+			logInfo(LOG_NOFORMAT, "\n");
 		}
 		
 		sn = 1; // start with subaperture 1 since subaperture 0 is the reference
@@ -214,7 +214,7 @@ int modSelSubapts(wfs_t *wfsinfo, float samini, int samxr) {
 
 	}
 	wfsinfo->nsubap = nsubap; // store to global configuration struct
-	logInfo("Selected %d usable subapertures", nsubap);
+	logInfo(0, "Selected %d usable subapertures", nsubap);
 	
 	// set remaining subaperture coordinates to 0
 	for (sn=nsubap; sn<cells[0]*cells[1]; sn++) {
@@ -224,13 +224,13 @@ int modSelSubapts(wfs_t *wfsinfo, float samini, int samxr) {
 		apcoo[sn][1] = 0;
 	}
 	
-	logDebug("final gridcs:");
+	logDebug(0, "final gridcs:");
 	for (sn=0; sn<nsubap; sn++) {
 		apcoo[sn][1] *= shsize[1];
 		apcoo[sn][0] *= shsize[0];
-		logDirect("%d (%d,%d) ", sn, wfsinfo->gridc[sn][0], wfsinfo->gridc[sn][1]);
+		logDebug(LOG_NOFORMAT, "%d (%d,%d) ", sn, wfsinfo->gridc[sn][0], wfsinfo->gridc[sn][1]);
 	}
-	logDirect("\n");
+	logDebug(LOG_NOFORMAT, "\n");
 	
 /*	int cfd;
 	char *cfn;
@@ -242,7 +242,7 @@ int modSelSubapts(wfs_t *wfsinfo, float samini, int samxr) {
 		logErr("Unable to write subapt img to file");
 
 	close(cfd);
-	logInfo("Subaperture definition image saved in file %s",cfn);*/
+	logInfo(0, "Subaperture definition image saved in file %s",cfn);*/
 	return EXIT_SUCCESS;
 }
 
@@ -274,7 +274,7 @@ void modCogTrack(wfs_t *wfsinfo, float *aver, float *max, float coords[][2]) {
 //	uint16_t *gp, *dp; // pointers to gain and dark
 	float  *ip, *cp; // pointers to raw, processed image
 
-	logDebug("Starting modCogTrack for %d subapts (CoG mode)", nsubap);
+	logDebug(LOG_SOMETIMES, "Starting modCogTrack for %d subapts (CoG mode)", nsubap);
 	
 	// Process the rest of the subapertures here:		
 	// loop over all subapertures, except sn=0 (ref subapt)
@@ -362,7 +362,7 @@ int modParseSH(wfs_t *wfsinfo) {
 	// therefore we can simply update the lower left coord by subtracting the coordinates.
 //	float sum, cog[2];
 	float rmsx=0.0, rmsy=0.0;
-	//logInfo("Coords: ");
+	//logInfo(0, "Coords: ");
 	
 	for (i=0; i<wfsinfo->nsubap; i++) {
 		// store the displacement vectors (wrt center of subaperture grid):
@@ -373,7 +373,7 @@ int modParseSH(wfs_t *wfsinfo) {
 		// the tracker window.
 		// Finally we subtract half the size of the tracker window  ( = subaperture grid/4) to fix everything.
 
-//		logDirect("%d (%d,%d) ", i, wfsinfo->gridc[i][0], wfsinfo->gridc[i][1]);
+//		logDebug(LOG_NOFORMAT, "%d (%d,%d) ", i, wfsinfo->gridc[i][0], wfsinfo->gridc[i][1]);
 		gsl_vector_float_set(wfsinfo->disp, 2*i+0, wfsinfo->subc[i][0] - wfsinfo->gridc[i][0] - coords[i][0] - wfsinfo->shsize[0]/4);
 		
 		// wfsinfo->disp[i][0] = (wfsinfo->subc[i][0] - wfsinfo->gridc[i][0]);
@@ -385,7 +385,7 @@ int modParseSH(wfs_t *wfsinfo) {
 		// wfsinfo->disp[i][1] -= coords[i][1];
 		// wfsinfo->disp[i][1] -= wfsinfo->shsize[1]/4;
 
-//		logDirect("(%f, %f) ", gsl_vector_float_get(wfsinfo->disp, 2*i+0), gsl_vector_float_get(wfsinfo->disp, 2*i+1));
+//		logDebug(LOG_NOFORMAT, "(%f, %f) ", gsl_vector_float_get(wfsinfo->disp, 2*i+0), gsl_vector_float_get(wfsinfo->disp, 2*i+1));
 		rmsx += gsl_pow_2((double) gsl_vector_float_get(wfsinfo->disp, 2*i+0));
 		rmsy += gsl_pow_2((double) gsl_vector_float_get(wfsinfo->disp, 2*i+1));
 		
@@ -395,7 +395,7 @@ int modParseSH(wfs_t *wfsinfo) {
 			gsl_vector_float_get(wfsinfo->disp, 2*i+1) > wfsinfo->shsize[1]/2 || 
 			gsl_vector_float_get(wfsinfo->disp, 2*i+1) < -wfsinfo->shsize[0]/2) {
 		
-//			logDebug("Runaway subapt detected! (%f,%f)", wfsinfo->disp[i][0], wfsinfo->disp[i][1]);
+//			logDebug(0, "Runaway subapt detected! (%f,%f)", wfsinfo->disp[i][0], wfsinfo->disp[i][1]);
 			// xc = (wfsinfo->subc[i][0] / wfsinfo->shsize[0]) * wfsinfo->shsize[0];
 			// yc = (wfsinfo->subc[i][1] / wfsinfo->shsize[1]) * wfsinfo->shsize[1];
 			// modCogFind(wfsinfo, xc, yc, wfsinfo->shsize[0], wfsinfo->shsize[1], 0.0, &sum, cog);
@@ -405,7 +405,7 @@ int modParseSH(wfs_t *wfsinfo) {
 			// 
 			// wfsinfo->disp[i][0] = cog[0];
 			// coords[i][1] = cog[1];
-			// logDebug("Runaway subapt saved! (%f,%f)", cog[0], cog[1]);
+			// logDebug(0, "Runaway subapt saved! (%f,%f)", cog[0], cog[1]);
 			// exit(0);
 		}
 		
@@ -419,10 +419,10 @@ int modParseSH(wfs_t *wfsinfo) {
 	
 	gsl_vector_float_sub(wfsinfo->disp, wfsinfo->refc);
 		
-//	logDirect("\n");
+//	logDebug(LOG_NOFORMAT, "\n");
 	rmsx = sqrt(rmsx/wfsinfo->nsubap);
 	rmsy = sqrt(rmsy/wfsinfo->nsubap);
-	logInfo("RMS displacement: x: %f, y: %f", rmsx, rmsy);
+	logInfo(LOG_SOMETIMES, "RMS displacement: x: %f, y: %f", rmsx, rmsy);
 	if (rmsfp == NULL) rmsfp = fopen("ttdebug-rms.dat", "w+");
 	fprintf(rmsfp, "%f, %f\n", rmsx, rmsy);
 	
@@ -430,7 +430,7 @@ int modParseSH(wfs_t *wfsinfo) {
 }
 
 int modCalcCtrl(control_t *ptc, const int wfs, int nmodes) {
-	logDebug("Calculating WFC ctrls");
+	logDebug(LOG_SOMETIMES, "Calculating WFC ctrls");
 	// function assumes presence of dmmodes, singular and wfsmodes...
 	if (ptc->wfs[wfs].dmmodes == NULL || ptc->wfs[wfs].singular == NULL || ptc->wfs[wfs].wfsmodes == NULL) {
 		logWarn("Cannot calculate WFC ctrls, calibration incomplete.");
@@ -471,11 +471,11 @@ int modCalcCtrl(control_t *ptc, const int wfs, int nmodes) {
 	oldsize = ptc->wfs[wfs].disp->size;
 	ptc->wfs[wfs].disp->size = nsubap*2;
 	
-	logDebug("Calculating control stuff for WFS %d (modes: %d)", wfs, nmodes);
+	logDebug(LOG_SOMETIMES, "Calculating control stuff for WFS %d (modes: %d)", wfs, nmodes);
 	for (i=0; i < nsubap; i++)
-		logDirect("(%f, %f)", gsl_vector_float_get(ptc->wfs[wfs].disp, 2*i+0), gsl_vector_float_get(ptc->wfs[wfs].disp, 2*i+1));
+		logDebug(LOG_SOMETIMES | LOG_NOFORMAT, "(%f, %f)", gsl_vector_float_get(ptc->wfs[wfs].disp, 2*i+0), gsl_vector_float_get(ptc->wfs[wfs].disp, 2*i+1));
 		
-	logDirect("\n");
+	logDebug(LOG_SOMETIMES | LOG_NOFORMAT, "\n");
 	
 //	gsl_linalg_SV_solve(ptc->wfs[wfs].wfsmodes, v, sing, testout, testinrec);	
 	
@@ -504,7 +504,7 @@ int modCalcCtrl(control_t *ptc, const int wfs, int nmodes) {
 	// gsl_blas_sgemv(CblasNoTrans, 1.0, ptc->wfs[wfs].dmmodes, work, 0.0, total);
 	
 	// copy complete control vector to seperate vectors
-	logDebug("Storing reconstructed actuator command to seperate vectors:");
+	logDebug(LOG_SOMETIMES, "Storing reconstructed actuator command to seperate vectors:");
 	j=0;
 	float old, ctrl;
 	for (wfc=0; wfc< ptc->wfc_count; wfc++) {
@@ -513,75 +513,15 @@ int modCalcCtrl(control_t *ptc, const int wfs, int nmodes) {
 			old = gsl_vector_float_get(ptc->wfc[wfc].ctrl, i);
 			
 			gsl_vector_float_set(ptc->wfc[wfc].ctrl, i, old- (ctrl*ptc->wfc[wfc].gain)); //*ptc->wfc[wfc].gain
-			logDirect("%f -> (%d,%d) ", gsl_vector_float_get(ptc->wfc[wfc].ctrl, i), wfc, i);
+			logDebug(LOG_SOMETIMES | LOG_NOFORMAT, "%f -> (%d,%d) ", gsl_vector_float_get(ptc->wfc[wfc].ctrl, i), wfc, i);
 			j++;
 //			if (j >= nmodes) break;
 		}
-		logDirect("\n");
+		logDebug(LOG_SOMETIMES | LOG_NOFORMAT, "\n");
 	}
-	logDirect("\n");
+	logDebug(LOG_SOMETIMES | LOG_NOFORMAT, "\n");
 	ptc->wfs[wfs].disp->size = oldsize;
-		
-	// logDebug("Linear output of wfsmodes:");
-	// for (i=0; i<2*nacttot*nsubap; i++)
-	// 	logDirect("%f ", ptc->wfs[wfs].wfsmodes[i]);
-	// logDirect("\n");
-	// 
-	// logDebug("Linear output of dmmodes:");
-	// for (i=0; i<nacttot*nacttot; i++)
-	// 	logDirect("%f ", ptc->wfs[wfs].dmmodes[i]);
-	// logDirect("\n");
-	// 
-	// 
-	// logDebug("Linear output of singval:");
-	// for (i=0; i<nacttot; i++)
-	// 	logDirect("%f ", ptc->wfs[wfs].singular[i]);
-	// logDirect("\n");
-		
-
-	// THIS IS OLD CODE, DIDN'T REALLY WORK ^_^ REPLACED BY GSL ROUTINES
-	
-// 	i=0;
-// 	// first calculate mode amplitudes
-// 	for (wfc=0; wfc< ptc->wfc_count; wfc++) { // loop over all WFCs
-// 		for (act=0; act < ptc->wfc[wfc].nact; act++) { // loop over all acts for WFC 'wfc'
-// 			sum=0.0;
-// 
-// 			// TODO: what coordinate of wfsmodes do we need?
-// 			// TODO: this code is ugly, reformat the data-readout please!
-// 			for (j=0; j<nsubap; j++) // loop over all subapertures
-// 				sum = sum + ptc->wfs[wfs].wfsmodes[j*nacttot+i] * (ptc->wfs[wfs].disp[j][0]-ptc->wfs[wfs].refc[j][0]-ptc->wfs[wfs].stepc.x)
-// 					+ ptc->wfs[wfs].wfsmodes[nacttot*nsubap+j*nacttot+i] * (ptc->wfs[wfs].disp[j][1]-ptc->wfs[wfs].refc[j][1]-ptc->wfs[wfs].stepc.y);
-// 
-// 				// sum = sum + ptc->wfs[wfs].wfsmodes[j*nacttot+i] * (ptc->wfs[wfs].disp[j][0]-ptc->wfs[wfs].refc[j][0]-ptc->wfs[wfs].stepc.x)
-// 				// 	+ ptc->wfs[wfs].wfsmodes[nacttot*nsubap+j*nacttot+i] * (ptc->wfs[wfs].disp[j][1]-ptc->wfs[wfs].refc[j][1]-ptc->wfs[wfs].stepc.y);
-// // this was wrong:
-// //				sum = sum + ptc->wfs[wfs].wfsmodes[i*2*nsubap+j*2] * (ptc->wfs[wfs].disp[j][0]-ptc->wfs[wfs].refc[j][0])
-// //					+ ptc->wfs[wfs].wfsmodes[i*2*nsubap+j*2+1] * (ptc->wfs[wfs].disp[j][1]-ptc->wfs[wfs].refc[j][1]);
-// 				
-// //			logDirect("%f ", sum);
-// 			modeamp[i] = sum;
-// 			i++;
-// 		}
-// 	}
-// 	
-// 	// apply inverse singular values and calculate actuator amplitudes	
-// 	i=0;
-// 	for (wfc=0; wfc< ptc->wfc_count; wfc++) { // loop over all WFCs
-// 		for (act=0; act < ptc->wfc[wfc].nact; act++) { // loop over all acts for WFC 'wfc'
-// 			sum=0.0;
-// 			for (j=0;j<nmodes;j++) // loop over all system modes that are used
-// 				sum += ptc->wfs[wfs].dmmodes[j*nacttot+i]*modeamp[j]/ptc->wfs[wfs].singular[j];
-// 
-// //			logDirect("%f ", sum);
-// 			// TODO: negative?
-// 			ptc->wfc[wfc].ctrl[act] += -sum * ptc->wfc[wfc].gain;
-// 			i++;
-// 			if (i >= 2) return EXIT_SUCCESS;
-// 		}
-// 	}
-//	logDirect("\n");
-	
+			
 	return EXIT_SUCCESS;
 }
 
@@ -1022,7 +962,7 @@ void modGetRef(wfs_t *wfsinfo) {
 	for (i=0; i<shsize[0]*shsize[1]; i++)
 		wfsinfo->refim[i] = refbest[i];
 
-	logInfo("Got new reference image, sharp: %f, aver: %f", sharp, aver);
+	logInfo(0, "Got new reference image, sharp: %f, aver: %f", sharp, aver);
 	// We have a new ref, check the displacement vectors for this new ref
 	// TvW: TODO
 }

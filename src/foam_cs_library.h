@@ -52,6 +52,8 @@ typedef unsigned char u_char;
 /********************/
 
 char logmessage[COMMANDLEN];
+#define LOG_SOMETIMES 1
+#define LOG_NOFORMAT 2
 
 // STRUCTS AND TYPES //
 /*********************/
@@ -232,7 +234,7 @@ typedef struct { // config_t
 	FILE *debugfd;				//!< associated filepointer
 	bool use_syslog; 			//!< syslog usage flag
 	char syslog_prepend[32]; 	//!< string to prepend to syslogs
-	bool use_stderr; 			//!< stderr usage flag (do we want to log to stderr or not?)
+	bool use_stdout; 			//!< stdout usage flag (do we want to log to stdout/stderr or not?)
 	level_t loglevel;			//!< level to log (see \c level_t)
 	int logfrac;				//!< fraction to log for info and debug (1 is always, 50 is 1/50 times)
 } config_t;
@@ -333,18 +335,10 @@ is checked to see if the user requested output to stderr. Finally,
 \a cs_config.use_syslog is checked to see if output to syslog is desired.
 This function does not report any problems at all.
 
+@param [in] flag Some options on how to log the data
 @param [in] msg The string to be passed on to vfprintf.
 */
-void logInfo(const char *msg, ...);
-
-/*!
-@brief This directly prints something to the log files and/or screen without formatting
-
-Works the same as logInfo() in the sense that it uses the same files/streams etc.
-
-@param [in] msg The string to be passed on to vfprintf.
-*/
-void logDirect(const char *msg, ...);
+void logInfo(const int flag, const char *msg, ...);
 
 /*!
 @brief logErr() prints out error messages to the appropriate streams, and exits.
@@ -373,9 +367,10 @@ void logWarn(const char *msg, ...);
 
 This function is used for debug logging. See documentation on logInfo() for more information.
 
+@param [in] flag Some options on how to log the data
 @param [in] msg The string to be passed on to vfprintf.
 */
-void logDebug(const char *msg, ...);
+void logDebug(const int flag, const char *msg, ...);
 
 /*!
 @brief Parse a \a var = \a value configuration pair stored in a config file.

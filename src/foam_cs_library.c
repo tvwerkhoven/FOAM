@@ -10,7 +10,7 @@
 #include "foam_cs_library.h"
 
 control_t ptc = { //!< Global struct to hold system characteristics and other data. Initialize with complete but minimal configuration
-	.mode = AO_MODE_OPEN,
+	.mode = AO_MODE_CLOSED,
 	.calmode = CAL_INFL, 	// or CAL_PINHOLE
 	.wfs_count = 0,
 	.wfc_count = 0,
@@ -26,9 +26,9 @@ config_t cs_config = {
 	.debugfd = NULL,
 	.use_syslog = false,
 	.syslog_prepend = "foam",
-	.use_stderr = true,
+	.use_stdout = true,
 	.loglevel = LOGDEBUG,
-	.logfrac = 1
+	.logfrac = 1000
 };
 
 conntrack_t clientlist;
@@ -44,82 +44,18 @@ static int formatLog(char *output, const char *prepend, const char *msg) {
 
 	output[0] = '\0'; // reset string
 	
-	strcat(output,timestr);
-	strcat(output,prepend);
-	strcat(output,msg);
+	strcat(output, timestr);
+	strcat(output, prepend);
+	strcat(output, msg);
 	strcat(output,"\n");
 	
 	return EXIT_SUCCESS;
 }
 
-/* logging functions */
-void logInfo(const char *msg, ...) {
-	if (cs_config.loglevel < LOGINFO) 		// Do we need this loglevel?
-		return;
-		
-	if (ptc.frames % cs_config.logfrac != 0)	// We only print log messages every logmod frames
-		return;
-	
-	va_list ap, aq, ar; // We need three of these because we cannot re-use a va_list variable
-	
-	va_start(ap, msg);
-	va_copy(aq, ap);
-	va_copy(ar, ap);
-	
-	formatLog(logmessage, " <info>: ", msg);
-	
-	if (cs_config.infofd != NULL) // Do we want to log this to a file?
-		vfprintf(cs_config.infofd, logmessage , ap);
-	
-	if (cs_config.use_stderr == true) // Do we want to log this to stderr
-		vfprintf(stdout, logmessage, aq);
-		
-	if (cs_config.use_syslog == true) 	// Do we want to log this to syslog?
-		syslog(LOG_INFO, msg, ar);
-	
-	va_end(ap);
-	va_end(aq);
-	va_end(ar);
-}
 
-// const int LFLG_ALWAYS =
-// const int LFLG_NOFORMAT = 
-
-
-// void logInfo(int flag, const char *msg, ...) {
-// 	
-// }
-
-void logDirect(const char *msg, ...) {
-	// this log command is always logged and without any additional formatting on the loginfo level
-	if (cs_config.loglevel < LOGINFO) 		// Do we need this loglevel?
-		return;
-		
-	if (ptc.frames % cs_config.logfrac != 0)	// We only print log messages every logmod frames
-		return;
-				
-	va_list ap, aq, ar; // We need three of these because we cannot re-use a va_list variable
-	
-	va_start(ap, msg);
-	va_copy(aq, ap);
-	va_copy(ar, ap);
-	
-	if (cs_config.infofd != NULL) // Do we want to log this to a file?
-		vfprintf(cs_config.infofd, msg , ap);
-	
-	if (cs_config.use_stderr == true) // Do we want to log this to stderr
-		vfprintf(stdout, msg, aq);
-		
-	if (cs_config.use_syslog == true) 	// Do we want to log this to syslog?
-		syslog(LOG_INFO, msg, ar);
-	
-	va_end(ap);
-	va_end(aq);
-	va_end(ar);
-}
 
 void logErr(const char *msg, ...) {
-	if (cs_config.loglevel < LOGERR) 	// Do we need this loglevel?
+	if (cs_config.loglevel < LOGERR) 			// Do we need this loglevel?
 		return;
 
 	va_list ap, aq, ar;
@@ -130,14 +66,13 @@ void logErr(const char *msg, ...) {
 	
 	formatLog(logmessage, " <error>: ", msg);
 
-	
-	if (cs_config.errfd != NULL)	// Do we want to log this to a file?
+	if (cs_config.errfd != NULL)				// Do we want to log this to a file?
 		vfprintf(cs_config.errfd, logmessage, ap);
 
-	if (cs_config.use_stderr == true) // Do we want to log this to stderr?
+	if (cs_config.use_stdout == true) 			// Do we want to log this to stdout?
 		vfprintf(stdout, logmessage, aq);
 	
-	if (cs_config.use_syslog == true) // Do we want to log this to syslog?
+	if (cs_config.use_syslog == true) 			// Do we want to log this to syslog?
 		syslog(LOG_ERR, msg, ar);
 
 	va_end(ap);
@@ -149,7 +84,7 @@ void logErr(const char *msg, ...) {
 }
 
 void logWarn(const char *msg, ...) {
-	if (cs_config.loglevel < LOGERR) 	// Do we need this loglevel?
+	if (cs_config.loglevel < LOGERR) 			// Do we need this loglevel?
 		return;
 
 	va_list ap, aq, ar;
@@ -159,15 +94,14 @@ void logWarn(const char *msg, ...) {
 	va_copy(ar, ap);
 	
 	formatLog(logmessage, " <warning>: ", msg);
-
 	
-	if (cs_config.errfd != NULL)	// Do we want to log this to a file?
+	if (cs_config.errfd != NULL)				// Do we want to log this to a file?
 		vfprintf(cs_config.errfd, logmessage, ap);
 
-	if (cs_config.use_stderr == true) // Do we want to log this to stderr?
-		vfprintf(stdout, logmessage, aq);
+	if (cs_config.use_stdout == true) 			// Do we want to log this to stderr?
+		vfprintf(stderr, logmessage, aq);
 	
-	if (cs_config.use_syslog == true) // Do we want to log this to syslog?
+	if (cs_config.use_syslog == true) 			// Do we want to log this to syslog?
 		syslog(LOG_ERR, msg, ar);
 
 	va_end(ap);
@@ -176,32 +110,80 @@ void logWarn(const char *msg, ...) {
 	
 }
 
-void logDebug(const char *msg, ...) {
-	if (cs_config.loglevel < LOGDEBUG) 	// Do we need this loglevel?
+
+void logInfo(const int flag, const char *msg, ...) {
+	if (cs_config.loglevel < LOGINFO) 			// Do we need this loglevel?
 		return;
-		
-	if (ptc.frames % cs_config.logfrac != 0)	// We only print log messages every logmod frames
+	
+												// We only print log messages every logfrac frames
+	if (flag & LOG_SOMETIMES && (ptc.frames % cs_config.logfrac) != 0)
 		return;
-		
-	va_list ap, aq, ar;
+	
+	va_list ap, aq, ar; 						// We need three of these because we cannot re-use a va_list variable
 	
 	va_start(ap, msg);
 	va_copy(aq, ap);
 	va_copy(ar, ap);
-
-	formatLog(logmessage, " <debug>: ", msg);
 	
-	if (cs_config.debugfd != NULL) 	// Do we want to log this to a file?
-		vfprintf(cs_config.debugfd, logmessage, ap);
+	formatLog(logmessage, " <info>: ", msg);
 	
-	if (cs_config.use_stderr == true)	// Do we want to log this to stderr?
-		vfprintf(stdout, logmessage, aq);
-
+	if (cs_config.infofd != NULL) {  			// Do we want to log this to a file?
+		if (!(flag & LOG_NOFORMAT)) 
+			vfprintf(cs_config.infofd, logmessage , ap);
+		else
+			vfprintf(cs_config.infofd, msg , ap);
+	}
 	
-	if (cs_config.use_syslog == true) 	// Do we want to log this to syslog?
-		syslog(LOG_DEBUG, msg, ar);
-
+	if (cs_config.use_stdout == true) { 			// Do we want to log this to stdout
+		if (!(flag & LOG_NOFORMAT)) 
+			vfprintf(stdout, logmessage, aq);
+		else
+			vfprintf(stdout, msg, aq);
+	}
+		
+	if (cs_config.use_syslog == true) 			// Do we want to log this to syslog?
+		syslog(LOG_INFO, msg, ar);
+	
 	va_end(ap);
 	va_end(aq);
 	va_end(ar);
 }
+
+void logDebug(const int flag, const char *msg, ...) {
+	if (cs_config.loglevel < LOGDEBUG) 			// Do we need this loglevel?
+		return;
+	
+												// We only print log messages every logfrac frames
+	if (flag & LOG_SOMETIMES && (ptc.frames % cs_config.logfrac) != 0)
+		return;
+	
+	va_list ap, aq, ar; 						// We need three of these because we cannot re-use a va_list variable
+	
+	va_start(ap, msg);
+	va_copy(aq, ap);
+	va_copy(ar, ap);
+	
+	formatLog(logmessage, " <debug>: ", msg);
+	
+	if (cs_config.debugfd != NULL) {  			// Do we want to log this to a file?
+		if (!(flag & LOG_NOFORMAT)) 
+			vfprintf(cs_config.debugfd, logmessage , ap);
+		else
+			vfprintf(cs_config.debugfd, msg , ap);
+	}
+	
+	if (cs_config.use_stdout == true) { 			// Do we want to log this to stdout
+		if (!(flag & LOG_NOFORMAT)) 
+			vfprintf(stdout, logmessage, aq);
+		else
+			vfprintf(stdout, msg, aq);
+	}
+		
+	if (cs_config.use_syslog == true) 			// Do we want to log this to syslog?
+		syslog(LOG_DEBUG, msg, ar);
+	
+	va_end(ap);
+	va_end(aq);
+	va_end(ar);
+}
+

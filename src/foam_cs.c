@@ -85,18 +85,18 @@ int main(int argc, char *argv[]) {
 	// BEGIN FOAM //
 	/**************/
 	
-	logInfo("Starting %s (%s) by %s",FOAM_NAME, FOAM_VERSION, FOAM_AUTHOR);
+	logInfo(0,"Starting %s (%s) by %s",FOAM_NAME, FOAM_VERSION, FOAM_AUTHOR);
 
 	ptc.starttime = time (NULL);
 	loctime = localtime (&ptc.starttime);
 	strftime (date, 64, "%A, %B %d %H:%M:%S, %Y (%Z).", loctime);	
-	logInfo("at %s", date);
+	logInfo(0,"at %s", date);
 		
 	// BEGIN LOADING CONFIG
 	if (loadConfig(FOAM_CONFIG_FILE) != EXIT_SUCCESS)
 		logErr("Loading configuration failed");
 
-	logInfo("Configuration successfully loaded...");	
+	logInfo(0, "Configuration successfully loaded...");	
 	
 	// INITIALIZE MODULES //
 	/**********************/
@@ -133,17 +133,17 @@ void stopFOAM() {
 	loctime = localtime (&end);
 	strftime (date, 64, "%A, %B %d %H:%M:%S, %Y (%Z).", loctime);	
 	
-	logInfo("Trying to stop modules...");
+	logInfo(0, "Trying to stop modules...");
 	modStopModule(&ptc);
 	
-	logInfo("Stopping threads...");
+	logInfo(0, "Stopping threads...");
 	pthread_mutex_destroy(&mode_mutex);
 	pthread_cond_destroy(&mode_cond);
 	// TODO: we need to stop the threads here, not just kill them?
 //	pthread_exit(NULL);
 	
-	logInfo("Stopping FOAM at %s", date);
-	logInfo("Ran for %ld seconds and parsed %ld frames (framerate: %f).", \
+	logInfo(0, "Stopping FOAM at %s", date);
+	logInfo(0, "Ran for %ld seconds and parsed %ld frames (framerate: %f).", \
 		end-ptc.starttime, ptc.frames, ptc.frames/(float) (end-ptc.starttime));
 
 	if (cs_config.infofd) fclose(cs_config.infofd);
@@ -208,7 +208,7 @@ int parseConfig(char *var, char *value) {
 			ptc.wfs[i].stepc.y = 0;
 		}
 		
-		logInfo("WFS_COUNT initialized: %d", ptc.wfs_count);
+		logInfo(0, "WFS_COUNT initialized: %d", ptc.wfs_count);
 	}
 	else if (strcmp(var, "WFC_COUNT") == 0) {
 		ptc.wfc_count = (int) strtol(value, NULL, 10);
@@ -217,7 +217,7 @@ int parseConfig(char *var, char *value) {
 		if (ptc.wfc == NULL)
 			logErr("Failed to allocate ptc.wfc");
 
-		logInfo("WFC_COUNT initialized: %d", ptc.wfc_count);
+		logInfo(0, "WFC_COUNT initialized: %d", ptc.wfc_count);
 	}
 	else if (strstr(var, "WFC_NAME") != NULL) {
 		if (issetWFC(var) != EXIT_SUCCESS) return EXIT_FAILURE;
@@ -226,7 +226,7 @@ int parseConfig(char *var, char *value) {
 		strncpy(ptc.wfc[tmp].name, value, (size_t) FILENAMELEN);
 		ptc.wfc[tmp].name[FILENAMELEN-1] = '\0'; // TODO: This might not be necessary
 		
-		logInfo("WFC_NAME initialized for WFC %d: %s", tmp, ptc.wfc[tmp].name);
+		logInfo(0, "WFC_NAME initialized for WFC %d: %s", tmp, ptc.wfc[tmp].name);
 	}
 	else if (strstr(var, "WFC_TYPE") != NULL) {
 		if (issetWFC(var) != EXIT_SUCCESS) return EXIT_FAILURE;
@@ -236,7 +236,7 @@ int parseConfig(char *var, char *value) {
 //		strncpy(ptc.wfc[tmp].name, value, (size_t) FILENAMELEN);
 //		ptc.wfc[tmp].name[FILENAMELEN-1] = '\0'; // TODO: This might not be necessary
 		
-		logInfo("WFC_TYPE initialized for WFC %d: %d", tmp, ptc.wfc[tmp].type);
+		logInfo(0, "WFC_TYPE initialized for WFC %d: %d", tmp, ptc.wfc[tmp].type);
 	}
     else if (strstr(var, "WFC_NACT") != NULL) {
 		if (issetWFC(var) != EXIT_SUCCESS) return EXIT_FAILURE;
@@ -248,7 +248,7 @@ int parseConfig(char *var, char *value) {
 		ptc.wfc[tmp].ctrl = gsl_vector_float_calloc(ptc.wfc[tmp].nact);
 		if (ptc.wfc[tmp].ctrl == NULL) return EXIT_FAILURE;
 
-		logInfo("WFS_NACT initialized for WFS %d: %d", tmp, ptc.wfc[tmp].nact);
+		logInfo(0, "WFS_NACT initialized for WFS %d: %d", tmp, ptc.wfc[tmp].nact);
     }
     else if (strstr(var, "WFC_GAIN") != NULL) {
 		if (issetWFC(var) != EXIT_SUCCESS) return EXIT_FAILURE;
@@ -256,7 +256,7 @@ int parseConfig(char *var, char *value) {
 		
 		ptc.wfc[tmp].gain = strtof(value, NULL);
 
-		logInfo("WFC_GAIN initialized for WFS %d: %f", tmp, ptc.wfc[tmp].gain);
+		logInfo(0, "WFC_GAIN initialized for WFS %d: %f", tmp, ptc.wfc[tmp].gain);
     }
 	else if (strstr(var, "WFS_NAME") != NULL) {
 		if (issetWFS(var) != EXIT_SUCCESS) return EXIT_FAILURE;
@@ -265,7 +265,7 @@ int parseConfig(char *var, char *value) {
 		strncpy(ptc.wfs[tmp].name, value, (size_t) FILENAMELEN);
 		ptc.wfs[tmp].name[FILENAMELEN-1] = '\0'; // This might not be necessary
 				
-		logInfo("WFS_NAME initialized for WFS %d: %s", tmp, ptc.wfs[tmp].name);
+		logInfo(0, "WFS_NAME initialized for WFS %d: %s", tmp, ptc.wfs[tmp].name);
 	}
 	else if (strstr(var, "WFS_DF") != NULL) {
 		if (issetWFS(var) != EXIT_SUCCESS) return EXIT_FAILURE;
@@ -274,7 +274,7 @@ int parseConfig(char *var, char *value) {
 		strncpy(ptc.wfs[tmp].darkfile, value, (size_t) FILENAMELEN);
 		ptc.wfs[tmp].darkfile[FILENAMELEN-1] = '\0'; // This might not be necessary
 		
-		logInfo("WFS_DF initialized for WFS %d: %s", tmp, ptc.wfs[tmp].darkfile);
+		logInfo(0, "WFS_DF initialized for WFS %d: %s", tmp, ptc.wfs[tmp].darkfile);
 	}
 	else if (strstr(var, "WFS_SKY") != NULL) {
 		if (issetWFS(var) != EXIT_SUCCESS) return EXIT_FAILURE;
@@ -283,7 +283,7 @@ int parseConfig(char *var, char *value) {
 		strncpy(ptc.wfs[tmp].skyfile, value, (size_t) FILENAMELEN);
 		ptc.wfs[tmp].skyfile[FILENAMELEN-1] = '\0'; // This might not be necessary
 		
-		logInfo("WFS_SKY initialized for WFS %d: %s", tmp, ptc.wfs[tmp].skyfile);
+		logInfo(0, "WFS_SKY initialized for WFS %d: %s", tmp, ptc.wfs[tmp].skyfile);
 	}
 	else if (strstr(var, "WFS_PINHOLE") != NULL) {
 		if (issetWFS(var) != EXIT_SUCCESS) return EXIT_FAILURE;
@@ -292,7 +292,7 @@ int parseConfig(char *var, char *value) {
 		strncpy(ptc.wfs[tmp].pinhole, value, (size_t) FILENAMELEN);
 		ptc.wfs[tmp].pinhole[FILENAMELEN-1] = '\0'; // This might not be necessary
 		
-		logInfo("WFS_PINHOLE initialized for WFS %d: %s", tmp, ptc.wfs[tmp].pinhole);
+		logInfo(0, "WFS_PINHOLE initialized for WFS %d: %s", tmp, ptc.wfs[tmp].pinhole);
 	}
 	else if (strstr(var, "WFS_INFL") != NULL) {
 		if (issetWFS(var) != EXIT_SUCCESS) return EXIT_FAILURE;
@@ -301,7 +301,7 @@ int parseConfig(char *var, char *value) {
 		strncpy(ptc.wfs[tmp].influence, value, (size_t) FILENAMELEN);
 		ptc.wfs[tmp].influence[FILENAMELEN-1] = '\0'; // This might not be necessary
 		
-		logInfo("WFS_INFL initialized for WFS %d: %s", tmp, ptc.wfs[tmp].influence);
+		logInfo(0, "WFS_INFL initialized for WFS %d: %s", tmp, ptc.wfs[tmp].influence);
 	}
 	else if (strstr(var, "WFS_FF") != NULL) {
 		if (issetWFS(var) != EXIT_SUCCESS) return EXIT_FAILURE;
@@ -310,7 +310,7 @@ int parseConfig(char *var, char *value) {
 		strncpy(ptc.wfs[tmp].flatfile, value, (size_t) FILENAMELEN);
 		ptc.wfs[tmp].flatfile[FILENAMELEN-1] = '\0'; // This might not be necessary
 
-		logInfo("WFS_FF initialized for WFS %d: %s", tmp, ptc.wfs[tmp].flatfile);
+		logInfo(0, "WFS_FF initialized for WFS %d: %s", tmp, ptc.wfs[tmp].flatfile);
 	}
 	else if (strstr(var, "WFS_CELLS") != NULL){
 		if (issetWFS(var) != EXIT_SUCCESS) return EXIT_FAILURE;
@@ -344,7 +344,7 @@ int parseConfig(char *var, char *value) {
 		if (ptc.wfs[tmp].refim == NULL)
 			logErr("Failed to allocate image memory for reference image.");
 
-		logInfo("WFS_CELLS initialized for WFS %d: (%dx%d). Subapt resolution is (%dx%d) pixels", \
+		logInfo(0, "WFS_CELLS initialized for WFS %d: (%dx%d). Subapt resolution is (%dx%d) pixels", \
 			tmp, ptc.wfs[tmp].cells[0], ptc.wfs[tmp].cells[1], ptc.wfs[tmp].shsize[0], ptc.wfs[tmp].shsize[1]);
 	}
 	else if (strstr(var, "WFS_RES") != NULL){
@@ -374,50 +374,50 @@ int parseConfig(char *var, char *value) {
 				(ptc.wfs[tmp].corrim == NULL))
 			logErr("Failed to allocate image memory (image, dark, flat, corrected).");
 		
-		logInfo("WFS_RES initialized for WFS %d: %d x %d", tmp, ptc.wfs[tmp].res.x, ptc.wfs[tmp].res.y);
+		logInfo(0, "WFS_RES initialized for WFS %d: %d x %d", tmp, ptc.wfs[tmp].res.x, ptc.wfs[tmp].res.y);
 	}
 
 	else if (strcmp(var, "CS_LISTEN_IP") == 0) {
 		strncpy(cs_config.listenip, value, 16);
 		
-		logInfo("CS_LISTEN_IP initialized: %s", cs_config.listenip);
+		logInfo(0, "CS_LISTEN_IP initialized: %s", cs_config.listenip);
 	}
 	else if (strcmp(var, "CS_LISTEN_PORT") == 0) {
 		cs_config.listenport = (int) strtol(value, NULL, 10);
 		
-		logInfo("CS_LISTEN_PORT initialized: %d", cs_config.listenport);
+		logInfo(0, "CS_LISTEN_PORT initialized: %d", cs_config.listenport);
 	}
 	else if (strcmp(var, "CS_USE_SYSLOG") == 0) {
 		cs_config.use_syslog = ((int) strtol(value, NULL, 10) == 0) ? false : true;
 		
-		logInfo("CS_USE_SYSLOG initialized: %d", cs_config.use_syslog);
+		logInfo(0, "CS_USE_SYSLOG initialized: %d", cs_config.use_syslog);
 	}
-	else if (strcmp(var, "CS_USE_STDERR") == 0) {
-		cs_config.use_stderr = ((int) strtol(value, NULL, 10) == 0) ? false : true;
+	else if (strcmp(var, "CS_USE_STDOUT") == 0) {
+		cs_config.use_stdout = ((int) strtol(value, NULL, 10) == 0) ? false : true;
 		
-		logInfo("CS_USE_STDERR initialized: %d", cs_config.use_stderr);
+		logInfo(0, "CS_USE_STDERR initialized: %d", cs_config.use_stdout);
 	}
 	else if (strcmp(var, "CS_INFOFILE") == 0) {
 		strncpy(cs_config.infofile,value, (size_t) FILENAMELEN);
 		cs_config.infofile[FILENAMELEN-1] = '\0'; // TODO: is this necessary?
-		logInfo("CS_INFOFILE initialized: %s", cs_config.infofile);
+		logInfo(0, "CS_INFOFILE initialized: %s", cs_config.infofile);
 	}
 	else if (strcmp(var, "CS_ERRFILE") == 0) {
 		strncpy(cs_config.errfile,value, (size_t) FILENAMELEN);
 		cs_config.errfile[FILENAMELEN-1] = '\0'; // TODO: is this necessary?
-		logInfo("CS_ERRFILE initialized: %s", cs_config.errfile);
+		logInfo(0, "CS_ERRFILE initialized: %s", cs_config.errfile);
 	}
 	else if (strcmp(var, "CS_DEBUGFILE") == 0) {
 		strncpy(cs_config.debugfile, value, (size_t) FILENAMELEN);
 		cs_config.debugfile[FILENAMELEN-1] = '\0'; // TODO: is this necessary?
-		logInfo("CS_DEBUGFILE initialized: %s", cs_config.debugfile);
+		logInfo(0, "CS_DEBUGFILE initialized: %s", cs_config.debugfile);
 	}
 
 	return EXIT_SUCCESS;
 }
 
 int loadConfig(char *file) {
-	logDebug("Reading configuration from file: %s",file);
+	logDebug(0, "Reading configuration from file: %s",file);
 	FILE *fp;
 	char line[COMMANDLEN];
 	char var[COMMANDLEN], value[COMMANDLEN];
@@ -433,7 +433,7 @@ int loadConfig(char *file) {
 		if (sscanf(line,"%s = %s", var, value) != 2)
 			continue;	// Skip lines which do not adhere to 'var = value'-syntax
 		
-		logDebug("Parsing '%s' '%s' settings pair.", var, value);
+		logDebug(0, "Parsing '%s' '%s' settings pair.", var, value);
 		
 		if (parseConfig(var,value) != EXIT_SUCCESS)	// pass the pair on to be parsed and inserted in ptc
 			return EXIT_FAILURE;		
@@ -453,7 +453,7 @@ int loadConfig(char *file) {
 	// Init syslog
 	if (cs_config.use_syslog == true) {
 		openlog(cs_config.syslog_prepend, LOG_PID, LOG_USER);	
-		logInfo("Syslog successfully initialized.");
+		logInfo(0, "Syslog successfully initialized.");
 	}
 	return EXIT_SUCCESS;
 }
@@ -464,44 +464,44 @@ int initLogFiles() {
 			logWarn("Unable to open file %s for info-logging! Not using this logmethod!", cs_config.infofile);
 			cs_config.infofile[0] = '\0';
 		}	
-		else logInfo("Info logfile '%s' successfully opened.", cs_config.infofile);
+		else logInfo(0, "Info logfile '%s' successfully opened.", cs_config.infofile);
 	}
 	else
-		logInfo("Not logging general info to disk.");
+		logInfo(0, "Not logging general info to disk.");
 
 	if (strlen(cs_config.errfile) > 0) {
 		if (strcmp(cs_config.errfile, cs_config.infofile) == 0) {	// If the errorfile is the same as the infofile, use the same FD
 			cs_config.errfd = cs_config.infofd;
-			logDebug("Using the same file '%s' for info- and error- logging.", cs_config.errfile);
+			logDebug(0, "Using the same file '%s' for info- and error- logging.", cs_config.errfile);
 		}
 		else if ((cs_config.errfd = fopen(cs_config.errfile,"a")) == NULL) {
 			logWarn("Unable to open file %s for error-logging! Not using this logmethod!", cs_config.errfile);
 			cs_config.errfile[0] = '\0';
 		}
-		else logInfo("Error logfile '%s' successfully opened.", cs_config.errfile);
+		else logInfo(0, "Error logfile '%s' successfully opened.", cs_config.errfile);
 	}
 	else {
-		logInfo("Not logging errors to disk.");
+		logInfo(0, "Not logging errors to disk.");
 	}
 
 
 	if (strlen(cs_config.debugfile) > 0) {
 		if (strcmp(cs_config.debugfile,cs_config.infofile) == 0) {
 			cs_config.debugfd = cs_config.infofd;	
-			logDebug("Using the same file '%s' for debug- and info- logging.", cs_config.debugfile);
+			logDebug(0, "Using the same file '%s' for debug- and info- logging.", cs_config.debugfile);
 		}
 		else if (strcmp(cs_config.debugfile,cs_config.errfile) == 0) {
 			cs_config.debugfd = cs_config.errfd;	
-			logDebug("Using the same file '%s' for debug- and error- logging.", cs_config.debugfile);
+			logDebug(0, "Using the same file '%s' for debug- and error- logging.", cs_config.debugfile);
 		}
 		else if ((cs_config.debugfd = fopen(cs_config.debugfile,"a")) == NULL) {
 			logWarn("Unable to open file %s for debug-logging! Not using this logmethod!", cs_config.debugfile);
 			cs_config.debugfile[0] = '\0';
 		}
-		else logInfo("Debug logfile '%s' successfully opened.", cs_config.debugfile);
+		else logInfo(0, "Debug logfile '%s' successfully opened.", cs_config.debugfile);
 	}
 	else {
-		logInfo("Not logging debug to disk.");
+		logInfo(0, "Not logging debug to disk.");
 	}
 
 	return EXIT_SUCCESS;
@@ -531,7 +531,7 @@ int saveConfig(char *file) {
 
 void modeOpen() {
 	ptc.frames++;
-	logInfo("Entering open loop.");
+	logInfo(0, "Entering open loop.");
 
 	if (ptc.wfs_count == 0) {				// we need wave front sensors
 		logWarn("Error, no WFSs defined.");
@@ -547,10 +547,9 @@ void modeOpen() {
 		return;
 	}
 	
-
 	while (ptc.mode == AO_MODE_OPEN) {
 		ptc.frames++;								// increment the amount of frames parsed
-		
+		// logInfo(0, "Entering open loop.");
 		if (modOpenLoop(&ptc) != EXIT_SUCCESS) {
 			logWarn("modOpenLoop failed");
 			ptc.mode = AO_MODE_LISTEN;
@@ -562,7 +561,7 @@ void modeOpen() {
 }
 
 void modeClosed() {	
-	logInfo("Entering closed loop.");
+	logInfo(0, "Entering closed loop.");
 
 	if (ptc.wfs_count == 0) {						// we need wave front sensors
 		logWarn("Error, no WFSs defined.");
@@ -593,7 +592,7 @@ void modeClosed() {
 }
 
 void modeCal() {
-	logInfo("Starting Calibration");
+	logInfo(0, "Starting Calibration");
 	
 	// this links to a module
 	if (modCalibrate(&ptc) != EXIT_SUCCESS) {
@@ -603,7 +602,7 @@ void modeCal() {
 		return;
 	}
 	
-	logInfo("Calibration loop done, switching to listen mode");
+	logInfo(0, "Calibration loop done, switching to listen mode");
 	tellClients("201 CALIBRATION SUCCESSFUL");
 	ptc.mode = AO_MODE_LISTEN;
 		
@@ -613,7 +612,7 @@ void modeCal() {
 void modeListen() {
 	
 	while (true) {
-		logInfo("Now running in listening mode.");
+		logInfo(0, "Now running in listening mode.");
 		switch (ptc.mode) {
 			case AO_MODE_OPEN:
 				modeOpen();
@@ -642,7 +641,7 @@ int sockListen() {
 	
 	event_init();					// Initialize libevent
 	
-	logDebug("Starting listening socket on %s:%d.", cs_config.listenip, cs_config.listenport);
+	logDebug(0, "Starting listening socket on %s:%d.", cs_config.listenip, cs_config.listenport);
 	
 	// Initialize the internet socket. We want streaming and we want TCP
 	if ((sock = socket(PF_INET, SOCK_STREAM, 0)) < 0)
@@ -669,7 +668,7 @@ int sockListen() {
 	if (setnonblock(sock) != 0) 
 		logWarn("Coult not set socket to non-blocking mode, might cause undesired side-effects.");
 		
-	logInfo("Successfully initialized socket on %s:%s, setting up event schedulers.", cs_config.listenip, cs_config.listenport);
+	logInfo(0, "Successfully initialized socket on %s:%d, setting up event schedulers.", cs_config.listenip, cs_config.listenport);
 	
 	event_set(&sockevent, sock, EV_READ | EV_PERSIST, sockAccept, NULL);
     event_add(&sockevent, NULL);
@@ -699,7 +698,7 @@ void sockAccept(const int sock, const short event, void *arg) {
 	client_t *client;				// connection data
 	cli_len = sizeof(cli_addr);
 	
-//	logDebug("Handling new client connection.");
+//	logDebug(0, "Handling new client connection.");
 	
 	newsock = accept(sock, (struct sockaddr *) &cli_addr, &cli_len);
 		
@@ -709,7 +708,7 @@ void sockAccept(const int sock, const short event, void *arg) {
 	if (setnonblock(newsock) < 0)
 		logWarn("Unable to set new client socket to non-blocking.");
 
-//	logDebug("Accepted & set to nonblock.");
+//	logDebug(0, "Accepted & set to nonblock.");
 	
 	// Check if we do not exceed the maximum number of connections:
 	if (clientlist.nconn >= MAX_CLIENTS) {
@@ -737,7 +736,7 @@ void sockAccept(const int sock, const short event, void *arg) {
 	if (bufferevent_enable(client->buf_ev, EV_READ) != 0)
 		logErr("Failed to enable buffered event.");
 
-	logInfo("Succesfully accepted connection from %s (using sock %d and buf_ev %p)", \
+	logInfo(0, "Succesfully accepted connection from %s (using sock %d and buf_ev %p)", \
 		inet_ntoa(cli_addr.sin_addr), newsock, client->buf_ev);
 	
 	bufferevent_write(client->buf_ev,"200 OK CONNECTION ESTABLISHED\n", sizeof("200 OK CONNECTION ESTABLISHED\n"));
@@ -748,7 +747,7 @@ void sockOnErr(struct bufferevent *bev, short event, void *arg) {
 	client_t *client = (client_t *)arg;
 
 	if (event & EVBUFFER_EOF) 
-		logInfo("Client successfully disconnected.");
+		logInfo(0, "Client successfully disconnected.");
 	else
 		logWarn("Client socket error, disconnecting.");
 		
@@ -783,7 +782,7 @@ void sockOnRead(struct bufferevent *bev, void *arg) {
 	if ((tmp = strchr(msg, '\r')) != NULL) // there might be a trailing newline which we don't want
 		*tmp = '\0';
 	
-	logDebug("Received %d bytes on socket reading: '%s'.", nbytes, msg);
+	logDebug(0, "Received %d bytes on socket reading: '%s'.", nbytes, msg);
 	parseCmd(msg, nbytes, client);
 }
 
@@ -1002,7 +1001,7 @@ int tellClients(char *msg, ...) {
 	vasprintf(&out, msg, ap);
 	asprintf(&out2, "%s\n", out);
 
-//	logDebug("message was: %s length %d and %d", msg, strlen(msg), strlen(msg));
+//	logDebug(0, "message was: %s length %d and %d", msg, strlen(msg), strlen(msg));
 	for (i=0; i < clientlist.nconn; i++) {
 		if (bufferevent_write(clientlist.connlist[i]->buf_ev, out2, strlen(out2)+1) != 0) {
 			logWarn("Error telling client %d", i);

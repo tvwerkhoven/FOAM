@@ -12,7 +12,7 @@
 #include "foam_primemod-dummy.h"
 
 int modInitModule(control_t *ptc) {
-	logInfo("Running in dummy mode, don't expect great AO results :)");
+	logInfo(0, "Running in dummy mode, don't expect great AO results :)");
 	return EXIT_SUCCESS;
 }
 

@@ -27,7 +27,7 @@
 
 #include "foam_primemod-simstatic.h"
 
-#define FOAM_MODSIM_STATIC "../config/simstatic.pgm"
+#define FOAM_MODSIM_STATIC "../config/simstaticbigger.pgm"
 
 // GLOBALS //
 /***********/
@@ -83,8 +83,8 @@ int modOpenLoop(control_t *ptc) {
 	if (modParseSH((&ptc->wfs[0])) != EXIT_SUCCESS)			// process SH sensor output, get displacements
 		return EXIT_FAILURE;
 	
-	logDebug("Frame: %ld", ptc->frames);
-	if (ptc->frames % 500 == 0) 
+	logDebug(LOG_SOMETIMES, "Frame: %ld", ptc->frames);
+	if (ptc->frames % cs_config.logfrac == 0) 
 		modDrawStuff(ptc, 0, screen);
 
 	if (ptc->frames > 20000)
@@ -117,8 +117,8 @@ int modClosedLoop(control_t *ptc) {
 	if (modCalcCtrlFake(ptc, 0, 0) != EXIT_SUCCESS)	// process SH sensor output, get displacements
 		return EXIT_FAILURE;	
 		
-	logDebug("frame: %ld", ptc->frames);
-	if (ptc->frames % 500 == 0) 
+	logDebug(LOG_SOMETIMES, "frame: %ld", ptc->frames);
+	if (ptc->frames % cs_config.logfrac == 0) 
 		modDrawStuff(ptc, 0, screen);
 	
 	if (ptc->frames > 20000)
@@ -134,7 +134,7 @@ int modClosedLoop(control_t *ptc) {
 
 int modCalibrate(control_t *ptc) {
 
-	logInfo("No calibration in static simulation mode");
+	logInfo(0, "No calibration in static simulation mode");
 
 	return EXIT_SUCCESS;
 }
@@ -142,7 +142,7 @@ int modCalibrate(control_t *ptc) {
 int drvReadSensor() {
 	int i, x, y;
 	int simres[2];
-	// logDebug("Now reading %d sensors", ptc.wfs_count);
+	// logDebug(0, "Now reading %d sensors", ptc.wfs_count);
 	
 	if (ptc.wfs_count < 1) {
 		logWarn("Nothing to process, no WFSs defined.");
@@ -188,11 +188,11 @@ gsl_vector_float *singf, *workf, *dispf, *actf;
 int modCalcCtrlFake(control_t *ptc, const int wfs, int nmodes) {
 	int i, j;
 	int nsubap = ptc->wfs[0].nsubap;
-	int nacttot = 39;
+	int nacttot = 750;
 	
 	// function assumes presence of dmmodes, singular and wfsmodes...
 	if (inflf == NULL || vf == NULL) {
-		logInfo("First modCalcCtrlFake, need to initialize stuff.");
+		logInfo(0, "First modCalcCtrlFake, need to initialize stuff.");
 		// fake the influence matrix:
 		gsl_matrix *infl, *v;
 		gsl_vector *sing, *work;
@@ -234,7 +234,7 @@ int modCalcCtrlFake(control_t *ptc, const int wfs, int nmodes) {
 		for (i=0; i<nsubap*2; i++)
 			gsl_vector_float_set(dispf, i, drand48()*2-1);
 		
-		logInfo("Init done, starting SVD reconstruction stuff.");
+		logInfo(0, "Init done, starting SVD reconstruction stuff.");
 		
 		gsl_matrix_free(infl);
 		gsl_matrix_free(v);

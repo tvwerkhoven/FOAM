@@ -111,7 +111,7 @@ int modClosedInit(control_t *ptc) {
 			ptc->mode = AO_MODE_LISTEN;
 			return EXIT_FAILURE;
 		}
-		logInfo("Calibration appears to be OK for all %d WFSs.", ptc->wfs_count);
+		logInfo(0, "Calibration appears to be OK for all %d WFSs.", ptc->wfs_count);
 	}
 	return EXIT_SUCCESS;
 }
@@ -154,18 +154,18 @@ int modCalibrate(control_t *ptc) {
 	// sky:
 	//  same as flat
 	
-	logInfo("Switching calibration");
+	logInfo(0, "Switching calibration");
 	switch (ptc->calmode) {
 		case CAL_PINHOLE: // pinhole WFS calibration
-			logInfo("Performing pinhole calibration for WFS %d", 0);
+			logInfo(0, "Performing pinhole calibration for WFS %d", 0);
 			return modCalPinhole(ptc, 0);
 			break;
 		case CAL_INFL: // influence matrix
-			logInfo("Performing influence matrix calibration for WFS %d", 0);
+			logInfo(0, "Performing influence matrix calibration for WFS %d", 0);
 			return modCalWFC(ptc, 0); // arguments: (control_t *ptc, int wfs)
 			break;
 		// case CAL_LINTEST: // influence matrix
-		// 	logInfo("Performing linearity test using WFS %d", 0);
+		// 	logInfo(0, "Performing linearity test using WFS %d", 0);
 		// 	return modLinTest(ptc, 0); // arguments: (control_t *ptc, int wfs)
 		// 	break;
 		default:

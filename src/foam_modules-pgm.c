@@ -42,7 +42,7 @@
 // 		return EXIT_FAILURE;
 // 	}
 // 	
-// 	logDebug("Loaded image %s (%dx%d)", fname, (*img)->w, (*img)->h);
+// 	logDebug(0, "Loaded image %s (%dx%d)", fname, (*img)->w, (*img)->h);
 // 
 // 	return EXIT_SUCCESS;
 // }
@@ -71,7 +71,7 @@ int modReadPGMArr(char *fname, float **img, int outres[2]) {
 		}
 	}
 
-	logDebug("ReadPGMArr Succesfully finished");
+	logDebug(0, "ReadPGMArr Succesfully finished");
 	return EXIT_SUCCESS;
 }
 

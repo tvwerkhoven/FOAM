@@ -95,7 +95,7 @@ int modSimDM(char *boundarymask, char *actuatorpat, int nact, gsl_vector_float *
 		if (boundaryres[0] != res.x || boundaryres[1] != res.y)
 			logErr("Boundary mask resolution incorrect! (%dx%d vs %dx%d)", res.x, res.y, boundaryres[0], boundaryres[1]);
 
-		logInfo("Read boundary '%s' succesfully (%dx%d)", boundarymask, res.x, res.y);
+		logInfo(0, "Read boundary '%s' succesfully (%dx%d)", boundarymask, res.x, res.y);
 	}
 	
 	// read actuator pattern file if this has not already been done before
@@ -106,7 +106,7 @@ int modSimDM(char *boundarymask, char *actuatorpat, int nact, gsl_vector_float *
 		if (actsurfres[0] != res.x || actsurfres[1] != res.y)
 			logErr("Actuatorn pattern resolution incorrect! (%dx%d vs %dx%d)", res.x, res.y, actsurfres[0], actsurfres[1]);
 
-		logInfo("Read actuator pattern '%s' succesfully (%dx%d)", actuatorpat, res.x, res.y);
+		logInfo(0, "Read actuator pattern '%s' succesfully (%dx%d)", actuatorpat, res.x, res.y);
 	}
 
 	// allocate memory for actuator pattern with voltages
@@ -118,16 +118,16 @@ int modSimDM(char *boundarymask, char *actuatorpat, int nact, gsl_vector_float *
 	}
 
 	// input linear and c=[-1,1], 'output' must be v=[0,255] and linear in v^2
-	logDebug("Simulating DM with voltages:");
+	logDebug(0, "Simulating DM with voltages:");
 	for (ik = 0; ik < nact; ik++) {
 		// first simulate rails (i.e. crop ctrl above abs(1))
 		if (gsl_vector_float_get(ctrl, ik) > 1.0) gsl_vector_float_set(ctrl, ik, 1.0);
 		else if (gsl_vector_float_get(ctrl, ik) < -1.0) gsl_vector_float_set(ctrl, ik, -1.0);
 		// we do Sqrt(255^2 (i+1) * 0.5) here to convert from [-1,1] (linear) to [0,255] (quadratic)
 		voltage[ik] = (int) round( sqrt(65025*(gsl_vector_float_get(ctrl, ik)+1)*0.5 ) ); //65025 = 255^2
-		logDirect("%d ", voltage[ik]);
+		logDebug(LOG_NOFORMAT, "%d ", voltage[ik]);
 	}
-	logDirect("\n");
+	logDebug(LOG_NOFORMAT, "\n");
 	
 	// set actuator voltages on electrodes *act is the actuator pattern,
 	// where the value of the pixel associates that pixel with an actuator
@@ -159,7 +159,7 @@ int modSimDM(char *boundarymask, char *actuatorpat, int nact, gsl_vector_float *
 	// in Press et al., "Numerical Recipes", Section 17.
 	
 	if (resp == NULL) {
-		logDebug("Allocating memory for resp: %dx%d.", res.x, res.y);
+		logDebug(0, "Allocating memory for resp: %dx%d.", res.x, res.y);
 		resp = calloc(res.x*res.y, sizeof(*resp));
 		if (resp == NULL)
 			logErr("Allocation error, exiting");

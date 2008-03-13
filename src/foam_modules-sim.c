@@ -64,7 +64,7 @@ float *aperture=NULL;
 
 int drvReadSensor() {
 	int i;
-	logDebug("Now reading %d sensors, origin is at (%d,%d).", ptc.wfs_count, simparams.curorig[0], simparams.curorig[1]);
+	logDebug(0, "Now reading %d sensors, origin is at (%d,%d).", ptc.wfs_count, simparams.curorig[0], simparams.curorig[1]);
 	
 	if (ptc.wfs_count < 1) 
 		logErr("Nothing to process, no WFSs defined.");
@@ -83,7 +83,7 @@ int drvReadSensor() {
 
 		modSimWind();
 		
-		logDebug("simAtm() done");
+		logDebug(0, "simAtm() done");
 	}
 	
 	// modDrawStuff(&ptc, 0, screen);
@@ -103,7 +103,7 @@ int drvReadSensor() {
 		// * ( round( (ptc.frames % 40)/40.0 )*2 - 1)
 	}
 
-	// logDebug("TT: faking tt with : %f, %f", gsl_vector_float_get(tmpctrl, 0), gsl_vector_float_get(tmpctrl, 1));
+	// logDebug(0, "TT: faking tt with : %f, %f", gsl_vector_float_get(tmpctrl, 0), gsl_vector_float_get(tmpctrl, 1));
 	// if (ttfd == NULL) ttfd = fopen("ttdebug.dat", "w+");
 	// fprintf(ttfd, "%f, %f\n", gsl_vector_float_get(tmpctrl, 0), gsl_vector_float_get(tmpctrl, 1));
 	
@@ -114,7 +114,7 @@ int drvReadSensor() {
 	///////////////////////
 	
 	// we simulate WFCs before the telescope to make sure they outer region is zero (Which is done by simTel())
-	logDebug("Now simulating %d WFC(s).", ptc.wfc_count);
+	logDebug(0, "Now simulating %d WFC(s).", ptc.wfc_count);
 	for (i=0; i < ptc.wfc_count; i++)
 		simWFC(&ptc, i, ptc.wfc[i].nact, ptc.wfc[i].ctrl, ptc.wfs[0].image); // Simulate every WFC in series
 	
@@ -176,15 +176,15 @@ int modSimWind() {
 int simWFC(control_t *ptc, int wfcid, int nact, gsl_vector_float *ctrl, float *image) {
 	// we want to simulate the tip tilt mirror here. What does it do
 	
-	logDebug("WFC %d (%s) has %d actuators, simulating", wfcid, ptc->wfc[wfcid].name, ptc->wfc[wfcid].nact);
-	// logDebug("TT: Control is: %f, %f", gsl_vector_float_get(ctrl,0), gsl_vector_float_get(ctrl,1));
+	logDebug(0, "WFC %d (%s) has %d actuators, simulating", wfcid, ptc->wfc[wfcid].name, ptc->wfc[wfcid].nact);
+	// logDebug(0, "TT: Control is: %f, %f", gsl_vector_float_get(ctrl,0), gsl_vector_float_get(ctrl,1));
 	// if (ttfd == NULL) ttfd = fopen("ttdebug.dat", "w+");
 	// fprintf(ttfd, "%f, %f\n", gsl_vector_float_get(ctrl,0), gsl_vector_float_get(ctrl,1));
 
 	if (ptc->wfc[wfcid].type == WFC_TT)
 		modSimTT(ctrl, image, ptc->wfs[0].res);
 	else if (ptc->wfc[wfcid].type == WFC_DM) {
-		logDebug("Running modSimDM with %s and %s, nact %d", FOAM_MODSIM_APTMASK, FOAM_MODSIM_ACTPAT, nact);
+		logDebug(0, "Running modSimDM with %s and %s, nact %d", FOAM_MODSIM_APTMASK, FOAM_MODSIM_ACTPAT, nact);
 		modSimDM(FOAM_MODSIM_APTMASK, FOAM_MODSIM_ACTPAT, nact, ctrl, image, ptc->wfs[0].res, -1); // last arg is for niter. -1 for autoset
 	}
 	else {
@@ -211,7 +211,7 @@ int simTel(char *file, float *image, coord_t res) {
 
 	}
 	
-	logDebug("Aperture read successfully (%dx%d), processing with image.",  res.x, res.y);
+	logDebug(0, "Aperture read successfully (%dx%d), processing with image.",  res.x, res.y);
 	
 	// Multiply wavefront with aperture
 	for (i=0; i < res.x*res.y; i++)
@@ -228,7 +228,7 @@ int simAtm(char *file, coord_t res, int origin[2], float *image) {
 	int i,j;
 	int imgres[2];
 	
-	logDebug("Simulating atmosphere.");
+	logDebug(0, "Simulating atmosphere.");
 	
 	// If we haven't loaded the simulated wavefront yet, load it now
 	if (simparams.simimg == NULL) {
@@ -265,7 +265,7 @@ int drvSetActuator(control_t *ptc, int wfc) {
 // TODO: add parameters: image, img resolution, lenslet resolution
 //int modSimSH(float *img, int imgres[2], int cellres[2]) {
 int modSimSH() {
-	logDebug("Simulating SH WFSs now.");
+	logDebug(0, "Simulating SH WFSs now.");
 	
 	int i;
 	int nx, ny;
@@ -297,26 +297,26 @@ int modSimSH() {
 	
 	// init FFT plan, FFTW_ESTIMATE could be replaces by MEASURE or sth, which should calculate FFT's faster
 	if (simparams.plan_forward == NULL) {
-		logDebug("Setting up plan for fftw");
+		logDebug(0, "Setting up plan for fftw");
 		
 		fp = fopen(simparams.wisdomfile,"r");
 		if (fp == NULL)	{				// File does not exist, generate new plan
-			logInfo("No FFTW plan found in %s, generating new plan, this may take a while.", simparams.wisdomfile);
+			logInfo(0, "No FFTW plan found in %s, generating new plan, this may take a while.", simparams.wisdomfile);
 			simparams.plan_forward = fftw_plan_dft_2d(nx, ny, simparams.shin, simparams.shout, FFTW_FORWARD, FFTW_EXHAUSTIVE);
 
 			// Open file for writing now
 			fp = fopen(simparams.wisdomfile,"w");
 			if (fp == NULL) {
-				logDebug("Could not open file %s for saving FFTW wisdom.", simparams.wisdomfile);
+				logDebug(0, "Could not open file %s for saving FFTW wisdom.", simparams.wisdomfile);
 				return EXIT_FAILURE;
 			}
 			fftw_export_wisdom_to_file(fp);
 			fclose(fp);
 		}
 		else {
-			logInfo("Importing FFTW wisdom file.");
-			logInfo("If this is the first time this program runs on this machine, this is bad.");
-			logInfo("In that case, please delete '%s' and rerun the program. It will generate new wisdom which is A Good Thing.", \
+			logInfo(0, "Importing FFTW wisdom file.");
+			logInfo(0, "If this is the first time this program runs on this machine, this is bad.");
+			logInfo(0, "In that case, please delete '%s' and rerun the program. It will generate new wisdom which is A Good Thing.", \
 				simparams.wisdomfile);
 			if (fftw_import_wisdom_from_file(fp) == 0) {
 				logWarn("Importing wisdom failed.");
@@ -338,7 +338,7 @@ int modSimSH() {
 			ptc.wfs[0].cells[0], shsize[0], ptc.wfs[0].res.x, ptc.wfs[0].cells[1], shsize[1], ptc.wfs[0].res.y);
 
 	
-	logDebug("Beginning imaging simulation.");
+	logDebug(0, "Beginning imaging simulation.");
 
 	// now we loop over each subaperture:
 	for (yc=0; yc<ptc.wfs[0].cells[1]; yc++) {

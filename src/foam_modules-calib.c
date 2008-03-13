@@ -59,23 +59,23 @@ int modCalPinhole(control_t *ptc, int wfs) {
 	modOpenLoop(ptc);
 	
 	// collect displacement vectors and store as reference
-	logInfo("Found following reference coordinates:");
+	logInfo(0, "Found following reference coordinates:");
 	for (j=0; j < ptc->wfs[wfs].nsubap; j++) {
 		gsl_vector_float_set(ptc->wfs[wfs].refc, 2*j+0, gsl_vector_float_get(ptc->wfs[wfs].disp, 2*j+0)); // x
 		gsl_vector_float_set(ptc->wfs[wfs].refc, 2*j+1, gsl_vector_float_get(ptc->wfs[wfs].disp, 2*j+1)); // y
 		// gsl_vector_float_set(ptc->wfs[wfs].refc, 2*j+0, 7); // x
 		// gsl_vector_float_set(ptc->wfs[wfs].refc, 2*j+1, 7); // y
 				
-		logDirect("(%f,%f) ", gsl_vector_float_get(ptc->wfs[wfs].refc, 2*j+0), gsl_vector_float_get(ptc->wfs[wfs].refc, 2*j+1));
+		logInfo(LOG_NOFORMAT, "(%f,%f) ", gsl_vector_float_get(ptc->wfs[wfs].refc, 2*j+0), gsl_vector_float_get(ptc->wfs[wfs].refc, 2*j+1));
 	}
 	// set the rest to zero
 	// for (j=ptc->wfs[wfs].nsubap; j < ptc->wfs[wfs].cells[0] * ptc->wfs[wfs].cells[1]; j++)
 	// 	fprintf(fp,"%f %f\n", (double) 0, (double) 0);
 	
-	logDirect("\n");
+	logInfo(LOG_NOFORMAT, "\n");
 	
 	// storing to file:
-	logInfo("Storing reference coordinates to %s.", ptc->wfs[wfs].pinhole);
+	logInfo(0, "Storing reference coordinates to %s.", ptc->wfs[wfs].pinhole);
 	fd = fopen(ptc->wfs[wfs].pinhole, "w+");
 	if (!fd) logErr("Could not open file %s: %s", ptc->wfs[wfs].pinhole, strerror(errno));
 	gsl_vector_float_fprintf(fd, ptc->wfs[wfs].refc, "%.10f"); // TvW TODO: 10 digits enough? too much?
@@ -180,7 +180,7 @@ int modLinTest(control_t *ptc, int wfs) {
 		fclose(fp);
 	} // end wfc loop
 	
-	logInfo("Linearity test using WFS %d (%s) done, stored in file %s", wfs, ptc->wfs[wfs].name, FOAM_MODCALIB_LIN);
+	logInfo(0, "Linearity test using WFS %d (%s) done, stored in file %s", wfs, ptc->wfs[wfs].name, FOAM_MODCALIB_LIN);
 	
 	return EXIT_SUCCESS;
 }
@@ -202,14 +202,14 @@ int modCalWFC(control_t *ptc, int wfs) {
 	// run open loop initialisation once (to get subapertures etc)
 	modOpenInit(ptc);
 	
-	logDebug("Checking pinhole calibration, file %s",ptc->wfs[wfs].pinhole);
+	logDebug(0, "Checking pinhole calibration, file %s",ptc->wfs[wfs].pinhole);
 	
 	if (modCalPinholeChk(ptc, wfs) != EXIT_SUCCESS) {
 		logWarn("WFC calibration failed, first perform pinhole calibration.");
 		return EXIT_FAILURE;
 	}
 	
-	logDebug("Starting WFC calibration");
+	logDebug(0, "Starting WFC calibration");
 	
 	// TvW: set to zero, what does that do?
 	for (i=0; i < ptc->wfc_count; i++)
@@ -237,11 +237,11 @@ int modCalWFC(control_t *ptc, int wfs) {
 	nsubap = ptc->wfs[wfs].nsubap;
 	float q0x[nsubap], q0y[nsubap];
 
-	logDebug("Allocating temporary matrix to store influence function (%d, %d x %d)", nsubap, nsubap*2, nact);
+	logDebug(0, "Allocating temporary matrix to store influence function (%d, %d x %d)", nsubap, nsubap*2, nact);
 	// this will store the influence matrix (which calculates displacements given actuator signals)
 	infl = gsl_matrix_float_calloc(nsubap*2, nacttot);
 				
-	logInfo("Calibrating WFC's using %d actuators and WFS %d with %d subapts, storing in %s.", \
+	logInfo(0, "Calibrating WFC's using %d actuators and WFS %d with %d subapts, storing in %s.", \
 		nacttot, wfs, nsubap, ptc->wfs[wfs].influence);
 	// fp = fopen(ptc->wfs[wfs].influence,"w+");
 	// fprintf(fp,"3\n");								// 3 dimensions (nact, nsub, 2d-vectors)
@@ -256,7 +256,7 @@ int modCalWFC(control_t *ptc, int wfs) {
 				q0y[i] = 0.0;
 			}
 
-			logInfo("Act %d/%d (WFC %d/%d)", j+1, ptc->wfc[wfc].nact, wfc+1, ptc->wfc_count);
+			logInfo(0, "Act %d/%d (WFC %d/%d)", j+1, ptc->wfc[wfc].nact, wfc+1, ptc->wfc_count);
 	
 			origvolt = gsl_vector_float_get(ptc->wfc[wfc].ctrl, j);
 	
@@ -325,7 +325,7 @@ int modCalWFC(control_t *ptc, int wfs) {
 	fprintf(fd, "%d\n%d\n%d\n", nacttot, nsubap, 2*nsubap);
 	fclose(fd);
 
-	logInfo("WFS %d (%s) influence function saved for in file %s", wfs, ptc->wfs[wfs].name, ptc->wfs[wfs].influence);
+	logInfo(0, "WFS %d (%s) influence function saved for in file %s", wfs, ptc->wfs[wfs].name, ptc->wfs[wfs].influence);
 	
 	modSVDGSL(ptc, wfs);
 	
@@ -362,7 +362,7 @@ int modCalWFCChk(control_t *ptc, int wfs) {
 	}
 	if (chknact != nacttot || chksubap != nsubap) {
 		logWarn("Calibration appears to be old, please re-calibrate");
-		logDebug("calibration parameters do not match current system parameters: nact: %d vs %d, nsubap: %d vs %d", chknact, nacttot, chksubap, nsubap);
+		logDebug(0, "calibration parameters do not match current system parameters: nact: %d vs %d, nsubap: %d vs %d", chknact, nacttot, chksubap, nsubap);
 		return EXIT_FAILURE;
 	}
 		
@@ -380,7 +380,7 @@ int modCalWFCChk(control_t *ptc, int wfs) {
 		ptc->wfs[wfs].singular = gsl_vector_float_calloc(nacttot);
 		if (ptc->wfs[wfs].singular == NULL) logErr("Failed to allocate memory for singular values vector.");
 	}
-	logDebug("Reading singular values into memory from %s now...", outfile);
+	logDebug(0, "Reading singular values into memory from %s now...", outfile);
 	gsl_vector_float_fscanf(fd, ptc->wfs[wfs].singular);
 	fclose(fd);
 
@@ -400,7 +400,7 @@ int modCalWFCChk(control_t *ptc, int wfs) {
 		if (ptc->wfs[wfs].wfsmodes == NULL) logErr("Failed to allocate memory for wfsmodes matrix.");
 	}
 
-	logDebug("Reading WFS modes into memory from %s now...", outfile);
+	logDebug(0, "Reading WFS modes into memory from %s now...", outfile);
 	gsl_matrix_float_fscanf(fd, ptc->wfs[wfs].wfsmodes);
 	fclose(fd);
 	
@@ -421,7 +421,7 @@ int modCalWFCChk(control_t *ptc, int wfs) {
 		if (ptc->wfs[wfs].dmmodes == NULL) logErr("Failed to allocate memory for dmmodes matrix.");
 	}
 
-	logDebug("Reading DM modes into memory from %s now...", outfile);
+	logDebug(0, "Reading DM modes into memory from %s now...", outfile);
 	gsl_matrix_float_fscanf(fd, ptc->wfs[wfs].dmmodes);
 	fclose(fd);
 
@@ -493,7 +493,7 @@ int modSVDGSL(control_t *ptc, int wfs) {
 	gsl_blas_dgemv(CblasNoTrans, 1.0, mat, testin, 0.0, testout);
 	gsl_blas_sgemv(CblasNoTrans, 1.0, matf, testinf, 0.0, testoutf);
 	
-	logInfo("Performing SVD on matrix from %s. nsubap: %d, nact: %d.",ptc->wfs[wfs].influence, nsubap, nact);
+	logInfo(0, "Performing SVD on matrix from %s. nsubap: %d, nact: %d.",ptc->wfs[wfs].influence, nsubap, nact);
 	
 	// perform SVD
 	gsl_linalg_SV_decomp(mat, v, sing, work);
@@ -521,13 +521,13 @@ int modSVDGSL(control_t *ptc, int wfs) {
 	gsl_vector_fprintf (fd, sing, "%.15lf");
 	fclose(fd);
 
-	logDebug("Re-reading stored matrices and vector into memory");
+	logDebug(0, "Re-reading stored matrices and vector into memory");
 	if (modCalWFCChk(ptc, wfs) != EXIT_SUCCESS) {
 		logWarn("Re-reading stored SVD files failed.");
 		return EXIT_FAILURE;
 	}
 	
-	logInfo("SVD complete, sanity checking begins");
+	logInfo(0, "SVD complete, sanity checking begins");
 	// check if the SVD worked:
 	// V^T . testin
 	// gsl_blas_sgemv(CblasTrans, 1.0, ptc->wfs[wfs].dmmodes, testin, 0.0, work);
@@ -568,23 +568,23 @@ int modSVDGSL(control_t *ptc, int wfs) {
 	
 	for (j=0; j<nact; j++) {
 		diffin += gsl_vector_get(testinrec, j)/gsl_vector_get(testin, j);
-		// logDirect("%f, %f\n", gsl_vector_get(testinrec, j), gsl_vector_get(testin, j));
+		// logInfo(LOG_NOFORMAT, "%f, %f\n", gsl_vector_get(testinrec, j), gsl_vector_get(testin, j));
 	}
 	diffin /= nact;
 	
-	// logDebug("and other vectors:");
+	// logDebug(0, "and other vectors:");
 	for (j=0; j<nact; j++) {
 		diffout += gsl_vector_float_get(testinrecf, j)/gsl_vector_float_get(testinf, j);
-		// logDirect("%f, %f\n", gsl_vector_float_get(testinrecf, j), gsl_vector_float_get(testinf, j));
+		// logInfo(LOG_NOFORMAT, "%f, %f\n", gsl_vector_float_get(testinrecf, j), gsl_vector_float_get(testinf, j));
 	}
 	diffout /= nact;
 	// get max and min to calculate condition
 	gsl_vector_float_minmax(ptc->wfs[wfs].singular, &min, &max);
 	cond = max/min;
 
-	logInfo("SVD Succeeded, decomposition (U, V and Sing) stored to files.");
-	logInfo("SVD # of zero singvals (0 is good): %d. Condition (close to 1 would be nice): %lf.", singvals, cond);
-	logInfo("SVD quality: in (double), in (float) ratio (must be 1): %lf and %lf", diffin, diffout);
+	logInfo(0, "SVD Succeeded, decomposition (U, V and Sing) stored to files.");
+	logInfo(0, "SVD # of zero singvals (0 is good): %d. Condition (close to 1 would be nice): %lf.", singvals, cond);
+	logInfo(0, "SVD quality: in (double), in (float) ratio (must be 1): %lf and %lf", diffin, diffout);
 
 	return EXIT_SUCCESS;
 }

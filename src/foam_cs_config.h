@@ -20,7 +20,7 @@
 
 #define FOAM_NAME "FOAM CS"			//!< some info about FOAM
 #define FOAM_VERSION "v0.4.0-130 Mar"	//!< FOAM version
-#define FOAM_AUTHOR "Tim van Werkhoven" //!< Author
+#define FOAM_AUTHOR "Tim van Werkhoven" //!< FOAM author
 
 #define MAX_CLIENTS 8				//!< maximum number of clients that can connect
  									// (allows for easy implementation of connection tracking)
