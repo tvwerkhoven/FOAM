@@ -76,11 +76,6 @@ This simulates the SH WFS
 int modSimSH();
 
 /*!
-@brief This routine, currently not used, can be used to simulate an object (e.g. wavefront)
-*/
-int simObj(char *file, float *image);
-
-/*!
 @brief \a simAtm() reads a fits file with simulated atmospheric distortion.
 
 This fuction works in wavefront-space.

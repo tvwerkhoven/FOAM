@@ -55,11 +55,11 @@ acts accordingly. With a real filterwheel, this would set some hardware address.
 int drvFilterWheel(control_t *ptc, fwheel_t mode);
 
 /*!
-@brief Calculates DM output voltages, which are in turn set by drvSetActuator().
+@brief Fake Control vector calculation, only simulate the computational load.
 
 @return EXIT_SUCCESS on success, EXIT_FAILURE otherwise.
 */
-int modCalcDMVolt();
+int modCalcCtrlFake(control_t *ptc, const int wfs, int nmodes);
 
 #endif /* FOAM_MODULES_SIMSTATIC */
 

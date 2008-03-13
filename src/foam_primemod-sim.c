@@ -13,6 +13,14 @@
 	Finally, a Shack-Hartmann wavefront sensor (lenslet array) is simulated where the wavefront is converted
 	to an image. After that, the sensor output is available and from there on, simulation is not necessary anymore.
 	The simulated sensor output can be used to do correlation or center-of-gravity tracking on.
+	
+	\info Dependencies
+	
+	This prime module needs the following modules for a complete package:
+	\li foam_modules-sim.c - to simulate the AO system (wavefront, telescope, DM/TT)
+	\li foam_modules-sh.c - to track targets
+	\li foam_modules-pgm.c - to read PGM files
+	
 */
 
 // HEADERS //
@@ -52,8 +60,7 @@ void modStopModule(control_t *ptc) {
 }
 
 int modOpenInit(control_t *ptc) {
-	int i;
-	
+
 	if (drvReadSensor(ptc) != EXIT_SUCCESS) {		// read the sensor output into ptc.image
 		logErr("Error, reading sensor failed.");
 		ptc->mode = AO_MODE_LISTEN;
@@ -61,26 +68,19 @@ int modOpenInit(control_t *ptc) {
 	}
 	
 	modSelSubapts(&(ptc->wfs[0]), 0, 0); 			// check samini (2nd param) and samxr (3d param)
-
-
-	// for (i=0; i<ptc->wfc[1].nact; i++)
-	// 	ptc->wfc[1].ctrl[i] = 0;
 	
 	return EXIT_SUCCESS;
 }
 
 int modOpenLoop(control_t *ptc) {
-	int i;
-	// for (i=0; i<ptc->wfc[1].nact; i++)
-	// 	ptc->wfc[1].ctrl[i] = ((ptc->frames % 50) / 25.0 - 1);
-				
 	if (drvReadSensor(ptc) != EXIT_SUCCESS)			// read the sensor output into ptc.image
 		return EXIT_FAILURE;
 		
-	if (modParseSH((&ptc->wfs[0])) != EXIT_SUCCESS)			// process SH sensor output, get displacements
+	if (modParseSH((&ptc->wfs[0])) != EXIT_SUCCESS)		// process SH sensor output, get displacements
 		return EXIT_FAILURE;
 	
 //	if (ptc->frames % 20 == 0) {
+	// modDrawSens(ptc, 0, screen);
 	modDrawStuff(ptc, 0, screen);
 
 //	}
@@ -115,12 +115,7 @@ int modClosedLoop(control_t *ptc) {
 	// set both actuators to something random
 	int i,j;
 	
-	// for (i=0; i<ptc->wfc_count; i++) {
-	// 	logDebug("Setting WFC %d with %d acts.", i, ptc->wfc[i].nact);
-	// 	for (j=0; j<ptc->wfc[i].nact; j++)
-	// 		ptc->wfc[i].ctrl[j] = drand48()*2-1;
-	// }
-
+	
 	if (drvReadSensor(ptc) != EXIT_SUCCESS)				// read the sensor output into ptc.image
 		return EXIT_FAILURE;
 	
@@ -129,21 +124,10 @@ int modClosedLoop(control_t *ptc) {
 		
 	if (modCalcCtrl(ptc, 0, 0) != EXIT_SUCCESS)		// parse displacements, get ctrls for WFC's
 		return EXIT_FAILURE;
-	// for (i=0; i<ptc->wfc_count; i++) {
-	// 	logDebug("Setting WFC %d with %d acts.", i, ptc->wfc[i].nact);
-	// 	for (j=0; j<ptc->wfc[i].nact; j++)
-	// 		logDirect("%f ",ptc->wfc[i].ctrl[j]);
-	// }
-	
+
 //	if (ptc->frames % 20 == 0) {
  	modDrawStuff(ptc, 0, screen);
-//	}
-	// if (ptc->frames % 20 == 0) {	
-	// 	logInfo("Dumping output...");
-	// 	modWritePGM("../config/wfsdump.pgm", screen);
-	// 	exit(0);
-	// }
-	
+//	}	
 
 	if (SDL_PollEvent(&event))
 		if (event.type == SDL_QUIT)

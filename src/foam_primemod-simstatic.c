@@ -12,6 +12,14 @@
 	the wavefront sensors themselves and thus costs no time. In simulation mode however, this 
 	image must be generated each time, and since this costs time, real benchmarking is not possible.
 	This static simulation tries to solve that.
+	
+	\section Dependencies
+	
+	This prime module needs the following modules for a complete package:
+	\li foam_modules-display.c - to display WFS output
+	\li foam_modules-sh.c - to track targets
+	\li foam_modules-pgm.c - to read PGM files
+	
 */
 
 // HEADERS //
@@ -98,25 +106,17 @@ int modClosedInit(control_t *ptc) {
 }
 
 int modClosedLoop(control_t *ptc) {
-	// set both actuators to something random
-	int i,j;
-	
-	for (i=0; i<ptc->wfc_count; i++) {
-		logDebug("Setting WFC %d with %d acts.", i, ptc->wfc[i].nact);
-		for (j=0; j<ptc->wfc[i].nact; j++)
-			gsl_vector_float_set(ptc->wfc[i].ctrl, j , (float) drand48()*2-1);
-	}
-
 	if (drvReadSensor(ptc) != EXIT_SUCCESS) {		// read the sensor output into ptc.image
 		logWarn("Error, reading sensor failed.");
 		return EXIT_FAILURE;
 	}
-
-	//modSelSubapts(&ptc.wfs[0], 0, 0); 			// check samini (2nd param) and samxr (3d param)				
 	
 	if (modParseSH((&ptc->wfs[0])) != EXIT_SUCCESS)	// process SH sensor output, get displacements
-		return EXIT_SUCCESS;
+		return EXIT_FAILURE;
 	
+	if (modCalcCtrlFake(ptc, 0, 0) != EXIT_SUCCESS)	// process SH sensor output, get displacements
+		return EXIT_FAILURE;	
+		
 	logInfo("frame: %ld", ptc->frames);
 	if (ptc->frames % 500 == 0) 
 		modDrawStuff(ptc, 0, screen);
@@ -185,10 +185,87 @@ int drvSetActuator(control_t *ptc, int wfc) {
 	return EXIT_SUCCESS;
 }
 
-int modCalcDMVolt() {
-	logDebug("Calculating DM voltages");
+gsl_matrix_float *inflf=NULL, *vf=NULL;
+gsl_vector_float *singf, *workf, *dispf, *actf;
+
+int modCalcCtrlFake(control_t *ptc, const int wfs, int nmodes) {
+	int i, j;
+	int nsubap = ptc->wfs[0].nsubap;
+	int nacttot = 39;
+	
+	logDebug("Calculating WFC ctrls");
+	// function assumes presence of dmmodes, singular and wfsmodes...
+	if (inflf == NULL || vf == NULL) {
+		logInfo("First modCalcCtrl, need to initialize stuff.");
+		// fake the influence matrix:
+		gsl_matrix *infl, *v;
+		gsl_vector *sing, *work;
+		
+		infl = gsl_matrix_calloc(nsubap*2, nacttot);
+		v = gsl_matrix_calloc(nacttot, nacttot);
+		sing = gsl_vector_calloc(nacttot);
+		work = gsl_vector_calloc(nacttot);
+		
+		inflf = gsl_matrix_float_calloc(nsubap*2, nacttot);
+		vf = gsl_matrix_float_calloc(nacttot, nacttot);
+		singf = gsl_vector_float_calloc(nacttot);
+		workf = gsl_vector_float_calloc(nacttot);
+		
+		dispf = gsl_vector_float_calloc(nsubap*2);
+		actf = gsl_vector_float_calloc(nacttot);
+		
+		for (i=0; i<nsubap*2; i++) 
+			for (j=0; j<nacttot; j++)
+				gsl_matrix_set(infl, i, j, drand48()*2-1);
+		
+		// SVD the influence matrix:		
+		gsl_linalg_SV_decomp(infl, v, sing, work);
+		
+		// copy to float versions
+		for (i=0; i<nsubap*2; i++) 
+			for (j=0; j<nacttot; j++)
+				gsl_matrix_float_set(inflf, i, j, gsl_matrix_get(infl, i, j));
+				
+		for (i=0; i<nacttot; i++) {
+			for (j=0; j<nacttot; j++)
+				gsl_matrix_float_set(vf, i, j, gsl_matrix_get(v, i, j));
+					
+			gsl_vector_float_set(singf, i, gsl_vector_get(sing, i));
+			gsl_vector_float_set(workf, i, gsl_vector_get(work, i));
+		}
+		
+		// init test displacement vector
+		for (i=0; i<nsubap*2; i++)
+			gsl_vector_float_set(dispf, i, drand48()*2-1);
+		logInfo("Init done, starting SVD reconstruction stuff.");
+		
+		gsl_matrix_free(infl);
+		gsl_matrix_free(v);
+		gsl_vector_free(work);
+		gsl_vector_free(sing);
+	}
+	
+	
+    gsl_blas_sgemv (CblasTrans, 1.0, inflf, dispf, 0.0, workf);
+
+	int singvals=nacttot;
+	float wi, alpha;
+	
+	for (i = 0; i < nacttot; i++) {
+		wi = gsl_vector_float_get (workf, i);
+		alpha = gsl_vector_float_get (singf, i);
+		if (alpha != 0) {
+			alpha = 1.0 / alpha;
+			singvals--;
+		}
+		gsl_vector_float_set (workf, i, alpha * wi);
+	}
+
+    gsl_blas_sgemv (CblasNoTrans, 1.0, vf, workf, 0.0, actf);
+	
 	return EXIT_SUCCESS;
 }
+
 
 // TODO: document this
 int drvFilterWheel(control_t *ptc, fwheel_t mode) {

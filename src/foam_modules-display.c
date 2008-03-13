@@ -17,10 +17,12 @@
 	\li modBeginDraw() - Begin drawing/displaying data on a surface
 	\li modFinishDraw() - Finish drawing/displaying data on a surface and display
 	\li modDisplayImg() - Displays an image to an SDL_Surface
+	\li modDrawSens9() - Display sensor output to the screen.
 	\li modDrawGrid() - Displays a square grid showing the lenslet array
 	\li modDrawSubapts() - Displays the current location of the subaperture tracking windows
 	\li modDrawVecs() - Draw vectors between the center of the Grid and the center of the tracker window
 	\li modDrawStuff() - Draw all of the above.
+
 
 	\section Dependencies
 	
@@ -226,9 +228,9 @@ void drawPixel(SDL_Surface *screen, int x, int y, Uint8 R, Uint8 G, Uint8 B) {
 
 int modDrawSubapts(wfs_t *wfsinfo, SDL_Surface *screen) {
 	if (wfsinfo->nsubap == 0)
-		return EXIT_SUCCESS;	// if there's nothing to draw, don't draw (shouldn't happen)
+		return EXIT_SUCCESS;			// if there's nothing to draw, don't draw (shouldn't happen)
 		
-	int *shsize;			// size of whole image, nr of cells. will hold an int[2] array
+	int *shsize;						// size of whole image, nr of cells. will hold an int[2] array
 	int (*subc)[2] = wfsinfo->subc;		// lower-left coordinates of the subapts
 
 	shsize = wfsinfo->shsize;
@@ -250,6 +252,7 @@ int modDrawSubapts(wfs_t *wfsinfo, SDL_Surface *screen) {
 	return EXIT_SUCCESS;
 }
 
+// TODO: only SH now, update!
 int modDrawVecs(wfs_t *wfsinfo, SDL_Surface *screen) {
 	if (wfsinfo->nsubap == 0)
 		return EXIT_SUCCESS;	// if there's nothing to draw, don't draw (shouldn't happen)
@@ -267,20 +270,17 @@ int modDrawVecs(wfs_t *wfsinfo, SDL_Surface *screen) {
 	return EXIT_SUCCESS;
 }
 
-int modDrawGrid(wfs_t *wfsinfo, SDL_Surface *screen) {
-	if (wfsinfo->nsubap == 0)
-		return EXIT_SUCCESS;			// if there's nothing to draw, don't draw (shouldn't happen)
-		
-	int *shsize = wfsinfo->shsize; 		// size of the grid
-	int *cells = wfsinfo->cells; 		// number of cells
+int modDrawGrid(int gridres[2], SDL_Surface *screen) {
 	int xc, yc;
+	int gridw = screen->w/gridres[0];
+	int gridh = screen->h/gridres[1];
 		
 			
-	for (xc=1; xc < cells[0]; xc++)
-		drawDash(xc*shsize[0], 0, xc*shsize[0], cells[1]*shsize[1], screen);
+	for (xc=1; xc < gridres[0]; xc++)
+		drawDash(xc*gridw, 0, xc*gridw, screen->h, screen);
 	
-	for (yc=1; yc< cells[1]; yc++)
-		drawDash(0, yc*shsize[1], cells[0]*shsize[0], yc*shsize[1], screen);
+	for (yc=1; yc< gridres[1]; yc++)
+		drawDash(0, yc*gridh, screen->w, yc*gridh, screen);
 			
 	return EXIT_SUCCESS;
 }
@@ -288,9 +288,15 @@ int modDrawGrid(wfs_t *wfsinfo, SDL_Surface *screen) {
 void modDrawStuff(control_t *ptc, int wfs, SDL_Surface *screen) {
 	modBeginDraw(screen);
 	modDisplayImg(ptc->wfs[wfs].image, ptc->wfs[wfs].res, screen);
-	modDrawGrid(&(ptc->wfs[wfs]), screen);
+	modDrawGrid((ptc->wfs[wfs].cells), screen);
 	modDrawSubapts(&(ptc->wfs[0]), screen);
 	modDrawVecs(&(ptc->wfs[0]), screen);
+	modFinishDraw(screen);
+}
+
+void modDrawSens(control_t *ptc, int wfs, SDL_Surface *screen) {	
+	modBeginDraw(screen);
+	modDisplayImg(ptc->wfs[wfs].image, ptc->wfs[wfs].res, screen);	
 	modFinishDraw(screen);
 }
 

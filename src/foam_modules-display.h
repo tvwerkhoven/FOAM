@@ -54,14 +54,14 @@ Do not forget to call modBeginDraw()/modFinishDraw().
 int modDrawVecs(wfs_t *wfsinfo, SDL_Surface *screen);
 
 /*!
-@brief This draws the subaperture grid on a screen
+@brief This draws a grid on the screen
 
 Do not forget to call modBeginDraw()/modFinishDraw().
 
-@param [in] *wfsinfo wfs_t struct with info on the current wfs
+@param [in] gridres The grid resolution to draw on the screen (i.e. 8x8)
 @param [in] *screen SDL_Surface to draw on
 */
-int modDrawGrid(wfs_t *wfsinfo, SDL_Surface *screen);
+int modDrawGrid(int gridres[2], SDL_Surface *screen);
 
 /*!
 @brief This displays an image img with resolution res.
@@ -99,6 +99,14 @@ this routine.
 */
 void modDrawStuff(control_t *ptc, int wfs, SDL_Surface *screen);
 
+/*!
+@brief Draw sensor output to screen
+
+This routine only draws the sensor output to the screen.
+You do \e not need to call modBeginDraw()/modFinishDraw() when using
+this routine.
+*/
+void modDrawSens(control_t *ptc, int wfs, SDL_Surface *screen);
 /*!
 @brief Finish drawing (unlock the screen)
 */
