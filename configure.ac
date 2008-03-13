@@ -23,7 +23,6 @@ AC_SEARCH_LIBS([gsl_blas_dgemm],[gsl], [], AC_MSG_ERROR([This package needs libg
 COMMON_LIBS=$LIBS
 AC_SUBST(COMMON_LIBS)
 # add common libs to the compilation tests lateron
-# this is at least necessary for cfitsio
 CFLAGS+=" $LIBS"
 
 ### DEVELOPER SECTION ###
@@ -86,11 +85,6 @@ if test "$simul" = true ; then
 	# this is kinda ugly
 	simulmissing=""
 	LIBS=""
-	AC_SEARCH_LIBS([ffopen], [cfitsio] ,[], 
-		[AC_MSG_WARN([This package needs libfitsio in simulation mode, disabling simulation.])]
-		simul=false
-		simulmissing+=" cfitsio"
-	) 
 	AC_SEARCH_LIBS([fftw_execute], [fftw3] ,[], 
 		[AC_MSG_WARN([This package needs libfftw3 in simulation mode, disabling simulation.])
 		simul=false

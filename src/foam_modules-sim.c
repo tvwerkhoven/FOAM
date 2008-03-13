@@ -44,7 +44,7 @@ struct simul simparams = {
 	.wind[1] = 0,
 	.curorig[0] = 0,
 	.curorig[1] = 0,
-	.seeingfac = 0.3,
+	.seeingfac = 0.2,
 	.simimg = NULL,
 	.plan_forward = NULL,
 	.wisdomfile = "fftw_wisdom.dat",
@@ -99,7 +99,7 @@ int drvReadSensor() {
 	
 	// regular sawtooth drift is here:
 	for (i=0; i<ptc.wfc[0].nact; i++) {
-		gsl_vector_float_set(tmpctrl, i, ((ptc.frames % 40)/40.0 * 2 - 1) );
+		gsl_vector_float_set(tmpctrl, i, ((ptc.frames % 40)/40.0 * 2 - 1) * ( round( (ptc.frames % 40)/40.0 )*2 - 1));
 		// * ( round( (ptc.frames % 40)/40.0 )*2 - 1)
 	}
 
@@ -115,8 +115,8 @@ int drvReadSensor() {
 	
 	// we simulate WFCs before the telescope to make sure they outer region is zero (Which is done by simTel())
 	logDebug("Now simulating %d WFC(s).", ptc.wfc_count);
-	// for (i=0; i < ptc.wfc_count; i++)
-	// 	simWFC(&ptc, i, ptc.wfc[i].nact, ptc.wfc[i].ctrl, ptc.wfs[0].image); // Simulate every WFC in series
+	for (i=0; i < ptc.wfc_count; i++)
+		simWFC(&ptc, i, ptc.wfc[i].nact, ptc.wfc[i].ctrl, ptc.wfs[0].image); // Simulate every WFC in series
 	
 	if (simTel(FOAM_MODSIM_APERTURE, ptc.wfs[0].image, ptc.wfs[0].res) != EXIT_SUCCESS) // Simulate telescope (from aperture.fits)
 		logErr("error in simTel().");

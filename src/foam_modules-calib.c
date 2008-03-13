@@ -58,14 +58,6 @@ int modCalPinhole(control_t *ptc, int wfs) {
 	// run open loop once
 	modOpenLoop(ptc);
 	
-	// open file to store vectors
-	// fp = fopen(ptc->wfs[wfs].pinhole,"w+");
-	// if (fp == NULL)
-	// 	logErr("Error opening pinhole calibration file for wfs %d (%s)", wfs, strerror(errno));
-		
-	// fprintf(fp,"2\n"); 			// we have 2 dimensions
-	// fprintf(fp,"%d\n%d\n", ptc->wfs[wfs].nsubap, 2); //outer dimension is nsubap, inner 2 (vectors)
-
 	// collect displacement vectors and store as reference
 	logInfo("Found following reference coordinates:");
 	for (j=0; j < ptc->wfs[wfs].nsubap; j++) {
@@ -73,12 +65,8 @@ int modCalPinhole(control_t *ptc, int wfs) {
 		gsl_vector_float_set(ptc->wfs[wfs].refc, 2*j+1, gsl_vector_float_get(ptc->wfs[wfs].disp, 2*j+1)); // y
 		// gsl_vector_float_set(ptc->wfs[wfs].refc, 2*j+0, 7); // x
 		// gsl_vector_float_set(ptc->wfs[wfs].refc, 2*j+1, 7); // y
-		
-//		ptc->wfs[wfs].refc[j][0] = ptc->wfs[wfs].disp[j][0];
-//		ptc->wfs[wfs].refc[j][1] = ptc->wfs[wfs].disp[j][1];
-		
+				
 		logDirect("(%f,%f) ", gsl_vector_float_get(ptc->wfs[wfs].refc, 2*j+0), gsl_vector_float_get(ptc->wfs[wfs].refc, 2*j+1));
-//		fprintf(fp,"%f\n%f\n", (double) ptc->wfs[wfs].refc[j][0], (double) ptc->wfs[wfs].refc[j][1]);
 	}
 	// set the rest to zero
 	// for (j=ptc->wfs[wfs].nsubap; j < ptc->wfs[wfs].cells[0] * ptc->wfs[wfs].cells[1]; j++)

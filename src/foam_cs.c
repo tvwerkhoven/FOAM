@@ -196,10 +196,8 @@ int parseConfig(char *var, char *value) {
 	if (strcmp(var, "WFS_COUNT") == 0) {
 		ptc.wfs_count = (int) strtol(value, NULL, 10);
 		ptc.wfs = calloc(ptc.wfs_count, sizeof(*ptc.wfs));	// allocate memory
-		if (ptc.wfs == NULL) {
+		if (ptc.wfs == NULL)
 			logErr("Failed to allocate ptc.wfs");
-			return EXIT_FAILURE;		
-		}
 		
 		// initialize some things to zero
 		for (i=0; i<ptc.wfs_count; i++) {
@@ -216,10 +214,8 @@ int parseConfig(char *var, char *value) {
 		ptc.wfc_count = (int) strtol(value, NULL, 10);
 		ptc.wfc = calloc(ptc.wfc_count, sizeof(*ptc.wfc));
 		
-		if (ptc.wfc == NULL) {
+		if (ptc.wfc == NULL)
 			logErr("Failed to allocate ptc.wfc");
-			return EXIT_FAILURE;
-		}
 
 		logInfo("WFC_COUNT initialized: %d", ptc.wfc_count);
 	}
@@ -326,35 +322,27 @@ int parseConfig(char *var, char *value) {
 		ptc.wfs[tmp].cells[0] = strtol(strtok(value,"{,}"), NULL, 10);
 		ptc.wfs[tmp].cells[1] = strtol(strtok(NULL ,"{,}"), NULL, 10);
 		
-		if (ptc.wfs[tmp].cells[0] % 2 != 0 || ptc.wfs[tmp].cells[1] % 2 != 0) {
+		if (ptc.wfs[tmp].cells[0] % 2 != 0 || ptc.wfs[tmp].cells[1] % 2 != 0)
 			logErr("WFS %d has an odd cell-resolution (%dx%d), not supported. Please only use 2nx2n cells.", \
 				tmp, ptc.wfs[tmp].cells[0], ptc.wfs[tmp].cells[1]);
-			return EXIT_FAILURE;
-		}
 		
 		ptc.wfs[tmp].subc = calloc(ptc.wfs[tmp].cells[0] * ptc.wfs[tmp].cells[1], sizeof(*ptc.wfs[tmp].subc));
 		ptc.wfs[tmp].gridc = calloc(ptc.wfs[tmp].cells[0] * ptc.wfs[tmp].cells[1], sizeof(*ptc.wfs[tmp].gridc));
 		
 		ptc.wfs[tmp].refc = gsl_vector_float_calloc(ptc.wfs[tmp].cells[0] * ptc.wfs[tmp].cells[1] * 2);
 		ptc.wfs[tmp].disp = gsl_vector_float_calloc(ptc.wfs[tmp].cells[0] * ptc.wfs[tmp].cells[1] * 2);
-		if (ptc.wfs[tmp].subc == NULL || ptc.wfs[tmp].refc == NULL || ptc.wfs[tmp].disp == NULL) {
+		if (ptc.wfs[tmp].subc == NULL || ptc.wfs[tmp].refc == NULL || ptc.wfs[tmp].disp == NULL)
 			logErr("Cannot allocate memory for tracker window coordinates, or other tracking vectors.");
-			return EXIT_FAILURE;
-		}
 		
-		if (ptc.wfs[tmp].res.x * ptc.wfs[tmp].res.y <= 0) {
+		if (ptc.wfs[tmp].res.x * ptc.wfs[tmp].res.y <= 0)
 			logErr("Cannot initialize WFS_CELLS before WFS_RES");
-			return EXIT_FAILURE;
-		}
 		
 		ptc.wfs[tmp].shsize[0] = (ptc.wfs[tmp].res.x / ptc.wfs[tmp].cells[0]);
 		ptc.wfs[tmp].shsize[1] = (ptc.wfs[tmp].res.y / ptc.wfs[tmp].cells[1]);
 		ptc.wfs[tmp].refim = calloc(ptc.wfs[tmp].shsize[0] * \
 			ptc.wfs[tmp].shsize[1], sizeof(ptc.wfs[tmp].refim));
-		if (ptc.wfs[tmp].refim == NULL) {
+		if (ptc.wfs[tmp].refim == NULL)
 			logErr("Failed to allocate image memory for reference image.");
-			return EXIT_FAILURE;
-		}
 
 		logInfo("WFS_CELLS initialized for WFS %d: (%dx%d). Subapt resolution is (%dx%d) pixels", \
 			tmp, ptc.wfs[tmp].cells[0], ptc.wfs[tmp].cells[1], ptc.wfs[tmp].shsize[0], ptc.wfs[tmp].shsize[1]);
@@ -369,11 +357,9 @@ int parseConfig(char *var, char *value) {
 		ptc.wfs[tmp].res.x = strtol(strtok(value,"{,}"), NULL, 10);
 		ptc.wfs[tmp].res.y = strtol(strtok(NULL ,"{,}"), NULL, 10);
 		
-		if (ptc.wfs[tmp].res.x % 2 != 0 || ptc.wfs[tmp].res.y % 4 != 0) {
+		if (ptc.wfs[tmp].res.x % 2 != 0 || ptc.wfs[tmp].res.y % 4 != 0)
 			logErr("WFS %d has an odd resolution (%dx%d), not supported. Please only use 2nx2n pixels.", \
 				tmp, ptc.wfs[tmp].res.x, ptc.wfs[tmp].res.y);
-			return EXIT_FAILURE;
-		}		
 		
 		// Allocate memory for all images we need lateron
 		ptc.wfs[tmp].image = calloc(ptc.wfs[tmp].res.x * ptc.wfs[tmp].res.y, sizeof(ptc.wfs[tmp].image));
@@ -385,10 +371,8 @@ int parseConfig(char *var, char *value) {
 		if ((ptc.wfs[tmp].image == NULL) ||
 				(ptc.wfs[tmp].darkim == NULL) ||
 				(ptc.wfs[tmp].flatim == NULL) ||
-				(ptc.wfs[tmp].corrim == NULL)) {
+				(ptc.wfs[tmp].corrim == NULL))
 			logErr("Failed to allocate image memory (image, dark, flat, corrected).");
-			return EXIT_FAILURE;
-		}
 		
 		logInfo("WFS_RES initialized for WFS %d: %d x %d", tmp, ptc.wfs[tmp].res.x, ptc.wfs[tmp].res.y);
 	}
@@ -477,14 +461,13 @@ int loadConfig(char *file) {
 int initLogFiles() {
 	if (strlen(cs_config.infofile) > 0) {
 		if ((cs_config.infofd = fopen(cs_config.infofile,"a")) == NULL) {
-			logErr("Unable to open file %s for info-logging! Not using this logmethod!", cs_config.infofile);
+			logWarn("Unable to open file %s for info-logging! Not using this logmethod!", cs_config.infofile);
 			cs_config.infofile[0] = '\0';
 		}	
-		else logDebug("Info logfile '%s' successfully opened.", cs_config.infofile);
+		else logInfo("Info logfile '%s' successfully opened.", cs_config.infofile);
 	}
-	else {
-		logDebug("Not logging general info to disk.");
-	}
+	else
+		logInfo("Not logging general info to disk.");
 
 	if (strlen(cs_config.errfile) > 0) {
 		if (strcmp(cs_config.errfile, cs_config.infofile) == 0) {	// If the errorfile is the same as the infofile, use the same FD
@@ -492,13 +475,13 @@ int initLogFiles() {
 			logDebug("Using the same file '%s' for info- and error- logging.", cs_config.errfile);
 		}
 		else if ((cs_config.errfd = fopen(cs_config.errfile,"a")) == NULL) {
-			logErr("Unable to open file %s for error-logging! Not using this logmethod!", cs_config.errfile);
+			logWarn("Unable to open file %s for error-logging! Not using this logmethod!", cs_config.errfile);
 			cs_config.errfile[0] = '\0';
 		}
-		else logDebug("Error logfile '%s' successfully opened.", cs_config.errfile);
+		else logInfo("Error logfile '%s' successfully opened.", cs_config.errfile);
 	}
 	else {
-		logDebug("Not logging errors to disk.");
+		logInfo("Not logging errors to disk.");
 	}
 
 
@@ -512,13 +495,13 @@ int initLogFiles() {
 			logDebug("Using the same file '%s' for debug- and error- logging.", cs_config.debugfile);
 		}
 		else if ((cs_config.debugfd = fopen(cs_config.debugfile,"a")) == NULL) {
-			logErr("Unable to open file %s for debug-logging! Not using this logmethod!", cs_config.debugfile);
+			logWarn("Unable to open file %s for debug-logging! Not using this logmethod!", cs_config.debugfile);
 			cs_config.debugfile[0] = '\0';
 		}
-		else logDebug("Debug logfile '%s' successfully opened.", cs_config.debugfile);
+		else logInfo("Debug logfile '%s' successfully opened.", cs_config.debugfile);
 	}
 	else {
-		logDebug("Not logging debug to disk.");
+		logInfo("Not logging debug to disk.");
 	}
 
 	return EXIT_SUCCESS;
@@ -551,7 +534,7 @@ void modeOpen() {
 	logInfo("Entering open loop.");
 
 	if (ptc.wfs_count == 0) {				// we need wave front sensors
-		logErr("Error, no WFSs defined.");
+		logWarn("Error, no WFSs defined.");
 		ptc.mode = AO_MODE_LISTEN;
 		return;
 	}
@@ -566,8 +549,7 @@ void modeOpen() {
 	
 
 	while (ptc.mode == AO_MODE_OPEN) {
-		ptc.frames++;								// increment the amount of frames parsed		
-		logInfo("Operating in open loop"); 
+		ptc.frames++;								// increment the amount of frames parsed
 		
 		if (modOpenLoop(&ptc) != EXIT_SUCCESS) {
 			logWarn("modOpenLoop failed");
@@ -583,7 +565,7 @@ void modeClosed() {
 	logInfo("Entering closed loop.");
 
 	if (ptc.wfs_count == 0) {						// we need wave front sensors
-		logErr("Error, no WFSs defined.");
+		logWarn("Error, no WFSs defined.");
 		ptc.mode = AO_MODE_LISTEN;
 		return;
 	}
@@ -598,7 +580,6 @@ void modeClosed() {
 	
 	ptc.frames++;
 	while (ptc.mode == AO_MODE_CLOSED) {
-		logInfo("Operating in closed loop"); 
 		
 		if (modClosedLoop(&ptc) != EXIT_SUCCESS) {
 			logWarn("modClosedLoop failed");
@@ -622,7 +603,7 @@ void modeCal() {
 		return;
 	}
 	
-	logDebug("Calibration loop done, switching to listen mode");
+	logInfo("Calibration loop done, switching to listen mode");
 	tellClients("201 CALIBRATION SUCCESSFUL");
 	ptc.mode = AO_MODE_LISTEN;
 		
@@ -661,25 +642,18 @@ int sockListen() {
 	
 	event_init();					// Initialize libevent
 	
-	logInfo("Starting listening socket on %s:%d.", cs_config.listenip, cs_config.listenport);
+	logDebug("Starting listening socket on %s:%d.", cs_config.listenip, cs_config.listenport);
 	
 	// Initialize the internet socket. We want streaming and we want TCP
-	if ((sock = socket(PF_INET, SOCK_STREAM, 0)) < 0) {
-		logErr("Listening socket error: %s",strerror(errno));
-		return EXIT_FAILURE; // TODO: we cant return here, we're in a thread. Exit?
-	}
-	
-	logDebug("Socket created.");
+	if ((sock = socket(PF_INET, SOCK_STREAM, 0)) < 0)
+		logErr("Failed to set up socket.");
 		
 	// Get the address fixed:
 	serv_addr.sin_family = AF_INET;
 	serv_addr.sin_addr.s_addr = inet_addr(cs_config.listenip);
 	serv_addr.sin_port = htons(cs_config.listenport);
 	memset(serv_addr.sin_zero, '\0', sizeof(serv_addr.sin_zero));
-	
-	logDebug("Mem set to zero for serv_addr.");
 
-	logDebug("Setting SO_REUSEADDR, SO_NOSIGPIPE and nonblocking...");
 	// Set reusable and nosigpipe flags so we don't get into trouble later on. TODO: doesn't work?
 	if (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval)) != 0)
 		logWarn("Could not set socket flag SO_REUSEADDR.");
@@ -688,14 +662,16 @@ int sockListen() {
 	if (bind(sock, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) != 0)
 		logErr("Binding socket failed: %s", strerror(errno));
 	
-	if (listen (sock, 1) != 0) logErr("Listen failed: %s", strerror(errno));
+	if (listen (sock, 1) != 0) 
+		logErr("Listen failed: %s", strerror(errno));
 		
 	// Set socket to non-blocking mode, nice for events
-	if (setnonblock(sock) != 0) logWarn("Coult not set socket to non-blocking mode, might cause undesired side-effects.");
+	if (setnonblock(sock) != 0) 
+		logWarn("Coult not set socket to non-blocking mode, might cause undesired side-effects.");
 		
-	logInfo("Successfully initialized socket, setting up event schedulers.");
+	logInfo("Successfully initialized socket on %s:%s, setting up event schedulers.", cs_config.listenip, cs_config.listenport);
 	
-    event_set(&sockevent, sock, EV_READ | EV_PERSIST, sockAccept, NULL);
+	event_set(&sockevent, sock, EV_READ | EV_PERSIST, sockAccept, NULL);
     event_add(&sockevent, NULL);
 
 	event_dispatch();				// Start looping
@@ -723,7 +699,7 @@ void sockAccept(const int sock, const short event, void *arg) {
 	client_t *client;				// connection data
 	cli_len = sizeof(cli_addr);
 	
-	logDebug("Handling new client connection.");
+//	logDebug("Handling new client connection.");
 	
 	newsock = accept(sock, (struct sockaddr *) &cli_addr, &cli_len);
 		
@@ -733,7 +709,7 @@ void sockAccept(const int sock, const short event, void *arg) {
 	if (setnonblock(newsock) < 0)
 		logWarn("Unable to set new client socket to non-blocking.");
 
-	logDebug("Accepted & set to nonblock.");
+//	logDebug("Accepted & set to nonblock.");
 	
 	// Check if we do not exceed the maximum number of connections:
 	if (clientlist.nconn >= MAX_CLIENTS) {
@@ -758,10 +734,8 @@ void sockAccept(const int sock, const short event, void *arg) {
 	clientlist.connlist[i] = client;
 
 	// We have to enable it before our callbacks will be
-	if (bufferevent_enable(client->buf_ev, EV_READ) != 0) {
+	if (bufferevent_enable(client->buf_ev, EV_READ) != 0)
 		logErr("Failed to enable buffered event.");
-		return;
-	}
 
 	logInfo("Succesfully accepted connection from %s (using sock %d and buf_ev %p)", \
 		inet_ntoa(cli_addr.sin_addr), newsock, client->buf_ev);
@@ -854,10 +828,8 @@ int popword(char **msg, char *cmd) {
 	
 	// remove initial whitespace
 	begin = strspn(*msg, " \t\n");
-	if (begin > 0) {
-		logDebug("Trimming string begin %d chars", begin);
+	if (begin > 0)// Trimming string begin %d chars", begin
 		*msg = *msg+begin;
-	}
 	
 	// get first next position of a space
 	end = strcspn(*msg, " \t\n");
@@ -876,8 +848,7 @@ int parseCmd(char *msg, const int len, client_t *client) {
 	char tmp[len+1];
 	tmp[0] = '\0';
 		
-	if (popword(&msg, tmp) > 0)
-		logDebug("First word: '%s'", tmp);
+	popword(&msg, tmp);
 		
 
 	if (strcmp(tmp,"help") == 0) {
@@ -886,7 +857,6 @@ int parseCmd(char *msg, const int len, client_t *client) {
 			showHelp(client, tmp);
 		else
 			showHelp(client, NULL);			
-//		logDebug("Got help command & sent it! (subhelp %s)", tmp);
 	}
 	else if ((strcmp(tmp,"exit") == 0) || (strcmp(tmp,"quit") == 0)) {
 		tellClients("200 OK EXIT");

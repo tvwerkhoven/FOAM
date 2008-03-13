@@ -82,6 +82,14 @@ void logInfo(const char *msg, ...) {
 	va_end(ar);
 }
 
+// const int LFLG_ALWAYS =
+// const int LFLG_NOFORMAT = 
+
+
+// void logInfo(int flag, const char *msg, ...) {
+// 	
+// }
+
 void logDirect(const char *msg, ...) {
 	// this log command is always logged and without any additional formatting on the loginfo level
 	if (cs_config.loglevel < LOGINFO) 		// Do we need this loglevel?

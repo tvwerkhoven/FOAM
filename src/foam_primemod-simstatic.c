@@ -83,7 +83,7 @@ int modOpenLoop(control_t *ptc) {
 	if (modParseSH((&ptc->wfs[0])) != EXIT_SUCCESS)			// process SH sensor output, get displacements
 		return EXIT_FAILURE;
 	
-	logInfo("Frame: %ld", ptc->frames);
+	logDebug("Frame: %ld", ptc->frames);
 	if (ptc->frames % 500 == 0) 
 		modDrawStuff(ptc, 0, screen);
 
@@ -117,7 +117,7 @@ int modClosedLoop(control_t *ptc) {
 	if (modCalcCtrlFake(ptc, 0, 0) != EXIT_SUCCESS)	// process SH sensor output, get displacements
 		return EXIT_FAILURE;	
 		
-	logInfo("frame: %ld", ptc->frames);
+	logDebug("frame: %ld", ptc->frames);
 	if (ptc->frames % 500 == 0) 
 		modDrawStuff(ptc, 0, screen);
 	
@@ -134,8 +134,7 @@ int modClosedLoop(control_t *ptc) {
 
 int modCalibrate(control_t *ptc) {
 
-	logInfo("Switching calibration");
-	logInfo("No calibration in static simulation mode");	
+	logInfo("No calibration in static simulation mode");
 
 	return EXIT_SUCCESS;
 }
@@ -143,7 +142,7 @@ int modCalibrate(control_t *ptc) {
 int drvReadSensor() {
 	int i, x, y;
 	int simres[2];
-	logDebug("Now reading %d sensors", ptc.wfs_count);
+	// logDebug("Now reading %d sensors", ptc.wfs_count);
 	
 	if (ptc.wfs_count < 1) {
 		logWarn("Nothing to process, no WFSs defined.");
@@ -159,7 +158,6 @@ int drvReadSensor() {
 	}
 	else {
 		if (simimgsurf == NULL) {
-			logDebug("Read PGM arr");
 			if (modReadPGMArr(FOAM_MODSIM_STATIC, &simimgsurf, simres) != EXIT_SUCCESS)
 				logErr("Cannot read static image.");
 
@@ -169,7 +167,6 @@ int drvReadSensor() {
 				return EXIT_FAILURE;			
 			}
 			
-			logDebug("Copying image to WFS image");
 			for (y=0; y<res.y*res.x; y++)
 				ptc.wfs[0].image[y] = simimgsurf[y];
 				
@@ -193,10 +190,9 @@ int modCalcCtrlFake(control_t *ptc, const int wfs, int nmodes) {
 	int nsubap = ptc->wfs[0].nsubap;
 	int nacttot = 39;
 	
-	logDebug("Calculating WFC ctrls");
 	// function assumes presence of dmmodes, singular and wfsmodes...
 	if (inflf == NULL || vf == NULL) {
-		logInfo("First modCalcCtrl, need to initialize stuff.");
+		logInfo("First modCalcCtrlFake, need to initialize stuff.");
 		// fake the influence matrix:
 		gsl_matrix *infl, *v;
 		gsl_vector *sing, *work;
@@ -237,6 +233,7 @@ int modCalcCtrlFake(control_t *ptc, const int wfs, int nmodes) {
 		// init test displacement vector
 		for (i=0; i<nsubap*2; i++)
 			gsl_vector_float_set(dispf, i, drand48()*2-1);
+		
 		logInfo("Init done, starting SVD reconstruction stuff.");
 		
 		gsl_matrix_free(infl);

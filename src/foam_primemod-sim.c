@@ -41,13 +41,17 @@ extern FILE *ttfd;
 int modInitModule(control_t *ptc) {
 
     /* Initialize defaults, Video and Audio */
-    if((SDL_Init(SDL_INIT_VIDEO) == -1)) logErr("Could not initialize SDL: %s.\n", SDL_GetError());
+    if((SDL_Init(SDL_INIT_VIDEO) == -1)) 
+		logErr("Could not initialize SDL: %s.\n", SDL_GetError());
+
 	atexit(SDL_Quit);
 	
 	SDL_WM_SetCaption("WFS 0 output", "WFS 0 output");
 
 	screen = SDL_SetVideoMode(ptc->wfs[0].res.x, ptc->wfs[0].res.y, 0, SDL_HWSURFACE|SDL_DOUBLEBUF);
-	if (screen == NULL) logErr("Unable to set video: %s", SDL_GetError());
+	if (screen == NULL) 
+		logErr("Unable to set video: %s", SDL_GetError());
+		
 	return EXIT_SUCCESS;
 }
 
@@ -101,12 +105,13 @@ int modClosedInit(control_t *ptc) {
 	
 	// // check if calibration is done
 	for (i=0; i < ptc->wfs_count; i++) {
-		logInfo("Checking if calibrations necessary for closed loop succeeded (WFS %d/%d).", i, ptc->wfs_count);
+		
 		if (modCalWFCChk(ptc, i) == EXIT_FAILURE) {
 			logWarn("Calibration incomplete for WFS %d, please calibrate first", i);
 			ptc->mode = AO_MODE_LISTEN;
 			return EXIT_FAILURE;
 		}
+		logInfo("Calibration appears to be OK for all %d WFSs.", ptc->wfs_count);
 	}
 	return EXIT_SUCCESS;
 }
@@ -164,7 +169,7 @@ int modCalibrate(control_t *ptc) {
 		// 	return modLinTest(ptc, 0); // arguments: (control_t *ptc, int wfs)
 		// 	break;
 		default:
-			logErr("Unsupported calibrate mode encountered.");
+			logWarn("Unsupported calibrate mode encountered.");
 			return EXIT_FAILURE;
 			break;			
 	}
