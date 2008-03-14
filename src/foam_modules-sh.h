@@ -49,9 +49,18 @@ analysed by modCalcDMVolt(), which calculates the actual driving voltages for th
 DM. 
 
 @return EXIT_SUCCESS on success, EXIT_FAILURE otherwise.
-@param [in] *wfsinfo wfs_t struct holding relevant information for the current WFS
+@param [in] *image The image to parse through either CoG or correlation tracking
+@param [in] *dark The darkfield image
+@param [in] *flat The flatfield image
+@param [in] res The resolution of the previous images
+@param [in] *subc[2] The starting coordinates of the tracker windows
+@param [in] *gridc[2] The starting coordinates of the grid cells
+@param [in] nsubap The number of subapertures (i.e. the length of the subc[] array)
+@param [in] track The size of the tracker windows
+@param [out] *disp The displacement vector wrt the reference displacements
+@param [in] *refc The reference displacements (i.e. after pinhole calibration)
 */
-int modParseSH(wfs_t *wfsinfo);
+int modParseSH(wfs_t *wfsinfo, float *image, float *dark, float *flat, coord_t res, int (*subc)[2], int (*gridc)[2], int nsubap, coord_t track, gsl_vector_float *disp, gsl_vector_float *refc);
 
 /*!
 @brief Calculates the sum of absolute differences for two subapertures
@@ -90,16 +99,21 @@ void imcal(float *corrim, float *image, float *darkim, float *flatim, float *sum
 @brief Tracks the seeing using center of gravity tracking
 
 This calculates the center of gravity of each subaperture. The coordinates will be relative to the center of the
-tracking window, i.e. if the center of gravity coordinate is added to the tracking window position, it is again
-centered around the real center of gravity. Note that this will only work for star-like images, extended
+tracking window. Note that this will only work for star-like images, extended
 images will not work.
 
-@param [in] *wfsinfo The wfs_t struct holding relevant info on the current WFS being analysed
-@param [out] *aver The average intensity over all subapts wil be stored here
-@param [out] *max The maximum intensity of all subapts will be stored here
-@param [out] coords will hold the CoG coordinates relative to the center of the subaperture
+@param [in] *image The image to parse through either CoG or correlation tracking
+@param [in] *dark The darkfield image
+@param [in] *flat The flatfield image
+@param [in] res The resolution of the previous images
+@param [in] *subc[2] The starting coordinates of the tracker windows
+@param [in] nsubap The number of subapertures (i.e. the length of the subc[] array)
+@param [in] track The size of the tracker windows
+@param [out] *aver The average pixel intensity (good for CCD saturation)
+@param [out] *max The maximum pixel intensity
+@param [out] coords A list of coordinates the spots were found at wrt the center of the tracker windows
 */
-void modCogTrack(wfs_t *wfsinfo, float *aver, float *max, float coords[][2]);
+void modCogTrack(float *image, float *dark, float *flat, coord_t res, int (*subc)[2], int nsubap, coord_t track, float *aver, float *max, float coords[][2]);
 
 /*!
 @brief Calculates the controls to be sent to the various WFC, given displacements.

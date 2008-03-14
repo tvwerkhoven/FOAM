@@ -33,7 +33,7 @@
 // GLOBALS //
 /***********/
 
-FILE *rmsfp;
+// FILE *rmsfp;
 
 // ROUTINES //
 /************/
@@ -252,78 +252,37 @@ int modSelSubapts(float *image, coord_t res, int cells[2], int (*subc)[2], int (
 	return EXIT_SUCCESS;
 }
 
-void modCogTrack(wfs_t *wfsinfo, float *aver, float *max, float coords[][2]) {
-	// center of gravity tracking here (easy)
+void modCogTrack(float *image, float *dark, float *flat, coord_t res, int (*subc)[2], int nsubap, coord_t track, float *aver, float *max, float coords[][2]) {
 	int ix, iy, sn=0;
 	float csx, csy, csum, fi; 			// variables for center-of-gravity
 	float sum = 0;
-
-	float *image = wfsinfo->image;
-//	float *dark = wfsinfo->darkim
-//	float *flat = wfsinfo->flatim
-	float *corr = wfsinfo->corrim;
-	int nsubap = wfsinfo->nsubap;
-	int (*subc)[2] = wfsinfo->subc;		// shortcut to the coordinates of the tracker windows
 	
-	int *cells, *shsize;
-	coord_t track;
-	
-	coord_t res = wfsinfo->res;			// shortcuts to resolution
-	cells = wfsinfo->cells;				// number of x-cells y-cells
-	shsize = wfsinfo->shsize;			// subapt pixel resolution
-
-	track.x = shsize[0]/2;				// size of the tracker windows. TODO: GLOBALIZE THIS!!
-	track.y = shsize[1]/2; 
-
-	*max = 0; 							// store maximum here (init to 0 pointer)
-	
-//	uint16_t *gp, *dp; // pointers to gain and dark
-	float  *ip, *cp; // pointers to raw, processed image
-
-	logDebug(LOG_SOMETIMES, "Starting modCogTrack for %d subapts (CoG mode)", nsubap);
-	
-	// Process the rest of the subapertures here:		
-	// loop over all subapertures, except sn=0 (ref subapt)
-	for (sn=0;sn<nsubap;sn++) {
-
-		// --->>> might use some pointer incrementing instead of setting
-		//        addresses from scratch every time
-		// set pointers to various 'images'
-		ip = &image[subc[sn][1]*res.x+subc[sn][0]]; // raw image (input)
-//		fprintf(stderr, "i: %d", subc[sn][0]*res.x+subc[sn][1]);
-//		dp = &dark[sn*shsize[0]*shsize[1]]; // dark (input)
-//		gp = &gain[sn*shsize[0]*shsize[1]]; // gain (output)
-		cp = &corr[sn*track.x*track.y]; // calibrated image (output)
-
-		// dark and flat correct subaperture, determine statistical quantities
-		imcal(cp, ip, NULL, NULL, &sum, max, res, track);
-
-		// center-of-gravity
+	// loop over all subapertures (treat those all equal)
+	for (sn=0; sn<nsubap; sn++) {
 		csx = 0.0; csy = 0.0; csum = 0.0;
 		for (iy=0; iy<track.y; iy++) {
 			for (ix=0; ix<track.x; ix++) {
-				fi = (float) corr[sn*track.x*track.y+iy*track.x+ix];
+				fi = (float) image[subc[sn][1]*res.x+subc[sn][0] + iy*res.x + ix];
 
-				csum += + fi;    // add this pixel's intensity to sum
-				csx += + fi * ix; // center of gravity of subaperture intensity 
-				csy += + fi * iy;
+				if (fi > *max) *max = fi;
+				
+				csum += fi;				// add this pixel's intensity to sum
+				csx += fi * ix; 		// center of gravity of subaperture intensity 
+				csy += fi * iy;
 			}
-		} // end loop over pixels to get CoG
-
-		if (csum > 0.0) { // if there is any signal at all
-			coords[sn][0] = -csx/csum + track.x/2; // negative for consistency with CT 
-			coords[sn][1] = -csy/csum + track.y/2; // /2 because our tracker cells are track[] wide and high
-		//	if (sn<0) printf("%d %f %f\n",sn,stx[sn],sty[sn]);
-		} 
-		else {
-			coords[sn][0] = 0.0;
-			coords[sn][1] = 0.0;
 		}
+		sum += csum;
 
-	} // end of loop over all subapertures
-
-
-	// average intensity over all subapertures
+		if (csum > 0.0) {				// if there is any signal at all
+			coords[sn][0] = csx/csum - track.x/2; // positive now
+			coords[sn][1] = csy/csum - track.y/2; // /2 because our tracker cells are track[] wide and high
+		} 
+		else
+			coords[sn][0] = coords[sn][1] = 0.0;
+		
+	}
+	
+	// Calculate average subaperture intensity
 	*aver = sum / ((float) (track.x*track.y*nsubap));
 }
 
@@ -355,82 +314,59 @@ void modCogFind(wfs_t *wfsinfo, int xc, int yc, int width, int height, float sam
 	cog[1] = cs[1]/csum;
 }
 
-int modParseSH(wfs_t *wfsinfo) {
-	// now calculate the offsets 
+int modParseSH(wfs_t *wfsinfo, float *image, float *dark, float *flat, coord_t res, int (*subc)[2], int (*gridc)[2], int nsubap, coord_t track, gsl_vector_float *disp, gsl_vector_float *refc) {
 	float aver=0.0, max=0.0;
-	float coords[wfsinfo->nsubap][2];
+	float rmsx=0.0, rmsy=0.0;
+	float maxx=0, maxy=0;
+	float coords[nsubap][2];
 	int i;
 
-	// track the maxima
-	modCogTrack(wfsinfo, &aver, &max, coords);
+	// track the maxima using CoG
+	modCogTrack(image, dark, flat, res, subc, nsubap, track, &aver, &max, coords);
 	
-	// note: coords is relative to the center of the tracker window
-	// therefore we can simply update the lower left coord by subtracting the coordinates.
-//	float sum, cog[2];
-	float rmsx=0.0, rmsy=0.0;
-	//logInfo(0, "Coords: ");
-	
-	for (i=0; i<wfsinfo->nsubap; i++) {
+	// logDebug(0 | LOG_SOMETIMES, "Coords: ");	
+	for (i=0; i<nsubap; i++) {
 		// store the displacement vectors (wrt center of subaperture grid):
 		// we get subc which is the coordinate of the tracker window wrt the complete sensor image
-		// we calculate the remainder of this coordinate with the subaperture grid, such that we get the 
-		// coordinate of the tracker window wrt the subaperture grid.
-		// After we have this coordinate, we add the displacement we just found which is wrt the center of 
-		// the tracker window.
-		// Finally we subtract half the size of the tracker window  ( = subaperture grid/4) to fix everything.
+		// subtracting the grid coordinat that this subaperture belongs to gives us the vector wrt to
+		// the grid coordinate. After this, we subtract a quarter of the size of the subaperture
+		// grid. If the tracker window would be centered in the grid, subc-gridc-track.x|y/4 would be zero.
+		// Last, we add the coordinate to get the displacement wrt to the center of the grid,
+		// instead of wrt to the center of the tracker window.
 
-//		logDebug(LOG_NOFORMAT, "%d (%d,%d) ", i, wfsinfo->gridc[i][0], wfsinfo->gridc[i][1]);
-		gsl_vector_float_set(wfsinfo->disp, 2*i+0, wfsinfo->subc[i][0] - wfsinfo->gridc[i][0] - coords[i][0] - wfsinfo->shsize[0]/4);
-		
-		// wfsinfo->disp[i][0] = (wfsinfo->subc[i][0] - wfsinfo->gridc[i][0]);
-		// wfsinfo->disp[i][0] -= coords[i][0];
-		// wfsinfo->disp[i][0] -= wfsinfo->shsize[0]/4;
-		gsl_vector_float_set(wfsinfo->disp, 2*i+1, wfsinfo->subc[i][1] - wfsinfo->gridc[i][1] - coords[i][1] - wfsinfo->shsize[1]/4);
-		
-		// wfsinfo->disp[i][1] = (wfsinfo->subc[i][1] - wfsinfo->gridc[i][1]);
-		// wfsinfo->disp[i][1] -= coords[i][1];
-		// wfsinfo->disp[i][1] -= wfsinfo->shsize[1]/4;
+		gsl_vector_float_set(disp, 2*i+0, subc[i][0] - gridc[i][0] - track.x/2 + (coords[i][0]) - gsl_vector_float_get(refc, 2*i+0));
+		gsl_vector_float_set(disp, 2*i+1, subc[i][1] - gridc[i][1] - track.y/2 + (coords[i][1]) - gsl_vector_float_get(refc, 2*i+1));
+		// logDebug(LOG_NOFORMAT| LOG_SOMETIMES, "(%.3f,%.3f) ", gsl_vector_float_get(disp, 2*i+0), gsl_vector_float_get(disp, 2*i+0));
+		// logDebug(LOG_NOFORMAT| LOG_SOMETIMES, "(%.3f,%.3f) ", coords[i][0], coords[i][1]);
 
-//		logDebug(LOG_NOFORMAT, "(%f, %f) ", gsl_vector_float_get(wfsinfo->disp, 2*i+0), gsl_vector_float_get(wfsinfo->disp, 2*i+1));
-		rmsx += gsl_pow_2((double) gsl_vector_float_get(wfsinfo->disp, 2*i+0));
-		rmsy += gsl_pow_2((double) gsl_vector_float_get(wfsinfo->disp, 2*i+1));
+		// Track maximum displacement within the tracker window. This should not be above 1 for long,
+		// otherwise the seeing is too bad for the AO system to compensate: if this value is above 1,
+		// the tracker window should follow the SH spot, and thus the next frame it should again
+		// be below one. If this is not the case the seeing changes too fast.
+		if (fabs(coords[i][0]) > maxx) maxx = fabs(coords[i][0]);
+		if (fabs(coords[i][1]) > maxy) maxy = fabs(coords[i][1]);
+
+		rmsx += gsl_pow_2((double) gsl_vector_float_get(disp, 2*i+0));
+		rmsy += gsl_pow_2((double) gsl_vector_float_get(disp, 2*i+1));
 		
 		// check for runaway subapts and recover them:
-		if (gsl_vector_float_get(wfsinfo->disp, 2*i+0) > wfsinfo->shsize[0]/2 || 
-			gsl_vector_float_get(wfsinfo->disp, 2*i+0) < -wfsinfo->shsize[0]/2 ||
-			gsl_vector_float_get(wfsinfo->disp, 2*i+1) > wfsinfo->shsize[1]/2 || 
-			gsl_vector_float_get(wfsinfo->disp, 2*i+1) < -wfsinfo->shsize[0]/2) {
-		
-//			logDebug(0, "Runaway subapt detected! (%f,%f)", wfsinfo->disp[i][0], wfsinfo->disp[i][1]);
-			// xc = (wfsinfo->subc[i][0] / wfsinfo->shsize[0]) * wfsinfo->shsize[0];
-			// yc = (wfsinfo->subc[i][1] / wfsinfo->shsize[1]) * wfsinfo->shsize[1];
-			// modCogFind(wfsinfo, xc, yc, wfsinfo->shsize[0], wfsinfo->shsize[1], 0.0, &sum, cog);
-			// 		
-			// wfsinfo->subc[i][0] = xc + (int) (cog[0]+0.5) - wfsinfo->shsize[0]/4;	// subapt coordinates
-			// wfsinfo->subc[i][1] = yc + (int) (cog[1]+0.5) - wfsinfo->shsize[1]/4;	// subapt coordinates
-			// 
-			// wfsinfo->disp[i][0] = cog[0];
-			// coords[i][1] = cog[1];
-			// logDebug(0, "Runaway subapt saved! (%f,%f)", cog[0], cog[1]);
-			// exit(0);
+		if (gsl_vector_float_get(disp, 2*i+0) > track.x || 
+			gsl_vector_float_get(disp, 2*i+0) < -track.x ||
+			gsl_vector_float_get(disp, 2*i+1) > track.y || 
+			gsl_vector_float_get(disp, 2*i+1) < -track.y) {
+			//logDebug(LOG_NOFORMAT| LOG_SOMETIMES, "Runaway subapt (%d) at: (%.3f,%.3f) ", 2*i, gsl_vector_float_get(disp, 2*i+0), gsl_vector_float_get(disp, 2*i+0));
 		}
-		
-		// update the tracker window coordinates:
-		// +0.5 to make sure rounding (integer clipping) is fair. 
-		// Don't forget to cast to int, otherwise problems occur!
-		// TODO: this works, is this fast?
-		wfsinfo->subc[i][0] -= (int) (coords[i][0]+0.5);//-wfsinfo->res.x/wfsinfo->cells[0]/4;
-		wfsinfo->subc[i][1] -= (int) (coords[i][1]+0.5);//-wfsinfo->res.y/wfsinfo->cells[1]/4;
+		// note: coords is relative to the center of the tracker window
+		// therefore we can simply update the lower left coord by subtracting the coordinates.
+		subc[i][0] += round(coords[i][0]);
+		subc[i][1] += round(coords[i][1]);
 	}
-	
-	gsl_vector_float_sub(wfsinfo->disp, wfsinfo->refc);
-		
-//	logDebug(LOG_NOFORMAT, "\n");
-	rmsx = sqrt(rmsx/wfsinfo->nsubap);
-	rmsy = sqrt(rmsy/wfsinfo->nsubap);
-	logInfo(LOG_SOMETIMES, "RMS displacement: x: %f, y: %f", rmsx, rmsy);
-	if (rmsfp == NULL) rmsfp = fopen("ttdebug-rms.dat", "w+");
-	fprintf(rmsfp, "%f, %f\n", rmsx, rmsy);
+	// logDebug(LOG_NOFORMAT| LOG_SOMETIMES, "\n");
+
+	rmsx = sqrt(rmsx/nsubap);
+	rmsy = sqrt(rmsy/nsubap);
+	logInfo(LOG_SOMETIMES, "RMS displacement wrt reference: x: %.3f, y: %.3f", rmsx, rmsy);
+	logInfo(LOG_SOMETIMES, "Max abs disp in tracker window (<(.5, .5)): (%.3f, %.3f)", maxx, maxy);
 	
 	return EXIT_SUCCESS;
 }
@@ -545,108 +481,6 @@ float sae(float *subapt, float *refapt, int len) {
 	return sum;
 }
 
-/*
-void procRef(wfs_t *wfsinfo, float *sharp, float *aver) {
-//	uint8_t  pixel;
-//	uint16_t in16, d16, g16;
-	float in, dd, gg;  // these types should be higher than the image type for internal calculation
-	float pixel;
-
-	float *image = wfsinfo->image;	// full image
-	float *ref = wfsinfo->refim;	// reference image
-	float *dark = wfsinfo->darkim; 	// dark image
-	float *flat = wfsinfo->flatim; 	// flat img
-	float si=0, sqi=0;				// some summing variables
-	float a=0, b=0, c=0, d=0; 		// summed quadrant intensities
-	
-	int ix, iy;	// counters
-
-	coord_t res = wfsinfo->res;		// resolution of *image
-	int *shsize = wfsinfo->shsize;	// subapt pixel resolution
-	int (*subc)[2] = wfsinfo->subc;		// coordinates of the tracker windows 
-	
-	for (iy=0; iy<shsize[1]; iy++) {
-		for (ix=0; ix<shsize[0]; ix++) {
-			// TvW: why *256 and /4?
-			// TvW: TODO this! 
-			// Also: combine this with imcal? same procedure right?
-			
-			// in = (float) image[(subc[0][1]-shsize[1]/4+iy)*res.x+subc[0][0]-shsize[0]/4+ix]*256;
-			// dd = (float) dark[(subc[0][1]-shsize[1]/4+iy)*res.x+subc[0][0]-shsize[0]/4+ix]/4;
-			// if (in > dd) in -= dd;
-			// else in = 0;
-			// gg = (float) (1.07374182E+09 / (float) 
-			// 	( flat[(subc[0][1]-shsize[1]/4+iy)*res.x+subc[0][0]-shsize[0]/4+ix] - 
-			// 	dark[(subc[0][1]-shsize[1]/4+iy)*res.x+subc[0][0]-shsize[0]/4+ix]));
-			// // 1.07374182E+09 is 2^30 
-			// // What's this? Only works on ints?
-			// pixel = (float) (((double) in * (double) gg) / (1 << 21));
-			
-			pixel = image[(subc[0][1]-shsize[1]/4+iy)*res.x+subc[0][0]-shsize[0]/4+ix];
-			
-			ref[iy* shsize[0] + ix] = pixel;
-			// TvW: this is not used at the moment:
-			// si += pixel;
-			// sqi += pixel;
-		}
-	}
-
-	switch (wfsinfo->scandir) {
-		case AO_AXES_XY:
-		    // the following defines the sharpness as the rms contrast
-		    // --->>> maybe we should only use the SX*SY subaperture and not the full
-		    //        RX*RY reference aperture because of flatfielding at the edges
-		    //  *sharp = sqrt( (sqi - ((float) si *(float) si)/((float) (RX*RY))) 
-		    //		 / (float) (RX*RY-1) );
-
-		    // the following is useful on spots, which returns the inverse
-		    // distance from a centered spot using a quad-cell approach
-	
-			// TvW: check this!
-			for (iy=shsize[1]/4; iy<shsize[1]/2; iy++) {
-				for (ix=shsize[0]/4; ix<shsize[0]/2; ix++) a=a+ref[iy*shsize[0]+ix]; // lower left
-				for (ix=shsize[0]/2; ix<shsize[0]*3/4; ix++) b=b+ref[iy*shsize[0]+ix]; // lower right 
-			}
-			for (iy=shsize[1]/2; iy<shsize[1]*3/4; iy++) {
-				for (ix=shsize[0]/4; ix<shsize[0]/2; ix++) c=c+ref[iy*shsize[0]+ix]; // upper left
-				for (ix=shsize[0]/2; ix<shsize[0]*3/4; ix++) d=d+ref[iy*shsize[0]+ix]; // upper right
-			}
-		    // adding +1 prevents division by zero
-		    *sharp = (float) (a+b+c+d) / (float) (abs(a+b-c-d)+abs(a+c-b-d)+1); 
-		    break;
-
-		case AO_AXES_X: // vertical limb, maximize intensity difference 
-			// between left and right
-			for (iy=shsize[1]/4; iy<shsize[1]*3/4; iy++) {
-				for (ix=shsize[0]/4; ix<shsize[0]/2; ix++) a=a+ref[iy*shsize[0]+ix]; //  left
-				for (ix=shsize[0]/2; ix<shsize[0]*3/4; ix++) b=b+ref[iy*shsize[0]+ix]; //  right 
-			}
-			// TvW: why /64?
-			*sharp = (float) fabs(a-b)/64.0;
-			break;
-
-		case AO_AXES_Y: // horizontal limb, maximize intensity difference 
-			// between top and bottom
-			// TvW: continue
-			for (ix=shsize[0]/4; ix<shsize[0]*3/4; ix++) {
-				for (iy=shsize[1]/4; iy<shsize[1]/2; iy++) a=a+ref[iy*shsize[0]+ix]; //  left
-				for (iy=shsize[1]/2; iy<shsize[1]*3/4; iy++) b=b+ref[iy*shsize[0]+ix]; //  right 
-			}
-			*sharp = (float) fabs(a-b)/64.0; 
-			break;
-
-	} // end switch (wfsinfo->scandir)
-
-	// average intensity over subaperture
-	si=0;
-	for (iy=shsize[1]/4; iy<shsize[1]*3/4; iy++)
-		for (ix=shsize[0]/4; ix<shsize[0]*3/4; ix++)
-			si += ref[iy*shsize[0]+ix];
-			
-	*aver = (float) (si) / (float) (shsize[0]/2*shsize[1]/2);
-
-} // end of procref
-*/
 
 // TODO: on the one hand depends on int wfs, on the other hand needs int window[2], fix that
 void imcal(float *corrim, float *image, float *darkim, float *flatim, float *sum, float *max, coord_t res, coord_t window) {
@@ -678,341 +512,3 @@ void imcal(float *corrim, float *image, float *darkim, float *flatim, float *sum
 	}			
 	
 }
-
-/*
-void modCorrTrack(wfs_t *wfsinfo, float *aver, float *max, float coords[][2]) {
-	// this will contain correlation tracking, but first we need to get reference images
-
-#define NP 5
-#define NO NP/2
-
-	// when working at the limb, we do not correct for transparency 
-	// variations since there is a coupling between subaperture intensity
-	// and overall shift
-	//
-	// --->>> but we should really figure out a way to correct anyway at
-	// the limb since the transparency variations influence the limb
-	// position; we might use pixels well within the disk to separate the
-	// transparency fluctuations from the limb position
-
-	// TvW: what does this mean again?
-//	if (wfsinfo->scandir != AO_AXES_XY) corr = 1.0;
-
-	float *image = wfsinfo->image;		// the real image (input)
-//	float *dark = wfsinfo->darkim
-//	float *flat = wfsinfo->flatim
-	float *corr = wfsinfo->corrim;		// the corrected image (output)
-	float *refim = wfsinfo->refim;		// the reference image (input)
-	float *ip, *cp, *rp;				// pointers to various images (temp)
-	coord_t res = wfsinfo->res;			// resolution of *image and *refim
-	int track[] = {res.x/wfsinfo->cells[0]/2, res.y/wfsinfo->cells[1]/2};
-										// tracking windows for the subapertures
-	int (*subc)[2] = wfsinfo->subc;		// coordinates of the tracker windows 
-	
-	int nsubap = wfsinfo->nsubap;		// number of subapts
-	float d, diff[NP][NP], cmin, msae[nsubap];	// variables to hold the SAE as function of displacement
-	int sn;
-
-	float sig[NP];
-	float tmpmax, sum;
-
-	static float sxx, sxxxx, rnp;     		// fixed values for parabola fit
-	static float sy,sxy,sxxy,x,y,a,b,da,db; // variable values for parabola fit
-	int ix=0, iy=0;
-	
-	// precompute some values needed to fit a parabola
-	// TODO: this is unecessary, rewrite this parabola fitting
-	// --->>> we could do this only once, not every time shtracker is called
-	sxx   = 0.0;
-	sxxxx = 0.0;
-	for (ix=0; ix<NP; ix++) {
-		x = ix - NO;
-		sxx   = sxx   + x*x;
-		sxxxx = sxxxx + x*x*x*x;
-	}
-	rnp = 1.0 / (float) NP;
-	da = 1.0 / (sxxxx-rnp*sxx*sxx);
-	db = 1.0 / sxx;
-
-	// correction factor for transparency fluctuations (e.g. cirrus)
-	// 32768 = 2^15
-	// TvW: why?
-//	for (i=0;i<4;i++) tmpcorr4[i] = (uint16_t) (corr * 32768.0);
-
-	// set max to zero manually, init some other vars
-	*max = 0;
-	tmpmax = 0;
-	sum = 0;
-	
-	
-	// BEGIN SUBAPERTURE LOOP //
-	////////////////////////////
-	for (sn=0;sn<nsubap;sn++) {
-
-		// --->>> might use some pointer incrementing instead of setting
-		//        addresses from scratch every time
-		ip = &image[subc[sn][1]*res.x+subc[sn][0]]; // raw image (input)
-//		dp = &dark[sn*shsize[0]*shsize[1]]; // dark (input)
-//		gp = &gain[sn*shsize[0]*shsize[1]]; // gain (output)
-		cp = &corr[sn*track[0]*track[1]]; // calibrated image (output)
-		
-
-		// dark and flat correct subaperture, determine statistical quantities
-		imcal(cp, ip, NULL, NULL, &sum, max, res, track);
-		
-		// update the maximum value
-		if (tmpmax > *max)
-			*max = tmpmax;
-			
-		// add the sum of this subapt to the average (divide by nsubapt later)
-		*aver += sum;
-		
-	    cmin = 1000000; // large positive integer 
-		// TODO: ugly, how to fix?
-
-	    switch (wfsinfo->scandir) {
-			case AO_AXES_XY:
-			////////////////
-
-			ip = &corr[sn*track[0]*track[1]]; // first pixel of each corrected subaperture
-			for (ix=-NO; ix<=NO; ix++) {
-				// --->>> might explicitely unroll the inner loop
-				for (iy=-NO;iy<=NO;iy++) {
-					rp = &refim[(iy+track[1]/2)*track[0]*2+ix+track[0]/2]; // first pixel of shifted reference
-					d = sae(ip,rp, track[1]*track[0]);
-					// --->>> squaring could be done in assembler code
-					diff[ix+NO][iy+NO] = d*d; // square of SAD
-				}
-			}
-			break;
-
-			case AO_AXES_X:
-			////////////////
-			
-			ip = &corr[sn*track[0]*track[1]]; // first pixel of each corrected subaperture
-			for (ix=-NO; ix<=NO; ix++) {
-				rp = &refim[(iy+track[1]/2)*track[0]*2+ix+track[0]/2]; // first pixel of shifted reference
-				d = sae(ip,rp, track[1]*track[0]);
-				diff[ix+NO][NO] = d;
-				if (cmin>d) {
-					cmin = d;
-				//  ndx = dx+ix;
-				}
-			}
-			break;
-
-			case AO_AXES_Y:
-			////////////////
-			
-			ip = &corr[sn*track[0]*track[1]]; // first pixel of each corrected subaperture
-			for (iy=-NO; iy<=NO; iy++) {
-				rp = &refim[(iy+track[1]/2)*track[0]*2+ix+track[0]/2]; // first pixel of shifted reference
-				d = sae(ip,rp, track[1]*track[0]);
-				diff[NO][iy+NO] = d;
-				if (cmin>d) {
-					cmin = d;
-				//  ndy = dy+iy;
-				}
-			}
-			break;
-		} // end of switch(axes) statement
-
-
-	    msae[sn] = cmin;            // minimum sum of absolute differences 
-
-	    // subpixel interpolation of minimum position
-	    // currently uses two 1-D approaches
-
-		// Interpolation along the X direction //
-		/////////////////////////////////////////
-		if ((wfsinfo->scandir==AO_AXES_X) || (wfsinfo->scandir==AO_AXES_XY)) {
-			if (wfsinfo->scandir==AO_AXES_XY) { // average values over the y-axis
-				for (ix=0; ix<NP; ix++) { 
-					sig[ix] = 0.0;
-					for (iy=0; iy<NP; iy++) sig[ix] = sig[ix] + (float) diff[ix][iy];
-				}
-			} else {
-				for (ix=0; ix<NP; ix++) {
-					sig[ix] = diff[ix][NO];
-				}
-			}
-			sy   = 0.0;
-			sxy  = 0.0;
-			sxxy = 0.0;
-			
-			for (ix=0; ix<NP; ix++) {
-				x = ix - NO;
-				y = sig[ix];
-				sy   = sy + y;			// First Moment (sum or avg)
-				sxy  = sxy + x*y;		// Second moment
-				sxxy = sxxy + x*x*y;	// Third moment
-			}
-
-			if (sy > 0.0) {
-				a = (sxxy-rnp*sxx*sy) * da;
-				b = sxy * db;
-				if (a != 0.0) 
-					coords[sn][0] = -0.5 * b/a;
-				else 
-					coords[sn][0] = 0.0;
-			} 
-			else {
-				coords[sn][0] = 0.0;
-			}
-		} // End for: if ((wfsinfo->scandir==AO_AXES_X) || (wfsinfo->scandir==AO_AXES_XY))
-		else {
-			coords[sn][0] = 0.0;
-		}
-
-		// Interpolation along the Y direction //
-		/////////////////////////////////////////
-		if ((wfsinfo->scandir==AO_AXES_Y) || (wfsinfo->scandir==AO_AXES_XY)) {
-			if (wfsinfo->scandir==AO_AXES_XY) { // average values over the x-axis
-				for (iy=0; iy<NP; iy++) {
-					sig[iy] = 0.0;
-					for (ix=0; ix<NP; ix++) sig[iy] = sig[iy] + (float) diff[ix][iy];
-				}
-			} 
-			else {
-				for (iy=0; iy<NP; iy++) {
-					sig[iy] = diff[NO][iy];
-				}
-			}
-		
-			sy   = 0.0;
-			sxy  = 0.0;
-			sxxy = 0.0;
-			for (ix=0; ix<NP; ix++) {
-				x = ix - NO;
-				y = sig[ix];
-				sy   = sy   + y;
-				sxy  = sxy  + x*y;
-				sxxy = sxxy + x*x*y;
-			}
-			if (sy > 0.0) {
-				a = (sxxy-rnp*sxx*sy) * da;
-				b = sxy * db;
-				if (a != 0.0) 
-					coords[sn][1] = -0.5 * b/a; // +(float) (dy); 
-				else 
-					coords[sn][1] = 0.0;
-			} 
-			else {
-				coords[sn][1] = 0.0;
-			}
-		} 
-		else {
-			coords[sn][1] = 0.0;
-		} // End for: if ((wfsinfo->scandir==AO_AXES_Y) || (wfsinfo->scandir==AO_AXES_XY))
-	}
-	// END SUBAPERTURE LOOP //
-	//////////////////////////
-
-	// TvW: why do we use corr?
-	// what is si?
-	// what do we need the statistics for?
-
-	// average intensity over all subapertures
-	// divide by number of pixels, we already summed it above
-	*aver /= (track[0]*track[1]*nsubap);
-
-
-	// calculate average reference subaperture intensity if new reference 
-	// was just taken
-	// TvW: what's this then?
-	
-	// if (*newref == AO_REFIM_NONE) { // new reference is valid
-	// 	printf("old correction factor: %f\n",corr);
-	// 	refaver = 0.0;  // average reference subaperture intensity
-	// 	for (ix=0;ix<SX;ix++)
-	// 		for (iy=0;iy<SY;iy++)
-	// 			refaver = refaver + (float) refim[(iy+4)*RX+ix+4];
-	// 	
-	// 	refaver = refaver/(float) (SX*SY);
-	// 	corr = 1.0; // reset brightness correction
-	// 	*newref = AO_REFIM_GOOD;
-	// 	printf("new reference, correction factor: %f\n",corr);
-	// }
-
-	// calculate intensity correction factor based on average intensity
-	// if (refaver == 0.0)
-	// 	corr = 1.0;
-	// else {
-	// 	if (*aver>0) corr = corr * refaver / *aver; // update correction factor
-	// 	// if correction factor is 2 or larger, then the multiplication
-	// 	// with 2^15 above 'flips' over to something close to zero; we should
-	// 	// allow at least a factor of 4, but we still need to catch that case
-	// 	// (maybe using saturated multiplication)
-	// 	if (corr>1.999) corr=1.999;
-	// }
-
-}
-
-void modGetRef(wfs_t *wfsinfo) {
-	float sharp, aver, bestsharp=0;			// store some stats in here
-	int i, refcount;
-	int *shsize = wfsinfo->shsize;			// subapt pixel resolution
-	
-	float refbest[shsize[0] * shsize[1]]; 	// best reference image storage
-
-	for (refcount=0; refcount<1024; refcount++) {
-		procRef(wfsinfo, &sharp, &aver);
-		if (sharp > bestsharp) { // the new potential reference is sharper
-			for (i=0; i<shsize[1]*shsize[0]; i++)
-				refbest[i] = wfsinfo->refim[i];
-				
-		}
-	}
-	
-	// store the best reference image
-	for (i=0; i<shsize[0]*shsize[1]; i++)
-		wfsinfo->refim[i] = refbest[i];
-
-	logInfo(0, "Got new reference image, sharp: %f, aver: %f", sharp, aver);
-	// We have a new ref, check the displacement vectors for this new ref
-	// TvW: TODO
-}
-
-void modCalcWFCVolt(control_t *ptc, int wfs, int nmodes) {
-	//, float sdx[NS], float sdy[NS], float actvol[DM_ACTUATORS],
-	//                float modeamp[DM_ACTUATORS], )
-		// sdx     subaperture shifts in x
-		// sdy     subaperture shifts in y
-		// actvol  desired change in actuator voltage squared
-		// modeamp system mode amplitudes
-		// nmodes  number of system modes to use
-
-	int i,j;   // index variables
-	float sum; // temporary sum
-
-	int nact;
-	
-	// get total nr of actuators
-	for (i=0; i < ptc->wfc_count; i++)
-		nact += ptc->wfc[i].nact;
-
-	// TvW continue here:
-	/////////////////////
-	
-	// new code using system mode amplitudes
-	// first calculate mode amplitudes
-	for (i=0; i<nact ;i++) { // loop over all actuators
-		sum=0.0;
-		for (j=0;j<ptc->wfs[wfs].nsubap;j++) // loop over all subapertures
-			sum = sum + wfsmodes[i*2*NS+j*2]*sdx[j] + wfsmodes[i*2*NS+j*2+1]*sdy[j];
-			
-		modeamp[i] = sum;
-	}
-	
-	// apply inverse singular values and calculate actuator amplitudes
-	for (i=0;i<nact;i++) { // loop over all actuators
-		sum=0.0;
-		for (j=0;j<nmodes;j++) // loop over all system modes that are used
-			sum = sum + dmmodes[i*DM_ACTUATORS+j]*modeamp[j]/singval[j];
-			
-		ptc->wfs[wfs].ctrl[i] = sum;
-	}
-
-
-}
-*/

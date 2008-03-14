@@ -85,10 +85,12 @@ int modOpenLoop(control_t *ptc) {
 		logWarn("Error, reading sensor failed.");
 		return EXIT_FAILURE;
 	}
-		
-	if (modParseSH((&ptc->wfs[0])) != EXIT_SUCCESS)			// process SH sensor output, get displacements
+
+													// process SH sensor output, get displacements
+	if (modParseSH(&(ptc->wfs[0]), ptc->wfs[0].image, ptc->wfs[0].darkim, ptc->wfs[0].flatim, ptc->wfs[0].res, \
+		ptc->wfs[0].subc, ptc->wfs[0].gridc, ptc->wfs[0].nsubap, ptc->wfs[0].track, ptc->wfs[0].disp, ptc->wfs[0].refc) != EXIT_SUCCESS)
 		return EXIT_FAILURE;
-	
+		
 	logDebug(LOG_SOMETIMES, "Frame: %ld", ptc->frames);
 	if (ptc->frames % cs_config.logfrac == 0) 
 		modDrawStuff(ptc, 0, screen);
@@ -117,7 +119,8 @@ int modClosedLoop(control_t *ptc) {
 		return EXIT_FAILURE;
 	}
 	
-	if (modParseSH((&ptc->wfs[0])) != EXIT_SUCCESS)	// process SH sensor output, get displacements
+	if (modParseSH(&(ptc->wfs[0]), ptc->wfs[0].image, ptc->wfs[0].darkim, ptc->wfs[0].flatim, ptc->wfs[0].res, \
+		ptc->wfs[0].subc, ptc->wfs[0].gridc, ptc->wfs[0].nsubap, ptc->wfs[0].track, ptc->wfs[0].disp, ptc->wfs[0].refc) != EXIT_SUCCESS)
 		return EXIT_FAILURE;
 	
 	if (modCalcCtrlFake(ptc, 0, 0) != EXIT_SUCCESS)	// process SH sensor output, get displacements

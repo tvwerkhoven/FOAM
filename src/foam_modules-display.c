@@ -107,7 +107,7 @@ int modDisplayImg(float *img, coord_t res, SDL_Surface *screen) {
 			min = img[x];
 	}
 	
-	logDebug(0, "Displaying image, min: %f, max: %f.", min, max);
+	logDebug(0, "Displaying image, min: %5.3f, max: %5.3f.", min, max);
 							
 	Uint32 color;
 	// trust me, i'm not proud of this code either ;) TODO

@@ -143,7 +143,7 @@ void stopFOAM() {
 //	pthread_exit(NULL);
 	
 	logInfo(0, "Stopping FOAM at %s", date);
-	logInfo(0, "Ran for %ld seconds and parsed %ld frames (framerate: %f).", \
+	logInfo(0, "Ran for %ld seconds, parsed %ld frames (%.1f FPS).", \
 		end-ptc.starttime, ptc.frames, ptc.frames/(float) (end-ptc.starttime));
 
 	if (cs_config.infofd) fclose(cs_config.infofd);
@@ -339,6 +339,9 @@ int parseConfig(char *var, char *value) {
 		
 		ptc.wfs[tmp].shsize[0] = (ptc.wfs[tmp].res.x / ptc.wfs[tmp].cells[0]);
 		ptc.wfs[tmp].shsize[1] = (ptc.wfs[tmp].res.y / ptc.wfs[tmp].cells[1]);
+		ptc.wfs[tmp].track.x = ptc.wfs[tmp].shsize[0]/2;
+		ptc.wfs[tmp].track.y = ptc.wfs[tmp].shsize[1]/2;
+		
 		ptc.wfs[tmp].refim = calloc(ptc.wfs[tmp].shsize[0] * \
 			ptc.wfs[tmp].shsize[1], sizeof(ptc.wfs[tmp].refim));
 		if (ptc.wfs[tmp].refim == NULL)

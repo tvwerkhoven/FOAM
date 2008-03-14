@@ -156,7 +156,8 @@ typedef struct { // wfs_t
 	gsl_matrix_float *wfsmodes;		//!< stores wfsmodes from SVD (nact*nsubap*2 big)
 	
 	int cells[2];					//!< number of cells in this WFS (SH only)
-	int shsize[2];					//!< cells/res, resolution per cell (redundant, but easy)
+	int shsize[2];					//!< cells/res, resolution per cell (redundant, but easy -> phase this out)
+	coord_t track;					//!< tracker window resolution in pixels (i.e. 1/2 of shsize)
 	
 	int (*subc)[2];					//!< this will hold the coordinates of each subapt
 	int (*gridc)[2];				//!< this will hold the grid origina for a certain subaperture
