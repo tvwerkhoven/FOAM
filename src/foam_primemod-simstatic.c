@@ -27,7 +27,7 @@
 
 #include "foam_primemod-simstatic.h"
 
-#define FOAM_MODSIM_STATIC "../config/simstaticbigger.pgm"
+#define FOAM_MODSIM_STATIC "../config/simstatic.pgm"
 
 // GLOBALS //
 /***********/
@@ -67,7 +67,13 @@ int modOpenInit(control_t *ptc) {
 		return EXIT_FAILURE;
 	}
 	
-	modSelSubapts(&(ptc->wfs[0]), 0, -1); 			// check samini (2nd param) and samxr (3d param)
+	modSelSubapts(ptc->wfs[0].image, ptc->wfs[0].res, ptc->wfs[0].cells, ptc->wfs[0].subc, ptc->wfs[0].gridc, &(ptc->wfs[0].nsubap), 0, -1);
+	
+	logDebug(0, "Res: (%d,%d), nsubap: %d, cells: (%d,%d), subc 0 and 1: (%d,%d) (%d,%d), gridc 0 and 1: (%d,%d) (%d,%d)", \
+		ptc->wfs[0].res.x, ptc->wfs[0].res.y, ptc->wfs[0].nsubap, ptc->wfs[0].cells[0], ptc->wfs[0].cells[1], \
+		ptc->wfs[0].subc[0][0], ptc->wfs[0].subc[0][1], \
+		ptc->wfs[0].subc[1][0], ptc->wfs[0].subc[1][1], ptc->wfs[0].gridc[0][0], ptc->wfs[0].gridc[0][1], \
+		ptc->wfs[0].gridc[1][0], ptc->wfs[0].gridc[1][1]);
 	
 	return EXIT_SUCCESS;
 }
@@ -188,7 +194,7 @@ gsl_vector_float *singf, *workf, *dispf, *actf;
 int modCalcCtrlFake(control_t *ptc, const int wfs, int nmodes) {
 	int i, j;
 	int nsubap = ptc->wfs[0].nsubap;
-	int nacttot = 750;
+	int nacttot = 2;
 	
 	// function assumes presence of dmmodes, singular and wfsmodes...
 	if (inflf == NULL || vf == NULL) {

@@ -38,7 +38,7 @@ FILE *rmsfp;
 // ROUTINES //
 /************/
 
-int modSelSubapts(wfs_t *wfsinfo, float samini, int samxr) {
+int modSelSubapts(float *image, coord_t res, int cells[2], int (*subc)[2], int (*apcoo)[2], int *totnsubap, float samini, int samxr) {
 	// stolen from ao3.c by CUK :)
 	int isy, isx, iy, ix, i, sn=0, nsubap=0; //init sn to zero!!
 	float sum=0.0, fi;					// check 'intensity' of a subapt
@@ -46,22 +46,25 @@ int modSelSubapts(wfs_t *wfsinfo, float samini, int samxr) {
 	float cx=0, cy=0;					// for CoG
 	float dist, rmin;					// minimum distance
 	int csa=0;							// estimate for best subapt
-	int (*subc)[2] = wfsinfo->subc;		// lower left coordinates of the tracker windows
-	int (*apcoo)[2] = wfsinfo->gridc;	// lower left coordinates of the tracker windows
+	// int (*subc)[2] = wfsinfo->subc;		// lower left coordinates of the tracker windows
+	// int (*apcoo)[2] = wfsinfo->gridc;	// lower left coordinates of the grid windows
 
-	float *image = wfsinfo->image;		// source image from sensor
-	coord_t res = wfsinfo->res;			// image resolution
-	int *cells = wfsinfo->cells;		// cell resolution used (i.e. 8x8)
-	int *shsize = wfsinfo->shsize;		// subapt pixel resolution
+//	float *image = wfsinfo->image;		// source image from sensor
+//	coord_t res = wfsinfo->res;			// image resolution
+//	int *cells = wfsinfo->cells;		// cell resolution used (i.e. 8x8)
+	int shsize[] = {res.x/cells[0], res.y/cells[1]};		// subapt pixel resolution
 	
 	// we store our subaperture map in here when deciding which subapts to use
 	int apmap[cells[0]][cells[1]];		// aperture map
 	int apmap2[cells[0]][cells[1]];		// aperture map 2
-//	int apcoo[cells[0] * cells[1]][2];  // subaperture coordinates in apmap
 	
 	logInfo(0, "Selecting subapertures.");
 	for (isy=0; isy<cells[1]; isy++) { // loops over all potential subapertures
 		for (isx=0; isx<cells[0]; isx++) {
+			// set apmap and apmap2 to zero
+			apmap[isx][isy] = 0;
+			apmap2[isx][isy] = 0;
+			
 			// check one potential subapt (isy,isx)
 			sum=0.0; cs[0] = 0.0; cs[1] = 0.0; csum = 0.0;
 			for (iy=0; iy<shsize[1]; iy++) { // sum all pixels in the subapt
@@ -178,20 +181,25 @@ int modSelSubapts(wfs_t *wfsinfo, float samini, int samxr) {
 		// print ASCII map of aperture
 		logInfo(0, "ASCII map of aperture:");
 		for (isy=0; isy<cells[1]; isy++) {
+			logInfo(LOG_NOFORMAT, "%d:", isy);
 			for (isx=0; isx<cells[0]; isx++)
 				if (apmap[isx][isy] == 0) logInfo(LOG_NOFORMAT, " "); 
 				else logInfo(LOG_NOFORMAT, "X");
 			logInfo(LOG_NOFORMAT, "\n");
 		}
 		
+		// always take the reference subapt to the new map, 
+		// otherwise we lose it during the first copying
+		apmap2[apcoo[0][0]][apcoo[0][1]] = 1;
+		
 		sn = 1; // start with subaperture 1 since subaperture 0 is the reference
 		while (sn < nsubap) {
 			isx = apcoo[sn][0]; isy = apcoo[sn][1];
-			if ((isx == 0) || (isx >= cells[0]) || (isy == 0) || (isy >= cells[1]) ||
-				(apmap[isx-1][isy] == 0) ||
-				(apmap[isx+1][isy] == 0) ||
-				(apmap[isx][isy-1] == 0) ||
-				(apmap[isx][isy+1] == 0)) {
+			if ((isx == 0) || (isx >= cells[0]-1) || (isy == 0) || (isy >= cells[1]-1) ||
+				(apmap[isx-1 % cells[0]][isy] == 0) ||
+				(apmap[isx+1 % cells[0]][isy] == 0) ||
+				(apmap[isx][isy-1 % cells[1]] == 0) ||
+				(apmap[isx][isy+1 % cells[1]] == 0)) {
 					
 				apmap2[isx][isy] = 0;
 				for (i=sn; i<(nsubap-1); i++) {
@@ -213,8 +221,17 @@ int modSelSubapts(wfs_t *wfsinfo, float samini, int samxr) {
 				apmap[isx][isy] = apmap2[isx][isy];
 
 	}
-	wfsinfo->nsubap = nsubap; // store to global configuration struct
+	*totnsubap = nsubap;		// store to external variable
 	logInfo(0, "Selected %d usable subapertures", nsubap);
+	
+	logInfo(0, "ASCII map of aperture:");
+	for (isy=0; isy<cells[1]; isy++) {
+		logInfo(LOG_NOFORMAT, "%d:", isy);
+		for (isx=0; isx<cells[0]; isx++)
+			if (apmap[isx][isy] == 0) logInfo(LOG_NOFORMAT, " "); 
+			else logInfo(LOG_NOFORMAT, "X");
+		logInfo(LOG_NOFORMAT, "\n");
+	}
 	
 	// set remaining subaperture coordinates to 0
 	for (sn=nsubap; sn<cells[0]*cells[1]; sn++) {
@@ -228,21 +245,10 @@ int modSelSubapts(wfs_t *wfsinfo, float samini, int samxr) {
 	for (sn=0; sn<nsubap; sn++) {
 		apcoo[sn][1] *= shsize[1];
 		apcoo[sn][0] *= shsize[0];
-		logDebug(LOG_NOFORMAT, "%d (%d,%d) ", sn, wfsinfo->gridc[sn][0], wfsinfo->gridc[sn][1]);
+		logDebug(LOG_NOFORMAT, "%d (%d,%d) ", sn, apcoo[sn][0], apcoo[sn][1]);
 	}
 	logDebug(LOG_NOFORMAT, "\n");
 	
-/*	int cfd;
-	char *cfn;
-
-	// write subaperture image into file
-	cfn = "ao_saim.dat";
-	cfd = creat(cfn,0);
-	if (write(cfd, image, res.x*res.y) != res.x*res.y)
-		logErr("Unable to write subapt img to file");
-
-	close(cfd);
-	logInfo(0, "Subaperture definition image saved in file %s",cfn);*/
 	return EXIT_SUCCESS;
 }
 

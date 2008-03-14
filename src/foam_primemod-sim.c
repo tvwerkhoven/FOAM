@@ -71,7 +71,7 @@ int modOpenInit(control_t *ptc) {
 		return EXIT_FAILURE;
 	}
 	
-	modSelSubapts(&(ptc->wfs[0]), 0, 0); 			// check samini (2nd param) and samxr (3d param)
+	modSelSubapts(ptc->wfs[0].image, ptc->wfs[0].res, ptc->wfs[0].cells, ptc->wfs[0].subc, ptc->wfs[0].gridc, &(ptc->wfs[0].nsubap), 0, 0);
 	
 	return EXIT_SUCCESS;
 }

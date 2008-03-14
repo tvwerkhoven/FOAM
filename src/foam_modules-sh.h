@@ -28,11 +28,16 @@ This routine checks all subapertures and sees whether they are useful or not.
 It can also 'erode' some apertures away from the edge or enforce a maximum
 radius between any subaperture and the reference subaperture.
 
-@param [in] *wfsinfo The wfs_t struct holding info on the current WFS info
+@param [in] *image The image that we need to look for subapts on
+@param [in] res The pixel resolution of the image
+@param [in] cells The cell-resolution (lenslet size) of the SH sensor
+@param [out] *subc The coordinates of the tracker windows
+@param [out] *apcoo The coordinates of the grid associated with a window
+@param [out] &totnsubap The number of usable subapertures in the system
 @param [in] samini The minimum intensity a useful subaperture should have
 @param [in] samxr The maximum radius to enforce if positive, or the amount of subapts to erode if negative.
 */
-int modSelSubapts(wfs_t *wfsinfo, float samini, int samxr);
+int modSelSubapts(float *image, coord_t res, int cells[2], int (*subc)[2], int (*apcoo)[2], int *totnsubap, float samini, int samxr);
 
 
 /*!
