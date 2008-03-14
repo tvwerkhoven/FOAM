@@ -13,7 +13,7 @@
 #include "foam_modules-display.h"	// we need the display module to show debug output
 #include "foam_modules-sh.h"		// we want the SH subroutines so we can track targets
 #include "foam_modules-pgm.h"		// we need PGM routines
-//#include "foam_modules-calib.h"		// we want the calibration
+#include "foam_modules-calib.h"		// we want the dark/flat calibration
 
 // These are defined in foam_cs_library.c
 extern control_t ptc;

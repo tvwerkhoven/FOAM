@@ -16,6 +16,7 @@
 /**************/
 
 #include <gsl/gsl_math.h>			// for small integer powers
+#include <gsl/gsl_linalg.h>			// for vectors and stuff
 #include "foam_cs_library.h"
 
 // PROTOTYPES //
@@ -50,9 +51,6 @@ DM.
 
 @return EXIT_SUCCESS on success, EXIT_FAILURE otherwise.
 @param [in] *image The image to parse through either CoG or correlation tracking
-@param [in] *dark The darkfield image
-@param [in] *flat The flatfield image
-@param [in] res The resolution of the previous images
 @param [in] *subc[2] The starting coordinates of the tracker windows
 @param [in] *gridc[2] The starting coordinates of the grid cells
 @param [in] nsubap The number of subapertures (i.e. the length of the subc[] array)
@@ -60,7 +58,7 @@ DM.
 @param [out] *disp The displacement vector wrt the reference displacements
 @param [in] *refc The reference displacements (i.e. after pinhole calibration)
 */
-int modParseSH(wfs_t *wfsinfo, float *image, float *dark, float *flat, coord_t res, int (*subc)[2], int (*gridc)[2], int nsubap, coord_t track, gsl_vector_float *disp, gsl_vector_float *refc);
+int modParseSH(gsl_matrix_float *image, int (*subc)[2], int (*gridc)[2], int nsubap, coord_t track, gsl_vector_float *disp, gsl_vector_float *refc);
 
 /*!
 @brief Calculates the sum of absolute differences for two subapertures
@@ -102,10 +100,7 @@ This calculates the center of gravity of each subaperture. The coordinates will 
 tracking window. Note that this will only work for star-like images, extended
 images will not work.
 
-@param [in] *image The image to parse through either CoG or correlation tracking
-@param [in] *dark The darkfield image
-@param [in] *flat The flatfield image
-@param [in] res The resolution of the previous images
+@param [in] *image The image to parse through CoG tracking
 @param [in] *subc[2] The starting coordinates of the tracker windows
 @param [in] nsubap The number of subapertures (i.e. the length of the subc[] array)
 @param [in] track The size of the tracker windows
@@ -113,7 +108,7 @@ images will not work.
 @param [out] *max The maximum pixel intensity
 @param [out] coords A list of coordinates the spots were found at wrt the center of the tracker windows
 */
-void modCogTrack(float *image, float *dark, float *flat, coord_t res, int (*subc)[2], int nsubap, coord_t track, float *aver, float *max, float coords[][2]);
+void modCogTrack(gsl_matrix_float *image, int (*subc)[2], int nsubap, coord_t track, float *aver, float *max, float coords[][2]);
 
 /*!
 @brief Calculates the controls to be sent to the various WFC, given displacements.

@@ -3,8 +3,11 @@ bin_PROGRAMS =
 
 # some shared compiler flags which must always be used
 # (not using AM_* flags because of http://sourceware.org/automake/automake.html#Flag-Variables-Ordering)
-CFLAGS=-pipe -Wall -Wextra -std=c99 -O3 -ftree-vectorize
+CFLAGS=-pipe -Wall -Wextra -O3 -ftree-vectorize
 LDFLAGS=$(COMMON_LIBS) -lc
+
+# (un)comment this to toggle GSL inlining
+CPPFLAGS+=-DHAVE_INLINE -DGSL_RANGE_CHECK_OFF
 
 # (un)comment this to toggle debugging
 CFLAGS+=-g -DDEBUG_ITIFG=255
@@ -33,8 +36,8 @@ endif
 # programs depend on whether or not we want static simulation...
 if STATSIMULATION
 bin_PROGRAMS += foamcs-statsim
-foamcs_statsim_SOURCES = foam_cs.c foam_library.c foam_cs_library.c foam_modules-sh.c foam_modules-display.c foam_modules-pgm.c foam_primemod-simstatic.c
-foamcs_statsim_SOURCES += foam_cs_library.h foam_library.h foam_modules-sh.h foam_modules-display.h foam_modules-pgm.h foam_primemod-simstatic.h
+foamcs_statsim_SOURCES = foam_cs.c foam_library.c foam_cs_library.c foam_modules-sh.c foam_modules-calib.c foam_modules-display.c foam_modules-pgm.c foam_primemod-simstatic.c
+foamcs_statsim_SOURCES += foam_cs_library.h foam_library.h foam_modules-sh.h foam_modules-calib.h foam_modules-display.h foam_modules-pgm.h foam_primemod-simstatic.h
 foamcs_statsim_CPPFLAGS = -include "foam_primemod-simstatic.h"
 foamcs_statsim_CFLAGS = $(SIMULATION_CFLAGS)
 foamcs_statsim_LDFLAGS = $(SIMULATION_LIBS)

@@ -428,6 +428,18 @@ int modCalWFCChk(control_t *ptc, int wfs) {
  	return EXIT_SUCCESS;
 }
 
+int modCalDarkFlat(float *image, float *dark, float *flat, gsl_matrix_float *corr) {
+	// TODO: incomplete, no dark/flatfield correction yet.
+	unsigned int i, j;
+	for (i=0; i<corr->size1; i++)
+		for (j=0; j<corr->size2; j++)
+			// corr->data[i * corr->tda + j] = image[i*corr->size1 + j];
+			gsl_matrix_float_set(corr, i, j, image[i*corr->size1 + j]);
+			
+	
+	return EXIT_SUCCESS;
+}
+
 int modSVDGSL(control_t *ptc, int wfs) {
 	FILE *fd;
 	int i, j, nact=0, nsubap;

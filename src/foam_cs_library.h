@@ -139,7 +139,7 @@ typedef struct { // wfs_t
 	float *image;					//!< pointer to the WFS output, stored in row-major format
 	float *darkim;					//!< darkfield (byte image), stored in row-major format \b per \b subapt
 	float *flatim;					//!< flatfield (byte image), stored in row-major format \b per \b subapt
-	float *corrim;					//!< corrected image, stored in row-major format \b per \b subapt
+	gsl_matrix_float *corrim;		//!< corrected image, stored in row-major format \b per \b subapt
 	
 	char darkfile[FILENAMELEN];		//!< filename for the darkfield calibration
 	char flatfile[FILENAMELEN];		//!< filename for the flatfield calibration

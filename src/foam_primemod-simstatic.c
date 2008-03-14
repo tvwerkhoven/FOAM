@@ -86,9 +86,11 @@ int modOpenLoop(control_t *ptc) {
 		return EXIT_FAILURE;
 	}
 
-													// process SH sensor output, get displacements
-	if (modParseSH(&(ptc->wfs[0]), ptc->wfs[0].image, ptc->wfs[0].darkim, ptc->wfs[0].flatim, ptc->wfs[0].res, \
-		ptc->wfs[0].subc, ptc->wfs[0].gridc, ptc->wfs[0].nsubap, ptc->wfs[0].track, ptc->wfs[0].disp, ptc->wfs[0].refc) != EXIT_SUCCESS)
+	if (modCalDarkFlat(ptc->wfs[0].image, ptc->wfs[0].darkim, ptc->wfs[0].flatim, ptc->wfs[0].corrim) != EXIT_SUCCESS)
+		return EXIT_FAILURE;
+	
+	if (modParseSH(ptc->wfs[0].corrim, ptc->wfs[0].subc, ptc->wfs[0].gridc, ptc->wfs[0].nsubap, \
+		ptc->wfs[0].track, ptc->wfs[0].disp, ptc->wfs[0].refc) != EXIT_SUCCESS)
 		return EXIT_FAILURE;
 		
 	logDebug(LOG_SOMETIMES, "Frame: %ld", ptc->frames);
@@ -119,8 +121,11 @@ int modClosedLoop(control_t *ptc) {
 		return EXIT_FAILURE;
 	}
 	
-	if (modParseSH(&(ptc->wfs[0]), ptc->wfs[0].image, ptc->wfs[0].darkim, ptc->wfs[0].flatim, ptc->wfs[0].res, \
-		ptc->wfs[0].subc, ptc->wfs[0].gridc, ptc->wfs[0].nsubap, ptc->wfs[0].track, ptc->wfs[0].disp, ptc->wfs[0].refc) != EXIT_SUCCESS)
+	if (modCalDarkFlat(ptc->wfs[0].image, ptc->wfs[0].darkim, ptc->wfs[0].flatim, ptc->wfs[0].corrim) != EXIT_SUCCESS)
+		return EXIT_FAILURE;
+	
+	if (modParseSH(ptc->wfs[0].corrim, ptc->wfs[0].subc, ptc->wfs[0].gridc, ptc->wfs[0].nsubap, \
+		ptc->wfs[0].track, ptc->wfs[0].disp, ptc->wfs[0].refc) != EXIT_SUCCESS)
 		return EXIT_FAILURE;
 	
 	if (modCalcCtrlFake(ptc, 0, 0) != EXIT_SUCCESS)	// process SH sensor output, get displacements

@@ -67,6 +67,20 @@ the displacements measured on a certain WFS.
 int modSVDGSL(control_t *ptc, int wfs);
 
 /*!
+@brief Do a dark- and flat-field correction on image
+
+This routine takes image, dark and flat as input, 
+corrects dark- and flat-field on image, and stores the result in corr.
+This last image (matrix), is a gsl type such that we can lateron easily do
+stuff with it.
+@param [in] *image The image to be corrected
+@param [in] *dark The darkfield
+@param [in] *flat The flatfield
+@param [out] *corr The corrected image -- this should already be allocated with the right size
+*/
+int modCalDarkFlat(float *image, float *dark, float *flat, gsl_matrix_float *corr);
+	
+/*!
 @brief This function tests the linearity of the WFCs.
 */
 //int modLinTest(control_t *ptc, int wfs);

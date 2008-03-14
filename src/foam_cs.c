@@ -368,7 +368,7 @@ int parseConfig(char *var, char *value) {
 		ptc.wfs[tmp].image = calloc(ptc.wfs[tmp].res.x * ptc.wfs[tmp].res.y, sizeof(ptc.wfs[tmp].image));
 		ptc.wfs[tmp].darkim = calloc(ptc.wfs[tmp].res.x * ptc.wfs[tmp].res.y, sizeof(ptc.wfs[tmp].darkim));
 		ptc.wfs[tmp].flatim = calloc(ptc.wfs[tmp].res.x * ptc.wfs[tmp].res.y, sizeof(ptc.wfs[tmp].flatim));
-		ptc.wfs[tmp].corrim = calloc(ptc.wfs[tmp].res.x * ptc.wfs[tmp].res.y, sizeof(ptc.wfs[tmp].corrim));
+		ptc.wfs[tmp].corrim = gsl_matrix_float_calloc(ptc.wfs[tmp].res.x, ptc.wfs[tmp].res.y);
 		
 		// check if everything worked out ok
 		if ((ptc.wfs[tmp].image == NULL) ||

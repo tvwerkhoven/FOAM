@@ -252,7 +252,7 @@ int modSelSubapts(float *image, coord_t res, int cells[2], int (*subc)[2], int (
 	return EXIT_SUCCESS;
 }
 
-void modCogTrack(float *image, float *dark, float *flat, coord_t res, int (*subc)[2], int nsubap, coord_t track, float *aver, float *max, float coords[][2]) {
+void modCogTrack(gsl_matrix_float *image, int (*subc)[2], int nsubap, coord_t track, float *aver, float *max, float coords[][2]) {
 	int ix, iy, sn=0;
 	float csx, csy, csum, fi; 			// variables for center-of-gravity
 	float sum = 0;
@@ -260,9 +260,12 @@ void modCogTrack(float *image, float *dark, float *flat, coord_t res, int (*subc
 	// loop over all subapertures (treat those all equal)
 	for (sn=0; sn<nsubap; sn++) {
 		csx = 0.0; csy = 0.0; csum = 0.0;
+
 		for (iy=0; iy<track.y; iy++) {
 			for (ix=0; ix<track.x; ix++) {
-				fi = (float) image[subc[sn][1]*res.x+subc[sn][0] + iy*res.x + ix];
+				fi = gsl_matrix_float_get(image, subc[sn][1]+iy, subc[sn][0]+ix);
+				//image[subc[sn][1]*res.x+subc[sn][0] + iy*res.x + ix];
+				// fi = image->data[(subc[sn][1]+iy) * image->tda + (subc[sn][0]+ix)];
 
 				if (fi > *max) *max = fi;
 				
@@ -314,7 +317,7 @@ void modCogFind(wfs_t *wfsinfo, int xc, int yc, int width, int height, float sam
 	cog[1] = cs[1]/csum;
 }
 
-int modParseSH(wfs_t *wfsinfo, float *image, float *dark, float *flat, coord_t res, int (*subc)[2], int (*gridc)[2], int nsubap, coord_t track, gsl_vector_float *disp, gsl_vector_float *refc) {
+int modParseSH(gsl_matrix_float *image, int (*subc)[2], int (*gridc)[2], int nsubap, coord_t track, gsl_vector_float *disp, gsl_vector_float *refc) {
 	float aver=0.0, max=0.0;
 	float rmsx=0.0, rmsy=0.0;
 	float maxx=0, maxy=0;
@@ -322,7 +325,7 @@ int modParseSH(wfs_t *wfsinfo, float *image, float *dark, float *flat, coord_t r
 	int i;
 
 	// track the maxima using CoG
-	modCogTrack(image, dark, flat, res, subc, nsubap, track, &aver, &max, coords);
+	modCogTrack(image, subc, nsubap, track, &aver, &max, coords);
 	
 	// logDebug(0 | LOG_SOMETIMES, "Coords: ");	
 	for (i=0; i<nsubap; i++) {
