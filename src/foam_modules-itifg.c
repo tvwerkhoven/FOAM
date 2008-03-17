@@ -30,12 +30,14 @@ int drvReadSensor() {
 	fd = open(device_name, flags);
 	if (!fd) 
 		printf("Error opening device %s: %s", device_name, strerror(errno));
-		
+	
+	close(fd);
+	
 	if (ioctl(fd, GIOC_SET_LUT_LIN) < 0) {
 		close(fd);
 		printf("%s: error linearising LUTs: %s\n", device_name, strerror(errno));
 	}
-
+	
 	if (ioctl(fd, GIOC_SET_DEFCNF, NULL) < 0) {
 		close(fd);
 		printf("%s: error setting camera configuration: %s\n", device_name, strerror(errno));
@@ -45,15 +47,15 @@ int drvReadSensor() {
 		close(fd);
 		printf("%s: error setting camera: %s\n", device_name, strerror(errno));
 	}
-
+	
 	if (ioctl(fd, GIOC_GET_CAMCNF, &cam) < 0) {
 		close(fd);
 		printf("%s: error getting camera configuration: %s\n", device_name, strerror(errno));
 	}
-
-	int result;
-	
-	*camera_name = *exo_name = 0;
+	// 
+	// int result;
+	// 
+	// *camera_name = *exo_name = 0;
 	
 	
 	close(fd);
