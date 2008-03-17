@@ -254,13 +254,17 @@ int modSelSubapts(float *image, coord_t res, int cells[2], int (*subc)[2], int (
 
 void modCogTrack(gsl_matrix_float *image, int (*subc)[2], int nsubap, coord_t track, float *aver, float *max, float coords[][2]) {
 	int ix, iy, sn=0;
-	float csx, csy, csum, fi; 			// variables for center-of-gravity
+	float csx, csy, csum, fi, cmax; 			// variables for center-of-gravity
 	float sum = 0;
 	
 	// loop over all subapertures (treat those all equal)
 	for (sn=0; sn<nsubap; sn++) {
 		csx = 0.0; csy = 0.0; csum = 0.0;
-
+		
+		// TvW: continue here!
+		// modCogTrackGSL(image, subc[sn], track, &csx, &csy, &csum, &cmax);
+		// modCogTrackLoop(image, subc[sn], track, &csx, &csy, &csum, &cmax);
+		
 		for (iy=0; iy<track.y; iy++) {
 			for (ix=0; ix<track.x; ix++) {
 				fi = gsl_matrix_float_get(image, subc[sn][1]+iy, subc[sn][0]+ix);
