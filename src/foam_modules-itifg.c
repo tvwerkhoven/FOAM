@@ -23,7 +23,7 @@ int drvReadSensor() {
 	int flags = O_RDWR;
 	int zero = 0;
 	int one = 1;
-	FILE *fd;
+	int fd;
 	union iti_cam_t cam;
 	// TvW: | O_SYNC | O_APPEND also used in test_itifg.c
 	
@@ -33,22 +33,22 @@ int drvReadSensor() {
 		
 	if (ioctl(fd, GIOC_SET_LUT_LIN) < 0) {
 		close(fd);
-		printf(device + ": error linearising LUTs: " + strerror(errno));
+		printf("%s: error linearising LUTs: %s\n", device_name, strerror(errno));
 	}
 
 	if (ioctl(fd, GIOC_SET_DEFCNF, NULL) < 0) {
 		close(fd);
-		printf(device + ": error getting camera configuration: " + strerror(errno));
+		printf("%s: error setting camera configuration: %s\n", device_name, strerror(errno));
 	}	
 	
 	if (ioctl(fd, GIOC_SET_CAMERA, &zero) < 0) {
 		close(fd);
-		printf(device + ": error setting camera: " + strerror(errno));
+		printf("%s: error setting camera: %s\n", device_name, strerror(errno));
 	}
 
 	if (ioctl(fd, GIOC_GET_CAMCNF, &cam) < 0) {
 		close(fd);
-		printf(device + ": error getting camera configuration: " + strerror(errno));
+		printf("%s: error getting camera configuration: %s\n", device_name, strerror(errno));
 	}
 
 	int result;
@@ -56,5 +56,5 @@ int drvReadSensor() {
 	*camera_name = *exo_name = 0;
 	
 	
-	closed(fd);
+	close(fd);
 }
