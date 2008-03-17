@@ -19,33 +19,36 @@
 #include <foam_modules-itifg.h>
 
 int drvReadSensor() {
-	char device_name[128];
+	char device_name[] = "/dev/ic0dma";
 	int flags = O_RDWR;
+	int zero = 0;
+	int one = 1;
 	FILE *fd;
+	union iti_cam_t cam;
 	// TvW: | O_SYNC | O_APPEND also used in test_itifg.c
 	
 	fd = open(device_name, flags);
 	if (!fd) 
-		logErr("Error opening device %s: %s", device_name, strerror(errno));
+		printf("Error opening device %s: %s", device_name, strerror(errno));
 		
 	if (ioctl(fd, GIOC_SET_LUT_LIN) < 0) {
 		close(fd);
-		logErr(device + ": error linearising LUTs: " + strerror(errno));
+		printf(device + ": error linearising LUTs: " + strerror(errno));
 	}
 
 	if (ioctl(fd, GIOC_SET_DEFCNF, NULL) < 0) {
 		close(fd);
-		logErr(device + ": error getting camera configuration: " + strerror(errno));
+		printf(device + ": error getting camera configuration: " + strerror(errno));
 	}	
 	
 	if (ioctl(fd, GIOC_SET_CAMERA, &zero) < 0) {
 		close(fd);
-		logErr(device + ": error setting camera: " + strerror(errno));
+		printf(device + ": error setting camera: " + strerror(errno));
 	}
 
 	if (ioctl(fd, GIOC_GET_CAMCNF, &cam) < 0) {
 		close(fd);
-		logErr(device + ": error getting camera configuration: " + strerror(errno));
+		printf(device + ": error getting camera configuration: " + strerror(errno));
 	}
 
 	int result;
