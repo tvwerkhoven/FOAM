@@ -48,7 +48,7 @@ int modInitModule(control_t *ptc) {
 
 	SDL_WM_SetCaption("WFS output", "WFS output");
 
-	screen = SDL_SetVideoMode(ptc->wfs[0].res.x, ptc->wfs[0].res.y, 0, SDL_HWSURFACE|SDL_DOUBLEBUF);
+	screen = SDL_SetVideoMode(ptc->wfs[0].res.x, ptc->wfs[0].res.y, 0, SDL_HWSURFACE | SDL_DOUBLEBUF | SDL_RESIZABLE);
 	if (screen == NULL) 
 		logErr("Unable to set video: %s", SDL_GetError());
 
@@ -101,8 +101,14 @@ int modOpenLoop(control_t *ptc) {
 		stopFOAM();
 		
 	if (SDL_PollEvent(&event))
-		if (event.type == SDL_QUIT)
-			stopFOAM();
+		switch (event.type) {
+			case SDL_QUIT:
+				stopFOAM();
+				break;
+			case SDL_VIDEORESIZE:
+				screen = SDL_SetVideoMode(event.resize.w, event.resize.h, 0, SDL_HWSURFACE | SDL_DOUBLEBUF | SDL_RESIZABLE);
+				break;
+		}
 			
 	return EXIT_SUCCESS;
 }
@@ -140,8 +146,15 @@ int modClosedLoop(control_t *ptc) {
 
 	
 	if (SDL_PollEvent(&event))
-		if (event.type == SDL_QUIT)
-			stopFOAM();
+		switch (event.type) {
+			case SDL_QUIT:
+				stopFOAM();
+				break;
+			case SDL_VIDEORESIZE:
+				screen = SDL_SetVideoMode(event.resize.w, event.resize.h, 0, SDL_HWSURFACE | SDL_DOUBLEBUF | SDL_RESIZABLE);
+				break;
+		}
+
 		
 	return EXIT_SUCCESS;
 }
