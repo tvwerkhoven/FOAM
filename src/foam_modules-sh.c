@@ -261,7 +261,7 @@ void modCogTrack(gsl_matrix_float *image, int (*subc)[2], int nsubap, coord_t tr
 	for (sn=0; sn<nsubap; sn++) {
 		csx = 0.0; csy = 0.0; csum = 0.0;
 		
-		// TvW: continue here!
+		// TvW: TODO continue here!
 		// modCogTrackGSL(image, subc[sn], track, &csx, &csy, &csum, &cmax);
 		// modCogTrackLoop(image, subc[sn], track, &csx, &csy, &csum, &cmax);
 		

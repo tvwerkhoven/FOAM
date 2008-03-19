@@ -141,19 +141,7 @@ int modClosedLoop(control_t *ptc) {
 	return EXIT_SUCCESS;
 }
 
-int modCalibrate(control_t *ptc) {
-	// todo: add dark/flat field calibrations
-	// dark:
-	//  add calibration enum
-	//  add function to calib.c with defined FILENAME
-	//  add switch to drvReadSensor which gives a black image (1)
-	// flat:
-	//  whats flat? how to do with SH sensor in place? --> take them out
-	//  add calib enum
-	//  add switch/ function / drvreadsensor
-	// sky:
-	//  same as flat
-	
+int modCalibrate(control_t *ptc) {	
 	logInfo(0, "Switching calibration");
 	switch (ptc->calmode) {
 		case CAL_PINHOLE: // pinhole WFS calibration
@@ -174,3 +162,136 @@ int modCalibrate(control_t *ptc) {
 			break;			
 	}
 }
+
+int modMessage(control_t *ptc, const client_t *client, char *list[], const int count) {
+	// spaces are important!!!
+	float tmpfl;
+	int tmpint;
+	
+ 	if (strcmp(list[0],"help") == 0) {
+		// give module specific help here
+		if (count > 1) { 
+			// give help on a specific command
+			if (strcmp(list[1], "calibrate") == 0) {
+				tellClient(client->buf_ev, "\
+200 OK HELP CALIBRATE\n\
+calibrate <mode>\n\
+   mode=pinhole: do a pinhole calibration.\n\
+   mode=influence: do a WFC influence matrix calibration.");
+			}
+			else if (strcmp(list[1], "step") == 0) {
+				tellClient(client->buf_ev, "\
+200 OK HELP STEP\n\
+step <x|y> [d]\n\
+    step the AO system d pixels in the x or y direction.\n\
+    if d is omitted, +1 is assumed.");
+			}
+			else if (strcmp(list[1], "gain") == 0) {
+				tellClient(client->buf_ev, "\
+200 OK HELP STEP\n\
+gain <wfc> <gain>\n\
+    set the gain for a certain wfc to <gain>.");
+			}
+			else { // oops, the user requested help on a topic (list[1])
+				// we don't know. tell this to parseCmd by returning 0
+				return 0;
+			}
+		}
+		else {
+			tellClient(client->buf_ev, "\
+step <x|y> [d]:         step a wfs in the x or y direction\n\
+gain <wfc> <gain>:      set the gain for a wfc");
+		}
+	}
+ 	else if (strcmp(list[0],"step") == 0) {
+		if (ptc->mode == AO_MODE_CAL) 
+			tellClient(client->buf_ev,"403 STEP NOT ALLOWED DURING CALIBRATION");
+
+		else if (count > 1) {
+			if (strcmp(list[1],"x") == 0) {
+				if (count > 2) {
+					tmpfl = strtof(list[3], NULL);
+					if (tmpfl > -10 && tmpfl < 10) {
+						ptc->wfs[0].stepc.x = tmpfl;
+						tellClients("200 OK STEP X %+.2f", tmpfl);
+					}
+					else tellClient(client->buf_ev,"401 INVALID STEPSIZE");
+				}
+				else {
+					ptc->wfs[0].stepc.x += 1;
+					tellClients("200 OK STEP X +1");
+				}
+			}
+			else if (strcmp(list[1],"y") == 0) {
+				if (count > 2) {
+					tmpfl = strtof(list[3], NULL);
+					if (tmpfl > -10 && tmpfl < 10) {
+						ptc->wfs[0].stepc.y = tmpfl;
+						tellClients("200 OK STEP Y %+.2f", tmpfl);
+					}
+					else tellClient(client->buf_ev,"401 INVALID STEPSIZE");
+				}
+				else {
+					ptc->wfs[0].stepc.y += 1;
+					tellClients("200 OK STEP Y +1");
+				}
+			}
+			else tellClient(client->buf_ev,"401 UNKNOWN STEP");
+		}
+		else tellClient(client->buf_ev,"402 STEP REQUIRES ARG");
+	}
+	else if (strcmp(list[0],"gain") == 0) {
+		if (count > 2) {
+			tmpint = strtol(list[1], NULL, 10);
+			tmpfl = strtof(list[2], NULL);
+			if (tmpint >= 0 && tmpint < ptc->wfc_count) {
+				if (tmpfl > -5 && tmpfl < 5) {
+					tellClients("200 OK GAIN %+.4f", tmpfl);
+					ptc->wfc[tmpint].gain = tmpfl;
+				}
+				else tellClient(client->buf_ev,"401 INVALID GAIN %d", tmpfl);
+			}
+			else tellClient(client->buf_ev,"401 UNKNOWN WFC %d", tmpint);
+		}
+		else tellClient(client->buf_ev,"402 GAIN REQUIRES ARG");
+	}
+	else if (strcmp(list[0],"calibrate") == 0) {
+		if (count > 1) {
+
+			if (strcmp(list[1],"pinhole") == 0) {
+				ptc->mode = AO_MODE_CAL;
+				ptc->calmode = CAL_PINHOLE;
+				pthread_mutex_lock(&mode_mutex);
+				pthread_cond_signal(&mode_cond);
+				pthread_mutex_unlock(&mode_mutex);
+				tellClients("200 OK CALIBRATE PINHOLE");
+			}
+			else if (strcmp(list[1],"lintest") == 0) {
+				ptc->mode = AO_MODE_CAL;
+				ptc->calmode = CAL_LINTEST;
+				pthread_mutex_lock(&mode_mutex);
+				pthread_cond_signal(&mode_cond);
+				pthread_mutex_unlock(&mode_mutex);
+				tellClients("200 OK CALIBRATE LINTEST");
+			}
+			else if (strcmp(list[1],"influence") == 0) {
+				ptc->mode = AO_MODE_CAL;
+				ptc->calmode = CAL_INFL;
+				pthread_mutex_lock(&mode_mutex);
+				pthread_cond_signal(&mode_cond);
+				pthread_mutex_unlock(&mode_mutex);	
+				tellClients("200 OK CALIBRATE INFLUENCE");
+			}
+			else tellClient(client->buf_ev,"401 UNKNOWN CALIBRATION");
+		}
+		else tellClient(client->buf_ev,"402 CALIBRATE REQUIRES ARG");
+	}
+	else { // no valid command found? return 0 so that the main thread knows this
+		return 0;
+	} // strcmp stops here
+	
+	// if we end up here, we didn't return 0, so we found a valid command
+	return 1;
+	
+}
+

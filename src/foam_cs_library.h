@@ -324,6 +324,35 @@ what to do in this mode. control_t provides a flag (.calmode) to distinguish bet
 int modCalibrate(control_t *ptc);
 
 /*!
+@brief This routine is run if a client sends a message over the socket
+
+If the networking thread of the control software receives data, it will 
+split the string received in space-seperate words. After that, the
+routine will handle some default commands itself, like 'help', 'quit',
+'shutdown' and others (see parseCmd()). If a command is not recognized, it 
+is passed to this routine, which must then do something, or return 0 to
+indicate an unknown command. parseCmd() itself will then warn the user.\n
+\n
+Besides parsing commands, this routine must also provide help informtion
+about which commands are available in the first place. FOAM itself
+already provides some help on the basic functions, and after sending this
+to the user, modMessage is called with list[0] == 'help' such that this 
+routine can add its own help info.\n
+\n
+If a client sends 'help <topic>', this is also passed to modMessage(),
+with list[0] == help and list[1] == <topic>. It should then give
+information on that topic and return 1, or return 0 if it does not
+'know' that topic.\n
+\n
+For an example of modMessage(), see foam_primemod-dummy.c.
+@param [in] *ptc The global control struct
+@param [in] *client Information on the client that sent data
+@param [in] *list The list of words received over the network
+@param [in] count The amount of words received over the network
+*/
+int modMessage(control_t *ptc, const client_t *client, char *list[], const int count);
+
+/*!
 @brief logInfo() prints out info messages to the appropriate streams.
 
 This function accepts a variable amount of arguments (like vfprintf) and passes
@@ -593,6 +622,15 @@ void catchSIGINT();
 @return EXIT_SUCCESS on success, EXIT_FAILURE otherwise.
 */
 int tellClients(char *msg, ...);
+
+/*!
+@brief This sends a message 'msg' to a specific client.
+
+@param [in] *bufev The bufferevent associated with a client
+@param [in] *msg The message to send to the clients
+@return EXIT_SUCCESS on success, EXIT_FAILURE otherwise.
+*/
+int tellClient(struct bufferevent *bufev, char *msg, ...);
 
 
 #endif /* FOAM_CS_LIBRARY */

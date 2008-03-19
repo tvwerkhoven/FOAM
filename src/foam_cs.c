@@ -14,6 +14,8 @@
 
 #include "foam_cs_library.h"
 
+int Maxparams=16;
+
 #ifndef FOAM_CONFIG_FILE
 #error "FOAM_CONFIG_FILE undefined, please define in foam_cs_config.h"
 #endif
@@ -42,7 +44,7 @@ extern int modOpenLoop(control_t *ptc);
 extern int modClosedInit(control_t *ptc);
 extern int modClosedLoop(control_t *ptc);
 extern int modCalibrate(control_t *ptc);
-
+extern int modMessage(control_t *ptc, const client_t *client, char *list[], const int count);
 
 	/*! 
 	@brief Initialisation function.
@@ -72,6 +74,7 @@ int main(int argc, char *argv[]) {
 		logErr("pthread_cond_init failed.");
 	
 	clientlist.nconn = 0;	// Init number of connections to zero
+	ptc.frames = 0L;			// Init the framecount to zero
 
 	char date[64];
 	struct tm *loctime;
@@ -420,7 +423,7 @@ int parseConfig(char *var, char *value) {
 }
 
 int loadConfig(char *file) {
-	logDebug(0, "Reading configuration from file: %s",file);
+	logDebug(0, "Reading configuration from file: %s. Max linelength: %d", file, COMMANDLEN);
 	FILE *fp;
 	char line[COMMANDLEN];
 	char var[COMMANDLEN], value[COMMANDLEN];
@@ -431,12 +434,17 @@ int loadConfig(char *file) {
 	
 	while (fgets(line, COMMANDLEN, fp) != NULL) {	// Read while there is no error
 		if (*line == ' ' || *line == '\t' || *line == '\n' || *line == '#')
-			continue;	// Skip bogus lines
+			continue;	// Skip bogus lines, they must not begin with these chars
+			
+		if (strlen(line) == COMMANDLEN-1) {
+			logErr("Configuration invalid, line '%s' is too long! (>%d)", line, COMMANDLEN-1);
+			continue;
+		}
 		
 		if (sscanf(line,"%s = %s", var, value) != 2)
 			continue;	// Skip lines which do not adhere to 'var = value'-syntax
 		
-		logDebug(0, "Parsing '%s' '%s' settings pair.", var, value);
+		logDebug(0, "Parsing '%s' '%s' settings pair (len: %d).", var, value, strlen(line), COMMANDLEN);
 		
 		if (parseConfig(var,value) != EXIT_SUCCESS)	// pass the pair on to be parsed and inserted in ptc
 			return EXIT_FAILURE;		
@@ -550,6 +558,7 @@ void modeOpen() {
 		return;
 	}
 	
+	// tellClients("201 MODE OPEN SUCCESSFUL");
 	while (ptc.mode == AO_MODE_OPEN) {
 		ptc.frames++;								// increment the amount of frames parsed
 		// logInfo(0, "Entering open loop.");
@@ -581,6 +590,7 @@ void modeClosed() {
 	}
 	
 	ptc.frames++;
+	// tellClients("201 MODE CLOSED SUCCESSFUL");
 	while (ptc.mode == AO_MODE_CLOSED) {
 		
 		if (modClosedLoop(&ptc) != EXIT_SUCCESS) {
@@ -600,13 +610,13 @@ void modeCal() {
 	// this links to a module
 	if (modCalibrate(&ptc) != EXIT_SUCCESS) {
 		logWarn("modCalibrate failed");
-		tellClients("404 ERROR CALIBRATION FAILED");
+		// tellClients("404 ERROR CALIBRATION FAILED");
 		ptc.mode = AO_MODE_LISTEN;
 		return;
 	}
 	
 	logInfo(0, "Calibration loop done, switching to listen mode");
-	tellClients("201 CALIBRATION SUCCESSFUL");
+	// tellClients("201 CALIBRATION SUCCESSFUL");
 	ptc.mode = AO_MODE_LISTEN;
 		
 	return;
@@ -616,6 +626,7 @@ void modeListen() {
 	
 	while (true) {
 		logInfo(0, "Now running in listening mode.");
+		
 		switch (ptc.mode) {
 			case AO_MODE_OPEN:
 				modeOpen();
@@ -628,12 +639,13 @@ void modeListen() {
 				break;
 			case AO_MODE_LISTEN:
 				// we wait until the mode changed
+				// tellClients("201 MODE LISTEN SUCCESSFUL");
 				pthread_mutex_lock(&mode_mutex);
 				pthread_cond_wait(&mode_cond, &mode_mutex);
 				pthread_mutex_unlock(&mode_mutex);
 				break;
 		}
-	} // end while(true)
+			} // end while(true)
 }
 
 int sockListen() {
@@ -676,6 +688,7 @@ int sockListen() {
 	event_set(&sockevent, sock, EV_READ | EV_PERSIST, sockAccept, NULL);
     event_add(&sockevent, NULL);
 
+	logInfo(0, "This tread will block for incoming network traffic now...");
 	event_dispatch();				// Start looping
 	
 	return EXIT_SUCCESS;
@@ -772,10 +785,16 @@ void sockOnRead(struct bufferevent *bev, void *arg) {
 	char msg[COMMANDLEN];
 	char *tmp;
 	int nbytes;
+	int flag=0;
 	
-	while ((nbytes = bufferevent_read(bev, msg, (size_t) COMMANDLEN-1)) == COMMANDLEN-1) {// detect very long messages
-		logErr("Received very long command over socket which was ignored.");
-		bufferevent_write(client->buf_ev,"400 COMMAND TOO LONG (MAX: COMMANDLEN)\n", sizeof("400 COMMAND TOO LONG (MAX: COMMANDLEN)\n"));
+	// detect very long messages, read everything and set a flag
+	while ((nbytes = bufferevent_read(bev, msg, (size_t) COMMANDLEN-1)) == COMMANDLEN-1)
+		flag=1;
+	
+	// if the message was too long, give a warning and return
+	if (flag == 1) {
+		logWarn("Received very long command over socket which was ignored.");
+		tellClient(client->buf_ev,"400 COMMAND IGNORED: TOO LONG (MAX: %d)", COMMANDLEN);
 		return;
 	}
 		
@@ -789,208 +808,199 @@ void sockOnRead(struct bufferevent *bev, void *arg) {
 	parseCmd(msg, nbytes, client);
 }
 
-/*int explode(char *msg, char **arr) {
-	size_t begin, end;	
-	int i, maxlen=0;
-	char *orig=msg;
-	
-	for(i=0; end != 0; i++) {
-		begin = strspn(msg, " \t\n");
-		if (begin > 0) msg = msg+begin;
-		
-		// get first next position of a space
-		end = strcspn(msg, " \t\n");
+// int explode(char *msg, char **arr) {
+// 	size_t begin, end;	
+// 	int i, maxlen=0;
+// 	char *orig=msg;
+// 	
+// 	for(i=0; end != 0; i++) {
+// 		begin = strspn(msg, " \t\n");
+// 		if (begin > 0) msg = msg+begin;
+// 		
+// 		// get first next position of a space
+// 		end = strcspn(msg, " \t\n");
+// 
+// 		msg = msg+end+1;
+// 		if ((int) end > maxlen) maxlen = (int) end;
+// 	}
+// 	
+// 	if (i == 0) return EXIT_FAILURE;
+// 	
+// 	char array[i][maxlen+1];
+// 	
+// 	for(i=0; end != 0; i++) {
+// 		begin = strspn(orig, " \t\n");
+// 		if (begin > 0) orig = orig+begin;
+// 		
+// 		// get first next position of a space
+// 		end = strcspn(orig, " \t\n");
+// 		
+// 		strncpy(array[i], orig, end);
+// 		array[i][end] = '\0';
+// 		
+// 		orig = orig+end+1;
+// 	}
+// 	
+// 	return EXIT_SUCCESS;
+// }
 
-		msg = msg+end+1;
-		if ((int) end > maxlen) maxlen = (int) end;
-	}
-	
-	if (i == 0) return EXIT_FAILURE;
-	
-	char array[i][maxlen+1];
-	
-	for(i=0; end != 0; i++) {
-		begin = strspn(orig, " \t\n");
-		if (begin > 0) orig = orig+begin;
-		
-		// get first next position of a space
-		end = strcspn(orig, " \t\n");
-		
-		strncpy(array[i], orig, end);
-		array[i][end] = '\0';
-		
-		orig = orig+end+1;
-	}
-	
-	return EXIT_SUCCESS;
-}*/
+// int popword(char **msg, char *cmd) {
+// 	size_t begin, end;
+// 	
+// 	// remove initial whitespace
+// 	begin = strspn(*msg, " \t\n");
+// 	if (begin > 0)// Trimming string begin %d chars", begin
+// 		*msg = *msg+begin;
+// 	
+// 	// get first next position of a space
+// 	end = strcspn(*msg, " \t\n");
+// 	if (end == 0) { // No characters? return 0 to the calling function
+// 		cmd[0] = '\0';
+// 		return 0;
+// 	}
+// 		
+// 	strncpy(cmd, *msg, end);
+// 	cmd[end] = '\0'; // terminate string (TODO: strncpy does not do this, solution?)
+// 	*msg = *msg+end+1;
+// 	return strlen(cmd);
+// }
 
-int popword(char **msg, char *cmd) {
-	size_t begin, end;
+int explode(char *str, char **list) {
+	size_t begin, len;
+	int i;
+	// Take a string 'str' which has space-seperated
+	// words in it and store pointers to the
+	// individual words in 'list'
+	for (i=0; i<Maxparams; i++ ) { 
+		// search for the first non-space char
+		begin = strspn(str, " \t\n\r\0");
+		str += begin;
 	
-	// remove initial whitespace
-	begin = strspn(*msg, " \t\n");
-	if (begin > 0)// Trimming string begin %d chars", begin
-		*msg = *msg+begin;
-	
-	// get first next position of a space
-	end = strcspn(*msg, " \t\n");
-	if (end == 0) { // No characters? return 0 to the calling function
-		cmd[0] = '\0';
-		return 0;
+		// search for the first space char,
+		// starting from the first nons-space char
+		len = strcspn(str, " \t\n\r\0");
+
+		// if len=0, there are no more words
+		// in 'str', use NULL to indicate this
+		// in 'list'
+		if (len == 0)  {
+			list[i] = NULL;
+			return i+1;
+		}   
+		// if len !=0, store the pointer to 
+		// the word in the list
+		list[i] = str;
+
+		// if the next character is a null
+		// char, we've reached the end of
+		// 'str'
+		if (str[len] == '\0') {
+			// if i<16, we can still use
+			// NULL t indicate this was
+			// the last word. Otherwise,
+			// we've stopped anyway
+			if (i < 15) list[i+1] = NULL;
+			return i+1;
+		}   
+		// replace the first space after
+		// the word with a null character
+		str[len] = '\0';
+
+		// proceed the pointer with the length
+		// of the word, + 1 for the null char
+		str += len+1;
 	}
-		
-	strncpy(cmd, *msg, end);
-	cmd[end] = '\0'; // terminate string (TODO: strncpy does not do this, solution?)
-	*msg = *msg+end+1;
-	return strlen(cmd);
+	
+	// if we finish the loop, we parsed Maxlength words:
+	return i+1;
 }
 
-int parseCmd(char *msg, const int len, client_t *client) {
-	char tmp[len+1];
-	tmp[0] = '\0';
-		
-	popword(&msg, tmp);
-		
 
-	if (strcmp(tmp,"help") == 0) {
-		// Show the help command
-		if (popword(&msg, tmp) > 0) // Does the user want help on a specific command?
-			showHelp(client, tmp);
-		else
-			showHelp(client, NULL);			
+int parseCmd(char *msg, const int len, client_t *client) {
+	// reserve memory for a local copy of 'msg'
+	char local[strlen(msg)+1];
+	char *list[Maxparams];
+	int count;
+	
+	// copy the string there, append \0
+	strncpy(local, msg, strlen(msg));
+	local[strlen(msg)] = '\0';
+
+	// length < 2? nothing to see here, move on
+	if (strlen(msg) < 2)
+		return tellClient(client->buf_ev,"400 UNKNOWN");
+
+	// explode the string, list[i] now holds the ith word in 'local'
+	if ((count = explode(local, list)) == 0) {
+		logWarn("parseCmd called without any words: '%s' or '%s' has %d words", msg, local, count);
+		return EXIT_FAILURE;
 	}
-	else if ((strcmp(tmp,"exit") == 0) || (strcmp(tmp,"quit") == 0)) {
-		tellClients("200 OK EXIT");
-//		bufferevent_write(client->buf_ev,"200 OK EXIT\n", sizeof("200 OK EXIT\n"));
+	logDebug(0, "We got: '%s', first word: '%s', words: %d", msg, list[0], count);
+			
+	// inspect the string, see what we are going to do:
+	if (strcmp(list[0],"help") == 0) {
+		// Does the user want help on a specific command?
+		// if so, count > 1 and list[1] holds the command the user wants help on
+		if (count > 1) { 		
+			// if both showHelp (general FOAM help) and modMessage (specific module help)
+			// do not have help info for list[1], we tell the client that we don't know either
+			if (showHelp(client, list[1]) <= 0 && modMessage(&ptc, client, list, count) <= 0)
+				tellClient(client->buf_ev, "401 UNKOWN HELP");
+		}
+		else {
+			// Give generic help here, both on FOAM and on the modules
+			showHelp(client, NULL);
+			modMessage(&ptc, client, list, count);
+		}
+	}
+	else if ((strcmp(list[0],"exit") == 0) || (strcmp(list[0],"quit") == 0)) {
+		tellClient(client->buf_ev, "200 OK EXIT");
 		sockOnErr(client->buf_ev, EVBUFFER_EOF, client);
 	}
-	else if (strcmp(tmp,"shutdown") == 0) {
+	else if (strcmp(list[0],"shutdown") == 0) {
 		tellClients("200 OK SHUTDOWN");
-//		bufferevent_write(client->buf_ev,"200 OK SHUTDOWN\n", sizeof("200 OK SHUTDOWN\n"));
 		sockOnErr(client->buf_ev, EVBUFFER_EOF, client);
 		stopFOAM();
 	}
-
-	else if (strcmp(tmp,"mode") == 0) {
-		if (popword(&msg, tmp) > 0) {
-			if (strcmp(tmp,"closed") == 0) {
+	else if (strcmp(list[0],"mode") == 0) {
+		if (count > 1) {
+			if (strcmp(list[1],"closed") == 0) {
 				ptc.mode = AO_MODE_CLOSED;
 				pthread_mutex_lock(&mode_mutex); // signal a change to the main thread
 				pthread_cond_signal(&mode_cond);
 				pthread_mutex_unlock(&mode_mutex);
 				tellClients("200 OK MODE CLOSED");
-//				bufferevent_write(client->buf_ev,"200 OK MODE CLOSED\n", sizeof("200 OK MODE CLOSED\n"));
 			}
-			else if (strcmp(tmp,"open") == 0) {
+			else if (strcmp(list[1],"open") == 0) {
 				ptc.mode = AO_MODE_OPEN;
 				pthread_mutex_lock(&mode_mutex);
 				pthread_cond_signal(&mode_cond);
 				pthread_mutex_unlock(&mode_mutex);
 				tellClients("200 OK MODE OPEN");
-//				bufferevent_write(client->buf_ev,"200 OK MODE OPEN\n", sizeof("200 OK MODE OPEN\n"));
 			}
-			else if (strcmp(tmp,"listen") == 0) {
+			else if (strcmp(list[1],"listen") == 0) {
 				ptc.mode = AO_MODE_LISTEN;
 				pthread_mutex_lock(&mode_mutex);
 				pthread_cond_signal(&mode_cond);
 				pthread_mutex_unlock(&mode_mutex);
 				tellClients("200 OK MODE LISTEN");
-//				bufferevent_write(client->buf_ev,"200 OK MODE LISTEN\n", sizeof("200 OK MODE LISTEN\n"));
 			}
 			else {
-				bufferevent_write(client->buf_ev,"401 UNKNOWN MODE\n", sizeof("400 UNKNOWN MODE\n"));
+				tellClient(client->buf_ev,"401 UNKNOWN MODE");
 			}
 		}
 		else {
-			bufferevent_write(client->buf_ev,"402 MODE REQUIRES ARG\n", sizeof("400 MODE REQUIRES ARG\n"));
-		}
-	}
-	else if (strcmp(tmp,"step") == 0) {
-		if (ptc.mode == AO_MODE_CAL) bufferevent_write(client->buf_ev,"403 STEP NOT ALLOWED DURING CALIBRATION\n", sizeof("403 STEP NOT ALLOWED DURING CALIBRATION\n"));
-		else if (popword(&msg, tmp) > 0) {
-			if (strcmp(tmp,"x") == 0) {
-				if (popword(&msg, tmp) > 0) {
-					if (strtof(tmp, NULL) > -10 && strtof(tmp, NULL) < 10) {
-						ptc.wfs[0].stepc.x = strtof(tmp, NULL);
-						tellClients("200 OK STEP X");
-					}
-					else bufferevent_write(client->buf_ev,"401 UNKNOWN STEPSIZE\n", sizeof("401 UNKNOWN STEPSIZE\n"));
-				}
-				else {
-					ptc.wfs[0].stepc.x += 1;
-					tellClients("200 OK STEP X +1");
-				}
-			}
-			if (strcmp(tmp,"y") == 0) {
-				if (popword(&msg, tmp) > 0) {
-					if (strtof(tmp, NULL) > -10 && strtof(tmp, NULL) < 10) {
-						ptc.wfs[0].stepc.y = strtof(tmp, NULL);
-						tellClients("200 OK STEP Y");
-					}
-					else bufferevent_write(client->buf_ev,"401 UNKNOWN STEPSIZE\n", sizeof("401 UNKNOWN STEPSIZE\n"));
-				}
-				else {
-					ptc.wfs[0].stepc.y += 1;
-					tellClients("200 OK STEP Y +1");
-				}
-			}
-			else bufferevent_write(client->buf_ev,"401 UNKNOWN STEP\n", sizeof("401 UNKNOWN STEP\n"));
-		}
-		else bufferevent_write(client->buf_ev,"402 STEP REQUIRES ARG\n", sizeof("402 STEP REQUIRES ARG\n"));
-	}
-	else if (strcmp(tmp,"gain") == 0) {
-		if (popword(&msg, tmp) > 0) {
-			if (strtof(tmp, NULL) > -5 && strtof(tmp, NULL) < 5) {
-				tellClients("200 OK GAIN");
-				ptc.wfc[0].gain = strtof(tmp, NULL);
-			}
-			else bufferevent_write(client->buf_ev,"401 UNKNOWN GAIN\n", sizeof("401 UNKNOWN GAIN\n"));
-		}
-		else bufferevent_write(client->buf_ev,"402 GAIN REQUIRES ARG\n", sizeof("402 GAIN REQUIRES ARG\n"));
-	}
-	else if (strcmp(tmp,"calibrate") == 0) {
-		if (popword(&msg, tmp) > 0) {
-
-			if (strcmp(tmp,"pinhole") == 0) {
-				ptc.mode = AO_MODE_CAL;
-				ptc.calmode = CAL_PINHOLE;
-				pthread_mutex_lock(&mode_mutex);
-				pthread_cond_signal(&mode_cond);
-				pthread_mutex_unlock(&mode_mutex);
-				tellClients("200 OK CALIBRATE PINHOLE");
-//				bufferevent_write(client->buf_ev,"200 OK CALIBRATE PINHOLE\n", sizeof("200 OK CALIBRATE PINHOLE\n"));
-			}
-			else if (strcmp(tmp,"lintest") == 0) {
-				ptc.mode = AO_MODE_CAL;
-				ptc.calmode = CAL_LINTEST;
-				pthread_mutex_lock(&mode_mutex);
-				pthread_cond_signal(&mode_cond);
-				pthread_mutex_unlock(&mode_mutex);
-				tellClients("200 OK CALIBRATE LINTEST");
-//				bufferevent_write(client->buf_ev,"200 OK CALIBRATE LINTEST\n", sizeof("200 OK CALIBRATE LINTEST\n"));
-			}
-			else if (strcmp(tmp,"influence") == 0) {
-				ptc.mode = AO_MODE_CAL;
-				ptc.calmode = CAL_INFL;
-				pthread_mutex_lock(&mode_mutex);
-				pthread_cond_signal(&mode_cond);
-				pthread_mutex_unlock(&mode_mutex);	
-				tellClients("200 OK CALIBRATE INFLUENCE");
-//				bufferevent_write(client->buf_ev,"200 OK CALIBRATE INFLUENCE\n", sizeof("200 OK CALIBRATE INFLUENCE\n"));
-			}
-			else {
-				bufferevent_write(client->buf_ev,"401 UNKNOWN CALIBRATION\n", sizeof("400 UNKNOWN CALIBRATION\n"));
-			}
-		}
-		else {
-			bufferevent_write(client->buf_ev,"402 CALIBRATE REQUIRES ARG\n", sizeof("400 CALIBRATE REQUIRES ARG\n"));
+			tellClient(client->buf_ev,"402 MODE REQUIRES ARG");
 		}
 	}
 	else {
-		return bufferevent_write(client->buf_ev,"400 UNKNOWN\n", sizeof("400 UNKNOWN\n"));
+		// No valid command found? pass it to the module
+		if (modMessage(&ptc, client, list, count) <= 0) {
+			return tellClient(client->buf_ev,"400 UNKNOWN");
+		}
 	}
-	
+
+
 	return EXIT_SUCCESS;
 }
 
@@ -1002,63 +1012,80 @@ int tellClients(char *msg, ...) {
 	va_start(ap, msg);
 
 	vasprintf(&out, msg, ap);
+	// format string and add newline
 	asprintf(&out2, "%s\n", out);
 
-//	logDebug(0, "message was: %s length %d and %d", msg, strlen(msg), strlen(msg));
+	// logDebug(0, "message was: %s length %d and %d", msg, strlen(msg), strlen(msg));
+	// pthread_mutex_lock(&mode_mutex);
 	for (i=0; i < clientlist.nconn; i++) {
+		// TODO: place locking outside or inside the loop? any difference?
+		
 		if (bufferevent_write(clientlist.connlist[i]->buf_ev, out2, strlen(out2)+1) != 0) {
 			logWarn("Error telling client %d", i);
 			return EXIT_FAILURE; 
 		}
 	}
+	// pthread_mutex_unlock(&mode_mutex);
+	// logDebug(LOG_NOFORMAT, "\n");
 	return EXIT_SUCCESS;
 }
 
+// todo: overlap with tellclients!? not good
+int tellClient(struct bufferevent *bufev, char *msg, ...) {
+	va_list ap;
+	char *out, *out2;
+
+	va_start(ap, msg);
+
+	vasprintf(&out, msg, ap);
+	asprintf(&out2, "%s\n", out);
+
+	// logDebug(0, "message to client was: %s length %d and %d", msg, strlen(msg), strlen(msg));
+	// pthread_mutex_lock(&mode_mutex);
+	if (bufferevent_write(bufev, out2, strlen(out2)+1) != 0) {
+		logWarn("Error telling client something");
+		return EXIT_FAILURE; 
+	}
+	// pthread_mutex_unlock(&mode_mutex);
+	
+	return EXIT_SUCCESS;
+}
+
+
 int showHelp(const client_t *client, const char *subhelp) {
+	// spaces are important here!!!
 	if (subhelp == NULL) {
-		char help[] = "\
+		tellClient(client->buf_ev, "\
 200 OK HELP\n\
 help [command]:         help (on a certain command, if available).\n\
 mode <mode>:            close or open the loop.\n\
-calibrate <mode>:       calibrate a component.\n\
-gain <value>:           sets gain for wfc 0 (TT).\n\
-step <x|y> [value]:     moves corrected frame of reference\n\
-info <wfc|wfs>:         gives information on the wfcs or wfss\n\
 exit or quit:           disconnect from daemon.\n\
-shutdown:               shutdown the FOAM progra.\n";
-
-		return bufferevent_write(client->buf_ev, help, sizeof(help));
+shutdown:               shutdown the FOAM program.");
 	}
 	else if (strcmp(subhelp, "mode") == 0) {
-		char help[] = "200 OK HELP MODE\n\
+		tellClient(client->buf_ev, "\
+200 OK HELP MODE\n\
 mode <mode>: close or open the loop.\n\
    mode=open: opens the loop and only records what's happening with the AO \n\
         system and does not actually drive anything.\n\
    mode=closed: closes the loop and starts the feedbackloop, correcting the\n\
         wavefront as fast as possible.\n\
    mode=listen: stops looping and waits for input from the users. Basically\n\
-        does nothing\n";
-		return bufferevent_write(client->buf_ev, help, sizeof(help));
+        does nothing.\n");
 	}
-	else if (strcmp(subhelp, "set") == 0) {
-		char help[] = "200 OK HELP SET\n\
-set <var> <value>\n\
-   this changes the value of a run-time variable.\n";
-		return bufferevent_write(client->buf_ev, help, sizeof(help));
-	}
-	else if (strcmp(subhelp, "calibrate") == 0) {
-		char help[] = "200 OK HELP CALIBRATE\n\
-calibrate <mode>\n\
-   mode=pinhole: do a pinhole calibration.\n\
-   mode=influence: do a WFC influence matrix calibration.\n";
-		return bufferevent_write(client->buf_ev, help, sizeof(help));
+	else if (strcmp(subhelp, "help") == 0) {
+			tellClient(client->buf_ev, "\
+200 OK HELP HELP\n\
+help [topic]\n\
+   show help on a topic, or (if omitted) in general");
 	}
 	else {
-		char help[] = "401 UNKOWN HELP\n";
-		return bufferevent_write(client->buf_ev, help, sizeof(help));
+		// if we end up here, 'subhelp' was unknown to us, and we tell parseCmd
+		return 0;
 	}
 	
-
+	// if we end up here, everything went ok
+	return 1;
 }
 
 // DOXYGEN GENERAL DOCUMENTATION //
@@ -1143,6 +1170,9 @@ ALIASES += cslib="foam_cs_library.*"
 	\li int modClosedInit(control_t *ptc);
 	\li int modClosedLoop(control_t *ptc);
 	\li int modCalibrate(control_t *ptc);
+	\li int modMessage(control_t *ptc, client_t *client, char *list[], int count);
+	
+	See the documentation on the specific functions for more information.
 
 	\subsection struct-prime The Prime Modules
 	

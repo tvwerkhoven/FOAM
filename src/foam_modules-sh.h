@@ -51,8 +51,8 @@ DM.
 
 @return EXIT_SUCCESS on success, EXIT_FAILURE otherwise.
 @param [in] *image The image to parse through either CoG or correlation tracking
-@param [in] *subc[2] The starting coordinates of the tracker windows
-@param [in] *gridc[2] The starting coordinates of the grid cells
+@param [in] *subc The starting coordinates of the tracker windows
+@param [in] *gridc The starting coordinates of the grid cells
 @param [in] nsubap The number of subapertures (i.e. the length of the subc[] array)
 @param [in] track The size of the tracker windows
 @param [out] *disp The displacement vector wrt the reference displacements
@@ -101,7 +101,7 @@ tracking window. Note that this will only work for star-like images, extended
 images will not work.
 
 @param [in] *image The image to parse through CoG tracking
-@param [in] *subc[2] The starting coordinates of the tracker windows
+@param [in] *subc The starting coordinates of the tracker windows
 @param [in] nsubap The number of subapertures (i.e. the length of the subc[] array)
 @param [in] track The size of the tracker windows
 @param [out] *aver The average pixel intensity (good for CCD saturation)
