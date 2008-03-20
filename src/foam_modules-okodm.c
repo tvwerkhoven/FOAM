@@ -47,6 +47,33 @@ static int Okodminit = 0;
 static int Okokfd;
 static int Okoaddr[38];
 
+int main () {
+	int i;
+	gsl_vector_float *ctrl;
+	gsl_vector_float_callc(ctrl, OKODM_NCHAN-1);
+	
+	// set everything to zero:
+	drvSetOkoDM(ctrl);
+	
+	// now manually read stuff:
+    off_t offset;
+    int w_out, dat;
+	
+	for (i=1; i<OKODM_NCHAN; i++) {
+		if ((offset=lseek(fd_open, addr, SEEK_SET)) < 0) {
+			fprintf(stderr,"Can not lseek  /dev/port\n");
+			exit (-1);
+		}
+
+		if ((w_out=read(fd_open, &dat,1)) != 1) {
+			fprintf(stderr,"Can not read  /dev/port\n");   
+			exit (-1);
+		}
+		printf("(%d, %d) ", i, dat);
+	}
+	printf("\n");
+	return 0;
+}
 
 int drvSetOkoDM(gsl_vector_float *ctrl) {
 	int i, volt;
@@ -67,7 +94,8 @@ int drvSetOkoDM(gsl_vector_float *ctrl) {
 static void okoOpen() {
 	Okokfd = open(OKOPORT, O_RDWR)
 	if (Okokfd < 0) {
-		logErr("Could not open port (%s) for Okotech DM: %s", OKOPORT, strerror(errno));
+//		logErr("Could not open port (%s) for Okotech DM: %s", OKOPORT, strerror(errno));
+		printf("Could not open port (%s) for Okotech DM: %s", OKOPORT, strerror(errno));
 	}
 }
 
@@ -122,7 +150,8 @@ static void okoSetAddr() {
 
 static void okoClose() {
 	if (close(Okofd) < 0) {
-		logErr("Could not close port (%s) for Okotech DM: %s", OKOPORT, strerror(errno));
+		// logErr("Could not close port (%s) for Okotech DM: %s", OKOPORT, strerror(errno));
+		printf("Could not close port (%s) for Okotech DM: %s", OKOPORT, strerror(errno));
 	}
 }
 
@@ -135,10 +164,12 @@ static void okoWrite(int addr, int voltage) {
 	
 	offset = lseek(Okofd, addr, SEEK_SET);
 	if (offset < 0)
-		logErr("Could not seek port %s: %s", OKOPORT, strerror(errno));
+		printf("Could not seek port %s: %s", OKOPORT, strerror(errno));
+		// logErr("Could not seek port %s: %s", OKOPORT, strerror(errno));
 	
 	w_out = write(Okofd, &data, 1);
 	if (w_out != 1)
-		logErr("Could not write to port %s: %s", OKOPORT, strerror(errno));
+		printf("Could not write to port %s: %s", OKOPORT, strerror(errno));
+		// logErr("Could not write to port %s: %s", OKOPORT, strerror(errno));
 	
 }
