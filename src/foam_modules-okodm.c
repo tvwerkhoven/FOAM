@@ -138,31 +138,48 @@ static void okoWrite(int addr, int voltage) {
 
 int drvSetOkoDM(gsl_vector_float *ctrl) {
 	int i, volt;
+	float voltf;
 	if (Okodminit == 0) {
 		Okodminit = 1;
 		okoOpen();
 	}
 	
-	for (i=0; i< (int) ctrl->size; i++) {
+	for (i=1; i< (int) ctrl->size; i++) {
 		// this maps [-1,1] to [0,255^2] and takes the square root of that range (linear -> quadratic)
-		volt = (int) round(sqrt(65025*(gsl_vector_float_get(ctrl, i)+1)*0.5 )); //65025 = 255^2
+		voltf = round(sqrt(65025*(gsl_vector_float_get(ctrl, i)+1)*0.5 )); //65025 = 255^2
+		volt = (int) voltf;
+		printf("(%.1f, %d -> %#x) ", voltf, volt, Okoaddr[i]);
 		okoWrite(Okoaddr[i], volt);
 	}
+	printf("\n");
 	
 	return EXIT_SUCCESS;
 }
 
 int main () {
 	int i;
+	float volt;
 	gsl_vector_float *ctrl;
 	ctrl = gsl_vector_float_calloc(OKODM_NCHAN-1);
 	
+	// set addr:
+	okoSetAddr();
+
 	// set everything to zero:
+	printf("setting mirror:\n");
+	for (i=0; i<ctrl->size; i++)  {
+		volt = ((float) i/ctrl->size)*2-1;
+		printf("%f ", volt);
+		gsl_vector_float_set(ctrl, i, volt);
+	}
+	printf("\n");
+
 	drvSetOkoDM(ctrl);
 	
 	// now manually read stuff:
     off_t offset;
-    int w_out, dat;
+    int w_out;
+    unsigned char dat;
 	
 	for (i=1; i<OKODM_NCHAN; i++) {
 		if ((offset=lseek(Okofd, Okoaddr[i], SEEK_SET)) < 0) {
