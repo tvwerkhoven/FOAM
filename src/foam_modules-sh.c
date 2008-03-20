@@ -381,12 +381,13 @@ int modParseSH(gsl_matrix_float *image, int (*subc)[2], int (*gridc)[2], int nsu
 int modCalcCtrl(control_t *ptc, const int wfs, int nmodes) {
 	logDebug(LOG_SOMETIMES, "Calculating WFC ctrls");
 	// function assumes presence of dmmodes, singular and wfsmodes...
+	// TODO: this has to be placed elsewhere, in the end...
 	if (ptc->wfs[wfs].dmmodes == NULL || ptc->wfs[wfs].singular == NULL || ptc->wfs[wfs].wfsmodes == NULL) {
 		logWarn("Cannot calculate WFC ctrls, calibration incomplete.");
 		return EXIT_FAILURE;
 	}
 	
-	int i,j, wfc;   		// index variables
+	int i,j, wfc;   			// index variables
 //	float sum; 					// temporary sum
 	int nacttot=0;
 	size_t oldsize;
@@ -397,11 +398,9 @@ int modCalcCtrl(control_t *ptc, const int wfs, int nmodes) {
 		nacttot += ptc->wfc[wfc].nact;
 	
 	// set to maxmimum if 0 or less is passed.
-	if (nmodes <= 0) nmodes = nacttot;
-	
-
-	
-	if (nmodes > nacttot) {
+	if (nmodes <= 0) 
+		nmodes = nacttot;
+	else if (nmodes > nacttot) {
 		logWarn("nmodes cannot be higher than the total number of actuators, cropping.");
 		nmodes = nacttot;
 	}
@@ -469,6 +468,8 @@ int modCalcCtrl(control_t *ptc, const int wfs, int nmodes) {
 		logDebug(LOG_SOMETIMES | LOG_NOFORMAT, "\n");
 	}
 	logDebug(LOG_SOMETIMES | LOG_NOFORMAT, "\n");
+	
+	// unhack the disp vector (see above)
 	ptc->wfs[wfs].disp->size = oldsize;
 			
 	return EXIT_SUCCESS;

@@ -14,6 +14,8 @@
 	\section Functions
 	
 	\li drvSetOkoDM() - Sets the Okotech 37ch DM to a certain voltage set.
+	\li drvInitOkoDM() - Initialize the Okotech DM
+	\li drvCloseOkoDM() - Close the Okotech DM
 	
 	\section History
 	
@@ -29,41 +31,45 @@
 #include <string.h>
 #include <math.h>
 
-#define OKODM_PORT "/dev/port"
-#define OKODM_NCHAN 38
-#define OKODM_MAXVOLT 255
+#define FOAM_MODOKODM_PORT "/dev/port"
+#define FOAM_MODOKODM_NCHAN 38
+#define FOAM_MODOKODM_MAXVOLT 255
+#define FOAM_MODOKODM_DEBUG 1		//!< set to 1 for debugging, in that case this module compiles on its own
 
 // PCI bus is 32 bit oriented, hence each 4th addres represents valid
 // 8bit wide channel 
-#define OKODM_PCI_OFFSET 4
+#define FOAM_MODOKODM_PCI_OFFSET 4
 
 // These are the base addresses for the different boards. In our
 // case we have 2 boards, boards 3 and 4 are not used
-#define OKODM_BASE1 0xc000
-#define OKODM_BASE2 0xc400
-#define OKODM_BASE3 0xFFFF
-#define OKODM_BASE4 0xFFFF
+#define FOAM_MODOKODM_BASE1 0xc000
+#define FOAM_MODOKODM_BASE2 0xc400
+#define FOAM_MODOKODM_BASE2DM_BASE3 0xFFFF
+#define FOAM_MODOKODM_BASE4 0xFFFF
 
 
-int Okodminit = 0;
-int Okofd;
-int Okoaddr[38];
+static int Okodminit = 0;
+static int Okofd;
+static int Okoaddr[38];
 
 static void okoOpen() {
-	Okofd = open(OKODM_PORT, O_RDWR);
-	if (Okofd < 0) {
-//		logErr("Could not open port (%s) for Okotech DM: %s", OKODM_PORT, strerror(errno));
-		printf("Could not open port (%s) for Okotech DM: %s", OKODM_PORT, strerror(errno));
+	Okofd = open(FOAM_MODOKODM_PORT, O_RDWR);
+	if (Okofd < 0) {	
+#ifdef FOAM_MODOKODM_DEBUG
+		printf("Could not open port (%s) for Okotech DM: %s", FOAM_MODOKODM_PORT, strerror(errno));
 		exit(-1);
+#elif
+		logErr("Could not open port (%s) for Okotech DM: %s", FOAM_MODOKODM_PORT, strerror(errno));
+#endif
 	}
 }
 
 static void okoSetAddr() {
 	int i, b1, b2;
 
-	i = OKODM_PCI_OFFSET;
-	b1 = OKODM_BASE1;
-	b2 = OKODM_BASE2;
+	i = FOAM_MODOKODM_PCI_OFFSET;
+	b1 = FOAM_MODOKODM_BASE1;
+	b2 = FOAM_MODOKODM_BASE2;
 
 	// board 1:
 	Okoaddr[1]=b1+13*i; 
@@ -107,60 +113,83 @@ static void okoSetAddr() {
 	Okoaddr[37]=b2+10*i;
 }
 
-static void okoClose() {
-	if (close(Okofd) < 0) {
-		// logErr("Could not close port (%s) for Okotech DM: %s", OKODM_PORT, strerror(errno));
-		printf("Could not close port (%s) for Okotech DM: %s", OKODM_PORT, strerror(errno));
-		exit(-1);
-	}
-}
-
 static void okoWrite(int addr, int voltage) {
 	off_t offset;
 	ssize_t w_out;
 	
 	// make sure we NEVER exceed the maximum voltage:
-	voltage = voltage & OKODM_MAXVOLT;
+	voltage = voltage & FOAM_MODOKODM_MAXVOLT;
 	
 	offset = lseek(Okofd, addr, SEEK_SET);
 	if (offset < 0) {
-		printf("Could not seek port %s: %s", OKODM_PORT, strerror(errno));
+#ifdef FOAM_MODOKODM_DEBUG
+		printf("Could not seek port %s: %s", FOAM_MODOKODM_PORT, strerror(errno));
 		exit(-1);
-		// logErr("Could not seek port %s: %s", OKODM_PORT, strerror(errno));
+#elif
+		logErr("Could not seek port %s: %s", FOAM_MODOKODM_PORT, strerror(errno));
+#endif
 	}
 	w_out = write(Okofd, &voltage, 1);
 	if (w_out != 1) {
-		printf("Could not write to port %s: %s", OKODM_PORT, strerror(errno));
+#ifdef FOAM_MODOKODM_DEBUG
+		printf("Could not write to port %s: %s", FOAM_MODOKODM_PORT, strerror(errno));
 		exit(-1);
-		// logErr("Could not write to port %s: %s", OKODM_PORT, strerror(errno));
+#elif
+		logErr("Could not write to port %s: %s", FOAM_MODOKODM_PORT, strerror(errno));
+#endif
 	}
 }
 
 int drvSetOkoDM(gsl_vector_float *ctrl) {
 	int i, volt;
 	float voltf;
-	if (Okodminit == 0) {
-		Okodminit = 1;
-		okoOpen();
-	}
 	
 	for (i=1; i< (int) ctrl->size; i++) {
 		// this maps [-1,1] to [0,255^2] and takes the square root of that range (linear -> quadratic)
 		voltf = round(sqrt(65025*(gsl_vector_float_get(ctrl, i)+1)*0.5 )); //65025 = 255^2
 		volt = (int) voltf;
+#ifdef FOAM_MODOKODM_DEBUG
 		printf("(%.1f, %d -> %#x) ", voltf, volt, Okoaddr[i]);
+#endif
 		okoWrite(Okoaddr[i], volt);
 	}
+#ifdef FOAM_MODOKODM_DEBUG
 	printf("\n");
+#endif
 	
 	return EXIT_SUCCESS;
 }
 
+void drvInitOkoDM() {
+	// Set the global list of addresses for the various actuators:
+	okoSetAddr();
+	
+	// Open access to the pci card using the global FD Okofd
+	okoOpen();
+	
+	// Indicate success for initialisation
+	Okodminit = 1;
+}
+
+void drvCloseOkoDM() {
+	// Close access to the pci card
+	if (close(Okofd) < 0) {
+#ifdef FOAM_MODOKODM_DEBUG
+		printf("Could not close port (%s) for Okotech DM: %s", FOAM_MODOKODM_PORT, strerror(errno));
+		exit(-1);
+#elif
+		logErr("Could not close port (%s) for Okotech DM: %s", FOAM_MODOKODM_PORT, strerror(errno));
+#endif
+	}
+}
+
+
+#ifdef FOAM_MODOKODM_DEBUG
 int main () {
 	int i;
 	float volt;
 	gsl_vector_float *ctrl;
-	ctrl = gsl_vector_float_calloc(OKODM_NCHAN-1);
+	ctrl = gsl_vector_float_calloc(FOAM_MODOKODM_NCHAN-1);
 	
 	// set addr:
 	okoSetAddr();
@@ -181,7 +210,7 @@ int main () {
     int w_out;
     unsigned char dat;
 	
-	for (i=1; i<OKODM_NCHAN; i++) {
+	for (i=1; i<FOAM_MODOKODM_NCHAN; i++) {
 		if ((offset=lseek(Okofd, Okoaddr[i], SEEK_SET)) < 0) {
 			fprintf(stderr,"Can not lseek  /dev/port\n");
 			exit (-1);
@@ -196,3 +225,4 @@ int main () {
 	printf("\n");
 	return 0;
 }
+#endif

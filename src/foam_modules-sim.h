@@ -71,15 +71,23 @@ int drvFilterWheel(control_t *ptc, fwheel_t mode);
 /*!
 @brief Simulates the SH sensor
 
+TODO: document
 This simulates the SH WFS
 */
 int modSimSH();
 
 /*!
+@brief This simulates errors using a certain WFC, useful for performance testing
+
+TODO: document
+*/
+void modSimError(int wfc, int method, int verbosity);
+
+/*!
 @brief \a simAtm() reads a fits file with simulated atmospheric distortion.
 
 This fuction works in wavefront-space.
-TODO: add doc
+TODO: document
 */
 int simAtm(char *file, coord_t res, int origin[2], float *image);
 

@@ -86,21 +86,21 @@ if test "$simul" = true ; then
 	simulmissing=""
 	LIBS=""
 	AC_SEARCH_LIBS([fftw_execute], [fftw3] ,[], 
-		[AC_MSG_WARN([This package needs libfftw3 in simulation mode, disabling simulation.])
+		[AC_MSG_ERROR([This package needs libfftw3 in simulation mode, disabling simulation.])
 		simul=false
 		simulmissing+=" fftw3"
 		]
 	) 	
 	 
 	AC_SEARCH_LIBS([SDL_Init], [SDL] ,[], 
-		[AC_MSG_WARN([This package needs libsdl in simulation mode, disabling simulation.])
+		[AC_MSG_ERROR([This package needs libsdl in simulation mode, disabling simulation.])
 		simul=false
 		simulmissing+=" sdl"
 		]
 	)
 
 	AC_SEARCH_LIBS([IMG_Load], [SDL_image] ,[], 
-		[AC_MSG_WARN([This package needs sdl-image in simulation mode, disabling simulation.])
+		[AC_MSG_ERROR([This package needs sdl-image in simulation mode, disabling simulation.])
 		simul=false
 		simulmissing+=" sdl-image"
 		]
@@ -126,14 +126,14 @@ if test "$statsimul" = true ; then
 	statsimulmissing=""
 	LIBS=""
 	AC_SEARCH_LIBS([SDL_Init], [SDL] ,[], 
-		[AC_MSG_WARN([This package needs libsdl in static simulation mode, disabling static simulation.])
+		[AC_MSG_ERROR([This package needs libsdl in static simulation mode, disabling static simulation.])
 		statsimul=false
 		statsimulmissing+=" sdl"
 		]
 	)
 
 	AC_SEARCH_LIBS([IMG_Load], [SDL_image] ,[], 
-		[AC_MSG_WARN([This package needs sdl-image in static simulation mode, disabling static simulation.])
+		[AC_MSG_ERROR([This package needs sdl-image in static simulation mode, disabling static simulation.])
 		statsimul=false
 		statsimulmissing+=" sdl-image"
 		]
@@ -173,7 +173,7 @@ if test "$ui" = true ; then
 	AC_MSG_NOTICE([Cheking UI libs])
 	LIBS=""
 	AC_SEARCH_LIBS([SDL_Init], [sdl] ,[], 
-		[AC_MSG_WARN([This package needs libsdl in ui mode, disabling simulation.])
+		[AC_MSG_ERROR([This package needs libsdl in ui mode, disabling simulation.])
 		ui=false
 		uimissing+=" sdl"
 		]

@@ -28,7 +28,7 @@ config_t cs_config = {
 	.syslog_prepend = "foam",
 	.use_stdout = true,
 	.loglevel = LOGDEBUG,
-	.logfrac = 1000
+	.logfrac = 1
 };
 
 conntrack_t clientlist;

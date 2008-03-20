@@ -27,7 +27,9 @@
 
 #include "foam_primemod-simstatic.h"
 
-#define FOAM_MODSIM_STATIC "../config/simstatic.pgm"
+#define FOAM_SIMSTATIC_IMG "../config/simstatic.pgm"
+#define FOAM_SIMSTATIC_NACT 39
+#define FOAM_SIMSTATIC_MAXFRAMES 20000
 
 // GLOBALS //
 /***********/
@@ -35,6 +37,9 @@
 float *simimgsurf=NULL;		// Global surface to draw on
 SDL_Surface *screen;		// Global surface to draw on
 SDL_Event event;			// Global SDL event struct to catch user IO
+extern pthread_mutex_t mode_mutex;
+extern pthread_cond_t mode_cond;
+
 
 // ROUTINES //
 /************/
@@ -97,7 +102,7 @@ int modOpenLoop(control_t *ptc) {
 	if (ptc->frames % cs_config.logfrac == 0) 
 		modDrawStuff(ptc, 0, screen);
 
-	if (ptc->frames > 20000)
+	if (ptc->frames > FOAM_SIMSTATIC_MAXFRAMES)
 		stopFOAM();
 		
 	if (SDL_PollEvent(&event))
@@ -141,7 +146,7 @@ int modClosedLoop(control_t *ptc) {
 	if (ptc->frames % cs_config.logfrac == 0) 
 		modDrawStuff(ptc, 0, screen);
 	
-	if (ptc->frames > 20000)
+	if (ptc->frames > FOAM_SIMSTATIC_MAXFRAMES)
 		stopFOAM();
 
 	
@@ -317,12 +322,12 @@ int drvReadSensor() {
 	}
 	else {
 		if (simimgsurf == NULL) {
-			if (modReadPGMArr(FOAM_MODSIM_STATIC, &simimgsurf, simres) != EXIT_SUCCESS)
+			if (modReadPGMArr(FOAM_SIMSTATIC_IMG, &simimgsurf, simres) != EXIT_SUCCESS)
 				logErr("Cannot read static image.");
 
 			if (simres[0] != res.x || simres[1] != res.y) {
 				logWarn("Simulation resolution incorrect for %s! (%dx%d vs %dx%d)", \
-					FOAM_MODSIM_STATIC, res.x, res.y, simres[0], simres[1]);
+					FOAM_SIMSTATIC_IMG, res.x, res.y, simres[0], simres[1]);
 				return EXIT_FAILURE;			
 			}
 			
@@ -347,7 +352,7 @@ gsl_vector_float *singf, *workf, *dispf, *actf;
 int modCalcCtrlFake(control_t *ptc, const int wfs, int nmodes) {
 	int i, j;
 	int nsubap = ptc->wfs[0].nsubap;
-	int nacttot = 2;
+	int nacttot = FOAM_SIMSTATIC_NACT;
 	
 	// function assumes presence of dmmodes, singular and wfsmodes...
 	if (inflf == NULL || vf == NULL) {

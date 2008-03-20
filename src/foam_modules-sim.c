@@ -36,15 +36,24 @@
 #define FOAM_MODSIM_APTMASK "../config/apert15-256.pgm"
 #define FOAM_MODSIM_ACTPAT "../config/dm37-256.pgm"
 
+#define FOAM_MODSIM_WINDX 0		//!< Simulated wind in x direction
+#define FOAM_MODSIM_WINDY 0 	//!< Simulated wind in y direction
+#define FOAM_MODSIM_SEEING 0.2	//!< Seeing factor to use (0.1 is good seeing, 0.5 is really bad)
+
+#define FOAM_MODSIM_ERR 1		//!< Introduce artificial WFC error?
+#define FOAM_MODSIM_ERRWFC 0	//!< Introduce error using which WFC?
+#define FOAM_MODSIM_ERRTYPE 1	//!< Error type: 1 sawtooth, 2 random drift
+#define FOAM_MODSIM_ERRVERB 1	//!< Be verbose about error simulation?
+
 // GLOBALS //
 /***********/
 
 struct simul simparams = {
-	.wind[0] = 0,
-	.wind[1] = 0,
+	.wind[0] = FOAM_MODSIM_WINDX,
+	.wind[1] = FOAM_MODSIM_WINDY,
 	.curorig[0] = 0,
 	.curorig[1] = 0,
-	.seeingfac = 0.2,
+	.seeingfac = FOAM_MODSIM_SEEING,
 	.simimg = NULL,
 	.plan_forward = NULL,
 	.wisdomfile = "fftw_wisdom.dat",
@@ -88,30 +97,13 @@ int drvReadSensor() {
 	
 	// modDrawStuff(&ptc, 0, screen);
 	
-	// sleep(1);
-	
-	// WE APPLY DM OR TT ERRORS HERE, 
-	// AND TEST IF THE WFC'S CAN CORRECT IT
-	///////////////////////////////////////
-
-	gsl_vector_float *tmpctrl;
-	tmpctrl = gsl_vector_float_calloc(ptc.wfc[0].nact);
-	
-	// regular sawtooth drift is here:
-	for (i=0; i<ptc.wfc[0].nact; i++) {
-		gsl_vector_float_set(tmpctrl, i, ((ptc.frames % 40)/40.0 * 2 - 1) * ( round( (ptc.frames % 40)/40.0 )*2 - 1));
-		// * ( round( (ptc.frames % 40)/40.0 )*2 - 1)
-	}
-
-	// logDebug(0, "TT: faking tt with : %f, %f", gsl_vector_float_get(tmpctrl, 0), gsl_vector_float_get(tmpctrl, 1));
-	// if (ttfd == NULL) ttfd = fopen("ttdebug.dat", "w+");
-	// fprintf(ttfd, "%f, %f\n", gsl_vector_float_get(tmpctrl, 0), gsl_vector_float_get(tmpctrl, 1));
-	
-	//	modSimTT(tmpctrl, ptc.wfs[0].image, ptc.wfs[0].res);
-	modSimDM(FOAM_MODSIM_APTMASK, FOAM_MODSIM_ACTPAT, ptc.wfc[0].nact, tmpctrl, ptc.wfs[0].image, ptc.wfs[0].res, -1); // last arg is for niter. -1 for autoset
-
-	// END OF FAKING ERRORS
-	///////////////////////
+	// introduce error here,
+	// first param: wfc to use for simulation (dependent on ptc.wfc[wfc])
+	// second param: 0 for regular sawtooth, 1 for random drift
+	// third param: 0 for no output, 1 for ctrl vec output
+#ifdef FOAM_MODSIM_ERR
+	modSimError(FOAM_MODSIM_ERRWFC, FOAM_MODSIM_ERRTYPE, FOAM_MODSIM_ERRVERB);
+#endif
 	
 	// we simulate WFCs before the telescope to make sure they outer region is zero (Which is done by simTel())
 	logDebug(0, "Now simulating %d WFC(s).", ptc.wfc_count);
@@ -126,10 +118,76 @@ int drvReadSensor() {
 		logWarn("Simulating SH WFSs failed.");
 		return EXIT_FAILURE;
 	}	
-
-	// modStuff(ptc, 0, screen);
 	
 	return EXIT_SUCCESS;
+}
+
+void modSimError(int wfc, int method, int verbosity) {
+	gsl_vector_float *tmpctrl;
+	int nact, i;
+	int repeat=40;
+	float ctrl;
+	
+	// get the number of actuators for the WFC to simulate
+	nact = ptc.wfc[wfc].nact;
+	
+	tmpctrl = gsl_vector_float_calloc(nact);
+	// calculate control vector
+	if (method == 1) {
+		// regular sawtooth drift is here:
+		for (i=0; i<nact; i++) {
+			ctrl = ((ptc.frames % repeat)/(float)repeat * 2 - 1) * ( round( (ptc.frames % repeat)/(float)repeat )*2 - 1);
+			gsl_vector_float_set(tmpctrl, i, ctrl);
+			// * ( round( (ptc.frames % 40)/40.0 )*2 - 1)
+		}
+	}
+	else {
+		// random drift is here:
+		for (i=0; i<nact; i++) {
+			ctrl = gsl_vector_float_get(tmpctrl,i) + (float) drand48()*0.1;
+			gsl_vector_float_set(tmpctrl, i, ctrl);
+			// * ( round( (ptc.frames % 40)/40.0 )*2 - 1)
+		}
+	}
+	
+	// What routine do we need to call to simulate this WFC?
+	if (ptc.wfc[wfc].type == WFC_DM)
+		modSimDM(FOAM_MODSIM_APTMASK, FOAM_MODSIM_ACTPAT, ptc.wfc[0].nact, tmpctrl, ptc.wfs[0].image, ptc.wfs[0].res, -1); // last arg is for niter. -1 for autoset
+	else if (ptc.wfc[wfc].type == WFC_TT)
+		modSimTT(tmpctrl, ptc.wfs[0].image, ptc.wfs[0].res);
+	
+	if (verbosity == 1) {
+		logInfo(LOG_SOMETIMES, "Error: %d with %d acts:", wfc, nact);
+		for (i=0; i<nact; i++)
+			logInfo(LOG_SOMETIMES | LOG_NOFORMAT, "(%.2f) ", gsl_vector_float_get(tmpctrl,i));
+			
+		logInfo(LOG_SOMETIMES | LOG_NOFORMAT, "\n");
+	}
+	
+	// old stuff:
+	// WE APPLY DM OR TT ERRORS HERE, 
+	// AND TEST IF THE WFC'S CAN CORRECT IT
+	///////////////////////////////////////
+
+	// gsl_vector_float *tmpctrl;
+	// tmpctrl = gsl_vector_float_calloc(ptc.wfc[0].nact);
+	
+	// regular sawtooth drift is here:
+	// for (i=0; i<ptc.wfc[0].nact; i++) {
+	// 	gsl_vector_float_set(tmpctrl, i, ((ptc.frames % 40)/40.0 * 2 - 1) * ( round( (ptc.frames % 40)/40.0 )*2 - 1));
+	// 	// * ( round( (ptc.frames % 40)/40.0 )*2 - 1)
+	// }
+
+	// logDebug(0, "TT: faking tt with : %f, %f", gsl_vector_float_get(tmpctrl, 0), gsl_vector_float_get(tmpctrl, 1));
+	// if (ttfd == NULL) ttfd = fopen("ttdebug.dat", "w+");
+	// fprintf(ttfd, "%f, %f\n", gsl_vector_float_get(tmpctrl, 0), gsl_vector_float_get(tmpctrl, 1));
+	
+	//	modSimTT(tmpctrl, ptc.wfs[0].image, ptc.wfs[0].res);
+	// modSimDM(FOAM_MODSIM_APTMASK, FOAM_MODSIM_ACTPAT, ptc.wfc[0].nact, tmpctrl, ptc.wfs[0].image, ptc.wfs[0].res, -1); // last arg is for niter. -1 for autoset
+
+	// END OF FAKING ERRORS
+	///////////////////////
+	
 }
 
 int modSimWind() {

@@ -33,7 +33,7 @@
 
 SDL_Surface *screen;	// Global surface to draw on
 SDL_Event event;		// Global SDL event struct to catch user IO
-extern FILE *ttfd;
+extern FILE *ttfd;		// TODO: this is only for debugging, from module-sim.c
 
 // ROUTINES //
 /************/
@@ -79,13 +79,17 @@ int modOpenInit(control_t *ptc) {
 int modOpenLoop(control_t *ptc) {
 	if (drvReadSensor(ptc) != EXIT_SUCCESS)			// read the sensor output into ptc.image
 		return EXIT_FAILURE;
+
+	if (modCalDarkFlat(ptc->wfs[0].image, ptc->wfs[0].darkim, ptc->wfs[0].flatim, ptc->wfs[0].corrim) != EXIT_SUCCESS)
+		return EXIT_FAILURE;
 		
-	if (modParseSH((&ptc->wfs[0])) != EXIT_SUCCESS)		// process SH sensor output, get displacements
+	if (modParseSH(ptc->wfs[0].corrim, ptc->wfs[0].subc, ptc->wfs[0].gridc, ptc->wfs[0].nsubap, \
+		ptc->wfs[0].track, ptc->wfs[0].disp, ptc->wfs[0].refc) != EXIT_SUCCESS)
 		return EXIT_FAILURE;
 	
-//	if (ptc->frames % 20 == 0) {
-	// modDrawSens(ptc, 0, screen);
-	modDrawStuff(ptc, 0, screen);
+	logDebug(LOG_SOMETIMES, "Frame: %ld", ptc->frames);
+	if (ptc->frames % cs_config.logfrac == 0) 
+		modDrawStuff(ptc, 0, screen);
 
 //	}
 
@@ -101,7 +105,6 @@ int modClosedInit(control_t *ptc) {
 	// this is the same for open and closed modes, don't rewrite stuff
 	if (modOpenInit(ptc) != EXIT_SUCCESS)
 		return EXIT_FAILURE;
-
 	
 	// // check if calibration is done
 	for (i=0; i < ptc->wfs_count; i++) {
@@ -124,15 +127,19 @@ int modClosedLoop(control_t *ptc) {
 	if (drvReadSensor(ptc) != EXIT_SUCCESS)				// read the sensor output into ptc.image
 		return EXIT_FAILURE;
 	
-	if (modParseSH((&ptc->wfs[0])) != EXIT_SUCCESS)		// process SH sensor output, get displacements
+	if (modCalDarkFlat(ptc->wfs[0].image, ptc->wfs[0].darkim, ptc->wfs[0].flatim, ptc->wfs[0].corrim) != EXIT_SUCCESS)
 		return EXIT_FAILURE;
 		
+	if (modParseSH(ptc->wfs[0].corrim, ptc->wfs[0].subc, ptc->wfs[0].gridc, ptc->wfs[0].nsubap, \
+		ptc->wfs[0].track, ptc->wfs[0].disp, ptc->wfs[0].refc) != EXIT_SUCCESS)
+		return EXIT_FAILURE;
+	
 	if (modCalcCtrl(ptc, 0, 0) != EXIT_SUCCESS)		// parse displacements, get ctrls for WFC's
 		return EXIT_FAILURE;
 
-//	if (ptc->frames % 20 == 0) {
- 	modDrawStuff(ptc, 0, screen);
-//	}	
+	logDebug(LOG_SOMETIMES, "Frame: %ld", ptc->frames);
+	if (ptc->frames % cs_config.logfrac == 0) 
+		modDrawStuff(ptc, 0, screen);
 
 	if (SDL_PollEvent(&event))
 		if (event.type == SDL_QUIT)
@@ -200,8 +207,43 @@ gain <wfc> <gain>\n\
 		else {
 			tellClient(client->buf_ev, "\
 step <x|y> [d]:         step a wfs in the x or y direction\n\
+logfrac <frame>:        log mesasges only every <frame> times\n\
+loglevel <0|1|2>:       set loglevel to ERROR, INFO or DEBUG (0,1,2)\n\
 gain <wfc> <gain>:      set the gain for a wfc");
 		}
+	}
+	else if (strcmp(list[0],"logfrac") == 0) {
+		if (count > 1) {
+			tmpint = abs(strtol(list[1], NULL, 10));
+			if (tmpint == 0) tmpint=1;
+			cs_config.logfrac = tmpint;
+			tellClients("200 OK LOGFRAC %d", tmpint);
+		}
+		else tellClient(client->buf_ev,"402 LOGFRAC REQUIRES ARG");
+	}
+	else if (strcmp(list[0],"loglevel") == 0) {
+		if (count > 1) {
+			tmpint = abs(strtol(list[1], NULL, 10));
+			switch (tmpint) {
+				case 0:
+					cs_config.loglevel = LOGNONE;
+					tellClients("200 OK LOGLEVEL ERRORS");
+					break;
+				case 1:
+				 	cs_config.loglevel = LOGINFO;
+					tellClients("200 OK LOGLEVEL INFO");
+					break;
+				case 2:
+					cs_config.loglevel = LOGDEBUG;
+					tellClients("200 OK LOGLEVEL DEBUG");
+					break;
+				default:
+					cs_config.loglevel = LOGINFO;
+					tellClients("200 OK LOGLEVEL INFO");
+					break;
+			}
+		}
+		else tellClient(client->buf_ev,"402 LOGFRAC REQUIRES ARG");
 	}
  	else if (strcmp(list[0],"step") == 0) {
 		if (ptc->mode == AO_MODE_CAL) 
