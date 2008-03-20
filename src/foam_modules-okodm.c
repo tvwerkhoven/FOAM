@@ -19,13 +19,15 @@
 	
 */
 
-#include <gs/gsl_vector.h>
+#include <gsl/gsl_vector.h>
 #include <stdio.h>
 #include <unistd.h>
 #include <stdlib.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <string.h>
+#include <math.h>
 
 #define OKODM_PORT "/dev/port"
 #define OKODM_NCHAN 38
@@ -43,59 +45,16 @@
 #define OKODM_BASE4 0xFFFF
 
 
-static int Okodminit = 0;
-static int Okokfd;
-static int Okoaddr[38];
-
-int main () {
-	int i;
-	gsl_vector_float *ctrl;
-	gsl_vector_float_callc(ctrl, OKODM_NCHAN-1);
-	
-	// set everything to zero:
-	drvSetOkoDM(ctrl);
-	
-	// now manually read stuff:
-    off_t offset;
-    int w_out, dat;
-	
-	for (i=1; i<OKODM_NCHAN; i++) {
-		if ((offset=lseek(fd_open, addr, SEEK_SET)) < 0) {
-			fprintf(stderr,"Can not lseek  /dev/port\n");
-			exit (-1);
-		}
-
-		if ((w_out=read(fd_open, &dat,1)) != 1) {
-			fprintf(stderr,"Can not read  /dev/port\n");   
-			exit (-1);
-		}
-		printf("(%d, %d) ", i, dat);
-	}
-	printf("\n");
-	return 0;
-}
-
-int drvSetOkoDM(gsl_vector_float *ctrl) {
-	int i, volt;
-	if (Okodminit == 0) {
-		Okodminit = 1;
-		okoOpen();
-	}
-	
-	for (i=0; i< (int) ctrl->size; i++) {
-		// this maps [-1,1] to [0,255^2] and takes the square root of that range (linear -> quadratic)
-		volt = (int) round(sqrt(65025*(gsl_vector_float_get(ctrl, i)+1)*0.5 )); //65025 = 255^2
-		okoWrite(Okoaddr[i], volt);
-	}
-	
-	return EXIT_SUCCESS;
-}
+int Okodminit = 0;
+int Okofd;
+int Okoaddr[38];
 
 static void okoOpen() {
-	Okokfd = open(OKOPORT, O_RDWR)
-	if (Okokfd < 0) {
-//		logErr("Could not open port (%s) for Okotech DM: %s", OKOPORT, strerror(errno));
-		printf("Could not open port (%s) for Okotech DM: %s", OKOPORT, strerror(errno));
+	Okofd = open(OKODM_PORT, O_RDWR);
+	if (Okofd < 0) {
+//		logErr("Could not open port (%s) for Okotech DM: %s", OKODM_PORT, strerror(errno));
+		printf("Could not open port (%s) for Okotech DM: %s", OKODM_PORT, strerror(errno));
+		exit(-1);
 	}
 }
 
@@ -150,8 +109,9 @@ static void okoSetAddr() {
 
 static void okoClose() {
 	if (close(Okofd) < 0) {
-		// logErr("Could not close port (%s) for Okotech DM: %s", OKOPORT, strerror(errno));
-		printf("Could not close port (%s) for Okotech DM: %s", OKOPORT, strerror(errno));
+		// logErr("Could not close port (%s) for Okotech DM: %s", OKODM_PORT, strerror(errno));
+		printf("Could not close port (%s) for Okotech DM: %s", OKODM_PORT, strerror(errno));
+		exit(-1);
 	}
 }
 
@@ -163,13 +123,59 @@ static void okoWrite(int addr, int voltage) {
 	voltage = voltage & OKODM_MAXVOLT;
 	
 	offset = lseek(Okofd, addr, SEEK_SET);
-	if (offset < 0)
-		printf("Could not seek port %s: %s", OKOPORT, strerror(errno));
-		// logErr("Could not seek port %s: %s", OKOPORT, strerror(errno));
+	if (offset < 0) {
+		printf("Could not seek port %s: %s", OKODM_PORT, strerror(errno));
+		exit(-1);
+		// logErr("Could not seek port %s: %s", OKODM_PORT, strerror(errno));
+	}
+	w_out = write(Okofd, &voltage, 1);
+	if (w_out != 1) {
+		printf("Could not write to port %s: %s", OKODM_PORT, strerror(errno));
+		exit(-1);
+		// logErr("Could not write to port %s: %s", OKODM_PORT, strerror(errno));
+	}
+}
+
+int drvSetOkoDM(gsl_vector_float *ctrl) {
+	int i, volt;
+	if (Okodminit == 0) {
+		Okodminit = 1;
+		okoOpen();
+	}
 	
-	w_out = write(Okofd, &data, 1);
-	if (w_out != 1)
-		printf("Could not write to port %s: %s", OKOPORT, strerror(errno));
-		// logErr("Could not write to port %s: %s", OKOPORT, strerror(errno));
+	for (i=0; i< (int) ctrl->size; i++) {
+		// this maps [-1,1] to [0,255^2] and takes the square root of that range (linear -> quadratic)
+		volt = (int) round(sqrt(65025*(gsl_vector_float_get(ctrl, i)+1)*0.5 )); //65025 = 255^2
+		okoWrite(Okoaddr[i], volt);
+	}
 	
+	return EXIT_SUCCESS;
+}
+
+int main () {
+	int i;
+	gsl_vector_float *ctrl;
+	ctrl = gsl_vector_float_calloc(OKODM_NCHAN-1);
+	
+	// set everything to zero:
+	drvSetOkoDM(ctrl);
+	
+	// now manually read stuff:
+    off_t offset;
+    int w_out, dat;
+	
+	for (i=1; i<OKODM_NCHAN; i++) {
+		if ((offset=lseek(Okofd, Okoaddr[i], SEEK_SET)) < 0) {
+			fprintf(stderr,"Can not lseek  /dev/port\n");
+			exit (-1);
+		}
+
+		if ((w_out=read(Okofd, &dat,1)) != 1) {
+			fprintf(stderr,"Can not read  /dev/port\n");   
+			exit (-1);
+		}
+		printf("(%d, %d) ", i, dat);
+	}
+	printf("\n");
+	return 0;
 }
