@@ -9,6 +9,9 @@
 #ifndef FOAM_MODULES_SIMSTATIC
 #define FOAM_MODULES_SIMSTATIC
 
+// For foam_cs.c, this must hold some configuration for the WFS sensor etc:
+#define FOAM_CONFIG_FILE "../config/ao_config-dm.cfg"
+
 #include "foam_cs_library.h"		// we link to the main program here (i.e. we use common (log) functions)
 #include "foam_modules-display.h"	// we need the display module to show debug output
 #include "foam_modules-sh.h"		// we want the SH subroutines so we can track targets

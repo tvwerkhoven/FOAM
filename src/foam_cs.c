@@ -120,8 +120,10 @@ int main(int argc, char *argv[]) {
 }
 
 void catchSIGINT() {
+	// TvW: disabled below reset, seems to work better (at least on OS X?)
+	// !!!:tim:20080325 
 	// reset signal handler, as noted on http://www.cs.cf.ac.uk/Dave/C/node24.html
-	signal(SIGINT, catchSIGINT);
+//	signal(SIGINT, catchSIGINT);
 	
 	// stop the framework
 	stopFOAM();
@@ -192,6 +194,35 @@ int validWFS(char *var) {
 	return tmp;
 }
 
+// TODO: unfinished, 
+// problem: how to init names for multiple WFC's?
+// i.e. wfc_count = 2, ptc.wfc is allocated,
+// how to set ptc.wfc[0].name and ptc.wfc[1].name using defines?
+
+//int initConfig() {
+//	int i;
+//
+//	// Allocate WFS data
+//	ptc.wfs_count = FOAM_WFS_COUNT;
+//	ptc.wfs = calloc(ptc.wfs_count, sizeof(*ptc.wfs));	// allocate memory
+//	if (ptc.wfs == NULL)
+//		logErr("Failed to allocate ptc.wfs");
+//
+//	for (i=0; i<ptc.wfs_count; i++) {
+//		ptc.wfs[i].singular = NULL;
+//		ptc.wfs[i].dmmodes = NULL;
+//		ptc.wfs[i].wfsmodes = NULL;
+//		ptc.wfs[i].stepc.x = 0;
+//		ptc.wfs[i].stepc.y = 0;
+//	}
+//	
+//	// Allocate WFC data
+//	ptc.wfc_count = FOAM_WFC_COUNT;
+//	ptc.wfc = calloc(ptc.wfc_count, sizeof(*ptc.wfc));
+//	if (ptc.wfc == NULL)
+//		logErr("Failed to allocate ptc.wfc");
+//
+//}
 
 int parseConfig(char *var, char *value) {
 	int tmp, i;
@@ -1201,7 +1232,6 @@ ALIASES += cslib="foam_cs_library.*"
 	\li \c libgsl used to do singular value decomposition, link to BLAS and various other matrix/vector operation.
 	
 	For simulation mode, the following is also required:
-	\li \c cfitsio a library to read (and write) FITS files. Used to read the simulated wavefront,
 	\li \c fftw3 which is used to compute FFT's to simulate the SH lenslet array,
 	\li \c SDL_Image used to read PGM files.
 	

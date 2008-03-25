@@ -44,15 +44,13 @@ static int formatLog(char *output, const char *prepend, const char *msg) {
 
 	output[0] = '\0'; // reset string
 	
-	strcat(output, timestr);
-	strcat(output, prepend);
-	strcat(output, msg);
-	strcat(output,"\n");
-	
+	// !!!:tim:20080325 strcat->strncat, does this solve stuff?
+	strncat(output, timestr, COMMANDLEN);
+	strncat(output, prepend, COMMANDLEN);
+	strncat(output, msg, COMMANDLEN);
+	strncat(output,"\n\0", COMMANDLEN);
 	return EXIT_SUCCESS;
 }
-
-
 
 void logErr(const char *msg, ...) {
 	if (cs_config.loglevel < LOGERR) 			// Do we need this loglevel?

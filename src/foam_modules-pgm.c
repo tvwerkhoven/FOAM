@@ -47,7 +47,7 @@
 // 	return EXIT_SUCCESS;
 // }
 
-int modReadPGMArr(char *fname, float **img, int outres[2]) {
+int modReadIMGArr(char *fname, float **img, int outres[2]) {
 	SDL_Surface *sdlimg;
 	int x, y;
 
@@ -59,7 +59,7 @@ int modReadPGMArr(char *fname, float **img, int outres[2]) {
 
 	// copy image from SDL_Surface to *img
 	
-	*img = malloc(sdlimg->w * sdlimg->h * sizeof(float));
+	*img = calloc(sdlimg->w * sdlimg->h, sizeof(float));
 	if (*img == NULL)
 		logErr("Failed to allocate memory in modReadPGMArr().");
 		
@@ -67,6 +67,7 @@ int modReadPGMArr(char *fname, float **img, int outres[2]) {
 	outres[1] = sdlimg->h;
 	for (y=0; y < sdlimg->h; y++) {
 		for (x=0; x<sdlimg->w; x++) {
+		
 			(*img)[y*sdlimg->w + x] = (float) getPixel(sdlimg, x, y);
 		}
 	}
@@ -77,7 +78,8 @@ int modReadPGMArr(char *fname, float **img, int outres[2]) {
 
 int modWritePGM(char *fname, SDL_Surface *img) {
 	FILE *fd;
-	float max=getPixel(img, 0, 0);
+	float max, min;
+	min = max = getPixel(img, 0, 0);
 	int x, y;
 	
 	fd = fopen(fname,"w+");
@@ -86,10 +88,14 @@ int modWritePGM(char *fname, SDL_Surface *img) {
 		return EXIT_FAILURE;
 	}
 	
-	// check maximum
-	for (x=0; x<img->w; x++) 
-		for (y=0; y<img->h; y++) 
-			if (getPixel(img, x, y) > max) max = getPixel(img, x, y);
+	// check maximum & min
+	for (x=0; x<img->w; x++) {
+		for (y=0; y<img->h; y++) {
+			pix = getPixel(img, x, y);
+			if (pix > max) max = pix;
+			else if (pix < min) min = pix;
+		}
+	}
 	
 	// We're making ascii
 	fprintf(fd, "P2\n");
@@ -98,12 +104,63 @@ int modWritePGM(char *fname, SDL_Surface *img) {
 
 	for (x=0; x<img->w; x++) {
 		for (y=0; y<img->h; y++) {
-			fprintf(fd, "%d ", (int) (getPixel(img, x, y)*255/max));
+			fprintf(fd, "%d ", (int) 255*(getPixel(img, x, y)-min/(max-min)));
 		}
 		fprintf(fd, "\n");
 	}
 	
 	fclose(fd);
+	return EXIT_SUCCESS;
+}
+
+int modWritePNG(char *fname, SDL_Surface *img) {
+	FILE *fd;
+	float max, min;
+	min = max = getPixel(img, 0, 0);
+	int x, y;
+	int gray[256];
+	
+	gdImagePtr im;
+	
+	// allocate image
+	im = gdImageCreate(img->w, img->h);
+	
+	// generate grayscales
+	for (i=0; i<256; i++)
+		gray[i] = gdImageColorAllocate(im, i, i, i);
+	
+	// check maximum & min
+	for (x=0; x<img->w; x++) {
+		for (y=0; y<img->h; y++) {
+			pix = getPixel(img, x, y);
+			if (pix > max) max = pix;
+			else if (pix < min) min = pix;
+		}
+	}
+	
+	// set pixels in image
+	for (x=0; x<img->w; x++) {
+		for (y=0; y<img->h; y++) {
+			pix = 255*(getPixel(img, x, y)-min)/(max-min);
+			gdImageSetPixel(im, x, y, gray[(int) pix]);
+		}
+	}
+	
+	// write image to file as png, wb is necessary under dos, harmless under linux
+	fd = fopen("screencap.png", "wb");
+	if (!fd) return EXIT_FAILURE
+	gdImagePng(im, pngout);
+	fclose(fd);
+	
+	// write image to file as jpg as well
+	fd = fopen("screencap.jpg", "wb");
+	if (!fd) return EXIT_FAILURE
+	gdImageJpeg(im, jpegout, -1);
+	fclose(fd);
+
+	// destroy the image
+	gdImageDestroy(im);
+
 	return EXIT_SUCCESS;
 }
 

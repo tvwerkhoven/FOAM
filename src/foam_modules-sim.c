@@ -21,6 +21,22 @@
 	\li foam_modules-display.c - to display the output
 	\li foam_modules-dm.c - to simulate TT and DM WFC's
 	\li foam_modules-calib.c - to calibrate the simulated WFC and TT mirror
+ 
+	This module expects the following defines to be present (with example values):
+
+	\li #define FOAM_MODSIM_WAVEFRONT "../config/wavefront.pgm"
+	\li #define FOAM_MODSIM_APERTURE "../config/apert15-256.pgm"
+	\li	#define FOAM_MODSIM_APTMASK "../config/apert15-256.pgm"
+	\li	#define FOAM_MODSIM_ACTPAT "../config/dm37-256.pgm"
+	 
+	\li	#define FOAM_MODSIM_WINDX 0	
+	\li	#define FOAM_MODSIM_WINDY 0 	
+	\li	#define FOAM_MODSIM_SEEING 0.2	
+	 
+	\li	#define FOAM_MODSIM_ERR 1	
+	\li	#define FOAM_MODSIM_ERRWFC 0
+	\li	#define FOAM_MODSIM_ERRTYPE 1	
+	\li	#define FOAM_MODSIM_ERRVERB 1
 	
 	\section License
 	This code is licensed under the GPL, version 2.
@@ -31,19 +47,7 @@
 
 #include "foam_modules-sim.h"
 
-#define FOAM_MODSIM_WAVEFRONT "../config/wavefront.pgm"
-#define FOAM_MODSIM_APERTURE "../config/apert15-256.pgm"
-#define FOAM_MODSIM_APTMASK "../config/apert15-256.pgm"
-#define FOAM_MODSIM_ACTPAT "../config/dm37-256.pgm"
-
-#define FOAM_MODSIM_WINDX 0		//!< Simulated wind in x direction
-#define FOAM_MODSIM_WINDY 0 	//!< Simulated wind in y direction
-#define FOAM_MODSIM_SEEING 0.2	//!< Seeing factor to use (0.1 is good seeing, 0.5 is really bad)
-
-#define FOAM_MODSIM_ERR 1		//!< Introduce artificial WFC error?
-#define FOAM_MODSIM_ERRWFC 0	//!< Introduce error using which WFC?
-#define FOAM_MODSIM_ERRTYPE 1	//!< Error type: 1 sawtooth, 2 random drift
-#define FOAM_MODSIM_ERRVERB 1	//!< Be verbose about error simulation?
+// We need the following defines, they must be provided by 
 
 // GLOBALS //
 /***********/
@@ -66,7 +70,7 @@ FILE *ttfd;
 float *aperture=NULL;
 
 // get this from somewhere else (debug)
-// extern SDL_Surface *screen;
+ extern SDL_Surface *screen;
 
 // ROUTINES //
 /************/
@@ -95,7 +99,8 @@ int drvReadSensor() {
 		logDebug(0, "simAtm() done");
 	}
 	
-	// modDrawStuff(&ptc, 0, screen);
+//	modDrawStuff(&ptc, 0, screen);
+//	sleep(1);
 	
 	// introduce error here,
 	// first param: wfc to use for simulation (dependent on ptc.wfc[wfc])
@@ -104,6 +109,10 @@ int drvReadSensor() {
 #ifdef FOAM_MODSIM_ERR
 	modSimError(FOAM_MODSIM_ERRWFC, FOAM_MODSIM_ERRTYPE, FOAM_MODSIM_ERRVERB);
 #endif
+
+//	modDrawStuff(&ptc, 0, screen);
+//	sleep(1);
+
 	
 	// we simulate WFCs before the telescope to make sure they outer region is zero (Which is done by simTel())
 	logDebug(0, "Now simulating %d WFC(s).", ptc.wfc_count);
@@ -113,11 +122,18 @@ int drvReadSensor() {
 	if (simTel(FOAM_MODSIM_APERTURE, ptc.wfs[0].image, ptc.wfs[0].res) != EXIT_SUCCESS) // Simulate telescope (from aperture.fits)
 		logErr("error in simTel().");
 	
+//	modDrawStuff(&ptc, 0, screen);
+//	sleep(1);
+
 	// Simulate the WFS here.
 	if (modSimSH() != EXIT_SUCCESS) {
 		logWarn("Simulating SH WFSs failed.");
 		return EXIT_FAILURE;
 	}	
+
+//	modDrawStuff(&ptc, 0, screen);
+//	sleep(1);
+
 	
 	return EXIT_SUCCESS;
 }
@@ -132,7 +148,7 @@ void modSimError(int wfc, int method, int verbosity) {
 	nact = ptc.wfc[wfc].nact;
 	
 	tmpctrl = gsl_vector_float_calloc(nact);
-	// calculate control vector
+	// fake control vector to make error
 	if (method == 1) {
 		// regular sawtooth drift is here:
 		for (i=0; i<nact; i++) {

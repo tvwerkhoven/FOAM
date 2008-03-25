@@ -55,7 +55,7 @@ float *actvolt=NULL;	// we store the actuator pattern with voltages applied here
 
 int modSimTT(gsl_vector_float *ctrl, float *image, coord_t res) {
 	int i,j;
-	float amp = 2;
+	float amp = 50;
 		
 	// first simulate rails (i.e. crop ctrl above abs(1))
 	// if (ctrl[0] > 1.0) ctrl[0] = 1.0;

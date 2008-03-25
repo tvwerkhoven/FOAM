@@ -10,7 +10,6 @@
 
 #include <math.h>
 #include <fftw3.h> 					// we need this for modSimSH()
-#include <fitsio.h> 				// we need this to read FITS files
 #include "foam_cs_library.h"		// we link to the main program here (i.e. we use common (log) functions)
 #include "foam_modules-display.h"	// we need the display module to show debug output
 #include "foam_modules-dm.h"		// we want the DM subroutines here too

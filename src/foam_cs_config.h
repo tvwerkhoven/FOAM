@@ -26,9 +26,4 @@
  									// (allows for easy implementation of connection tracking)
 
 
-// For foam_cs.c:
-#define FOAM_CONFIG_FILE "../config/ao_config.cfg"
-
-
-
 #endif /* FOAM_CS_CONFIG */
