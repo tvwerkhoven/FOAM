@@ -15,7 +15,7 @@
 #include "foam_cs_library.h"		// we link to the main program here (i.e. we use common (log) functions)
 #include "foam_modules-display.h"	// we need the display module to show debug output
 #include "foam_modules-sh.h"		// we want the SH subroutines so we can track targets
-#include "foam_modules-pgm.h"		// we need PGM routines
+#include "foam_modules-img.h"		// we need img routines
 #include "foam_modules-calib.h"		// we want the dark/flat calibration
 
 // These are defined in foam_cs_library.c

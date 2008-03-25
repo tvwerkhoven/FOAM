@@ -1,9 +1,9 @@
 /*! 
-	@file foam_modules-pgm.c
+	@file foam_modules-img.c
 	@author @authortim
 	@date 2008-02-25 
 
-	@brief This file contains functions to read and write pgm files.
+	@brief This file contains functions to read and write image files.
 	
 	\section Info
 	This module can be used to read and write SDL_Surfaces from and to files.
@@ -11,8 +11,9 @@
 	\section Functions
 	
 	The functions provided to the outside world are:
-	\li modReadPGM() - Read a PGM file into a SDL_Surface.
-	\li modWritePGM() - Write an ASCII PGM file.
+	\li modReadIMGArr() - Read an img (png, pgm, jpg, etc.) to an array.
+	\li modWritePGM() - Write an 8-bit ASCII PGM file.
+	\li modWritePNG() - Write an 8-bit grayscale PNG file.
 
 	\section Dependencies
 	
@@ -21,6 +22,7 @@
 	This module requires the following libraries:
 	\li SDL
 	\li SDL_Image
+	\li gd
 
 	\section License
 	This code is licensed under the GPL, version 2.	
@@ -29,7 +31,7 @@
 // HEADERS //
 /***********/
 
-#include "foam_modules-pgm.h"
+#include "foam_modules-img.h"
 
 // ROUTINES //
 /************/
@@ -61,24 +63,24 @@ int modReadIMGArr(char *fname, float **img, int outres[2]) {
 	
 	*img = calloc(sdlimg->w * sdlimg->h, sizeof(float));
 	if (*img == NULL)
-		logErr("Failed to allocate memory in modReadPGMArr().");
+		logErr("Failed to allocate memory in modReadIMGArr().");
 		
 	outres[0] = sdlimg->w;
 	outres[1] = sdlimg->h;
 	for (y=0; y < sdlimg->h; y++) {
 		for (x=0; x<sdlimg->w; x++) {
-		
+			// beware: pointer trickery begins
 			(*img)[y*sdlimg->w + x] = (float) getPixel(sdlimg, x, y);
 		}
 	}
 
-	logDebug(0, "ReadPGMArr Succesfully finished");
+	logDebug(0, "ReadIMGArr Succesfully finished");
 	return EXIT_SUCCESS;
 }
 
 int modWritePGM(char *fname, SDL_Surface *img) {
 	FILE *fd;
-	float max, min;
+	float max, min, pix;
 	min = max = getPixel(img, 0, 0);
 	int x, y;
 	
@@ -91,7 +93,8 @@ int modWritePGM(char *fname, SDL_Surface *img) {
 	// check maximum & min
 	for (x=0; x<img->w; x++) {
 		for (y=0; y<img->h; y++) {
-			pix = getPixel(img, x, y);
+			// ???:tim:20080325 does this work? uint32 -> float conversion?
+			pix = (float) getPixel(img, x, y);
 			if (pix > max) max = pix;
 			else if (pix < min) min = pix;
 		}
@@ -104,7 +107,7 @@ int modWritePGM(char *fname, SDL_Surface *img) {
 
 	for (x=0; x<img->w; x++) {
 		for (y=0; y<img->h; y++) {
-			fprintf(fd, "%d ", (int) 255*(getPixel(img, x, y)-min/(max-min)));
+			fprintf(fd, "%d ", (int) (255 * (getPixel(img, x, y)-min) / (max-min)) );
 		}
 		fprintf(fd, "\n");
 	}
@@ -115,9 +118,9 @@ int modWritePGM(char *fname, SDL_Surface *img) {
 
 int modWritePNG(char *fname, SDL_Surface *img) {
 	FILE *fd;
-	float max, min;
+	float max, min, pix;
 	min = max = getPixel(img, 0, 0);
-	int x, y;
+	int x, y, i;
 	int gray[256];
 	
 	gdImagePtr im;
@@ -147,16 +150,16 @@ int modWritePNG(char *fname, SDL_Surface *img) {
 	}
 	
 	// write image to file as png, wb is necessary under dos, harmless under linux
-	fd = fopen("screencap.png", "wb");
-	if (!fd) return EXIT_FAILURE
-	gdImagePng(im, pngout);
+	fd = fopen(fname, "wb");
+	if (!fd) return EXIT_FAILURE;
+	gdImagePng(im, fd);
 	fclose(fd);
 	
 	// write image to file as jpg as well
-	fd = fopen("screencap.jpg", "wb");
-	if (!fd) return EXIT_FAILURE
-	gdImageJpeg(im, jpegout, -1);
-	fclose(fd);
+//	fd = fopen("screencap.jpg", "wb");
+//	if (!fd) return EXIT_FAILURE;
+//	gdImageJpeg(im, fd, -1);
+//	fclose(fd);
 
 	// destroy the image
 	gdImageDestroy(im);

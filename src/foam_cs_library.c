@@ -44,7 +44,8 @@ static int formatLog(char *output, const char *prepend, const char *msg) {
 
 	output[0] = '\0'; // reset string
 	
-	// !!!:tim:20080325 strcat->strncat, does this solve stuff?
+	// !!!:tim:20080325 strcat->strncat, does this solve stuff? (see log)
+	// !!!:tim:20080325 no it does not, problem lies somewhere else
 	strncat(output, timestr, COMMANDLEN);
 	strncat(output, prepend, COMMANDLEN);
 	strncat(output, msg, COMMANDLEN);

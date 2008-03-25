@@ -89,7 +89,7 @@ int modSimDM(char *boundarymask, char *actuatorpat, int nact, gsl_vector_float *
 
 	// read boundary mask file if this has not already been done before
 	if (boundary == NULL) {
-		if (modReadPGMArr(boundarymask, &boundary, boundaryres) != EXIT_SUCCESS)
+		if (modReadIMGArr(boundarymask, &boundary, boundaryres) != EXIT_SUCCESS)
 			logErr("Cannot read boundary mask");
 			
 		if (boundaryres[0] != res.x || boundaryres[1] != res.y)
@@ -100,7 +100,7 @@ int modSimDM(char *boundarymask, char *actuatorpat, int nact, gsl_vector_float *
 	
 	// read actuator pattern file if this has not already been done before
 	if (act == NULL) {
-		if (modReadPGMArr(actuatorpat, &act, actsurfres) != EXIT_SUCCESS)
+		if (modReadIMGArr(actuatorpat, &act, actsurfres) != EXIT_SUCCESS)
 			logErr("Cannot read boundary mask");
 
 		if (actsurfres[0] != res.x || actsurfres[1] != res.y)

@@ -121,7 +121,7 @@ int main(int argc, char *argv[]) {
 
 void catchSIGINT() {
 	// TvW: disabled below reset, seems to work better (at least on OS X?)
-	// !!!:tim:20080325 
+	// !!!:tim:20080325 does not solve the occasional hanging after ^C and requires ^/
 	// reset signal handler, as noted on http://www.cs.cf.ac.uk/Dave/C/node24.html
 //	signal(SIGINT, catchSIGINT);
 	

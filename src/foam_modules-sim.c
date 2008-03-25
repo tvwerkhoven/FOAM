@@ -277,7 +277,7 @@ int simTel(char *file, float *image, coord_t res) {
 	// read boundary mask file 
 	// float *aperture is globally defined and initialized to NULL.
 	if (aperture == NULL) {
-		if (modReadPGMArr(file, &aperture, aptres) != EXIT_SUCCESS)
+		if (modReadIMGArr(file, &aperture, aptres) != EXIT_SUCCESS)
 			logErr("Cannot read telescope aperture");
 
 		if (res.x != aptres[0] || res.y != aptres[1])
@@ -306,7 +306,7 @@ int simAtm(char *file, coord_t res, int origin[2], float *image) {
 	
 	// If we haven't loaded the simulated wavefront yet, load it now
 	if (simparams.simimg == NULL) {
-		if (modReadPGMArr(file, &(simparams.simimg), imgres) != EXIT_SUCCESS)
+		if (modReadIMGArr(file, &(simparams.simimg), imgres) != EXIT_SUCCESS)
 			return EXIT_FAILURE;
 		
 		simparams.simimgres[0] = imgres[0];

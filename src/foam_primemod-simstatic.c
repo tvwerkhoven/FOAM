@@ -18,7 +18,7 @@
 	This prime module needs the following modules for a complete package:
 	\li foam_modules-display.c - to display WFS output
 	\li foam_modules-sh.c - to track targets
-	\li foam_modules-pgm.c - to read PGM files
+	\li foam_modules-img.c - to read image files
 	
 */
 
@@ -322,7 +322,7 @@ int drvReadSensor() {
 	}
 	else {
 		if (simimgsurf == NULL) {
-			if (modReadPGMArr(FOAM_SIMSTATIC_IMG, &simimgsurf, simres) != EXIT_SUCCESS)
+			if (modReadIMGArr(FOAM_SIMSTATIC_IMG, &simimgsurf, simres) != EXIT_SUCCESS)
 				logErr("Cannot read static image.");
 
 			if (simres[0] != res.x || simres[1] != res.y) {

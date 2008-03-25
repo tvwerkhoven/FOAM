@@ -19,7 +19,7 @@
 	This prime module needs the following modules for a complete package:
 	\li foam_modules-sim.c - to simulate the AO system (wavefront, telescope, DM/TT)
 	\li foam_modules-sh.c - to track targets
-	\li foam_modules-pgm.c - to read PGM files
+	\li foam_modules-img.c - to read image files
 	
 */
 

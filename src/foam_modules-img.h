@@ -1,9 +1,9 @@
 /*! 
-	@file foam_modules-pgm.h
+	@file foam_modules-img.h
 	@author @authortim
 	@date 2008-02-25
 
-	@brief This header file prototypes the pgm functions.
+	@brief This header file prototypes the image functions.
 */
 #ifndef FOAM_MODULES_IMG
 #define FOAM_MODULES_IMG
@@ -21,13 +21,13 @@
 // int modReadPGM(char *fname, SDL_Surface **img);
 
 /*!
-@brief Reads a pgm file from disk into an array
+@brief Reads a image file from disk into an array
 
 @param [in] *fname the filename to read
 @param [out] **img the array that will hold the image (does not have to be allocated yet)
 @param [out] outres this will hold the resolution of img
 */
-int modReadPGMArr(char *fname, float **img, int outres[2]);
+int modReadIMGArr(char *fname, float **img, int outres[2]);
 
 /*!
 @brief Writes a 8-bit ASCII PGM file from memory to disk

@@ -116,6 +116,20 @@ if test "$simul" = true ; then
 		]
 	)
 	
+	AC_SEARCH_LIBS([gdImageCreate], [gd] ,[], 
+		[AC_MSG_WARN([This package needs libgd in simulation mode.])
+		simul=false
+		simulmissing+=" gd"
+		]
+	)
+	
+	AC_SEARCH_LIBS([gdImagePng], [png] ,[], 
+		[AC_MSG_WARN([This package needs libpng in simulation mode.])
+		simul=false
+		simulmissing+=" png"
+		]
+	)	
+	
 	# fix simulation Cflags (mainly SDL)
 	SIMULATION_CFLAGS+="$SDL_CFLAGS"
 	SIMULATION_LIBS+="$LIBS $SDL_LIBS"
@@ -148,6 +162,20 @@ if test "$statsimul" = true ; then
 		statsimulmissing+=" sdl-image"
 		]
 	)
+	
+	AC_SEARCH_LIBS([gdImageCreate], [gd] ,[], 
+		[AC_MSG_WARN([This package needs libgd in simulation mode.])
+		simul=false
+		simulmissing+=" gd"
+		]
+	)
+	
+	AC_SEARCH_LIBS([gdImagePng], [png] ,[], 
+		[AC_MSG_WARN([This package needs libpng in simulation mode.])
+		simul=false
+		simulmissing+=" png"
+		]
+	)	
 	
 	# fix simulation Cflags (mainly SDL)
 	STATSIMULATION_CFLAGS+="$SDL_CFLAGS"
