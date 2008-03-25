@@ -10,10 +10,10 @@ LDFLAGS=$(COMMON_LIBS) -lc
 CPPFLAGS+=-DHAVE_INLINE -DGSL_RANGE_CHECK_OFF
 
 # (un)comment this to toggle debugging
-CFLAGS+=-g -DDEBUG_ITIFG=255
+#CFLAGS+=-g -DDEBUG_ITIFG=255
 # (un)comment this to toggle malloc debugging
 HAVE_DMALLOC=1
-LDFLAGS+=-ldmalloc
+#LDFLAGS+=-ldmalloc 
 
 # extra files that are not compiled
 # EXTRA_DIST =

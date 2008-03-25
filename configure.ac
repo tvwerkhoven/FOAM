@@ -5,6 +5,7 @@ AC_COPYRIGHT([Copyright 2007-2008 Tim van Werkhoven <T.I.M.vanWerkhoven@phys.uu.
 AC_PROG_CC
 AC_PROG_CPP
 AC_PROG_MAKE_SET
+AC_PROG_INSTALL
 
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_FILES([
@@ -16,8 +17,8 @@ src/Makefile
 AC_SEARCH_LIBS([sin], [m] ,[], AC_MSG_ERROR([This package needs libm.]) ) 
 AC_SEARCH_LIBS([event_init], [event] ,[], AC_MSG_ERROR([This package needs libevent.]) ) 
 AC_SEARCH_LIBS([pthread_create], [pthread] ,[], AC_MSG_ERROR([This package needs libpthread.]) ) 
-AC_SEARCH_LIBS([cblas_dgemm],[gslcblas], [], AC_MSG_ERROR([This package needs a cblas.]) ) 
 AC_SEARCH_LIBS([gsl_blas_dgemm],[gsl], [], AC_MSG_ERROR([This package needs libgsl.]) ) 
+AC_SEARCH_LIBS([cblas_dgemm],[gslcblas], [], AC_MSG_ERROR([This package needs a cblas supplied with gsl like atlas]) ) 
 
 # save common libs (this is kinda ugly)
 COMMON_LIBS=$LIBS
@@ -33,11 +34,20 @@ CFLAGS+=" $LIBS"
 
 ### BEGIN PKG_CONFIG ###
 ########################
-# TvW: meer PKG_CHECK_MODULES, check docs
-PKG_CHECK_MODULES(SDL, sdl) # seems to give errors some times
-#SDL_CFLAGS = $(pkg-config SDL --cflags)
-#SDL_LIBS = $(pkg-config SDL --libs)
+# Check for PKG_CHECK_MODULES first, for OS X
+# ToDo: is this syntax ok?
+if test x"$PKG_CONFIG_PATH" = x ; then
+	AC_MSG_NOTICE([The PKG_CONFIG_PATH variable was not set])
+	AC_MSG_NOTICE([You should set it to the directories that contain the .pc files])
+	AC_MSG_NOTICE([Try adding the env variables like: ])
+	AC_MSG_NOTICE([ACLOCAL_FLAGS "-I /sw/share/aclocal" ])
+	AC_MSG_NOTICE([PKG_CONFIG_PATH "/sw/lib/pkgconfig"])
+	AC_MSG_ERROR([Abort])
+fi
 
+PKG_CHECK_MODULES(SDL, sdl) 
+#SDL_CFLAGS = $(pkg-config SDL --cflags),
+#SDL_LIBS = $(pkg-config SDL --libs)
 ### TEST FOR USER INPUT ###
 ###########################
 
@@ -86,21 +96,21 @@ if test "$simul" = true ; then
 	simulmissing=""
 	LIBS=""
 	AC_SEARCH_LIBS([fftw_execute], [fftw3] ,[], 
-		[AC_MSG_ERROR([This package needs libfftw3 in simulation mode, disabling simulation.])
+		[AC_MSG_WARN([This package needs libfftw3 in simulation mode.])
 		simul=false
 		simulmissing+=" fftw3"
 		]
 	) 	
 	 
 	AC_SEARCH_LIBS([SDL_Init], [SDL] ,[], 
-		[AC_MSG_ERROR([This package needs libsdl in simulation mode, disabling simulation.])
+		[AC_MSG_WARN([This package needs libsdl in simulation mode.])
 		simul=false
 		simulmissing+=" sdl"
 		]
 	)
 
 	AC_SEARCH_LIBS([IMG_Load], [SDL_image] ,[], 
-		[AC_MSG_ERROR([This package needs sdl-image in simulation mode, disabling simulation.])
+		[AC_MSG_WARN([This package needs sdl-image in simulation mode.])
 		simul=false
 		simulmissing+=" sdl-image"
 		]
@@ -126,14 +136,14 @@ if test "$statsimul" = true ; then
 	statsimulmissing=""
 	LIBS=""
 	AC_SEARCH_LIBS([SDL_Init], [SDL] ,[], 
-		[AC_MSG_ERROR([This package needs libsdl in static simulation mode, disabling static simulation.])
+		[AC_MSG_WARN([This package needs libsdl in static simulation mode.])
 		statsimul=false
 		statsimulmissing+=" sdl"
 		]
 	)
 
 	AC_SEARCH_LIBS([IMG_Load], [SDL_image] ,[], 
-		[AC_MSG_ERROR([This package needs sdl-image in static simulation mode, disabling static simulation.])
+		[AC_MSG_WARN([This package needs sdl-image in static simulation mode.])
 		statsimul=false
 		statsimulmissing+=" sdl-image"
 		]
@@ -173,7 +183,7 @@ if test "$ui" = true ; then
 	AC_MSG_NOTICE([Cheking UI libs])
 	LIBS=""
 	AC_SEARCH_LIBS([SDL_Init], [sdl] ,[], 
-		[AC_MSG_ERROR([This package needs libsdl in ui mode, disabling simulation.])
+		[AC_MSG_WARN([This package needs libsdl in ui mode.])
 		ui=false
 		uimissing+=" sdl"
 		]
@@ -202,9 +212,8 @@ if test "$simul" = true ; then
 elif test "$simul" = disabled; then
 	AC_MSG_NOTICE([Simulation mode: disabled])
 else
-# TvW: errors 
-	AC_MSG_ERROR([Simulation mode: not available])
-	AC_MSG_ERROR([Simulation mode: missing: $simulmissing])
+	AC_MSG_NOTICE([Simulation mode: not available])
+	AC_MSG_NOTICE([Simulation mode: missing: $simulmissing])
 fi
 
 if test "$statsimul" = true ; then
@@ -212,9 +221,8 @@ if test "$statsimul" = true ; then
 elif test "$statsimul" = disabled; then
 	AC_MSG_NOTICE([Static sim mode: disabled])
 else
-# TvW: errors 
-	AC_MSG_ERROR([Static sim mode: not available])
-	AC_MSG_ERROR([Static sim mode: missing: $statsimulmissing])
+	AC_MSG_NOTICE([Static sim mode: not available])
+	AC_MSG_NOTICE([Static sim mode: missing: $statsimulmissing])
 fi
 
 if test "$ui" = true ; then
@@ -222,8 +230,8 @@ if test "$ui" = true ; then
 elif test "$ui" = disabled; then
 	AC_MSG_NOTICE([UI:              disabled])
 else
-	AC_MSG_ERROR([UI:              not available])
-	AC_MSG_ERROR([UI:              missing: $uimissing])
+	AC_MSG_NOTICE([UI:              not available])
+	AC_MSG_NOTICE([UI:              missing: $uimissing])
 fi
 
 if test "$itifg" = true ; then

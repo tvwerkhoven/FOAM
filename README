@@ -1,19 +1,49 @@
-Quick install howto:
+Install for the impatient
 
-- Generate configure script:
- $ autoreconf -s -i
+ - Generate configure script:
+   $ autoreconf -s -i
+ - Configure FOAM:
+   $ ./configure
+ - Optionally: install missing libraries
+ - Build the program:
+   $ make
+ - Run FOAM:
+   $ cd src/
+   $ ./foamcs-<sim|dummy|statsim>
+   FOAM will initialize and then stop doing anything.
+ - Connect to FOAM at default address:
+   $ telnet localhost 10000
 
-- Configure FOAM:
- $ ./configure
+Installation
 
-- Optionally: install missing libraries
+TODO, see above section in the meantime.
 
-- Build the program:
- $ make
+Dependencies
 
-- Run FOAM:
- $ cd src/
- $ ./foamcs-<sim|dummy|statsim>
+For compiling, FOAM needs (at least):
 
-- Connect to FOAM at default address:
- $ telnet localhost 10000
+ - automake/autoconf tools
+ - pkg-config (if not already supplied)
+
+At runtime, FOAM depends on the following libraries:
+
+ - libfftw3
+ - libsdl and libsdl_image
+ - libevent
+ - libgsl
+ - a BLAS, like ATLAS (via libgslcblas)
+
+Known issues
+
+ - On OS X, pkg-config might not be setup correctly when using fink. Because
+   Apple provides its own set of aclocal files, these conflict with the ones
+   supplied by fink. To fix, symlink /usr/share/aclocal to /sw/share/aclocal
+   and set up the variables
+    ACLOCAL_FLAGS="-I /usr/share/aclocal "
+   and
+    PKG_CONFIG_PATH="/sw/lib/pkgconfig "
+   in your login script (i.e. ~/.profile)
+
+ - On OS X, SDL appears to give some sort of memory leak, which crashes the
+   program just before stopping it over the network ('shutdown'). The
+   cause of this is as of yet unknown.
