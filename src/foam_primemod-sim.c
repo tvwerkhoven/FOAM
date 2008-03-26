@@ -174,6 +174,7 @@ int modMessage(control_t *ptc, const client_t *client, char *list[], const int c
 	// spaces are important!!!
 	float tmpfl;
 	int tmpint;
+	char tmpchar[COMMANDLEN];
 	
  	if (strcmp(list[0],"help") == 0) {
 		// give module specific help here
@@ -209,8 +210,31 @@ gain <wfc> <gain>\n\
 step <x|y> [d]:         step a wfs in the x or y direction\n\
 logfrac <frame>:        log mesasges only every <frame> times\n\
 loglevel <0|1|2>:       set loglevel to ERROR, INFO or DEBUG (0,1,2)\n\
+saveimg png:            save the sensor image to disk in png format\n\
 gain <wfc> <gain>:      set the gain for a wfc");
 		}
+	}
+	else if (strcmp(list[0],"saveimg") == 0) {
+		if (count > 1) {
+			if (strcmp(list[1],"png") == 0) {
+				logDebug(0, "Attempting to save PNG file now");
+				
+				if (modStorPNGArr(tmpchar, "raw", ptc->capped, ptc->wfs[0].image, ptc->wfs[0].res) == EXIT_SUCCESS) {
+					ptc->capped++;
+					tellClients("200 OK SAVEIMG PNG %s", tmpchar);
+				}
+				else tellClient(client->buf_ev,"400 ERROR SAVING CAPTURE");
+				
+				if (modStorPNGSurf(tmpchar, "proc", ptc->capped, screen) == EXIT_SUCCESS) {
+					ptc->capped++;
+					tellClients("200 OK SAVEIMG PNG %s", tmpchar);
+				}
+				else tellClient(client->buf_ev,"400 ERROR SAVING CAPTURE");
+			}
+			else tellClient(client->buf_ev,"401 INVALID IMG FORMAT");
+		}
+		else tellClient(client->buf_ev,"402 SAVEIMG REQUIRES ARG");
+		
 	}
 	else if (strcmp(list[0],"logfrac") == 0) {
 		if (count > 1) {

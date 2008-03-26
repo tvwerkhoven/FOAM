@@ -81,7 +81,8 @@ typedef enum { // aomode_t
 	AO_MODE_OPEN,	//!< Open loop mode
 	AO_MODE_CLOSED, //!< Closed loop mode
 	AO_MODE_CAL, 	//!< Calibration mode (in conjunction with calmode_t)
-	AO_MODE_LISTEN	//!< Listen mode (idle)
+	AO_MODE_LISTEN,	//!< Listen mode (idle)
+	AO_MODE_SHUTDOWN //!< Set to this mode for the worker thread to finish
 } aomode_t;
 
 /*!
@@ -185,14 +186,13 @@ can then read these variables and report them to the user, or change them to inf
 the CS behaviour.\n
 Parts of it are read at initialisation from some configuration file, other parts are
 hardcoded and yet others are assigned dynamically.
-\n
-This struct is globally available.
 */
 typedef struct { // control_t
 	aomode_t mode;		//!< defines the mode the AO system is in (see aomode_t type)
 	calmode_t calmode;	//!< defines the possible calibration modes (see calmode_t type)
 	time_t starttime;	//!< stores the starting time of the system
 	long frames;		//!< store the number of frames parsed
+	int capped;			//!< stores the number of frames captured earlier (i.e. what files already exist)
 	
 						// WFS variables
 	int wfs_count;		//!< number of WFSs in the system
@@ -238,6 +238,8 @@ typedef struct { // config_t
 	bool use_stdout; 			//!< stdout usage flag (do we want to log to stdout/stderr or not?)
 	level_t loglevel;			//!< level to log (see \c level_t)
 	int logfrac;				//!< fraction to log for info and debug (1 is always, 50 is 1/50 times)
+	pthread_t threads[MAX_THREADS]; //!< this stores the thread ids of all threads created
+	int nthreads;				//!< stores the number of threads in use
 } config_t;
 
 /* 

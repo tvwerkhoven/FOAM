@@ -33,17 +33,56 @@ int modReadIMGArr(char *fname, float **img, int outres[2]);
 @brief Writes a 8-bit ASCII PGM file from memory to disk
 
 @param [in] *fname the filename to write
-@param [out] *img the SDL_Surface that will be written to disk
+@param [in] *img the SDL_Surface that will be written to disk
 */
 int modWritePGM(char *fname, SDL_Surface *img);
 
 /*!
- @brief Writes a 8-bit PNG file from memory to disk
+ @brief Writes a 8-bit PNG file from an SDL_Surface to disk
  
  @param [in] *fname the filename to write
- @param [out] *img the SDL_Surface that will be written to disk
+ @param [in] *img the SDL_Surface that will be written to disk
 */
-int modWritePNG(char *fname, SDL_Surface *img);
+int modWritePNGSurf(char *fname, SDL_Surface *img);
+
+/*!
+ @brief Writes a 8-bit PNG file from an float array to disk
+ 
+ @param [in] *fname the filename to write
+ @param [in] *img the float array that holds the image
+ @param [in] res the resolution of img
+ */
+int modWritePNGArr(char *fname, float *img, coord_t res);
+
+/*!
+ @brief Writes a 8-bit PNG file for an float image to disk
+ 
+ This routine writes out the image stored in an array to disk, naming the files like:\n
+ foam_capture-YYYYMMDD_HHMMSS_CCCCC_WFSx.png\n
+ with:
+ \li YYYYMMDD the date 
+ \li HHMMSS the time
+ \li CCCCC the sequence number given to the function
+ 
+ @param [out] *filename The base filename that was used to write to disk.
+ @param [in] *post String to append to the filename (but before .png)
+ @param [in] seq Sequence number to add to the filename 
+ @param [in] *img Float array which holds the image
+ @param [in] res Resolution of the image
+ */
+int modStorPNGArr(char *filename, char *post, int seq, float *img, coord_t res);
+
+/*!
+ @brief Writes a 8-bit PNG file for an SDL surface to disk
+ 
+ See modStorPNGArr() for details.
+ 
+ @param [out] *filename The base filename that was used to write to disk.
+ @param [in] *post String to append to the filename (but before .png)
+ @param [in] seq Sequence number to add to the filename 
+ @param [in] *img SDL_Surface which holds the image
+ */
+int modStorPNGSurf(char *filename, char *post, int seq, SDL_Surface *img);
 
 /*!
 @brief Get the value of a specific pixel off a SDL_Surface

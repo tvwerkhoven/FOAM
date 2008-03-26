@@ -15,6 +15,7 @@ control_t ptc = { //!< Global struct to hold system characteristics and other da
 	.wfs_count = 0,
 	.wfc_count = 0,
 	.frames = 0,
+	.capped = 0,
 	.filter = FILT_NORMAL
 };
 
@@ -28,10 +29,13 @@ config_t cs_config = {
 	.syslog_prepend = "foam",
 	.use_stdout = true,
 	.loglevel = LOGDEBUG,
-	.logfrac = 1
+	.logfrac = 1,
+	.nthreads = 0
 };
 
 conntrack_t clientlist;
+// !!!:tim:20080326 need to fix this somewhere neater:
+struct event_base *sockbase;
 
 static int formatLog(char *output, const char *prepend, const char *msg) {
 	char timestr[9];
@@ -42,14 +46,17 @@ static int formatLog(char *output, const char *prepend, const char *msg) {
 	loctime = localtime (&curtime);
 	strftime (timestr, 9, "%H:%M:%S", loctime);
 
-	output[0] = '\0'; // reset string
+
 	
 	// !!!:tim:20080325 strcat->strncat, does this solve stuff? (see log)
 	// !!!:tim:20080325 no it does not, problem lies somewhere else
-	strncat(output, timestr, COMMANDLEN);
-	strncat(output, prepend, COMMANDLEN);
-	strncat(output, msg, COMMANDLEN);
-	strncat(output,"\n\0", COMMANDLEN);
+//	output[0] = '\0'; // reset string
+//	strncat(output, timestr, COMMANDLEN);
+//	strncat(output, prepend, COMMANDLEN);
+//	strncat(output, msg, COMMANDLEN);
+//	strncat(output,"\n\0", COMMANDLEN);
+	// retry, use snprintf instead of strncat:
+	snprintf(output, (size_t) COMMANDLEN, "%s%s%s\n", timestr, prepend, msg);
 	return EXIT_SUCCESS;
 }
 
@@ -117,13 +124,14 @@ void logInfo(const int flag, const char *msg, ...) {
 												// We only print log messages every logfrac frames
 	if (flag & LOG_SOMETIMES && (ptc.frames % cs_config.logfrac) != 0)
 		return;
-	
+
+	printf("0");
 	va_list ap, aq, ar; 						// We need three of these because we cannot re-use a va_list variable
 	
 	va_start(ap, msg);
 	va_copy(aq, ap);
 	va_copy(ar, ap);
-	
+	printf("1");	
 	formatLog(logmessage, " <info>: ", msg);
 	
 	if (cs_config.infofd != NULL) {  			// Do we want to log this to a file?
@@ -132,20 +140,21 @@ void logInfo(const int flag, const char *msg, ...) {
 		else
 			vfprintf(cs_config.infofd, msg , ap);
 	}
-	
+	printf("2");
 	if (cs_config.use_stdout == true) { 			// Do we want to log this to stdout
 		if (!(flag & LOG_NOFORMAT)) 
 			vfprintf(stdout, logmessage, aq);
 		else
 			vfprintf(stdout, msg, aq);
 	}
-		
+	printf("3");
 	if (cs_config.use_syslog == true) 			// Do we want to log this to syslog?
 		syslog(LOG_INFO, msg, ar);
 	
 	va_end(ap);
 	va_end(aq);
 	va_end(ar);
+	printf("4");
 }
 
 void logDebug(const int flag, const char *msg, ...) {
@@ -156,11 +165,13 @@ void logDebug(const int flag, const char *msg, ...) {
 	if (flag & LOG_SOMETIMES && (ptc.frames % cs_config.logfrac) != 0)
 		return;
 	
+	printf("0");
 	va_list ap, aq, ar; 						// We need three of these because we cannot re-use a va_list variable
 	
 	va_start(ap, msg);
 	va_copy(aq, ap);
 	va_copy(ar, ap);
+	printf("1");
 	
 	formatLog(logmessage, " <debug>: ", msg);
 	
@@ -170,6 +181,7 @@ void logDebug(const int flag, const char *msg, ...) {
 		else
 			vfprintf(cs_config.debugfd, msg , ap);
 	}
+	printf("2");
 	
 	if (cs_config.use_stdout == true) { 			// Do we want to log this to stdout
 		if (!(flag & LOG_NOFORMAT)) 
@@ -177,6 +189,7 @@ void logDebug(const int flag, const char *msg, ...) {
 		else
 			vfprintf(stdout, msg, aq);
 	}
+	printf("3");
 		
 	if (cs_config.use_syslog == true) 			// Do we want to log this to syslog?
 		syslog(LOG_DEBUG, msg, ar);
@@ -184,5 +197,6 @@ void logDebug(const int flag, const char *msg, ...) {
 	va_end(ap);
 	va_end(aq);
 	va_end(ar);
+	printf("4");
 }
 

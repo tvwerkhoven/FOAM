@@ -27,7 +27,7 @@ int Maxparams=16;
 extern control_t ptc;
 extern config_t cs_config;
 extern conntrack_t clientlist;
-
+extern struct event_base *sockbase;		// Stores the eventbase to be used
 // These are used for communication between worker thread and
 // networking thread
 pthread_mutex_t mode_mutex;
@@ -67,14 +67,13 @@ int main(int argc, char *argv[]) {
 	// INIT VARS // 
 	/*************/
 	
-	pthread_t thread;
 	if (pthread_mutex_init(&mode_mutex, NULL) != 0)
 		logErr("pthread_mutex_init failed.");
 	if (pthread_cond_init (&mode_cond, NULL) != 0)
 		logErr("pthread_cond_init failed.");
 	
 	clientlist.nconn = 0;	// Init number of connections to zero
-	ptc.frames = 0L;			// Init the framecount to zero
+	ptc.frames = 0L;		// Init the framecount to zero
 
 	char date[64];
 	struct tm *loctime;
@@ -105,16 +104,16 @@ int main(int argc, char *argv[]) {
 	/**********************/
 
 	modInitModule(&ptc);
+
+	int threadrc;
+	// Create thread which does all the work
+	threadrc = pthread_create(&(cs_config.threads[0]), NULL, (void *) modeListen, NULL);
+	if (threadrc)
+		logErr("Error in pthread_create, return code was: %d.", threadrc);
+
+	cs_config.nthreads = 1;
 	
-	// Create thread which listens to clients on a socket		
-	if ((pthread_create(&thread,
-		NULL,
-		(void *) sockListen,
-		NULL)
-		) != 0)
-		logErr("Error in pthread_create: %s.", strerror(errno));
-		
-	modeListen(); 			// After initialization, start in open mode
+	sockListen(); 			// After initialization, start in open mode
 
 	return EXIT_SUCCESS;
 }
@@ -130,9 +129,12 @@ void catchSIGINT() {
 }
 
 void stopFOAM() {
+	int i;
 	char date[64];
 	struct tm *loctime;
 	time_t end;
+	void *status;
+	int rc;
 	
 	end = time (NULL);
 	loctime = localtime (&end);
@@ -141,7 +143,19 @@ void stopFOAM() {
 	logInfo(0, "Trying to stop modules...");
 	modStopModule(&ptc);
 	
-	logInfo(0, "Stopping threads...");
+	logInfo(0, "Waiting for threads to stop...");
+	for (i=0; i<cs_config.nthreads; i++) {
+		rc = pthread_join(cs_config.threads[i], &status);
+		if (rc)
+			logWarn("There was a problem joining worker thread %d/%d, return code was: %d (%s)", \
+					i+1, cs_config.nthreads, rc, strerror(errno));
+		else
+			logInfo(0, "Thread %d/%d joined successfully, exit status was: %ld", \
+					i+1, cs_config.nthreads, (long) status);
+
+	}
+	
+	logInfo(0, "Destroying thread mutex stuff...");
 	pthread_mutex_destroy(&mode_mutex);
 	pthread_cond_destroy(&mode_cond);
 	// TODO: we need to stop the threads here, not just kill them?
@@ -675,8 +689,13 @@ void modeListen() {
 				pthread_cond_wait(&mode_cond, &mode_mutex);
 				pthread_mutex_unlock(&mode_mutex);
 				break;
+			case AO_MODE_SHUTDOWN:
+				// we want to shutdown the program, return modeListen
+				pthread_exit((void *) 0);
+				break;
+				
 		}
-			} // end while(true)
+	} // end while(true)
 }
 
 int sockListen() {
@@ -685,7 +704,7 @@ int sockListen() {
 	int optval=1; 					// Used to set socket options
 	struct sockaddr_in serv_addr;	// Store the server address here
 	
-	event_init();					// Initialize libevent
+	sockbase = event_init();		// Initialize libevent
 	
 	logDebug(0, "Starting listening socket on %s:%d.", cs_config.listenip, cs_config.listenport);
 	
@@ -720,7 +739,7 @@ int sockListen() {
     event_add(&sockevent, NULL);
 
 	logInfo(0, "This tread will block for incoming network traffic now...");
-	event_dispatch();				// Start looping
+	event_base_dispatch(sockbase);				// Start looping
 	
 	return EXIT_SUCCESS;
 }
@@ -759,7 +778,6 @@ void sockAccept(const int sock, const short event, void *arg) {
 	
 	// Check if we do not exceed the maximum number of connections:
 	if (clientlist.nconn >= MAX_CLIENTS) {
-		sleep(1);
 		close(newsock);
 		logWarn("Refused connection, maximum clients reached (%d)", MAX_CLIENTS);
 		return;
@@ -778,6 +796,10 @@ void sockAccept(const int sock, const short event, void *arg) {
 
 	client->connid = i;
 	clientlist.connlist[i] = client;
+	
+	// Since we are using multiple bases, assign this one to a specific base:
+	if (bufferevent_base_set(sockbase, client->buf_ev) != 0)
+		logErr("Failed to set base for buffered events.");
 
 	// We have to enable it before our callbacks will be
 	if (bufferevent_enable(client->buf_ev, EV_READ) != 0)
@@ -991,6 +1013,10 @@ int parseCmd(char *msg, const int len, client_t *client) {
 	else if (strcmp(list[0],"shutdown") == 0) {
 		tellClients("200 OK SHUTDOWN");
 		sockOnErr(client->buf_ev, EVBUFFER_EOF, client);
+		ptc.mode = AO_MODE_SHUTDOWN;
+		pthread_mutex_lock(&mode_mutex); // signal a change to the main thread
+		pthread_cond_signal(&mode_cond);
+		pthread_mutex_unlock(&mode_mutex);		
 		stopFOAM();
 	}
 	else if (strcmp(list[0],"mode") == 0) {

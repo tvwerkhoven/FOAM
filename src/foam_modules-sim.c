@@ -301,6 +301,7 @@ int simAtm(char *file, coord_t res, int origin[2], float *image) {
 	
 	int i,j;
 	int imgres[2];
+	float max, min, pix;
 	
 	logDebug(0, "Simulating atmosphere.");
 	
@@ -308,6 +309,30 @@ int simAtm(char *file, coord_t res, int origin[2], float *image) {
 	if (simparams.simimg == NULL) {
 		if (modReadIMGArr(file, &(simparams.simimg), imgres) != EXIT_SUCCESS)
 			return EXIT_FAILURE;
+		
+		min = max = simparams.simimg[0];
+		
+		// normalize the wavefront between -1 and 1. 
+		// first get the min and max:
+		for (i=0; i<imgres[0]*imgres[1]; i++) { // loop over all pixels
+			pix = simparams.simimg[i];
+			if (pix > max) max=pix;
+			else if (pix < min) min=pix;
+		}
+		
+		// and then rescale the iamge
+		for (i=0; i<imgres[0]*imgres[1]; i++) { // loop over all pixels
+			simparams.simimg[i] = (2*(simparams.simimg[i]-min)/(max-min))-1;
+		}
+
+		// check if it worked
+		min = max = simparams.simimg[0];
+		for (i=0; i<imgres[0]*imgres[1]; i++) { // loop over all pixels
+			pix = simparams.simimg[i];
+			if (pix > max) max=pix;
+			else if (pix < min) min=pix;
+		}
+		logDebug(0, "Loading atmosphere finished, min: %f, max: %f (should be -1, 1)", min, max);
 		
 		simparams.simimgres[0] = imgres[0];
 		simparams.simimgres[1] = imgres[1];
@@ -321,6 +346,7 @@ int simAtm(char *file, coord_t res, int origin[2], float *image) {
 		return EXIT_FAILURE;
 	}
 	
+	// take a portion from the bigger simulated wavefront.
 	for (i=0; i<res.y; i++) { // y coordinate
 		for (j=0; j<res.x; j++) { // x coordinate 
 			image[i*res.x + j] = simparams.simimg[(i+origin[1])*simparams.simimgres[0] + (j+origin[0])];
