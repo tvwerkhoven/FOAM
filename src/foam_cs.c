@@ -28,10 +28,15 @@ extern control_t ptc;
 extern config_t cs_config;
 extern conntrack_t clientlist;
 extern struct event_base *sockbase;		// Stores the eventbase to be used
+
 // These are used for communication between worker thread and
 // networking thread
 pthread_mutex_t mode_mutex;
 pthread_cond_t mode_cond;
+
+// we use this to block signals in threads
+// see http://www.opengroup.org/onlinepubs/009695399/functions/sigprocmask.html
+static sigset_t signal_mask;
 
 // PROTOTYPES //
 /**************/	
@@ -71,18 +76,12 @@ int main(int argc, char *argv[]) {
 		logErr("pthread_mutex_init failed.");
 	if (pthread_cond_init (&mode_cond, NULL) != 0)
 		logErr("pthread_cond_init failed.");
-	
+		
 	clientlist.nconn = 0;	// Init number of connections to zero
 	ptc.frames = 0L;		// Init the framecount to zero
 
 	char date[64];
 	struct tm *loctime;
-
-	// SIGNAL HANDLERS //
-	/*******************/
-
-	signal(SIGINT, catchSIGINT);
-	signal(SIGPIPE, SIG_IGN);
 	
 	// BEGIN FOAM //
 	/**************/
@@ -95,6 +94,7 @@ int main(int argc, char *argv[]) {
 	logInfo(0,"at %s", date);
 		
 	// BEGIN LOADING CONFIG
+	// !!!:tim:20080327 replace this with defines lateron, I think?
 	if (loadConfig(FOAM_CONFIG_FILE) != EXIT_SUCCESS)
 		logErr("Loading configuration failed");
 
@@ -104,14 +104,46 @@ int main(int argc, char *argv[]) {
 	/**********************/
 
 	modInitModule(&ptc);
+	
+	
+	// START THREADING //
+	/*******************/
+	
+	// ignore all signals that might cause problems (^C),
+	// and enable them on a per-thread basis lateron.
+    sigemptyset(&signal_mask);
+    sigaddset(&signal_mask, SIGINT);
+    //sigaddset(&signal_mask, SIGTERM); // you might want to block this as well
+
+	rc = pthread_sigmask (SIG_BLOCK, &signal_mask, NULL);
+    if (rc) {
+		logWarn("Could not set signal blocking for threads.");
+		logWarn("This might cause problems when sending signals to the program.");
+    }
 
 	int threadrc;
+	
 	// Create thread which does all the work
+	// this thread inherits the signal blocking defined above
 	threadrc = pthread_create(&(cs_config.threads[0]), NULL, (void *) modeListen, NULL);
 	if (threadrc)
 		logErr("Error in pthread_create, return code was: %d.", threadrc);
 
 	cs_config.nthreads = 1;
+	
+	// now make sure the main thread handles the signals by unblocking them:
+	struct sigaction act;
+	
+	act.sa_handler = catchSIGINT;
+	sigaction(SIGINT, &act, NULL);
+	pthread_sigmask(SIG_UNBLOCK, &new, NULL);
+	
+	// SIGNAL HANDLERS //
+	/*******************/
+	
+	// set signals, *after* threading
+//	signal(SIGINT, catchSIGINT);
+//	signal(SIGPIPE, SIG_IGN);
 	
 	sockListen(); 			// After initialization, start in open mode
 
