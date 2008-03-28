@@ -39,47 +39,49 @@
 #include "foam_modules-display.h"
 
 #define FOAM_MODDISPLAY_PRIO 1
-#define FOAM_MODDISPLAY_PRIO 
 static pthread_t moddisplay_thread;
 static pthread_attr_t moddisplay_attr;
 static int moddisplay_drawing = 1;
 // ROUTINES //
 /************/
 
+
+// TODO:
 int modInitDraw() {
 	// we use this routine to startup a helper thread which will do the actual SDL
 	// such that the drawing calls are non-blocking.
-	int rc;
-
-	pthread_attr_init(&moddisplay_attr);
-	pthread_attr_setdetachstate(&moddisplay_attr, PTHREAD_CREATE_JOINABLE);
-	
-	rc = pthread_create(&moddisplay_thread, &moddisplay_attr, drawLoop, NULL);
-	if (rc) {
-		logWarn("Failed to initalize drawing module, drawing will not work.");
-		return EXIT_FAILURE;
-	}
-	
+//	int rc;
+//
+//	pthread_attr_init(&moddisplay_attr);
+//	pthread_attr_setdetachstate(&moddisplay_attr, PTHREAD_CREATE_JOINABLE);
+//	
+//	rc = pthread_create(&moddisplay_thread, &moddisplay_attr, drawLoop, NULL);
+//	if (rc) {
+//		logWarn("Failed to initalize drawing module, drawing will not work.");
+//		return EXIT_FAILURE;
+//	}
+//	
 	return EXIT_SUCCESS;
 }
 
 int modStopDraw() {
 	// we're done, let the thread finish
-	moddisplay_drawing = 0;
+//	moddisplay_drawing = 0;
 	
 	// join with the display thread
-	pthread_join(moddisplay_thread, NULL);
+//	pthread_join(moddisplay_thread, NULL);
 	
-	pthread_attr_destroy(&moddisplay_attr);
+//	pthread_attr_destroy(&moddisplay_attr);
+	return EXIT_SUCCESS;
 }
 
 void drawLoop() {
-	while (moddisplay_drawing == 1) {
-		
-	}
+//	while (moddisplay_drawing == 1) {
+//		
+//	}
 	
 	// ok, we're done with drawing, stop here and join with the calling thread
-	pthread_exit(0);
+//	pthread_exit(0);
 }
 
 void drawRect(int coord[2], int size[2], SDL_Surface *screen) {

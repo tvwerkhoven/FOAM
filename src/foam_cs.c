@@ -34,6 +34,9 @@ extern struct event_base *sockbase;		// Stores the eventbase to be used
 pthread_mutex_t mode_mutex;
 pthread_cond_t mode_cond;
 
+// This is to make threads joinable
+static pthread_attr_t attr;
+
 // we use this to block signals in threads
 // see http://www.opengroup.org/onlinepubs/009695399/functions/sigprocmask.html
 static sigset_t signal_mask;
@@ -114,18 +117,22 @@ int main(int argc, char *argv[]) {
     sigemptyset(&signal_mask);
     sigaddset(&signal_mask, SIGINT);
     //sigaddset(&signal_mask, SIGTERM); // you might want to block this as well
-
-	rc = pthread_sigmask (SIG_BLOCK, &signal_mask, NULL);
-    if (rc) {
+	
+	int threadrc;
+	
+	threadrc = pthread_sigmask (SIG_BLOCK, &signal_mask, NULL);
+    if (threadrc) {
 		logWarn("Could not set signal blocking for threads.");
 		logWarn("This might cause problems when sending signals to the program.");
     }
-
-	int threadrc;
+	
+	// make thread explicitly joinable
+	pthread_attr_init(&attr);
+	pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
 	
 	// Create thread which does all the work
 	// this thread inherits the signal blocking defined above
-	threadrc = pthread_create(&(cs_config.threads[0]), NULL, (void *) modeListen, NULL);
+	threadrc = pthread_create(&(cs_config.threads[0]), &attr, (void *) modeListen, NULL);
 	if (threadrc)
 		logErr("Error in pthread_create, return code was: %d.", threadrc);
 
@@ -136,14 +143,7 @@ int main(int argc, char *argv[]) {
 	
 	act.sa_handler = catchSIGINT;
 	sigaction(SIGINT, &act, NULL);
-	pthread_sigmask(SIG_UNBLOCK, &new, NULL);
-	
-	// SIGNAL HANDLERS //
-	/*******************/
-	
-	// set signals, *after* threading
-//	signal(SIGINT, catchSIGINT);
-//	signal(SIGPIPE, SIG_IGN);
+	pthread_sigmask (SIG_UNBLOCK, &signal_mask, NULL);
 	
 	sockListen(); 			// After initialization, start in open mode
 
@@ -168,6 +168,19 @@ void stopFOAM() {
 	void *status;
 	int rc;
 	
+	// Tell the clients we're going down
+	tellClients("200 OK SHUTTING DOWN NOW");
+	
+	// set the mode to shutdown so the modules know
+	// we're finishing up
+	ptc.mode = AO_MODE_SHUTDOWN;
+	
+	// signal the change to the other threads
+	pthread_mutex_lock(&mode_mutex); 
+	pthread_cond_signal(&mode_cond);
+	pthread_mutex_unlock(&mode_mutex);
+	
+	// get the time to see how long we've run
 	end = time (NULL);
 	loctime = localtime (&end);
 	strftime (date, 64, "%A, %B %d %H:%M:%S, %Y (%Z).", loctime);	
@@ -187,11 +200,10 @@ void stopFOAM() {
 
 	}
 	
-	logInfo(0, "Destroying thread mutex stuff...");
+	logInfo(0, "Destroying thread configuration (mutex, cond, attr)...");
 	pthread_mutex_destroy(&mode_mutex);
 	pthread_cond_destroy(&mode_cond);
-	// TODO: we need to stop the threads here, not just kill them?
-//	pthread_exit(NULL);
+	pthread_attr_destroy(&attr);
 	
 	logInfo(0, "Stopping FOAM at %s", date);
 	logInfo(0, "Ran for %ld seconds, parsed %ld frames (%.1f FPS).", \
@@ -1045,10 +1057,6 @@ int parseCmd(char *msg, const int len, client_t *client) {
 	else if (strcmp(list[0],"shutdown") == 0) {
 		tellClients("200 OK SHUTDOWN");
 		sockOnErr(client->buf_ev, EVBUFFER_EOF, client);
-		ptc.mode = AO_MODE_SHUTDOWN;
-		pthread_mutex_lock(&mode_mutex); // signal a change to the main thread
-		pthread_cond_signal(&mode_cond);
-		pthread_mutex_unlock(&mode_mutex);		
 		stopFOAM();
 	}
 	else if (strcmp(list[0],"mode") == 0) {

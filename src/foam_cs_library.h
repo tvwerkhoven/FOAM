@@ -191,6 +191,7 @@ typedef struct { // control_t
 	aomode_t mode;		//!< defines the mode the AO system is in (see aomode_t type)
 	calmode_t calmode;	//!< defines the possible calibration modes (see calmode_t type)
 	time_t starttime;	//!< stores the starting time of the system
+	time_t lasttime;	//!< use this to track the framerate
 	long frames;		//!< store the number of frames parsed
 	int capped;			//!< stores the number of frames captured earlier (i.e. what files already exist)
 	

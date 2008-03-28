@@ -404,15 +404,10 @@ int modCalcCtrl(control_t *ptc, const int wfs, int nmodes) {
 		logWarn("nmodes cannot be higher than the total number of actuators, cropping.");
 		nmodes = nacttot;
 	}
-	
-//	float modeamp[nacttot];
 
-	// TvW: tmp hack, remove line lateron
-	nmodes = 35;	
 	gsl_vector_float *work, *total; // temp work vector and vector to store all control commands for all WFCs
 	work = gsl_vector_float_calloc(nacttot);
 	total = gsl_vector_float_calloc(nacttot);
-
 
 	// TODO: this is a hack :P (problem: disp vector is allocated more space than used, but at allocation time, this is unknown
 	// we now tell gsl that the vector is only as long as we're using, while the actual allocated space is more)
