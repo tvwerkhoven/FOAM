@@ -29,7 +29,7 @@ config_t cs_config = {
 	.syslog_prepend = "foam",
 	.use_stdout = true,
 	.loglevel = LOGDEBUG,
-	.logfrac = 1,
+	.logfrac = 1000,
 	.nthreads = 0
 };
 
@@ -125,13 +125,13 @@ void logInfo(const int flag, const char *msg, ...) {
 	if (flag & LOG_SOMETIMES && (ptc.frames % cs_config.logfrac) != 0)
 		return;
 
-	printf("0");
+//	printf("0");
 	va_list ap, aq, ar; 						// We need three of these because we cannot re-use a va_list variable
 	
 	va_start(ap, msg);
 	va_copy(aq, ap);
 	va_copy(ar, ap);
-	printf("1");	
+//	printf("1");	
 	formatLog(logmessage, " <info>: ", msg);
 	
 	if (cs_config.infofd != NULL) {  			// Do we want to log this to a file?
@@ -140,21 +140,21 @@ void logInfo(const int flag, const char *msg, ...) {
 		else
 			vfprintf(cs_config.infofd, msg , ap);
 	}
-	printf("2");
+//	printf("2");
 	if (cs_config.use_stdout == true) { 			// Do we want to log this to stdout
 		if (!(flag & LOG_NOFORMAT)) 
 			vfprintf(stdout, logmessage, aq);
 		else
 			vfprintf(stdout, msg, aq);
 	}
-	printf("3");
+//	printf("3");
 	if (cs_config.use_syslog == true) 			// Do we want to log this to syslog?
 		syslog(LOG_INFO, msg, ar);
 	
 	va_end(ap);
 	va_end(aq);
 	va_end(ar);
-	printf("4");
+//	printf("4");
 }
 
 void logDebug(const int flag, const char *msg, ...) {
@@ -165,13 +165,13 @@ void logDebug(const int flag, const char *msg, ...) {
 	if (flag & LOG_SOMETIMES && (ptc.frames % cs_config.logfrac) != 0)
 		return;
 	
-	printf("0");
+//	printf("0");
 	va_list ap, aq, ar; 						// We need three of these because we cannot re-use a va_list variable
 	
 	va_start(ap, msg);
 	va_copy(aq, ap);
 	va_copy(ar, ap);
-	printf("1");
+//	printf("1");
 	
 	formatLog(logmessage, " <debug>: ", msg);
 	
@@ -181,7 +181,7 @@ void logDebug(const int flag, const char *msg, ...) {
 		else
 			vfprintf(cs_config.debugfd, msg , ap);
 	}
-	printf("2");
+//	printf("2");
 	
 	if (cs_config.use_stdout == true) { 			// Do we want to log this to stdout
 		if (!(flag & LOG_NOFORMAT)) 
@@ -189,7 +189,7 @@ void logDebug(const int flag, const char *msg, ...) {
 		else
 			vfprintf(stdout, msg, aq);
 	}
-	printf("3");
+//	printf("3");
 		
 	if (cs_config.use_syslog == true) 			// Do we want to log this to syslog?
 		syslog(LOG_DEBUG, msg, ar);
@@ -197,6 +197,6 @@ void logDebug(const int flag, const char *msg, ...) {
 	va_end(ap);
 	va_end(aq);
 	va_end(ar);
-	printf("4");
+//	printf("4");
 }
 

@@ -12,10 +12,10 @@
 #define FOAM_CONFIG_FILE "../config/ao_config-dm.cfg"
 
 // For foam_modules.c, we need some files to do simulation with:
-#define FOAM_MODSIM_WAVEFRONT "../config/wavefront.pgm"
-#define FOAM_MODSIM_APERTURE "../config/apert15-256.pgm"
-#define FOAM_MODSIM_APTMASK "../config/apert15-256.pgm"
-#define FOAM_MODSIM_ACTPAT "../config/dm37-256.pgm"
+#define FOAM_MODSIM_WAVEFRONT "../config/wavefront.png"
+#define FOAM_MODSIM_APERTURE "../config/apert15-256.png"
+#define FOAM_MODSIM_APTMASK "../config/apert15-256.png"
+#define FOAM_MODSIM_ACTPAT "../config/dm37-256.png"
 
 #define FOAM_MODSIM_WINDX 0		//!< Simulated wind in x direction
 #define FOAM_MODSIM_WINDY 0 	//!< Simulated wind in y direction

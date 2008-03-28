@@ -10,7 +10,11 @@
 #define FOAM_MODULES_SIMSTATIC
 
 // For foam_cs.c, this must hold some configuration for the WFS sensor etc:
-#define FOAM_CONFIG_FILE "../config/ao_config-dm.cfg"
+#define FOAM_CONFIG_FILE "../config/ao_config-simstat.cfg"
+
+#define FOAM_SIMSTATIC_IMG "../config/simstatic.png"
+#define FOAM_SIMSTATIC_NACT 39
+#define FOAM_SIMSTATIC_MAXFRAMES 20000
 
 #include "foam_cs_library.h"		// we link to the main program here (i.e. we use common (log) functions)
 #include "foam_modules-display.h"	// we need the display module to show debug output

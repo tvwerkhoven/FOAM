@@ -1,5 +1,5 @@
 /*! 
-	@file foam_primemod-simstatic.c
+	@file foam_primemod-sim.c
 	@author @authortim
 	@date 2008-03-12
 
@@ -14,13 +14,12 @@
 	to an image. After that, the sensor output is available and from there on, simulation is not necessary anymore.
 	The simulated sensor output can be used to do correlation or center-of-gravity tracking on.
 	
-	\info Dependencies
+	\section Dependencies
 	
 	This prime module needs the following modules for a complete package:
 	\li foam_modules-sim.c - to simulate the AO system (wavefront, telescope, DM/TT)
 	\li foam_modules-sh.c - to track targets
 	\li foam_modules-img.c - to read image files
-	
 */
 
 // HEADERS //

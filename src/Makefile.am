@@ -20,7 +20,7 @@ HAVE_DMALLOC=1
 
 # basic framework files which are always needed
 FRAME_SRC = foam_cs.c foam_library.c foam_cs_library.c
-FRAME_HDR = foam_cs_library.h foam_library.h
+FRAME_HDR = foam_cs_library.h foam_library.h foam_cs_config.h
 
 # dummy moduleset
 bin_PROGRAMS += foamcs-dummy

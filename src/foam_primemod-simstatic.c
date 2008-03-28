@@ -27,10 +27,6 @@
 
 #include "foam_primemod-simstatic.h"
 
-#define FOAM_SIMSTATIC_IMG "../config/simstatic.pgm"
-#define FOAM_SIMSTATIC_NACT 39
-#define FOAM_SIMSTATIC_MAXFRAMES 20000
-
 // GLOBALS //
 /***********/
 
@@ -102,8 +98,11 @@ int modOpenLoop(control_t *ptc) {
 	if (ptc->frames % cs_config.logfrac == 0) 
 		modDrawStuff(ptc, 0, screen);
 
-	if (ptc->frames > FOAM_SIMSTATIC_MAXFRAMES)
-		stopFOAM();
+	if (ptc->frames > FOAM_SIMSTATIC_MAXFRAMES) {
+		ptc->frames = 0;
+		ptc->mode = AO_MODE_LISTEN;
+	}
+		
 		
 	if (SDL_PollEvent(&event))
 		switch (event.type) {
@@ -146,8 +145,10 @@ int modClosedLoop(control_t *ptc) {
 	if (ptc->frames % cs_config.logfrac == 0) 
 		modDrawStuff(ptc, 0, screen);
 	
-	if (ptc->frames > FOAM_SIMSTATIC_MAXFRAMES)
-		stopFOAM();
+	if (ptc->frames > FOAM_SIMSTATIC_MAXFRAMES) {
+		ptc->mode = AO_MODE_LISTEN;
+	}
+	
 
 	
 	if (SDL_PollEvent(&event))

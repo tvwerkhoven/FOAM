@@ -308,7 +308,7 @@ int simAtm(char *file, coord_t res, int origin[2], float *image) {
 	// If we haven't loaded the simulated wavefront yet, load it now
 	if (simparams.simimg == NULL) {
 		if (modReadIMGArr(file, &(simparams.simimg), imgres) != EXIT_SUCCESS)
-			return EXIT_FAILURE;
+			logErr("simAtm(): Cannot read the simulated wavefront: '%s'", file);
 		
 		min = max = simparams.simimg[0];
 		

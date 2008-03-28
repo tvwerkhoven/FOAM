@@ -53,7 +53,8 @@ int modReadIMGArr(char *fname, float **img, int outres[2]) {
 	SDL_Surface *sdlimg;
 	int x, y;
 	
-	modReadIMGSurf(fname, &sdlimg);
+	if (modReadIMGSurf(fname, &sdlimg) != EXIT_SUCCESS)
+		return EXIT_FAILURE;
 
 	// !!!:tim:20080326 update we export this part to modReadIMGSurf such that 
 //	sdlimg = IMG_Load(fname);
