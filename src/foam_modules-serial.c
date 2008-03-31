@@ -20,8 +20,8 @@
 #include <stdio.h> // for stuff
 #include <unistd.h> // for close
 #include <stdlib.h> // has EXIT_SUCCESS / _FAILURE (0, 1)
-//#include <sys/types.h>
-//#include <sys/stat.h> 
+#include <sys/types.h> // for linux (open)
+#include <sys/stat.h> // for linux (open)
 #include <fcntl.h> // for fcntl
 #include <errno.h>
 #include <string.h>
@@ -71,25 +71,49 @@ int drvSetSerial(const char *port, const char *cmd) {
 int main (int argc, char *argv[]) {
 	int i;
 	char cmd[4] = "3W1\r";
+	int fd, ret;
+	char buf[4];
+	buf[3] = '\0';
 	
 	if (argc < 4) {
-		printf("Please run me as <script> <port> <begin> <end> and I will write \
-			   '3WX\r' to serial port <port>, with X ranging from <begin> to <end>\n");
+		printf("Please run me as <script> <port> <begin> <end> and I "\
+		"will write '3WX\\r' to serial port <port>, with X ranging "\
+		"from <begin> to <end>\n");
 		return -1;
 	}
 	int beg = (int) strtol(argv[2], NULL, 10);
 	int end = (int) strtol(argv[3], NULL, 10);
 	
-	printf("Printing '3WX\r' to serial port %s with X ranging from %d to %d\n", argv[1], beg, end);
+	printf("Printing '3WX\\r' to serial port %s with X ranging from %d to "\
+		"%d\n", argv[1], beg, end);
 	
+
 	for (i=beg; i<end+1; i++) {
-		printf("Trying to write '3W%d\r' to %s...", i, argv[1]);
+		printf("Trying to write '3W%d\\r' to %s...", i, argv[1]);
 		
 		cmd[2] = i+0x30; // convert int to ASCII
-		if (drvSetSerial(argv[1], cmd) == -1)
+		if (drvSetSerial(argv[1], cmd) == -1) {
 			printf("failed.\n");
-		else
-			printf("success!\n");
+		}
+		else {
+			printf("success! Reading back...");
+			fd = open(argv[1], O_RDWR);
+			printf("opened...");
+			if (fd == -1)
+				printf("failed\n");
+			else {
+				ret = read(fd, buf, (size_t) 3);
+				if (ret == -1)
+					printf("reading failed: %s\n", strerror(errno));
+				else
+					printf("success: %s\n", buf);
+
+				close(fd);
+
+			}
+			/*
+			*/
+		}
 		
 		// sleep for 0.5 seconds between each call if we are debugging
 		usleep(500000);
