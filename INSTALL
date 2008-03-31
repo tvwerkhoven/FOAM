@@ -11,9 +11,9 @@ In this document:
 1. Installation Instructions
 ============================
 
-FOAM follows the standard GNU installation procedure.  To compile FOAM
-you will need an ANSI C-compiler.  After unpacking the distribution
-the Makefiles can be prepared using the configure command,
+FOAM follows the standard GNU installation procedure. To compile FOAM you
+will need an ANSI C-compiler. After unpacking the distribution the
+Makefiles can be prepared using the configure command,
 
   ./configure
 
@@ -21,16 +21,16 @@ You can then build the library by typing,
 
   make
 
-All packages (i.e. sets of software and hardware modules) will be 
-compiled by default, but this might not be possible or necessary in
-your situation. The configure script takes extra command line options
-such that you can configure which packages you want or do not want to
-build. For an overview, run,
+All packages (i.e. sets of software and hardware modules) will be compiled
+by default, but this might not be possible or necessary in your situation.
+The configure script takes extra command line options such that you can
+configure which packages you want or do not want to build. For an overview,
+run,
 
   ./configure --help
 
-If you change any compilation options you will need to remove any
-existing compiled files with,
+If you change any compilation options you will need to remove any existing
+compiled files with,
 
   make clean 
 
@@ -39,20 +39,29 @@ existing compiled files with,
 2. Installation Instructions For Dummies
 ========================================
 
-These are complete install instructions on a clean machine using 
-Debian 4.0. This guides you through the process of installing the system,
+These are complete install instructions on a clean machine using Debian
+4.0. This guides you through the process of installing the system,
 libraries that FOAM needs, and finally FOAM itself. Most steps have some
 explanation on certain aspects of FOAM.
 
   - Install Debian as you like
 
-FOAM runs on any system providing a nice compiler (like GCC) and the libraries it depends on (which include libevent, libgsl, ATLAS, lidgd, libpng and some others). FOAM should even run on OS X, although the hardware drivers necessary might not. Even if the hardware drivers are not available for OS X, you can still run simulation mode on OS X, if you want to test new tracking or correction mechanisms.
+FOAM runs on any system providing a nice compiler (like GCC) and the
+libraries it depends on (which include libevent, libgsl, ATLAS, lidgd,
+libpng and some others). FOAM should even run on OS X, although the
+hardware drivers necessary might not. Even if the hardware drivers are not
+available for OS X, you can still run simulation mode on OS X, if you want
+to test new tracking or correction mechanisms.
 
   - Set up AO user, or use another account 
 
-FOAM does not require root privileges per se. However if you want to interact with hardware (i.e. reading/writing to serial ports, PCI boards, or something else), you generally require sufficient privileges to do this. 
+FOAM does not require root privileges per se. However if you want to
+interact with hardware (i.e. reading/writing to serial ports, PCI boards,
+or something else), you generally require sufficient privileges to do this.
 
-One option is to chown/chmod all devices used (like /dev/ttyS0 for serial port 1) such that the user running FOAM can read/write these, another option is to run FOAM as root.
+One option is to chown/chmod all devices used (like /dev/ttyS0 for serial
+port 1) such that the user running FOAM can read/write these, another
+option is to run FOAM as root.
 
   - Download the latest version of FOAM
 
@@ -60,46 +69,101 @@ At the time of this writing, FOAM is available on my website at,
 
   http://www.phys.uu.nl/~0315133/foam/
 
-The subdirectory tags/ holds all versions of FOAM I released, the directory docs/ holds some documentation about FOAM. Developer documentation is also available in the tags/ directory, although not all revisions have up-to-date documentation.
+The subdirectory tags/ holds all versions of FOAM I released, the directory
+docs/ holds some documentation about FOAM. Developer documentation is also
+available in the tags/ directory, although not all revisions have
+up-to-date documentation.
 
   - Untar/<gz|bz> the FOAM archive
 
-  - Run 
+  - Generate the configure script, autoreconf -s -i
+
+To generate the configure script, run 'autoreconf -s -i' from the base
+directory of FOAM. This requires the autoconf and automake tools.
+
+  - Run the configure script, ./configure
+
+The configure script will check for the libraries that FOAM needs, as well
+as other tools that are used. If something is missing, this script will 
+tell you, such that you can install it.
+
+  - Make the programs, make
+
+To make the actual programs, run the command 'make' from the base FOAM 
+directory. This will compile all programs enabled during configuration.
+
+  - Run the program, ./foamcs-????
+
+The programs are built in the src/ directory, and can only be run from 
+there by default, because the configuration files are expected to be in
+../config. 
+
+  - Do Science
+
+Once FOAM is running, your AO system is in good hands :) You can do science 
+now!
 
                     ------------------------------
 
 3. Troubleshooting
 ==================
 
-If FOAM fails to compile for some reason, here are some hints to get you going.
+If FOAM fails to compile for some reason, here are some hints to get you
+going.
+
+General Hints
+=============
+
+* Make sure that you have the development versions of the libraries, e.g.
+  libc6-dev, libevent-dev, libgsl0-dev, etc.
+
+* Read the errors and log files, these usually provide useful hints as to
+  what's going wrong during installation.
 
 ./configure script is not present
 =================================
 
-If you obtained a version of FOAM without configure script, you can generate it yourself using the autotools. To do this, go to the FOAM directory which holds 'configure.ac' and run,
+If you obtained a version of FOAM without configure script, you can
+generate it yourself using the autotools. To do this, go to the FOAM
+directory which holds 'configure.ac' and run,
 
   # autoreconf -s -i
 
-If things run smoothly, this does not produce any output, and the configure script is ready.
+If things run smoothly, this does not produce any output, and the configure
+script is ready.
 
 ./configure script fails
 ========================
 
-If the configure script fails, it is possible that you do not have pkg-config setup correctly on your system. This is at least an issue on OS X, where the preinstalled tools supplied with OS X might conflict with repository systems like fink or port. In that case, check the following:
+If the configure script fails, it is possible that you do not have
+pkg-config setup correctly on your system. This is at least an issue on OS
+X, where the preinstalled tools supplied with OS X might conflict with
+repository systems like fink or port. In that case, check the following:
 
-- Make sure pkg-config is present, along with the autotools (autoconf, automake, autoreconf, aclocal, etc)
-- Make sure ACLOCAL_FLAGS points to the directory holding the .m4 files (i.e. /usr/share/local or /sw/share/local for a default fink installation)
-- Make sure PKG_CONFIG_PATH points to the pkg-config files (.pc) (i.e. /sw/lib/pkgconfig for a default fink installtion)
+- Make sure pkg-config is present, along with the autotools (autoconf,
+  automake, autoreconf, aclocal, etc) 
+- Make sure ACLOCAL_FLAGS points to the directory holding the .m4 files
+  (i.e. /usr/share/local or /sw/share/local for a default fink
+  installation)
+- Make sure PKG_CONFIG_PATH points to the pkg-config files (.pc) (i.e.
+  /sw/lib/pkgconfig for a default fink installtion)
 
 Linking fails
 =============
 
-If after compilation, linking all object files with the libraries fails, try the following:
+If after compilation, linking all object files with the libraries fails,
+try the following:
 
-- Make sure the necessary libraries are installed, as well as their dependencies.
-- Make sure the linker (ld) knows where to find the libraries (again, on OS X there are also installed in /sw/lib, and you need to add -L/sw/lib when linking)
+- Make sure the necessary libraries are installed, as well as their
+  dependencies.
+- Make sure the linker (ld) knows where to find the libraries (again, on OS
+  X there are also installed in /sw/lib, and you need to add -L/sw/lib when
+  linking)
 
-The make command outputs the compiler commands used. Check the failing command and try to see if the libraries required (-lxxxxx like -lm or -lgsl) are indeed in one of the directories specified by -L, OR in a default system directory.
+The make command outputs the compiler commands used. Check the failing
+command and try to see if the libraries required (-lxxxxx like -lm or
+-lgsl) are indeed in one of the directories specified by -L, OR in a
+default system directory.
 
                     ------------------------------
 
@@ -107,8 +171,8 @@ The make command outputs the compiler commands used. Check the failing command a
 =================================================================
 
 The sections below describe the general features of the standard GNU
-installation procedure. These are not specific for FOAM and are 
-actually taken from the GSL INSTALL file.
+installation procedure. These are not specific for FOAM and are actually
+taken from the GSL INSTALL file.
 
 Basic Installation
 ==================
