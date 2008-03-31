@@ -103,6 +103,68 @@ there by default, because the configuration files are expected to be in
 Once FOAM is running, your AO system is in good hands :) You can do science 
 now!
 
+To get ITIFG running
+====================
+
+  - Get the ITIFG drivers from sourceforge
+    (8.4.0 is the newest at the time of writing).
+
+  ? Get the linux kernel headers for the running kernel
+    (linux-headers-2.6.18-5, linux-support-2.6.18-5, linux-source-2.6.18
+    etc).
+
+  - Get the linux source for the current running kernel
+    (symlink /usr/src/linux to /usr/src/linux-source-2.6.18 or something)
+
+  - Run `make oldconfig` from /usr/src/linux to get header stuff
+    (fixes: please run 'make config depend' from 
+     /lib/modules/2.6.18-5/build)
+
+  - Run `make vmlinux` from /usr/src/linux, symlink 
+    /lib/modules-2.6.18-5/build/vmlinux to vmlinux just created
+
+  - Install flex & bison-1.35, symlink /bin/bison to /bin/bison-1.35
+    (fixes: can't find bison/flex)
+
+  - Install libx11-dev to get x11 headers
+    (fixes: 'can't find X11/Xos.h' etc for test_itifg.c)
+
+  - Install groff to be able to make documentation
+    (fixes: 'can't find macro file m')
+
+  - Configure the ITIFG driver
+    (see README, or make config && make depend && make && make statc)
+
+  - Insert the module (sudo insmod src/osdep/itifg8.ko)
+
+  - Check for errors (sudo tail -n 100 /var/log/messages|syslog)
+
+  - Optionally: use the debug module (itifg8_g.ko) and check for
+    verbosity in the log files.
+
+To get the DaqBoard/2000 running
+================================
+
+  - Get the driver ported to 2.6 (not an iotech driver, but seems to work)
+
+  - Install libgamin-dev (or something like that) to get fam.h
+
+  - Run `make` to make the module this *will* give warnings
+
+  - Edit the Makefile such that it contains 'DB2K_MAJOR = 61' somewhere
+    (this is the major version number for the db2k module. This should 
+     show up in /proc/devices after insmodding the module. This number
+     may be different in your setup! (I don't know what it is))
+
+  - Run `make dev` to make populate the /dev/ directory with handlers
+
+  - Run `sudo insmod modules/db2k.ko`
+
+  - Check that it shows up in `lsmod | grep db2k`, check log files
+
+  - Run `cat /proc/iotech/drivers/db2k/DaqBoard2k0/type` to see what type
+    of daqboard you have installed (see readme for more examples)
+
                     ------------------------------
 
 3. Troubleshooting
