@@ -52,21 +52,25 @@
 
 // these are for the itifg calls:
 #include "itifgExt.h"
-#include "amvsReg.h"
-#include "amdigReg.h"
-#include "ampcvReg.h"
-#include "amcmpReg.h"
+//#include "amvsReg.h"
+//#include "amdigReg.h"
+//#include "ampcvReg.h"
+//#include "amcmpReg.h"
 #include "pcdigReg.h"
 #include "libitifg.h"
 
+int drvInitSensor();
 
 
 #ifdef FOAM_MODITIFG_DEBUG
 int main() {
 	// init vars
 	
+	printf("This is the debug version for ITIFG8\n");
+
 	// init cam
-	
+	drvInitSensor();
+
 	// test image
 	
 	// cleanup
@@ -75,14 +79,15 @@ int main() {
 }
 #endif
 
-int drvReadSensor() {
+int drvInitSensor() {
 	char device_name[] = "/dev/ic0dma";
+
+	// TvW: | O_SYNC | O_APPEND also used in test_itifg.c
 	int flags = O_RDWR;
 	int zero = 0;
 	int one = 1;
 	int fd;
 	union iti_cam_t cam;
-	// TvW: | O_SYNC | O_APPEND also used in test_itifg.c
 	
 	fd = open(device_name, flags);
 	if (!fd) 
@@ -239,3 +244,4 @@ Happy Easter! (I'm back next Tuesday)
 matthias
  
 */
+
