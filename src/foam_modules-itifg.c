@@ -19,6 +19,14 @@
 */
 
 #define FOAM_MODITIFG_DEBUG 1
+#define FOAM_MODITIFG_DEV "/dev/ic0dma"
+#define FOAM_MODITIFG_MODULE 48
+
+#ifdef FOAM_MODITIFG_DEBUG
+#define FOAM_MODITIFG_ERR printf
+#elif
+#define FOAM_MODITIFG_ERR logErr
+#endif
 
 //#include <foam_modules-itifg.h>
 
@@ -61,7 +69,6 @@
 
 int drvInitSensor();
 
-
 #ifdef FOAM_MODITIFG_DEBUG
 int main() {
 	// init vars
@@ -80,7 +87,7 @@ int main() {
 #endif
 
 int drvInitSensor() {
-	char device_name[] = "/dev/ic0dma";
+	char device_name[] = FOAM_MODITIFG_DEV;
 
 	// TvW: | O_SYNC | O_APPEND also used in test_itifg.c
 	int flags = O_RDWR;
@@ -90,35 +97,35 @@ int drvInitSensor() {
 	union iti_cam_t cam;
 	
 	fd = open(device_name, flags);
-	if (!fd) 
-		printf("Error opening device %s: %s", device_name, strerror(errno));
+	if (!fd)
+		FOAM_MODITIFG_ERR("Error opening device %s: %s", device_name, strerror(errno));
 	
 	close(fd);
 	
 	if (ioctl(fd, GIOC_SET_LUT_LIN) < 0) {
 		close(fd);
-		printf("%s: error linearising LUTs: %s\n", device_name, strerror(errno));
+		FOAM_MODITIFG_ERR("%s: error linearising LUTs: %s\n", device_name, strerror(errno));
 	}
 	
 	if (ioctl(fd, GIOC_SET_DEFCNF, NULL) < 0) {
 		close(fd);
-		printf("%s: error setting camera configuration: %s\n", device_name, strerror(errno));
+		FOAM_MODITIFG_ERR("%s: error setting camera configuration: %s\n", device_name, strerror(errno));
 	}	
 	
 	if (ioctl(fd, GIOC_SET_CAMERA, &zero) < 0) {
 		close(fd);
-		printf("%s: error setting camera: %s\n", device_name, strerror(errno));
+		FOAM_MODITIFG_ERR("%s: error setting camera: %s\n", device_name, strerror(errno));
 	}
 	
 	if (ioctl(fd, GIOC_GET_CAMCNF, &cam) < 0) {
 		close(fd);
-		printf("%s: error getting camera configuration: %s\n", device_name, strerror(errno));
+		FOAM_MODITIFG_ERR("%s: error getting camera configuration: %s\n", device_name, strerror(errno));
 	}
 	// 
 	// int result;
 	// 
 	// *camera_name = *exo_name = 0;
-	
+	// FOAM_MODITIFG_MODULE
 	
 	close(fd);
 	

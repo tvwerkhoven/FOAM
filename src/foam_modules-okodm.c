@@ -14,8 +14,8 @@
 	\section Functions
 	
 	\li drvSetOkoDM() - Sets the Okotech 37ch DM to a certain voltage set.
-	\li drvInitOkoDM() - Initialize the Okotech DM
-	\li drvCloseOkoDM() - Close the Okotech DM
+	\li drvInitOkoDM() - Initialize the Okotech DM (call this first!)
+	\li drvCloseOkoDM() - Close the Okotech DM (call this at the end!)
 	
 	\section History
 	
@@ -117,7 +117,9 @@ static void okoWrite(int addr, int voltage) {
 	off_t offset;
 	ssize_t w_out;
 	
-	// make sure we NEVER exceed the maximum voltage:
+	// make sure we NEVER exceed the maximum voltage
+	// this is a cheap way to guarantee that (albeit inaccurate)
+	// however, if voltage > 255, things are bad anyway
 	voltage = voltage & FOAM_MODOKODM_MAXVOLT;
 	
 	offset = lseek(Okofd, addr, SEEK_SET);
@@ -138,6 +140,7 @@ static void okoWrite(int addr, int voltage) {
 		logErr("Could not write to port %s: %s", FOAM_MODOKODM_PORT, strerror(errno));
 #endif
 	}
+	
 }
 
 int drvSetOkoDM(gsl_vector_float *ctrl) {
@@ -149,7 +152,7 @@ int drvSetOkoDM(gsl_vector_float *ctrl) {
 		voltf = round(sqrt(65025*(gsl_vector_float_get(ctrl, i)+1)*0.5 )); //65025 = 255^2
 		volt = (int) voltf;
 #ifdef FOAM_MODOKODM_DEBUG
-		printf("(%.1f, %d -> %#x) ", voltf, volt, Okoaddr[i]);
+		printf("(volt: %.1f, %d -> %#x) ", voltf, volt, Okoaddr[i]);
 #endif
 		okoWrite(Okoaddr[i], volt);
 	}
@@ -220,6 +223,8 @@ int main () {
 			fprintf(stderr,"Can not read  /dev/port\n");   
 			exit (-1);
 		}
+		// sleep for 0.5 seconds between each call if we are debugging
+		usleep(500000);
 		printf("(%d, %d) ", i, dat);
 	}
 	printf("\n");
