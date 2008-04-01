@@ -169,12 +169,12 @@ int drvSetOkoDM(gsl_vector_float *ctrl) {
 #ifdef FOAM_MODOKODM_DEBUG
 //		printf("(cmd: %.1f, volt: %.1f, %d -> %#x) ", gsl_vector_float_get(ctrl, i), voltf, volt, Okoaddr[i]);
 #endif
-//		if (okoWrite(Okoaddr[i], volt) == EXIT_FAILURE)
-//			return EXIT_FAILURE;
+		if (okoWrite(Okoaddr[i], volt) == EXIT_FAILURE)
+			return EXIT_FAILURE;
 			
 	}
 #ifdef FOAM_MODOKODM_DEBUG
-	printf("\n");
+	//printf("\n");
 #endif
 	
 	return EXIT_SUCCESS;
@@ -279,6 +279,8 @@ int main () {
 		gsl_vector_float_set(ctrl, i, 1);
 		
 		printf("%d...", i);
+		// because we don't add a \n, we need fflush
+		fflush(stdout);
 		if (drvSetOkoDM(ctrl) == EXIT_FAILURE) {
 			printf("Could not set voltages!\n");
 			return EXIT_FAILURE;
@@ -288,14 +290,15 @@ int main () {
 	printf("done\n");
 	
 	printf("Settings single actuators randomly over the DM a 1000 times without delay:...");
-	for (i=0; i<1000 i++) {
+	for (i=0; i<1000; i++) {
 		// set all to zero
 		gsl_vector_float_set_zero(ctrl);
 		
 		// set one to 1 (max)
 		gsl_vector_float_set(ctrl, (int) drand48()*(FOAM_MODOKODM_NCHAN-1), 1);
 		
-		printf("%d,", i);
+		printf(".");
+		fflush(stdout);
 		if (drvSetOkoDM(ctrl) == EXIT_FAILURE) {
 			printf("Could not set voltages!\n");
 			return EXIT_FAILURE;
