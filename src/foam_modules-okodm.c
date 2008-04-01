@@ -10,6 +10,9 @@
 	The Okotech 37ch DM has 38 actuators (one being the substrate) leaving 37 for AO. The mirror
 	is controlled through a PCI board. This requires setting some hardware addresses, but not much
 	more. See mirror.h and rotate.c supplied on CD with the Okotech mirror for examples.
+ 
+	This module also compiles on its own like:\n
+	gcc foam_modules-okodm.c -lgsl -Wall -std=c99 -DFOAM_MODOKODM_DEBUG=1
 	
 	\section Functions
 	
@@ -164,10 +167,10 @@ int drvSetOkoDM(gsl_vector_float *ctrl) {
 		voltf = round(sqrt(65025*(gsl_vector_float_get(ctrl, i)+1)*0.5 )); //65025 = 255^2
 		volt = (int) voltf;
 #ifdef FOAM_MODOKODM_DEBUG
-		printf("(volt: %.1f, %d -> %#x) ", voltf, volt, Okoaddr[i]);
+		printf("(cmd: %.1f, volt: %.1f, %d -> %#x) ", gsl_vector_float_get(ctrl, i), voltf, volt, Okoaddr[i]);
 #endif
-		if (okoWrite(Okoaddr[i], volt) == EXIT_FAILURE)
-			return EXIT_FAILURE;
+//		if (okoWrite(Okoaddr[i], volt) == EXIT_FAILURE)
+//			return EXIT_FAILURE;
 			
 	}
 #ifdef FOAM_MODOKODM_DEBUG
@@ -247,14 +250,16 @@ int main () {
     int w_out;
     unsigned char dat;
 	
+	printf("Data set on %s, now reading back to see if it worked:\n",FOAM_MODOKODM_PORT);
+	
 	for (i=1; i<FOAM_MODOKODM_NCHAN; i++) {
 		if ((offset=lseek(Okofd, Okoaddr[i], SEEK_SET)) < 0) {
-			fprintf(stderr,"Can not lseek  /dev/port\n");
+			fprintf(stderr,"Can not lseek %s\n", FOAM_MODOKODM_PORT);
 			return EXIT_FAILURE;
 		}
 
 		if ((w_out=read(Okofd, &dat,1)) != 1) {
-			fprintf(stderr,"Can not read  /dev/port\n");   
+			fprintf(stderr,"Can not read %s\n", FOAM_MODOKODM_PORT);   
 			return EXIT_FAILURE;
 		}
 		printf("(%d, %d) ", i, dat);
@@ -266,12 +271,12 @@ int main () {
 	printf("Mirror does not give errors (good), now setting actuators one by one\n(skipping 0 because it is the substrate)\n");
 	printf("Settings acts:...\n");
 	
-	for (i=1; i<FOAM_MODOKODM_NCHAN; i++) {
+	for (i=0; i<FOAM_MODOKODM_NCHAN-1; i++) {
 		// set all to zero
 		gsl_vector_float_set_zero(ctrl);
 		
-		// set one to 255 (max)
-		gsl_vector_float_set(ctrl, i, 255);
+		// set one to 1 (max)
+		gsl_vector_float_set(ctrl, i, 1);
 		
 		printf("%d...", i);
 		if (drvSetOkoDM(ctrl) == EXIT_FAILURE) {
