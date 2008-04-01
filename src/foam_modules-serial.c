@@ -96,7 +96,9 @@ int main (int argc, char *argv[]) {
 			printf("failed.\n");
 		}
 		else {
-			printf("success! Reading back...");
+			printf("success!\n");
+			/*
+			printf("Reading back...");
 			fd = open(argv[1], O_RDWR);
 			printf("opened...");
 			if (fd == -1)
