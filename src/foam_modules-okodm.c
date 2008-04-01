@@ -44,7 +44,7 @@
 // case we have 2 boards, boards 3 and 4 are not used
 #define FOAM_MODOKODM_BASE1 0xc000
 #define FOAM_MODOKODM_BASE2 0xc400
-#define FOAM_MODOKODM_BASE2DM_BASE3 0xFFFF
+#define FOAM_MODOKODM_BASE3 0xFFFF
 #define FOAM_MODOKODM_BASE4 0xFFFF
 
 
@@ -52,16 +52,18 @@ static int Okodminit = 0;
 static int Okofd;
 static int Okoaddr[38];
 
-static void okoOpen() {
+static int okoOpen() {
 	Okofd = open(FOAM_MODOKODM_PORT, O_RDWR);
 	if (Okofd < 0) {	
 #ifdef FOAM_MODOKODM_DEBUG
-		printf("Could not open port (%s) for Okotech DM: %s", FOAM_MODOKODM_PORT, strerror(errno));
-		exit(-1);
+		printf("Could not open port (%s) for Okotech DM: %s\n", FOAM_MODOKODM_PORT, strerror(errno));
 #elif
-		logErr("Could not open port (%s) for Okotech DM: %s", FOAM_MODOKODM_PORT, strerror(errno));
+		logWarn("Could not open port (%s) for Okotech DM: %s", FOAM_MODOKODM_PORT, strerror(errno));
 #endif
+		return EXIT_FAILURE;
 	}
+	
+	return EXIT_SUCCESS;
 }
 
 static void okoSetAddr() {
@@ -113,7 +115,7 @@ static void okoSetAddr() {
 	Okoaddr[37]=b2+10*i;
 }
 
-static void okoWrite(int addr, int voltage) {
+static int okoWrite(int addr, int voltage) {
 	off_t offset;
 	ssize_t w_out;
 	
@@ -125,27 +127,37 @@ static void okoWrite(int addr, int voltage) {
 	offset = lseek(Okofd, addr, SEEK_SET);
 	if (offset < 0) {
 #ifdef FOAM_MODOKODM_DEBUG
-		printf("Could not seek port %s: %s", FOAM_MODOKODM_PORT, strerror(errno));
-		exit(-1);
+		printf("Could not seek port %s: %s\n", FOAM_MODOKODM_PORT, strerror(errno));
 #elif
-		logErr("Could not seek port %s: %s", FOAM_MODOKODM_PORT, strerror(errno));
+		logWarn("Could not seek port %s: %s", FOAM_MODOKODM_PORT, strerror(errno));
 #endif
+		return EXIT_FAILURE;
 	}
 	w_out = write(Okofd, &voltage, 1);
 	if (w_out != 1) {
 #ifdef FOAM_MODOKODM_DEBUG
-		printf("Could not write to port %s: %s", FOAM_MODOKODM_PORT, strerror(errno));
-		exit(-1);
+		printf("Could not write to port %s: %s\n", FOAM_MODOKODM_PORT, strerror(errno));
 #elif
-		logErr("Could not write to port %s: %s", FOAM_MODOKODM_PORT, strerror(errno));
+		logWarn("Could not write to port %s: %s", FOAM_MODOKODM_PORT, strerror(errno));
 #endif
+		return EXIT_FAILURE;
 	}
 	
+	return EXIT_SUCCESS;
 }
 
 int drvSetOkoDM(gsl_vector_float *ctrl) {
 	int i, volt;
 	float voltf;
+	
+	if (Okodminit != 1) {
+#ifdef FOAM_MODOKODM_DEBUG
+		printf("Mirror not initialized yet, please do that first\n");
+#elif
+		logWarn("Mirror not initialized yet, please do that first");
+#endif
+		return EXIT_FAILURE;
+	}
 	
 	for (i=1; i< (int) ctrl->size; i++) {
 		// this maps [-1,1] to [0,255^2] and takes the square root of that range (linear -> quadratic)
@@ -154,7 +166,9 @@ int drvSetOkoDM(gsl_vector_float *ctrl) {
 #ifdef FOAM_MODOKODM_DEBUG
 		printf("(volt: %.1f, %d -> %#x) ", voltf, volt, Okoaddr[i]);
 #endif
-		okoWrite(Okoaddr[i], volt);
+		if (okoWrite(Okoaddr[i], volt) == EXIT_FAILURE)
+			return EXIT_FAILURE;
+			
 	}
 #ifdef FOAM_MODOKODM_DEBUG
 	printf("\n");
@@ -163,27 +177,42 @@ int drvSetOkoDM(gsl_vector_float *ctrl) {
 	return EXIT_SUCCESS;
 }
 
-void drvInitOkoDM() {
+int drvInitOkoDM() {
 	// Set the global list of addresses for the various actuators:
 	okoSetAddr();
 	
 	// Open access to the pci card using the global FD Okofd
-	okoOpen();
+	if (okoOpen() == EXIT_FAILURE)
+		return EXIT_FAILURE;
 	
 	// Indicate success for initialisation
 	Okodminit = 1;
+		
+	return EXIT_SUCCESS;
 }
 
-void drvCloseOkoDM() {
+int drvCloseOkoDM() {
 	// Close access to the pci card
+	if (Okodminit != 1)
+#ifdef FOAM_MODOKODM_DEBUG
+		printf("DM was never initialized! Trying to close FD anyone in case it's open, might cause an error\n");
+#elif
+		logWarn("DM was never initialized! Trying to close FD anyone in case it's open, might cause an error");
+#endif
+	
+	// we're done
+	Okodminit = 0;
+
 	if (close(Okofd) < 0) {
 #ifdef FOAM_MODOKODM_DEBUG
-		printf("Could not close port (%s) for Okotech DM: %s", FOAM_MODOKODM_PORT, strerror(errno));
-		exit(-1);
+		printf("Could not close port (%s) for Okotech DM: %s\n", FOAM_MODOKODM_PORT, strerror(errno));
 #elif
-		logErr("Could not close port (%s) for Okotech DM: %s", FOAM_MODOKODM_PORT, strerror(errno));
+		logWarn("Could not close port (%s) for Okotech DM: %s", FOAM_MODOKODM_PORT, strerror(errno));
 #endif
+		return EXIT_FAILURE;
 	}
+	
+	return EXIT_SUCCESS;
 }
 
 
@@ -194,11 +223,13 @@ int main () {
 	gsl_vector_float *ctrl;
 	ctrl = gsl_vector_float_calloc(FOAM_MODOKODM_NCHAN-1);
 	
-	// set addr:
-	okoSetAddr();
+	if (drvInitOkoDM() == EXIT_FAILURE) {
+		printf("Failed to init the mirror\n");
+		return EXIT_FAILURE;
+	}
 
 	// set everything to zero:
-	printf("setting mirror:\n");
+	printf("Setting mirror with voltages:\n");
 	for (i=0; i<ctrl->size; i++)  {
 		volt = ((float) i/ctrl->size)*2-1;
 		printf("%f ", volt);
@@ -206,8 +237,11 @@ int main () {
 	}
 	printf("\n");
 
-	drvSetOkoDM(ctrl);
-	
+	if (drvSetOkoDM(ctrl) == EXIT_FAILURE) {
+		printf("Could not set voltages\n");
+		return EXIT_FAILURE;
+	}
+		
 	// now manually read stuff:
     off_t offset;
     int w_out;
@@ -216,18 +250,41 @@ int main () {
 	for (i=1; i<FOAM_MODOKODM_NCHAN; i++) {
 		if ((offset=lseek(Okofd, Okoaddr[i], SEEK_SET)) < 0) {
 			fprintf(stderr,"Can not lseek  /dev/port\n");
-			exit (-1);
+			return EXIT_FAILURE;
 		}
 
 		if ((w_out=read(Okofd, &dat,1)) != 1) {
 			fprintf(stderr,"Can not read  /dev/port\n");   
-			exit (-1);
+			return EXIT_FAILURE;
 		}
-		// sleep for 0.5 seconds between each call if we are debugging
-		usleep(500000);
 		printf("(%d, %d) ", i, dat);
+//		sleeping between read calls is not really necessary, pci is fast enough
+//		usleep(1000000);
 	}
 	printf("\n");
+	
+	printf("Mirror does not give errors (good), now setting actuators one by one\n(skipping 0 because it is the substrate)\n");
+	printf("Settings acts:...\n");
+	
+	for (i=1; i<FOAM_MODOKODM_NCHAN; i++) {
+		// set all to zero
+		gsl_vector_float_set_zero(ctrl);
+		
+		// set one to 255 (max)
+		gsl_vector_float_set(ctrl, i, 255);
+		
+		printf("%d...", i);
+		if (drvSetOkoDM(ctrl) == EXIT_FAILURE) {
+			printf("Could not set voltages!\n");
+			return EXIT_FAILURE;
+		}
+		
+	}
+	printf("\n");
+	
+	if (drvCloseOkoDM() == EXIT_FAILURE)
+		return EXIT_FAILURE;
+	
 	return 0;
 }
 #endif

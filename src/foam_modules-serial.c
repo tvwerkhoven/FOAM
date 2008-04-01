@@ -79,6 +79,7 @@ int main (int argc, char *argv[]) {
 		printf("Please run me as <script> <port> <begin> <end> and I "\
 		"will write '3WX\\r' to serial port <port>, with X ranging "\
 		"from <begin> to <end>\n");
+		printf("In ao3 (tt3.h:170), values 0 thru 5 were used\n");
 		return -1;
 	}
 	int beg = (int) strtol(argv[2], NULL, 10);
@@ -117,8 +118,8 @@ int main (int argc, char *argv[]) {
 			*/
 		}
 		
-		// sleep for 0.5 seconds between each call if we are debugging
-		usleep(500000);
+		// sleep for 5 seconds between each call if we are debugging
+		usleep(5000000);
 	}
 	return 0;
 }
