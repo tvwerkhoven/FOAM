@@ -46,16 +46,6 @@ static int formatLog(char *output, const char *prepend, const char *msg) {
 	loctime = localtime (&curtime);
 	strftime (timestr, 9, "%H:%M:%S", loctime);
 
-
-	
-	// !!!:tim:20080325 strcat->strncat, does this solve stuff? (see log)
-	// !!!:tim:20080325 no it does not, problem lies somewhere else
-//	output[0] = '\0'; // reset string
-//	strncat(output, timestr, COMMANDLEN);
-//	strncat(output, prepend, COMMANDLEN);
-//	strncat(output, msg, COMMANDLEN);
-//	strncat(output,"\n\0", COMMANDLEN);
-	// retry, use snprintf instead of strncat:
 	snprintf(output, (size_t) COMMANDLEN, "%s%s%s\n", timestr, prepend, msg);
 	return EXIT_SUCCESS;
 }
@@ -64,6 +54,7 @@ void logErr(const char *msg, ...) {
 	if (cs_config.loglevel < LOGERR) 			// Do we need this loglevel?
 		return;
 
+	char logmessage[COMMANDLEN];
 	va_list ap, aq, ar;
 	
 	va_start(ap, msg);
@@ -93,6 +84,7 @@ void logWarn(const char *msg, ...) {
 	if (cs_config.loglevel < LOGERR) 			// Do we need this loglevel?
 		return;
 
+	char logmessage[COMMANDLEN];
 	va_list ap, aq, ar;
 	
 	va_start(ap, msg);
@@ -124,7 +116,9 @@ void logInfo(const int flag, const char *msg, ...) {
 												// We only print log messages every logfrac frames
 	if (flag & LOG_SOMETIMES && (ptc.frames % cs_config.logfrac) != 0)
 		return;
-
+	
+	char logmessage[COMMANDLEN];
+	
 //	printf("0");
 	va_list ap, aq, ar; 						// We need three of these because we cannot re-use a va_list variable
 	
@@ -164,6 +158,8 @@ void logDebug(const int flag, const char *msg, ...) {
 												// We only print log messages every logfrac frames
 	if (flag & LOG_SOMETIMES && (ptc.frames % cs_config.logfrac) != 0)
 		return;
+	
+	char logmessage[COMMANDLEN];
 	
 //	printf("0");
 	va_list ap, aq, ar; 						// We need three of these because we cannot re-use a va_list variable

@@ -326,25 +326,19 @@ gain <wfc> <gain>:      set the gain for a wfc");
 			if (strcmp(list[1],"pinhole") == 0) {
 				ptc->mode = AO_MODE_CAL;
 				ptc->calmode = CAL_PINHOLE;
-				pthread_mutex_lock(&mode_mutex);
 				pthread_cond_signal(&mode_cond);
-				pthread_mutex_unlock(&mode_mutex);
 				tellClients("200 OK CALIBRATE PINHOLE");
 			}
 			else if (strcmp(list[1],"lintest") == 0) {
 				ptc->mode = AO_MODE_CAL;
 				ptc->calmode = CAL_LINTEST;
-				pthread_mutex_lock(&mode_mutex);
 				pthread_cond_signal(&mode_cond);
-				pthread_mutex_unlock(&mode_mutex);
 				tellClients("200 OK CALIBRATE LINTEST");
 			}
 			else if (strcmp(list[1],"influence") == 0) {
 				ptc->mode = AO_MODE_CAL;
 				ptc->calmode = CAL_INFL;
-				pthread_mutex_lock(&mode_mutex);
 				pthread_cond_signal(&mode_cond);
-				pthread_mutex_unlock(&mode_mutex);	
 				tellClients("200 OK CALIBRATE INFLUENCE");
 			}
 			else tellClient(client->buf_ev,"401 UNKNOWN CALIBRATION");

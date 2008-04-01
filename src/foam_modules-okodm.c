@@ -9,10 +9,13 @@
 	
 	The Okotech 37ch DM has 38 actuators (one being the substrate) leaving 37 for AO. The mirror
 	is controlled through a PCI board. This requires setting some hardware addresses, but not much
-	more. See mirror.h and rotate.c supplied on CD with the Okotech mirror for examples.
+	more. See mirror.h and rotate.c supplied on CD with the Okotech mirror for examples.\
+
+	Manufacturers website:
+	 http://www.okotech.com/content/oko/pics/gallery/Typical%20PDM%2037%20passport_.pdf
  
 	This module also compiles on its own like:\n
-	gcc foam_modules-okodm.c -lgsl -Wall -std=c99 -DFOAM_MODOKODM_DEBUG=1
+	gcc foam_modules-okodm.c -lm -lc -lgslcblas -lgsl -xWall -DFOAM_MODOKODM_DEBUG=1 -std=c99
 	
 	\section Functions
 	
@@ -264,7 +267,7 @@ int main () {
 	}
 
 	// set everything to zero:
-	printf("Setting mirror with voltages:\n");
+	printf("Setting mirror with control vector (values between -1 and 1):\n");
 	for (i=0; i<ctrl->size; i++)  {
 		volt = ((float) i/ctrl->size)*2-1;
 		printf("%f ", volt);
@@ -336,7 +339,7 @@ int main () {
 			return EXIT_FAILURE;
 		}
 	}
-	printf("done\n");
+	printf("done, cleaning up\n");
 	
 	if (drvCloseOkoDM() == EXIT_FAILURE)
 		return EXIT_FAILURE;

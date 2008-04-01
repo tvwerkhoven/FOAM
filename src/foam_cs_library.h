@@ -51,7 +51,6 @@ typedef unsigned char u_char;
 // GLOBAL VARIABLES //
 /********************/
 
-char logmessage[COMMANDLEN];
 #define LOG_SOMETIMES 1
 #define LOG_NOFORMAT 2
 

@@ -37,10 +37,6 @@ pthread_cond_t mode_cond;
 // This is to make threads joinable
 static pthread_attr_t attr;
 
-// we use this to block signals in threads
-// see http://www.opengroup.org/onlinepubs/009695399/functions/sigprocmask.html
-static sigset_t signal_mask;
-
 // PROTOTYPES //
 /**************/	
 
@@ -85,6 +81,11 @@ int main(int argc, char *argv[]) {
 
 	char date[64];
 	struct tm *loctime;
+
+	// we use this to block signals in threads
+	// see http://www.opengroup.org/onlinepubs/009695399/functions/sigprocmask.html
+	static sigset_t signal_mask;
+	
 	
 	// BEGIN FOAM //
 	/**************/
@@ -108,15 +109,18 @@ int main(int argc, char *argv[]) {
 
 	modInitModule(&ptc);
 	
-	
 	// START THREADING //
 	/*******************/
 	
 	// ignore all signals that might cause problems (^C),
 	// and enable them on a per-thread basis lateron.
     sigemptyset(&signal_mask);
-    sigaddset(&signal_mask, SIGINT);
-    //sigaddset(&signal_mask, SIGTERM); // you might want to block this as well
+    sigaddset(&signal_mask, SIGINT); // 'user' stuff
+    sigaddset(&signal_mask, SIGTERM);
+	
+	sigaddset(&signal_mask, SIGSEGV); // 'bad' stuff, try to do a clean exit
+	sigaddset(&signal_mask, SIGBUS);
+
 	
 	int threadrc;
 	
@@ -175,10 +179,8 @@ void stopFOAM() {
 	// we're finishing up
 	ptc.mode = AO_MODE_SHUTDOWN;
 	
-	// signal the change to the other threads
-	pthread_mutex_lock(&mode_mutex); 
+	// signal the change to the other thread(s)
 	pthread_cond_signal(&mode_cond);
-	pthread_mutex_unlock(&mode_mutex);
 	
 	// get the time to see how long we've run
 	end = time (NULL);
@@ -1063,23 +1065,17 @@ int parseCmd(char *msg, const int len, client_t *client) {
 		if (count > 1) {
 			if (strcmp(list[1],"closed") == 0) {
 				ptc.mode = AO_MODE_CLOSED;
-				pthread_mutex_lock(&mode_mutex); // signal a change to the main thread
-				pthread_cond_signal(&mode_cond);
-				pthread_mutex_unlock(&mode_mutex);
+				pthread_cond_signal(&mode_cond); // signal a change to the main thread
 				tellClients("200 OK MODE CLOSED");
 			}
 			else if (strcmp(list[1],"open") == 0) {
 				ptc.mode = AO_MODE_OPEN;
-				pthread_mutex_lock(&mode_mutex);
 				pthread_cond_signal(&mode_cond);
-				pthread_mutex_unlock(&mode_mutex);
 				tellClients("200 OK MODE OPEN");
 			}
 			else if (strcmp(list[1],"listen") == 0) {
 				ptc.mode = AO_MODE_LISTEN;
-				pthread_mutex_lock(&mode_mutex);
 				pthread_cond_signal(&mode_cond);
-				pthread_mutex_unlock(&mode_mutex);
 				tellClients("200 OK MODE LISTEN");
 			}
 			else {
