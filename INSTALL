@@ -227,6 +227,21 @@ command and try to see if the libraries required (-lxxxxx like -lm or
 -lgsl) are indeed in one of the directories specified by -L, OR in a
 default system directory.
 
+Common errors
+=============
+
+* You get something like:
+ '/usr/lib/gcc/i486-linux-gnu/4.1.2/../../../../lib/libgsl.so: 
+  undefined reference to `cblas_scasum'
+
+This means you have installed GSL, but you have NOT installed a BLAS or did 
+not link to it, which GSL depends on (quite explicitly in this case). Try 
+installing ATLAS, which is such a BLAS with nice overall performance which 
+also automatically links to GSL. Then add -lgslcblas to the compile command.
+
+If you can get your hands on a BLAS designed specifically for your platform,
+you probably want to install that instead. Don't ask me how though.
+
                     ------------------------------
 
 4. Further information on the standard GNU installation procedure

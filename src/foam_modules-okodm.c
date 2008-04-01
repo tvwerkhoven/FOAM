@@ -18,8 +18,9 @@
 	
 	\li drvSetOkoDM() - Sets the Okotech 37ch DM to a certain voltage set.
 	\li drvInitOkoDM() - Initialize the Okotech DM (call this first!)
-	\li drvCloseOkoDM() - Close the Okotech DM (call this at the end!)
-	
+	\li drvCloseOkoDM() - Calls drvRstOkoDM, then closes the Okotech DM (call this at the end!)
+	\li drvRstOkoDM() - Resets the Okotech DM to FOAM_MODOKODM_RSTVOLT (default 180)
+ 
 	\section History
 	
 */
@@ -37,6 +38,7 @@
 #define FOAM_MODOKODM_PORT "/dev/port"
 #define FOAM_MODOKODM_NCHAN 38
 #define FOAM_MODOKODM_MAXVOLT 255
+#define FOAM_MODOKODM_RSTVOLT 180
 #define FOAM_MODOKODM_DEBUG 1		//!< set to 1 for debugging, in that case this module compiles on its own
 
 // PCI bus is 32 bit oriented, hence each 4th addres represents valid
@@ -180,6 +182,27 @@ int drvSetOkoDM(gsl_vector_float *ctrl) {
 	return EXIT_SUCCESS;
 }
 
+int drvRstOkoDM() {
+	int i;
+	
+	if (Okodminit != 1) {
+#ifdef FOAM_MODOKODM_DEBUG
+		printf("Mirror not initialized yet, please do that first\n");
+#elif
+		logWarn("Mirror not initialized yet, please do that first");
+#endif
+		return EXIT_FAILURE;
+	}
+	
+	for (i=1; i< FOAM_MODOKODM_NCHAN; i++) {
+		if (okoWrite(Okoaddr[i], FOAM_MODOKODM_RSTVOLT) == EXIT_FAILURE)
+			return EXIT_FAILURE;
+		
+	}
+	
+	return EXIT_SUCCESS;
+}
+
 int drvInitOkoDM() {
 	// Set the global list of addresses for the various actuators:
 	okoSetAddr();
@@ -195,6 +218,15 @@ int drvInitOkoDM() {
 }
 
 int drvCloseOkoDM() {
+	// reset the mirror
+	if (drvRstOkoDM() == EXIT_FAILURE) {
+#ifdef FOAM_MODOKODM_DEBUG
+		printf("Could not reset the DM to voltage %d\n", FOAM_MODOKODM_RSTVOLT);
+#elif
+		logWarn("Could not reset the DM to voltage %d", FOAM_MODOKODM_RSTVOLT);
+#endif		
+	};
+	
 	// Close access to the pci card
 	if (Okodminit != 1)
 #ifdef FOAM_MODOKODM_DEBUG
