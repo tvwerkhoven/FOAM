@@ -73,7 +73,7 @@ int drvSetSerial(const char *port, const char *cmd) {
 		fcntl(fd, F_SETFL, 0);
 
 #ifdef FOAM_MODSERIAL_DEBUG
-	printf("Successfully opened port '%s'\n", port);
+	printf("opened port '%s'\n", port);
 #endif
 	
     int n = write(fd, cmd, strlen(cmd));
@@ -90,7 +90,7 @@ int drvSetSerial(const char *port, const char *cmd) {
     close(fd);
 	
 #ifdef FOAM_MODSERIAL_DEBUG
-	printf("Successfully wrote '%s' to port\n", cmd);
+	printf("wrote to port\n", cmd);
 #endif
 	
 	return n;
