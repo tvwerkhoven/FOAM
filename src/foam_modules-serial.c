@@ -99,29 +99,29 @@ int drvSetSerial(const char *port, const char *cmd) {
 #ifdef FOAM_MODSERIAL_ALONE
 int main (int argc, char *argv[]) {
 	int i;
-	char cmd[4] = "3W1\r";
+	char cmd[4] = "XR0\r";
 	int fd, ret;
 	char buf[4];
 	buf[3] = '\0';
 	
 	if (argc < 4) {
 		printf("Please run me as <script> <port> <begin> <end> and I "\
-		"will write '3WX\\r' to serial port <port>, with X ranging "\
-		"from <begin> to <end>\n");
-		printf("In ao3 (tt3.h:170), values 0 thru 5 were used\n");
+		"will write '%s' to serial port <port>, with 0 ranging "\
+		"from <begin> to <end>\n", cmd);
+		printf("In ao3 (tt3.h:170), values 1 thru 4 were used\n");
 		return -1;
 	}
 	int beg = (int) strtol(argv[2], NULL, 10);
 	int end = (int) strtol(argv[3], NULL, 10);
 	
-	printf("Printing '3WX\\r' to serial port %s with X ranging from %d to "\
-		"%d\n", argv[1], beg, end);
+	printf("Printing '%s' to serial port %s with 0 ranging from %d to "\
+		"%d\n", cmd, argv[1], beg, end);
 	
 
 	for (i=beg; i<end+1; i++) {
-		printf("Trying to write '3W%d\\r' to %s...", i, argv[1]);
-		
 		cmd[2] = i+0x30; // convert int to ASCII
+		printf("Trying to write '%s' to %s...", cmd, i, argv[1]);
+
 		if (drvSetSerial(argv[1], cmd) == -1) {
 			printf("failed.\n");
 		}
@@ -149,6 +149,17 @@ int main (int argc, char *argv[]) {
 		// sleep for 5 seconds between each call if we are debugging
 		usleep(5000000);
 	}
+	
+	cmd[2] = 6+0x30; // convert int to ASCII
+	printf("Trying to write '%s' to %s...", cmd, i, argv[1]);
+
+	if (drvSetSerial(argv[1], cmd) == -1)
+		printf("failed.\n");
+	else
+		printf("success!\n");
+
+		
+	usleep(5000000);
 	return 0;
 }
 #endif
