@@ -151,6 +151,10 @@ static int okoWrite(int addr, int voltage) {
 		return EXIT_FAILURE;
 	}
 	
+#ifdef FOAM_MODOKODM_DEBUG
+	printf("(w: %d), ", (int) offset);
+#endif
+		   
 	return EXIT_SUCCESS;
 }
 
@@ -171,12 +175,12 @@ int drvSetOkoDM(gsl_vector_float *ctrl) {
 		// this maps [-1,1] to [0,255^2] and takes the square root of that range (linear -> quadratic)
 		voltf = round(sqrt(65025*(gsl_vector_float_get(ctrl, i)+1)*0.5 )); //65025 = 255^2
 		volt = (int) voltf;
-#ifdef FOAM_MODOKODM_DEBUG
-//		printf("(cmd: %.1f, volt: %.1f, %d -> %#x) ", gsl_vector_float_get(ctrl, i), voltf, volt, Okoaddr[i]);
-#endif
 		if (okoWrite(Okoaddr[i], volt) != EXIT_SUCCESS)
 			return EXIT_FAILURE;
-			
+
+#ifdef FOAM_MODOKODM_DEBUG
+		printf("(%d) ", volt);
+#endif		
 	}
 #ifdef FOAM_MODOKODM_DEBUG
 	//printf("\n");
@@ -290,7 +294,7 @@ int main () {
 	// now manually read stuff:
     off_t offset;
     int w_out;
-    unsigned char dat;
+    int dat;
 	
 	printf("Data set on %s, now reading back to see if it worked:\n",FOAM_MODOKODM_PORT);
 	
@@ -299,6 +303,7 @@ int main () {
 			fprintf(stderr,"Can not lseek %s\n", FOAM_MODOKODM_PORT);
 			return EXIT_FAILURE;
 		}
+		printf("(s: %d), ", (int) offset);
 
 		if ((w_out=read(Okofd, &dat,1)) != 1) {
 			fprintf(stderr,"Can not read %s\n", FOAM_MODOKODM_PORT);   
