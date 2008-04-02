@@ -33,7 +33,7 @@
 int drvSetSerial(const char *port, const char *cmd) {
 	int fd;
 	// cmd is something like "3WX\r" with X a number (from tt3.h)
-	// port is something like "/dev/ttyS0"\
+	// port is something like "/dev/ttyS0"
 	
 	if (port == NULL || cmd == NULL)
 		return EXIT_FAILURE;
@@ -114,8 +114,7 @@ int main (int argc, char *argv[]) {
 				close(fd);
 
 			}
-			/*
-			*/
+			 */
 		}
 		
 		// sleep for 5 seconds between each call if we are debugging

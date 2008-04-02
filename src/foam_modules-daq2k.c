@@ -356,7 +356,7 @@ int main() {
 	printf("Will now drive filterwheel connected to port A, sending values 0 through 7 by using the first three bits\n");
 	for (i=0; i<8; i++) {
 		printf("0x%u...", i);
-		drvDaqSetP2(0,0,i)
+		drvDaqSetP2(0,0,i);
 		sleep(1);
 	}
 	printf("done\n");

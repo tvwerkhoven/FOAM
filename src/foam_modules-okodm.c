@@ -174,7 +174,7 @@ int drvSetOkoDM(gsl_vector_float *ctrl) {
 #ifdef FOAM_MODOKODM_DEBUG
 //		printf("(cmd: %.1f, volt: %.1f, %d -> %#x) ", gsl_vector_float_get(ctrl, i), voltf, volt, Okoaddr[i]);
 #endif
-		if (okoWrite(Okoaddr[i], volt) == EXIT_FAILURE)
+		if (okoWrite(Okoaddr[i], volt) != EXIT_SUCCESS)
 			return EXIT_FAILURE;
 			
 	}
@@ -270,12 +270,19 @@ int main () {
 	printf("Setting mirror with control vector (values between -1 and 1):\n");
 	for (i=0; i<ctrl->size; i++)  {
 		volt = ((float) i/ctrl->size)*2-1;
-		printf("%f ", volt);
+		printf("(%d, %.2f) ", i, volt);
 		gsl_vector_float_set(ctrl, i, volt);
 	}
 	printf("\n");
 
-	if (drvSetOkoDM(ctrl) == EXIT_FAILURE) {
+	printf("Which corresponds to voltages:\n");
+	for (i=0; i<ctrl->size; i++)  {
+		volt = ((float) i/ctrl->size)*2-1;
+		printf("(%d, %d) ", i, (int) round(sqrt(65025*(volt+1)*0.5 )));
+	}
+	printf("\n");
+	
+	if (drvSetOkoDM(ctrl) != EXIT_SUCCESS) {
 		printf("Could not set voltages\n");
 		return EXIT_FAILURE;
 	}
