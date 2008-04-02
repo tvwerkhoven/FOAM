@@ -1,0 +1,60 @@
+#
+# Example Configuration File for PCDig Module
+# Camera: DALSA CA-D60256
+#
+# Christoph Keller 15/11/2001
+#
+
+
+[PCD:0]			# Board 0
+
+      CAMERA_NAME = "DALSA CA-D6-0256W fps:955 (8bit)"
+      EXO_FILENAME = "p4b4tp00.exo.tim"
+      LEN_SYNC = SYNC
+      LEN_POLARITY = RISING_EDGE
+      FEN_ENABLE = ENABLE
+      FEN_POLARITY = RISING_EDGE
+      MULTI_ENABLE = DISABLE
+      MULTI_POLARITY = ACTIVE_LOW
+      MULTI_INPUT_MODE = MULTI_INPUT_FIELD
+#     PCLK_POLARITY = RISING_EDGE		# read only register
+#     MULTI_OUTPUT_ENABLE = DISABLE		# this is not configurable
+#     USE_EXT_MULTI = DISABLE			# this is not configurable
+      RETIME_ENABLE = DISABLE
+      RETIME_POLARITY = FALLING_EDGE
+      CAM3_ENABLE = DISABLE
+      EXSYNC_ENABLE = ENABLE
+      EXSYNC_POLARITY = ACTIVE_LOW
+      EXSYNC_MODE = EXSYNC_FREE_RUNNING
+#     EXT_SYNC_TIME = 0.139684          # us (140ns ... 572us)
+      # default exposure time !!!
+      EXT_SYNC_PERIOD_TIME = 20.000 # us (210ns ... 18.75s)
+      # default readout time !!!
+      EXSYNC_MIDPOINT_DELAY = 4000.000	# us (210ns ... 18.75s)
+      # this controls the same as the above value (readout time)
+      # the last value is the important (overwrites the first)
+      EXSYNC_START_LOCATION = EXSYNC_START_CYCLE_END
+      PRI_ENABLE = DISABLE
+      #PRI_POLARITY = ACTIVE_LOW
+      PRI_MIDPOINT_DELAY = 3000.210	# us (210ns ... 18.75s)
+      #PRI_START_LOCATION = PRI_START_CYCLE_END
+      #PRI_END_LOCATION = PRI_END_IS_START_DEPEND
+      CAM_MODE_CTL = 0
+      CCLK_STATIC_ENABLE = DISABLE
+      CCLK_STATIC_STATE = LEVEL_LOW
+      HORZ_OFF = 0
+      WIDTH_PIXELS = 64
+      VERT_OFF = 0
+      HEIGHT_PIXELS = 256
+      CCLK_FREQ_SEL = 25.000000		# MHz (320kHz ... 100MHz)
+      PIXEL_SIZE = 8
+      TRIGGER_POLARITY = FALLING_EDGE,FALLING_EDGE
+      TRIGGER_SRC = TTL_TRIG,TTL_TRIG
+      TRIG_GLITCH_DETECTOR = DISABLE,DISABLE
+#     TRIGGER_STATE = LEVEL_HIGH,LEVEL_LOW	# read only register
+#     GEN_SW_TRIGGER = 2118125364,2118125364	# this is not configurable
+      TRIG_DIVIDE_FACTOR = 256
+      TRIG_DIVIDE_CONTROL = DISABLE_TRIG_DIVIDE
+#     PARAM_GROUPS_APPLICABLE = 14
+      IMAGE_GEOMETRY = 4CHAN_SEP_TAP_L2R
+#     NUM_CAMERAS = 1
