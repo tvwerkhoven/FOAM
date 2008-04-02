@@ -2,20 +2,28 @@
 #MAJOR=alpha
 #MINOR=$(shell svn log -r HEAD | head -n 2 | tail -n 1 | awk '{print$1"-"$5}')
 AC_INIT([FOAM], [alpha-r195-2008-04-02], [T.I.M.vanWerkhoven@phys.uu.nl])
+AC_COPYRIGHT([Copyright 2007-2008 Tim van Werkhoven <T.I.M.vanWerkhoven@phys.uu.nl>])
+
+AC_CONFIG_HEADERS([config.h])
+AC_CONFIG_AUX_DIR([build-aux])
+AC_CONFIG_FILES([
+Makefile
+src/Makefile
+config/Makefile
+])
 
 AM_INIT_AUTOMAKE([-Wall -Werror foreign])
-AC_COPYRIGHT([Copyright 2007-2008 Tim van Werkhoven <T.I.M.vanWerkhoven@phys.uu.nl>])
+
 
 AC_PROG_CC
 AC_PROG_CPP
 AC_PROG_MAKE_SET
 AC_PROG_INSTALL
 
-AC_CONFIG_HEADERS([config.h])
-AC_CONFIG_FILES([
-Makefile
-src/Makefile
-])
+# We'd like C99 enabled
+#AC_PROG_CC_C99
+# We'd like const to work
+AC_C_CONST
 
 # We always need these libs
 AC_SEARCH_LIBS([sin], [m] ,[], AC_MSG_ERROR([This package needs libm.]) ) 
@@ -23,6 +31,10 @@ AC_SEARCH_LIBS([event_init], [event] ,[], AC_MSG_ERROR([This package needs libev
 AC_SEARCH_LIBS([pthread_create], [pthread] ,[], AC_MSG_ERROR([This package needs libpthread.]) ) 
 AC_SEARCH_LIBS([gsl_blas_dgemm],[gsl], [], AC_MSG_ERROR([This package needs libgsl.]) ) 
 AC_SEARCH_LIBS([cblas_dgemm],[gslcblas], [], AC_MSG_ERROR([This package needs a cblas supplied with gsl like atlas]) ) 
+
+m4_foreach([lib], [[foo], [bar, baz]],
+                     [echo myvar
+          ])
 
 # save common libs (this is kinda ugly)
 COMMON_LIBS=$LIBS
@@ -52,6 +64,7 @@ fi
 PKG_CHECK_MODULES(SDL, sdl) 
 #SDL_CFLAGS = $(pkg-config SDL --cflags),
 #SDL_LIBS = $(pkg-config SDL --libs)
+
 ### TEST FOR USER INPUT ###
 ###########################
 
@@ -81,6 +94,15 @@ AC_ARG_ENABLE([ui],
 		no)  ui=disabled ;;
 		*) AC_MSG_ERROR([bad value ${enableval} for --enable-ui]) ;;
 	esac],[ui=true])
+	
+# Test if we want to include the UI or not
+AC_ARG_ENABLE([hwdebug],
+		AC_HELP_STRING([--enable-hwdebug], [enable hardware debugging]),
+		[case "${enableval}" in
+		yes) hwdebug=true ;;
+		no)  hwdebug=disabled ;;
+		*) AC_MSG_ERROR([bad value ${enableval} for --enable-hwdebug]) ;;
+	esac],[hwdebug=true])
 
 # Test if we want ITIFG enabled (default no, unfinished stuff)
 AC_ARG_ENABLE([itifg],
@@ -234,6 +256,7 @@ AC_SUBST(UI_CFLAGS)
 AM_CONDITIONAL([UI], [test x$ui = xtrue])
 
 LIBS=""
+
 ### END CHECKING FOR MODES ###
 ##############################
 

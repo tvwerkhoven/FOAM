@@ -14,6 +14,7 @@
 	\section Functions	
 	
 	The functions provided to the outside world are:
+ 
 	\li modCalPinhole() - Calibrate pinhole coordinates, used as a reference when correcting
 	\li modCalPinholeChk() - Checks whether pinhole calibration has been performed
 	\li modCalWFC() - Measures the WFC influence function and inverts this. This calibration is done per WFS for all WFC's.
