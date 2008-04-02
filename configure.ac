@@ -1,7 +1,7 @@
 # dynamic versioning does not work :<
 #MAJOR=alpha
 #MINOR=$(shell svn log -r HEAD | head -n 2 | tail -n 1 | awk '{print$1"-"$5}')
-AC_INIT([FOAM], [alpha-r175-2008-03-28], [T.I.M.vanWerkhoven@phys.uu.nl])
+AC_INIT([FOAM], [alpha-r195-2008-04-02], [T.I.M.vanWerkhoven@phys.uu.nl])
 
 AM_INIT_AUTOMAKE([-Wall -Werror foreign])
 AC_COPYRIGHT([Copyright 2007-2008 Tim van Werkhoven <T.I.M.vanWerkhoven@phys.uu.nl>])

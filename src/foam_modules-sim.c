@@ -24,22 +24,20 @@
  
 	This module expects the following defines to be present (with example values):
 
-	\li #define FOAM_MODSIM_WAVEFRONT "../config/wavefront.pgm"
-	\li #define FOAM_MODSIM_APERTURE "../config/apert15-256.pgm"
-	\li	#define FOAM_MODSIM_APTMASK "../config/apert15-256.pgm"
-	\li	#define FOAM_MODSIM_ACTPAT "../config/dm37-256.pgm"
+	\li FOAM_MODSIM_WAVEFRONT "../config/wavefront.pgm"
+	\li FOAM_MODSIM_APERTURE "../config/apert15-256.pgm"
+	\li FOAM_MODSIM_APTMASK "../config/apert15-256.pgm"
+	\li FOAM_MODSIM_ACTPAT "../config/dm37-256.pgm"
 	 
-	\li	#define FOAM_MODSIM_WINDX 0	
-	\li	#define FOAM_MODSIM_WINDY 0 	
-	\li	#define FOAM_MODSIM_SEEING 0.2	
+	\li FOAM_MODSIM_WINDX 0	
+	\li FOAM_MODSIM_WINDY 0 	
+	\li FOAM_MODSIM_SEEING 0.2	
 	 
-	\li	#define FOAM_MODSIM_ERR 1	
-	\li	#define FOAM_MODSIM_ERRWFC 0
-	\li	#define FOAM_MODSIM_ERRTYPE 1	
-	\li	#define FOAM_MODSIM_ERRVERB 1
+	\li FOAM_MODSIM_ERR 1	
+	\li FOAM_MODSIM_ERRWFC 0
+	\li FOAM_MODSIM_ERRTYPE 1	
+	\li FOAM_MODSIM_ERRVERB 1
 	
-	\section License
-	This code is licensed under the GPL, version 2.
 */
 
 // HEADERS //

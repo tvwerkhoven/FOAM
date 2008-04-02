@@ -9,27 +9,47 @@
  
  For info, look at the source, it isn't that complicated (really)
  
+ This module can compile on its own\n
+ <tt>gcc foam_modules-serial.c -Wall -std=c99</tt>
+ 
  \section Functions
  
  \li drvSetSerial() - Sets a value on a serial port
  
+ \section Configuration
+ 
+ This module only supports these configurations:
+ \li \b FOAM_MODSERIAL_ALONE (*undef*), ifdef, this module compiles on its own
+ \li \b FOAM_MODSERIAL_DEBUG (*undef*), ifdef, gives lowlevel debug information
+ 
  \section History
  
+ \li 2008-04-02: init
+
  */
 
-#include <stdio.h> // for stuff
-#include <unistd.h> // for close
-#include <stdlib.h> // has EXIT_SUCCESS / _FAILURE (0, 1)
-#include <sys/types.h> // for linux (open)
-#include <sys/stat.h> // for linux (open)
-#include <fcntl.h> // for fcntl
+#include <stdio.h>		// for stuff
+#include <unistd.h>		// for close
+#include <stdlib.h>		// has EXIT_SUCCESS / _FAILURE (0, 1)
+#include <sys/types.h>	// for linux (open)
+#include <sys/stat.h>	// for linux (open)
+#include <fcntl.h>		// for fcntl
 #include <errno.h>
 #include <string.h>
 //#include <string.h>
 //#include <math.h>
 
-#define FOAM_MODSERIAL_DEBUG 1		//!< set to 1 for debugging, in that case this module compiles on its own
+#ifdef FOAM_MODSERIAL_ALONE
+#define FOAM_MODSERIAL_DEBUG 1		//!< set to 1 for debugging, in that case this module compiles on its OwnerGrabButtonMask
+#endif
 
+/*!
+ @brief This function a string on a port and returns the bytes written
+ 
+ @param [in] *port The port to write to
+ @param [in] *cmd The string to write to the port
+ @return Number of bytes written on success, EXIT_FAILURE otherwise.
+ */
 int drvSetSerial(const char *port, const char *cmd) {
 	int fd;
 	// cmd is something like "3WX\r" with X a number (from tt3.h)
@@ -39,6 +59,7 @@ int drvSetSerial(const char *port, const char *cmd) {
 		return EXIT_FAILURE;
 	
 	fd = open(port, O_RDWR | O_NOCTTY | O_NDELAY);
+
 	
     if (fd == -1) {
 #ifdef FOAM_MODSERIAL_DEBUG
@@ -50,6 +71,10 @@ int drvSetSerial(const char *port, const char *cmd) {
 	}
 	else 
 		fcntl(fd, F_SETFL, 0);
+
+#ifdef FOAM_MODSERIAL_DEBUG
+	printf("Successfully opened port '%s'\n", port);
+#endif
 	
     int n = write(fd, cmd, strlen(cmd));
     if (n == -1)
@@ -63,11 +88,15 @@ int drvSetSerial(const char *port, const char *cmd) {
 #endif
 	
     close(fd);
+	
+#ifdef FOAM_MODSERIAL_DEBUG
+	printf("Successfully wrote '%s' to port\n", cmd);
+#endif
+	
 	return n;
 }
 
-
-#ifdef FOAM_MODSERIAL_DEBUG
+#ifdef FOAM_MODSERIAL_ALONE
 int main (int argc, char *argv[]) {
 	int i;
 	char cmd[4] = "3W1\r";

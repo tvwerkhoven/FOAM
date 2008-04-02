@@ -9,23 +9,39 @@
 	
 	The Okotech 37ch DM has 38 actuators (one being the substrate) leaving 37 for AO. The mirror
 	is controlled through a PCI board. This requires setting some hardware addresses, but not much
-	more. See mirror.h and rotate.c supplied on CD with the Okotech mirror for examples.\
+	more. See mirror.h and rotate.c supplied on CD with the Okotech mirror for examples.
 
 	Manufacturers website:
-	 http://www.okotech.com/content/oko/pics/gallery/Typical%20PDM%2037%20passport_.pdf
+	<tt>http://www.okotech.com/content/oko/pics/gallery/Typical%20PDM%2037%20passport_.pdf</tt>
  
 	This module also compiles on its own like:\n
-	gcc foam_modules-okodm.c -lm -lc -lgslcblas -lgsl -xWall -DFOAM_MODOKODM_DEBUG=1 -std=c99
+	<tt>gcc foam_modules-okodm.c -lm -lc -lgslcblas -lgsl -Wall -DFOAM_MODOKODM_ALONE=1 -std=c99</tt>
 	
 	\section Functions
 	
 	\li drvSetOkoDM() - Sets the Okotech 37ch DM to a certain voltage set.
 	\li drvInitOkoDM() - Initialize the Okotech DM (call this first!)
 	\li drvCloseOkoDM() - Calls drvRstOkoDM, then closes the Okotech DM (call this at the end!)
-	\li drvRstOkoDM() - Resets the Okotech DM to FOAM_MODOKODM_RSTVOLT (default 180)
+	\li drvRstOkoDM() - Resets the Okotech DM to FOAM_MODOKODM_RSTVOLT
+ 
+	\section Configuration
+ 
+	There are several things that can be configured about this module. The following defines are used:
+	\li \b FOAM_MODOKODM_PORT ("/dev/port"), the port used throughout the module
+	\li \b FOAM_MODOKODM_NCHAN (38), the number of channels on the board
+	\li \b FOAM_MODOKODM_MAXVOLT (255), the maximum voltage allowed (all voltages are logically AND'd with this value)
+	\li \b FOAM_MODOKODM_RSTVOLT (180), the voltage used to reset the mirror
+	\li \b FOAM_MODOKODM_ALONE (*undef*), ifdef, this module will compile on it's own, imlies FOAM_MODOKODM_DEBUG
+	\li \b FOAM_MODOKODM_DEBUG (*undef*), ifdef, this module will give lowlevel debugs through printf
+	\li \b FOAM_MODOKODM_BASE1 (0xc000), first base address of the PCI card, can be found with lspci -v, look for PROTO-3
+	\li \b FOAM_MODOKODM_BASE2 (0xc400), second base address
+	\li \b FOAM_MODOKODM_BASE3 (0xFFFF), third base address
+	\li \b FOAM_MODOKODM_BASE4 (0xFFFF), fourth base address
  
 	\section History
-	
+ 
+	\li 2008-04-02: init
+
 */
 
 #include <gsl/gsl_vector.h>
@@ -38,27 +54,91 @@
 #include <string.h>
 #include <math.h>
 
-#define FOAM_MODOKODM_PORT "/dev/port"
-#define FOAM_MODOKODM_NCHAN 38
-#define FOAM_MODOKODM_MAXVOLT 255
-#define FOAM_MODOKODM_RSTVOLT 180
-#define FOAM_MODOKODM_DEBUG 1		//!< set to 1 for debugging, in that case this module compiles on its own
+#define FOAM_MODOKODM_PORT "/dev/port"	//!< The port for PCI card IO
+#define FOAM_MODOKODM_NCHAN 38			//!< Number of channels (actuators + substrate)
+#define FOAM_MODOKODM_MAXVOLT 255		//!< Maximum voltage to set to the PCI car
+
+#ifndef FOAM_MODOKODM_RSTVOLT
+#define FOAM_MODOKODM_RSTVOLT 180		//!< Use this voltage when resetting the mirror
+#endif
+
+#ifdef FOAM_MODOKODM_ALONE
+#define FOAM_MODOKODM_DEBUG 1			//!< set to 1 for debugging, in that case this module compiles on its own
+#endif
 
 // PCI bus is 32 bit oriented, hence each 4th addres represents valid
 // 8bit wide channel 
-#define FOAM_MODOKODM_PCI_OFFSET 4
+#define FOAM_MODOKODM_PCI_OFFSET 4		//!< This should be 4, perhaps 8 sometimes
 
 // These are the base addresses for the different boards. In our
 // case we have 2 boards, boards 3 and 4 are not used
-#define FOAM_MODOKODM_BASE1 0xc000
-#define FOAM_MODOKODM_BASE2 0xc400
-#define FOAM_MODOKODM_BASE3 0xFFFF
-#define FOAM_MODOKODM_BASE4 0xFFFF
+#define FOAM_MODOKODM_BASE1 0xc000		//!< Get these addresses from lspci -v and look for the PROTO-3 cards
+#define FOAM_MODOKODM_BASE2 0xc400		//!< Get these addresses from lspci -v and look for the PROTO-3 cards
+#define FOAM_MODOKODM_BASE3 0xFFFF		//!< Get these addresses from lspci -v and look for the PROTO-3 cards
+#define FOAM_MODOKODM_BASE4 0xFFFF		//!< Get these addresses from lspci -v and look for the PROTO-3 cards
 
+// Local global variables for tracking configuration
+static int Okodminit = 0;				//!< This variable is set to 1 if the DM is initialized
+static int Okofd;						//!< This stores the FD to the DM
+static int Okoaddr[38];					//!< This stores the addresses for all actuators
 
-static int Okodminit = 0;
-static int Okofd;
-static int Okoaddr[38];
+// Function prototypes
+
+// local functions
+/*!
+ @brief This local function opens the mirror and stores the FD in Okofd
+ 
+ @return EXIT_SUCCESS on success, EXIT_FAILURE otherwise.
+ */
+static int okoOpen();
+/*!
+ @brief This local function fills the Okoaddr array with the actuator addresses.
+ */
+static void okoSetAddr();
+/*!
+ @brief This local function writes the first byte of an integer to the address given by addr
+ 
+ @return EXIT_SUCCESS on success, EXIT_FAILURE otherwise.
+ */
+
+static int okoWrite(int addr, int voltage);
+// public functions
+/*!
+ @brief This function sets the DM to the values given by *ctrl
+ 
+ The vector/array *ctrl should hold control values for the mirror which
+ range from -1 to 1, the domain being linear (i.e. from 0.5 to 1 gives twice
+ the stroke). Since the mirror is actually only linear in voltage^2, this
+ routine maps [-1,1] to [0,255] appropriately.
+ 
+ @param [in] *ctrl Holds the controls to send to the mirror in the -1 to 1 range
+ @return EXIT_SUCCESS on success, EXIT_FAILURE otherwise.
+ */
+int drvSetOkoDM(gsl_vector_float *ctrl);
+/*!
+ @brief Resets all actuators on the DM to FOAM_MODOKODM_RSTVOLT
+ 
+ @return EXIT_SUCCESS on success, EXIT_FAILURE otherwise.
+ */
+int drvRstOkoDM();
+/*!
+ @brief Initialize the module (software and hardware)
+ 
+ You need to call this function *before* any other function, otherwise it will
+ not work.
+ 
+ @return EXIT_SUCCESS on success, EXIT_FAILURE otherwise.
+ */
+int drvInitOkoDM();
+/*!
+ @brief Close the module (software and hardware)
+ 
+ You need to call this function *after* the last DM command. This
+ resets the mirror and closes the file descriptor.
+ 
+ @return EXIT_SUCCESS on success, EXIT_FAILURE otherwise.
+ */
+int drvCloseOkoDM();
 
 static int okoOpen() {
 	Okofd = open(FOAM_MODOKODM_PORT, O_RDWR);
@@ -258,7 +338,7 @@ int drvCloseOkoDM() {
 }
 
 
-#ifdef FOAM_MODOKODM_DEBUG
+#ifdef FOAM_MODOKODM_ALONE
 int main () {
 	int i;
 	float volt;
@@ -309,13 +389,11 @@ int main () {
 			fprintf(stderr,"Can not read %s\n", FOAM_MODOKODM_PORT);   
 			return EXIT_FAILURE;
 		}
-		printf("(%d, %d) ", i, dat);
+		printf("(%d, %#x) ", i, dat);
 //		sleeping between read calls is not really necessary, pci is fast enough
 //		usleep(1000000);
 	}
 	printf("\n");
-	
-	return 0;
 
 	printf("Mirror does not give errors (good), now setting actuators one by one\n(skipping 0 because it is the substrate)\n");
 	printf("Settings acts with 0.25 second delay:...\n");
