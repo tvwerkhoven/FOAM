@@ -21,7 +21,7 @@
 #define FOAM_MODITIFG_ALONE 1
 #define FOAM_MODITIFG_DEBUG 1
 #define FOAM_MODITIFG_DEV "/dev/ic0dma"
-#define FOAM_MODITIFG_CONFFILE ""
+#define FOAM_MODITIFG_CONFFILE "../config/dalsa-cad6-pcd.cam"
 #define FOAM_MODITIFG_MODULE 48
 
 #ifdef FOAM_MODITIFG_ALONE
@@ -120,6 +120,9 @@ int drvInitSensor() {
 	
 	int result;	
 	*camera_name = *exo_name = 0;
+	short width, height;
+	int depth;
+	int rawsize, pagedsize;
 	
 	if ((result = iti_read_config(config_file, &cam, 0, FOAM_MODITIFG_MODULE, 0, camera_name, exo_name)) < 0) {
 		close(fd);
@@ -133,6 +136,69 @@ int drvInitSensor() {
 		return EXIT_FAILURE;
 	}
 	
+	if(ioctl(fd, GIOC_SET_TIMEOUT, &(struct timeval){0, 0}) < 0) {
+		close(fd);
+		FOAM_MODITIFG_ERR("%s: error setting timeout: %s\n", device_name, strerror(errno));
+		return -1;
+	}
+	FOAM_MODITIFG_ERR("timout set to {0,0}\n");
+	
+	if(ioctl(fd, GIOC_SET_HDEC, &one) < 0) {
+		close(fd);
+		FOAM_MODITIFG_ERR("%s: error setting horizontal decimation: %s\n", device_name, strerror(errno));
+		return -1;
+	}
+	
+	if(ioctl(fd, GIOC_SET_VDEC, &one) < 0) {
+		close(fd);
+		FOAM_MODITIFG_ERR("%s: error setting vertical decimation: %s\n", device_name, strerror(errno));
+		return -1;
+	}
+#ifdef FOAM_MODITIFG_DEBUG
+	FOAM_MODITIFG_ERR("decimation set to {0,0}\n");
+#endif
+	
+	if(ioctl(fd, GIOC_GET_WIDTH, &width) < 0) {
+		close(fd);
+		FOAM_MODITIFG_ERR("%s: error getting width: %s\n", device_name, strerror(errno));
+		return -1;
+	}
+	
+	if(ioctl(fd, GIOC_GET_HEIGHT, &height) < 0) {
+		close(fd);
+		FOAM_MODITIFG_ERR("%s: error getting height: %s\n", device_name, strerror(errno));
+		return -1;
+	}
+	
+	if(ioctl(fd, GIOC_GET_DEPTH, &depth) < 0) {
+		close(fd);
+		FOAM_MODITIFG_ERR("%s: error getting depth: %s\n", device_name, strerror(errno));
+		return -1;
+	}
+#ifdef FOAM_MODITIFG_DEBUG
+	FOAM_MODITIFG_ERR("width x height x depth: %dx%dx%d\n", width, height, depth);
+#endif
+	
+	if(ioctl(fd, GIOC_GET_RAWSIZE, &rawsize) < 0) {
+		close(fd);
+		FOAM_MODITIFG_ERR("%s: error getting raw size: %s\n", device_name, strerror(errno));
+		return -1;
+	}
+	
+	if(ioctl(fd, GIOC_GET_PAGEDSIZE, &pagedsize) < 0) {
+		close(fd);
+		FOAM_MODITIFG_ERR("%s: error getting paged size: %s\n", device_name, strerror(errno));
+		return -1;
+	}
+#ifdef FOAM_MODITIFG_DEBUG
+	FOAM_MODITIFG_ERR("raw size: %d, paged size: %d\n", rawsize, pagedsize);
+#endif
+	
+	if(fcntl(fd, F_SETFL, fcntl (fd, F_GETFL, NULL) & ~O_NONBLOCK) < 0) {
+		close(fd);
+		FOAM_MODITIFG_ERR("%s: error setting blocking: %s\n", device_name, strerror(errno));
+		return -1;
+	}
 	
 	return 0;
 }
