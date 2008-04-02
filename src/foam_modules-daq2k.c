@@ -23,7 +23,7 @@
 	Especially take a look at the programmer's manual which has a useful function reference at the end.
  
 	This module can compile on its own:
-		gcc foam_modules-daq2k.c -lc -Wall -I../../../../misc/daqboard_iotech220_portedto26/include/ -L../../../../misc/daqboard_iotech220_portedto26/lib -ldaqx
+		gcc foam_modules-daq2k.c -lc -lm -ldaqx -Wall -I../../../../misc/daqboard_iotech220_portedto26/include/ -L../../../../misc/daqboard_iotech220_portedto26/lib
 
 	\section Functions
 	
@@ -93,7 +93,7 @@ static int initDaqDac(int board) {
 			return EXIT_FAILURE;
 		}
 #ifdef FOAM_MODDAQ2K_DEBUG
-		printf("%d...", board);
+		printf("%d...", chan);
 #endif		
 		
 	}
@@ -252,25 +252,25 @@ int drvDaqSetP2(int board, int port, int bitpat) {
 			if ((Daqiop2conf[board] & 0x01) != 0) // port is not output, can't write
 				return EXIT_FAILURE;
 
-			daqIOWrite(Daqfds[board], DiodtLocal8255, Diodp8255A, bitpat, DioepP2, 1);
+			daqIOWrite(Daqfds[board], DiodtLocal8255, Diodp8255A, 0, DioepP2, bitpat);
 			break;
 		case 1:
 			if ((Daqiop2conf[board] & 0x02) != 0) // port is not output, can't write
 				return EXIT_FAILURE;
 
-			daqIOWrite(Daqfds[board], DiodtLocal8255, Diodp8255B, bitpat, DioepP2, 1);
+			daqIOWrite(Daqfds[board], DiodtLocal8255, Diodp8255B, 0, DioepP2, bitpat);
 			break;
 		case 2:
 			if ((Daqiop2conf[board] & 0x04) != 0) // port is not output, can't write
 				return EXIT_FAILURE;
 
-			daqIOWrite(Daqfds[board], DiodtLocal8255, Diodp8255CHigh, bitpat, DioepP2, 1);
+			daqIOWrite(Daqfds[board], DiodtLocal8255, Diodp8255CHigh, 0, DioepP2, bitpat);
 			break ;
 		case 3:
 			if ((Daqiop2conf[board] & 0x08) != 0) // port is not output, can't write
 				return EXIT_FAILURE;
 
-			daqIOWrite(Daqfds[board], DiodtLocal8255, Diodp8255CLow, bitpat, DioepP2, 1);
+			daqIOWrite(Daqfds[board], DiodtLocal8255, Diodp8255CLow, 0, DioepP2, bitpat);
 			break;
 	}
 	
@@ -301,6 +301,9 @@ int main() {
 		exit(-1);
 	
 	printf("Opened DAQboard!\n");
+	
+	// set stdout to unbuffered, otherwise we won't see intermediate messages
+	setvbuf(stdout, NULL, _IONBF, 0);
 	
 	// setting digital IO ports now //
 	//////////////////////////////////
