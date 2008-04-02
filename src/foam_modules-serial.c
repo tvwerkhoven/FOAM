@@ -107,7 +107,7 @@ int main (int argc, char *argv[]) {
 	if (argc < 4) {
 		printf("Please run me as <script> <port> <begin> <end> and I "\
 		"will write 'XR0\\r' to serial port <port>, with 0 ranging "\
-		"from <begin> to <end>\n", cmd);
+		"from <begin> to <end>\n");
 		printf("In ao3 (tt3.h:170), values 1 thru 4 were used\n");
 		return -1;
 	}
@@ -115,7 +115,7 @@ int main (int argc, char *argv[]) {
 	int end = (int) strtol(argv[3], NULL, 10);
 	
 	printf("Printing 'XR0\\r' to serial port %s with 0 ranging from %d to "\
-		"%d\n", cmd, argv[1], beg, end);
+		"%d\n", argv[1], beg, end);
 	
 
 	for (i=beg; i<end+1; i++) {
