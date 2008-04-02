@@ -10,7 +10,7 @@
  For info, look at the source, it isn't that complicated (really)
  
  This module can compile on its own\n
- <tt>gcc foam_modules-serial.c -Wall -std=c99</tt>
+ <tt>gcc foam_modules-serial.c -Wall -std=c99 -DFOAM_MODSERIAL_ALONE=1</tt>
  
  \section Functions
  
@@ -64,7 +64,7 @@ int drvSetSerial(const char *port, const char *cmd) {
     if (fd == -1) {
 #ifdef FOAM_MODSERIAL_DEBUG
 		printf("Unable to access serial port %s: %s\n", port, strerror(errno));
-#elif
+#else
 		logErr("Unable to access serial port %s: %s", port, strerror(errno));
 #endif
 		return EXIT_FAILURE;
@@ -81,7 +81,7 @@ int drvSetSerial(const char *port, const char *cmd) {
 #ifdef FOAM_MODSERIAL_DEBUG
 		printf("Unable to write to serial port, asked to write %s (%d bytes) to %s, which failed: %s\n", \
 			   cmd, (int) strlen(cmd), port, strerror(errno));
-#elif
+#else
 		logErr("Unable to write to serial port, asked to write %s (%d bytes) to %s, which failed: %s", \
 		   cmd, (int) strlen(cmd), port, strerror(errno));
 
@@ -100,7 +100,7 @@ int drvSetSerial(const char *port, const char *cmd) {
 int main (int argc, char *argv[]) {
 	int i;
 	char cmd[4] = "XR0\r";
-	int fd, ret;
+	//int fd, ret;
 	char buf[4];
 	buf[3] = '\0';
 	
@@ -120,7 +120,7 @@ int main (int argc, char *argv[]) {
 
 	for (i=beg; i<end+1; i++) {
 		cmd[2] = i+0x30; // convert int to ASCII
-		printf("Trying to write '%s' to %s...", cmd, i, argv[1]);
+		printf("Trying to write '%s' to %s...", cmd, argv[1]);
 
 		if (drvSetSerial(argv[1], cmd) == -1) {
 			printf("failed.\n");
@@ -151,7 +151,7 @@ int main (int argc, char *argv[]) {
 	}
 	
 	cmd[2] = 6+0x30; // convert int to ASCII
-	printf("Trying to write '%s' to %s...", cmd, i, argv[1]);
+	printf("Trying to write '%s' to %s...", cmd, argv[1]);
 
 	if (drvSetSerial(argv[1], cmd) == -1)
 		printf("failed.\n");

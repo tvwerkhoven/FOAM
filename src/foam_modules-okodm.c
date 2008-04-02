@@ -145,7 +145,7 @@ static int okoOpen() {
 	if (Okofd < 0) {	
 #ifdef FOAM_MODOKODM_DEBUG
 		printf("Could not open port (%s) for Okotech DM: %s\n", FOAM_MODOKODM_PORT, strerror(errno));
-#elif
+#else
 		logWarn("Could not open port (%s) for Okotech DM: %s", FOAM_MODOKODM_PORT, strerror(errno));
 #endif
 		return EXIT_FAILURE;
@@ -216,7 +216,7 @@ static int okoWrite(int addr, int voltage) {
 	if (offset < 0) {
 #ifdef FOAM_MODOKODM_DEBUG
 		printf("Could not seek port %s: %s\n", FOAM_MODOKODM_PORT, strerror(errno));
-#elif
+#else
 		logWarn("Could not seek port %s: %s", FOAM_MODOKODM_PORT, strerror(errno));
 #endif
 		return EXIT_FAILURE;
@@ -225,7 +225,7 @@ static int okoWrite(int addr, int voltage) {
 	if (w_out != 1) {
 #ifdef FOAM_MODOKODM_DEBUG
 		printf("Could not write to port %s: %s\n", FOAM_MODOKODM_PORT, strerror(errno));
-#elif
+#else
 		logWarn("Could not write to port %s: %s", FOAM_MODOKODM_PORT, strerror(errno));
 #endif
 		return EXIT_FAILURE;
@@ -245,7 +245,7 @@ int drvSetOkoDM(gsl_vector_float *ctrl) {
 	if (Okodminit != 1) {
 #ifdef FOAM_MODOKODM_DEBUG
 		printf("Mirror not initialized yet, please do that first\n");
-#elif
+#else
 		logWarn("Mirror not initialized yet, please do that first");
 #endif
 		return EXIT_FAILURE;
@@ -275,7 +275,7 @@ int drvRstOkoDM() {
 	if (Okodminit != 1) {
 #ifdef FOAM_MODOKODM_DEBUG
 		printf("Mirror not initialized yet, please do that first\n");
-#elif
+#else
 		logWarn("Mirror not initialized yet, please do that first");
 #endif
 		return EXIT_FAILURE;
@@ -309,7 +309,7 @@ int drvCloseOkoDM() {
 	if (drvRstOkoDM() == EXIT_FAILURE) {
 #ifdef FOAM_MODOKODM_DEBUG
 		printf("Could not reset the DM to voltage %d\n", FOAM_MODOKODM_RSTVOLT);
-#elif
+#else
 		logWarn("Could not reset the DM to voltage %d", FOAM_MODOKODM_RSTVOLT);
 #endif		
 	};
@@ -318,7 +318,7 @@ int drvCloseOkoDM() {
 	if (Okodminit != 1)
 #ifdef FOAM_MODOKODM_DEBUG
 		printf("DM was never initialized! Trying to close FD anyone in case it's open, might cause an error\n");
-#elif
+#else
 		logWarn("DM was never initialized! Trying to close FD anyone in case it's open, might cause an error");
 #endif
 	
@@ -328,7 +328,7 @@ int drvCloseOkoDM() {
 	if (close(Okofd) < 0) {
 #ifdef FOAM_MODOKODM_DEBUG
 		printf("Could not close port (%s) for Okotech DM: %s\n", FOAM_MODOKODM_PORT, strerror(errno));
-#elif
+#else
 		logWarn("Could not close port (%s) for Okotech DM: %s", FOAM_MODOKODM_PORT, strerror(errno));
 #endif
 		return EXIT_FAILURE;

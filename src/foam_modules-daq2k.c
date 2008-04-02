@@ -227,7 +227,7 @@ static int initDaqDac(int board) {
 			daqFormatError(err, (PCHAR) errmsg);
 #ifdef FOAM_MODDAQ2K_DEBUG
 			printf("Error writing voltage to DAC ports for board %d: %s\n", board, errmsg);
-#elif
+#else
 			logWarn("Error writing voltage to DAC ports for board %d: %s", board, errmsg);
 #endif
 			Daqdacinit = 0;			
@@ -274,7 +274,7 @@ static int initDaqIOP2(int board) {
 		daqFormatError(err, (PCHAR) errmsg);
 #ifdef FOAM_MODDAQ2K_DEBUG
 		printf("Error configuring digital IO on 8255 for board %d: %s\n", board, errmsg);
-#elif
+#else
 		logWarn("Error configuring digital IO on 8255 for board %d: %s", board, errmsg);
 #endif
 		Daqiop2init = 0;			
@@ -289,7 +289,7 @@ static int initDaqIOP2(int board) {
 		daqFormatError(err, (PCHAR) errmsg);
 #ifdef FOAM_MODDAQ2K_DEBUG
 		printf("Error configuring digital IO on 8255 for board %d: %s\n", board, errmsg);
-#elif
+#else
 		logWarn("Error configuring digital IO on 8255 for board %d: %s", board, errmsg);
 #endif
 		Daqiop2init = 0;
@@ -322,7 +322,7 @@ int drvInitDaq2k() {
 		if (Daqfds[board] == -1) {
 #ifdef FOAM_MODDAQ2K_DEBUG
 			printf("Could not connect to board %d, %s: %s\n", board, Daqnames[board], strerror(errno));
-#elif
+#else
 			logWarn("Could not connect to board %d, %s: %s", board, Daqnames[board], strerror(errno));
 #endif
 		}
@@ -342,7 +342,7 @@ int drvInitDaq2k() {
 	if (Daqdacinit != 1 && Daqiop2init != 1) {
 #ifdef FOAM_MODDAQ2K_DEBUG
 		printf("Failed to set up Daqboards\n");
-#elif
+#else
 		logWarn("Failed to set up Daqboards");
 #endif
 		return EXIT_FAILURE;
@@ -352,14 +352,14 @@ int drvInitDaq2k() {
 	if (Daqiop2init != 1)
 #ifdef FOAM_MODDAQ2K_DEBUG
 		printf("Failed to set IO ports on some Daqboards\n");
-#elif
+#else
 		logWarn("Failed to set IO ports on some Daqboards");
 #endif
 	
 	if (Daqdacinit != 1)
 #ifdef FOAM_MODDAQ2K_DEBUG
 		printf("Failed to set up DAC units on some Daqboards\n");
-#elif
+#else
 		logWarn("Failed to set up DAC units on some Daqboards");
 #endif
 	
