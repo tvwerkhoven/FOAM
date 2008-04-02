@@ -308,7 +308,8 @@ int main() {
 	// setting digital IO ports now //
 	//////////////////////////////////
 	printf("Trying to set some bit patterns values on P2:\n");
-	printf("portA and portB (4b): ");
+	printf("\n");
+	printf("portA and portB (8b): ");
 	for (i=1; i<256; i *= 2) { 
 		printf("0x%u...", i);
 		if (drvDaqSetP2(0, 0, i) != EXIT_SUCCESS || drvDaqSetP2(0, 1, i) != EXIT_SUCCESS) 
@@ -324,9 +325,11 @@ int main() {
 	else 
 		printf("(ok), ");
 	
-	sleep(1);
 	printf("\n");
-	printf("portC low and high (8b): ");
+	sleep(1);
+	
+	printf("\n");
+	printf("portC low and high (4b): ");
 	for (i=1; i<16; i *= 2) {
 		printf("0x%u...", i);
 		if (drvDaqSetP2(0, 2, i) != EXIT_SUCCESS || drvDaqSetP2(0, 3, i) != EXIT_SUCCESS) 
@@ -345,18 +348,32 @@ int main() {
 	
 	printf("\n");
 	sleep(1);
+	printf("\n");
+	
+	// setting digital io now, do FW //
+	///////////////////////////////////
+	
+	printf("Will now drive filterwheel connected to port A, sending values 0 through 7 by using the first three bits\n");
+	for (i=0; i<8; i++) {
+		printf("0x%u...", i);
+		drvDaqSetP2(0,0,i)
+		sleep(1);
+	}
+	printf("done\n");
+	sleep(1);
 	
 	// setting analog outputs  now //
 	/////////////////////////////////
-	printf("Setting some voltages on the %d channels of board 0 now:\n", Daqchancount[0]);
-	printf("(going through the whole voltage range in 10 seconds)\n");
-	for (i=1; i<=100; i++) {
+	printf("Setting some voltages on all %d channels of board 0 now:\n", Daqchancount[0]);
+	printf("(going through the whole voltage range in 20 seconds)\n");
+	for (i=0; i<=100; i++) {
 		if (i % 10 == 0) printf("%d%%", i);
 		else printf(".");
 		drvDaqSetDACs(0, i*65536/100);
-		usleep(100000);
+		usleep(200000);
 	}
 	printf("..done\n");
+	printf("\n");
 		
 	drvCloseDaq2k();	
 	printf("Closed DAQboard!\n");
