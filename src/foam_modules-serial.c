@@ -90,7 +90,7 @@ int drvSetSerial(const char *port, const char *cmd) {
     close(fd);
 	
 #ifdef FOAM_MODSERIAL_DEBUG
-	printf("wrote to port\n", cmd);
+	printf("wrote to port\n");
 #endif
 	
 	return n;
@@ -149,8 +149,9 @@ int main (int argc, char *argv[]) {
 		// sleep for 5 seconds between each call if we are debugging
 		usleep(5000000);
 	}
+	i=6;
 	
-	cmd[2] = 6+0x30; // convert int to ASCII
+	cmd[2] = i+0x30; // convert int to ASCII
 	printf("Trying to write 'XR%d\\r' to %s...", i, argv[1]);
 
 	if (drvSetSerial(argv[1], cmd) == -1)
