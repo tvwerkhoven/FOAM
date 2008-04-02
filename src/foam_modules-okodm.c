@@ -294,7 +294,7 @@ int main () {
 	// now manually read stuff:
     off_t offset;
     int w_out;
-    int dat;
+    int dat=0;
 	
 	printf("Data set on %s, now reading back to see if it worked:\n",FOAM_MODOKODM_PORT);
 	
@@ -315,6 +315,8 @@ int main () {
 	}
 	printf("\n");
 	
+	return 0;
+
 	printf("Mirror does not give errors (good), now setting actuators one by one\n(skipping 0 because it is the substrate)\n");
 	printf("Settings acts with 0.25 second delay:...\n");
 	
