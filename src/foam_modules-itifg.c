@@ -18,14 +18,17 @@
 	which was released under the GPL version 2.
 */
 
+#define FOAM_MODITIFG_ALONE 1
 #define FOAM_MODITIFG_DEBUG 1
 #define FOAM_MODITIFG_DEV "/dev/ic0dma"
 #define FOAM_MODITIFG_MODULE 48
 
+#ifdef FOAM_MODITIFG_ALONE
+#define FOAM_MODITIFG_DEBUG 1
+#endif
+
 #ifdef FOAM_MODITIFG_DEBUG
 #define FOAM_MODITIFG_ERR printf
-#elif
-#define FOAM_MODITIFG_ERR logErr
 #endif
 
 //#include <foam_modules-itifg.h>
@@ -69,22 +72,6 @@
 
 int drvInitSensor();
 
-#ifdef FOAM_MODITIFG_DEBUG
-int main() {
-	// init vars
-	
-	printf("This is the debug version for ITIFG8\n");
-
-	// init cam
-	drvInitSensor();
-
-	// test image
-	
-	// cleanup
-	
-	return 0;
-}
-#endif
 
 int drvInitSensor() {
 	char device_name[] = FOAM_MODITIFG_DEV;
@@ -98,9 +85,7 @@ int drvInitSensor() {
 	
 	fd = open(device_name, flags);
 	if (!fd)
-		FOAM_MODITIFG_ERR("Error opening device %s: %s", device_name, strerror(errno));
-	
-	close(fd);
+		FOAM_MODITIFG_ERR("Error opening device %s: %s\n", device_name, strerror(errno));
 	
 	if (ioctl(fd, GIOC_SET_LUT_LIN) < 0) {
 		close(fd);
@@ -121,6 +106,7 @@ int drvInitSensor() {
 		close(fd);
 		FOAM_MODITIFG_ERR("%s: error getting camera configuration: %s\n", device_name, strerror(errno));
 	}
+	
 	// 
 	// int result;
 	// 
@@ -131,6 +117,23 @@ int drvInitSensor() {
 	
 	return 0;
 }
+
+#ifdef FOAM_MODITIFG_ALONE
+int main() {
+	// init vars
+	
+	printf("This is the debug version for ITIFG8\n");
+	
+	// init cam
+	drvInitSensor();
+	
+	// test image
+	
+	// cleanup
+	
+	return 0;
+}
+#endif
 
 /*
 There are two basic operation modes:
