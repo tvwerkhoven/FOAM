@@ -106,7 +106,7 @@ int main (int argc, char *argv[]) {
 	
 	if (argc < 4) {
 		printf("Please run me as <script> <port> <begin> <end> and I "\
-		"will write '%s' to serial port <port>, with 0 ranging "\
+		"will write 'XR0\\r' to serial port <port>, with 0 ranging "\
 		"from <begin> to <end>\n", cmd);
 		printf("In ao3 (tt3.h:170), values 1 thru 4 were used\n");
 		return -1;
@@ -114,13 +114,13 @@ int main (int argc, char *argv[]) {
 	int beg = (int) strtol(argv[2], NULL, 10);
 	int end = (int) strtol(argv[3], NULL, 10);
 	
-	printf("Printing '%s' to serial port %s with 0 ranging from %d to "\
+	printf("Printing 'XR0\\r' to serial port %s with 0 ranging from %d to "\
 		"%d\n", cmd, argv[1], beg, end);
 	
 
 	for (i=beg; i<end+1; i++) {
 		cmd[2] = i+0x30; // convert int to ASCII
-		printf("Trying to write '%s' to %s...", cmd, argv[1]);
+		printf("Trying to write 'XR%d\\r' to %s...", i, argv[1]);
 
 		if (drvSetSerial(argv[1], cmd) == -1) {
 			printf("failed.\n");
@@ -151,7 +151,7 @@ int main (int argc, char *argv[]) {
 	}
 	
 	cmd[2] = 6+0x30; // convert int to ASCII
-	printf("Trying to write '%s' to %s...", cmd, argv[1]);
+	printf("Trying to write 'XR%d\\r' to %s...", i, argv[1]);
 
 	if (drvSetSerial(argv[1], cmd) == -1)
 		printf("failed.\n");
