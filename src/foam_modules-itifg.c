@@ -21,6 +21,7 @@
 #define FOAM_MODITIFG_ALONE 1
 #define FOAM_MODITIFG_DEBUG 1
 #define FOAM_MODITIFG_DEV "/dev/ic0dma"
+#define FOAM_MODITIFG_CONFFILE ""
 #define FOAM_MODITIFG_MODULE 48
 
 #ifdef FOAM_MODITIFG_ALONE
@@ -75,7 +76,10 @@ int drvInitSensor();
 
 int drvInitSensor() {
 	char device_name[] = FOAM_MODITIFG_DEV;
-
+	char config_file[] = FOAM_MODITIFG_CONFFILE;
+	char camera_name[512];
+	char exo_name[512];
+	
 	// TvW: | O_SYNC | O_APPEND also used in test_itifg.c
 	int flags = O_RDWR;
 	int zero = 0;
@@ -83,37 +87,52 @@ int drvInitSensor() {
 	int fd;
 	union iti_cam_t cam;
 	
+	
 	fd = open(device_name, flags);
-	if (!fd)
+	if (fd == -1) {
 		FOAM_MODITIFG_ERR("Error opening device %s: %s\n", device_name, strerror(errno));
+		return EXIT_FAILURE;
+	}
 	
 	if (ioctl(fd, GIOC_SET_LUT_LIN) < 0) {
 		close(fd);
 		FOAM_MODITIFG_ERR("%s: error linearising LUTs: %s\n", device_name, strerror(errno));
+		return EXIT_FAILURE;
 	}
 	
 	if (ioctl(fd, GIOC_SET_DEFCNF, NULL) < 0) {
 		close(fd);
 		FOAM_MODITIFG_ERR("%s: error setting camera configuration: %s\n", device_name, strerror(errno));
+		return EXIT_FAILURE;
 	}	
 	
 	if (ioctl(fd, GIOC_SET_CAMERA, &zero) < 0) {
 		close(fd);
 		FOAM_MODITIFG_ERR("%s: error setting camera: %s\n", device_name, strerror(errno));
+		return EXIT_FAILURE;
 	}
 	
 	if (ioctl(fd, GIOC_GET_CAMCNF, &cam) < 0) {
 		close(fd);
 		FOAM_MODITIFG_ERR("%s: error getting camera configuration: %s\n", device_name, strerror(errno));
+		return EXIT_FAILURE;
 	}
 	
-	// 
-	// int result;
-	// 
-	// *camera_name = *exo_name = 0;
-	// FOAM_MODITIFG_MODULE
+	int result;	
+	*camera_name = *exo_name = 0;
 	
-	close(fd);
+	if ((result = iti_read_config(config_file, &cam, 0, FOAM_MODITIFG_MODULE, 0, camera_name, exo_name)) < 0) {
+		close(fd);
+		FOAM_MODITIFG_ERR("%s: error reading camera configuration: %s\n", device_name, strerror(errno));
+		return EXIT_FAILURE;		
+	}
+	
+	if (ioctl(fd, GIOC_SET_CAMCNF, &cam) < 0) {
+		close(fd);
+		FOAM_MODITIFG_ERR("%s: error setting camera configuration: %s\n", device_name, strerror(errno));
+		return EXIT_FAILURE;
+	}
+	
 	
 	return 0;
 }
