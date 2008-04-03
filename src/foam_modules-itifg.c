@@ -256,7 +256,7 @@ int drvInitBufs(mod_itifg_buf *buf, mod_itifg_cam *cam) {
 
 void drvInitGrab(mod_itifg_cam *cam) {
 	// reset stats if possible
-	ioctl(cam->fd, GIOC_SET_STATS, NULL);
+//	ioctl(cam->fd, GIOC_SET_STATS, NULL);
 	
 	// start the framegrabber by seeking a lot???
 	lseek(cam->fd, +LONG_MAX, SEEK_END);
@@ -269,7 +269,7 @@ void drvStopGrab(mod_itifg_cam *cam) {
 
 int drvGetImg(mod_itifg_cam *cam, mod_itifg_buf *buf, int timeout) {
 	int result;
-	struct iti_acc_t acc;
+//	struct iti_acc_t acc;
 	struct pollfd pfd = {cam->fd, POLLIN, 0};
 	
 	result = poll(&pfd, 1, timeout);
@@ -318,10 +318,10 @@ int main() {
 	// test image
 	for (i=0; i<10; i++) {
 		drvGetImg(&camera, &buffer, 1000);
-		printf("Frames grabbed: %lu\n", buffer->info->framenums.transfered);
+		printf("Frames grabbed: %lu\n", buffer.info->framenums.transfered);
 		printf("Pixels 1 through 100:\n");
 		for (j=0; j<100; j++)
-			printf("%d,", buffer->data[j]);
+			printf("%d,", buffer.data[j]);
 		
 		printf("\n");
 	}
