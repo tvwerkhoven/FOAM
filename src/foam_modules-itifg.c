@@ -318,10 +318,10 @@ int main() {
 	// test image
 	for (i=0; i<10; i++) {
 		drvGetImg(&camera, &buffer, 1000);
-		printf("Frames grabbed: %lu\n", buffer.info->framenums.transfered);
+		printf("Frames grabbed: %lu\n", buffer.info->acq->captured);
 		printf("Pixels 1 through 100:\n");
 		for (j=0; j<100; j++)
-			printf("%d,", buffer.data[j]);
+			printf("%d,", ((char *) (buffer.data)) + j);
 		
 		printf("\n");
 	}
