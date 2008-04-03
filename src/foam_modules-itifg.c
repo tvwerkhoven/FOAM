@@ -143,7 +143,7 @@ int drvInitSensor(mod_itifg_cam *cam) {
 	}
 	union iti_cam_t tmpcam;
 	
-	if (ioctl(cam->fd, GIOC_GET_CAMCNF, &tmpcam) < 0) {
+	if (ioctl(cam->fd, GIOC_GET_CAMCNF, &(cam->itcam)) < 0) {
 		close(cam->fd);
 		FOAM_MODITIFG_ERR("%s: error getting camera configuration: %s\n", cam->device_name, strerror(errno));
 		return EXIT_FAILURE;
@@ -151,7 +151,7 @@ int drvInitSensor(mod_itifg_cam *cam) {
 
 	
 //	if ((result = iti_read_config(cam->config_file, &(cam->itcam), 0, cam->module, 0, cam->camera_name, cam->exo_name)) < 0) {
-	if ((result = iti_read_config(cam->config_file, &(tmpcam), 0, cam->module, 0, cam->camera_name, cam->exo_name)) < 0) {
+	if ((result = iti_read_config(cam->config_file, &(cam->itcam), 0, cam->module, 0, cam->camera_name, cam->exo_name)) < 0) {
 		close(cam->fd);
 		FOAM_MODITIFG_ERR("%s: error reading camera configuration: %s\n", cam->device_name, strerror(errno));
 		return EXIT_FAILURE;		
@@ -160,7 +160,7 @@ int drvInitSensor(mod_itifg_cam *cam) {
 	FOAM_MODITIFG_ERR("Read config. Camera: '%s', exo: '%s'\n", cam->camera_name, cam->exo_name);
 #endif
 	
-	if (ioctl(cam->fd, GIOC_SET_CAMCNF, &(tmpcam)) < 0) {
+	if (ioctl(cam->fd, GIOC_SET_CAMCNF, &(cam->itcam)) < 0) {
 		close(cam->fd);
 		FOAM_MODITIFG_ERR("%s: error setting camera configuration: %s\n", cam->device_name, strerror(errno));
 		return EXIT_FAILURE;
