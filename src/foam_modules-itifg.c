@@ -3,11 +3,14 @@
 	@author @authortim
 	@date 2008-03-03 16:49
 
-	@brief This file contains routines to read out a PCDIG itifg camera.
+	@brief This file contains routines to read out a PCDIG framegrabber using the ITIFG driver.
 
 	\section Info
  
 	More documentation at the end of the source file (Hints for getting itifg running by Matthias Stein)
+ 
+	This module compiles on its own\n
+	<tt>gcc foam_modules-itifg.c -DFOAM_MODITIFG_ALONE=1 -Wall -lc -I../../../drivers/itifg-8.4.0-0/include/ -L../../../drivers/itifg-8.4.0-0/lib/ -litifg_g -lm -lc</tt>
 	
 	\section Functions
 	
@@ -38,14 +41,16 @@
 #include <stdlib.h> // more stuff
 #include <unistd.h> // for close()
 #include <string.h>	// for strerror (itifgExt.h)
-#include <errno.h>
+#include <errno.h>	// for errno
 #include <poll.h>	// for poll()
 #include <fcntl.h>	// for O_RDWR, open()
 #include <time.h>	// for itifgExt.h
-
+#include <limits.h>	// for LONG_MAX
 #include <math.h>	// ?
 
 #include <sys/ioctl.h>	// for ioctl()
+#include <sys/mman.h>	// for mmap()
+
 //#include <signal.h> // ?
 //#include <setjmp.h> // ?
 
@@ -251,18 +256,19 @@ int drvInitBufs(mod_itifg_buf *buf, mod_itifg_cam *cam) {
 
 void drvInitGrab(mod_itifg_cam *cam) {
 	// reset stats if possible
-	ioctl(card->fd, GIOC_SET_STATS, NULL);
+	ioctl(cam->fd, GIOC_SET_STATS, NULL);
 	
 	// start the framegrabber by seeking a lot???
-	lseek(card->fd, +LONG_MAX, SEEK_END);
+	lseek(cam->fd, +LONG_MAX, SEEK_END);
 }
 
 void drvStopGrab(mod_itifg_cam *cam) {
 	// start the framegrabber by seeking a lot???
-	lseek(card->fd, -LONG_MAX, SEEK_END);
+	lseek(cam->fd, -LONG_MAX, SEEK_END);
 }
 
 int drvGetImg(mod_itifg_cam *cam, mod_itifg_buf *buf, int timeout) {
+	int result;
 	struct iti_acc_t acc;
 	struct pollfd pfd = {cam->fd, POLLIN, 0};
 	
@@ -270,19 +276,20 @@ int drvGetImg(mod_itifg_cam *cam, mod_itifg_buf *buf, int timeout) {
 	if (result <= 0)
 		return EXIT_FAILURE;
 	
-	if (ioctl(cam->fd, GIOC_GET_STATS, &acc) < 0) {
-		FOAM_MODITIFG_ERR("Could not read framegrabber statistics");
-		return EXIT_FAILURE;
-	}
+//	if (ioctl(cam->fd, GIOC_GET_STATS, &acc) < 0) {
+//		FOAM_MODITIFG_ERR("Could not read framegrabber statistics");
+//		return EXIT_FAILURE;
+//	}
 	
-	buf->data = (void *)((char *)buf->map + ((acc.transfered - 1) % buf->frames) * cam->pagedsize);
+//	buf->data = (void *)((char *)buf->map + ((acc.transfered - 1) % buf->frames) * cam->pagedsize);
+	buf->data = (void *)((char *)buf->map + ((1 - 1) % buf->frames) * cam->pagedsize);
 	buf->info = (iti_info_t *)((char *)buf->data + cam->rawsize);
 	
 	// TvW: hoes does this work, exactly?
-	if (acc.transfered != info->framenums.transfered) {
-		FOAM_MODITIFG_ERR("Frame %lu not in right place in mmap area (%lu is in its spot)", acc.transfered, info->framenums.transfered);
-		return EXIT_FAILURE;
-	}
+//	if (acc.transfered != info->framenums.transfered) {
+//		FOAM_MODITIFG_ERR("Frame %lu not in right place in mmap area (%lu is in its spot)", acc.transfered, info->framenums.transfered);
+//		return EXIT_FAILURE;
+//	}
 	
 	return EXIT_SUCCESS;
 }
@@ -296,7 +303,7 @@ int drvStopBufs(mod_itifg_buf *buf, mod_itifg_cam *cam) {
 #ifdef FOAM_MODITIFG_ALONE
 int main() {
 	// init vars
-	int i;
+	int i, j;
 	mod_itifg_cam camera;
 	mod_itifg_buf buffer;
 	
@@ -311,10 +318,10 @@ int main() {
 	// test image
 	for (i=0; i<10; i++) {
 		drvGetImg(&camera, &buffer, 1000);
-		printf("Frames grabbed: %lu\n", buf->info->framenums.transfered);
+		printf("Frames grabbed: %lu\n", buffer->info->framenums.transfered);
 		printf("Pixels 1 through 100:\n");
 		for (j=0; j<100; j++)
-			printf("%d,", buf->data[j]);
+			printf("%d,", buffer->data[j]);
 		
 		printf("\n");
 	}
