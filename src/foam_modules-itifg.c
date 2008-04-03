@@ -316,14 +316,18 @@ int main() {
 	printf("This is the debug version for ITIFG8\n");
 	
 	// init cam
-	drvInitSensor(&camera);
+	if (drvInitSensor(&camera) != EXIT_SUCCESS)
+		return EXIT_FAILURE;
 	
 	// init bufs
-	drvInitBufs(&buffer, &camera);
+	if (drvInitBufs(&buffer, &camera) != EXIT_SUCCESS)
+		return EXIT_FAILURE;
 	
 	// test image
 	for (i=0; i<10; i++) {
-		drvGetImg(&camera, &buffer, 1000);
+		if (drvGetImg(&camera, &buffer, 1000) != EXIT_SUCCESS)
+			return EXIT_FAILURE;
+		
 		printf("Frames grabbed: %d\n", buffer.info->acq.captured);
 		printf("Pixels 1 through 100:\n");
 		for (j=0; j<100; j++)
