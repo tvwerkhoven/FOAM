@@ -122,17 +122,13 @@ int modWritePGMSurf(char *fname, SDL_Surface *img) {
 	return EXIT_SUCCESS;
 }
 
-int modWritePNGArr(char *fname, void *img, coord_t res, int type) {
+int modWritePNGArr(char *fname, void *imgc, coord_t res, int type) {
 	FILE *fd;
 	
-	if (type == 0) {
-		float *imgc;
-		imgc = (float *) img;
-	}
-	else if (type == 1) {
-		unsigned char *imgc;
-		imgc = (unsigned char *) img;
-	}
+	if (type == 0)
+		imgc = (float *) imgc;
+	else if (type == 1)
+		imgc = (unsigned char *) imgc;
 	else 
 		return EXIT_FAILURE;
 	
