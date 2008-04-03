@@ -93,7 +93,7 @@ typedef struct {
 	int fd;					//!< will hold FD to the framegrabber
 	size_t pagedsize;		//!< size of the complete frame + some metadata
 	size_t rawsize;			//!< size of the raw frame (width*height*depth)
-	union iti_cam_t cam;	//!< see iti_cam_t
+	union iti_cam_t itcam;	//!< see iti_cam_t
 	int module;				//!< 48 in mcmath setup
 	char device_name[512];	//!< something like '/dev/ic0dma'
 	char config_file[512];	//!< something like '../conffiles/dalsa-cad6.cam'
@@ -148,7 +148,10 @@ int drvInitSensor(mod_itifg_cam *cam) {
 		return EXIT_FAILURE;
 	}
 	
-	if ((result = iti_read_config(cam->config_file, &(cam->cam), 0, cam->module, 0, cam->camera_name, cam->exo_name)) < 0) {
+	union iti_cam_t tmpcam;
+	
+//	if ((result = iti_read_config(cam->config_file, &(cam->itcam), 0, cam->module, 0, cam->camera_name, cam->exo_name)) < 0) {
+	if ((result = iti_read_config(cam->config_file, &(tmpcam), 0, cam->module, 0, cam->camera_name, cam->exo_name)) < 0) {
 		close(cam->fd);
 		FOAM_MODITIFG_ERR("%s: error reading camera configuration: %s\n", cam->device_name, strerror(errno));
 		return EXIT_FAILURE;		
@@ -157,7 +160,7 @@ int drvInitSensor(mod_itifg_cam *cam) {
 	FOAM_MODITIFG_ERR("Read config. Camera: '%s', exo: '%s'\n", cam->camera_name, cam->exo_name);
 #endif
 	
-	if (ioctl(cam->fd, GIOC_SET_CAMCNF, &(cam->cam)) < 0) {
+	if (ioctl(cam->fd, GIOC_SET_CAMCNF, &(tmpcam)) < 0) {
 		close(cam->fd);
 		FOAM_MODITIFG_ERR("%s: error setting camera configuration: %s\n", cam->device_name, strerror(errno));
 		return EXIT_FAILURE;
