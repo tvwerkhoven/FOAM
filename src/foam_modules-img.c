@@ -127,13 +127,16 @@ int modWritePNGArr(char *fname, void *img, coord_t res, int type) {
 	
 	switch (type) {
 		case 0:
-			float *imgc = (float *) img;
+			float *imgc;
+			imgc = (float *) img;
 			break;
 		case 1:
-			unsigned char *imgc = (unsigned char *) img;
+			unsigned char *imgc;
+			imgc = (unsigned char *) img;
 			break;
 		case 2:
-			int  *imgc = (int *) img;
+			int  *imgc;
+			imgc = (int *) img;
 			break;
 		case 3:
 			return EXIT_FAILURE;

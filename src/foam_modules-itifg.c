@@ -9,8 +9,8 @@
  
 	More documentation at the end of the source file (Hints for getting itifg running by Matthias Stein)
  
-	This module compiles on its own\n
-	<tt>gcc foam_modules-itifg.c -DFOAM_MODITIFG_ALONE=1 -Wall -lc -I../../../drivers/itifg-8.4.0-0/include/ -L../../../drivers/itifg-8.4.0-0/lib/ -litifg_g -lm -lc</tt>
+	This module compiles on its own, but needs some dependencies\n
+	<tt>cc foam_modules-img.c  foam_modules-itifg.c -Wall -lc -I../../../drivers/itifg-8.4.0-0/include/ -L../../../drivers/itifg-8.4.0-0/lib/ -I. -litifg_g -lm -lc -g `sdl-config --libs --cflags`</tt>
 	
 	\section Functions
 	
