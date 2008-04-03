@@ -125,23 +125,16 @@ int modWritePGMSurf(char *fname, SDL_Surface *img) {
 int modWritePNGArr(char *fname, void *img, coord_t res, int type) {
 	FILE *fd;
 	
-	switch (type) {
-		case 0:
-			float *imgc;
-			imgc = (float *) img;
-			break;
-		case 1:
-			unsigned char *imgc;
-			imgc = (unsigned char *) img;
-			break;
-		case 2:
-			int  *imgc;
-			imgc = (int *) img;
-			break;
-		case 3:
-			return EXIT_FAILURE;
-			break;
+	if (type == 0) {
+		float *imgc;
+		imgc = (float *) img;
 	}
+	else if (type == 1) {
+		unsigned char *imgc;
+		imgc = (unsigned char *) img;
+	}
+	else 
+		return EXIT_FAILURE;
 	
 	float max, min, pix;
 	min = max = (float) imgc[0];
