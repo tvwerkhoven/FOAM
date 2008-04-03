@@ -74,6 +74,14 @@ foamcs_simdm_CFLAGS = $(SIMULATION_CFLAGS)
 foamcs_simdm_LDFLAGS = $(SIMULATION_LIBS)
 endif
 
+# Compile some debug programs for the hardware (okodm, daq, serial, itifg)
+#if DEBUG
+#bin_PROGRAMS += foamcs-debug-okodm
+#foamcs_debug_okodm_SOURCES = foam_modules-okodm.c
+#foamcs_debug_okodm_CPPFLAGS = -D
+
+#endif
+
 if ITIFG
 # this does not work ATM, no useful modules present
 bin_PROGRAMS += foamcs-itifg

@@ -39,14 +39,17 @@
 #include <unistd.h> // for close()
 #include <string.h>	// for strerror (itifgExt.h)
 #include <errno.h>
-//#include <signal.h> // ?
-//#include <setjmp.h> // ?
+#include <poll.h>	// for poll()
 #include <fcntl.h>	// for O_RDWR, open()
-#include <time.h> // for itifgExt.h
-//#include <termios.h> // ?
-#include <math.h> // ?
+#include <time.h>	// for itifgExt.h
+
+#include <math.h>	// ?
 
 #include <sys/ioctl.h>	// for ioctl()
+//#include <signal.h> // ?
+//#include <setjmp.h> // ?
+
+//#include <termios.h> // ?
 //#include <sys/param.h> // ?
 //#include <sys/stat.h> // ?
 //#include <sys/ipc.h> // ?
@@ -71,150 +74,259 @@
 #include "pcdigReg.h"
 #include "libitifg.h"
 
-int drvInitSensor();
+/*! @brief Struct which holds some data to initialize ITIFG cameras with
+ 
+ To initialize a camera, some information is needed. This is stored in this
+ struct that will be passed along to camera related functions. These 
+ functions will then fill in the blanks as much as possible, given some
+ data that is already present. See functions for details.
+ */
+typedef struct {
+	short width;			//!< will hold CCD width
+	short height;			//!< will hold CCD height
+	int depth;				//!< will hold CCD depth (i.e. 8bit)
+	int fd;					//!< will hold FD to the framegrabber
+	size_t pagedsize;		//!< size of the complete frame + some metadata
+	size_t rawsize;			//!< size of the raw frame (width*height*depth)
+	union iti_cam_t cam;	//!< Some
+	int module;				//!< 48 in mcmath setup
+	char device_name[512];	//!< something like '/dev/ic0dma'
+	char config_file[512];	//!< something like '../conffiles/dalsa-cad6.cam'
+	char camera_name[512];	//!< will be provided by itifg
+	char exo_name[512];		//!< will be provided by itifg
+} mod_itifg_cam;
 
+typedef struct {
+	int frames;				//!< how many frames should the buffer hold?
+	iti_info_t *info;		//!< this will point to information on the current frame
+	void *data;				//!< this will point to the current frame
+	void *map;				//!< this will point to the mmap()'ed memory
+} mod_itifg_buf;
 
-int drvInitSensor() {
-	char device_name[] = FOAM_MODITIFG_DEV;
-	char config_file[] = FOAM_MODITIFG_CONFFILE;
-	char camera_name[512];
-	char exo_name[512];
-	
+int drvInitSensor(mod_itifg_cam *cam);
+int drvInitBufs(mod_itifg_buf *buf, mod_itifg_cam *cam);
+
+int drvInitSensor(mod_itifg_cam *cam) {
 	// TvW: | O_SYNC | O_APPEND also used in test_itifg.c
 	int flags = O_RDWR;
 	int zero = 0;
 	int one = 1;
-	int fd;
-	union iti_cam_t cam;
-	
-	
-	fd = open(device_name, flags);
-	if (fd == -1) {
-		FOAM_MODITIFG_ERR("Error opening device %s: %s\n", device_name, strerror(errno));
+	int result;	
+		
+	cam->fd = open(cam->device_name, flags);
+	if (cam->fd == -1) {
+		FOAM_MODITIFG_ERR("Error opening device %s: %s\n", cam->camera_name, strerror(errno));
 		return EXIT_FAILURE;
 	}
 	
-	if (ioctl(fd, GIOC_SET_LUT_LIN) < 0) {
-		close(fd);
-		FOAM_MODITIFG_ERR("%s: error linearising LUTs: %s\n", device_name, strerror(errno));
+	if (ioctl(cam->fd, GIOC_SET_LUT_LIN) < 0) {
+		close(cam->fd);
+		FOAM_MODITIFG_ERR("%s: error linearising LUTs: %s\n", cam->camera_name, strerror(errno));
 		return EXIT_FAILURE;
 	}
 	
-	if (ioctl(fd, GIOC_SET_DEFCNF, NULL) < 0) {
-		close(fd);
-		FOAM_MODITIFG_ERR("%s: error setting camera configuration: %s\n", device_name, strerror(errno));
+	if (ioctl(cam->fd, GIOC_SET_DEFCNF, NULL) < 0) {
+		close(cam->fd);
+		FOAM_MODITIFG_ERR("%s: error setting camera configuration: %s\n", cam->camera_name, strerror(errno));
 		return EXIT_FAILURE;
 	}	
 	
-	if (ioctl(fd, GIOC_SET_CAMERA, &zero) < 0) {
-		close(fd);
-		FOAM_MODITIFG_ERR("%s: error setting camera: %s\n", device_name, strerror(errno));
+	if (ioctl(cam->fd, GIOC_SET_CAMERA, &zero) < 0) {
+		close(cam->fd);
+		FOAM_MODITIFG_ERR("%s: error setting camera: %s\n", cam->camera_name, strerror(errno));
 		return EXIT_FAILURE;
 	}
 	
-	if (ioctl(fd, GIOC_GET_CAMCNF, &cam) < 0) {
-		close(fd);
-		FOAM_MODITIFG_ERR("%s: error getting camera configuration: %s\n", device_name, strerror(errno));
+	if (ioctl(cam->fd, GIOC_GET_CAMCNF, &cam) < 0) {
+		close(cam->fd);
+		FOAM_MODITIFG_ERR("%s: error getting camera configuration: %s\n", cam->camera_name, strerror(errno));
 		return EXIT_FAILURE;
 	}
 	
-	int result;	
-	*camera_name = *exo_name = 0;
-	short width, height;
-	int depth;
-	int rawsize, pagedsize;
-	
-	if ((result = iti_read_config(config_file, &cam, 0, FOAM_MODITIFG_MODULE, 0, camera_name, exo_name)) < 0) {
-		close(fd);
-		FOAM_MODITIFG_ERR("%s: error reading camera configuration: %s\n", device_name, strerror(errno));
+	if ((result = iti_read_config(cam->config_file, &(cam->cam), 0, cam->module, 0, cam->camera_name, cam->exo_name)) < 0) {
+		close(cam->fd);
+		FOAM_MODITIFG_ERR("%s: error reading camera configuration: %s\n", cam->camera_name, strerror(errno));
 		return EXIT_FAILURE;		
 	}
 	
-	if (ioctl(fd, GIOC_SET_CAMCNF, &cam) < 0) {
-		close(fd);
-		FOAM_MODITIFG_ERR("%s: error setting camera configuration: %s\n", device_name, strerror(errno));
+	if (ioctl(cam->fd, GIOC_SET_CAMCNF, &(cam->cam)) < 0) {
+		close(cam->fd);
+		FOAM_MODITIFG_ERR("%s: error setting camera configuration: %s\n", cam->camera_name, strerror(errno));
 		return EXIT_FAILURE;
 	}
 	
-	if(ioctl(fd, GIOC_SET_TIMEOUT, &(struct timeval){0, 0}) < 0) {
-		close(fd);
-		FOAM_MODITIFG_ERR("%s: error setting timeout: %s\n", device_name, strerror(errno));
-		return -1;
+	if (ioctl(cam->fd, GIOC_SET_TIMEOUT, &(struct timeval){0, 0}) < 0) {
+		close(cam->fd);
+		FOAM_MODITIFG_ERR("%s: error setting timeout: %s\n", cam->camera_name, strerror(errno));
+		return EXIT_FAILURE;
 	}
-	FOAM_MODITIFG_ERR("timout set to {0,0}\n");
+#ifdef FOAM_MODITIFG_DEBUG
+	FOAM_MODITIFG_ERR("Timout set to {0,0}\n");
+#endif
 	
-	if(ioctl(fd, GIOC_SET_HDEC, &one) < 0) {
-		close(fd);
-		FOAM_MODITIFG_ERR("%s: error setting horizontal decimation: %s\n", device_name, strerror(errno));
-		return -1;
+	if(ioctl(cam->fd, GIOC_SET_HDEC, &one) < 0) {
+		close(cam->fd);
+		FOAM_MODITIFG_ERR("%s: error setting horizontal decimation: %s\n", cam->camera_name, strerror(errno));
+		return EXIT_FAILURE;
 	}
 	
-	if(ioctl(fd, GIOC_SET_VDEC, &one) < 0) {
-		close(fd);
-		FOAM_MODITIFG_ERR("%s: error setting vertical decimation: %s\n", device_name, strerror(errno));
-		return -1;
+	if(ioctl(cam->fd, GIOC_SET_VDEC, &one) < 0) {
+		close(cam->fd);
+		FOAM_MODITIFG_ERR("%s: error setting vertical decimation: %s\n", cam->camera_name, strerror(errno));
+		return EXIT_FAILURE;
 	}
 #ifdef FOAM_MODITIFG_DEBUG
 	FOAM_MODITIFG_ERR("decimation set to {0,0}\n");
 #endif
 	
-	if(ioctl(fd, GIOC_GET_WIDTH, &width) < 0) {
-		close(fd);
-		FOAM_MODITIFG_ERR("%s: error getting width: %s\n", device_name, strerror(errno));
-		return -1;
+	if(ioctl(cam->fd, GIOC_GET_WIDTH, &(cam->width)) < 0) {
+		close(cam->fd);
+		FOAM_MODITIFG_ERR("%s: error getting width: %s\n", cam->camera_name, strerror(errno));
+		return EXIT_FAILURE;
 	}
 	
-	if(ioctl(fd, GIOC_GET_HEIGHT, &height) < 0) {
-		close(fd);
-		FOAM_MODITIFG_ERR("%s: error getting height: %s\n", device_name, strerror(errno));
-		return -1;
+	if(ioctl(cam->fd, GIOC_GET_HEIGHT, &(cam->height)) < 0) {
+		close(cam->fd);
+		FOAM_MODITIFG_ERR("%s: error getting height: %s\n", cam->camera_name, strerror(errno));
+		return EXIT_FAILURE;
 	}
 	
-	if(ioctl(fd, GIOC_GET_DEPTH, &depth) < 0) {
-		close(fd);
-		FOAM_MODITIFG_ERR("%s: error getting depth: %s\n", device_name, strerror(errno));
-		return -1;
-	}
-#ifdef FOAM_MODITIFG_DEBUG
-	FOAM_MODITIFG_ERR("width x height x depth: %dx%dx%d\n", width, height, depth);
-#endif
-	
-	if(ioctl(fd, GIOC_GET_RAWSIZE, &rawsize) < 0) {
-		close(fd);
-		FOAM_MODITIFG_ERR("%s: error getting raw size: %s\n", device_name, strerror(errno));
-		return -1;
-	}
-	
-	if(ioctl(fd, GIOC_GET_PAGEDSIZE, &pagedsize) < 0) {
-		close(fd);
-		FOAM_MODITIFG_ERR("%s: error getting paged size: %s\n", device_name, strerror(errno));
-		return -1;
+	if(ioctl(cam->fd, GIOC_GET_DEPTH, &(cam->depth)) < 0) {
+		close(cam->fd);
+		FOAM_MODITIFG_ERR("%s: error getting depth: %s\n", cam->camera_name, strerror(errno));
+		return EXIT_FAILURE;
 	}
 #ifdef FOAM_MODITIFG_DEBUG
-	FOAM_MODITIFG_ERR("raw size: %d, paged size: %d\n", rawsize, pagedsize);
+	FOAM_MODITIFG_ERR("width x height x depth: %dx%dx%d\n", cam->width, cam->height, cam->depth);
 #endif
 	
-	if(fcntl(fd, F_SETFL, fcntl (fd, F_GETFL, NULL) & ~O_NONBLOCK) < 0) {
-		close(fd);
-		FOAM_MODITIFG_ERR("%s: error setting blocking: %s\n", device_name, strerror(errno));
-		return -1;
+	if(ioctl(cam->fd, GIOC_GET_RAWSIZE, &(cam->rawsize)) < 0) {
+		close(cam->fd);
+		FOAM_MODITIFG_ERR("%s: error getting raw size: %s\n", cam->camera_name, strerror(errno));
+		return EXIT_FAILURE;
 	}
 	
-	return 0;
+	if(ioctl(cam->fd, GIOC_GET_PAGEDSIZE, &(cam->pagedsize)) < 0) {
+		close(cam->fd);
+		FOAM_MODITIFG_ERR("%s: error getting paged size: %s\n", cam->camera_name, strerror(errno));
+		return EXIT_FAILURE;
+	}
+#ifdef FOAM_MODITIFG_DEBUG
+	FOAM_MODITIFG_ERR("raw size: %d, paged size: %d\n", cam->rawsize, cam->pagedsize);
+#endif
+	
+	if (fcntl(cam->fd, F_SETFL, fcntl(cam->fd, F_GETFL, NULL) & ~O_NONBLOCK) < 0) {
+		close(cam->fd);
+		FOAM_MODITIFG_ERR("%s: error setting blocking: %s\n", cam->camera_name, strerror(errno));
+		return EXIT_FAILURE;
+	}
+
+#ifdef FOAM_MODITIFG_DEBUG
+	FOAM_MODITIFG_ERR("Camera configuration done.");
+#endif
+	
+	return EXIT_SUCCESS;
 }
+
+int drvInitBufs(mod_itifg_buf *buf, mod_itifg_cam *cam) {
+	
+	// start mmap
+	buf->map = mmap(NULL, cam->pagedsize * buf->frames, PROT_READ | PROT_WRITE, MAP_SHARED, cam->fd, 0);
+	
+	if (buf->map == (void *)-1) {
+		FOAM_MODITIFG_ERR("Could not mmap(): %s\n", strerror(errno));
+		return EXIT_FAILURE;
+	}
+	
+	buf->data = buf->map;
+	buf->info = (iti_info_t *)((char *)buf->data + cam->rawsize);
+	//lseek +LONG_MAX SEEK_END
+
+#ifdef FOAM_MODITIFG_DEBUG
+	FOAM_MODITIFG_ERR("mmap() success");
+#endif
+	
+	return EXIT_SUCCESS;
+}
+
+void drvInitGrab(mod_itifg_cam *cam) {
+	// reset stats if possible
+	ioctl(card->fd, GIOC_SET_STATS, NULL);
+	
+	// start the framegrabber by seeking a lot???
+	lseek(card->fd, +LONG_MAX, SEEK_END);
+}
+
+void drvStopGrab(mod_itifg_cam *cam) {
+	// start the framegrabber by seeking a lot???
+	lseek(card->fd, -LONG_MAX, SEEK_END);
+}
+
+int drvGetImg(mod_itifg_cam *cam, mod_itifg_buf *buf, int timeout) {
+	struct iti_acc_t acc;
+	struct pollfd pfd = {cam->fd, POLLIN, 0};
+	
+	result = poll(&pfd, 1, timeout);
+	if (result <= 0)
+		return EXIT_FAILURE;
+	
+	if (ioctl(cam->fd, GIOC_GET_STATS, &acc) < 0) {
+		FOAM_MODITIFG_ERR("Could not read framegrabber statistics");
+		return EXIT_FAILURE;
+	}
+	
+	buf->data = (void *)((char *)buf->map + ((acc.transfered - 1) % buf->frames) * cam->pagedsize);
+	buf->info = (iti_info_t *)((char *)buf->data + cam->rawsize);
+	
+	// TvW: hoes does this work, exactly?
+	if (acc.transfered != info->framenums.transfered) {
+		FOAM_MODITIFG_ERR("Frame %lu not in right place in mmap area (%lu is in its spot)", acc.transfered, info->framenums.transfered);
+		return EXIT_FAILURE;
+	}
+	
+	return EXIT_SUCCESS;
+}
+
+int drvStopBufs(mod_itifg_buf *buf, mod_itifg_cam *cam) {
+	munmap(buf->map, cam->pagedsize * buf->frames);
+	return EXIT_SUCCESS;
+}
+
 
 #ifdef FOAM_MODITIFG_ALONE
 int main() {
 	// init vars
+	int i;
+	mod_itifg_cam camera;
+	mod_itifg_buf buffer;
 	
 	printf("This is the debug version for ITIFG8\n");
 	
 	// init cam
-	drvInitSensor();
+	drvInitSensor(&camera);
+	
+	// init bufs
+	drvInitBufs(&buffer, &camera);
 	
 	// test image
+	for (i=0; i<10; i++) {
+		drvGetImg(&camera, &buffer, 1000);
+		printf("Frames grabbed: %lu\n", buf->info->framenums.transfered);
+		printf("Pixels 1 through 100:\n");
+		for (j=0; j<100; j++)
+			printf("%d,", buf->data[j]);
+		
+		printf("\n");
+	}
+	
+	printf("cleaning up now\n");
 	
 	// cleanup
+	drvStopGrab(&camera);
+	drvStopBufs(&buffer, &camera);
+	
+	// end
+	printf("exit\n");
 	
 	return 0;
 }

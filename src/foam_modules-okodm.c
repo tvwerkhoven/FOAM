@@ -206,11 +206,15 @@ static void okoSetAddr() {
 static int okoWrite(int addr, int voltage) {
 	off_t offset;
 	ssize_t w_out;
+	unsigned char volt8;
 	
 	// make sure we NEVER exceed the maximum voltage
 	// this is a cheap way to guarantee that (albeit inaccurate)
 	// however, if voltage > 255, things are bad anyway
 	voltage = voltage & FOAM_MODOKODM_MAXVOLT;
+	
+	// store data in 8bit char, as we only write one byte
+	volt8 = (unsigned char) voltage;
 	
 	offset = lseek(Okofd, addr, SEEK_SET);
 	if (offset < 0) {
@@ -221,7 +225,7 @@ static int okoWrite(int addr, int voltage) {
 #endif
 		return EXIT_FAILURE;
 	}
-	w_out = write(Okofd, &voltage, 1);
+	w_out = write(Okofd, &volt8, 1);
 	if (w_out != 1) {
 #ifdef FOAM_MODOKODM_DEBUG
 		printf("Could not write to port %s: %s\n", FOAM_MODOKODM_PORT, strerror(errno));
@@ -230,11 +234,7 @@ static int okoWrite(int addr, int voltage) {
 #endif
 		return EXIT_FAILURE;
 	}
-	
-#ifdef FOAM_MODOKODM_DEBUG
-	printf("(w: %d), ", (int) offset);
-#endif
-		   
+			   
 	return EXIT_SUCCESS;
 }
 
@@ -259,7 +259,7 @@ int drvSetOkoDM(gsl_vector_float *ctrl) {
 			return EXIT_FAILURE;
 
 #ifdef FOAM_MODOKODM_DEBUG
-		printf("(%d) ", volt);
+		//printf("(%d) ", volt);
 #endif		
 	}
 #ifdef FOAM_MODOKODM_DEBUG
@@ -370,33 +370,39 @@ int main () {
 		printf("Could not set voltages\n");
 		return EXIT_FAILURE;
 	}
-		
-	// now manually read stuff:
-    off_t offset;
-    int w_out;
-    int dat=0;
-	
-	printf("Data set on %s, now reading back to see if it worked:\n",FOAM_MODOKODM_PORT);
-	
-	for (i=1; i<FOAM_MODOKODM_NCHAN; i++) {
-		if ((offset=lseek(Okofd, Okoaddr[i], SEEK_SET)) < 0) {
-			fprintf(stderr,"Can not lseek %s\n", FOAM_MODOKODM_PORT);
-			return EXIT_FAILURE;
-		}
-		printf("(s: %d), ", (int) offset);
 
-		if ((w_out=read(Okofd, &dat,1)) != 1) {
-			fprintf(stderr,"Can not read %s\n", FOAM_MODOKODM_PORT);   
-			return EXIT_FAILURE;
-		}
-		printf("(%d, %#x) ", i, dat);
-//		sleeping between read calls is not really necessary, pci is fast enough
-//		usleep(1000000);
-	}
-	printf("\n");
+//	reading back from a PCI card is not always possible,
+//	and apparantly it does not work here :P
+//
+//	// now manually read stuff:
+//    off_t offset;
+//    int w_out;
+//    int dat=0;
+//	
+//	printf("Data set on %s, now reading back to see if it worked:\n",FOAM_MODOKODM_PORT);
+//	
+//	for (i=1; i<FOAM_MODOKODM_NCHAN; i++) {
+//		if ((offset=lseek(Okofd, Okoaddr[i], SEEK_SET)) < 0) {
+//			fprintf(stderr,"Can not lseek %s\n", FOAM_MODOKODM_PORT);
+//			return EXIT_FAILURE;
+//		}
+//		printf("(s: %d), ", (int) offset);
+//
+//		if ((w_out=read(Okofd, &dat,1)) != 1) {
+//			fprintf(stderr,"Can not read %s\n", FOAM_MODOKODM_PORT);   
+//			return EXIT_FAILURE;
+//		}
+//		printf("(%d, %#x) ", i, dat);
+////		sleeping between read calls is not really necessary, pci is fast enough
+////		usleep(1000000);
+//	}
+//	printf("\n");
 
 	printf("Mirror does not give errors (good), now setting actuators one by one\n(skipping 0 because it is the substrate)\n");
 	printf("Settings acts with 0.25 second delay:...\n");
+
+	// do unbuffered printing
+	setvbuf(stdout, NULL, _IONBF, 0);
 	
 	for (i=0; i<FOAM_MODOKODM_NCHAN-1; i++) {
 		// set all to zero
@@ -406,8 +412,6 @@ int main () {
 		gsl_vector_float_set(ctrl, i, 1);
 		
 		printf("%d...", i);
-		// because we don't add a \n, we need fflush
-		fflush(stdout);
 		if (drvSetOkoDM(ctrl) == EXIT_FAILURE) {
 			printf("Could not set voltages!\n");
 			return EXIT_FAILURE;
@@ -416,26 +420,37 @@ int main () {
 	}
 	printf("done\n");
 	
-	printf("Settings single actuators randomly over the DM a 1000 times without delay:...");
-	for (i=0; i<1000; i++) {
-		// set all to zero
-		gsl_vector_float_set_zero(ctrl);
+
+	
+	printf("Settings actuators to low (0) and high (%d) volts repeatedly:...\n", FOAM_MODOKODM_MAXVOLT);
+	for (i=0; i<20; i++) {
+		// set all to -1
+		printf("lo..");
+		gsl_vector_float_set_all(ctrl, -1.0);
 		
-		// set one to 1 (max)
-		gsl_vector_float_set(ctrl, (int) drand48()*(FOAM_MODOKODM_NCHAN-1), 1);
-		
-		printf(".");
-		fflush(stdout);
-		if (drvSetOkoDM(ctrl) == EXIT_FAILURE) {
-			printf("Could not set voltages!\n");
+		if (drvSetOkoDM(ctrl) != EXIT_SUCCESS) {
+			printf("FAILED");
 			return EXIT_FAILURE;
 		}
+		
+		sleep(1);
+		printf("hi..");
+
+		gsl_vector_float_set_all(ctrl, 1.0);
+		
+		if (drvSetOkoDM(ctrl) != EXIT_SUCCESS) {
+			printf("FAILED");
+			return EXIT_FAILURE;
+		}
+		
+		sleep(1);
 	}
 	printf("done, cleaning up\n");
 	
 	if (drvCloseOkoDM() == EXIT_FAILURE)
 		return EXIT_FAILURE;
 	
+	printf("exit.\n");
 	return 0;
 }
 #endif
