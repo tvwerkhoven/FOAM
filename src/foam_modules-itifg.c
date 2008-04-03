@@ -314,6 +314,7 @@ int main() {
 	buffer.frames = 4; // ringbuffer will be 4 frames big
 	
 	printf("This is the debug version for ITIFG8\n");
+	printf("Trying to do something with '%s' using '%s'\n", camera.device_name, camera.config_file);
 	
 	// init cam
 	if (drvInitSensor(&camera) != EXIT_SUCCESS)
