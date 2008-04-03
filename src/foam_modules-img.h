@@ -10,7 +10,7 @@
 
 #include "foam_cs_library.h"		// we link to the main program here (i.e. we use common (log) functions)
 #include "SDL_image.h"				// we need this to read image files
-#include "gd.h"						// we need this to write png/jpg files
+#include <gd.h>						// we need this to write png/jpg files
 
 /*!
 @brief Reads a pgm file from disk into an SDL_Surface
@@ -51,8 +51,9 @@ int modWritePNGSurf(char *fname, SDL_Surface *img);
  @param [in] *fname the filename to write
  @param [in] *img the float array that holds the image
  @param [in] res the resolution of img
+ @param [in] type the datatype of *img, 0 for float, 1 for unsigned char
  */
-int modWritePNGArr(char *fname, float *img, coord_t res);
+int modWritePNGArr(char *fname, void *img, coord_t res, int type);
 
 /*!
  @brief Writes a 8-bit PNG file for an float image to disk

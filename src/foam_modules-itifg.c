@@ -44,7 +44,7 @@
 #include <foam_cs_library.h>
 #endif
 
-#include <stdio.h>	// for stuff
+#include <stdio.h>	// for stuff (asprintf)
 #include <stdlib.h> // more stuff
 #include <unistd.h> // for close()
 #include <string.h>	// for strerror (itifgExt.h)
@@ -338,7 +338,7 @@ int main() {
 	if (drvInitBufs(&buffer, &camera) != EXIT_SUCCESS)
 		return EXIT_FAILURE;
 
-	coordt_t res;
+	coord_t res;
 	res.x = (int) camera.width;
 	res.y = (int) camera.height;
 	
@@ -356,7 +356,7 @@ int main() {
 		asprintf(&file, "itifg-%s-cap-%d.png", camera.device_name, i);
 		printf("Writing frame to disk (%s)\n", file);
 
-		modWritePNGArr(file, ((unsigned char *) (buffer.data)), res, 1);
+		modWritePNGArr(file, ((void *) (buffer.data)), res, 1);
 	}
 	
 	printf("cleaning up now\n");
