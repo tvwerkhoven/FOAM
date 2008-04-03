@@ -93,7 +93,7 @@ typedef struct {
 	int fd;					//!< will hold FD to the framegrabber
 	size_t pagedsize;		//!< size of the complete frame + some metadata
 	size_t rawsize;			//!< size of the raw frame (width*height*depth)
-	union iti_cam_t cam;	//!< Some
+	union iti_cam_t cam;	//!< see iti_cam_t
 	int module;				//!< 48 in mcmath setup
 	char device_name[512];	//!< something like '/dev/ic0dma'
 	char config_file[512];	//!< something like '../conffiles/dalsa-cad6.cam'
@@ -307,6 +307,12 @@ int main() {
 	mod_itifg_cam camera;
 	mod_itifg_buf buffer;
 	
+	camera.module = 48; // some number taken from test_itifg
+	strncpy(camera.device_name, "/dev/ic0dma", 512-1);
+	strncpy(camera.config_file, "../conffiles/dalsa-cad6.cam", 512-1);
+
+	buffer.frames = 4; // ringbuffer will be 4 frames big
+	
 	printf("This is the debug version for ITIFG8\n");
 	
 	// init cam
@@ -318,7 +324,7 @@ int main() {
 	// test image
 	for (i=0; i<10; i++) {
 		drvGetImg(&camera, &buffer, 1000);
-		printf("Frames grabbed: %lu\n", buffer.info->acq->captured);
+		printf("Frames grabbed: %d\n", buffer.info->acq.captured);
 		printf("Pixels 1 through 100:\n");
 		for (j=0; j<100; j++)
 			printf("%d,", *( ((char *) (buffer.data)) + j) );
