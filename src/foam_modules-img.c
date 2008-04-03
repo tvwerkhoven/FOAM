@@ -124,19 +124,10 @@ int modWritePGMSurf(char *fname, SDL_Surface *img) {
 
 int modWritePNGArr(char *fname, void *imgc, coord_t res, int type) {
 	FILE *fd;
-	
-	if (type == 0)
-		imgc = (float *) imgc;
-	else if (type == 1)
-		imgc = (unsigned char *) imgc;
-	else 
-		return EXIT_FAILURE;
-	
 	float max, min, pix;
-	min = max = (float) imgc[0];
 	int x, y, i;
 	int gray[256];
-	
+
 	gdImagePtr im;
 	
 	// allocate image
@@ -145,21 +136,51 @@ int modWritePNGArr(char *fname, void *imgc, coord_t res, int type) {
 	// generate grayscales
 	for (i=0; i<256; i++)
 		gray[i] = gdImageColorAllocate(im, i, i, i);
-	
-	// check maximum & min
-	for (x=0; x< res.x*res.y; x++) {
-		pix = (float) imgc[x];
-		if (pix > max) max = pix;
-		else if (pix < min) min = pix;
-	}
-	
-	// set pixels in image
-	for (y=0; y< res.y; y++) {
-		for (x=0; x< res.x; x++) {
-			pix = 255*((float) imgc[y*res.x + x]-min)/(max-min);
-			gdImageSetPixel(im, x, y, gray[(int) pix]);
+
+	// Begin branching depending on datatype //
+	///////////////////////////////////////////
+	if (type == 0) {
+		imgc = (float *) imgc;
+		min = max = (float) imgc[0];
+		// check maximum & min
+		for (x=0; x< res.x*res.y; x++) {
+			pix = (float) imgc[x];
+			if (pix > max) max = pix;
+			else if (pix < min) min = pix;
 		}
+		
+		// set pixels in image
+		for (y=0; y< res.y; y++) {
+			for (x=0; x< res.x; x++) {
+				pix = 255*((float) imgc[y*res.x + x]-min)/(max-min);
+				gdImageSetPixel(im, x, y, gray[(int) pix]);
+			}
+		}		
 	}
+	else if (type == 1) {
+		imgc = (unsigned char *) imgc;
+		
+		min = max = (float) imgc[0];
+		// check maximum & min
+		for (x=0; x< res.x*res.y; x++) {
+			pix = (float) imgc[x];
+			if (pix > max) max = pix;
+			else if (pix < min) min = pix;
+		}
+		
+		// set pixels in image
+		for (y=0; y< res.y; y++) {
+			for (x=0; x< res.x; x++) {
+				pix = 255*((float) imgc[y*res.x + x]-min)/(max-min);
+				gdImageSetPixel(im, x, y, gray[(int) pix]);
+			}
+		}		
+	}
+	else 
+		return EXIT_FAILURE;
+	
+	///////////////////
+	// End Branching //
 	
 	// write image to file as png, wb is necessary under dos, harmless under linux
 	fd = fopen(fname, "wb");
@@ -271,21 +292,22 @@ int modStorPNGSurf(char *filename, char *post, int seq, SDL_Surface *img) {
 
 Uint32 getPixel(SDL_Surface *surface, int x, int y) {
     int bpp = surface->format->BytesPerPixel;
-    /* Here p is the address to the pixel we want to retrieve */
+    // Here p is the address to the pixel we want to retrieve
     Uint8 *p = (Uint8 *)surface->pixels + y * surface->pitch + x * bpp;
+
     switch(bpp) {
-    case 1:
-        return *p;
-    case 2:
-        return *(Uint16 *)p;
-    case 3:
-        if (SDL_BYTEORDER == SDL_BIG_ENDIAN)
-            return p[0] << 16 | p[1] << 8 | p[2];
-        else
-            return p[0] | p[1] << 8 | p[2] << 16;
-    case 4:
-        return *(Uint32 *)p;
-    default:
-        return 0;       /* shouldn't happen, but avoids warnings */
+		case 1:
+			return *p;
+		case 2:
+			return *(Uint16 *)p;
+		case 3:
+			if (SDL_BYTEORDER == SDL_BIG_ENDIAN)
+				return p[0] << 16 | p[1] << 8 | p[2];
+			else
+				return p[0] | p[1] << 8 | p[2] << 16;
+		case 4:
+			return *(Uint32 *)p;
+		default:
+			return 0;       // shouldn't happen, but avoids warnings
     }
 }
