@@ -122,10 +122,26 @@ int modWritePGMSurf(char *fname, SDL_Surface *img) {
 	return EXIT_SUCCESS;
 }
 
-int modWritePNGArr(char *fname, float *img, coord_t res) {
+int modWritePNGArr(char *fname, void *img, coord_t res, int type) {
 	FILE *fd;
+	
+	switch (type) {
+		case 0:
+			float *imgc = (float *) img;
+			break;
+		case 1:
+			unsigned char *imgc = (unsigned char *) img;
+			break;
+		case 2:
+			int  *imgc = (int *) img;
+			break;
+		case 3:
+			return EXIT_FAILURE;
+			break;
+	}
+	
 	float max, min, pix;
-	min = max = img[0];
+	min = max = (float) imgc[0];
 	int x, y, i;
 	int gray[256];
 	
@@ -140,7 +156,7 @@ int modWritePNGArr(char *fname, float *img, coord_t res) {
 	
 	// check maximum & min
 	for (x=0; x< res.x*res.y; x++) {
-		pix = img[x];
+		pix = (float) imgc[x];
 		if (pix > max) max = pix;
 		else if (pix < min) min = pix;
 	}
@@ -148,7 +164,7 @@ int modWritePNGArr(char *fname, float *img, coord_t res) {
 	// set pixels in image
 	for (y=0; y< res.y; y++) {
 		for (x=0; x< res.x; x++) {
-			pix = 255*(img[y*res.x + x]-min)/(max-min);
+			pix = 255*((float) imgc[y*res.x + x]-min)/(max-min);
 			gdImageSetPixel(im, x, y, gray[(int) pix]);
 		}
 	}
@@ -237,7 +253,7 @@ int modStorPNGArr(char *filename, char *post, int seq, float *img, coord_t res) 
 //	for (i = 0; i < ptc.wfs_count; i++) {
 	snprintf(filename, COMMANDLEN, "foam_capture-%s_%05d-%s.png", date, seq, post);
 	logDebug(0, "Storing capture to %s", filename);
-	modWritePNGArr(filename, img, res);
+	modWritePNGArr(filename, img, res, 0);
 //	}
 	
 	return EXIT_SUCCESS;

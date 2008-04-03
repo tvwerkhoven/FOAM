@@ -37,6 +37,13 @@
 
 //#include <foam_modules-itifg.h>
 
+#ifdef FOAM_MODITIFG_ALONE
+// used for writing the frames
+#include <foam_modules-img.h>
+// necessary for coord_t
+#include <foam_cs_library.h>
+#endif
+
 #include <stdio.h>	// for stuff
 #include <stdlib.h> // more stuff
 #include <unistd.h> // for close()
@@ -312,10 +319,11 @@ int main() {
 	int i, j;
 	mod_itifg_cam camera;
 	mod_itifg_buf buffer;
+	char *file;
 	
 	camera.module = 48; // some number taken from test_itifg
 	strncpy(camera.device_name, "/dev/ic0dma", 512-1);
-	strncpy(camera.config_file, "../conffiles/dalsa-cad6.cam", 512-1);
+	strncpy(camera.config_file, "../conffiles/dalsa-cad6-pcd.cam", 512-1);
 
 	buffer.frames = 4; // ringbuffer will be 4 frames big
 	
@@ -329,6 +337,10 @@ int main() {
 	// init bufs
 	if (drvInitBufs(&buffer, &camera) != EXIT_SUCCESS)
 		return EXIT_FAILURE;
+
+	coordt_t res;
+	res.x = (int) camera.width;
+	res.y = (int) camera.height;
 	
 	// test image
 	for (i=0; i<10; i++) {
@@ -338,9 +350,13 @@ int main() {
 		printf("Frames grabbed: %d\n", buffer.info->acq.captured);
 		printf("Pixels 1 through 100:\n");
 		for (j=0; j<100; j++)
-			printf("%d,", *( ((char *) (buffer.data)) + j) );
+			printf("%d,", *( ((unsigned char *) (buffer.data)) + j) );
 		
 		printf("\n");
+		asprintf(&file, "itifg-%s-cap-%d.png", camera.device_name, i);
+		printf("Writing frame to disk (%s)\n", file);
+
+		modWritePNGArr(file, ((unsigned char *) (buffer.data)), res, 1);
 	}
 	
 	printf("cleaning up now\n");
