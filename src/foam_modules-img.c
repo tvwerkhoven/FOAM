@@ -140,11 +140,12 @@ int modWritePNGArr(char *fname, void *imgc, coord_t res, int type) {
 	// Begin branching depending on datatype //
 	///////////////////////////////////////////
 	if (type == 0) {
-		imgc = (float *) imgc;
-		min = max = (float) imgc[0];
+		//imgc = (float *) imgc;
+		float *img = (float *) imgc;
+		min = max = (float) img[0];
 		// check maximum & min
 		for (x=0; x< res.x*res.y; x++) {
-			pix = (float) imgc[x];
+			pix = (float) img[x];
 			if (pix > max) max = pix;
 			else if (pix < min) min = pix;
 		}
@@ -152,18 +153,18 @@ int modWritePNGArr(char *fname, void *imgc, coord_t res, int type) {
 		// set pixels in image
 		for (y=0; y< res.y; y++) {
 			for (x=0; x< res.x; x++) {
-				pix = 255*((float) imgc[y*res.x + x]-min)/(max-min);
+				pix = 255*((float) img[y*res.x + x]-min)/(max-min);
 				gdImageSetPixel(im, x, y, gray[(int) pix]);
 			}
 		}		
 	}
 	else if (type == 1) {
-		imgc = (unsigned char *) imgc;
+		unsigned char *img = (unsigned char *) imgc;
 		
-		min = max = (float) imgc[0];
+		min = max = (float) img[0];
 		// check maximum & min
 		for (x=0; x< res.x*res.y; x++) {
-			pix = (float) imgc[x];
+			pix = (float) img[x];
 			if (pix > max) max = pix;
 			else if (pix < min) min = pix;
 		}
@@ -171,7 +172,7 @@ int modWritePNGArr(char *fname, void *imgc, coord_t res, int type) {
 		// set pixels in image
 		for (y=0; y< res.y; y++) {
 			for (x=0; x< res.x; x++) {
-				pix = 255*((float) imgc[y*res.x + x]-min)/(max-min);
+				pix = 255*((float) img[y*res.x + x]-min)/(max-min);
 				gdImageSetPixel(im, x, y, gray[(int) pix]);
 			}
 		}		

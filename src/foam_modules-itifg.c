@@ -323,7 +323,7 @@ int main() {
 	
 	camera.module = 48; // some number taken from test_itifg
 	strncpy(camera.device_name, "/dev/ic0dma", 512-1);
-	strncpy(camera.config_file, "../conffiles/dalsa-cad6-pcd.cam", 512-1);
+	strncpy(camera.config_file, "../config/dalsa-cad6-pcd.cam", 512-1);
 
 	buffer.frames = 4; // ringbuffer will be 4 frames big
 	
@@ -353,7 +353,7 @@ int main() {
 			printf("%d,", *( ((unsigned char *) (buffer.data)) + j) );
 		
 		printf("\n");
-		asprintf(&file, "itifg-%s-cap-%d.png", camera.device_name, i);
+		asprintf(&file, "itifg-debug-cap-%d.png",  i);
 		printf("Writing frame to disk (%s)\n", file);
 
 		modWritePNGArr(file, ((void *) (buffer.data)), res, 1);
