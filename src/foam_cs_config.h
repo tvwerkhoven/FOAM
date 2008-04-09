@@ -9,6 +9,11 @@
 	te rest of @name.
 */
 
+// INCLUDE AUTOCONF //
+/********************/
+
+#include "config.h"
+
 // USER CONFIG BEGIN //
 /*********************/
 #ifndef FOAM_CS_CONFIG
@@ -18,13 +23,7 @@
 #define FILENAMELEN 64				//!< maximum length for logfile names (no need to touch)
 #define COMMANDLEN 1024				//!< maximum length for commands we read over the socket (no need to touch)
 
-#define FOAM_NAME "FOAM CS"			//!< some info about FOAM
-#define FOAM_VERSION "v0.4.0-130 Mar"	//!< FOAM version
-#define FOAM_AUTHOR "Tim van Werkhoven" //!< FOAM author
-
 #define MAX_CLIENTS 8				//!< maximum number of clients that can connect
- 									// (allows for easy implementation of connection tracking)
-
-#define MAX_THREADS 4				//!< number of threads besides the main thread that can be created (not really used)
+#define MAX_THREADS 4				//!< number of threads besides the main thread that can be created (unused atm)
 
 #endif /* FOAM_CS_CONFIG */

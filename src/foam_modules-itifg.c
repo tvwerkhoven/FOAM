@@ -10,7 +10,7 @@
 	More documentation at the end of the source file (Hints for getting itifg running by Matthias Stein)
  
 	This module compiles on its own, but needs some dependencies\n
-	<tt>cc foam_modules-img.c  foam_modules-itifg.c -Wall -lc -I../../../drivers/itifg-8.4.0-0/include/ -L../../../drivers/itifg-8.4.0-0/lib/ -I. -litifg_g -lm -lc -g `sdl-config --libs --cflags`</tt>
+	<tt>gcc foam_modules-img.c foam_modules-itifg.c -DFOAM_MODITIFG_ALONE=1 -Wall -lc -I../../../drivers/itifg-8.4.0-0/include/ -L../../../drivers/itifg-8.4.0-0/lib/ -I. -litifg_g -lm -lc -g `sdl-config --libs --cflags`</tt>
 	
 	\section Functions
 	
@@ -21,8 +21,8 @@
 	which was released under the GPL version 2.
 */
 
-#define FOAM_MODITIFG_ALONE 1
-#define FOAM_MODITIFG_DEBUG 1
+//#define FOAM_MODITIFG_ALONE 1
+//#define FOAM_MODITIFG_DEBUG 1
 #define FOAM_MODITIFG_DEV "/dev/ic0dma"
 #define FOAM_MODITIFG_CONFFILE "../config/dalsa-cad6-pcd.cam"
 #define FOAM_MODITIFG_MODULE 48
@@ -130,12 +130,13 @@ int drvInitSensor(mod_itifg_cam *cam) {
 		FOAM_MODITIFG_ERR("Error opening device %s: %s\n", cam->device_name, strerror(errno));
 		return EXIT_FAILURE;
 	}
-	
-	if (ioctl(cam->fd, GIOC_SET_LUT_LIN) < 0) {
-		close(cam->fd);
-		FOAM_MODITIFG_ERR("%s: error linearising LUTs: %s\n", cam->device_name, strerror(errno));
-		return EXIT_FAILURE;
-	}
+
+// ???:tim:20080408 might not be necessary?
+//	if (ioctl(cam->fd, GIOC_SET_LUT_LIN) < 0) {
+//		close(cam->fd);
+//		FOAM_MODITIFG_ERR("%s: error linearising LUTs: %s\n", cam->device_name, strerror(errno));
+//		return EXIT_FAILURE;
+//	}
 	
 	if (ioctl(cam->fd, GIOC_SET_DEFCNF, NULL) < 0) {
 		close(cam->fd);
@@ -160,11 +161,11 @@ int drvInitSensor(mod_itifg_cam *cam) {
 //	if ((result = iti_read_config(cam->config_file, &(cam->itcam), 0, cam->module, 0, cam->camera_name, cam->exo_name)) < 0) {
 	if ((result = iti_read_config(cam->config_file, &(cam->itcam), 0, cam->module, 0, cam->camera_name, cam->exo_name)) < 0) {
 		close(cam->fd);
-		FOAM_MODITIFG_ERR("%s: error reading camera configuration: %s\n", cam->device_name, strerror(errno));
+		FOAM_MODITIFG_ERR("%s: error reading camera configuration from file %s: %s\n", cam->device_name, cam->config_file, strerror(errno));
 		return EXIT_FAILURE;		
 	}
 #ifdef FOAM_MODITIFG_DEBUG
-	FOAM_MODITIFG_ERR("Read config. Camera: '%s', exo: '%s'\n", cam->camera_name, cam->exo_name);
+	FOAM_MODITIFG_ERR("Read config '%s'. Camera: '%s', exo: '%s'\n", cam->config_file, cam->camera_name, cam->exo_name);
 #endif
 	
 	if (ioctl(cam->fd, GIOC_SET_CAMCNF, &(cam->itcam)) < 0) {
@@ -173,14 +174,14 @@ int drvInitSensor(mod_itifg_cam *cam) {
 		return EXIT_FAILURE;
 	}
 	
-	if (ioctl(cam->fd, GIOC_SET_TIMEOUT, &(struct timeval){0, 0}) < 0) {
-		close(cam->fd);
-		FOAM_MODITIFG_ERR("%s: error setting timeout: %s\n", cam->device_name, strerror(errno));
-		return EXIT_FAILURE;
-	}
-#ifdef FOAM_MODITIFG_DEBUG
-	FOAM_MODITIFG_ERR("Timout set to {0,0}\n");
-#endif
+//	if (ioctl(cam->fd, GIOC_SET_TIMEOUT, &(struct timeval){0, 0}) < 0) {
+//		close(cam->fd);
+//		FOAM_MODITIFG_ERR("%s: error setting timeout: %s\n", cam->device_name, strerror(errno));
+//		return EXIT_FAILURE;
+//	}
+//#ifdef FOAM_MODITIFG_DEBUG
+//	FOAM_MODITIFG_ERR("Timout set to {0,0}\n");
+//#endif
 	
 	if(ioctl(cam->fd, GIOC_SET_HDEC, &one) < 0) {
 		close(cam->fd);
@@ -194,7 +195,7 @@ int drvInitSensor(mod_itifg_cam *cam) {
 		return EXIT_FAILURE;
 	}
 #ifdef FOAM_MODITIFG_DEBUG
-	FOAM_MODITIFG_ERR("decimation set to {0,0}\n");
+	FOAM_MODITIFG_ERR("decimation set to {1,1} (i.e. we want full frames)\n");
 #endif
 	
 	if(ioctl(cam->fd, GIOC_GET_WIDTH, &(cam->width)) < 0) {
@@ -261,7 +262,7 @@ int drvInitBufs(mod_itifg_buf *buf, mod_itifg_cam *cam) {
 	//lseek +LONG_MAX SEEK_END
 
 #ifdef FOAM_MODITIFG_DEBUG
-	FOAM_MODITIFG_ERR("mmap() success");
+	FOAM_MODITIFG_ERR("mmap() successful.");
 #endif
 	
 	return EXIT_SUCCESS;
