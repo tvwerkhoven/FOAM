@@ -21,8 +21,8 @@
 	which was released under the GPL version 2.
 */
 
-//#define FOAM_MODITIFG_ALONE 1
-//#define FOAM_MODITIFG_DEBUG 1
+#define FOAM_MODITIFG_ALONE 1
+#define FOAM_MODITIFG_DEBUG 1
 #define FOAM_MODITIFG_DEV "/dev/ic0dma"
 #define FOAM_MODITIFG_CONFFILE "../config/dalsa-cad6-pcd.cam"
 #define FOAM_MODITIFG_MODULE 48
@@ -39,10 +39,11 @@
 
 #ifdef FOAM_MODITIFG_ALONE
 // used for writing the frames
-#include <foam_modules-img.h>
+#include "foam_modules-img.h"
 // necessary for coord_t
-#include <foam_cs_library.h>
+#include "foam_cs_library.h"
 #endif
+
 
 #include <stdio.h>	// for stuff (asprintf)
 #include <stdlib.h> // more stuff
@@ -57,6 +58,8 @@
 
 #include <sys/ioctl.h>	// for ioctl()
 #include <sys/mman.h>	// for mmap()
+
+
 
 //#include <signal.h> // ?
 //#include <setjmp.h> // ?

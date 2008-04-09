@@ -1,5 +1,6 @@
 # init the bin_programs variable
-bin_PROGRAMS = serial-test okodm-test daq2k-test itifg-test
+bin_PROGRAMS = serial-test okodm-test daq2k-test
+# itifg-test done manually
 
 # some shared compiler flags which must always be used
 # (not using AM_* flags because of http://sourceware.org/automake/automake.html#Flag-Variables-Ordering)
@@ -17,7 +18,8 @@ HAVE_DMALLOC=1
 
 SRCDIR=$(abs_top_srcdir)/src
 
-
+# we don't need or use the common libs here
+LIBS=
 
 # serial module test
 serial_test_SOURCES = $(SRCDIR)/foam_modules-serial.c
@@ -37,9 +39,17 @@ daq2k_test_LDFLAGS = -lc -lm -ldaqx -L/home/tim/foam/drivers/lib
 daq2k_test_CFLAGS = -std=c99
 
 # itifg test
-itifg_test_SOURCES = $(SRCDIR)/foam_modules-img.c $(SRCDIR)/foam_modules-itifg.c
-itifg_test_CPPFLAGS = -DFOAM_MODITIFG_ALONE=1 `sdl-config --cflags` -I/home/tim/foam/drivers/itifg/include
-itifg_test_LDFLAGS = -lc -lm `sdl-config --libs` -L/home/tim/foam/drivers/itifg/lib
-itifg_test_CFLAGS = -Wall
+#itifg_test_SOURCES = $(SRCDIR)/foam_cs_library.c $(SRCDIR)/foam_modules-img.c $(SRCDIR)/foam_modules-itifg.c
+#itifg_test_CPPFLAGS = -DFOAM_MODITIFG_ALONE=1 -DLinux `sdl-config --cflags` -I/home/tim/foam/drivers/itifg/include
+#itifg_test_LDFLAGS = -lm -lc -lgd -lpng -lSDL_image `sdl-config --libs` /home/tim/foam/drivers/itifg/lib/libitifg.a 
+#itifg_test_CFLAGS = -Wall -g 
 
-
+# here comes the itifg hack:
+itifg-test: $(SRCDIR)/foam_cs_library.c $(SRCDIR)/foam_modules-img.c $(SRCDIR)/foam_modules-itifg.c
+	$(CC) $(CFLAGS) $(GFLAGS) $(LIFLAGS) $(LLFLAGS) \
+	-I/home/tim/foam/drivers/itifg/include  \
+	-L/home/tim/foam/drivers/itifg/lib  \
+	-I/home/tim/foam/trunk/code/src/ \
+	-o $@ $^ \
+	-litifg -lm -lc -g \
+	-lgd -lpng -lSDL_image `sdl-config --libs --cflags`
