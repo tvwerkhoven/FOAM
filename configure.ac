@@ -4,12 +4,13 @@
 AC_INIT([FOAM], [alpha-r195-2008-04-02], [T.I.M.vanWerkhoven@phys.uu.nl])
 AC_COPYRIGHT([Copyright 2007-2008 Tim van Werkhoven <T.I.M.vanWerkhoven@phys.uu.nl>])
 
-AC_CONFIG_HEADERS([config.h])
+AC_CONFIG_HEADERS([src/config.h])
 AC_CONFIG_AUX_DIR([build-aux])
 AC_CONFIG_FILES([
 Makefile
 src/Makefile
 config/Makefile
+testing/Makefile
 ])
 
 AM_INIT_AUTOMAKE([-Wall -Werror foreign])
@@ -20,7 +21,7 @@ AC_PROG_CPP
 AC_PROG_MAKE_SET
 AC_PROG_INSTALL
 
-# We'd like C99 enabled
+# We'd like C99 enabled - breaks GSL, some define goes wrong
 #AC_PROG_CC_C99
 # We'd like const to work
 AC_C_CONST
@@ -31,10 +32,6 @@ AC_SEARCH_LIBS([event_init], [event] ,[], AC_MSG_ERROR([This package needs libev
 AC_SEARCH_LIBS([pthread_create], [pthread] ,[], AC_MSG_ERROR([This package needs libpthread.]) ) 
 AC_SEARCH_LIBS([gsl_blas_dgemm],[gsl], [], AC_MSG_ERROR([This package needs libgsl.]) ) 
 AC_SEARCH_LIBS([cblas_dgemm],[gslcblas], [], AC_MSG_ERROR([This package needs a cblas supplied with gsl like atlas]) ) 
-
-m4_foreach([lib], [[foo], [bar, baz]],
-                     [echo myvar
-          ])
 
 # save common libs (this is kinda ugly)
 COMMON_LIBS=$LIBS

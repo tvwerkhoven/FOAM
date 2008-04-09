@@ -132,15 +132,35 @@ To get ITIFG running
   - Install groff to be able to make documentation
     (fixes: 'can't find macro file m')
 
-  - Configure the ITIFG driver
+  - Build the ITIFG driver
     (see README, or make config && make depend && make && make statc)
 
+  - To get the right FPGA file loaded into memory (necessary for test_itifg),
+    either run 'cat fpgafiles/<file.exo> > /dev/ic0cfg' or change the DEFAULT
+	param in release/config_itifg. Make sure the exo file in conffile/file.cam
+	is identical.
+	(fixes: 'FPGA geometry does not match' like errors)
+  
   - Insert the module (sudo insmod src/osdep/itifg8.ko)
+  
+  - Run the configuration scripts (makedev_itifg and config_itifg)
+    Make sure these are executable:
+	cd release/ && chmod +x makedev_itifg perms_itifg rulesd_itifg rules_itifg
+	initd_itifg config_itifg
+	
+  - Run the testscript (bin/test_itifg)
+    To save images using test_itifg, edit bin/Makefile, and add
+	 '-DSAVE_TIFF -ltiff -ljpeg -lz' 
+	to the
+	 '$(TEST_1): test_itifg.c' 
+	target. Note that it is -lz and not -lgz!
 
   - Check for errors (sudo tail -n 100 /var/log/messages|syslog)
 
   - Optionally: use the debug module (itifg8_g.ko) and check for
-    verbosity in the log files.
+    verbosity in the log files. 
+    NOTE: itifg_g is extremely verbose, potentially clogging up
+	logfiles. Since it logs to debug, syslog and kern.log
 
 To get the DaqBoard/2000 running
 ================================
@@ -226,6 +246,20 @@ The make command outputs the compiler commands used. Check the failing
 command and try to see if the libraries required (-lxxxxx like -lm or
 -lgsl) are indeed in one of the directories specified by -L, OR in a
 default system directory.
+
+ITIFG errors
+============
+
+* Modprobing fails: 'insmod: error inserting 'src/osdep/itifg8_g.ko': -1 
+  Invalid module format'
+
+This can mean that the module is compiled with a different version of gcc then
+the kernel itself. Check /var/log/syslog, if it says something like: 
+
+  'itifg8: version magic '2.6.18 SMP mod_unload 686 REGPARM gcc-4.1' should 
+  be '2.6.18 SMP mod_unload 686 REGPARM gcc-3.4'
+
+then this is most probably the case.  
 
 Common errors
 =============
