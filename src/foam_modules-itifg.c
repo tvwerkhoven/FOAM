@@ -59,19 +59,17 @@
 #include <sys/ioctl.h>	// for ioctl()
 #include <sys/mman.h>	// for mmap()
 
-
-
 //#include <signal.h> // ?
 //#include <setjmp.h> // ?
 
-//#include <termios.h> // ?
-//#include <sys/param.h> // ?
-//#include <sys/stat.h> // ?
-//#include <sys/ipc.h> // ?
-//#include <sys/shm.h> // ?
-//#include <sys/mman.h> // ?
-//#include <sys/poll.h> // ?
-//#include <sys/wait.h> // ?
+#include <termios.h> // ?
+#include <sys/param.h> // ?
+#include <sys/stat.h> // ?
+#include <sys/ipc.h> // ?
+#include <sys/shm.h> // ?
+#include <sys/mman.h> // ?
+#include <sys/poll.h> // ?
+#include <sys/wait.h> // ?
 
 // #include <X11/Xos.h>
 // #include <X11/Xlib.h>

@@ -247,6 +247,12 @@ command and try to see if the libraries required (-lxxxxx like -lm or
 -lgsl) are indeed in one of the directories specified by -L, OR in a
 default system directory.
 
+crt1.o errors
+=============
+
+Make sure you install glibc-devel or something similar. See 
+http://gcc.gnu.org/ml/gcc-bugs/2001-02/msg00713.html for example.
+
 ITIFG errors
 ============
 
