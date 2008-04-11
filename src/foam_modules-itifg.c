@@ -87,7 +87,7 @@
 #include "pcdigReg.h"
 #include "libitifg.h"
 
-/*! @brief Struct which holds some data to initialize ITIFG cameras with
+/*! @brief Struct which holds some data to /nitialize ITIFG cameras with
  
  To initialize a camera, some information is needed. This is stored in this
  struct that will be passed along to camera related functions. These 
@@ -242,7 +242,7 @@ int drvInitSensor(mod_itifg_cam *cam) {
 	}
 
 #ifdef FOAM_MODITIFG_DEBUG
-	FOAM_MODITIFG_ERR("Camera configuration done.");
+	FOAM_MODITIFG_ERR("Camera configuration done.\n");
 #endif
 	
 	return EXIT_SUCCESS;
@@ -263,7 +263,7 @@ int drvInitBufs(mod_itifg_buf *buf, mod_itifg_cam *cam) {
 	//lseek +LONG_MAX SEEK_END
 
 #ifdef FOAM_MODITIFG_DEBUG
-	FOAM_MODITIFG_ERR("mmap() successful.");
+	FOAM_MODITIFG_ERR("mmap() successful.\n");
 #endif
 	
 	return EXIT_SUCCESS;
@@ -272,12 +272,18 @@ int drvInitBufs(mod_itifg_buf *buf, mod_itifg_cam *cam) {
 void drvInitGrab(mod_itifg_cam *cam) {
 	// reset stats if possible
 //	ioctl(cam->fd, GIOC_SET_STATS, NULL);
+#ifdef FOAM_MODITIFG_DEBUG
+	FOAM_MODITIFG_ERR("Starting grab, lseeking to %ld.\n", +LONG_MAX);
+#endif
 	
 	// start the framegrabber by seeking a lot???
 	lseek(cam->fd, +LONG_MAX, SEEK_END);
 }
 
 void drvStopGrab(mod_itifg_cam *cam) {
+#ifdef FOAM_MODITIFG_DEBUG
+	FOAM_MODITIFG_ERR("Stopping grab, lseeking to %ld.\n", -LONG_MAX);
+#endif
 	// start the framegrabber by seeking a lot???
 	lseek(cam->fd, -LONG_MAX, SEEK_END);
 }
@@ -285,11 +291,23 @@ void drvStopGrab(mod_itifg_cam *cam) {
 int drvGetImg(mod_itifg_cam *cam, mod_itifg_buf *buf, int timeout) {
 	int result;
 //	struct iti_acc_t acc;
-	struct pollfd pfd = {cam->fd, POLLIN, 0};
-	
-	result = poll(&pfd, 1, timeout);
-	if (result <= 0)
+	//struct pollfd pfd = {cam->fd, POLLIN, 0};
+#ifdef FOAM_MODITIFG_DEBUG
+	FOAM_MODITIFG_ERR("Grabbing image...\n");	
+#endif
+	fd_set in_fdset, ex_fdset;
+	FD_ZERO (&in_fdset);
+	FD_ZERO (&ex_fdset);
+	FD_SET (cam->fd, &in_fdset);
+	FD_SET (cam->fd, &ex_fdset);
+
+	//result = poll(&pfd, 1, timeout);
+	result = select(1024, &in_fdset, NULL, &ex_fdset, NULL);
+
+	if (result <= 0) {
 		return EXIT_FAILURE;
+		FOAM_MODITIFG_ERR("Select() returned no active FD's\n");
+	}
 	
 //	if (ioctl(cam->fd, GIOC_GET_STATS, &acc) < 0) {
 //		FOAM_MODITIFG_ERR("Could not read framegrabber statistics");
@@ -339,6 +357,9 @@ int main() {
 	// init bufs
 	if (drvInitBufs(&buffer, &camera) != EXIT_SUCCESS)
 		return EXIT_FAILURE;
+
+	// init grab
+	drvInitGrab(&camera);
 
 	coord_t res;
 	res.x = (int) camera.width;
