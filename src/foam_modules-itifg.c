@@ -59,17 +59,17 @@
 #include <sys/ioctl.h>	// for ioctl()
 #include <sys/mman.h>	// for mmap()
 
+#include <sys/time.h>	// for timeval
 //#include <signal.h> // ?
 //#include <setjmp.h> // ?
 
-#include <termios.h> // ?
-#include <sys/param.h> // ?
-#include <sys/stat.h> // ?
-#include <sys/ipc.h> // ?
-#include <sys/shm.h> // ?
-#include <sys/mman.h> // ?
-#include <sys/poll.h> // ?
-#include <sys/wait.h> // ?
+//#include <termios.h> // ?
+//#include <sys/param.h> // ?
+//#include <sys/stat.h> // ?
+//#include <sys/ipc.h> // ?
+//#include <sys/shm.h> // ?
+//#include <sys/poll.h> // ?
+//#include <sys/wait.h> // ?
 
 // #include <X11/Xos.h>
 // #include <X11/Xlib.h>
@@ -150,7 +150,7 @@ int drvInitSensor(mod_itifg_cam *cam) {
 		FOAM_MODITIFG_ERR("%s: error setting camera: %s\n", cam->device_name, strerror(errno));
 		return EXIT_FAILURE;
 	}
-	union iti_cam_t tmpcam;
+	//union iti_cam_t tmpcam;
 	
 	if (ioctl(cam->fd, GIOC_GET_CAMCNF, &(cam->itcam)) < 0) {
 		close(cam->fd);
@@ -269,7 +269,7 @@ int drvInitBufs(mod_itifg_buf *buf, mod_itifg_cam *cam) {
 	return EXIT_SUCCESS;
 }
 
-void drvInitGrab(mod_itifg_cam *cam) {
+int drvInitGrab(mod_itifg_cam *cam) {
 	// reset stats if possible
 //	ioctl(cam->fd, GIOC_SET_STATS, NULL);
 #ifdef FOAM_MODITIFG_DEBUG
@@ -277,18 +277,29 @@ void drvInitGrab(mod_itifg_cam *cam) {
 #endif
 	
 	// start the framegrabber by seeking a lot???
-	lseek(cam->fd, +LONG_MAX, SEEK_END);
+	if ( lseek(cam->fd, +LONG_MAX, SEEK_END) == -1) {
+		FOAM_MODITIFG_ERR("Error starting grab: %s\n", strerror(errno));
+		return EXIT_FAILURE;
+	}
+
+	return EXIT_SUCCESS;
 }
 
-void drvStopGrab(mod_itifg_cam *cam) {
+int drvStopGrab(mod_itifg_cam *cam) {
 #ifdef FOAM_MODITIFG_DEBUG
 	FOAM_MODITIFG_ERR("Stopping grab, lseeking to %ld.\n", -LONG_MAX);
 #endif
-	// start the framegrabber by seeking a lot???
-	lseek(cam->fd, -LONG_MAX, SEEK_END);
+	// stop the framegrabber by seeking a lot???
+	if ( lseek(cam->fd, -LONG_MAX, SEEK_END) == -1) {
+		FOAM_MODITIFG_ERR("Error starting grab: %s\n", strerror(errno));
+		return EXIT_FAILURE;
+	}
+
+	return EXIT_SUCCESS;
 }
 
 int drvGetImg(mod_itifg_cam *cam, mod_itifg_buf *buf, int timeout) {
+	off_t seek;
 	int result;
 //	struct iti_acc_t acc;
 	//struct pollfd pfd = {cam->fd, POLLIN, 0};
@@ -304,20 +315,41 @@ int drvGetImg(mod_itifg_cam *cam, mod_itifg_buf *buf, int timeout) {
 	//result = poll(&pfd, 1, timeout);
 	result = select(1024, &in_fdset, NULL, &ex_fdset, NULL);
 
-	if (result <= 0) {
+	if (result <= 0)  {
+		FOAM_MODITIFG_ERR("Select() returned no active FD's, error:%s\n", strerror(errno));
 		return EXIT_FAILURE;
-		FOAM_MODITIFG_ERR("Select() returned no active FD's\n");
 	}
+
 	
+	seek = lseek(cam->fd, 0, SEEK_CUR);
+	if (seek == -1) {
+		FOAM_MODITIFG_ERR("SEEK_CUR faild: %s\n", strerror(errno));
+		return EXIT_FAILURE;
+	}
+
+#ifdef FOAM_MODITIFG_DEBUG
+	FOAM_MODITIFG_ERR("Select returned: %d, seek_cur: %d\n", result, (int) seek);	
+#endif
 //	if (ioctl(cam->fd, GIOC_GET_STATS, &acc) < 0) {
 //		FOAM_MODITIFG_ERR("Could not read framegrabber statistics");
 //		return EXIT_FAILURE;
 //	}
 	
-//	buf->data = (void *)((char *)buf->map + ((acc.transfered - 1) % buf->frames) * cam->pagedsize);
+//	buf->data = (void *)((char *)buf->map + ((int) seek % (buf->frames * cam->pagedsize)));
 	buf->data = (void *)((char *)buf->map + ((1 - 1) % buf->frames) * cam->pagedsize);
 	buf->info = (iti_info_t *)((char *)buf->data + cam->rawsize);
-	
+
+	struct timeval timestamp;
+	memcpy (&timestamp, &(buf->info->acq.timestamp), sizeof(struct timeval));
+
+#ifdef FOAM_MODITIFG_DEBUG
+	FOAM_MODITIFG_ERR("Captured %d frames (lost %d), last stamp: %d\n", buf->info->acq.captured, buf->info->acq.lost, (int) timestamp.tv_sec);	
+#endif
+	iti_info_t *imageinfo;
+	imageinfo = (iti_info_t *)((char *)buf->data + cam->rawsize);
+	FOAM_MODITIFG_ERR("Captured %d frames\n", imageinfo->acq.captured);
+
+
 	// TvW: hoes does this work, exactly?
 //	if (acc.transfered != info->framenums.transfered) {
 //		FOAM_MODITIFG_ERR("Frame %lu not in right place in mmap area (%lu is in its spot)", acc.transfered, info->framenums.transfered);
@@ -371,15 +403,15 @@ int main() {
 			return EXIT_FAILURE;
 		
 		printf("Frames grabbed: %d\n", buffer.info->acq.captured);
-		printf("Pixels 1 through 100:\n");
-		for (j=0; j<100; j++)
+		//printf("Pixels 1 through 100:\n");
+		for (j=0; j<10; j++)
 			printf("%d,", *( ((unsigned char *) (buffer.data)) + j) );
 		
 		printf("\n");
 		asprintf(&file, "itifg-debug-cap-%d.png",  i);
-		printf("Writing frame to disk (%s)\n", file);
+		//printf("Writing frame to disk (%s)\n", file);
 
-		modWritePNGArr(file, ((void *) (buffer.data)), res, 1);
+		//modWritePNGArr(file, ((void *) (buffer.data)), res, 1);
 	}
 	
 	printf("cleaning up now\n");
