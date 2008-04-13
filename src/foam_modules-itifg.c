@@ -291,7 +291,7 @@ int drvStopGrab(mod_itifg_cam *cam) {
 #endif
 	// stop the framegrabber by seeking a lot???
 	if ( lseek(cam->fd, -LONG_MAX, SEEK_END) == -1) {
-		FOAM_MODITIFG_ERR("Error starting grab: %s\n", strerror(errno));
+		FOAM_MODITIFG_ERR("Error stopping grab: %s\n", strerror(errno));
 		return EXIT_FAILURE;
 	}
 

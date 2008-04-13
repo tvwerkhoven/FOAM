@@ -22,7 +22,7 @@
       CAM_MODE_CTL = 0
       CCLK_STATIC_ENABLE = DISABLE
       CCLK_STATIC_STATE = LEVEL_LOW
-#     EXT_SYNC_TIME = 572.000   # us (140ns ... 572us)
+      #EXT_SYNC_TIME = 572.000   # us (140ns ... 572us)
       # default exposure time !!!
       EXT_SYNC_PERIOD_TIME = 1047.000  # us (210ns ... 18.75s)
       # default readout time !!!
