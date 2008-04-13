@@ -217,7 +217,7 @@ static int okoWrite(int addr, int voltage) {
 	volt8 = (unsigned char) voltage;
 	
 	offset = lseek(Okofd, addr, SEEK_SET);
-	if (offset < 0) {
+	if (offset == (off_t) -1) {
 #ifdef FOAM_MODOKODM_DEBUG
 		printf("Could not seek port %s: %s\n", FOAM_MODOKODM_PORT, strerror(errno));
 #else
