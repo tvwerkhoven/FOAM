@@ -110,21 +110,21 @@
  To initialize a framegrabber board using itifg, some info is needed. 
  Additional info given by the driver will again be stored in the struct.
  To initialize a board, the fields prefixed with '(user)' should already be
- filled in. After initialization, the '(itifg)' fields will also be filled.
+ filled in. After initialization, the '(mod)' fields will also be filled.
  */
 typedef struct {
-	short width;			//!< (itifg) CCD width
-	short height;			//!< (itifg) CCD height
-	int depth;				//!< (itifg) CCD depth (i.e. 8bit)
-	int fd;					//!< (itifg) FD to the framegrabber
-	size_t pagedsize;		//!< (itifg) size of the complete frame + some metadata
-	size_t rawsize;			//!< (itifg) size of the raw frame (width*height*depth)
-	union iti_cam_t itcam;	//!< (itifg) see iti_cam_t (itifg driver)
+	short width;			//!< (mod) CCD width
+	short height;			//!< (mod) CCD height
+	int depth;				//!< (mod) CCD depth (i.e. 8bit)
+	int fd;					//!< (mod) FD to the framegrabber
+	size_t pagedsize;		//!< (mod) size of the complete frame + some metadata
+	size_t rawsize;			//!< (mod) size of the raw frame (width*height*depth)
+	union iti_cam_t itcam;	//!< (mod) see iti_cam_t (itifg driver)
 	int module;				//!< (user) module used, 48 in mcmath setup
 	char device_name[512];	//!< (user) something like '/dev/ic0dma'
 	char config_file[512];	//!< (user) something like '../conffiles/dalsa-cad6.cam'
-	char camera_name[512];	//!< (itifg) camera name, as stored in the configuration file
-	char exo_name[512];		//!< (itifg) exo filename, as stored in the configuration file
+	char camera_name[512];	//!< (mod) camera name, as stored in the configuration file
+	char exo_name[512];		//!< (mod) exo filename, as stored in the configuration file
 } mod_itifg_cam_t;
 
 /*!
@@ -133,12 +133,13 @@ typedef struct {
  This struct stores some variables which makes it easier to
  work with the buffer used by the itifg driver. It should be initialized
  with only 'frames' holding a value, this will be the length of the buffer.
+ Again, '(user)' is to be given by the user, '(mod)' will be filled in automatically.
  */
 typedef struct {
 	int frames;				//!< (user) how many frames should the buffer hold?
-	iti_info_t *info;		//!< information on the current frame
-	void *data;				//!< location of the current frame
-	void *map;				//!< location of the mmap()'ed memory
+	iti_info_t *info;		//!< (mod) information on the current frame
+	void *data;				//!< (mod) location of the current frame
+	void *map;				//!< (mod) location of the mmap()'ed memory
 } mod_itifg_buf_t;
 
 /*!
