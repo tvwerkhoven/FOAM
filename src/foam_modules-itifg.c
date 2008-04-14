@@ -10,22 +10,40 @@
 	More documentation at the end of the source file (Hints for getting itifg running by Matthias Stein)
  
 	This module compiles on its own, but needs some dependencies\n
-	<tt>gcc foam_modules-img.c foam_modules-itifg.c -DFOAM_MODITIFG_ALONE=1 -Wall -lc -I../../../drivers/itifg-8.4.0-0/include/ -L../../../drivers/itifg-8.4.0-0/lib/ -I. -litifg_g -lm -lc -g `sdl-config --libs --cflags`</tt>
+	<tt>
+	gcc -pipe -Wall -Wextra -g -DDEBUG_ITIFG=255    \
+	-Iitifg/include  \
+	-Litifg/lib  \
+	-Ifoam/trunk/code/src/ \
+	-o itifg-test foam/trunk/code/src/foam_cs_library.c foam/trunk/code/src/foam_modules-img.c foam/trunk/code/src/foam_modules-itifg.c \
+	-litifg -lm -lc -g \
+	-lgd -lpng -lSDL_image `sdl-config --libs --cflags`
+	</tt>
 	
 	\section Functions
 	
-	\li drvReadSensor() - Reads out a camera into the global ptc struct
-	
+	Functions provided by this module are listed below. Typical usage would be to use the functions from top
+	to bottom consecutively.
+ 
+	\li drvInitBoard() - Initialize a framegrabber board
+	\li drvInitBufs() - Initialize buffers and memory for use with a framegrabber board
+	\li drvInitGrab() - Start grabbing frames
+	\li drvGetImg() - Grab the next available image
+	\li drvStopGrab() - Stop grabbing frames
+	\li drvStopBufs() - Release the memory used by the buffers
+	\li drvStopBoard() - Stop the board and cleanup
+ 
 	\section History
-	This file is based on itifg.cc, part of filter_control by Guus Sliepen <guus@sliepen.eu.org>
+	This file is partially based on itifg.cc, part of filter_control by Guus Sliepen <guus@sliepen.eu.org>
 	which was released under the GPL version 2.
+ 
+	\section Todo
+ 
+	\li Automatically read the module number during initialization using iti_parse_info
 */
 
-#define FOAM_MODITIFG_ALONE 1
-#define FOAM_MODITIFG_DEBUG 1
-#define FOAM_MODITIFG_DEV "/dev/ic0dma"
-#define FOAM_MODITIFG_CONFFILE "../config/dalsa-cad6-pcd.cam"
-#define FOAM_MODITIFG_MODULE 48
+//#define FOAM_MODITIFG_ALONE 1
+//#define FOAM_MODITIFG_DEBUG 1
 
 #ifdef FOAM_MODITIFG_ALONE
 #define FOAM_MODITIFG_DEBUG 1
@@ -38,7 +56,7 @@
 //#include <foam_modules-itifg.h>
 
 #ifdef FOAM_MODITIFG_ALONE
-// used for writing the frames
+// used for writing the frames to disk
 #include "foam_modules-img.h"
 // necessary for coord_t
 #include "foam_cs_library.h"
@@ -87,39 +105,134 @@
 #include "pcdigReg.h"
 #include "libitifg.h"
 
-/*! @brief Struct which holds some data to /nitialize ITIFG cameras with
+/*! @brief Struct which holds some data to initialize ITIFG cameras with
  
- To initialize a camera, some information is needed. This is stored in this
- struct that will be passed along to camera related functions. These 
- functions will then fill in the blanks as much as possible, given some
- data that is already present. See functions for details.
+ To initialize a framegrabber board using itifg, some info is needed. 
+ Additional info given by the driver will again be stored in the struct.
+ To initialize a board, the fields prefixed with '(user)' should already be
+ filled in. After initialization, the '(itifg)' fields will also be filled.
  */
 typedef struct {
-	short width;			//!< will hold CCD width
-	short height;			//!< will hold CCD height
-	int depth;				//!< will hold CCD depth (i.e. 8bit)
-	int fd;					//!< will hold FD to the framegrabber
-	size_t pagedsize;		//!< size of the complete frame + some metadata
-	size_t rawsize;			//!< size of the raw frame (width*height*depth)
-	union iti_cam_t itcam;	//!< see iti_cam_t
-	int module;				//!< 48 in mcmath setup
-	char device_name[512];	//!< something like '/dev/ic0dma'
-	char config_file[512];	//!< something like '../conffiles/dalsa-cad6.cam'
-	char camera_name[512];	//!< will be provided by itifg
-	char exo_name[512];		//!< will be provided by itifg
-} mod_itifg_cam;
+	short width;			//!< (itifg) CCD width
+	short height;			//!< (itifg) CCD height
+	int depth;				//!< (itifg) CCD depth (i.e. 8bit)
+	int fd;					//!< (itifg) FD to the framegrabber
+	size_t pagedsize;		//!< (itifg) size of the complete frame + some metadata
+	size_t rawsize;			//!< (itifg) size of the raw frame (width*height*depth)
+	union iti_cam_t itcam;	//!< (itifg) see iti_cam_t (itifg driver)
+	int module;				//!< (user) module used, 48 in mcmath setup
+	char device_name[512];	//!< (user) something like '/dev/ic0dma'
+	char config_file[512];	//!< (user) something like '../conffiles/dalsa-cad6.cam'
+	char camera_name[512];	//!< (itifg) camera name, as stored in the configuration file
+	char exo_name[512];		//!< (itifg) exo filename, as stored in the configuration file
+} mod_itifg_cam_t;
 
+/*!
+ @brief Stores data on itifg camera buffer
+ 
+ This struct stores some variables which makes it easier to
+ work with the buffer used by the itifg driver. It should be initialized
+ with only 'frames' holding a value, this will be the length of the buffer.
+ */
 typedef struct {
-	int frames;				//!< how many frames should the buffer hold?
-	iti_info_t *info;		//!< this will point to information on the current frame
-	void *data;				//!< this will point to the current frame
-	void *map;				//!< this will point to the mmap()'ed memory
-} mod_itifg_buf;
+	int frames;				//!< (user) how many frames should the buffer hold?
+	iti_info_t *info;		//!< information on the current frame
+	void *data;				//!< location of the current frame
+	void *map;				//!< location of the mmap()'ed memory
+} mod_itifg_buf_t;
 
-int drvInitSensor(mod_itifg_cam *cam);
-int drvInitBufs(mod_itifg_buf *buf, mod_itifg_cam *cam);
+/*!
+ @brief Initialize a framegrabber board
+ 
+ This function requires a mod_itifg_cam_t struct which holds at least 
+ device_name, config_file and module. The rest will be filled in by this
+ function and is used in subsequent framegrabber calls.
+ 
+ @params [in] *cam A struct with at least device_name, config_file and module.
+ @return EXIT_SUCCESS on success, EXIT_FAILURE otherwise.
+ */
+int drvInitBoard(mod_itifg_cam_t *cam);
 
-int drvInitSensor(mod_itifg_cam *cam) {
+/*!
+ @brief Initialize buffers for a framegrabber board
+ 
+ This function requires a previously initialized mod_itifg_cam_t struct filled
+ by drvInitBoard(), and a mod_itifg_buf_t struct which holds only 'frames'. The 
+ buffer will hold this many frames.
+ 
+ @param [in] *cam Struct previously filled by a drvInitBoard() call.
+ @param [in] *buf Struct with only member .frames set indicating the size of the buffer
+ @return EXIT_SUCCESS on success, EXIT_FAILURE otherwise. 
+ */
+int drvInitBufs(mod_itifg_buf_t *buf, mod_itifg_cam_t *cam);
+
+/*!
+ @brief Start the actual framegrabbing
+
+ This function starts the framegrabbing for *cam.
+ 
+ Starting and stopping the framegrabber can be done multiple times without problems. If
+ no frames are necessary for example, grabbing can be (temporarily) stopped by drvStopGrab()
+ and later resumed with this function.
+ 
+ @param [in] *cam Struct previously filled by a drvInitBoard() call.
+ @return EXIT_SUCCESS on success, EXIT_FAILURE otherwise. 
+ */
+int drvInitGrab(mod_itifg_cam_t *cam);
+
+/*!
+ @brief Stop framegrabbing
+  
+ This function stops the framegrabbing for *cam.
+ 
+ See also drvInitGrab()
+ 
+ @param [in] *cam Struct previously filled by a drvInitBoard() call.
+ @return EXIT_SUCCESS on success, EXIT_FAILURE otherwise. 
+ */
+int drvStopGrab(mod_itifg_cam_t *cam);
+
+/*!
+ @brief Get the next available image from the camera
+ 
+ This function waits until the next full frame is avalaible using select() (i.e.
+ waiting does not take up CPU time). After this function returns without errors,
+ buf->data points to the newest frame and buf->info points to the metadata on this frame 
+ (buf->info currently does not work, 2008-04-14). buf->data needs to be casted to
+ a suitable datatype before usage. This depends on the specific hardware configuration
+ and can usually be deduced from buf->depth which gives the bits per pixel.
+ 
+ Additionally, a timeout can be given which is used in the select() call. If a 
+ timeout occurs, this function returns with EXIT_SUCCESS.
+ 
+ @param [in] *buf Struct previously filled by a drvInitBufs() call.
+ @param [in] *cam Struct previously filled by a drvInitBoard() call.
+ @param [in] *timeout Timeout used with the select() call. Use NULL to disable
+ @return EXIT_SUCCESS on new frame or timeout, EXIT_FAILURE otherwise. 
+ */
+int drvGetImg(mod_itifg_cam_t *cam, mod_itifg_buf_t *buf, struct timeval *timeout);
+
+/*!
+ @brief Stops a framegrabber board
+ 
+ This function stops the framegrabber that was started previously by drvInitBoard().
+ 
+ @param [in] *cam Struct previously filled by a drvInitBoard() call.
+ @return EXIT_SUCCESS on success, EXIT_FAILURE otherwise.
+ */
+int drvStopBoard(mod_itifg_cam_t *cam);
+
+/*!
+ @brief Closes and frees buffers for a framegrabber board
+ 
+ This function closes buffers used an frees the memory associated with it. 
+ @param [in] *cam Struct previously filled by a drvInitBoard() call.
+ @param [in] *buf Struct previously filled by a drvInitBufs() call.
+ @return EXIT_SUCCESS on success, EXIT_FAILURE otherwise. 
+ */
+int drvStopBufs(mod_itifg_buf_t *buf, mod_itifg_cam_t *cam);
+
+int drvInitBoard(mod_itifg_cam_t *cam) {
 	// TvW: | O_SYNC | O_APPEND also used in test_itifg.c
 	int flags = O_RDWR;
 	int zero = 0;
@@ -248,7 +361,7 @@ int drvInitSensor(mod_itifg_cam *cam) {
 	return EXIT_SUCCESS;
 }
 
-int drvInitBufs(mod_itifg_buf *buf, mod_itifg_cam *cam) {
+int drvInitBufs(mod_itifg_buf_t *buf, mod_itifg_cam_t *cam) {
 	
 	// start mmap
 	buf->map = mmap(NULL, cam->pagedsize * buf->frames, PROT_READ | PROT_WRITE, MAP_SHARED, cam->fd, 0);
@@ -260,7 +373,6 @@ int drvInitBufs(mod_itifg_buf *buf, mod_itifg_cam *cam) {
 	
 	buf->data = buf->map;
 	buf->info = (iti_info_t *)((char *)buf->data + cam->rawsize);
-	//lseek +LONG_MAX SEEK_END
 
 #ifdef FOAM_MODITIFG_DEBUG
 	FOAM_MODITIFG_ERR("mmap() successful.\n");
@@ -269,7 +381,7 @@ int drvInitBufs(mod_itifg_buf *buf, mod_itifg_cam *cam) {
 	return EXIT_SUCCESS;
 }
 
-int drvInitGrab(mod_itifg_cam *cam) {
+int drvInitGrab(mod_itifg_cam_t *cam) {
 	// reset stats if possible
 //	ioctl(cam->fd, GIOC_SET_STATS, NULL);
 #ifdef FOAM_MODITIFG_DEBUG
@@ -285,7 +397,7 @@ int drvInitGrab(mod_itifg_cam *cam) {
 	return EXIT_SUCCESS;
 }
 
-int drvStopGrab(mod_itifg_cam *cam) {
+int drvStopGrab(mod_itifg_cam_t *cam) {
 #ifdef FOAM_MODITIFG_DEBUG
 	FOAM_MODITIFG_ERR("Stopping grab, lseeking to %ld.\n", -LONG_MAX);
 #endif
@@ -298,7 +410,7 @@ int drvStopGrab(mod_itifg_cam *cam) {
 	return EXIT_SUCCESS;
 }
 
-int drvGetImg(mod_itifg_cam *cam, mod_itifg_buf *buf, int timeout) {
+int drvGetImg(mod_itifg_cam_t *cam, mod_itifg_buf_t *buf, struct timeval *timeout) {
 	off_t seek;
 	int result;
 //	struct iti_acc_t acc;
@@ -313,13 +425,17 @@ int drvGetImg(mod_itifg_cam *cam, mod_itifg_buf *buf, int timeout) {
 	FD_SET (cam->fd, &ex_fdset);
 
 	//result = poll(&pfd, 1, timeout);
-	result = select(1024, &in_fdset, NULL, &ex_fdset, NULL);
+	result = select(1024, &in_fdset, NULL, &ex_fdset, timeout);
 
-	if (result <= 0)  {
+	
+	if (result == -1)  {
 		FOAM_MODITIFG_ERR("Select() returned no active FD's, error:%s\n", strerror(errno));
 		return EXIT_FAILURE;
 	}
-
+	if (result == 0) {
+		// timeout occured, return immediately
+		return EXIT_SUCCESS;
+	}
 	
 	seek = lseek(cam->fd, 0, SEEK_CUR);
 	if (seek == -1) {
@@ -336,7 +452,8 @@ int drvGetImg(mod_itifg_cam *cam, mod_itifg_buf *buf, int timeout) {
 //	}
 	
 //	buf->data = (void *)((char *)buf->map + ((int) seek % (buf->frames * cam->pagedsize)));
-	buf->data = (void *)((char *)buf->map + ((1 - 1) % buf->frames) * cam->pagedsize);
+//	buf->data = (void *)((char *)buf->map + ((1 - 1) % buf->frames) * cam->pagedsize);
+	buf->data = (void *)((char *)buf->map);
 	buf->info = (iti_info_t *)((char *)buf->data + cam->rawsize);
 
 	struct timeval timestamp;
@@ -345,10 +462,9 @@ int drvGetImg(mod_itifg_cam *cam, mod_itifg_buf *buf, int timeout) {
 #ifdef FOAM_MODITIFG_DEBUG
 	FOAM_MODITIFG_ERR("Captured %d frames (lost %d), last stamp: %d\n", buf->info->acq.captured, buf->info->acq.lost, (int) timestamp.tv_sec);	
 #endif
-	iti_info_t *imageinfo;
-	imageinfo = (iti_info_t *)((char *)buf->data + cam->rawsize);
-	FOAM_MODITIFG_ERR("Captured %d frames\n", imageinfo->acq.captured);
-
+//	iti_info_t *imageinfo;
+//	imageinfo = (iti_info_t *)((char *)buf->data + cam->rawsize);
+//	FOAM_MODITIFG_ERR("Captured %d frames\n", imageinfo->acq.captured);
 
 	// TvW: hoes does this work, exactly?
 //	if (acc.transfered != info->framenums.transfered) {
@@ -359,18 +475,29 @@ int drvGetImg(mod_itifg_cam *cam, mod_itifg_buf *buf, int timeout) {
 	return EXIT_SUCCESS;
 }
 
-int drvStopBufs(mod_itifg_buf *buf, mod_itifg_cam *cam) {
-	munmap(buf->map, cam->pagedsize * buf->frames);
+int drvStopBufs(mod_itifg_buf_t *buf, mod_itifg_cam_t *cam) {
+	if (munmap(buf->map, cam->pagedsize * buf->frames) == -1) {
+		FOAM_MODITIFG_ERR("Error unmapping camera memory: %s\n", strerror(errno));
+		return EXIT_FAILURE;
+	}
 	return EXIT_SUCCESS;
 }
 
+int drvStopBoard(mod_itifg_cam_t *cam) {
+	if (close(cam->fd) == -1) {
+		FOAM_MODITIFG_ERR("Unable to close framegrabber board fd: %s\n", strerror(errno));
+		return EXIT_FAILURE;
+	}
+	
+	return EXIT_SUCCESS;
+}
 
 #ifdef FOAM_MODITIFG_ALONE
 int main() {
 	// init vars
 	int i, j;
-	mod_itifg_cam camera;
-	mod_itifg_buf buffer;
+	mod_itifg_cam_t camera;
+	mod_itifg_buf_t buffer;
 	char *file;
 	
 	camera.module = 48; // some number taken from test_itifg
@@ -383,7 +510,7 @@ int main() {
 	printf("Trying to do something with '%s' using '%s'\n", camera.device_name, camera.config_file);
 	
 	// init cam
-	if (drvInitSensor(&camera) != EXIT_SUCCESS)
+	if (drvInitBoard(&camera) != EXIT_SUCCESS)
 		return EXIT_FAILURE;
 	
 	// init bufs
@@ -399,7 +526,7 @@ int main() {
 	
 	// test image
 	for (i=0; i<10; i++) {
-		if (drvGetImg(&camera, &buffer, 1000) != EXIT_SUCCESS)
+		if (drvGetImg(&camera, &buffer, NULL) != EXIT_SUCCESS)
 			return EXIT_FAILURE;
 		
 		printf("Frames grabbed: %d\n", buffer.info->acq.captured);
@@ -427,123 +554,4 @@ int main() {
 }
 #endif
 
-/*
-There are two basic operation modes:
-
-1. The 'grab' mode
-You only want to have one image at a time and You want to have the
-most recent image. You don't care, if there are images lost, when
-You process one.
-Often used for live video and quick processing.
-
-call sequence:
-open
-mmap ringbuffer size (min 2 images)
-ioctl GET_CAMCNF
-modify via iti_read_config
-ioctl SET_CAMCNF
-ioctl GET_RAW|PAGED_SIZE
-lseek +LONG_MAX SEEK_END
-
-loop:
-wait for image (poll/select/signal)
-lseek 0 SEEK_CUR to get the offset of the current image into Your
-memory
-Image Processing
-
-lseek -LONG_MAX SEEK_END
-munmap
-close
-
-2. The 'snap' mode
-You are interested in EVERY image you can get. No image should be
-lost. The number of images is limited by the main memory You have.
-
-same call sequence except:
-no mmap/munmap
-lseek number_of_bytes_to_read SEEK_END
-into the loop:
-only read - it is blockin till a new image is there
-
-When working in grab mode - mmap makes sense, in snap mode - read is
-the better solution.
-
-- What is the difference between the /dev/ic0??? descriptors? when
-are they used?
-
-There are cfg, acq, dma, exs, lut, iop.
-
-cfg - FPGA download
-acq - camera to board acquisition
-dma - on-board memory to host memory transfer
-exs - trigger/shutter/exposure handling
-lut - on-board lookup table handling
-iop - on-board i/o ports
-
-For common image acqustion usage, You never use acq directly! You open
-dma instead and if acq isn't open at this moment, dma couples acq
-internally.
-
-- How do I start and stop the framegrabber? The changelog mentions
-lseek() ('ioctls STRT/STOP replaced by one lseek interface'), where
-and how can I use that with itifg?
-
-to start an image acquisition, You have to do
-
-grab mode: lseek +LONG_MAX SEEK_END
-
-snap mode: lseek number_of_images * number_of_bytes_per_image SEEK_END
-
-to stop acqusition, you alwas do
-
-lseek -LONG_MAX SEEK_END
-
-For the grab mode you need some additional calls lseek SEEK_CUR/SEEK_END
-to get the offset of the most recent image/to confirm this image
-
-- What do the various parameters in the .cam files mean?
-
-You setup the board for a specific camera. The parameters are different
-for the different boards and different cameras. There are some more
-exapmles into the conffiles dir and some of the parameters are self
-explaining. If You are unsure ask me for the behavior of a a specific
-switch.
-
-- Are all camera specific settings in the .cam files or do I need to
-do some things myself? I.e.: do certain cameras require a different
-mode of operation, or is this all the same for all cameras?
-
-There can be various operation modes for one camera. One of the most
-important choise it weather the camera makes images from itself (free-
-																 running mode) or it is controlled by the board (trigger and/or exposure
-																												 time). Then the exs device gets involved.
-
-And more specifically:
-- How do I find out the module that I need to use with
-iti_read_config() (fourth argument)? I currently use 48, but I don't
-know why (this is what itifg_test uses).
-
-There is a function iti_parse_info, that reads /proc/itifg8 and fills
-You a 'setup' structure, You can the it from that. Other approach:
-You tell me Your board an I tell You the number.
-
-If I overlooked certain documentation, please tell me. Also, if these
-questions are too general for the itifg driver, let me know. However I
-could not find the answer to these questions (easily). An alternative
-would be to take your test code and cut out the parts I need, but
-that's a rather hacky approach in which case I wouldn't fully
-understand what I would be doing.
-
-Thanks in advance,
-
-Tim van Werkhoven
-
-
-Sorry to be short at some points, the time...
-
-Happy Easter! (I'm back next Tuesday)
-
-matthias
- 
-*/
 
