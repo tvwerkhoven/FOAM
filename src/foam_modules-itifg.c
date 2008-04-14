@@ -51,6 +51,8 @@
 
 #ifdef FOAM_MODITIFG_DEBUG
 #define FOAM_MODITIFG_ERR printf
+#else
+#define FOAM_MODITIFG_ERR logDebug
 #endif
 
 //#include <foam_modules-itifg.h>
@@ -346,7 +348,7 @@ int drvInitBoard(mod_itifg_cam_t *cam) {
 		return EXIT_FAILURE;
 	}
 #ifdef FOAM_MODITIFG_DEBUG
-	FOAM_MODITIFG_ERR("raw size: %d, paged size: %d\n", cam->rawsize, cam->pagedsize);
+	FOAM_MODITIFG_ERR("raw size: %d, paged size: %d\n", (int) cam->rawsize, (int) cam->pagedsize);
 #endif
 	
 	if (fcntl(cam->fd, F_SETFL, fcntl(cam->fd, F_GETFL, NULL) & ~O_NONBLOCK) < 0) {
@@ -494,7 +496,7 @@ int drvStopBoard(mod_itifg_cam_t *cam) {
 }
 
 #ifdef FOAM_MODITIFG_ALONE
-int main() {
+int main(int argc, char *argv[]) {
 	// init vars
 	int i, j;
 	mod_itifg_cam_t camera;

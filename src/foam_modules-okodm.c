@@ -118,7 +118,7 @@ static int okoSetAddr(mod_okodm_t *dm);
  
  @return EXIT_SUCCESS on success, EXIT_FAILURE otherwise.
  */
-static int okoWrite(int addr, int voltage);
+static int okoWrite(int dmfd, int addr, int voltage);
 
 // public function prototypes
 
@@ -189,16 +189,16 @@ static int okoSetAddr(mod_okodm_t *dm) {
 	b2 = dm->pcibase[1];
 	
 	// malloc address memory
-	if (dm->nact != 38) {
+	if (dm->nchan != 38) {
 #ifdef FOAM_MODOKODM_DEBUG
-		printf("Warning, number of actuators greater not equal to 38 (is %d). This will not work!\n", dm->nact);
+		printf("Warning, number of actuators greater not equal to 38 (is %d). This will not work!\n", dm->nchan);
 #else
-		logWarn("Warning, number of actuators greater not equal to 38 (is %d). This will not work!", dm->nact);
+		logWarn("Warning, number of actuators greater not equal to 38 (is %d). This will not work!", dm->nchan);
 #endif
 		return EXIT_FAILURE;		
 	}
 
-	dm->addr = malloc((size_t) dm->nact * sizeof(dm->addr));
+	dm->addr = malloc((size_t) dm->nchan * sizeof(dm->addr));
 	if (dm->addr == NULL) {
 #ifdef FOAM_MODOKODM_DEBUG
 		printf("Could not allocate memory for DM hardware addresses!\n");
@@ -409,7 +409,7 @@ int main () {
 
 	// set everything to zero:
 	printf("Setting mirror with control vector (values between -1 and 1):\n");
-	for (i=0; i<ctrl->size; i++)  {
+	for (i=0; i < (int) ctrl->size; i++)  {
 		volt = ((float) i/ctrl->size)*2-1;
 		printf("(%d, %.2f) ", i, volt);
 		gsl_vector_float_set(ctrl, i, volt);
@@ -417,7 +417,7 @@ int main () {
 	printf("\n");
 
 	printf("Which corresponds to voltages:\n");
-	for (i=0; i<ctrl->size; i++)  {
+	for (i=0; i < (int) ctrl->size; i++)  {
 		volt = ((float) i/ctrl->size)*2-1;
 		printf("(%d, %d) ", i, (int) round(sqrt(65025*(volt+1)*0.5 )));
 	}

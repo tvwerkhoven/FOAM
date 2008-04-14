@@ -52,7 +52,7 @@
  */
 int drvSetSerial(const char *port, const char *cmd) {
 	int fd;
-	// cmd is something like "3WX\r" with X a number (from tt3.h)
+	// cmd is something like "3Xn\r" with n a number (from tt<3|4>.h)
 	// port is something like "/dev/ttyS0"
 	
 	if (port == NULL || cmd == NULL)

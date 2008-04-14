@@ -60,7 +60,7 @@
 #endif
 
 typedef struct {
-	char device;		//!< (user) device name of the board
+	char device[64];	//!< (user) device name of the board
 	int fd;				//!< (mod) device fd
 	int nchans;			//!< (user) number of DAC channels (used) on the board
 	float minvolt;		//!< (user) minimum voltage for the DAC ports
@@ -144,7 +144,7 @@ int drvInitDaq2k(mod_daq2k_board_t *board);
 /*!
  @brief Close all Daqboards opened successfully previously, call this before quitting
  */
-int drvCloseDaq2k(mod_daq2k_board_t *board);
+void drvCloseDaq2k(mod_daq2k_board_t *board);
 
 /*!
  @brief Set a bitpattern on a digital IO port on a specific board
@@ -249,8 +249,9 @@ static int initDaqIOP2(mod_daq2k_board_t *board) {
 		   board->iop2conf[2], board->iop2conf[3]);
 #endif
 	
-	err = daqIOGet8255Conf(Daqfds[board], (BOOL) board->iop2conf[0], \
-						   (BOOL) board->iop2conf[1] , \
+	err = daqIOGet8255Conf(board->fd, \
+						   (BOOL) board->iop2conf[0], \
+						   (BOOL) board->iop2conf[1], \
 						   (BOOL) board->iop2conf[2], \
 						   (BOOL) board->iop2conf[3], &config);
 	if (err != DerrNoError) {
@@ -292,8 +293,6 @@ static int initDaqIOP2(mod_daq2k_board_t *board) {
 }
 
 int drvInitDaq2k(mod_daq2k_board_t *board) {
-	int board;
-
 	// set these variables to 1, assume success
 	board->dacinit = 1;
 	board->iop2init = 1;
@@ -488,7 +487,7 @@ int main() {
 	
 	// setting analog outputs  now //
 	/////////////////////////////////
-	printf("Setting some voltages on all %d channels of board 0 now:\n", board->nchans);
+	printf("Setting some voltages on all %d channels of board 0 now:\n", board.nchans);
 	printf("(going through the whole voltage range in 20 seconds)\n");
 	for (i=0; i<=100; i++) {
 		if (i % 10 == 0) printf("%d%%", i);

@@ -50,6 +50,7 @@ itifg-test: $(SRCDIR)/foam_cs_library.c $(SRCDIR)/foam_modules-img.c $(SRCDIR)/f
 	-Iitifg/include  \
 	-Litifg/lib  \
 	-I../src/ \
+	-DFOAM_MODITIFG_ALONE=1 \
 	-o $@ $^ \
 	-litifg -lm -lc -g \
 	-lgd -lpng -lSDL_image `sdl-config --libs --cflags`
