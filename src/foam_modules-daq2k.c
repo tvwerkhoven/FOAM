@@ -39,37 +39,10 @@
 	
 	\li	\b FOAM_MODDAQ2K_ALONE (*undef*), ifdef, compiles on its own (implies FOAM_MODDAQ2K_DEBUG)
 	\li \b FOAM_MODDAQ2K_DEBUG (*undef*), ifdef, gives lowlevel prinft debug statements
- 	\li \b FOAM_MODDAQ2K_NBOARDS (1), number of boards to use/control
- 	\li \b FOAM_MODDAQ2K_BOARDS ({"daqBoard2k0"}), AI, device names
- 	\li	\b FOAM_MODDAQ2K_NCHANS ({4}), AI, with the number of channels (i.e. {4})
- 	\li	\b FOAM_MODDAQ2K_MINVOLT ({-10.}), AI, minimum voltages for analog ports
- 	\li \b FOAM_MODDAQ2K_MAXVOLT ({10.}), AI, maximum voltages for analog ports
-	\li \b FOAM_MODDAQ2K_IOP2CONF ({12}), AI, configuration 
- 
-	AI means it must be an array initializer. This means that the value must be such that
-	it can be used like:
-	\code
-	float Daqminvolts[] = FOAM_MODDAQ2K_MINVOLT;
-	\endcode
-	which means that FOAM_MODDAQ2K_MINVOLT must look like {0.0, -10.0, -10.0, -5.0}. All AIs
-	must have FOAM_MODDAQ2K_NBOARDS elements.
- 
-	\subsection Configuring digital IO ports
- 
-	The define 'FOAM_MODDAQ2K_IOP2CONF' can be used to configure the digital IO ports on the Daqboard.
-	There are three of these ports on one board, each being 8 bit wide (each thus having 65536 possible values).
-	The ports are named portA, portB, and portC, and portC can be subdivided into two 4-bit ports named
-	portCHigh and portCLow. In this case, the ports take the high nibble (=4bit) and low nibble respectively.
-	
-	Configuration of these ports is necessary because all ports can be used for input or output. To facilitate 
-	this, the configuration is coded in a 4 bit integer, where the bits correspond to portA, portB, portCHigh and
-	portClow going from the low to the high bit. If the bit is set to 1, the port will be used as input, if
-	set to zero, it will be used for output. Thus if we want portA and portB to be output and portC to be
-	input, we need a bitstring 1100, or decimal value 12 (4+8). The two 1's correspond to portCHigh and portCLow,
-	the two zeroes correspond to portA and portB.
- 
+
 	\section History
  
+	\li 2008-04-14: api change, configuration done with datatypes instead of defines
 	\li 2008-04-02: init
 
 */
@@ -86,28 +59,37 @@
 #define FOAM_MODDAQ2K_DEBUG 1				//!< set to 1 for debugging, in that case this module compiles on its own
 #endif
 
-#define FOAM_MODDAQ2K_NBOARDS 1				//!< number of total boards in the system
-#define FOAM_MODDAQ2K_BOARDS {"daqBoard2k0"}	//!< array initialier of FOAM_MODDAQ2K_NBOARDS long with the device names for the daqboards
-#define FOAM_MODDAQ2K_NCHANS {4}			//!< Number of DAC channels per board used
-#define FOAM_MODDAQ2K_MINVOLT {-10.}		//!< Minimum voltage for boards, should be floats
-#define FOAM_MODDAQ2K_MAXVOLT {10.}			//!< Maximum voltage for boards, should be floats
-#define FOAM_MODDAQ2K_IOP2CONF {12}			//!< Port configuration for 8225 chip on boards, bit 1 is for portA, 2 for portB, 3 for high portC, 4 for low portC. 12 = 8 + 4  = bit 4 + bit 3, so portA=0, portB=0, portChigh=1, portClow=1
+typedef struct {
+	char device;		//!< (user) device name of the board
+	int fd;				//!< (mod) device fd
+	int nchans;			//!< (user) number of DAC channels (used) on the board
+	float minvolt;		//!< (user) minimum voltage for the DAC ports
+	float maxvolt;		//!< (user) maximum voltage for the DAC ports
+	int iop2conf[4];	//!< (user) port configuration for 8225 chip, {portA, portB, high portC, low portC} 0 is output, 1 is input
+	int dacinit;		//!< (mod) switch to see if DAC is initialized successfully or not
+	int iop2init;		//!< (mod) switch to see if IO P2 is initialized successfully or not
+} mod_daq2k_board_t;
 
-static int Daqdacinit = 0;					//!< used to indicate partial DAC initialisation success
-static int Daqiop2init = 0;					//!< used to indicate partial digital IO initialisation success
+//#define FOAM_MODDAQ2K_NBOARDS 1				//!< number of total boards in the system
+//#define FOAM_MODDAQ2K_BOARDS {"daqBoard2k0"}	//!< array initialier of FOAM_MODDAQ2K_NBOARDS long with the device names for the daqboards
+//#define FOAM_MODDAQ2K_NCHANS {4}			//!< Number of DAC channels per board used
+//#define FOAM_MODDAQ2K_MINVOLT {-10.}		//!< Minimum voltage for boards, should be floats
+//#define FOAM_MODDAQ2K_MAXVOLT {10.}			//!< Maximum voltage for boards, should be floats
+//#define FOAM_MODDAQ2K_IOP2CONF {12}			//!< Port configuration for 8225 chip on boards, bit 1 is for portA, 2 for portB, 3 for high portC, 4 for low portC. 12 = 8 + 4  = bit 4 + bit 3, so portA=0, portB=0, portChigh=1, portClow=1
+//
+//static int Daqdacinit = 0;					//!< used to indicate partial DAC initialisation success
+//static int Daqiop2init = 0;					//!< used to indicate partial digital IO initialisation success
 
 // several static global variables holding configuration for the boards
 // const if possible, so we don't accidentally change stuff
-static DaqHandleT Daqfds[FOAM_MODDAQ2K_NBOARDS];			//!< Stores the FDs for all boards
-static char *Daqnames[] = FOAM_MODDAQ2K_BOARDS;				//!< Stores the names for all devices
-static const int Daqchancount[] = FOAM_MODDAQ2K_NCHANS;		//!< Store the number of channels per board
-static const float Daqminvolts[] = FOAM_MODDAQ2K_MINVOLT;	//!< Stores the minimum voltage per board
-static const float Daqmaxvolts[] = FOAM_MODDAQ2K_MAXVOLT;	//!< Stores the maximum voltage per board
-static const int Daqiop2conf[] = FOAM_MODDAQ2K_IOP2CONF;	//!< Stores the IO port configuration
+//static DaqHandleT Daqfds[FOAM_MODDAQ2K_NBOARDS];			//!< Stores the FDs for all boards
+//static char *Daqnames[] = FOAM_MODDAQ2K_BOARDS;				//!< Stores the names for all devices
+//static const int Daqchancount[] = FOAM_MODDAQ2K_NCHANS;		//!< Store the number of channels per board
+//static const float Daqminvolts[] = FOAM_MODDAQ2K_MINVOLT;	//!< Stores the minimum voltage per board
+//static const float Daqmaxvolts[] = FOAM_MODDAQ2K_MAXVOLT;	//!< Stores the maximum voltage per board
+//static const int Daqiop2conf[] = FOAM_MODDAQ2K_IOP2CONF;	//!< Stores the IO port configuration
 
-// Function prototypes
-
-// local functions
+// local function prototypes
 /*!
  @brief Local function to initialize the DAC part of the Daqboard
  
@@ -119,10 +101,10 @@ static const int Daqiop2conf[] = FOAM_MODDAQ2K_IOP2CONF;	//!< Stores the IO port
  This function returns EXIT_SUCCESS immediately if the corresponding 
  fd is -1 (and thus the devices failed to open). 
  
- @param [in] board The board to initialize the DACs for
+ @param [in] *board The board to initialize the DACs for
  @return EXIT_SUCCESS on success, EXIT_FAILURE otherwise.
  */
-static int initDaqDac(int board);
+static int initDaqDac(mod_daq2k_board_t *board);
 /*!
  @brief Local function to initialize the digital IO part of the Daqboard
  
@@ -134,10 +116,10 @@ static int initDaqDac(int board);
  This function returns EXIT_SUCCESS immediately if the corresponding 
  fd is -1 (and thus the devices failed to open).
  
- @param [in] board The board to initialize the DACs for
+ @param [in] *board The board to initialize the IO ports for
  @return EXIT_SUCCESS on success, EXIT_FAILURE otherwise.
  */
-static int initDaqIOP2(int board);
+static int initDaqIOP2(mod_daq2k_board_t *board);
 
 // public functions
 /*!
@@ -154,14 +136,15 @@ static int initDaqIOP2(int board);
  calls are ignored. It is possible to use the digital IO without the DAC or vice versa
  this way.
  
+ @param [in] *board the daqboard to initialize
  @return EXIT_SUCCESS on (partial) success, EXIT_FAILURE on complete failure.
  */
-int drvInitDaq2k();
+int drvInitDaq2k(mod_daq2k_board_t *board);
 
 /*!
  @brief Close all Daqboards opened successfully previously, call this before quitting
  */
-void drvCloseDaq2k();
+int drvCloseDaq2k(mod_daq2k_board_t *board);
 
 /*!
  @brief Set a bitpattern on a digital IO port on a specific board
@@ -171,13 +154,13 @@ void drvCloseDaq2k();
  be ignored if one wants to, although it's unlikely that trying to write to read-only
  configured ports can serve useful purposes.
  
- @param [in] board The board to use
+ @param [in] *cam The board to use
  @param [in] port The port to write to, 0=portA, 1=portB, 2=portCHigh, 3=portCLow
  @param [in] bitpat The bitpattern to write (the low 8 (port={0,1}) or 4 (port={2,3}) bits are used)
  
  @return EXIT_SUCCESS on (partial) success, EXIT_FAILURE on complete failure.
  */
-int drvDaqSetP2(int board, int port, int bitpat);
+int drvDaqSetP2(mod_daq2k_board_t *board, int port, int bitpat);
 /*!
  @brief Write something to a DAC channel
  
@@ -187,11 +170,11 @@ int drvDaqSetP2(int board, int port, int bitpat);
  
  If the FD corresponding to the Daqboard 'board' is -1, this function returns immmediately
  
- @param [in] board The board to use
+ @param [in] *board The board to use
  @param [in] chan The channel to write to
  @param [in] val The value to write [0, 65535], 16bit
  */
-void drvDaqSetDAC(int board, int chan, int val);
+void drvDaqSetDAC(mod_daq2k_board_t *board, int chan, int val);
 /*!
  @brief Write something to all DAC channels on a board
  
@@ -199,14 +182,14 @@ void drvDaqSetDAC(int board, int chan, int val);
  
  If the FD corresponding to the Daqboard 'board' is -1, this function returns immmediately.
  
- @param [in] board The board to use
+ @param [in] *board The board to use
  @param [in] val The value to write [0, 65535], 16bit
  */
-void drvDaqSetDACs(int board, int val);
+void drvDaqSetDACs(mod_daq2k_board_t *board, int val);
 
-static int initDaqDac(int board) {
+static int initDaqDac(mod_daq2k_board_t *board) {
 	// FD not open? then just return
-	if (Daqfds[board] == -1)
+	if (board->fd == -1)
 		return EXIT_SUCCESS;
 	
 	int chan;
@@ -214,23 +197,23 @@ static int initDaqDac(int board) {
 	CHAR errmsg[512];
 
 #ifdef FOAM_MODDAQ2K_DEBUG
-	printf("Opening %d DAC channels on board %d, channel...", Daqchancount[board], board);
+	printf("Opening %d DAC channels on board %s, channel...", board->nchans, board->device);
 #endif
 	
-	for (chan=0; chan<Daqchancount[board]; chan++) {
+	for (chan=0; chan < board->nchans; chan++) {
 		// configure output mode on this channel to be DdomVoltage (i.e. a constant DC)
-		daqDacSetOutputMode(Daqfds[board], DddtLocal, chan, DdomVoltage);
+		daqDacSetOutputMode(board->fd, DddtLocal, chan, DdomVoltage);
 		// set the initial voltage to 0, does the least harm in any situation ;)
-		err = daqDacWt(Daqfds[board], DddtLocal, chan, (WORD) 0);
+		err = daqDacWt(board->fd, DddtLocal, chan, (WORD) 0);
 		// oops, we got an error! return immediately, and do not use Daqboard DAC routines anymore
 		if (err != DerrNoError) {
 			daqFormatError(err, (PCHAR) errmsg);
 #ifdef FOAM_MODDAQ2K_DEBUG
-			printf("Error writing voltage to DAC ports for board %d: %s\n", board, errmsg);
+			printf("Error writing voltage to DAC ports for board %s: %s\n", board->device, errmsg);
 #else
-			logWarn("Error writing voltage to DAC ports for board %d: %s", board, errmsg);
+			logWarn("Error writing voltage to DAC ports for board %s: %s", board->device, errmsg);
 #endif
-			Daqdacinit = 0;			
+			board->dacinit = 0;
 			return EXIT_FAILURE;
 		}
 #ifdef FOAM_MODDAQ2K_DEBUG
@@ -246,9 +229,9 @@ static int initDaqDac(int board) {
 	return EXIT_SUCCESS;
 }
 
-static int initDaqIOP2(int board) {
+static int initDaqIOP2(mod_daq2k_board_t *board) {
 	// FD not open? then just return
-	if (Daqfds[board] == -1)
+	if (board->fd == -1)
 		return EXIT_SUCCESS;
 	
 	DaqError err;
@@ -261,45 +244,45 @@ static int initDaqIOP2(int board) {
 	//  second 0: B as output
 	// 3rd, 4th 1: C low and high nibble as inputs
 #ifdef FOAM_MODDAQ2K_DEBUG
-	printf("Setting up P2 on board %d as: (0x%x, 0x%x, 0x%x, 0x%x) ", board, \
-		   Daqiop2conf[board] & 0x01, Daqiop2conf[board] & 0x02, \
-		   Daqiop2conf[board] & 0x04, Daqiop2conf[board] & 0x08);
+	printf("Setting up P2 on board %s as: (0x%x, 0x%x, 0x%x, 0x%x) ", board->device, \
+		   board->iop2conf[0], board->iop2conf[1], \
+		   board->iop2conf[2], board->iop2conf[3]);
 #endif
 	
-	err = daqIOGet8255Conf(Daqfds[board], (BOOL) Daqiop2conf[board] & 0x01, \
-						   (BOOL) Daqiop2conf[board] & 0x02, \
-						   (BOOL) Daqiop2conf[board] & 0x04, \
-						   (BOOL) Daqiop2conf[board] & 0x08, &config);
+	err = daqIOGet8255Conf(Daqfds[board], (BOOL) board->iop2conf[0], \
+						   (BOOL) board->iop2conf[1] , \
+						   (BOOL) board->iop2conf[2], \
+						   (BOOL) board->iop2conf[3], &config);
 	if (err != DerrNoError) {
 		daqFormatError(err, (PCHAR) errmsg);
 #ifdef FOAM_MODDAQ2K_DEBUG
-		printf("Error configuring digital IO on 8255 for board %d: %s\n", board, errmsg);
+		printf("Error configuring digital IO on 8255 for board %s: %s\n", board->device, errmsg);
 #else
-		logWarn("Error configuring digital IO on 8255 for board %d: %s", board, errmsg);
-#endif
-		Daqiop2init = 0;			
+		logWarn("Error configuring digital IO on 8255 for board %s: %s", board->device, errmsg);
+#endif		
+		board->iop2init = 0;
 		return EXIT_FAILURE;
 	}
 	
 	
 	// write settings and config number to internal register
-	err = daqIOWrite(Daqfds[board], DiodtLocal8255, Diodp8255IR, 0, DioepP2, config);
+	err = daqIOWrite(board->fd, DiodtLocal8255, Diodp8255IR, 0, DioepP2, config);
 	
 	if (err != DerrNoError) {
 		daqFormatError(err, (PCHAR) errmsg);
 #ifdef FOAM_MODDAQ2K_DEBUG
-		printf("Error configuring digital IO on 8255 for board %d: %s\n", board, errmsg);
+		printf("Error configuring digital IO on 8255 for board %s: %s\n", board->device, errmsg);
 #else
-		logWarn("Error configuring digital IO on 8255 for board %d: %s", board, errmsg);
+		logWarn("Error configuring digital IO on 8255 for board %s: %s", board->device, errmsg);
 #endif
-		Daqiop2init = 0;
+		board->iop2init = 0;
 		return EXIT_FAILURE;
 	}
 	
 	// init IO ports to 0 (off) no error checking because we don't really care here
-	daqIOWrite(Daqfds[board], DiodtLocal8255, Diodp8255A, 0, DioepP2, 1);
-	daqIOWrite(Daqfds[board], DiodtLocal8255, Diodp8255B, 0, DioepP2, 1);
-	daqIOWrite(Daqfds[board], DiodtLocal8255, Diodp8255C, 0, DioepP2, 1);
+	daqIOWrite(board->fd, DiodtLocal8255, Diodp8255A, 0, DioepP2, 1);
+	daqIOWrite(board->fd, DiodtLocal8255, Diodp8255B, 0, DioepP2, 1);
+	daqIOWrite(board->fd, DiodtLocal8255, Diodp8255C, 0, DioepP2, 1);
 	
 #ifdef FOAM_MODDAQ2K_DEBUG
 	printf("Successfully set up P2!\n");
@@ -308,140 +291,140 @@ static int initDaqIOP2(int board) {
 	return EXIT_SUCCESS;
 }
 
-int drvInitDaq2k() {
+int drvInitDaq2k(mod_daq2k_board_t *board) {
 	int board;
-		
-	// init DAC part of the Daqboard, assume success and set to 0 on error
-	Daqdacinit = 1;
-	// init digital IO channels here, assume success and set to 0 on error
-	Daqiop2init = 1;
 
-	// open all daqboards
-	for (board=0; board<FOAM_MODDAQ2K_NBOARDS; board++) {
-		Daqfds[board] = daqOpen(Daqnames[board]);
-		if (Daqfds[board] == -1) {
+	// set these variables to 1, assume success
+	board->dacinit = 1;
+	board->iop2init = 1;
+	
+	board->fd = daqOpen(board->device);
+	if (board->fd == -1) {
 #ifdef FOAM_MODDAQ2K_DEBUG
-			printf("Could not connect to board %d, %s: %s\n", board, Daqnames[board], strerror(errno));
+		printf("Could not connect to board %s: %s\n", board->device, strerror(errno));
 #else
-			logWarn("Could not connect to board %d, %s: %s", board, Daqnames[board], strerror(errno));
+		logWarn("Could not connect to board %s: %s", board->device, strerror(errno));
 #endif
-		}
-
-#ifdef FOAM_MODDAQ2K_DEBUG
-		printf("Opened daqboard %d\n", board);
-#endif
-		
-		// try to init the DAC circuits
-		initDaqDac(board);
-		
-		// try to init the digital IO circuits
-		initDaqIOP2(board);
 	}
+	
+#ifdef FOAM_MODDAQ2K_DEBUG
+	printf("Opened daqboard %s\n", board->device);
+#endif
+	
+	// try to init the DAC circuits
+	initDaqDac(board);
+	
+	// try to init the digital IO circuits
+	initDaqIOP2(board);
 
 	
-	if (Daqdacinit != 1 && Daqiop2init != 1) {
+	if (board->dacinit != 1 && board->iop2init != 1) {
 #ifdef FOAM_MODDAQ2K_DEBUG
-		printf("Failed to set up Daqboards\n");
+		printf("Failed to set up Daqboard %s\n", board->device);
 #else
-		logWarn("Failed to set up Daqboards");
+		logWarn("Failed to set up Daqboard %s", board->device);
 #endif
 		return EXIT_FAILURE;
 	}
 
 	
-	if (Daqiop2init != 1)
+	if (board->iop2init != 1)
 #ifdef FOAM_MODDAQ2K_DEBUG
-		printf("Failed to set IO ports on some Daqboards\n");
+		printf("Failed to set IO ports on Daqboard %s\n", board->device);
 #else
-		logWarn("Failed to set IO ports on some Daqboards");
+		logWarn("Failed to set IO ports on Daqboard %s", board->device);
 #endif
 	
-	if (Daqdacinit != 1)
+	if (board->dacinit != 1)
 #ifdef FOAM_MODDAQ2K_DEBUG
-		printf("Failed to set up DAC units on some Daqboards\n");
+		printf("Failed to set up DAC units on Daqboard %s\n", board->device);
 #else
-		logWarn("Failed to set up DAC units on some Daqboards");
+		logWarn("Failed to set up DAC units on Daqboard %s", board->device);
 #endif
 	
 #ifdef FOAM_MODDAQ2K_DEBUG
-	printf("Daqboards are now set up!\n");
+	printf("Daqboard %s is now set up!\n", board->device);
 #endif
 	
 	return EXIT_SUCCESS;		
 }
 
-void drvCloseDaq2k() {
-	int board;
+void drvCloseDaq2k(mod_daq2k_board_t *board) {
 	
-	// close all open daqboards (fd != -1)
-	for (board=0; board<FOAM_MODDAQ2K_NBOARDS; board++) {
-		if (Daqfds[board] != -1)
-			daqClose(Daqfds[board]);
-
-	}
+	// close open daqboard (fd != -1)
+	if (board->fd >= 0)
+		daqClose(board->fd);
+	
 }
 
-int drvDaqSetP2(int board, int port, int bitpat) {
+int drvDaqSetP2(mod_daq2k_board_t *board, int port, int bitpat) {
 	// port must be either 0, 1, 2 or 3 for portA, portB, portC high and low
 	// respectively
-	if (Daqfds[board] == -1)
+	if (board->fd == -1)
 		return EXIT_SUCCESS;
 
 	// init IO ports to 0 (off) no error checking because we don't really care here
 	switch (port) {
 		case 0:
-			if ((Daqiop2conf[board] & 0x01) != 0) // port is not output, can't write
+			if (board->iop2conf[0] != 0) // port is not output, can't write
 				return EXIT_FAILURE;
 
-			daqIOWrite(Daqfds[board], DiodtLocal8255, Diodp8255A, 0, DioepP2, bitpat);
+			daqIOWrite(board->fd, DiodtLocal8255, Diodp8255A, 0, DioepP2, bitpat);
 			break;
 		case 1:
-			if ((Daqiop2conf[board] & 0x02) != 0) // port is not output, can't write
+			if (board->iop2conf[1] != 0) // port is not output, can't write
 				return EXIT_FAILURE;
 
-			daqIOWrite(Daqfds[board], DiodtLocal8255, Diodp8255B, 0, DioepP2, bitpat);
+			daqIOWrite(board->fd, DiodtLocal8255, Diodp8255B, 0, DioepP2, bitpat);
 			break;
 		case 2:
-			if ((Daqiop2conf[board] & 0x04) != 0) // port is not output, can't write
+			if (board->iop2conf[2] != 0) // port is not output, can't write
 				return EXIT_FAILURE;
 
-			daqIOWrite(Daqfds[board], DiodtLocal8255, Diodp8255CHigh, 0, DioepP2, bitpat);
+			daqIOWrite(board->fd, DiodtLocal8255, Diodp8255CHigh, 0, DioepP2, bitpat);
 			break ;
 		case 3:
-			if ((Daqiop2conf[board] & 0x08) != 0) // port is not output, can't write
+			if (board->iop2conf[2] != 0) // port is not output, can't write
 				return EXIT_FAILURE;
 
-			daqIOWrite(Daqfds[board], DiodtLocal8255, Diodp8255CLow, 0, DioepP2, bitpat);
+			daqIOWrite(board->fd, DiodtLocal8255, Diodp8255CLow, 0, DioepP2, bitpat);
 			break;
 	}
 	
 	return EXIT_SUCCESS;
 }
 
-void drvDaqSetDAC(int board, int chan, int val) {
-	if (Daqfds[board] == -1)
+void drvDaqSetDAC(mod_daq2k_board_t *board, int chan, int val) {
+	if (board->fd == -1)
 		return;
 	
-	daqDacWt(Daqfds[board], DddtLocal, (DWORD) chan, (WORD) (val & 0xffff));
+	daqDacWt(board->fd, DddtLocal, (DWORD) chan, (WORD) (val & 0xffff));
 }
 
-void drvDaqSetDACs(int board, int val) {
-	if (Daqfds[board] == -1)
+void drvDaqSetDACs(mod_daq2k_board_t *board, int val) {
+	if (board->fd == -1)
 		return;
 	
 	int i;
-	for (i=0; i<Daqchancount[0]; i++)
-		daqDacWt(Daqfds[board], DddtLocal, (DWORD) i, (WORD) val);
+	for (i=0; i<board->nchans; i++)
+		daqDacWt(board->fd, DddtLocal, (DWORD) i, (WORD) val);
 }
 
 #ifdef FOAM_MODDAQ2K_ALONE
 int main() {
 	int i;
+	mod_daq2k_board_t board = {
+		.device = "daqBoard2k0",
+		.nchans = 4,
+		.minvolt = -10.0,
+		.maxvolt = 10.0,
+		.iop2conf = {0,0,1,1},
+	};
 	
-	if (drvInitDaq2k() != EXIT_SUCCESS)
+	if (drvInitDaq2k(&board) != EXIT_SUCCESS)
 		exit(-1);
 	
-	printf("Opened DAQboard!\n");
+	printf("Opened DAQboard %s!\n", board.device);
 	
 	// set stdout to unbuffered, otherwise we won't see intermediate messages
 	setvbuf(stdout, NULL, _IONBF, 0);
@@ -450,10 +433,10 @@ int main() {
 	//////////////////////////////////
 	printf("Trying to set some bit patterns values on P2:\n");
 	printf("\n");
-	printf("portA and portB (8b): ");
+	printf("portA and portB (8bit): ");
 	for (i=1; i<256; i *= 2) { 
 		printf("0x%u...", i);
-		if (drvDaqSetP2(0, 0, i) != EXIT_SUCCESS || drvDaqSetP2(0, 1, i) != EXIT_SUCCESS) 
+		if (drvDaqSetP2(&board, 0, i) != EXIT_SUCCESS || drvDaqSetP2(&board, 1, i) != EXIT_SUCCESS) 
 			printf("(failed), ");
 		else 
 			printf("(ok), ");
@@ -461,7 +444,7 @@ int main() {
 	}
 	i=255;
 	printf("0x%u...", i);
-	if (drvDaqSetP2(0, 0, i) != EXIT_SUCCESS || drvDaqSetP2(0, 1, i) != EXIT_SUCCESS) 
+	if (drvDaqSetP2(&board, 0, i) != EXIT_SUCCESS || drvDaqSetP2(&board, 1, i) != EXIT_SUCCESS) 
 		printf("(failed), ");
 	else 
 		printf("(ok), ");
@@ -470,10 +453,10 @@ int main() {
 	sleep(1);
 	
 	printf("\n");
-	printf("portC low and high (4b): ");
+	printf("portC low and high (4bit), this should fail in default config: ");
 	for (i=1; i<16; i *= 2) {
 		printf("0x%u...", i);
-		if (drvDaqSetP2(0, 2, i) != EXIT_SUCCESS || drvDaqSetP2(0, 3, i) != EXIT_SUCCESS) 
+		if (drvDaqSetP2(&board, 2, i) != EXIT_SUCCESS || drvDaqSetP2(&board, 3, i) != EXIT_SUCCESS) 
 			printf("(failed), ");
 		else 
 			printf("(ok), ");
@@ -482,7 +465,7 @@ int main() {
 	
 	i=15;
 	printf("0x%u...", i);
-	if (drvDaqSetP2(0, 2, i) != EXIT_SUCCESS || drvDaqSetP2(0, 3, i) != EXIT_SUCCESS) 
+	if (drvDaqSetP2(&board, 2, i) != EXIT_SUCCESS || drvDaqSetP2(&board, 3, i) != EXIT_SUCCESS) 
 		printf("(failed), ");
 	else 
 		printf("(ok), ");
@@ -497,7 +480,7 @@ int main() {
 	printf("Will now drive filterwheel connected to port A, sending values 0 through 7 by using the first three bits\n");
 	for (i=0; i<8; i++) {
 		printf("0x%u...", i);
-		drvDaqSetP2(0,0,i);
+		drvDaqSetP2(&board,0,i);
 		sleep(1);
 	}
 	printf("done\n");
@@ -505,18 +488,18 @@ int main() {
 	
 	// setting analog outputs  now //
 	/////////////////////////////////
-	printf("Setting some voltages on all %d channels of board 0 now:\n", Daqchancount[0]);
+	printf("Setting some voltages on all %d channels of board 0 now:\n", board->nchans);
 	printf("(going through the whole voltage range in 20 seconds)\n");
 	for (i=0; i<=100; i++) {
 		if (i % 10 == 0) printf("%d%%", i);
 		else printf(".");
-		drvDaqSetDACs(0, i*65536/100);
+		drvDaqSetDACs(&board, i*65536/100);
 		usleep(200000);
 	}
 	printf("..done\n");
 	printf("\n");
 		
-	drvCloseDaq2k();	
+	drvCloseDaq2k(&board);	
 	printf("Closed DAQboard!\n");
 	return EXIT_SUCCESS;
 }

@@ -34,8 +34,8 @@ okodm_test_LDFLAGS = -lm -lc -lgslcblas -lgsl
 
 # daq test
 daq2k_test_SOURCES = $(SRCDIR)/foam_modules-daq2k.c
-daq2k_test_CPPFLAGS = -DFOAM_MODDAQ2K_ALONE=1 -I/home/tim/foam/drivers/daq2k/include
-daq2k_test_LDFLAGS = -lc -lm -ldaqx -L/home/tim/foam/drivers/lib
+daq2k_test_CPPFLAGS = -DFOAM_MODDAQ2K_ALONE=1 -Idaq2k/include
+daq2k_test_LDFLAGS = -lc -lm -ldaqx -Ldaq2k/lib
 daq2k_test_CFLAGS = -std=c99
 
 # itifg test
@@ -47,9 +47,9 @@ daq2k_test_CFLAGS = -std=c99
 # here comes the itifg hack:
 itifg-test: $(SRCDIR)/foam_cs_library.c $(SRCDIR)/foam_modules-img.c $(SRCDIR)/foam_modules-itifg.c
 	$(CC) $(CFLAGS) $(GFLAGS) $(LIFLAGS) $(LLFLAGS) \
-	-I/home/tim/foam/drivers/itifg/include  \
-	-L/home/tim/foam/drivers/itifg/lib  \
-	-I/home/tim/foam/trunk/code/src/ \
+	-Iitifg/include  \
+	-Litifg/lib  \
+	-I../src/ \
 	-o $@ $^ \
 	-litifg -lm -lc -g \
 	-lgd -lpng -lSDL_image `sdl-config --libs --cflags`
