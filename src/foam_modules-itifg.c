@@ -471,11 +471,12 @@ int drvGetImg(mod_itifg_cam_t *cam, mod_itifg_buf_t *buf, struct timeval *timeou
 	buf->data = (void *)((char *)buf->map);
 	buf->info = (iti_info_t *)((char *)buf->data + cam->rawsize);
 
-	struct timeval timestamp;
-	memcpy (&timestamp, &(buf->info->acq.timestamp), sizeof(struct timeval));
+//	struct timeval timestamp;
+//	memcpy (&timestamp, &(buf->info->acq.timestamp), sizeof(struct timeval));
 
 #ifdef FOAM_MODITIFG_DEBUG
-	FOAM_MODITIFG_ERR("acq.captured %d acq.lost %d, acq.timestamp.tv_sec: %d\n", buf->info->acq.captured, buf->info->acq.lost, (int) buf->info->acq.timestamp.tv_sec);
+	FOAM_MODITIFG_ERR("acq.captured %d acq.lost %d, acq.timestamp.tv_sec: %d .tv_usec: %d\n", buf->info->acq.captured, buf->info->acq.lost, (int) buf->info->acq.timestamp.tv_sec, (int) buf->info->acq.timestamp.tv_usec);
+	FOAM_MODITIFG_ERR("dma.transfered %d \n", buf->info->dma.transfered);
 #endif
 
 #ifdef FOAM_MODITIFG_DEBUG
@@ -522,7 +523,7 @@ int drvStopBoard(mod_itifg_cam_t *cam) {
 #ifdef FOAM_MODITIFG_ALONE
 int main(int argc, char *argv[]) {
 	// init vars
-	int i, j;
+	int i, j, f;
 	mod_itifg_cam_t camera;
 	mod_itifg_buf_t buffer;
 	char *file;
@@ -557,12 +558,23 @@ int main(int argc, char *argv[]) {
 			return EXIT_FAILURE;
 		
 		printf("Frames grabbed: %d\n", buffer.info->acq.captured);
-		//printf("Pixels 1 through 100:\n");
-		for (j=0; j<10; j++)
-			printf("%d,", *( ((unsigned char *) (buffer.data)) + j) );
+		printf("Pixels 1 through 25:\n");
+		for (f=0; f<buffer.frames; f++) {
+			for (j=0; j<25; j++)
+				printf("%d,", *( ((unsigned char *) (buffer.data)) + j + f*camera.pagedsize) );
+			
+			printf("\n");
+		}
+//		for (j=0; j<10; j++)
+//			printf("%d,", *( ((unsigned char *) (buffer.data)) + j + 1*cam->pagedsize) );
+//		for (j=0; j<10; j++)
+//			printf("%d,", *( ((unsigned char *) (buffer.data)) + j + 2*cam->pagedsize));
+//		for (j=0; j<10; j++)
+//			printf("%d,", *( ((unsigned char *) (buffer.data)) + j + 3*cam->pagedsize) );
+
 		
 		printf("\n");
-		asprintf(&file, "itifg-debug-cap-%d.png",  i);
+//		asprintf(&file, "itifg-debug-cap-%d.png",  i);
 		//printf("Writing frame to disk (%s)\n", file);
 
 		//modWritePNGArr(file, ((void *) (buffer.data)), res, 1);
