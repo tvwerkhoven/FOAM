@@ -436,7 +436,6 @@ int drvGetImg(mod_itifg_cam_t *cam, mod_itifg_buf_t *buf, struct timeval *timeou
 
 	//result = poll(&pfd, 1, timeout);
 	result = select(1024, &in_fdset, NULL, &ex_fdset, timeout);
-
 	
 	if (result == -1)  {
 		FOAM_MODITIFG_ERR("Select() returned no active FD's, error:%s\n", strerror(errno));
@@ -444,17 +443,23 @@ int drvGetImg(mod_itifg_cam_t *cam, mod_itifg_buf_t *buf, struct timeval *timeou
 	}
 	if (result == 0) {
 		// timeout occured, return immediately
+#ifdef FOAM_MODITIFG_DEBUG
+		FOAM_MODITIFG_ERR("Timeout in drvGetImg().\n");	
+#endif
 		return EXIT_SUCCESS;
 	}
-	
-	seek = lseek(cam->fd, 0, SEEK_CUR);
+
+#ifdef FOAM_MODITIFG_DEBUG
+	FOAM_MODITIFG_ERR("lseek 0 SEEK_END...\n");	
+#endif
+	seek = lseek(cam->fd, 0, SEEK_END);
 	if (seek == -1) {
-		FOAM_MODITIFG_ERR("SEEK_CUR faild: %s\n", strerror(errno));
+		FOAM_MODITIFG_ERR("SEEK_END failed: %s\n", strerror(errno));
 		return EXIT_FAILURE;
 	}
 
 #ifdef FOAM_MODITIFG_DEBUG
-	FOAM_MODITIFG_ERR("Select returned: %d, seek_cur: %d\n", result, (int) seek);	
+	FOAM_MODITIFG_ERR("Select returned: %d, SEEK_END: %d\n", result, (int) seek);	
 #endif
 //	if (ioctl(cam->fd, GIOC_GET_STATS, &acc) < 0) {
 //		FOAM_MODITIFG_ERR("Could not read framegrabber statistics");
@@ -470,7 +475,19 @@ int drvGetImg(mod_itifg_cam_t *cam, mod_itifg_buf_t *buf, struct timeval *timeou
 	memcpy (&timestamp, &(buf->info->acq.timestamp), sizeof(struct timeval));
 
 #ifdef FOAM_MODITIFG_DEBUG
-	FOAM_MODITIFG_ERR("Captured %d frames (lost %d), last stamp: %d\n", buf->info->acq.captured, buf->info->acq.lost, (int) timestamp.tv_sec);	
+	FOAM_MODITIFG_ERR("acq.captured %d acq.lost %d, acq.timestamp.tv_sec: %d\n", buf->info->acq.captured, buf->info->acq.lost, (int) buf->info->acq.timestamp.tv_sec);
+#endif
+
+#ifdef FOAM_MODITIFG_DEBUG
+	FOAM_MODITIFG_ERR("lseek paged_size SEEK_CUR...\n");	
+#endif
+	seek = lseek(cam->fd, cam->pagedsize, SEEK_CUR);
+	if (seek == -1) {
+		FOAM_MODITIFG_ERR("SEEK_CUR failed: %s\n", strerror(errno));
+		return EXIT_FAILURE;
+	}	
+#ifdef FOAM_MODITIFG_DEBUG
+	FOAM_MODITIFG_ERR("Select returned: %d, SEEK_CUR: %d\n", result, (int) seek);	
 #endif
 //	iti_info_t *imageinfo;
 //	imageinfo = (iti_info_t *)((char *)buf->data + cam->rawsize);
