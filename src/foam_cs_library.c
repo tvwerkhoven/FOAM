@@ -108,7 +108,6 @@ void logWarn(const char *msg, ...) {
 	
 }
 
-
 void logInfo(const int flag, const char *msg, ...) {
 	if (cs_config.loglevel < LOGINFO) 			// Do we need this loglevel?
 		return;

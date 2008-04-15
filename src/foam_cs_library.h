@@ -148,6 +148,7 @@ typedef struct { // wfs_t
 	axes_t scandir; 				//!< scanning direction(s) used (see axes_t type)
 	
 	// TODO: the below members SHOULD be exported to some different structure (these are SH specific)	
+	// !!!:tim:20080414 datatype initialized in sh module, porting can begin
 	
 	float *refim;					//!< reference image for correlation tracking (unused now)
 	

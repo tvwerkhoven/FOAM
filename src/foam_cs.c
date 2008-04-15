@@ -26,7 +26,7 @@ int Maxparams=16;
 // These are defined in foam_cs_library.c
 extern control_t ptc;
 extern config_t cs_config;
-extern conntrack_t clientlist;
+extern conntrack_t clientlist;			// Stores a list of clients connected
 extern struct event_base *sockbase;		// Stores the eventbase to be used
 
 // These are used for communication between worker thread and
@@ -155,10 +155,8 @@ int main(int argc, char *argv[]) {
 }
 
 void catchSIGINT() {
-	// TvW: disabled below reset, seems to work better (at least on OS X?)
-	// !!!:tim:20080325 does not solve the occasional hanging after ^C and requires ^/
 	// reset signal handler, as noted on http://www.cs.cf.ac.uk/Dave/C/node24.html
-//	signal(SIGINT, catchSIGINT);
+	// signal(SIGINT, catchSIGINT);
 	
 	// stop the framework
 	stopFOAM();
@@ -239,7 +237,7 @@ int validWFC(char *var) {
 	tmp = strtol(strstr(var,"[")+1, NULL, 10);
 	if (tmp >= ptc.wfc_count) {
 		logWarn("Corrupt configuration, found config for WFC %d (%s) while WFC count is only %d.", tmp, var, ptc.wfc_count);
-		return -1; // TODO: we deviate from errorcodes here, acceptable?
+		return -1;
 	}
 	return tmp;
 }
@@ -249,7 +247,7 @@ int validWFS(char *var) {
 	tmp = strtol(strstr(var,"[")+1, NULL, 10);
 	if (tmp >= ptc.wfs_count) {
 		logWarn("Corrupt configuration, found config for WFS %d (%s) while WFS count is only %d.", tmp, var, ptc.wfs_count);
-		return -1; // TODO: we deviate from errorcodes here, acceptable?
+		return -1;
 	}
 	return tmp;
 }
@@ -764,7 +762,7 @@ int sockListen() {
 	serv_addr.sin_port = htons(cs_config.listenport);
 	memset(serv_addr.sin_zero, '\0', sizeof(serv_addr.sin_zero));
 
-	// Set reusable and nosigpipe flags so we don't get into trouble later on. TODO: doesn't work?
+	// Set reusable and nosigpipe flags so we don't get into trouble later on.
 	if (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval)) != 0)
 		logWarn("Could not set socket flag SO_REUSEADDR.");
 	
@@ -907,63 +905,6 @@ void sockOnRead(struct bufferevent *bev, void *arg) {
 	parseCmd(msg, nbytes, client);
 }
 
-// int explode(char *msg, char **arr) {
-// 	size_t begin, end;	
-// 	int i, maxlen=0;
-// 	char *orig=msg;
-// 	
-// 	for(i=0; end != 0; i++) {
-// 		begin = strspn(msg, " \t\n");
-// 		if (begin > 0) msg = msg+begin;
-// 		
-// 		// get first next position of a space
-// 		end = strcspn(msg, " \t\n");
-// 
-// 		msg = msg+end+1;
-// 		if ((int) end > maxlen) maxlen = (int) end;
-// 	}
-// 	
-// 	if (i == 0) return EXIT_FAILURE;
-// 	
-// 	char array[i][maxlen+1];
-// 	
-// 	for(i=0; end != 0; i++) {
-// 		begin = strspn(orig, " \t\n");
-// 		if (begin > 0) orig = orig+begin;
-// 		
-// 		// get first next position of a space
-// 		end = strcspn(orig, " \t\n");
-// 		
-// 		strncpy(array[i], orig, end);
-// 		array[i][end] = '\0';
-// 		
-// 		orig = orig+end+1;
-// 	}
-// 	
-// 	return EXIT_SUCCESS;
-// }
-
-// int popword(char **msg, char *cmd) {
-// 	size_t begin, end;
-// 	
-// 	// remove initial whitespace
-// 	begin = strspn(*msg, " \t\n");
-// 	if (begin > 0)// Trimming string begin %d chars", begin
-// 		*msg = *msg+begin;
-// 	
-// 	// get first next position of a space
-// 	end = strcspn(*msg, " \t\n");
-// 	if (end == 0) { // No characters? return 0 to the calling function
-// 		cmd[0] = '\0';
-// 		return 0;
-// 	}
-// 		
-// 	strncpy(cmd, *msg, end);
-// 	cmd[end] = '\0'; // terminate string (TODO: strncpy does not do this, solution?)
-// 	*msg = *msg+end+1;
-// 	return strlen(cmd);
-// }
-
 int explode(char *str, char **list) {
 	size_t begin, len;
 	int i;
@@ -1020,6 +961,7 @@ int parseCmd(char *msg, const int len, client_t *client) {
 	char local[strlen(msg)+1];
 	char *list[Maxparams];
 	int count;
+	int tmpint;
 	
 	// copy the string there, append \0
 	strncpy(local, msg, strlen(msg));
@@ -1054,12 +996,29 @@ int parseCmd(char *msg, const int len, client_t *client) {
 	}
 	else if ((strcmp(list[0],"exit") == 0) || (strcmp(list[0],"quit") == 0)) {
 		tellClient(client->buf_ev, "200 OK EXIT");
+		// we disconnect a client by simulation EOF
 		sockOnErr(client->buf_ev, EVBUFFER_EOF, client);
 	}
 	else if (strcmp(list[0],"shutdown") == 0) {
 		tellClients("200 OK SHUTDOWN");
 		sockOnErr(client->buf_ev, EVBUFFER_EOF, client);
 		stopFOAM();
+	}
+	else if (strcmp(list[0],"image") == 0) {
+		if (count > 1) {
+			tmpint = (int) strtol(list[0], NULL, 10);
+			if (tmpint < ptc.wfs_count) {
+				tellClient(client->buf_ev, "200 OK IMAGE WFS %d - NOT IMPLEMENTED", tmpint);
+				tellClient(client->buf_ev, "SIZE %d", ptc.wfs[tmpint].res.x * ptc.wfs[tmpint].res.y);
+			}
+			else {
+				tellClient(client->buf_ev,"401 UNKNOWN WFS %ld", tmpint);
+			}
+		}
+		else {
+			tellClient(client->buf_ev,"402 IMAGE REQUIRES ARG");
+		}
+		
 	}
 	else if (strcmp(list[0],"mode") == 0) {
 		if (count > 1) {
@@ -1111,8 +1070,6 @@ int tellClients(char *msg, ...) {
 	// logDebug(0, "message was: %s length %d and %d", msg, strlen(msg), strlen(msg));
 	// pthread_mutex_lock(&mode_mutex);
 	for (i=0; i < clientlist.nconn; i++) {
-		// TODO: place locking outside or inside the loop? any difference?
-		
 		if (bufferevent_write(clientlist.connlist[i]->buf_ev, out2, strlen(out2)+1) != 0) {
 			logWarn("Error telling client %d", i);
 			return EXIT_FAILURE; 
@@ -1130,6 +1087,7 @@ int tellClient(struct bufferevent *bufev, char *msg, ...) {
 
 	va_start(ap, msg);
 
+	// !!!:tim:20080414 this can be done faster?
 	vasprintf(&out, msg, ap);
 	asprintf(&out2, "%s\n", out);
 
@@ -1152,6 +1110,7 @@ int showHelp(const client_t *client, const char *subhelp) {
 200 OK HELP\n\
 help [command]:         help (on a certain command, if available).\n\
 mode <mode>:            close or open the loop.\n\
+image <wfs>:            get the image from a certain WFS.\n\
 exit or quit:           disconnect from daemon.\n\
 shutdown:               shutdown the FOAM program.");
 	}
@@ -1166,6 +1125,13 @@ mode <mode>: close or open the loop.\n\
    mode=listen: stops looping and waits for input from the users. Basically\n\
         does nothing.\n");
 	}
+	else if (strcmp(subhelp, "image") == 0) {
+		tellClient(client->buf_ev, "\
+200 OK HELP IMAGE\n\
+image <wfs>: request to send a WFS image over the network.\n\
+    <wfs> must be a valid wavefrontsensor.\n\
+    Note that this transfer may take a while and could slowdown the AO itself.\n");
+	}	
 	else if (strcmp(subhelp, "help") == 0) {
 			tellClient(client->buf_ev, "\
 200 OK HELP HELP\n\

@@ -11,8 +11,9 @@
 	\section Functions
 	
 	The functions provided to the outside world are:
+	\li modReadIMGSurf() - Read an img (png, pgm, jpg, etc.) to an SDL_Surface.
 	\li modReadIMGArr() - Read an img (png, pgm, jpg, etc.) to an array.
-	\li modWritePNGSurf() - Write an 8-bit ASCII PGM file from an SDL_Surface.
+	\li modWritePGMSurf() - Write an 8-bit ASCII PGM file from an SDL_Surface.
 	\li modWritePNGArr() - Write an 8-bit ASCII PGM file from a float image.
 	\li modWritePNGSurf() - Write an 8-bit grayscale PNG file from an SDL_Surface.
 
@@ -24,9 +25,14 @@
 	\li SDL
 	\li SDL_Image
 	\li gd
+	\li libpng
+ 
+	\section History
+ 
+	\li 2008-04-14 updated documentation
 
 	\section License
-	This code is licensed under the GPL, version 2.	
+	This code is licensed under the GPL, version 2 or higher
 */
 
 // HEADERS //
@@ -290,7 +296,6 @@ int modStorPNGSurf(char *filename, char *post, int seq, SDL_Surface *img) {
 	return EXIT_SUCCESS;	
 }
 	
-
 Uint32 getPixel(SDL_Surface *surface, int x, int y) {
     int bpp = surface->format->BytesPerPixel;
     // Here p is the address to the pixel we want to retrieve

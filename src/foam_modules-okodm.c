@@ -31,6 +31,12 @@
 	\li \b FOAM_MODOKODM_ALONE (*undef*), ifdef, this module will compile on it's own, imlies FOAM_MODOKODM_DEBUG
 	\li \b FOAM_MODOKODM_DEBUG (*undef*), ifdef, this module will give lowlevel debugs through printf
  
+	\section Dependencies
+ 
+	This module depends on GSL because it uses the gsl_vector* datatypes to store DM commands in. 
+	This is done because this this format is suitable for doing fast calculations, and
+	the control vector is usually the output of some matrix multiplication.
+
 	\section History
  
 	\li 2008-04-14: api update, defines deprecated, replaced by struct
@@ -57,22 +63,6 @@
 #ifdef FOAM_MODOKODM_ALONE
 #define FOAM_MODOKODM_DEBUG 1			//!< set to 1 for debugging, in that case this module compiles on its own
 #endif
-
-// PCI bus is 32 bit oriented, hence each 4th addres represents valid
-// 8bit wide channel 
-//#define FOAM_MODOKODM_PCI_OFFSET 4		//!< This should be 4, perhaps 8 sometimes
-
-// These are the base addresses for the different boards. In our
-// case we have 2 boards, boards 3 and 4 are not used
-//#define FOAM_MODOKODM_BASE1 0xc000		//!< Get these addresses from lspci -v and look for the PROTO-3 cards
-//#define FOAM_MODOKODM_BASE2 0xc400		//!< Get these addresses from lspci -v and look for the PROTO-3 cards
-//#define FOAM_MODOKODM_BASE3 0xFFFF		//!< Get these addresses from lspci -v and look for the PROTO-3 cards
-//#define FOAM_MODOKODM_BASE4 0xFFFF		//!< Get these addresses from lspci -v and look for the PROTO-3 cards
-
-// Local global variables for tracking configuration (obsoleted)
-//static int Okodminit = 0;				//!< This variable is set to 1 if the DM is initialized
-//static int Okofd;						//!< This stores the FD to the DM
-//static int Okoaddr[38];					//!< This stores the addresses for all actuators
 
 // datatypes
 
@@ -479,7 +469,7 @@ int main () {
 	
 
 	
-	printf("Settings actuators to low (0) and high (%d) volts repeatedly:...\n", FOAM_MODOKODM_MAXVOLT);
+	printf("Settings actuators to low (0) and high (%d) volts repeatedly (20 times):...\n", FOAM_MODOKODM_MAXVOLT);
 	for (i=0; i<20; i++) {
 		// set all to -1
 		printf("lo..");

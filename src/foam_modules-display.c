@@ -38,16 +38,46 @@
 
 #include "foam_modules-display.h"
 
+// DATATYPES //
+/************/
+
+typedef struct {
+	SDL_Surface *screen;		//!< (mod) SDL_Surface to use
+	SDL_Event event;			//!< (mod) SDL_Event to use
+	char caption[64];			//!< (user) Caption for the SDL window
+	coord_t res;				//!< (user) Resolution for the SDL window
+	Uint32 flags;				//!< (user) Flags to use with SDL_SetVideoMode
+} mod_display_t;
+
+// GLOBAL VARIABLES //
+/********************/
+
 #define FOAM_MODDISPLAY_PRIO 1
 static pthread_t moddisplay_thread;
 static pthread_attr_t moddisplay_attr;
 static int moddisplay_drawing = 1;
+
 // ROUTINES //
 /************/
 
 
-// TODO:
-int modInitDraw() {
+int modInitDraw(mod_display_t *disp) {
+    if (SDL_Init(SDL_INIT_VIDEO) == -1) {
+		logWarn("Could not initialize SDL: %s", SDL_GetError());
+		return EXIT_FAILURE;
+	}
+	
+	atexit(SDL_Quit);
+	
+	SDL_WM_SetCaption(disp->caption, disp->caption);
+	
+	disp->screen = SDL_SetVideoMode(disp->res.x, disp->res.y, 0, disp->flags);
+	//SDL_HWSURFACE | SDL_DOUBLEBUF | SDL_RESIZABLE
+	if (disp->screen == NULL) {
+		logWarn("Unable to set video: %s", SDL_GetError());
+		return EXIT_FAILURE;
+	}
+	
 	// we use this routine to startup a helper thread which will do the actual SDL
 	// such that the drawing calls are non-blocking.
 //	int rc;
@@ -123,7 +153,7 @@ void drawDash(int x0, int y0, int x1, int y1, SDL_Surface *screen) {
 
 	drawPixel(screen, x0, y0, 255, 255, 255);
 	for(i=0; i<step; i++) {
-		if ((i / 10) % 2 == 1)
+		if ((i / 10) % 2 == 1) // we're drawing a dash, so don't always draw a pixel
 			continue;
 			
 		x1 = x0+i*dx; // since x1 is an integer, we can't just increment this, steps of 0.7 pixels wouldn't work...
@@ -142,7 +172,8 @@ int modDisplayImg(float *img, coord_t res, SDL_Surface *screen) {
 	float max=img[0];
 	float min=img[0];
 	
-	// we need this loop to check the maximum and minimum intensity. TODO: Do we need that? can't SDL do that?	
+	// we need this loop to check the maximum and minimum intensity. 
+	// TODO: Do we need that? can't SDL do that?
 	for (x=0; x < res.x*res.y; x++) {
 		if (img[x] > max)
 			max = img[x];
@@ -223,6 +254,8 @@ int modDisplayImg(float *img, coord_t res, SDL_Surface *screen) {
 
 void drawPixel(SDL_Surface *screen, int x, int y, Uint8 R, Uint8 G, Uint8 B) {
 	Uint32 color = SDL_MapRGB(screen->format, R, G, B);
+	
+	// crop the pixel coordinates if they go out of bound
 	if (x<0) x=0;
 	else if (x>screen->w) x=screen->w;
 	
@@ -269,6 +302,7 @@ void drawPixel(SDL_Surface *screen, int x, int y, Uint8 R, Uint8 G, Uint8 B) {
 	}
 }
 
+// !!!:tim:20080414 shortcut for SH display routines
 int modDrawSubapts(wfs_t *wfsinfo, SDL_Surface *screen) {
 	if (wfsinfo->nsubap == 0)
 		return EXIT_SUCCESS;			// if there's nothing to draw, don't draw (shouldn't happen)
@@ -295,7 +329,7 @@ int modDrawSubapts(wfs_t *wfsinfo, SDL_Surface *screen) {
 	return EXIT_SUCCESS;
 }
 
-// TODO: only SH now, update!
+// !!!:tim:20080414 shortcut for SH display routines
 int modDrawVecs(wfs_t *wfsinfo, SDL_Surface *screen) {
 	if (wfsinfo->nsubap == 0)
 		return EXIT_SUCCESS;	// if there's nothing to draw, don't draw (shouldn't happen)
@@ -318,7 +352,6 @@ int modDrawGrid(int gridres[2], SDL_Surface *screen) {
 	int gridw = screen->w/gridres[0];
 	int gridh = screen->h/gridres[1];
 		
-			
 	for (xc=1; xc < gridres[0]; xc++)
 		drawDash(xc*gridw, 0, xc*gridw, screen->h, screen);
 	

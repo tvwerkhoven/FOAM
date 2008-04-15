@@ -22,7 +22,7 @@
 	This module does not depend on other modules.
 
 	\section License
-	This code is licensed under the GPL, version 2.	
+	This code is licensed under the GPL, version 2 or later
 */
 
 // HEADERS //
@@ -34,6 +34,38 @@
 /***********/
 
 // FILE *rmsfp;
+
+// DATATYPES //
+/*************/
+
+/*!
+ @brief This stores information on SH tracking
+ 
+ The things prefixed by '(user)' must be supplied by the user immediately (i.e.
+ hardcode it in or read some configuration file). The (mod) things will be calculcated
+ by this or other modules. (runtime) is something the user can change during runtime.
+ */
+typedef struct {
+	int nsubap;						//!< (user) amount of subapertures used (coordinates stored in subc)
+
+	coord_t cells;					//!< (user) number of cells in this SH WFS (i.e. lenslet resolution)
+	coord_t shsize;					//!< (mod) pixel resolution per cell
+	coord_t track;					//!< (mod) tracker window resolution in pixels (i.e. 1/2 of shsize per definition)
+	
+	gsl_vector_float *singular;		//!< (mod) stores singular values from SVD (nact big)
+	gsl_matrix_float *dmmodes;		//!< (mod) stores dmmodes from SVD (nact*nact big)
+	gsl_matrix_float *wfsmodes;		//!< (mod) stores wfsmodes from SVD (nact*nsubap*2 big)
+
+	coord_t *subc;					//!< (mod) this will hold the coordinates of each sub aperture
+	coord_t *gridc;					//!< (mod) this will hold the grid origin for a certain subaperture
+	gsl_vector_float *refc;			//!< (mod) reference displacements (i.e. definition of the origin)
+	gsl_vector_float *disp;			//!< (mod) measured displacements (compare with refence for actual shift)
+
+	fcoord_t stepc;					//!< (runtime) add this to the reference displacement during correction
+	
+	char pinhole[FILENAMELEN];		//!< (user) filename to store the pinhole calibration (stored in *refc)
+	char influence[FILENAMELEN];	//!< (user) filename to store the influence matrix
+} mod_sh_track_t;
 
 // ROUTINES //
 /************/

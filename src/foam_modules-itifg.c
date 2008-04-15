@@ -33,7 +33,14 @@
 	\li drvStopBufs() - Release the memory used by the buffers
 	\li drvStopBoard() - Stop the board and cleanup
  
+	\section Dependencies
+ 
+	This module depends on the itifg module version 8.4.0-0 or higher. This open source driver is used
+	to access a variety of framegrabbers, including the PC-DIG board used here.
+
 	\section History
+ 
+	\li 2008-04-14 api improved, now works with variables instead of defines
 	This file is partially based on itifg.cc, part of filter_control by Guus Sliepen <guus@sliepen.eu.org>
 	which was released under the GPL version 2.
  
@@ -55,7 +62,7 @@
 #define FOAM_MODITIFG_ERR logDebug
 #endif
 
-//#include <foam_modules-itifg.h>
+//#include "foam_modules-itifg.h"
 
 #ifdef FOAM_MODITIFG_ALONE
 // used for writing the frames to disk

@@ -44,7 +44,7 @@
 #endif
 
 /*!
- @brief This function a string on a port and returns the bytes written
+ @brief This function writes a string to a port and returns the bytes written
  
  @param [in] *port The port to write to
  @param [in] *cmd The string to write to the port

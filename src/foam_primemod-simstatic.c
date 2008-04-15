@@ -30,35 +30,28 @@
 // GLOBALS //
 /***********/
 
-float *simimgsurf=NULL;		// Global surface to draw on
-SDL_Surface *screen;		// Global surface to draw on
-SDL_Event event;			// Global SDL event struct to catch user IO
-extern pthread_mutex_t mode_mutex;
-extern pthread_cond_t mode_cond;
-
+float *simimgsurf=NULL;		// Global array to store image in
+//SDL_Surface *screen;		// Global surface to draw on
+//SDL_Event event;			// Global SDL event struct to catch user IO
+extern pthread_mutex_t mode_mutex;	// Mutexes coming from foam_cs.c
+extern pthread_cond_t mode_cond;	// cont_t coming from foam_cs.c
+mod_display_t disp;			// display information (screen, event, etc...)
 
 // ROUTINES //
 /************/
 
 int modInitModule(control_t *ptc) {
-    // initialize video
-    if (SDL_Init(SDL_INIT_VIDEO) == -1) 
-		logErr("Could not initialize SDL: %s", SDL_GetError());
-		
-	atexit(SDL_Quit);
-
-	SDL_WM_SetCaption("WFS output", "WFS output");
-
-	screen = SDL_SetVideoMode(ptc->wfs[0].res.x, ptc->wfs[0].res.y, 0, SDL_HWSURFACE | SDL_DOUBLEBUF | SDL_RESIZABLE);
-	if (screen == NULL) 
-		logErr("Unable to set video: %s", SDL_GetError());
-
+    // initialize display
+	if (modInitDraw(&disp) != EXIT_SUCCESS)
+		return EXIT_FAILURE;
+	
 	return EXIT_SUCCESS;
 }
 
 void modStopModule(control_t *ptc) {
 	// Unlock the screen, we might have stopped the module during drawing
-	modFinishDraw(screen);
+	// !!!:tim:20080414 does this work correctly?
+	modFinishDraw(disp->screen);
 }
 
 int modOpenInit(control_t *ptc) {
@@ -102,8 +95,7 @@ int modOpenLoop(control_t *ptc) {
 		ptc->frames = 0;
 		ptc->mode = AO_MODE_LISTEN;
 	}
-		
-		
+
 	if (SDL_PollEvent(&event))
 		switch (event.type) {
 			case SDL_QUIT:

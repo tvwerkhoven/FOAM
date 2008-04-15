@@ -30,7 +30,7 @@ ovdluhe@kis.uni-freiburg.de
 
 	\section Dependencies
 
-	This module does not depend on other modules.
+	This module does not depend on other modules or libraries
 
 	\section License
 	Gleb Vdovin agreed to release his code into the public domain under the GPL on January 26, 2008.
