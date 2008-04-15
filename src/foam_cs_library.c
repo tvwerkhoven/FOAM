@@ -10,20 +10,23 @@
 #include "foam_cs_library.h"
 
 control_t ptc = { //!< Global struct to hold system characteristics and other data. Initialize with complete but minimal configuration
-	.mode = AO_MODE_OPEN,
-	.calmode = CAL_INFL, 	// or CAL_PINHOLE
+	.mode = AO_MODE_LISTEN,
+	.calmode = CAL_INFL,
 	.wfs_count = 0,
 	.wfc_count = 0,
+	.fw_count = 0,
 	.frames = 0,
 	.capped = 0,
-	.filter = FILT_NORMAL
 };
 
-config_t cs_config = { 
+config_t cs_config = { //!< Global struct to hold system configuration. Init with complete but minimal configuration
 	.listenip = "0.0.0.0", 	// listen on any IP by default, can be overridden by config file
 	.listenport = 10000,	// listen on port 10000 by default
+	.infofile = NULL,
 	.infofd = NULL,
+	.errfile = NULL,
 	.errfd = NULL,
+	.debugfile = NULL,
 	.debugfd = NULL,
 	.use_syslog = false,
 	.syslog_prepend = "foam",

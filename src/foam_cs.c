@@ -14,20 +14,25 @@
 
 #include "foam_cs_library.h"
 
-int Maxparams=16;
+int Maxparams=32;
 
-#ifndef FOAM_CONFIG_FILE
-#error "FOAM_CONFIG_FILE undefined, please define in foam_cs_config.h"
-#endif
+// !!!:tim:20080415 config not done via files anymore
+//#ifndef FOAM_CONFIG_FILE
+//#error "FOAM_CONFIG_FILE undefined, please define in foam_cs_config.h"
+//#endif
 
 // GLOBAL VARIABLES //
 /********************/	
 
-// These are defined in foam_cs_library.c
-extern control_t ptc;
-extern config_t cs_config;
+// These are defined in foam_cs_library.c, and declared in
+// foam_cs_library.h
 extern conntrack_t clientlist;			// Stores a list of clients connected
 extern struct event_base *sockbase;		// Stores the eventbase to be used
+
+// These are defined in the prime module file, but declared in
+// foam_cs_libray.h. Beware of this if you really want to get your hands dirty
+extern control_t ptc;
+extern config_t cs_config;
 
 // These are used for communication between worker thread and
 // networking thread
@@ -42,7 +47,7 @@ static pthread_attr_t attr;
 
 // These come from modules, these MUST be defined there
 extern void modStopModule(control_t *ptc);
-extern int modInitModule(control_t *ptc);
+extern int modInitModule(control_t *ptc, config_t *cs_config);
 extern int modOpenInit(control_t *ptc);
 extern int modOpenLoop(control_t *ptc);
 extern int modClosedInit(control_t *ptc);
@@ -75,10 +80,7 @@ int main(int argc, char *argv[]) {
 		logErr("pthread_mutex_init failed.");
 	if (pthread_cond_init (&mode_cond, NULL) != 0)
 		logErr("pthread_cond_init failed.");
-		
-	clientlist.nconn = 0;	// Init number of connections to zero
-	ptc.frames = 0L;		// Init the framecount to zero
-
+	
 	char date[64];
 	struct tm *loctime;
 
@@ -96,19 +98,30 @@ int main(int argc, char *argv[]) {
 	loctime = localtime (&ptc.starttime);
 	strftime (date, 64, "%A, %B %d %H:%M:%S, %Y (%Z).", loctime);	
 	logInfo(0,"at %s", date);
-		
-	// BEGIN LOADING CONFIG
-	// !!!:tim:20080327 replace this with defines lateron, I think?
-	if (loadConfig(FOAM_CONFIG_FILE) != EXIT_SUCCESS)
-		logErr("Loading configuration failed");
 
-	logInfo(0, "Configuration successfully loaded...");	
-	
 	// INITIALIZE MODULES //
 	/**********************/
-
-	modInitModule(&ptc);
 	
+	// this routine will populate ptc and possibly 
+	// adapt cs_config. changes will be processed below
+	modInitModule(&ptc, &cs_config);
+	
+	// BEGIN LOADING CONFIG
+	// !!!:tim:20080327 replace this with defines lateron, I think?
+//	if (loadConfig(FOAM_CONFIG_FILE) != EXIT_SUCCESS)
+//		logErr("Loading configuration failed");
+	
+	// Check the info, error and debug files that we possibly have to log to
+	initLogFiles();
+	
+	// Init syslog if necessary
+	if (cs_config.use_syslog == true) {
+		openlog(cs_config.syslog_prepend, LOG_PID, LOG_USER);	
+		logInfo(0, "Syslog successfully initialized.");
+	}
+
+	logInfo(0, "Configuration successfully loaded...");	
+		
 	// START THREADING //
 	/*******************/
 	
@@ -172,6 +185,19 @@ void stopFOAM() {
 	
 	// Tell the clients we're going down
 	tellClients("200 OK SHUTTING DOWN NOW");
+	sleep(1);
+	
+	// disconnect all clients
+	for (i=0; i < MAX_CLIENTS; i++) {
+		if (clientlist.connlist[i] != NULL) {
+			if (clientlist.connlist[i]->fd > 0) {
+				sockOnErr(clientlist.connlist[i]->buf_ev, EVBUFFER_EOF, clientlist.connlist[i]);
+			}
+			else {
+				logWarn("Error closing client %d, client_t not NULL, but fd <=0!", i);
+			}
+		}
+	}
 	
 	// set the mode to shutdown so the modules know
 	// we're finishing up
@@ -216,41 +242,41 @@ void stopFOAM() {
 }
 
 // tiny helper function
-int issetWFC(char *var) {
-	if (ptc.wfc == NULL) {
-		logWarn("Cannot initialize %s before initializing WFC_COUNT", var);
-		return EXIT_FAILURE;
-	}
-	return EXIT_SUCCESS;
-}
-
-int issetWFS(char *var) {
-	if (ptc.wfs == NULL) {
-		logWarn("Cannot initialize %s before initializing WFS_COUNT", var);
-		return EXIT_FAILURE;
-	}
-	return EXIT_SUCCESS;
-}
-
-int validWFC(char *var) {
-	int tmp;
-	tmp = strtol(strstr(var,"[")+1, NULL, 10);
-	if (tmp >= ptc.wfc_count) {
-		logWarn("Corrupt configuration, found config for WFC %d (%s) while WFC count is only %d.", tmp, var, ptc.wfc_count);
-		return -1;
-	}
-	return tmp;
-}
-
-int validWFS(char *var) {
-	int tmp;
-	tmp = strtol(strstr(var,"[")+1, NULL, 10);
-	if (tmp >= ptc.wfs_count) {
-		logWarn("Corrupt configuration, found config for WFS %d (%s) while WFS count is only %d.", tmp, var, ptc.wfs_count);
-		return -1;
-	}
-	return tmp;
-}
+//int issetWFC(char *var) {
+//	if (ptc.wfc == NULL) {
+//		logWarn("Cannot initialize %s before initializing WFC_COUNT", var);
+//		return EXIT_FAILURE;
+//	}
+//	return EXIT_SUCCESS;
+//}
+//
+//int issetWFS(char *var) {
+//	if (ptc.wfs == NULL) {
+//		logWarn("Cannot initialize %s before initializing WFS_COUNT", var);
+//		return EXIT_FAILURE;
+//	}
+//	return EXIT_SUCCESS;
+//}
+//
+//int validWFC(char *var) {
+//	int tmp;
+//	tmp = strtol(strstr(var,"[")+1, NULL, 10);
+//	if (tmp >= ptc.wfc_count) {
+//		logWarn("Corrupt configuration, found config for WFC %d (%s) while WFC count is only %d.", tmp, var, ptc.wfc_count);
+//		return -1;
+//	}
+//	return tmp;
+//}
+//
+//int validWFS(char *var) {
+//	int tmp;
+//	tmp = strtol(strstr(var,"[")+1, NULL, 10);
+//	if (tmp >= ptc.wfs_count) {
+//		logWarn("Corrupt configuration, found config for WFS %d (%s) while WFS count is only %d.", tmp, var, ptc.wfs_count);
+//		return -1;
+//	}
+//	return tmp;
+//}
 
 // TODO: unfinished, 
 // problem: how to init names for multiple WFC's?
@@ -282,284 +308,284 @@ int validWFS(char *var) {
 //
 //}
 
-int parseConfig(char *var, char *value) {
-	int tmp, i;
-
-	if (strcmp(var, "WFS_COUNT") == 0) {
-		ptc.wfs_count = (int) strtol(value, NULL, 10);
-		ptc.wfs = calloc(ptc.wfs_count, sizeof(*ptc.wfs));	// allocate memory
-		if (ptc.wfs == NULL)
-			logErr("Failed to allocate ptc.wfs");
-		
-		// initialize some things to zero
-		for (i=0; i<ptc.wfs_count; i++) {
-			ptc.wfs[i].singular = NULL;
-			ptc.wfs[i].dmmodes = NULL;
-			ptc.wfs[i].wfsmodes = NULL;
-			ptc.wfs[i].stepc.x = 0;
-			ptc.wfs[i].stepc.y = 0;
-		}
-		
-		logInfo(0, "WFS_COUNT initialized: %d", ptc.wfs_count);
-	}
-	else if (strcmp(var, "WFC_COUNT") == 0) {
-		ptc.wfc_count = (int) strtol(value, NULL, 10);
-		ptc.wfc = calloc(ptc.wfc_count, sizeof(*ptc.wfc));
-		
-		if (ptc.wfc == NULL)
-			logErr("Failed to allocate ptc.wfc");
-
-		logInfo(0, "WFC_COUNT initialized: %d", ptc.wfc_count);
-	}
-	else if (strstr(var, "WFC_NAME") != NULL) {
-		if (issetWFC(var) != EXIT_SUCCESS) return EXIT_FAILURE;
-		if ((tmp = validWFC(var)) < 0) return EXIT_FAILURE;
-				
-		strncpy(ptc.wfc[tmp].name, value, (size_t) FILENAMELEN);
-		ptc.wfc[tmp].name[FILENAMELEN-1] = '\0'; // TODO: This might not be necessary
-		
-		logInfo(0, "WFC_NAME initialized for WFC %d: %s", tmp, ptc.wfc[tmp].name);
-	}
-	else if (strstr(var, "WFC_TYPE") != NULL) {
-		if (issetWFC(var) != EXIT_SUCCESS) return EXIT_FAILURE;
-		if ((tmp = validWFC(var)) < 0) return EXIT_FAILURE;
-		
-		ptc.wfc[tmp].type = (int) strtol(value, NULL, 10);
+//int parseConfig(char *var, char *value) {
+//	int tmp, i;
+//
+//	if (strcmp(var, "WFS_COUNT") == 0) {
+//		ptc.wfs_count = (int) strtol(value, NULL, 10);
+//		ptc.wfs = calloc(ptc.wfs_count, sizeof(*ptc.wfs));	// allocate memory
+//		if (ptc.wfs == NULL)
+//			logErr("Failed to allocate ptc.wfs");
+//		
+//		// initialize some things to zero
+//		for (i=0; i<ptc.wfs_count; i++) {
+//			ptc.wfs[i].singular = NULL;
+//			ptc.wfs[i].dmmodes = NULL;
+//			ptc.wfs[i].wfsmodes = NULL;
+//			ptc.wfs[i].stepc.x = 0;
+//			ptc.wfs[i].stepc.y = 0;
+//		}
+//		
+//		logInfo(0, "WFS_COUNT initialized: %d", ptc.wfs_count);
+//	}
+//	else if (strcmp(var, "WFC_COUNT") == 0) {
+//		ptc.wfc_count = (int) strtol(value, NULL, 10);
+//		ptc.wfc = calloc(ptc.wfc_count, sizeof(*ptc.wfc));
+//		
+//		if (ptc.wfc == NULL)
+//			logErr("Failed to allocate ptc.wfc");
+//
+//		logInfo(0, "WFC_COUNT initialized: %d", ptc.wfc_count);
+//	}
+//	else if (strstr(var, "WFC_NAME") != NULL) {
+//		if (issetWFC(var) != EXIT_SUCCESS) return EXIT_FAILURE;
+//		if ((tmp = validWFC(var)) < 0) return EXIT_FAILURE;
+//				
 //		strncpy(ptc.wfc[tmp].name, value, (size_t) FILENAMELEN);
 //		ptc.wfc[tmp].name[FILENAMELEN-1] = '\0'; // TODO: This might not be necessary
-		
-		logInfo(0, "WFC_TYPE initialized for WFC %d: %d", tmp, ptc.wfc[tmp].type);
-	}
-    else if (strstr(var, "WFC_NACT") != NULL) {
-		if (issetWFC(var) != EXIT_SUCCESS) return EXIT_FAILURE;
-		if ((tmp = validWFC(var)) < 0) return EXIT_FAILURE;
-
-		// Get the number of actuators for which WFC?
-		// tmp = strtol(strstr(var,"[")+1, NULL, 10);
-		ptc.wfc[tmp].nact = strtol(value, NULL, 10);
-		ptc.wfc[tmp].ctrl = gsl_vector_float_calloc(ptc.wfc[tmp].nact);
-		if (ptc.wfc[tmp].ctrl == NULL) return EXIT_FAILURE;
-
-		logInfo(0, "WFS_NACT initialized for WFS %d: %d", tmp, ptc.wfc[tmp].nact);
-    }
-    else if (strstr(var, "WFC_GAIN") != NULL) {
-		if (issetWFC(var) != EXIT_SUCCESS) return EXIT_FAILURE;
-		if ((tmp = validWFC(var)) < 0) return EXIT_FAILURE;
-		
-		ptc.wfc[tmp].gain = strtof(value, NULL);
-
-		logInfo(0, "WFC_GAIN initialized for WFS %d: %f", tmp, ptc.wfc[tmp].gain);
-    }
-	else if (strstr(var, "WFS_NAME") != NULL) {
-		if (issetWFS(var) != EXIT_SUCCESS) return EXIT_FAILURE;
-		if ((tmp = validWFS(var)) < 0) return EXIT_FAILURE;
-		
-		strncpy(ptc.wfs[tmp].name, value, (size_t) FILENAMELEN);
-		ptc.wfs[tmp].name[FILENAMELEN-1] = '\0'; // This might not be necessary
-				
-		logInfo(0, "WFS_NAME initialized for WFS %d: %s", tmp, ptc.wfs[tmp].name);
-	}
-	else if (strstr(var, "WFS_DF") != NULL) {
-		if (issetWFS(var) != EXIT_SUCCESS) return EXIT_FAILURE;
-		if ((tmp = validWFS(var)) < 0) return EXIT_FAILURE;
-
-		strncpy(ptc.wfs[tmp].darkfile, value, (size_t) FILENAMELEN);
-		ptc.wfs[tmp].darkfile[FILENAMELEN-1] = '\0'; // This might not be necessary
-		
-		logInfo(0, "WFS_DF initialized for WFS %d: %s", tmp, ptc.wfs[tmp].darkfile);
-	}
-	else if (strstr(var, "WFS_SKY") != NULL) {
-		if (issetWFS(var) != EXIT_SUCCESS) return EXIT_FAILURE;
-		if ((tmp = validWFS(var)) < 0) return EXIT_FAILURE;
-
-		strncpy(ptc.wfs[tmp].skyfile, value, (size_t) FILENAMELEN);
-		ptc.wfs[tmp].skyfile[FILENAMELEN-1] = '\0'; // This might not be necessary
-		
-		logInfo(0, "WFS_SKY initialized for WFS %d: %s", tmp, ptc.wfs[tmp].skyfile);
-	}
-	else if (strstr(var, "WFS_PINHOLE") != NULL) {
-		if (issetWFS(var) != EXIT_SUCCESS) return EXIT_FAILURE;
-		if ((tmp = validWFS(var)) < 0) return EXIT_FAILURE;
-
-		strncpy(ptc.wfs[tmp].pinhole, value, (size_t) FILENAMELEN);
-		ptc.wfs[tmp].pinhole[FILENAMELEN-1] = '\0'; // This might not be necessary
-		
-		logInfo(0, "WFS_PINHOLE initialized for WFS %d: %s", tmp, ptc.wfs[tmp].pinhole);
-	}
-	else if (strstr(var, "WFS_INFL") != NULL) {
-		if (issetWFS(var) != EXIT_SUCCESS) return EXIT_FAILURE;
-		if ((tmp = validWFS(var)) < 0) return EXIT_FAILURE;
-
-		strncpy(ptc.wfs[tmp].influence, value, (size_t) FILENAMELEN);
-		ptc.wfs[tmp].influence[FILENAMELEN-1] = '\0'; // This might not be necessary
-		
-		logInfo(0, "WFS_INFL initialized for WFS %d: %s", tmp, ptc.wfs[tmp].influence);
-	}
-	else if (strstr(var, "WFS_FF") != NULL) {
-		if (issetWFS(var) != EXIT_SUCCESS) return EXIT_FAILURE;
-		if ((tmp = validWFS(var)) < 0) return EXIT_FAILURE;
-
-		strncpy(ptc.wfs[tmp].flatfile, value, (size_t) FILENAMELEN);
-		ptc.wfs[tmp].flatfile[FILENAMELEN-1] = '\0'; // This might not be necessary
-
-		logInfo(0, "WFS_FF initialized for WFS %d: %s", tmp, ptc.wfs[tmp].flatfile);
-	}
-	else if (strstr(var, "WFS_CELLS") != NULL){
-		if (issetWFS(var) != EXIT_SUCCESS) return EXIT_FAILURE;
-		if ((tmp = validWFS(var)) < 0) return EXIT_FAILURE;
-		
-		if (strstr(value,"{") == NULL || strstr(value,"}") == NULL || strstr(value,",") == NULL) 
-			return EXIT_FAILURE; // return if we don't have the {x,y} syntax
-
-		ptc.wfs[tmp].cells[0] = strtol(strtok(value,"{,}"), NULL, 10);
-		ptc.wfs[tmp].cells[1] = strtol(strtok(NULL ,"{,}"), NULL, 10);
-		
-		if (ptc.wfs[tmp].cells[0] % 2 != 0 || ptc.wfs[tmp].cells[1] % 2 != 0)
-			logErr("WFS %d has an odd cell-resolution (%dx%d), not supported. Please only use 2nx2n cells.", \
+//		
+//		logInfo(0, "WFC_NAME initialized for WFC %d: %s", tmp, ptc.wfc[tmp].name);
+//	}
+//	else if (strstr(var, "WFC_TYPE") != NULL) {
+//		if (issetWFC(var) != EXIT_SUCCESS) return EXIT_FAILURE;
+//		if ((tmp = validWFC(var)) < 0) return EXIT_FAILURE;
+//		
+//		ptc.wfc[tmp].type = (int) strtol(value, NULL, 10);
+////		strncpy(ptc.wfc[tmp].name, value, (size_t) FILENAMELEN);
+////		ptc.wfc[tmp].name[FILENAMELEN-1] = '\0'; // TODO: This might not be necessary
+//		
+//		logInfo(0, "WFC_TYPE initialized for WFC %d: %d", tmp, ptc.wfc[tmp].type);
+//	}
+//    else if (strstr(var, "WFC_NACT") != NULL) {
+//		if (issetWFC(var) != EXIT_SUCCESS) return EXIT_FAILURE;
+//		if ((tmp = validWFC(var)) < 0) return EXIT_FAILURE;
+//
+//		// Get the number of actuators for which WFC?
+//		// tmp = strtol(strstr(var,"[")+1, NULL, 10);
+//		ptc.wfc[tmp].nact = strtol(value, NULL, 10);
+//		ptc.wfc[tmp].ctrl = gsl_vector_float_calloc(ptc.wfc[tmp].nact);
+//		if (ptc.wfc[tmp].ctrl == NULL) return EXIT_FAILURE;
+//
+//		logInfo(0, "WFS_NACT initialized for WFS %d: %d", tmp, ptc.wfc[tmp].nact);
+//    }
+//    else if (strstr(var, "WFC_GAIN") != NULL) {
+//		if (issetWFC(var) != EXIT_SUCCESS) return EXIT_FAILURE;
+//		if ((tmp = validWFC(var)) < 0) return EXIT_FAILURE;
+//		
+//		ptc.wfc[tmp].gain = strtof(value, NULL);
+//
+//		logInfo(0, "WFC_GAIN initialized for WFS %d: %f", tmp, ptc.wfc[tmp].gain);
+//    }
+//	else if (strstr(var, "WFS_NAME") != NULL) {
+//		if (issetWFS(var) != EXIT_SUCCESS) return EXIT_FAILURE;
+//		if ((tmp = validWFS(var)) < 0) return EXIT_FAILURE;
+//		
+//		strncpy(ptc.wfs[tmp].name, value, (size_t) FILENAMELEN);
+//		ptc.wfs[tmp].name[FILENAMELEN-1] = '\0'; // This might not be necessary
+//				
+//		logInfo(0, "WFS_NAME initialized for WFS %d: %s", tmp, ptc.wfs[tmp].name);
+//	}
+//	else if (strstr(var, "WFS_DF") != NULL) {
+//		if (issetWFS(var) != EXIT_SUCCESS) return EXIT_FAILURE;
+//		if ((tmp = validWFS(var)) < 0) return EXIT_FAILURE;
+//
+//		strncpy(ptc.wfs[tmp].darkfile, value, (size_t) FILENAMELEN);
+//		ptc.wfs[tmp].darkfile[FILENAMELEN-1] = '\0'; // This might not be necessary
+//		
+//		logInfo(0, "WFS_DF initialized for WFS %d: %s", tmp, ptc.wfs[tmp].darkfile);
+//	}
+//	else if (strstr(var, "WFS_SKY") != NULL) {
+//		if (issetWFS(var) != EXIT_SUCCESS) return EXIT_FAILURE;
+//		if ((tmp = validWFS(var)) < 0) return EXIT_FAILURE;
+//
+//		strncpy(ptc.wfs[tmp].skyfile, value, (size_t) FILENAMELEN);
+//		ptc.wfs[tmp].skyfile[FILENAMELEN-1] = '\0'; // This might not be necessary
+//		
+//		logInfo(0, "WFS_SKY initialized for WFS %d: %s", tmp, ptc.wfs[tmp].skyfile);
+//	}
+//	else if (strstr(var, "WFS_PINHOLE") != NULL) {
+//		if (issetWFS(var) != EXIT_SUCCESS) return EXIT_FAILURE;
+//		if ((tmp = validWFS(var)) < 0) return EXIT_FAILURE;
+//
+//		strncpy(ptc.wfs[tmp].pinhole, value, (size_t) FILENAMELEN);
+//		ptc.wfs[tmp].pinhole[FILENAMELEN-1] = '\0'; // This might not be necessary
+//		
+//		logInfo(0, "WFS_PINHOLE initialized for WFS %d: %s", tmp, ptc.wfs[tmp].pinhole);
+//	}
+//	else if (strstr(var, "WFS_INFL") != NULL) {
+//		if (issetWFS(var) != EXIT_SUCCESS) return EXIT_FAILURE;
+//		if ((tmp = validWFS(var)) < 0) return EXIT_FAILURE;
+//
+//		strncpy(ptc.wfs[tmp].influence, value, (size_t) FILENAMELEN);
+//		ptc.wfs[tmp].influence[FILENAMELEN-1] = '\0'; // This might not be necessary
+//		
+//		logInfo(0, "WFS_INFL initialized for WFS %d: %s", tmp, ptc.wfs[tmp].influence);
+//	}
+//	else if (strstr(var, "WFS_FF") != NULL) {
+//		if (issetWFS(var) != EXIT_SUCCESS) return EXIT_FAILURE;
+//		if ((tmp = validWFS(var)) < 0) return EXIT_FAILURE;
+//
+//		strncpy(ptc.wfs[tmp].flatfile, value, (size_t) FILENAMELEN);
+//		ptc.wfs[tmp].flatfile[FILENAMELEN-1] = '\0'; // This might not be necessary
+//
+//		logInfo(0, "WFS_FF initialized for WFS %d: %s", tmp, ptc.wfs[tmp].flatfile);
+//	}
+//	else if (strstr(var, "WFS_CELLS") != NULL){
+//		if (issetWFS(var) != EXIT_SUCCESS) return EXIT_FAILURE;
+//		if ((tmp = validWFS(var)) < 0) return EXIT_FAILURE;
+//		
+//		if (strstr(value,"{") == NULL || strstr(value,"}") == NULL || strstr(value,",") == NULL) 
+//			return EXIT_FAILURE; // return if we don't have the {x,y} syntax
+//
+//		ptc.wfs[tmp].cells[0] = strtol(strtok(value,"{,}"), NULL, 10);
+//		ptc.wfs[tmp].cells[1] = strtol(strtok(NULL ,"{,}"), NULL, 10);
+//		
+//		if (ptc.wfs[tmp].cells[0] % 2 != 0 || ptc.wfs[tmp].cells[1] % 2 != 0)
+//			logErr("WFS %d has an odd cell-resolution (%dx%d), not supported. Please only use 2nx2n cells.", \
 				tmp, ptc.wfs[tmp].cells[0], ptc.wfs[tmp].cells[1]);
-		
-		ptc.wfs[tmp].subc = calloc(ptc.wfs[tmp].cells[0] * ptc.wfs[tmp].cells[1], sizeof(*ptc.wfs[tmp].subc));
-		ptc.wfs[tmp].gridc = calloc(ptc.wfs[tmp].cells[0] * ptc.wfs[tmp].cells[1], sizeof(*ptc.wfs[tmp].gridc));
-		
-		ptc.wfs[tmp].refc = gsl_vector_float_calloc(ptc.wfs[tmp].cells[0] * ptc.wfs[tmp].cells[1] * 2);
-		ptc.wfs[tmp].disp = gsl_vector_float_calloc(ptc.wfs[tmp].cells[0] * ptc.wfs[tmp].cells[1] * 2);
-		if (ptc.wfs[tmp].subc == NULL || ptc.wfs[tmp].refc == NULL || ptc.wfs[tmp].disp == NULL)
-			logErr("Cannot allocate memory for tracker window coordinates, or other tracking vectors.");
-		
-		if (ptc.wfs[tmp].res.x * ptc.wfs[tmp].res.y <= 0)
-			logErr("Cannot initialize WFS_CELLS before WFS_RES");
-		
-		ptc.wfs[tmp].shsize[0] = (ptc.wfs[tmp].res.x / ptc.wfs[tmp].cells[0]);
-		ptc.wfs[tmp].shsize[1] = (ptc.wfs[tmp].res.y / ptc.wfs[tmp].cells[1]);
-		ptc.wfs[tmp].track.x = ptc.wfs[tmp].shsize[0]/2;
-		ptc.wfs[tmp].track.y = ptc.wfs[tmp].shsize[1]/2;
-		
-		ptc.wfs[tmp].refim = calloc(ptc.wfs[tmp].shsize[0] * \
-			ptc.wfs[tmp].shsize[1], sizeof(ptc.wfs[tmp].refim));
-		if (ptc.wfs[tmp].refim == NULL)
-			logErr("Failed to allocate image memory for reference image.");
+//		
+//		ptc.wfs[tmp].subc = calloc(ptc.wfs[tmp].cells[0] * ptc.wfs[tmp].cells[1], sizeof(*ptc.wfs[tmp].subc));
+//		ptc.wfs[tmp].gridc = calloc(ptc.wfs[tmp].cells[0] * ptc.wfs[tmp].cells[1], sizeof(*ptc.wfs[tmp].gridc));
+//		
+//		ptc.wfs[tmp].refc = gsl_vector_float_calloc(ptc.wfs[tmp].cells[0] * ptc.wfs[tmp].cells[1] * 2);
+//		ptc.wfs[tmp].disp = gsl_vector_float_calloc(ptc.wfs[tmp].cells[0] * ptc.wfs[tmp].cells[1] * 2);
+//		if (ptc.wfs[tmp].subc == NULL || ptc.wfs[tmp].refc == NULL || ptc.wfs[tmp].disp == NULL)
+//			logErr("Cannot allocate memory for tracker window coordinates, or other tracking vectors.");
+//		
+//		if (ptc.wfs[tmp].res.x * ptc.wfs[tmp].res.y <= 0)
+//			logErr("Cannot initialize WFS_CELLS before WFS_RES");
+//		
+//		ptc.wfs[tmp].shsize[0] = (ptc.wfs[tmp].res.x / ptc.wfs[tmp].cells[0]);
+//		ptc.wfs[tmp].shsize[1] = (ptc.wfs[tmp].res.y / ptc.wfs[tmp].cells[1]);
+//		ptc.wfs[tmp].track.x = ptc.wfs[tmp].shsize[0]/2;
+//		ptc.wfs[tmp].track.y = ptc.wfs[tmp].shsize[1]/2;
+//		
+//		ptc.wfs[tmp].refim = calloc(ptc.wfs[tmp].shsize[0] * \
+//			ptc.wfs[tmp].shsize[1], sizeof(ptc.wfs[tmp].refim));
+//		if (ptc.wfs[tmp].refim == NULL)
+//			logErr("Failed to allocate image memory for reference image.");
+//
+//		logInfo(0, "WFS_CELLS initialized for WFS %d: (%dx%d). Subapt resolution is (%dx%d) pixels", \
+//			tmp, ptc.wfs[tmp].cells[0], ptc.wfs[tmp].cells[1], ptc.wfs[tmp].shsize[0], ptc.wfs[tmp].shsize[1]);
+//	}
+//	else if (strstr(var, "WFS_RES") != NULL){
+//		if (issetWFS(var) != EXIT_SUCCESS) return EXIT_FAILURE;
+//		if ((tmp = validWFS(var)) < 0) return EXIT_FAILURE;
+//		
+//		if (strstr(value,"{") == NULL || strstr(value,"}") == NULL || strstr(value,",") == NULL) 
+//			return EXIT_FAILURE;
+//
+//		ptc.wfs[tmp].res.x = strtol(strtok(value,"{,}"), NULL, 10);
+//		ptc.wfs[tmp].res.y = strtol(strtok(NULL ,"{,}"), NULL, 10);
+//		
+//		if (ptc.wfs[tmp].res.x % 2 != 0 || ptc.wfs[tmp].res.y % 4 != 0)
+//			logErr("WFS %d has an odd resolution (%dx%d), not supported. Please only use 2nx2n pixels.", \
+//				tmp, ptc.wfs[tmp].res.x, ptc.wfs[tmp].res.y);
+//		
+//		// Allocate memory for all images we need lateron
+//		ptc.wfs[tmp].image = calloc(ptc.wfs[tmp].res.x * ptc.wfs[tmp].res.y, sizeof(ptc.wfs[tmp].image));
+//		ptc.wfs[tmp].darkim = calloc(ptc.wfs[tmp].res.x * ptc.wfs[tmp].res.y, sizeof(ptc.wfs[tmp].darkim));
+//		ptc.wfs[tmp].flatim = calloc(ptc.wfs[tmp].res.x * ptc.wfs[tmp].res.y, sizeof(ptc.wfs[tmp].flatim));
+//		ptc.wfs[tmp].corrim = gsl_matrix_float_calloc(ptc.wfs[tmp].res.x, ptc.wfs[tmp].res.y);
+//		
+//		// check if everything worked out ok
+//		if ((ptc.wfs[tmp].image == NULL) ||
+//				(ptc.wfs[tmp].darkim == NULL) ||
+//				(ptc.wfs[tmp].flatim == NULL) ||
+//				(ptc.wfs[tmp].corrim == NULL))
+//			logErr("Failed to allocate image memory (image, dark, flat, corrected).");
+//		
+//		logInfo(0, "WFS_RES initialized for WFS %d: %d x %d", tmp, ptc.wfs[tmp].res.x, ptc.wfs[tmp].res.y);
+//	}
+//
+//	else if (strcmp(var, "CS_LISTEN_IP") == 0) {
+//		strncpy(cs_config.listenip, value, 16);
+//		
+//		logInfo(0, "CS_LISTEN_IP initialized: %s", cs_config.listenip);
+//	}
+//	else if (strcmp(var, "CS_LISTEN_PORT") == 0) {
+//		cs_config.listenport = (int) strtol(value, NULL, 10);
+//		
+//		logInfo(0, "CS_LISTEN_PORT initialized: %d", cs_config.listenport);
+//	}
+//	else if (strcmp(var, "CS_USE_SYSLOG") == 0) {
+//		cs_config.use_syslog = ((int) strtol(value, NULL, 10) == 0) ? false : true;
+//		
+//		logInfo(0, "CS_USE_SYSLOG initialized: %d", cs_config.use_syslog);
+//	}
+//	else if (strcmp(var, "CS_USE_STDOUT") == 0) {
+//		cs_config.use_stdout = ((int) strtol(value, NULL, 10) == 0) ? false : true;
+//		
+//		logInfo(0, "CS_USE_STDERR initialized: %d", cs_config.use_stdout);
+//	}
+//	else if (strcmp(var, "CS_INFOFILE") == 0) {
+//		strncpy(cs_config.infofile,value, (size_t) FILENAMELEN);
+//		cs_config.infofile[FILENAMELEN-1] = '\0'; // TODO: is this necessary?
+//		logInfo(0, "CS_INFOFILE initialized: %s", cs_config.infofile);
+//	}
+//	else if (strcmp(var, "CS_ERRFILE") == 0) {
+//		strncpy(cs_config.errfile,value, (size_t) FILENAMELEN);
+//		cs_config.errfile[FILENAMELEN-1] = '\0'; // TODO: is this necessary?
+//		logInfo(0, "CS_ERRFILE initialized: %s", cs_config.errfile);
+//	}
+//	else if (strcmp(var, "CS_DEBUGFILE") == 0) {
+//		strncpy(cs_config.debugfile, value, (size_t) FILENAMELEN);
+//		cs_config.debugfile[FILENAMELEN-1] = '\0'; // TODO: is this necessary?
+//		logInfo(0, "CS_DEBUGFILE initialized: %s", cs_config.debugfile);
+//	}
+//
+//	return EXIT_SUCCESS;
+//}
 
-		logInfo(0, "WFS_CELLS initialized for WFS %d: (%dx%d). Subapt resolution is (%dx%d) pixels", \
-			tmp, ptc.wfs[tmp].cells[0], ptc.wfs[tmp].cells[1], ptc.wfs[tmp].shsize[0], ptc.wfs[tmp].shsize[1]);
-	}
-	else if (strstr(var, "WFS_RES") != NULL){
-		if (issetWFS(var) != EXIT_SUCCESS) return EXIT_FAILURE;
-		if ((tmp = validWFS(var)) < 0) return EXIT_FAILURE;
-		
-		if (strstr(value,"{") == NULL || strstr(value,"}") == NULL || strstr(value,",") == NULL) 
-			return EXIT_FAILURE;
-
-		ptc.wfs[tmp].res.x = strtol(strtok(value,"{,}"), NULL, 10);
-		ptc.wfs[tmp].res.y = strtol(strtok(NULL ,"{,}"), NULL, 10);
-		
-		if (ptc.wfs[tmp].res.x % 2 != 0 || ptc.wfs[tmp].res.y % 4 != 0)
-			logErr("WFS %d has an odd resolution (%dx%d), not supported. Please only use 2nx2n pixels.", \
-				tmp, ptc.wfs[tmp].res.x, ptc.wfs[tmp].res.y);
-		
-		// Allocate memory for all images we need lateron
-		ptc.wfs[tmp].image = calloc(ptc.wfs[tmp].res.x * ptc.wfs[tmp].res.y, sizeof(ptc.wfs[tmp].image));
-		ptc.wfs[tmp].darkim = calloc(ptc.wfs[tmp].res.x * ptc.wfs[tmp].res.y, sizeof(ptc.wfs[tmp].darkim));
-		ptc.wfs[tmp].flatim = calloc(ptc.wfs[tmp].res.x * ptc.wfs[tmp].res.y, sizeof(ptc.wfs[tmp].flatim));
-		ptc.wfs[tmp].corrim = gsl_matrix_float_calloc(ptc.wfs[tmp].res.x, ptc.wfs[tmp].res.y);
-		
-		// check if everything worked out ok
-		if ((ptc.wfs[tmp].image == NULL) ||
-				(ptc.wfs[tmp].darkim == NULL) ||
-				(ptc.wfs[tmp].flatim == NULL) ||
-				(ptc.wfs[tmp].corrim == NULL))
-			logErr("Failed to allocate image memory (image, dark, flat, corrected).");
-		
-		logInfo(0, "WFS_RES initialized for WFS %d: %d x %d", tmp, ptc.wfs[tmp].res.x, ptc.wfs[tmp].res.y);
-	}
-
-	else if (strcmp(var, "CS_LISTEN_IP") == 0) {
-		strncpy(cs_config.listenip, value, 16);
-		
-		logInfo(0, "CS_LISTEN_IP initialized: %s", cs_config.listenip);
-	}
-	else if (strcmp(var, "CS_LISTEN_PORT") == 0) {
-		cs_config.listenport = (int) strtol(value, NULL, 10);
-		
-		logInfo(0, "CS_LISTEN_PORT initialized: %d", cs_config.listenport);
-	}
-	else if (strcmp(var, "CS_USE_SYSLOG") == 0) {
-		cs_config.use_syslog = ((int) strtol(value, NULL, 10) == 0) ? false : true;
-		
-		logInfo(0, "CS_USE_SYSLOG initialized: %d", cs_config.use_syslog);
-	}
-	else if (strcmp(var, "CS_USE_STDOUT") == 0) {
-		cs_config.use_stdout = ((int) strtol(value, NULL, 10) == 0) ? false : true;
-		
-		logInfo(0, "CS_USE_STDERR initialized: %d", cs_config.use_stdout);
-	}
-	else if (strcmp(var, "CS_INFOFILE") == 0) {
-		strncpy(cs_config.infofile,value, (size_t) FILENAMELEN);
-		cs_config.infofile[FILENAMELEN-1] = '\0'; // TODO: is this necessary?
-		logInfo(0, "CS_INFOFILE initialized: %s", cs_config.infofile);
-	}
-	else if (strcmp(var, "CS_ERRFILE") == 0) {
-		strncpy(cs_config.errfile,value, (size_t) FILENAMELEN);
-		cs_config.errfile[FILENAMELEN-1] = '\0'; // TODO: is this necessary?
-		logInfo(0, "CS_ERRFILE initialized: %s", cs_config.errfile);
-	}
-	else if (strcmp(var, "CS_DEBUGFILE") == 0) {
-		strncpy(cs_config.debugfile, value, (size_t) FILENAMELEN);
-		cs_config.debugfile[FILENAMELEN-1] = '\0'; // TODO: is this necessary?
-		logInfo(0, "CS_DEBUGFILE initialized: %s", cs_config.debugfile);
-	}
-
-	return EXIT_SUCCESS;
-}
-
-int loadConfig(char *file) {
-	logDebug(0, "Reading configuration from file: %s. Max linelength: %d", file, COMMANDLEN);
-	FILE *fp;
-	char line[COMMANDLEN];
-	char var[COMMANDLEN], value[COMMANDLEN];
-	
-	fp = fopen(file,"r");
-	if (fp == NULL)		// We can't open the file?
-		return EXIT_FAILURE;
-	
-	while (fgets(line, COMMANDLEN, fp) != NULL) {	// Read while there is no error
-		if (*line == ' ' || *line == '\t' || *line == '\n' || *line == '#')
-			continue;	// Skip bogus lines, they must not begin with these chars
-			
-		if (strlen(line) == COMMANDLEN-1) {
-			logErr("Configuration invalid, line '%s' is too long! (>%d)", line, COMMANDLEN-1);
-			continue;
-		}
-		
-		if (sscanf(line,"%s = %s", var, value) != 2)
-			continue;	// Skip lines which do not adhere to 'var = value'-syntax
-		
-		logDebug(0, "Parsing '%s' '%s' settings pair (len: %d).", var, value, strlen(line), COMMANDLEN);
-		
-		if (parseConfig(var,value) != EXIT_SUCCESS)	// pass the pair on to be parsed and inserted in ptc
-			return EXIT_FAILURE;		
-	}
-	
-	if (!feof(fp)) 		// Oops, not everything was read?
-		return EXIT_FAILURE;
-	else 
-		fclose(fp);
-		
-	// begin postconfig check
-	// TvW: TODO
-	
-	// Check the info, error and debug files that we possibly have to log to
-	initLogFiles();
-	
-	// Init syslog
-	if (cs_config.use_syslog == true) {
-		openlog(cs_config.syslog_prepend, LOG_PID, LOG_USER);	
-		logInfo(0, "Syslog successfully initialized.");
-	}
-	return EXIT_SUCCESS;
-}
+//int loadConfig(char *file) {
+//	logDebug(0, "Reading configuration from file: %s. Max linelength: %d", file, COMMANDLEN);
+//	FILE *fp;
+//	char line[COMMANDLEN];
+//	char var[COMMANDLEN], value[COMMANDLEN];
+//	
+//	fp = fopen(file,"r");
+//	if (fp == NULL)		// We can't open the file?
+//		return EXIT_FAILURE;
+//	
+//	while (fgets(line, COMMANDLEN, fp) != NULL) {	// Read while there is no error
+//		if (*line == ' ' || *line == '\t' || *line == '\n' || *line == '#')
+//			continue;	// Skip bogus lines, they must not begin with these chars
+//			
+//		if (strlen(line) == COMMANDLEN-1) {
+//			logErr("Configuration invalid, line '%s' is too long! (>%d)", line, COMMANDLEN-1);
+//			continue;
+//		}
+//		
+//		if (sscanf(line,"%s = %s", var, value) != 2)
+//			continue;	// Skip lines which do not adhere to 'var = value'-syntax
+//		
+//		logDebug(0, "Parsing '%s' '%s' settings pair (len: %d).", var, value, strlen(line), COMMANDLEN);
+//		
+//		if (parseConfig(var,value) != EXIT_SUCCESS)	// pass the pair on to be parsed and inserted in ptc
+//			return EXIT_FAILURE;		
+//	}
+//	
+//	if (!feof(fp)) 		// Oops, not everything was read?
+//		return EXIT_FAILURE;
+//	else 
+//		fclose(fp);
+//		
+//	// begin postconfig check
+//	// TvW: TODO
+//	
+//	// Check the info, error and debug files that we possibly have to log to
+//	initLogFiles();
+//	
+//	// Init syslog
+//	if (cs_config.use_syslog == true) {
+//		openlog(cs_config.syslog_prepend, LOG_PID, LOG_USER);	
+//		logInfo(0, "Syslog successfully initialized.");
+//	}
+//	return EXIT_SUCCESS;
+//}
 
 int initLogFiles() {
-	if (strlen(cs_config.infofile) > 0) {
+	if (cs_config.infofile != NULL) {
 		if ((cs_config.infofd = fopen(cs_config.infofile,"a")) == NULL) {
 			logWarn("Unable to open file %s for info-logging! Not using this logmethod!", cs_config.infofile);
 			cs_config.infofile[0] = '\0';
@@ -569,7 +595,7 @@ int initLogFiles() {
 	else
 		logInfo(0, "Not logging general info to disk.");
 
-	if (strlen(cs_config.errfile) > 0) {
+	if (cs_config.errfile != NULL) {
 		if (strcmp(cs_config.errfile, cs_config.infofile) == 0) {	// If the errorfile is the same as the infofile, use the same FD
 			cs_config.errfd = cs_config.infofd;
 			logDebug(0, "Using the same file '%s' for info- and error- logging.", cs_config.errfile);
@@ -584,8 +610,7 @@ int initLogFiles() {
 		logInfo(0, "Not logging errors to disk.");
 	}
 
-
-	if (strlen(cs_config.debugfile) > 0) {
+	if (cs_config.debugfile != 0) {
 		if (strcmp(cs_config.debugfile,cs_config.infofile) == 0) {
 			cs_config.debugfd = cs_config.infofd;	
 			logDebug(0, "Using the same file '%s' for debug- and info- logging.", cs_config.debugfile);
@@ -607,27 +632,27 @@ int initLogFiles() {
 	return EXIT_SUCCESS;
 }
 
-int saveConfig(char *file) {
-	FILE *fp;
-		
-	fp = fopen(file,"w+");
-	if (fp == NULL)		// We can't open the file
-		return EXIT_FAILURE;
-
-	// this is not complete yet
-	// TODO
-	fputs("# Automatically created config file\n", fp);
-	fputs("WFS_COUNT = 1\n", fp);
-	
-	fputs("WFC_COUNT = 2\n", fp);
-	fputs("WFC_NACT[0] = 2\n", fp);
-	fputs("WFC_NACT[1] = 37\n", fp);
-	fputs("# EOF\n", fp);
-
-	fclose(fp);
-
-	return EXIT_SUCCESS;
-}
+//int saveConfig(char *file) {
+//	FILE *fp;
+//		
+//	fp = fopen(file,"w+");
+//	if (fp == NULL)		// We can't open the file
+//		return EXIT_FAILURE;
+//
+//	// this is not complete yet
+//	// TODO
+//	fputs("# Automatically created config file\n", fp);
+//	fputs("WFS_COUNT = 1\n", fp);
+//	
+//	fputs("WFC_COUNT = 2\n", fp);
+//	fputs("WFC_NACT[0] = 2\n", fp);
+//	fputs("WFC_NACT[1] = 37\n", fp);
+//	fputs("# EOF\n", fp);
+//
+//	fclose(fp);
+//
+//	return EXIT_SUCCESS;
+//}
 
 void modeOpen() {
 	ptc.frames++;
@@ -779,7 +804,11 @@ int sockListen() {
 		
 	logInfo(0, "Successfully initialized socket on %s:%d, setting up event schedulers.", cs_config.listenip, cs_config.listenport);
 	
+	// configure the event to be scheduled 
 	event_set(&sockevent, sock, EV_READ | EV_PERSIST, sockAccept, NULL);
+	// associated the event with a certain event_base
+	event_base_set(sockbase, &sockevent);
+	// add the event to the buffer
     event_add(&sockevent, NULL);
 
 	logInfo(0, "This tread will block for incoming network traffic now...");
@@ -845,13 +874,14 @@ void sockAccept(const int sock, const short event, void *arg) {
 	if (bufferevent_base_set(sockbase, client->buf_ev) != 0)
 		logErr("Failed to set base for buffered events.");
 
-	// We have to enable it before our callbacks will be
+	// We have to enable it before our callbacks will be effective
 	if (bufferevent_enable(client->buf_ev, EV_READ) != 0)
 		logErr("Failed to enable buffered event.");
 
 	logInfo(0, "Succesfully accepted connection from %s (using sock %d and buf_ev %p)", \
 		inet_ntoa(cli_addr.sin_addr), newsock, client->buf_ev);
 	
+	// welcome the client
 	bufferevent_write(client->buf_ev,"200 OK CONNECTION ESTABLISHED\n", sizeof("200 OK CONNECTION ESTABLISHED\n"));
 
 }
@@ -865,8 +895,9 @@ void sockOnErr(struct bufferevent *bev, short event, void *arg) {
 		logWarn("Client socket error, disconnecting.");
 		
 	clientlist.nconn--;
+	// !!!:tim:20080415 this works, because clientlist.connlist[(int) client->connid] 
+	// points to client, which is freed below.
 	clientlist.connlist[(int) client->connid] = NULL; // Does this work nicely?
-	
 	bufferevent_free(client->buf_ev);
 	close(client->fd);
 	free(client);
@@ -936,7 +967,7 @@ int explode(char *str, char **list) {
 		// 'str'
 		if (str[len] == '\0') {
 			// if i<16, we can still use
-			// NULL t indicate this was
+			// NULL to indicate this was
 			// the last word. Otherwise,
 			// we've stopped anyway
 			if (i < 15) list[i+1] = NULL;
@@ -954,7 +985,6 @@ int explode(char *str, char **list) {
 	// if we finish the loop, we parsed Maxlength words:
 	return i+1;
 }
-
 
 int parseCmd(char *msg, const int len, client_t *client) {
 	// reserve memory for a local copy of 'msg'
@@ -1000,8 +1030,7 @@ int parseCmd(char *msg, const int len, client_t *client) {
 		sockOnErr(client->buf_ev, EVBUFFER_EOF, client);
 	}
 	else if (strcmp(list[0],"shutdown") == 0) {
-		tellClients("200 OK SHUTDOWN");
-		sockOnErr(client->buf_ev, EVBUFFER_EOF, client);
+		tellClients("200 OK SHUTTING DOWN NOW!");
 		stopFOAM();
 	}
 	else if (strcmp(list[0],"image") == 0) {
@@ -1017,8 +1046,18 @@ int parseCmd(char *msg, const int len, client_t *client) {
 		}
 		else {
 			tellClient(client->buf_ev,"402 IMAGE REQUIRES ARG");
+		}		
+	}
+	else if (strcmp(list[0],"broadcast") == 0) {
+		if (count > 1) {
+			tellClients("200 OK %s", msg);
 		}
-		
+		else if (count == Maxparams) {
+			tellClient(client->buf_ev,"401 BROADCAST ACCEPTS ONLY %d WORDS", Maxparams);
+		}
+		else {
+			tellClient(client->buf_ev,"402 BROADCAST REQUIRES ARG");
+		}
 	}
 	else if (strcmp(list[0],"mode") == 0) {
 		if (count > 1) {
@@ -1069,14 +1108,19 @@ int tellClients(char *msg, ...) {
 
 	// logDebug(0, "message was: %s length %d and %d", msg, strlen(msg), strlen(msg));
 	// pthread_mutex_lock(&mode_mutex);
-	for (i=0; i < clientlist.nconn; i++) {
-		if (bufferevent_write(clientlist.connlist[i]->buf_ev, out2, strlen(out2)+1) != 0) {
-			logWarn("Error telling client %d", i);
-			return EXIT_FAILURE; 
+	logDebug(0, "Tellclients called..., telling '%s', and '%s' and '%s'", msg, out, out2);
+	for (i=0; i < MAX_CLIENTS; i++) {
+		logDebug(LOG_NOFORMAT, "%d ", i);
+		if (clientlist.connlist[i] != NULL && clientlist.connlist[i]->fd > 0) { 
+			logDebug(LOG_NOFORMAT, "told! (%s) ", out2);
+			if (bufferevent_write(clientlist.connlist[i]->buf_ev, out2, strlen(out2)+1) != 0) {
+				logWarn("Error telling client %d", i);
+				return EXIT_FAILURE; 
+			}
 		}
 	}
 	// pthread_mutex_unlock(&mode_mutex);
-	// logDebug(LOG_NOFORMAT, "\n");
+	logDebug(LOG_NOFORMAT, "\n");
 	return EXIT_SUCCESS;
 }
 
@@ -1102,7 +1146,6 @@ int tellClient(struct bufferevent *bufev, char *msg, ...) {
 	return EXIT_SUCCESS;
 }
 
-
 int showHelp(const client_t *client, const char *subhelp) {
 	// spaces are important here!!!
 	if (subhelp == NULL) {
@@ -1111,6 +1154,7 @@ int showHelp(const client_t *client, const char *subhelp) {
 help [command]:         help (on a certain command, if available).\n\
 mode <mode>:            close or open the loop.\n\
 image <wfs>:            get the image from a certain WFS.\n\
+broadcast <msg>:        send a message to all connected clients.\n\
 exit or quit:           disconnect from daemon.\n\
 shutdown:               shutdown the FOAM program.");
 	}

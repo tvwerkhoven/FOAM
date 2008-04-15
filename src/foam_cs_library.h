@@ -39,7 +39,9 @@ typedef unsigned char u_char;
 #include <gsl/gsl_linalg.h> 		// this is for SVD / matrix datatype
 #include <gsl/gsl_blas.h> 			// this is for SVD
 
-#include "foam_cs_config.h"
+// !!!:tim:20080415 deprecated, basic configuration now done in foam_cs_librabry.c
+// !!!:tim:20080415 and the rest is done in the primemodule header- & c-file
+//#include "foam_cs_config.h"
 
 //#include <sys/select.h> //?
 //#include <limits.h> 				// LINE_MAX
@@ -85,23 +87,6 @@ typedef enum { // aomode_t
 } aomode_t;
 
 /*!
-@brief Helper enum for filter wheel identification
-*/
-typedef enum {
-	FILT_PINHOLE,	//!< Pinhole filter in place, used for calibration
-	FILT_NORMAL		//!< Normal' filter in place
-} fwheel_t;
-
-/*!
-@brief Helper enum for ao calibration mode operation.
-*/
-typedef enum { // calmode_t
-	CAL_PINHOLE,	//!< determine reference shifts after inserting a pinhole
-	CAL_INFL,		//!< determine the influence functions for each WFS-WFC pair
-	CAL_LINTEST		//!< linearity test for WFCs
-} calmode_t;
-
-/*!
 @brief Helper enum for ao scanning mode
 */
 typedef enum { // axes_t
@@ -111,70 +96,59 @@ typedef enum { // axes_t
 } axes_t;
 
 /*!
-@brief Helper enum for WFC types
-*/
-typedef enum { // axes_t
-	WFC_TT=0,		//!< WFC Type for tip-tilt mirrors
-	WFC_DM=1		//!< WFC type for deformable mirrors
-} wfctype_t;
+ @brief Helper enum for filter wheel identification
+
+ This datatype must be used by the user to configure the AO system.
+ To do anything useful, FOAM must know what filterwheels you are using,
+ such that they can be accessed lateron.
+ See dummy prime module for details.
+ */
+typedef struct {
+	char *name;		//!< Filterwheel name
+	fwheel_t *filters;	//!< All possible filters
+	fwheel_t curfilt;	//!< Current filter in place
+} filtwheel_t;
 
 /*!
 @brief Helper struct to store WFC variables in \a ptc. Used by type \c control_t.
+ 
+ This datatype must be used by the user to configure the AO system.
+ To do anything useful, FOAM must know what WFSs and WFCs you are using,
+ and therefore you must fill in the (user) fields at the beginning.
+ See dummy prime module for details.
 */
 typedef struct { // wfc_t
-	char name[FILENAMELEN];		//!< name for the specific WFC
-	int nact;					//!< number of actuators in this WFC
-	gsl_vector_float *ctrl;		//!< pointer to array of controls for the WFC (i.e. `voltages')
-	float gain;					//!< gain used in calculating the new controls
-	wfctype_t type;				//!< type of WFC we're dealing with (0 = TT, 1 = DM)
+	char *name;					//!< (user) name for the specific WFC
+	int nact;					//!< (user) number of actuators in this WFC
+	gsl_vector_float *ctrl;		//!< (foam) pointer to array of controls for the WFC (i.e. `voltages')
+	float gain;					//!< (user) gain used in calculating the new controls
+	wfctype_t type;				//!< (user) type of WFC we're dealing with (0 = TT, 1 = DM)
 } wfc_t;
 
 /*!
 @brief Helper struct to store the WFS image(s). Used by type \c control_t.
+ 
+ This datatype must be used by the user to configure the AO system.
+ To do anything useful, FOAM must know what WFSs and WFCs you are using,
+ and therefore you must fill in the (user) fields at the beginning.
+ See dummy prime module for details.
 */
 typedef struct { // wfs_t
-	char name[FILENAMELEN];			//!< name of the specific WFS
-	coord_t res;					//!< x,y-resolution of this WFS
+	char *name;						//!< (user) name of the specific WFS
+	coord_t res;					//!< (user) x,y-resolution of this WFS
 
-	float *image;					//!< pointer to the WFS output, stored in row-major format
-	float *darkim;					//!< darkfield (byte image), stored in row-major format \b per \b subapt
-	float *flatim;					//!< flatfield (byte image), stored in row-major format \b per \b subapt
-	gsl_matrix_float *corrim;		//!< corrected image, stored in row-major format \b per \b subapt
+	void *image;					//!< (foam) pointer to the WFS output
+	gsl_matrix_float *darkim;		//!< (foam) darkfield (byte image), stored in row-major format \b per \b subapt
+	gsl_matrix_float *flatim;		//!< (foam) flatfield (byte image), stored in row-major format \b per \b subapt
+	gsl_matrix_float *corrim;		//!< (foam) corrected image, stored in row-major format \b per \b subapt
 	
-	char darkfile[FILENAMELEN];		//!< filename for the darkfield calibration
-	char flatfile[FILENAMELEN];		//!< filename for the flatfield calibration
-	char skyfile[FILENAMELEN];		//!< filename for the flatfield calibration
+	char *darkfile;					//!< (user) filename for the darkfield calibration
+	char *flatfile;					//!< (user) filename for the flatfield calibration
+	char *skyfile;					//!< (user) filename for the flatfield calibration
 
-	axes_t scandir; 				//!< scanning direction(s) used (see axes_t type)
-	
-	// TODO: the below members SHOULD be exported to some different structure (these are SH specific)	
-	// !!!:tim:20080414 datatype initialized in sh module, porting can begin
-	
-	float *refim;					//!< reference image for correlation tracking (unused now)
-	
-	gsl_vector_float *singular;		//!< stores singular values from SVD (nact big)
-	gsl_matrix_float *dmmodes;		//!< stores dmmodes from SVD (nact*nact big)
-	gsl_matrix_float *wfsmodes;		//!< stores wfsmodes from SVD (nact*nsubap*2 big)
-	
-	int cells[2];					//!< number of cells in this WFS (SH only)
-	int shsize[2];					//!< cells/res, resolution per cell (redundant, but easy -> phase this out)
-	coord_t track;					//!< tracker window resolution in pixels (i.e. 1/2 of shsize)
-	
-	int (*subc)[2];					//!< this will hold the coordinates of each subapt
-	int (*gridc)[2];				//!< this will hold the grid origina for a certain subaperture
-//	float (*refc)[2];				//!< reference displacements
-//	float (*disp)[2];				//!< measured displacements (compare with refence for actual shift)
-	gsl_vector_float *refc;			//!< reference displacements
-	gsl_vector_float *disp;			//!< measured displacements (compare with refence for actual shift)
-	fcoord_t stepc;					//!< add this to the reference displacement during correction
-	
-	char pinhole[FILENAMELEN];		//!< filename to store the pinhole calibration (in *(refc))
-	char influence[FILENAMELEN];	//!< filename to store the influence matrix
-	
-	int nsubap;						//!< amount of subapertures used (coordinates stored in subc)
-	
+	axes_t scandir; 				//!< (user) scanning direction(s) used (see axes_t type)
+
 } wfs_t;
-
 
 
 /*! 
@@ -183,27 +157,33 @@ typedef struct { // wfs_t
 This struct is used to store several variables indicating the state of the AO system 
 which are shared between the different CS threads. The thread interfacing with user(s)
 can then read these variables and report them to the user, or change them to influence
-the CS behaviour.\n
-Parts of it are read at initialisation from some configuration file, other parts are
-hardcoded and yet others are assigned dynamically.
-*/
+the CS behaviour.
+ 
+The struct is initialized with some default values at runtime (hardcoded), but
+should be configured by the user in the prime module c-file for useful operation.
+(user) fields can be configured by the user, (foam) fields should be left untouched
+ 
+Also take a look at wfs_t, wfc_t and filtwheel_t.
+ */
 typedef struct { // control_t
-	aomode_t mode;		//!< defines the mode the AO system is in (see aomode_t type)
-	calmode_t calmode;	//!< defines the possible calibration modes (see calmode_t type)
-	time_t starttime;	//!< stores the starting time of the system
-	time_t lasttime;	//!< use this to track the framerate
-	long frames;		//!< store the number of frames parsed
-	int capped;			//!< stores the number of frames captured earlier (i.e. what files already exist)
+	aomode_t mode;		//!< (user) defines the mode the AO system is in (see aomode_t type), default AO_MODE_LISTEN
+	calmode_t calmode;	//!< (user) defines the possible calibration modes (see calmode_t type), default CAL_PINHOLE
+	time_t starttime;	//!< (foam) stores the starting time of the system
+	time_t lasttime;	//!< (foam) use this to track the framerate
+	long frames;		//!< (foam) store the number of frames parsed
+	int capped;			//!< (foam) stores the number of frames captured earlier (i.e. what files already exist)
 	
 						// WFS variables
-	int wfs_count;		//!< number of WFSs in the system
-	wfs_t *wfs;			//!< pointer to a number of wfs_t structs
+	int wfs_count;		//!< (user) number of WFSs in the system, default 0
+	wfs_t *wfs;			//!< (user) pointer to a number of wfs_t structs, default NULL
 	
 						// WFC variables
-	int wfc_count;		//!< number of WFCs in the system
-	wfc_t *wfc;			//!< pointer to a number of wfc_t structs
+	int wfc_count;		//!< (user) number of WFCs in the system, default 0
+	wfc_t *wfc;			//!< (user) pointer to a number of wfc_t structs, default NULL
 	
-	fwheel_t filter;	//!< stores the filterwheel currently in place
+						// Filterwheel variables
+	int fw_count;		//!< (user) number of fwheels in the system, default 0
+	filtwheel_t *filter; //!< (user) stores the filterwheel, default NULL
 	
 } control_t;
 
@@ -223,24 +203,35 @@ typedef enum { // level_t
 
 This struct stores things like the IP and port it should be listening on, the 
 files to log error, info and debug messages to and whether or not to use
-syslog.
+syslog. (user) fields can be modified by the user in the prime module c-file
+(see dummy prime module for example). These fields are initialized with some
+default values. (foam) fields should never be touched by a user (although reading
+should be ok).
+ 
+The logfrac field is used to stop superfluous logging. See logInfo() and logDebug()
+documentation for details. Errors and warnings are always logged/displayed, as these
+shouldn't occur.
 */
 typedef struct { // config_t
-	char listenip[16];			//!< IP to listen on, like "0.0.0.0"
-	int listenport;				//!< port to listen on, like 10000
-	char infofile[FILENAMELEN]; //!< file to log info messages to
-	FILE *infofd;				//!< associated filepointer
-	char errfile[FILENAMELEN];	//!< file to log error messages to
-	FILE *errfd;				//!< associated filepointer
-	char debugfile[FILENAMELEN];	//!< file to log debug messages to
-	FILE *debugfd;				//!< associated filepointer
-	bool use_syslog; 			//!< syslog usage flag
-	char syslog_prepend[32]; 	//!< string to prepend to syslogs
-	bool use_stdout; 			//!< stdout usage flag (do we want to log to stdout/stderr or not?)
-	level_t loglevel;			//!< level to log (see \c level_t)
-	int logfrac;				//!< fraction to log for info and debug (1 is always, 50 is 1/50 times)
-	pthread_t threads[MAX_THREADS]; //!< this stores the thread ids of all threads created
-	int nthreads;				//!< stores the number of threads in use
+	char *listenip;				//!< (user) IP to listen on, default "0.0.0.0"
+	int listenport;				//!< (user) port to listen on, default 10000
+	
+	char *infofile;				//!< (user) file to log info messages to, default none
+	FILE *infofd;				//!< (foam) associated filepointer
+	char *errfile;				//!< (user) file to log error messages to, default none
+	FILE *errfd;				//!< (foam) associated filepointer
+	char *debugfile;			//!< (user) file to log debug messages to, default none
+	FILE *debugfd;				//!< (foam) associated filepointer
+	
+	bool use_syslog; 			//!< (user) syslog usage flag, default no
+	char *syslog_prepend;		//!< (user) string to prepend to syslogs, default "foam"
+	bool use_stdout; 			//!< (user) stdout usage flag, default no
+	
+	level_t loglevel;			//!< (user) level to log (see \c level_t), default LOG_DEBUG
+	int logfrac;				//!< (user) fraction to log for certain info and debug (1 is always, 50 is 1/50 times), default 1000
+	
+	pthread_t threads[MAX_THREADS]; //!< (foam) this stores the thread ids of all threads created
+	int nthreads;				//!< (foam) stores the number of threads in use
 } config_t;
 
 /* 
@@ -277,7 +268,7 @@ a standardized means to initialize the module before anything has been done, lik
 some configuration files, start cameras or anything else. It is called without arguments and should return
 EXIT_SUCCESS or EXIT_FAILURE depening on success or not.
 */
-int modInitModule(control_t *ptc);
+int modInitModule(control_t *ptc, config_t *cs_config);
 
 /*!
 @brief This routine is run at the very end of the @name program.
