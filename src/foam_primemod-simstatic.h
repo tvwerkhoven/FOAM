@@ -9,14 +9,67 @@
 #ifndef FOAM_MODULES_SIMSTATIC
 #define FOAM_MODULES_SIMSTATIC
 
-// For foam_cs.c, this must hold some configuration for the WFS sensor etc:
-#define FOAM_CONFIG_FILE "../config/ao_config-simstat.cfg"
+// GENERAL //
+/***********/
 
-#define FOAM_SIMSTATIC_IMG "../config/simstatic.png"
-#define FOAM_SIMSTATIC_NACT 39
-#define FOAM_SIMSTATIC_MAXFRAMES 20000
+/*
+ * These defines must be defined. Choose values as you like, but
+ * don't touch them if you don't need to.
+ */
 
+#define FILENAMELEN 64				//!< maximum length for logfile names (no need to touch)
+#define COMMANDLEN 1024				//!< maximum length for commands we read over the socket (no need to touch)
+
+#define MAX_CLIENTS 8				//!< maximum number of clients that can connect
+#define MAX_THREADS 4				//!< number of threads besides the main thread that can be created (unused atm)
+#define MAX_FILTERS 8				//!< maximum number of filters one filterwheel can have
+
+// DATATYPES //
+/************/
+
+/* 
+ * These datatypes can be expanded as you like, but 
+ * do not remove things that are already present!
+ */
+
+/*!
+ @brief Helper enum for ao calibration mode operation.
+ 
+ You can add your own calibration modes here which you can use to determine
+ what kind of calibration a user wants.
+ */
+typedef enum { // calmode_t
+	CAL_PINHOLE,	//!< determine reference shifts after inserting a pinhole
+	CAL_INFL,		//!< determine the influence functions for each WFS-WFC pair
+	CAL_LINTEST		//!< linearity test for WFCs
+} calmode_t;
+
+/*!
+ @brief Helper enum for WFC types
+ 
+ This should be enough for now, but can be expanded to include other
+ WFCs as well.
+ */
+typedef enum { // axes_t
+	WFC_TT=0,		//!< WFC Type for tip-tilt mirrors
+	WFC_DM=1		//!< WFC type for deformable mirrors
+} wfctype_t;
+
+/*!
+ @brief Helper enum for filterwheel types
+ 
+ This should be enough for now, but can be expanded to include other
+ filterwheels as well.
+ */
+typedef enum { //fwheel_t
+	FILT_PINHOLE,	//!< Pinhole used for pinhole calibration
+	FILT_OPEN,		//!< Open position, don't filter
+	FILT_CLOSED		//!< Closed, don't let light through
+} fwheel_t;
+
+#include "config.h"
 #include "foam_cs_library.h"		// we link to the main program here (i.e. we use common (log) functions)
+
 #include "foam_modules-display.h"	// we need the display module to show debug output
 #include "foam_modules-sh.h"		// we want the SH subroutines so we can track targets
 #include "foam_modules-img.h"		// we need img routines

@@ -25,9 +25,9 @@
 
 @param [in] *fname the filename to read
 @param [out] **img the array that will hold the image (does not have to be allocated yet)
-@param [out] outres this will hold the resolution of img
+@param [out] *outres this will hold the resolution of img
 */
-int modReadIMGArr(char *fname, float **img, int outres[2]);
+int modReadIMGArr(char *fname, float **img, coord_t *outres);
 
 /*!
 @brief Writes a 8-bit ASCII PGM file from memory to disk
@@ -38,12 +38,14 @@ int modReadIMGArr(char *fname, float **img, int outres[2]);
 int modWritePGM(char *fname, SDL_Surface *img);
 
 /*!
- @brief Writes a 8-bit PNG file from an SDL_Surface to disk
+ @brief Writes a PNG file from an SDL_Surface to disk
  
  @param [in] *fname the filename to write
  @param [in] *img the SDL_Surface that will be written to disk
+ @param [in] maxval the maximum value to scale the image with (0--65536), 0 for no scaling
+ @param [in] pgmtype 0 for ascii pgm file, or 1 for binary pgm file
 */
-int modWritePNGSurf(char *fname, SDL_Surface *img);
+int modWritePGMSurf(char *fname, SDL_Surface *img, int maxval, int pgmtype)
 
 /*!
  @brief Writes a 8-bit PNG file from an float array to disk

@@ -43,7 +43,6 @@ int modCalPinhole(control_t *ptc, int wfs) {
 	int i, j;
 	FILE *fd;
 
-		
 	// set filterwheel to pinhole
 	drvFilterWheel(ptc, FILT_PINHOLE);
 	
@@ -96,8 +95,9 @@ int modCalPinholeChk(control_t *ptc, int wfs) {
 	}
 	if (ptc->wfs[wfs].refc == NULL) {
 		ptc->wfs[wfs].refc = gsl_vector_float_calloc(nsubap*2);
-		if (ptc->wfs[wfs].refc == NULL) 
-			logErr("Unable to allocate data for ptc->wfs[wfs].refc for wfs %d (tried to allocate %d elements)", wfs, nsubap*2);
+		// !!!:tim:20080416 calloc handling done by GSL itself
+//		if (ptc->wfs[wfs].refc == NULL) 
+//			logErr("Unable to allocate data for ptc->wfs[wfs].refc for wfs %d (tried to allocate %d elements)", wfs, nsubap*2);
 	}
 	else gsl_vector_float_fscanf(fd, ptc->wfs[wfs].refc);
 	fclose(fd);
@@ -334,7 +334,8 @@ int modCalWFC(control_t *ptc, int wfs) {
 }
 
 // this will hold an offloading mechanism of some sort
-int modOffload() {
+// !!!:tim:20080416 document
+int modOffloadTTDM() {
 	
 	return EXIT_SUCCESS;
 }

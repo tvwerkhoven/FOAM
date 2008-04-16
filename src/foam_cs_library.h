@@ -119,11 +119,12 @@ typedef enum { // axes_t
 } axes_t;
 
 /*!
- @brief Helper enum for filter wheel identification
+ @brief Helper enum for filter wheel identification (user by control_t)
 
  This datatype must be used by the user to configure the AO system.
  To do anything useful, FOAM must know what filterwheels you are using,
- such that they can be accessed lateron.
+ and therefore you must fill in the (user) fields at the beginning.
+ 
  See dummy prime module for details.
  */
 typedef struct {
@@ -172,8 +173,7 @@ typedef struct { // wfs_t
 	char *flatfile;					//!< (user) filename for the flatfield calibration
 	char *skyfile;					//!< (user) filename for the flatfield calibration
 
-	axes_t scandir; 				//!< (user) scanning direction(s) used (see axes_t type)
-
+	axes_t scandir; 				//!< (user) scanning direction(s) used
 } wfs_t;
 
 
@@ -192,8 +192,8 @@ should be configured by the user in the prime module c-file for useful operation
 Also take a look at wfs_t, wfc_t and filtwheel_t.
  */
 typedef struct { // control_t
-	aomode_t mode;		//!< (user) defines the mode the AO system is in (see aomode_t type), default AO_MODE_LISTEN
-	calmode_t calmode;	//!< (user) defines the possible calibration modes (see calmode_t type), default CAL_PINHOLE
+	aomode_t mode;		//!< (user) defines the mode the AO system is in, default AO_MODE_LISTEN
+	calmode_t calmode;	//!< (user) defines the possible calibration modes, default CAL_PINHOLE
 	time_t starttime;	//!< (foam) stores the starting time of the system
 	time_t lasttime;	//!< (foam) use this to track the framerate
 	long frames;		//!< (foam) store the number of frames parsed
@@ -253,7 +253,7 @@ typedef struct { // config_t
 	char *syslog_prepend;		//!< (user) string to prepend to syslogs, default "foam"
 	bool use_stdout; 			//!< (user) stdout usage flag, default no
 	
-	level_t loglevel;			//!< (user) level to log (see \c level_t), default LOG_DEBUG
+	level_t loglevel;			//!< (user) level to log, default LOG_DEBUG
 	int logfrac;				//!< (user) fraction to log for certain info and debug (1 is always, 50 is 1/50 times), default 1000
 	
 	pthread_t threads[MAX_THREADS]; //!< (foam) this stores the thread ids of all threads created

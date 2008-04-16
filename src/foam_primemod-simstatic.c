@@ -25,7 +25,8 @@
 // HEADERS //
 /***********/
 
-#include "foam_primemod-simstatic.h"
+// included by default during compilation using the -include flag
+//#include "foam_primemod-simstatic.h"
 
 // GLOBALS //
 /***********/
@@ -44,6 +45,55 @@ int modInitModule(control_t *ptc) {
     // initialize display
 	if (modInitDraw(&disp) != EXIT_SUCCESS)
 		return EXIT_FAILURE;
+	
+	logInfo(0, "Running in dummy mode, don't expect great AO results :)");
+	
+	// populate ptc here
+	ptc->mode = AO_MODE_LISTEN;			// start in listen mode (safe bet, you probably want this)
+	ptc->calmode = CAL_INFL;			// this is not really relevant
+	ptc->wfs_count = 1;					// 1 FW, WFS and WFC
+	ptc->wfc_count = 1;
+	ptc->fw_count = 1;
+	
+	// allocate memory for filters, wfcs and wfss
+	// use malloc to make the memory globally available
+	ptc->filter = (filtwheel_t *) malloc(ptc->fw_count * sizeof(filtwheel_t));
+	ptc->wfc = (wfc_t *) malloc(ptc->wfc_count * sizeof(wfc_t));
+	ptc->wfs = (wfs_t *) malloc(ptc->wfs_count * sizeof(wfs_t));
+	
+	// configure WFS 0
+	ptc->wfs[0].name = "SH WFS";
+	ptc->wfs[0].res.x = 256;
+	ptc->wfs[0].res.y = 256;
+	ptc->wfs[0].darkfile = NULL;
+	ptc->wfs[0].flatfile = NULL;
+	ptc->wfs[0].skyfile = NULL;
+	ptc->wfs[0].scandir = AO_AXES_XY;
+	
+	// configure WFC 0
+	ptc->wfc[0].name = "OkoDM";
+	ptc->wfc[0].nact = 37;
+	ptc->wfc[0].gain = 1.0;
+	ptc->wfc[0].type = WFC_DM;
+	
+	// configure filter 0
+	ptc->filter[0].name = "Telescope FW";
+	ptc->filter[0].nfilts = 3;
+	ptc->filter[0].filters[0] = FILT_PINHOLE;
+	ptc->filter[0].filters[1] = FILT_OPEN;
+	ptc->filter[0].filters[2] = FILT_CLOSED;
+	
+	// configure cs_config here
+	cs_config->listenip = "0.0.0.0";	// listen on any IP by defaul
+	cs_config->listenport = 10000;		// listen on port 10000 by default
+	cs_config->use_syslog = false;		// don't use the syslog
+	cs_config->syslog_prepend = "foam";	// prepend logging with 'foam'
+	cs_config->use_stdout = true;		// do use stdout
+	cs_config->loglevel = LOGDEBUG;		// log error, info and debug
+	cs_config->logfrac = 100;			// log verbose messages only every 100 frames
+	cs_config->infofile = NULL;			// don't log anything to file
+	cs_config->errfile = NULL;
+	cs_config->debugfile = NULL;
 	
 	return EXIT_SUCCESS;
 }
@@ -201,6 +251,7 @@ gain <wfc> <gain>\n\
 		else {
 			tellClient(client->buf_ev, "\
 step <x|y> [d]:         step a wfs in the x or y direction\n\
+calibrate <mode>:       calibrate a wavefront sensor\n\
 gain <wfc> <gain>:      set the gain for a wfc");
 		}
 	}
@@ -290,39 +341,37 @@ gain <wfc> <gain>:      set the gain for a wfc");
 	
 }
 
-int drvReadSensor() {
+int drvReadSensor(wfs_t *wfsinfo) {
 	int i, x, y;
-	int simres[2];
+	coord_t simres;
 	// logDebug(0, "Now reading %d sensors", ptc.wfs_count);
 	
-	if (ptc.wfs_count < 1) {
-		logWarn("Nothing to process, no WFSs defined.");
-		return EXIT_FAILURE;
-	}
-	
-	coord_t res = ptc.wfs[0].res;
+//	if (ptc.wfs_count < 1) {
+//		logWarn("Nothing to process, no WFSs defined.");
+//		return EXIT_FAILURE;
+//	}
+
 	
 	// if filterwheel is set to pinhole, simulate a coherent image
-	if (ptc.mode == AO_MODE_CAL && ptc.filter == FILT_PINHOLE) {
-		logWarn("Calibration not supported in static simulation mode.");
-		return EXIT_FAILURE;
-	}
-	else {
+//	if (ptc.mode == AO_MODE_CAL && ptc.filter == FILT_PINHOLE) {
+//		logWarn("Calibration not supported in static simulation mode.");
+//		return EXIT_FAILURE;
+//	}
+//	else {
 		if (simimgsurf == NULL) {
-			if (modReadIMGArr(FOAM_SIMSTATIC_IMG, &simimgsurf, simres) != EXIT_SUCCESS)
+			if (modReadIMGArr(FOAM_SIMSTATIC_IMG, &simimgsurf, &simres) != EXIT_SUCCESS)
 				logErr("Cannot read static image.");
 
-			if (simres[0] != res.x || simres[1] != res.y) {
+			if (simres[0] != wfsinfo->res.x || simres[1] != wfsinfo->res.y) {
 				logWarn("Simulation resolution incorrect for %s! (%dx%d vs %dx%d)", \
-					FOAM_SIMSTATIC_IMG, res.x, res.y, simres[0], simres[1]);
+					FOAM_SIMSTATIC_IMG, wfsinfo->res.x, wfsinfo->res.y, simres[0], simres[1]);
 				return EXIT_FAILURE;			
 			}
 			
-			for (y=0; y<res.y*res.x; y++)
-				ptc.wfs[0].image[y] = simimgsurf[y];
-				
+			// point the image pointer to the simulated image stored in simimsurf
+			wfsinfo->image = simimgsurf;
 		}
-	}
+//	}
 
 	return EXIT_SUCCESS;
 }

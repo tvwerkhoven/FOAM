@@ -1,5 +1,5 @@
 # init the bin_programs variable
-bin_PROGRAMS = serial-test okodm-test daq2k-test
+bin_PROGRAMS = serial-test okodm-test daq2k-test modimg-test
 # itifg-test done manually
 
 # some shared compiler flags which must always be used
@@ -37,6 +37,12 @@ daq2k_test_SOURCES = $(SRCDIR)/foam_modules-daq2k.c
 daq2k_test_CPPFLAGS = -DFOAM_MODDAQ2K_ALONE=1 -Idaq2k/include
 daq2k_test_LDFLAGS = -lc -lm -ldaqx -Ldaq2k/lib
 daq2k_test_CFLAGS = -std=c99
+
+# img module test
+modimg_test_SOURCES = $(SRCDIR)/foam_modules-img.c
+modimg_test_CPPFLAGS = -DFOAM_MODIMG_ALONE=1
+modimg_test_LDFLAGS = -lc -lm 
+modimg_test_CFLAGS = -std=c99
 
 # itifg test
 #itifg_test_SOURCES = $(SRCDIR)/foam_cs_library.c $(SRCDIR)/foam_modules-img.c $(SRCDIR)/foam_modules-itifg.c
