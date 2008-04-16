@@ -38,16 +38,38 @@
 // HEADERS //
 /***********/
 
-#include "foam_modules-img.h"
-
 #ifdef FOAM_MODIMG_ALONE
 #define FOAM_MODIMG_DEBUG 1
-
-#define logDebug(num, message, ...) fprintf (stdout, message "\n", ## __VA_ARGS__)
-#define logInfo(num, message, ...) fprintf (stdout, message "\n", ## __VA_ARGS__)
-#define logWarn(message, ...) fprintf (stdout, message "\n", ## __VA_ARGS__)
-#define logError(message, ...) fprintf (stdout, message "\n", ## __VA_ARGS__)
+#include "foam_modules-alone.h"
 #endif
+
+#include "foam_modules-img.h"
+
+//void logErr(const char *msg, ...) {
+//	va_list ap;
+//	va_start(ap, msg);
+//	vfprintf(stderr, msg, ap);
+//	fprintf(stderr, "\n");
+//}
+//void logWarn(const char *msg, ...) {
+//	va_list ap;
+//	va_start(ap, msg);
+//	vfprintf(stderr, msg, ap);
+//	fprintf(stderr, "\n");
+//}
+//void logInfo(int flg, const char *msg, ...) {
+//	va_list ap;
+//	va_start(ap, msg);
+//	vfprintf(stderr, msg, ap);
+//	fprintf(stderr, "\n");
+//}
+//void logDebug(int flg, const char *msg, ...) {
+//	va_list ap;
+//	va_start(ap, msg);
+//	vfprintf(stderr, msg, ap);
+//	fprintf(stderr, "\n");
+//}
+
 
 // ROUTINES //
 /************/
@@ -483,7 +505,7 @@ Uint32 getPixel(SDL_Surface *surface, int x, int y) {
     }
 }
 
-#ifdef 
+#ifdef FOAM_MODIMG_ALONE
 int main(int argc, char *argv[]) {
 	if (argc < 2) {
 		printf("Please call me as: <script> <image file>\n");

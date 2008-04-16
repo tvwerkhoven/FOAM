@@ -41,8 +41,8 @@ daq2k_test_CFLAGS = -std=c99
 # img module test
 modimg_test_SOURCES = $(SRCDIR)/foam_modules-img.c
 modimg_test_CPPFLAGS = -DFOAM_MODIMG_ALONE=1
-modimg_test_LDFLAGS = -lc -lm 
-modimg_test_CFLAGS = -std=c99
+modimg_test_LDFLAGS = -lc -lm  `sdl-config --libs`
+modimg_test_CFLAGS = -std=c99 `sdl-config --cflags`
 
 # itifg test
 #itifg_test_SOURCES = $(SRCDIR)/foam_cs_library.c $(SRCDIR)/foam_modules-img.c $(SRCDIR)/foam_modules-itifg.c
