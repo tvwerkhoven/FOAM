@@ -16,15 +16,44 @@ extern pthread_cond_t mode_cond;
 
 int modInitModule(control_t *ptc, config_t *cs_config) {
 	logInfo(0, "Running in dummy mode, don't expect great AO results :)");
+	
 	// populate ptc here
 	ptc->mode = AO_MODE_LISTEN;			// start in listen mode (safe bet, you probably want this)
 	ptc->calmode = CAL_INFL;			// this is not really relevant
-	ptc->wfs_count = 0;					// we have a boring AO system with no filters, WFSs or WFCs
-	ptc->wfc_count = 0;
-	ptc->fw_count = 0;
+	ptc->wfs_count = 1;					// 1 FW, WFS and WFC
+	ptc->wfc_count = 1;
+	ptc->fw_count = 1;
 	
+	// allocate memory for filters, wfcs and wfss
+	// use malloc to make the memory globally available
+	ptc->filter = (filtwheel_t *) malloc(ptc->fw_count * sizeof(filtwheel_t));
+	ptc->wfc = (wfc_t *) malloc(ptc->wfc_count * sizeof(wfc_t));
+	ptc->wfs = (wfs_t *) malloc(ptc->wfs_count * sizeof(wfs_t));
+	
+	// configure WFS 0
+	ptc->wfs[0].name = "SH WFS";
+	ptc->wfs[0].res.x = 256;
+	ptc->wfs[0].res.y = 256;
+	ptc->wfs[0].darkfile = NULL;
+	ptc->wfs[0].flatfile = NULL;
+	ptc->wfs[0].skyfile = NULL;
+	ptc->wfs[0].scandir = AO_AXES_XY;
+	
+	// configure WFC 0
+	ptc->wfc[0].name = "OkoDM";
+	ptc->wfc[0].nact = 37;
+	ptc->wfc[0].gain = 1.0;
+	ptc->wfc[0].type = WFC_DM;
+	
+	// configure filter 0
+	ptc->filter[0].name = "Telescope FW";
+	ptc->filter[0].nfilts = 3;
+	ptc->filter[0].filters[0] = FILT_PINHOLE;
+	ptc->filter[0].filters[1] = FILT_OPEN;
+	ptc->filter[0].filters[2] = FILT_CLOSED;
+		
 	// configure cs_config here
-	cs_config->listenip = "0.0.0.0";	// listen on any IP by default, can be overridden by config file
+	cs_config->listenip = "0.0.0.0";	// listen on any IP by defaul
 	cs_config->listenport = 10000;		// listen on port 10000 by default
 	cs_config->use_syslog = false;		// don't use the syslog
 	cs_config->syslog_prepend = "foam";	// prepend logging with 'foam'

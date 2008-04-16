@@ -56,6 +56,29 @@ typedef unsigned char u_char;
 #define LOG_SOMETIMES 1
 #define LOG_NOFORMAT 2
 
+// ERROR CHECKING //
+/******************/
+
+#ifndef FILENAMELEN
+#error "FILENAMELEN undefined, please define in prime module header file"
+#endif
+
+#ifndef COMMANDLEN
+#error "COMMANDLEN undefined, please define in prime module header file"
+#endif
+
+#ifndef MAX_CLIENTS
+#error "MAX_CLIENTS undefined, please define in prime module header file"
+#endif
+
+#ifndef MAX_THREADS 
+#error "MAX_THREADS undefined, please define in prime module header file"
+#endif
+
+#ifndef MAX_FILTERS
+#error"MAX_FILTERS undefined, please define in prime module header file"
+#endif
+
 // STRUCTS AND TYPES //
 /*********************/
 
@@ -104,9 +127,10 @@ typedef enum { // axes_t
  See dummy prime module for details.
  */
 typedef struct {
-	char *name;		//!< Filterwheel name
-	fwheel_t *filters;	//!< All possible filters
-	fwheel_t curfilt;	//!< Current filter in place
+	char *name;			//!< (user) Filterwheel name
+	int nfilts;			//!< (user) Number of filters present in this wheel
+	fwheel_t curfilt;	//!< (foam) Current filter in place
+	fwheel_t filters[MAX_FILTERS];	//!< (user) All filters present in this wheel
 } filtwheel_t;
 
 /*!
@@ -136,11 +160,13 @@ typedef struct { // wfc_t
 typedef struct { // wfs_t
 	char *name;						//!< (user) name of the specific WFS
 	coord_t res;					//!< (user) x,y-resolution of this WFS
+	int bpp;						//!< (user) bits per pixel to use when reading the sensor (only 8 or 16 atm)
 
 	void *image;					//!< (foam) pointer to the WFS output
-	gsl_matrix_float *darkim;		//!< (foam) darkfield (byte image), stored in row-major format \b per \b subapt
-	gsl_matrix_float *flatim;		//!< (foam) flatfield (byte image), stored in row-major format \b per \b subapt
-	gsl_matrix_float *corrim;		//!< (foam) corrected image, stored in row-major format \b per \b subapt
+	gsl_matrix_float *darkim;		//!< (foam) darkfield for the CCD 
+	gsl_matrix_float *flatim;		//!< (foam) flatfield for the CCD
+	gsl_matrix_float *skyim;		//!< (foam) skyfield for the CCD
+	gsl_matrix_float *corrim;		//!< (foam) corrected image to be processed
 	
 	char *darkfile;					//!< (user) filename for the darkfield calibration
 	char *flatfile;					//!< (user) filename for the flatfield calibration
@@ -396,15 +422,6 @@ This function is used for debug logging. See documentation on logInfo() for more
 */
 void logDebug(const int flag, const char *msg, ...);
 
-/*!
-@brief Parse a \a var = \a value configuration pair stored in a config file.
-
-@param [in] *var the name of the variable.
-@param [in] *value the value of the variable.
-@return \c EXIT_SUCCESS upon successful parsing of the configuration, \c EXIT_FAILURE otherwise.
-*/
-int parseConfig(char *var, char *value);
-
 /*! 
 @brief Runs the AO open-loop mode.
 
@@ -515,23 +532,8 @@ This function is necessary because passing a NULL pointer to bufferevent_new for
 function causes it to crash. Therefore this placeholder is used, which does exactly nothing.
 */
 void sockOnWrite(struct bufferevent *bev, void *arg);
-	
+
 /*!
-@brief Pop off a word from a space-seperated (" \t\n") string. Used to parse commands (see parseCmd()).
-*/
-int popword(char **msg, char *cmd);
-
-/*! 
-@brief Loads the config from \a file.
-
-Loads the configuration (especially system characterisation, like number of WFCs, 
-number of WFSs, etc) from a file and stores it in the global struct \a ptc.
-@param [in] file the filename to read the configuration from.
-@return \c EXIT_SUCCESS if the load succeeds, \c EXIT_FAILURE otherwise.
-*/
-int loadConfig(char *file);
-
-/*
 @brief Open a stream to the appropriate logfiles, as defined in the configuration file.
 
 This function opens the error-, info- and debug-log files IF they
@@ -543,15 +545,36 @@ file. No filename means that no stream will be opened.
 int initLogFiles();
 
 /*!
-@brief Save the configuration currently being used to \a file.
+ @brief Check & initialize darkfield, flatfield and skyfield files.
+ 
+ Check if the darkfield, flatfield and skyfield files are available, and if so,
+ allocate memory for the various images in memory and load them into the
+ newly allocated matrices. 
+ 
+ If the files are not present, set the images to NULL so that we know we have 
+ to calibrate lateron. 
+ 
+ If the files are set to NULL, don't use dark/flat/sky field calibration at all.
+ */
+void checkFieldFiles(wfs_t *wfsinfo);
 
-Save the configuration to a file such that it can be read by loadConfig().
-Currently this function is unfinished.
+/*!
+ @brief Check if the ptc struct has reasonable values
+ 
+ Check if the values in ptc set by modInitModule() by the user are reasonable.
+ If they are not reasonable, give a warning about it. If necessary, allocate
+ some memory.
+ */
+void checkAOConfig(control_t *ptc);
 
-@param [in] *file the file to store the data in
-@return EXIT_SUCCESS on successful save, EXIT_FAILURE otherwise.
-*/
-int saveConfig(char *file);
+/*!
+ @brief Check if the cs_config struct has reasonable values
+ 
+ Check if the values in cs_config set by modInitModule() by the user are reasonable.
+ If they are not reasonable, give a warning about it. If necessary, allocate
+ some memory.
+ */
+void checkFOAMConfig(config_t *conf);
 
 /*!
 @brief Give information on @name CS over the socket.
@@ -574,35 +597,6 @@ This routine does the following:
 \li Close files for info/error/debug logging.
 */
 void stopFOAM();
-
-/*!
-@brief Checks whether ptc.wfc is already allocated, displays a warning otherwise
-@return EXIT_SUCCESS if ptc.wfc is already allocated, EXIT_FAILURE otherwise
-*/
-int issetWFC(char *var);
-
-/*!
-@brief Checks whether ptc.wfs is already allocated, displays a warning otherwise
-@return EXIT_SUCCESS if ptc.wfs is already allocated, EXIT_FAILURE otherwise
-*/
-int issetWFS(char *var);
-
-/*!
-@brief Checks whether the var=value pair in \c var is a valid WFC.
-
-This function takes a variable as input in the form of var = value, taken
-from the configuration file, and checks whether the variable is for a
-valid WFC. I.e.: WFC_NAME[1] = 'anyname' is invalid if WFC_COUNT is only 1,
-and then this function would warn the user.
-@return EXIT_SUCCESS if \c var holds a valid WFC configuration, EXIT_FAILURE otherwise
-*/
-int validWFC(char *var);
-
-/*!
-@brief Checks whether the var=value pair in \c var is a valid WFS. See validWFC();
-@return EXIT_SUCCESS if \c var holds a valid WFS configuration, EXIT_FAILURE otherwise
-*/
-int validWFS(char *var);
 
 /*!
 @brief Catches \c SIGINT signals and stops @name gracefully, calling \c stopFOAM().

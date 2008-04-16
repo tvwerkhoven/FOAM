@@ -158,7 +158,7 @@ typedef struct {
  device_name, config_file and module. The rest will be filled in by this
  function and is used in subsequent framegrabber calls.
  
- @params [in] *cam A struct with at least device_name, config_file and module.
+ @param [in] *cam A struct with at least device_name, config_file and module.
  @return EXIT_SUCCESS on success, EXIT_FAILURE otherwise.
  */
 int drvInitBoard(mod_itifg_cam_t *cam);
