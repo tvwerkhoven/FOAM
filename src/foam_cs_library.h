@@ -76,7 +76,7 @@ typedef unsigned char u_char;
 #endif
 
 #ifndef MAX_FILTERS
-#error"MAX_FILTERS undefined, please define in prime module header file"
+#error "MAX_FILTERS undefined, please define in prime module header file"
 #endif
 
 // STRUCTS AND TYPES //
