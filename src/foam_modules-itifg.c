@@ -522,6 +522,7 @@ int drvStopBoard(mod_itifg_cam_t *cam) {
 
 #ifdef FOAM_MODITIFG_ALONE
 int main(int argc, char *argv[]) {
+	off_t seekc, seeke;
 	// init vars
 	int i, j, f;
 	mod_itifg_cam_t camera;
@@ -553,7 +554,7 @@ int main(int argc, char *argv[]) {
 	res.y = (int) camera.height;
 	
 	// test image
-	for (i=0; i<10; i++) {
+	for (i=0; i<5; i++) {
 		if (drvGetImg(&camera, &buffer, NULL) != EXIT_SUCCESS)
 			return EXIT_FAILURE;
 		
@@ -578,6 +579,91 @@ int main(int argc, char *argv[]) {
 		//printf("Writing frame to disk (%s)\n", file);
 
 		//modWritePNGArr(file, ((void *) (buffer.data)), res, 1);
+	}
+	
+	printf("Testing various lseek combinations...");
+	
+	printf("seek_end 0 / seek_cur pagedsize / buf->data = buf->map...");
+	for (i=0; i<5; i++) {
+
+		fd_set in_fdset, ex_fdset;
+		FD_ZERO (&in_fdset);
+		FD_ZERO (&ex_fdset);
+		FD_SET (cam->fd, &in_fdset);
+		FD_SET (cam->fd, &ex_fdset);
+
+		//result = poll(&pfd, 1, timeout);
+		result = select(1024, &in_fdset, NULL, &ex_fdset, timeout);
+
+		if (result == -1)
+			printf("Select() returned no active FD's, error:%s\n", strerror(errno));
+		else if (result == 0)
+			printf("Timeout in drvGetImg().\n");	
+
+		printf("select: %d, ", result);
+		seeke = lseek(cam->fd, 0, SEEK_END);
+		if (seek == -1)
+			printf("SEEK_END failed: %s\n", strerror(errno));
+
+		printf("0 seek_end: %d, ", seeke);
+		printf("Select returned: %d, SEEK_END: %d\n", result, (int) seek);	
+		buf->data = (void *)((char *)buf->map);
+		buf->info = (iti_info_t *)((char *)buf->data + cam->rawsize);
+			
+		seekc = lseek(cam->fd, cam->pagedsize, SEEK_CUR);
+		printf("%d seek_cur: %d, ", cam->pagedsize, seekc);
+		if (seek == -1)
+			printf("SEEK_CUR failed: %s\n", strerror(errno));
+
+		printf("\n");
+		printf("image: ");
+		for (f=0; f<buffer.frames; f++) {
+			for (j=0; j<25; j++)
+				printf("%d,", *( ((unsigned char *) (buffer.data)) + j + f*camera.pagedsize) );
+			
+			printf("\n");
+		}
+	}
+		
+	printf("seek_end 0 / seek_cur <seek_end out> / buf->data = buf->map...");
+	for (i=0; i<5; i++) {
+		fd_set in_fdset, ex_fdset;
+		FD_ZERO (&in_fdset);
+		FD_ZERO (&ex_fdset);
+		FD_SET (cam->fd, &in_fdset);
+		FD_SET (cam->fd, &ex_fdset);
+		
+		//result = poll(&pfd, 1, timeout);
+		result = select(1024, &in_fdset, NULL, &ex_fdset, timeout);
+		
+		if (result == -1)
+			printf("Select() returned no active FD's, error:%s\n", strerror(errno));
+		else if (result == 0)
+			printf("Timeout in drvGetImg().\n");	
+		
+		printf("select: %d, ", result);
+		seeke = lseek(cam->fd, 0, SEEK_END);
+		if (seek == -1)
+			printf("SEEK_END failed: %s\n", strerror(errno));
+		
+		printf("0 seek_end: %d, ", seeke);
+		printf("Select returned: %d, SEEK_END: %d\n", result, (int) seek);	
+		buf->data = (void *)((char *)buf->map);
+		buf->info = (iti_info_t *)((char *)buf->data + cam->rawsize);
+		
+		seekc = lseek(cam->fd, seeke, SEEK_CUR);
+		printf("%d seek_cur: %d, ", seeke, seekc);
+		if (seek == -1)
+			printf("SEEK_CUR failed: %s\n", strerror(errno));
+		
+		printf("\n");
+		printf("image: ");
+		for (f=0; f<buffer.frames; f++) {
+			for (j=0; j<25; j++)
+				printf("%d,", *( ((unsigned char *) (buffer.data)) + j + f*camera.pagedsize) );
+			
+			printf("\n");
+		}
 	}
 	
 	printf("cleaning up now\n");
