@@ -527,6 +527,7 @@ int main(int argc, char *argv[]) {
 	int i, j, f;
 	mod_itifg_cam_t camera;
 	mod_itifg_buf_t buffer;
+	mod_itifg_cam_t *cam = &camera;
 	char *file;
 	
 	camera.module = 48; // some number taken from test_itifg
@@ -582,6 +583,9 @@ int main(int argc, char *argv[]) {
 	}
 	
 	printf("Testing various lseek combinations...");
+	
+	int result;
+	fd_set in_fdset, ex_fdset;
 	
 	printf("seek_end 0 / seek_cur pagedsize / buf->data = buf->map...");
 	for (i=0; i<5; i++) {
