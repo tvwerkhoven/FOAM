@@ -847,6 +847,16 @@ int main(int argc, char *argv[]) {
 		printf("\n");
 	}
 
+	printf("buffer looks like (iti_info_t appendix (first 25 bytes)):\n");
+	for (f=0; f<buffer.frames; f++) {
+		for (j=0; j<25; j++) { 
+			pix = *( ((unsigned char *) (buffer.data)) + camera.rawsize + j + f*camera.pagedsize); 
+			printf("%d,", pix);
+		}
+		printf("\n");
+	}
+	
+	
 	printf("buffer looks like (rawsize boundaries):\n");
 	for (f=0; f<buffer.frames; f++) {
 		for (j=0; j<25; j++) { 
