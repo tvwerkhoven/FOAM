@@ -605,7 +605,7 @@ int main(int argc, char *argv[]) {
 		FD_SET (cam->fd, &ex_fdset);
 
 		//result = poll(&pfd, 1, timeout);
-		result = select(1024, &in_fdset, NULL, &ex_fdset, timeout);
+		result = select(1024, &in_fdset, NULL, &ex_fdset, &timeout);
 
 		if (result == -1)
 			printf("Select() returned no active FD's, error:%s\n", strerror(errno));
@@ -652,7 +652,7 @@ int main(int argc, char *argv[]) {
 		FD_SET (cam->fd, &ex_fdset);
 		
 		//result = poll(&pfd, 1, timeout);
-		result = select(1024, &in_fdset, NULL, &ex_fdset, timeout);
+		result = select(1024, &in_fdset, NULL, &ex_fdset, &timeout);
 		
 		if (result == -1)
 			printf("Select() returned no active FD's, error:%s\n", strerror(errno));
@@ -670,6 +670,59 @@ int main(int argc, char *argv[]) {
 		
 		seekc = lseek(cam->fd, seeke, SEEK_CUR);
 		printf("%d seek_cur: %d | ", (int) seeke, (int) seekc);
+		if (seekc == -1)
+			printf("SEEK_CUR failed: %s\n", strerror(errno));
+		
+		printf("image: \n");
+		for (f=0; f<buffer.frames; f++) {
+			pixs = 0;
+			for (j=0; j<25; j++) { 
+				pix = *( ((unsigned char *) (buffer.data)) + j + f*camera.pagedsize); 
+				pixs += pow(2,j) * pix;
+				printf("%d,", pix);
+			}
+			printf("H: %d", (int) sqrt(pixs));
+			
+			printf("\n");
+		}
+	}
+	
+	
+	printf("\n");
+	drvStopGrab(&camera);
+	drvInitGrab(&camera);
+	printf("seek_end <seek_end out> / seek_cur pagedsize / buf->data = buf->map...\n");
+	printf("****************************************\n");
+	// old seek_out value, init to 0
+	off_t seekeo = (off_t) 0;
+	for (i=0; i<5; i++) {
+		FD_ZERO (&in_fdset);
+		FD_ZERO (&ex_fdset);
+		FD_SET (cam->fd, &in_fdset);
+		FD_SET (cam->fd, &ex_fdset);
+		
+		//result = poll(&pfd, 1, timeout);
+		result = select(1024, &in_fdset, NULL, &ex_fdset, &timeout);
+		
+		if (result == -1)
+			printf("Select() returned no active FD's, error:%s\n", strerror(errno));
+		else if (result == 0)
+			printf("Timeout in drvGetImg().\n");	
+		
+		printf("select: %d | ", result);
+		seeke = lseek(cam->fd, seekeo, SEEK_END);
+		if (seeke == -1)
+			printf("SEEK_END failed: %s\n", strerror(errno));
+		
+		printf("%d seek_end: %d | ", (int) seekeo, (int) seeke);
+		
+		// store seek_out output for use in next loop
+		seekeo = seeke;
+		buf->data = (void *)((char *)buf->map);
+		buf->info = (iti_info_t *)((char *)buf->data + cam->rawsize);
+		
+		seekc = lseek(cam->fd, cam->pagedsize, SEEK_CUR);
+		printf("%d seek_cur: %d | ", cam->pagedsize, (int) seekc);
 		if (seekc == -1)
 			printf("SEEK_CUR failed: %s\n", strerror(errno));
 		
