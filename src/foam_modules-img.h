@@ -45,7 +45,7 @@ int modWritePGM(char *fname, SDL_Surface *img);
  @param [in] maxval the maximum value to scale the image with (0--65536), 0 for no scaling
  @param [in] pgmtype 0 for ascii pgm file, or 1 for binary pgm file
 */
-int modWritePGMSurf(char *fname, SDL_Surface *img, int maxval, int pgmtype)
+int modWritePGMSurf(char *fname, SDL_Surface *img, int maxval, int pgmtype);
 
 /*!
  @brief Writes a 8-bit PNG file from an float array to disk
