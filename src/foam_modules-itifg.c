@@ -523,6 +523,13 @@ int drvStopBoard(mod_itifg_cam_t *cam) {
 #ifdef FOAM_MODITIFG_ALONE
 int main(int argc, char *argv[]) {
 
+	if (argc < 2)  {
+		printf("Need config file! call <prog> <conffile.cam>\n");
+		exit(-1);
+	}
+	else
+		printf("Using conffile '%s'\n", argv[1]);
+
 	// init vars
 	int i, j, f;
 	mod_itifg_cam_t camera;
@@ -531,7 +538,7 @@ int main(int argc, char *argv[]) {
 	
 	camera.module = 48; // some number taken from test_itifg
 	strncpy(camera.device_name, "/dev/ic0dma", 512-1);
-	strncpy(camera.config_file, "../config/dalsa-cad6-pcd.cam", 512-1);
+	strncpy(camera.config_file, argv[1], 512-1);
 
 	buffer.frames = 4; // ringbuffer will be 4 frames big
 	
@@ -794,7 +801,7 @@ int main(int argc, char *argv[]) {
 	drvInitGrab(&camera);
 	printf("\nseek_end 0 / seek_cur pagedsize / buf->data = buf->map... long run!\n");
 	printf("****************************************\n");
-	for (i=0; i<1000; i++) {
+	for (i=0; i<30000; i++) {
 		
 		FD_ZERO (&in_fdset);
 		FD_ZERO (&ex_fdset);
@@ -820,7 +827,7 @@ int main(int argc, char *argv[]) {
 		if (seekc == -1)
 			printf("SEEK_CUR failed: %s\n", strerror(errno));
 	}
-	printf("after 1k images: seek_end: %d, seek_cur: %d \n", (int) seeke, (int) seekc);
+	printf("after 30k images: seek_end: %d, seek_cur: %d \n", (int) seeke, (int) seekc);
 	printf("buffer looks like (pagedsize boundaries):\n");
 	
 	for (f=0; f<buffer.frames; f++) {
@@ -830,7 +837,16 @@ int main(int argc, char *argv[]) {
 		}
 		printf("\n");
 	}
-	
+
+	printf("buffer looks like (iti_info_t appendix (first 25 bytes)):\n");
+	for (f=0; f<buffer.frames; f++) {
+		for (j=0; j<25; j++) { 
+			pix = *( ((unsigned char *) (buffer.data)) + camera.rawsize + j + f*camera.pagedsize); 
+			printf("%d,", pix);
+		}
+		printf("\n");
+	}
+
 	printf("buffer looks like (rawsize boundaries):\n");
 	for (f=0; f<buffer.frames; f++) {
 		for (j=0; j<25; j++) { 
