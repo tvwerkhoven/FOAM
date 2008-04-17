@@ -522,12 +522,11 @@ int drvStopBoard(mod_itifg_cam_t *cam) {
 
 #ifdef FOAM_MODITIFG_ALONE
 int main(int argc, char *argv[]) {
-	off_t seekc, seeke;
+
 	// init vars
 	int i, j, f;
 	mod_itifg_cam_t camera;
 	mod_itifg_buf_t buffer;
-	mod_itifg_cam_t *cam = &camera;
 	char *file;
 	
 	camera.module = 48; // some number taken from test_itifg
@@ -584,7 +583,11 @@ int main(int argc, char *argv[]) {
 	
 	printf("Testing various lseek combinations...");
 	
+	off_t seekc, seeke;
+	struct timeval timeout
 	int result;
+	mod_itifg_buf_t *buf = &buffer;
+	mod_itifg_cam_t *cam = &camera;
 	fd_set in_fdset, ex_fdset;
 	
 	printf("seek_end 0 / seek_cur pagedsize / buf->data = buf->map...");
