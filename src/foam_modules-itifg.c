@@ -549,6 +549,7 @@ int main(int argc, char *argv[]) {
 	// init grab
 	drvInitGrab(&camera);
 
+	goto skip;
 	coord_t res;
 	res.x = (int) camera.width;
 	res.y = (int) camera.height;
@@ -580,20 +581,22 @@ int main(int argc, char *argv[]) {
 
 		//modWritePNGArr(file, ((void *) (buffer.data)), res, 1);
 	}
+	skip:
 	
-	printf("Testing various lseek combinations...");
+	printf("Testing various lseek combinations...\n");
+	printf("***************************************\n");
 	
 	off_t seekc, seeke;
-	struct timeval timeout
+	//struct timeval timeout;
+	struct timeval *timeout = NULL;
 	int result;
 	mod_itifg_buf_t *buf = &buffer;
 	mod_itifg_cam_t *cam = &camera;
 	fd_set in_fdset, ex_fdset;
 	
-	printf("seek_end 0 / seek_cur pagedsize / buf->data = buf->map...");
+	printf("seek_end 0 / seek_cur pagedsize / buf->data = buf->map...\n");
 	for (i=0; i<5; i++) {
 
-		fd_set in_fdset, ex_fdset;
 		FD_ZERO (&in_fdset);
 		FD_ZERO (&ex_fdset);
 		FD_SET (cam->fd, &in_fdset);
@@ -609,17 +612,16 @@ int main(int argc, char *argv[]) {
 
 		printf("select: %d, ", result);
 		seeke = lseek(cam->fd, 0, SEEK_END);
-		if (seek == -1)
+		if (seeke == -1)
 			printf("SEEK_END failed: %s\n", strerror(errno));
 
-		printf("0 seek_end: %d, ", seeke);
-		printf("Select returned: %d, SEEK_END: %d\n", result, (int) seek);	
+		printf("0 seek_end: %d, ", (int) seeke);
 		buf->data = (void *)((char *)buf->map);
 		buf->info = (iti_info_t *)((char *)buf->data + cam->rawsize);
 			
 		seekc = lseek(cam->fd, cam->pagedsize, SEEK_CUR);
-		printf("%d seek_cur: %d, ", cam->pagedsize, seekc);
-		if (seek == -1)
+		printf("%d seek_cur: %d, ", cam->pagedsize, (int) seekc);
+		if (seekc == -1)
 			printf("SEEK_CUR failed: %s\n", strerror(errno));
 
 		printf("\n");
@@ -632,9 +634,8 @@ int main(int argc, char *argv[]) {
 		}
 	}
 		
-	printf("seek_end 0 / seek_cur <seek_end out> / buf->data = buf->map...");
+	printf("seek_end 0 / seek_cur <seek_end out> / buf->data = buf->map...\n");
 	for (i=0; i<5; i++) {
-		fd_set in_fdset, ex_fdset;
 		FD_ZERO (&in_fdset);
 		FD_ZERO (&ex_fdset);
 		FD_SET (cam->fd, &in_fdset);
@@ -650,17 +651,16 @@ int main(int argc, char *argv[]) {
 		
 		printf("select: %d, ", result);
 		seeke = lseek(cam->fd, 0, SEEK_END);
-		if (seek == -1)
+		if (seeke == -1)
 			printf("SEEK_END failed: %s\n", strerror(errno));
 		
-		printf("0 seek_end: %d, ", seeke);
-		printf("Select returned: %d, SEEK_END: %d\n", result, (int) seek);	
+		printf("0 seek_end: %d, ", (int)  seeke);
 		buf->data = (void *)((char *)buf->map);
 		buf->info = (iti_info_t *)((char *)buf->data + cam->rawsize);
 		
 		seekc = lseek(cam->fd, seeke, SEEK_CUR);
-		printf("%d seek_cur: %d, ", seeke, seekc);
-		if (seek == -1)
+		printf("%d seek_cur: %d, ", (int) seeke, (int) seekc);
+		if (seekc == -1)
 			printf("SEEK_CUR failed: %s\n", strerror(errno));
 		
 		printf("\n");
