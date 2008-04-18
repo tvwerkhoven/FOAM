@@ -237,40 +237,40 @@ int drvStopBufs(mod_itifg_buf_t *buf, mod_itifg_cam_t *cam);
 
 int drvInitBoard(mod_itifg_cam_t *cam) {
 	// TvW: | O_SYNC | O_APPEND also used in test_itifg.c
-	int flags = O_RDWR | O_SYNC | O_APPEND;
+	int flags = O_RDWR | O_APPEND | O_SYNC;
 	int zero = 0;
 	int one = 1;
 	int result;	
 		
 	cam->fd = open(cam->device_name, flags);
 	if (cam->fd == -1) {
-		logWarn("Error opening device %s: %s\n", cam->device_name, strerror(errno));
+		logWarn("Error opening device %s: %s", cam->device_name, strerror(errno));
 		return EXIT_FAILURE;
 	}
 
 // ???:tim:20080408 might not be necessary?
 //	if (ioctl(cam->fd, GIOC_SET_LUT_LIN) < 0) {
 //		close(cam->fd);
-//		logWarn("%s: error linearising LUTs: %s\n", cam->device_name, strerror(errno));
+//		logWarn("%s: error linearising LUTs: %s", cam->device_name, strerror(errno));
 //		return EXIT_FAILURE;
 //	}
 	
 	if (ioctl(cam->fd, GIOC_SET_DEFCNF, NULL) < 0) {
 		close(cam->fd);
-		logWarn("%s: error setting camera configuration: %s\n", cam->device_name, strerror(errno));
+		logWarn("%s: error setting camera configuration: %s", cam->device_name, strerror(errno));
 		return EXIT_FAILURE;
 	}	
 	
 	if (ioctl(cam->fd, GIOC_SET_CAMERA, &zero) < 0) {
 		close(cam->fd);
-		logWarn("%s: error setting camera: %s\n", cam->device_name, strerror(errno));
+		logWarn("%s: error setting camera: %s", cam->device_name, strerror(errno));
 		return EXIT_FAILURE;
 	}
 	//union iti_cam_t tmpcam;
 	
 	if (ioctl(cam->fd, GIOC_GET_CAMCNF, &(cam->itcam)) < 0) {
 		close(cam->fd);
-		logWarn("%s: error getting camera configuration: %s\n", cam->device_name, strerror(errno));
+		logWarn("%s: error getting camera configuration: %s", cam->device_name, strerror(errno));
 		return EXIT_FAILURE;
 	}
 
@@ -278,87 +278,87 @@ int drvInitBoard(mod_itifg_cam_t *cam) {
 //	if ((result = iti_read_config(cam->config_file, &(cam->itcam), 0, cam->module, 0, cam->camera_name, cam->exo_name)) < 0) {
 	if ((result = iti_read_config(cam->config_file, &(cam->itcam), 0, cam->module, 0, cam->camera_name, cam->exo_name)) < 0) {
 		close(cam->fd);
-		logWarn("%s: error reading camera configuration from file %s: %s\n", cam->device_name, cam->config_file, strerror(errno));
+		logWarn("%s: error reading camera configuration from file %s: %s", cam->device_name, cam->config_file, strerror(errno));
 		return EXIT_FAILURE;		
 	}
 #ifdef FOAM_MODITIFG_DEBUG
-	logDebug(0, "Read config '%s'. Camera: '%s', exo: '%s'\n", cam->config_file, cam->camera_name, cam->exo_name);
+	logDebug(0, "Read config '%s'. Camera: '%s', exo: '%s'", cam->config_file, cam->camera_name, cam->exo_name);
 #endif
 	
 	if (ioctl(cam->fd, GIOC_SET_CAMCNF, &(cam->itcam)) < 0) {
 		close(cam->fd);
-		logWarn("%s: error setting camera configuration: %s\n", cam->device_name, strerror(errno));
+		logWarn("%s: error setting camera configuration: %s", cam->device_name, strerror(errno));
 		return EXIT_FAILURE;
 	}
 	
 //	if (ioctl(cam->fd, GIOC_SET_TIMEOUT, &(struct timeval){0, 0}) < 0) {
 //		close(cam->fd);
-//		logWarn("%s: error setting timeout: %s\n", cam->device_name, strerror(errno));
+//		logWarn("%s: error setting timeout: %s", cam->device_name, strerror(errno));
 //		return EXIT_FAILURE;
 //	}
 //#ifdef FOAM_MODITIFG_DEBUG
-//	logDebug(0, "Timout set to {0,0}\n");
+//	logDebug(0, "Timout set to {0,0}");
 //#endif
 	
 	if(ioctl(cam->fd, GIOC_SET_HDEC, &one) < 0) {
 		close(cam->fd);
-		logWarn("%s: error setting horizontal decimation: %s\n", cam->device_name, strerror(errno));
+		logWarn("%s: error setting horizontal decimation: %s", cam->device_name, strerror(errno));
 		return EXIT_FAILURE;
 	}
 	
 	if(ioctl(cam->fd, GIOC_SET_VDEC, &one) < 0) {
 		close(cam->fd);
-		logWarn("%s: error setting vertical decimation: %s\n", cam->device_name, strerror(errno));
+		logWarn("%s: error setting vertical decimation: %s", cam->device_name, strerror(errno));
 		return EXIT_FAILURE;
 	}
 #ifdef FOAM_MODITIFG_DEBUG
-	logDebug(0, "decimation set to {1,1} (i.e. we want full frames)\n");
+	logDebug(0, "decimation set to {1,1} (i.e. we want full frames)");
 #endif
 	
 	if(ioctl(cam->fd, GIOC_GET_WIDTH, &(cam->width)) < 0) {
 		close(cam->fd);
-		logWarn("%s: error getting width: %s\n", cam->device_name, strerror(errno));
+		logWarn("%s: error getting width: %s", cam->device_name, strerror(errno));
 		return EXIT_FAILURE;
 	}
 	
 	if(ioctl(cam->fd, GIOC_GET_HEIGHT, &(cam->height)) < 0) {
 		close(cam->fd);
-		logWarn("%s: error getting height: %s\n", cam->device_name, strerror(errno));
+		logWarn("%s: error getting height: %s", cam->device_name, strerror(errno));
 		return EXIT_FAILURE;
 	}
 	
 	if(ioctl(cam->fd, GIOC_GET_DEPTH, &(cam->depth)) < 0) {
 		close(cam->fd);
-		logWarn("%s: error getting depth: %s\n", cam->device_name, strerror(errno));
+		logWarn("%s: error getting depth: %s", cam->device_name, strerror(errno));
 		return EXIT_FAILURE;
 	}
 #ifdef FOAM_MODITIFG_DEBUG
-	logDebug(0, "width x height x depth: %dx%dx%d\n", cam->width, cam->height, cam->depth);
+	logDebug(0, "width x height x depth: %dx%dx%d", cam->width, cam->height, cam->depth);
 #endif
 	
 	if(ioctl(cam->fd, GIOC_GET_RAWSIZE, &(cam->rawsize)) < 0) {
 		close(cam->fd);
-		logWarn("%s: error getting raw size: %s\n", cam->device_name, strerror(errno));
+		logWarn("%s: error getting raw size: %s", cam->device_name, strerror(errno));
 		return EXIT_FAILURE;
 	}
 	
 	if(ioctl(cam->fd, GIOC_GET_PAGEDSIZE, &(cam->pagedsize)) < 0) {
 		close(cam->fd);
-		logWarn("%s: error getting paged size: %s\n", cam->device_name, strerror(errno));
+		logWarn("%s: error getting paged size: %s", cam->device_name, strerror(errno));
 		return EXIT_FAILURE;
 	}
 #ifdef FOAM_MODITIFG_DEBUG
-	logDebug(0, "raw size: %d, paged size: %d\n", (int) cam->rawsize, (int) cam->pagedsize);
+	logDebug(0, "raw size: %d, paged size: %d", (int) cam->rawsize, (int) cam->pagedsize);
 #endif
 	
 	if (fcntl(cam->fd, F_SETFL, fcntl(cam->fd, F_GETFL, NULL) & ~O_NONBLOCK) < 0) {
 		close(cam->fd);
-		logWarn("%s: error setting blocking: %s\n", cam->device_name, strerror(errno));
+		logWarn("%s: error setting blocking: %s", cam->device_name, strerror(errno));
 		return EXIT_FAILURE;
 	}
 
 #ifdef FOAM_MODITIFG_DEBUG
-	logDebug(0, "Camera configuration done.\n");
+	logDebug(0, "Camera configuration done.");
 #endif
 	
 	return EXIT_SUCCESS;
@@ -370,7 +370,7 @@ int drvInitBufs(mod_itifg_buf_t *buf, mod_itifg_cam_t *cam) {
 	buf->map = mmap(NULL, cam->pagedsize * buf->frames, PROT_READ | PROT_WRITE, MAP_SHARED, cam->fd, 0);
 	
 	if (buf->map == (void *)-1) {
-		logWarn("Could not mmap(): %s\n", strerror(errno));
+		logWarn("Could not mmap(): %s", strerror(errno));
 		return EXIT_FAILURE;
 	}
 	
@@ -378,7 +378,7 @@ int drvInitBufs(mod_itifg_buf_t *buf, mod_itifg_cam_t *cam) {
 	buf->info = (iti_info_t *)((char *)buf->data + cam->rawsize);
 
 #ifdef FOAM_MODITIFG_DEBUG
-	logDebug(0, "mmap() successful.\n");
+	logDebug(0, "mmap() successful.");
 #endif
 	
 	return EXIT_SUCCESS;
@@ -388,12 +388,12 @@ int drvInitGrab(mod_itifg_cam_t *cam) {
 	// reset stats if possible
 //	ioctl(cam->fd, GIOC_SET_STATS, NULL);
 #ifdef FOAM_MODITIFG_DEBUG
-	logDebug(0, "Starting grab, lseeking to %ld.\n", +LONG_MAX);
+	logDebug(0, "Starting grab, lseeking to %ld.", +LONG_MAX);
 #endif
 	
 	// start the framegrabber by seeking a lot???
 	if ( lseek(cam->fd, +LONG_MAX, SEEK_END) == -1) {
-		logWarn("Error starting grab: %s\n", strerror(errno));
+		logWarn("Error starting grab: %s", strerror(errno));
 		return EXIT_FAILURE;
 	}
 
@@ -402,11 +402,11 @@ int drvInitGrab(mod_itifg_cam_t *cam) {
 
 int drvStopGrab(mod_itifg_cam_t *cam) {
 #ifdef FOAM_MODITIFG_DEBUG
-	logDebug(0, "Stopping grab, lseeking to %ld.\n", -LONG_MAX);
+	logDebug(0, "Stopping grab, lseeking to %ld.", -LONG_MAX);
 #endif
 	// stop the framegrabber by seeking a lot???
 	if ( lseek(cam->fd, -LONG_MAX, SEEK_END) == -1) {
-		logWarn("Error stopping grab: %s\n", strerror(errno));
+		logWarn("Error stopping grab: %s", strerror(errno));
 		return EXIT_FAILURE;
 	}
 
@@ -419,7 +419,7 @@ int drvGetImg(mod_itifg_cam_t *cam, mod_itifg_buf_t *buf, struct timeval *timeou
 //	struct iti_acc_t acc;
 	//struct pollfd pfd = {cam->fd, POLLIN, 0};
 #ifdef FOAM_MODITIFG_DEBUG
-	logDebug(0, "Grabbing image...\n");	
+	logDebug(0, "Grabbing image...");	
 #endif
 	fd_set in_fdset, ex_fdset;
 	FD_ZERO (&in_fdset);
@@ -431,28 +431,28 @@ int drvGetImg(mod_itifg_cam_t *cam, mod_itifg_buf_t *buf, struct timeval *timeou
 	result = select(FOAM_MODITIFG_MAXFD, &in_fdset, NULL, &ex_fdset, timeout);
 	
 	if (result == -1)  {
-		logWarn("Select() returned no active FD's, error:%s\n", strerror(errno));
+		logWarn("Select() returned no active FD's, error:%s", strerror(errno));
 		return EXIT_FAILURE;
 	}
 	if (result == 0) {
 		// timeout occured, return immediately
 #ifdef FOAM_MODITIFG_DEBUG
-		logWarn("Timeout in drvGetImg().\n");	
+		logWarn("Timeout in drvGetImg().");	
 #endif
 		return EXIT_SUCCESS;
 	}
 
 #ifdef FOAM_MODITIFG_DEBUG
-	logDebug(0, "lseek 0 SEEK_END...\n");	
+	logDebug(0, "lseek 0 SEEK_END...");	
 #endif
 	seek = lseek(cam->fd, 0, SEEK_END);
 	if (seek == -1) {
-		logWarn("SEEK_END failed: %s\n", strerror(errno));
+		logWarn("SEEK_END failed: %s", strerror(errno));
 		return EXIT_FAILURE;
 	}
 
 #ifdef FOAM_MODITIFG_DEBUG
-	logDebug(0, "Select returned: %d, SEEK_END: %d\n", result, (int) seek);	
+	logDebug(0, "Select returned: %d, SEEK_END: %d", result, (int) seek);	
 #endif
 
 //	buf->data = (void *)((char *)buf->map + ((int) seek % (buf->frames * cam->pagedsize)));
@@ -464,24 +464,25 @@ int drvGetImg(mod_itifg_cam_t *cam, mod_itifg_buf_t *buf, struct timeval *timeou
 //	memcpy (&timestamp, &(buf->info->acq.timestamp), sizeof(struct timeval));
 
 #ifdef FOAM_MODITIFG_DEBUG
-	logDebug(0, "acq.captured %d acq.lost %d, acq.timestamp.tv_sec: %d .tv_usec: %d\n", buf->info->acq.captured, buf->info->acq.lost, (int) buf->info->acq.timestamp.tv_sec, (int) buf->info->acq.timestamp.tv_usec);
-	logDebug(0, "dma.transfered %d \n", buf->info->dma.transfered);
+	//logDebug(0, "acq.captured %d acq.lost %d, acq.timestamp.tv_sec: %d .tv_usec: %d", buf->info->acq.captured, buf->info->acq.lost, (int) buf->info->acq.timestamp.tv_sec, (int) buf->info->acq.timestamp.tv_usec);
+	//logDebug(0, "dma.transfered %d ", buf->info->dma.transfered);
 #endif
 
 #ifdef FOAM_MODITIFG_DEBUG
-	logDebug(0, "lseek paged_size SEEK_CUR...\n");	
+	logDebug(0, "lseek %d SEEK_CUR...", cam->pagedsize);	
 #endif
 	seek = lseek(cam->fd, cam->pagedsize, SEEK_CUR);
+	//seek = lseek(cam->fd, seek, SEEK_CUR);
 	if (seek == -1) {
-		logWarn("SEEK_CUR failed: %s\n", strerror(errno));
+		logWarn("SEEK_CUR failed: %s", strerror(errno));
 		return EXIT_FAILURE;
 	}	
 #ifdef FOAM_MODITIFG_DEBUG
-	logDebug(0, "Select returned: %d, SEEK_CUR: %d\n", result, (int) seek);	
+	logDebug(0, "Select returned: %d, SEEK_CUR: %d", result, (int) seek);	
 #endif
 //	iti_info_t *imageinfo;
 //	imageinfo = (iti_info_t *)((char *)buf->data + cam->rawsize);
-//	logDebug(0, "Captured %d frames\n", imageinfo->acq.captured);
+//	logDebug(0, "Captured %d frames", imageinfo->acq.captured);
 
 	// TvW: hoes does this work, exactly?
 //	if (acc.transfered != info->framenums.transfered) {
@@ -494,7 +495,7 @@ int drvGetImg(mod_itifg_cam_t *cam, mod_itifg_buf_t *buf, struct timeval *timeou
 
 int drvStopBufs(mod_itifg_buf_t *buf, mod_itifg_cam_t *cam) {
 	if (munmap(buf->map, cam->pagedsize * buf->frames) == -1) {
-		logWarn("Error unmapping camera memory: %s\n", strerror(errno));
+		logWarn("Error unmapping camera memory: %s", strerror(errno));
 		return EXIT_FAILURE;
 	}
 	return EXIT_SUCCESS;
@@ -502,7 +503,7 @@ int drvStopBufs(mod_itifg_buf_t *buf, mod_itifg_cam_t *cam) {
 
 int drvStopBoard(mod_itifg_cam_t *cam) {
 	if (close(cam->fd) == -1) {
-		logWarn("Unable to close framegrabber board fd: %s\n", strerror(errno));
+		logWarn("Unable to close framegrabber board fd: %s", strerror(errno));
 		return EXIT_FAILURE;
 	}
 	
@@ -545,10 +546,11 @@ int main(int argc, char *argv[]) {
 	// init grab
 	drvInitGrab(&camera);
 
-	goto skip;
 	coord_t res;
 	res.x = (int) camera.width;
 	res.y = (int) camera.height;
+
+	//goto skip1;
 	
 	// test image
 	for (i=0; i<5; i++) {
@@ -577,7 +579,7 @@ int main(int argc, char *argv[]) {
 
 		//modWritePNGArr(file, ((void *) (buffer.data)), res, 1);
 	}
-	skip:
+	skip1:
 	
 	printf("Testing various lseek combinations...\n");
 	printf("***************************************\n");
@@ -593,7 +595,7 @@ int main(int argc, char *argv[]) {
 	
 	printf("\nseek_end 0 / seek_cur pagedsize / buf->data = buf->map...\n");
 	printf("****************************************\n");
-	for (i=0; i<10; i++) {
+	for (i=0; i<5; i++) {
 
 		FD_ZERO (&in_fdset);
 		FD_ZERO (&ex_fdset);
@@ -645,7 +647,7 @@ int main(int argc, char *argv[]) {
 	printf("doing SEEK_END, read image, wait 1 sec (buffer fills?), read image, \
 		   do SEEK_CUR, read image, wait 1 sec (buffer fills?), read image, loop\n");
 	printf("****************************************\n");
-	for (i=0; i<5; i++) {
+	for (i=0; i<3; i++) {
 		
 		FD_ZERO (&in_fdset);
 		FD_ZERO (&ex_fdset);
