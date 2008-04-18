@@ -1,0 +1,13 @@
+# Tim van Werkhoven, April 18, 2008
+
+This directory is used for testing modules in stand-alone mode. Some modules
+can be compiled as stand alone versions which then include a main() routine
+and thus can be run directly. This can be useful for debugging modules
+before using them in a bigger program.
+
+See Makefile.am for details on how this works, and also take a look at the 
+modules listed there (i.e. img, itifg, daq2k, serial, okodm).
+
+Note that the itifg module cannot (easily) be compiled using automake
+statements, as it needs -litifg AFTER all source files, and LDFLAGS are
+given BEFORE source files if using automake.

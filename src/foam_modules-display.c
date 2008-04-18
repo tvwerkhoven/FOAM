@@ -14,6 +14,7 @@
 	\section Functions
 	
 	The functions provided to the outside world are:
+	\li modInitDraw() - Initialize this module (setup SDL etc)
 	\li modBeginDraw() - Begin drawing/displaying data on a surface
 	\li modFinishDraw() - Finish drawing/displaying data on a surface and display
 	\li modDisplayImg() - Displays an image to an SDL_Surface
@@ -44,7 +45,7 @@
 typedef struct {
 	SDL_Surface *screen;		//!< (mod) SDL_Surface to use
 	SDL_Event event;			//!< (mod) SDL_Event to use
-	char caption[64];			//!< (user) Caption for the SDL window
+	char *caption;				//!< (user) Caption for the SDL window
 	coord_t res;				//!< (user) Resolution for the SDL window
 	Uint32 flags;				//!< (user) Flags to use with SDL_SetVideoMode
 } mod_display_t;
