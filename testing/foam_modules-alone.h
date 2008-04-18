@@ -26,7 +26,7 @@ typedef enum { //fwheel_t
 } fwheel_t;
 
 #include "foam_cs_library.h"		
-/*
+
 void logErr(const char *msg, ...) {
 	va_list ap;
 	va_start(ap, msg);
@@ -51,5 +51,3 @@ void logDebug(int flg, const char *msg, ...) {
 	vfprintf(stderr, msg, ap);
 	fprintf(stderr, "\n");
 }
-
-*/
