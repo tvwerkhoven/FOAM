@@ -237,7 +237,7 @@ int drvStopBufs(mod_itifg_buf_t *buf, mod_itifg_cam_t *cam);
 
 int drvInitBoard(mod_itifg_cam_t *cam) {
 	// TvW: | O_SYNC | O_APPEND also used in test_itifg.c
-	int flags = O_RDWR;
+	int flags = O_RDWR | O_SYNC | O_APPEND;
 	int zero = 0;
 	int one = 1;
 	int result;	
