@@ -593,7 +593,7 @@ int main(int argc, char *argv[]) {
 	
 	printf("\nseek_end 0 / seek_cur pagedsize / buf->data = buf->map...\n");
 	printf("****************************************\n");
-	for (i=0; i<25; i++) {
+	for (i=0; i<10; i++) {
 
 		FD_ZERO (&in_fdset);
 		FD_ZERO (&ex_fdset);
@@ -634,6 +634,7 @@ int main(int argc, char *argv[]) {
 			
 			printf("\n");
 		}
+		//sleep(1);
 	}
 		
 	printf("\n");
@@ -664,7 +665,7 @@ int main(int argc, char *argv[]) {
 		if (seeke == -1)
 			printf("SEEK_END failed: %s\n", strerror(errno));
 
-		printf("0 seek_end: %d | ", (int) seeke);
+		printf("0 seek_end: %d |\n ", (int) seeke);
 		
 		pixs = 0;
 		for (j=0; j<25; j++) { 
@@ -689,7 +690,7 @@ int main(int argc, char *argv[]) {
 		buf->info = (iti_info_t *)((char *)buf->data + cam->rawsize);
 		
 		seekc = lseek(cam->fd, cam->pagedsize, SEEK_CUR);
-		printf("%d seek_cur: %d | ", cam->pagedsize, (int) seekc);
+		printf("%d seek_cur: %d |\n ", cam->pagedsize, (int) seekc);
 		if (seekc == -1)
 			printf("SEEK_CUR failed: %s\n", strerror(errno));
 		

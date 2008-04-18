@@ -51,7 +51,7 @@ modimg_test_CFLAGS = -std=c99 `sdl-config --cflags`
 #itifg_test_CFLAGS = -Wall -g 
 
 # here comes the itifg hack:
-itifg-test: $(SRCDIR)/foam_cs_library.c $(SRCDIR)/foam_modules-itifg.c
+itifg-test: $(SRCDIR)/foam_modules-itifg.c
 	$(CC) $(CFLAGS) $(GFLAGS) $(LIFLAGS) $(LLFLAGS) \
 	-Iitifg/include  \
 	-Litifg/lib  \
