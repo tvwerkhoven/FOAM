@@ -665,52 +665,59 @@ int main(int argc, char *argv[]) {
 		if (seeke == -1)
 			printf("SEEK_END failed: %s\n", strerror(errno));
 
-		printf("0 seek_end: %d |\n ", (int) seeke);
+		printf("0 seek_end: %d |\n", (int) seeke);
 		
-		pixs = 0;
-		for (j=0; j<25; j++) { 
-			pix = *( ((unsigned char *) (buffer.data)) + j); 
-			pixs += pow(2,j) * pix;
-			printf("%d,", pix);
+		for (i=0; i<2; i++) {
+			pixs = 0;
+			for (j=0; j<25; j++) { 
+				pix = *( ((unsigned char *) (buffer.data)) + j); 
+				pixs += pow(2,j) * pix;
+				printf("%d,", pix);
+			}
+			printf("H: %d\n", (int) sqrt(pixs));
 		}
-		printf("H: %d\n", (int) sqrt(pixs));
 		
 		sleep(1);
 		
-		pixs = 0;
-		for (j=0; j<25; j++) { 
-			pix = *( ((unsigned char *) (buffer.data)) + j); 
-			pixs += pow(2,j) * pix;
-			printf("%d,", pix);
+		for (i=0; i<2; i++) {
+			pixs = 0;
+			for (j=0; j<25; j++) { 
+				pix = *( ((unsigned char *) (buffer.data)) + j); 
+				pixs += pow(2,j) * pix;
+				printf("%d,", pix);
+			}
+			printf("H: %d\n", (int) sqrt(pixs));
 		}
-		printf("H: %d\n", (int) sqrt(pixs));
-		
 
 		buf->data = (void *)((char *)buf->map);
 		buf->info = (iti_info_t *)((char *)buf->data + cam->rawsize);
 		
 		seekc = lseek(cam->fd, cam->pagedsize, SEEK_CUR);
-		printf("%d seek_cur: %d |\n ", cam->pagedsize, (int) seekc);
+		printf("%d seek_cur: %d |\n", cam->pagedsize, (int) seekc);
 		if (seekc == -1)
 			printf("SEEK_CUR failed: %s\n", strerror(errno));
 		
-		pixs = 0;
-		for (j=0; j<25; j++) { 
-			pix = *( ((unsigned char *) (buffer.data)) + j); 
-			pixs += pow(2,j) * pix;
-			printf("%d,", pix);
+		for (i=0; i<2; i++) {
+			pixs = 0;
+			for (j=0; j<25; j++) { 
+				pix = *( ((unsigned char *) (buffer.data)) + j); 
+				pixs += pow(2,j) * pix;
+				printf("%d,", pix);
+			}
+			printf("H: %d\n", (int) sqrt(pixs));
 		}
-		printf("H: %d\n", (int) sqrt(pixs));
 		
 		sleep(1);
 		
-		pixs = 0;
-		for (j=0; j<25; j++) { 
-			pix = *( ((unsigned char *) (buffer.data)) + j); 
-			pixs += pow(2,j) * pix;
-			printf("%d,", pix);
+		for (i=0; i<2; i++) {
+			pixs = 0;
+			for (j=0; j<25; j++) { 
+				pix = *( ((unsigned char *) (buffer.data)) + j); 
+				pixs += pow(2,j) * pix;
+				printf("%d,", pix);
+			}
+			printf("H: %d\n", (int) sqrt(pixs));
 		}
-		printf("H: %d\n", (int) sqrt(pixs));
 		
 //		printf("image: \n");
 //		for (f=0; f<buffer.frames; f++) {
