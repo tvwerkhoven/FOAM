@@ -544,46 +544,14 @@ int main(int argc, char *argv[]) {
 		return EXIT_FAILURE;
 
 	// init grab
-	drvInitGrab(&camera);
+//	drvInitGrab(&camera);
+	// start grabbing with a 4 frame loop
+	lseek(camera.fd, buffer.frames * buffer.pagedsize, SEEK_END);
 
 	coord_t res;
 	res.x = (int) camera.width;
 	res.y = (int) camera.height;
 
-	//goto skip1;
-	
-	// test image
-	for (i=0; i<5; i++) {
-		if (drvGetImg(&camera, &buffer, NULL) != EXIT_SUCCESS)
-			return EXIT_FAILURE;
-		
-		printf("Frames grabbed: %d\n", buffer.info->acq.captured);
-		printf("Pixels 1 through 25:\n");
-		for (f=0; f<buffer.frames; f++) {
-			for (j=0; j<25; j++)
-				printf("%d,", *( ((unsigned char *) (buffer.data)) + j + f*camera.pagedsize) );
-			
-			printf("\n");
-		}
-//		for (j=0; j<10; j++)
-//			printf("%d,", *( ((unsigned char *) (buffer.data)) + j + 1*cam->pagedsize) );
-//		for (j=0; j<10; j++)
-//			printf("%d,", *( ((unsigned char *) (buffer.data)) + j + 2*cam->pagedsize));
-//		for (j=0; j<10; j++)
-//			printf("%d,", *( ((unsigned char *) (buffer.data)) + j + 3*cam->pagedsize) );
-
-		
-		printf("\n");
-//		asprintf(&file, "itifg-debug-cap-%d.png",  i);
-		//printf("Writing frame to disk (%s)\n", file);
-
-		//modWritePNGArr(file, ((void *) (buffer.data)), res, 1);
-	}
-	skip1:
-	
-	printf("Testing various lseek combinations...\n");
-	printf("***************************************\n");
-	
 	off_t seekc, seeke;
 	//struct timeval timeout;
 	struct timeval *timeout = NULL;
@@ -593,6 +561,61 @@ int main(int argc, char *argv[]) {
 	fd_set in_fdset, ex_fdset;
 	int pix, pixs;
 	
+	
+	// test images
+	for (i=0; i<6; i++) {
+		FD_ZERO (&in_fdset);
+		FD_ZERO (&ex_fdset);
+		FD_SET (camera.fd, &in_fdset);
+		FD_SET (camera.fd, &ex_fdset);
+		
+		//result = poll(&pfd, 1, timeout);
+		result = select(1024, &in_fdset, NULL, &ex_fdset, timeout);
+		
+		if (result == -1)
+			printf("Select() returned no active FD's, error:%s\n", strerror(errno));
+		else if (result == 0)
+			printf("Timeout in drvGetImg().\n");	
+		
+		printf("select: %d | ", result);
+		seeke = lseek(cam->fd, 0, SEEK_END);
+		if (seeke == -1)
+			printf("SEEK_END failed: %s\n", strerror(errno));
+		
+		printf("lseek fd 0 seek_end: %d | ", (int) seeke);
+
+		seekc = lseek(cam->fd, 0, SEEK_CUR);
+		if (seekc == -1)
+			printf("SEEK_CUR failed: %s\n", strerror(errno));
+		
+		printf("lseek fd 0 seek_cur: %d | frame from %d to %d\n", (int) seekc, (int) seekc, (int) seeke);
+		
+		buf->data = (void *)((char *)buf->map);
+		buf->info = (iti_info_t *)((char *)buf->data + cam->rawsize);
+		
+		printf("image: \n");
+		for (f=0; f<buffer.frames; f++) {
+			pixs = 0;
+			for (j=0; j<25; j++) { 
+				pix = *( ((unsigned char *) (buffer.data)) + j + f*camera.pagedsize); 
+				pixs += pow(2,j) * pix;
+				printf("%d,", pix);
+			}
+			printf("H: %d\n", (int) sqrt(pixs));
+		}
+		
+		seekc = lseek(cam->fd, cam->pagedsize, SEEK_CUR);
+		printf("lseek fd %d seek_cur: %d | END\n", cam->pagedsize, (int) seekc);
+		if (seekc == -1)
+			printf("SEEK_CUR failed: %s\n", strerror(errno));
+		
+	}
+	exit(0);
+	
+	
+	printf("Testing various lseek combinations...\n");
+	printf("***************************************\n");
+		
 	printf("\nseek_end 0 / seek_cur pagedsize / buf->data = buf->map...\n");
 	printf("****************************************\n");
 	for (i=0; i<5; i++) {
