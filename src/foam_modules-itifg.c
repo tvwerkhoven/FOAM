@@ -546,7 +546,7 @@ int main(int argc, char *argv[]) {
 	// init grab
 //	drvInitGrab(&camera);
 	// start grabbing with a 4 frame loop
-	lseek(camera.fd, buffer.frames * buffer.pagedsize, SEEK_END);
+	lseek(camera.fd, buffer.frames * camera.pagedsize, SEEK_END);
 
 	coord_t res;
 	res.x = (int) camera.width;
@@ -608,6 +608,10 @@ int main(int argc, char *argv[]) {
 		printf("lseek fd %d seek_cur: %d | END\n", cam->pagedsize, (int) seekc);
 		if (seekc == -1)
 			printf("SEEK_CUR failed: %s\n", strerror(errno));
+		
+		// reset frame capture
+		if (seekc >= buffer.frames * camera.pagedsize) 
+			lseek(camera.fd, buffer.frames * camera.pagedsize, SEEK_END);
 		
 	}
 	exit(0);
