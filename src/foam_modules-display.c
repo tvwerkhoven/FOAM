@@ -70,7 +70,7 @@ int modInitDraw(mod_display_t *disp) {
 	
 	atexit(SDL_Quit);
 	
-	SDL_WM_SetCaption(disp->caption, disp->caption);
+	SDL_WM_SetCaption(disp->caption, 0);
 	
 	disp->screen = SDL_SetVideoMode(disp->res.x, disp->res.y, 0, disp->flags);
 	//SDL_HWSURFACE | SDL_DOUBLEBUF | SDL_RESIZABLE
