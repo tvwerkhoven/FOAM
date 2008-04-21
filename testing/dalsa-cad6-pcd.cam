@@ -25,12 +25,12 @@
       CCLK_STATIC_STATE = LEVEL_LOW
 #     EXT_SYNC_TIME = 572.000   # us (140ns ... 572us)
       # default exposure time !!!
-      EXT_SYNC_PERIOD_TIME = 12047.000  # us (210ns ... 18.75s)
+      EXT_SYNC_PERIOD_TIME = 2047.000  # us (210ns ... 18.75s)
       # default readout time !!!
       EXSYNC_MIDPOINT_DELAY = 47.000  # us (210ns ... 18.75s)
       # this controls the same as the above value (readout time)
       # the last value is the important (overwrites the first)
-      PRI_MIDPOINT_DELAY = 2047.000  # us (210ns ... 18.75s)
+      PRI_MIDPOINT_DELAY = 1047.000  # us (210ns ... 18.75s)
       EXSYNC_START_LOCATION = EXSYNC_START_CYCLE_END
       PRI_START_LOCATION = PRI_START_CYCLE_END
       PRI_END_LOCATION = PRI_END_IS_START_DEPEND

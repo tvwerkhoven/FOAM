@@ -237,7 +237,7 @@ int drvStopBufs(mod_itifg_buf_t *buf, mod_itifg_cam_t *cam);
 
 int drvInitBoard(mod_itifg_cam_t *cam) {
 	// TvW: | O_SYNC | O_APPEND also used in test_itifg.c
-	int flags = O_RDWR | O_APPEND | O_SYNC;
+	int flags = O_RDWR | O_APPEND | O_SYNC | O_NONBLOCK;
 	int zero = 0;
 	int one = 1;
 	int result;	
@@ -546,7 +546,9 @@ int main(int argc, char *argv[]) {
 	// init grab
 //	drvInitGrab(&camera);
 	// start grabbing with a 4 frame loop
-	lseek(camera.fd, buffer.frames * camera.pagedsize, SEEK_END);
+	//lseek(camera.fd, buffer.frames * camera.pagedsize, SEEK_END);
+	//lseek(camera.fd, buffer.frames * camera.pagedsize, SEEK_END);
+	lseek(camera.fd, +LONG_MAX, SEEK_END);
 
 	coord_t res;
 	res.x = (int) camera.width;
@@ -561,9 +563,10 @@ int main(int argc, char *argv[]) {
 	fd_set in_fdset, ex_fdset;
 	int pix, pixs;
 	
+	goto longrun;
 	
 	// test images
-	for (i=0; i<6; i++) {
+	for (i=0; i<10; i++) {
 		FD_ZERO (&in_fdset);
 		FD_ZERO (&ex_fdset);
 		FD_SET (camera.fd, &in_fdset);
@@ -608,7 +611,15 @@ int main(int argc, char *argv[]) {
 		printf("lseek fd %d seek_cur: %d | END\n", cam->pagedsize, (int) seekc);
 		if (seekc == -1)
 			printf("SEEK_CUR failed: %s\n", strerror(errno));
-		
+
+		// reset frame capture
+		if (seekc >= buffer.frames * camera.pagedsize)  {
+			seeke = lseek(camera.fd, buffer.frames * camera.pagedsize, SEEK_END);
+			printf("RESET: lseek fd %d SEEK_END: %d\n", buffer.frames * camera.pagedsize,(int) seeke);
+		}
+//		if (seekc >= buffer.frames * camera.pagedsize) 
+//			lseek(camera.fd, buffer.frames * camera.pagedsize, SEEK_END);
+
 		// reset frame capture
 		if (seekc >= buffer.frames * camera.pagedsize) 
 			lseek(camera.fd, buffer.frames * camera.pagedsize, SEEK_END);
@@ -913,11 +924,14 @@ int main(int argc, char *argv[]) {
 //	printf("\n");
 //	printf("cleaning up now\n");
 	
-	drvStopGrab(&camera);
-	drvInitGrab(&camera);
+	//drvStopGrab(&camera);
+	//drvInitGrab(&camera);
+	longrun:
 	printf("\nseek_end 0 / seek_cur pagedsize / buf->data = buf->map... long run!\n");
 	printf("****************************************\n");
-	for (i=0; i<30000; i++) {
+	// no buffering 
+	setvbuf(stdout, NULL, _IONBF, 0);
+	for (i=0; i<31000; i++) {
 		
 		FD_ZERO (&in_fdset);
 		FD_ZERO (&ex_fdset);
@@ -942,8 +956,13 @@ int main(int argc, char *argv[]) {
 		seekc = lseek(cam->fd, cam->pagedsize, SEEK_CUR);
 		if (seekc == -1)
 			printf("SEEK_CUR failed: %s\n", strerror(errno));
+
+		if (i % 100 == 0)
+			printf(".");
+		if (i > 30000) 
+			printf("i: %d, end: %d, cur: %d\n", i, (int) seeke, (int) seekc);
 	}
-	printf("after 30k images: seek_end: %d, seek_cur: %d \n", (int) seeke, (int) seekc);
+	printf("after 31k images: seek_end: %d, seek_cur: %d \n", (int) seeke, (int) seekc);
 	printf("buffer looks like (pagedsize boundaries):\n");
 	
 	for (f=0; f<buffer.frames; f++) {
