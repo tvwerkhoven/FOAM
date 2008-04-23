@@ -650,7 +650,7 @@ int main(int argc, char *argv[]) {
 
 	printf("Starting long run\n");
 	// test images
-	for (i=0; i<10*30840+5; i++) {
+	for (i=0; i<30840 + 40*16384; i++) {
 		FD_ZERO (&in_fdset);
 		FD_ZERO (&ex_fdset);
 		FD_SET (camera.fd, &in_fdset);
@@ -664,14 +664,14 @@ int main(int argc, char *argv[]) {
 		else if (result == 0)
 			printf("Timeout in drvGetImg().\n");	
 		
-		if ((i % 15420) < 3  || (i % 15420) > 15417)
+		if (overcnt < 5)
 			printf("frame: %d | select: %d | ", i, result);
 
 		seeke = lseek(cam->fd, 0, SEEK_END);
 		if (seeke == -1)
 			printf("SEEK_END failed: %s\n", strerror(errno));
 		
-		if ((i % 15420) < 3  || (i % 15420) > 15417)
+		if (overcnt < 5)
 			printf("lseek fd 0 seek_end: %d | ", (int) seeke);
 
 		seekc = lseek(cam->fd, 0, SEEK_CUR);
@@ -679,17 +679,20 @@ int main(int argc, char *argv[]) {
 			printf("SEEK_CUR failed: %s\n", strerror(errno));
 		if (seekc < seekco) {
 			printf("Overflow at frame %d! from %d to %d, diff %d\n",i, seekco, seekc, seekco-seekc);
+			overcnt = 0;
 		}
 
 		seekco = seekc;
-		if ((i % 15420) < 3  || (i % 15420) > 15417) {
+		if (overcnt < 5) {
 			printf("lseek fd 0 seek_cur: %d | ", (int) seekc);
+			printf("frame from %d to %d or pos %d | ", seekc, seeke, (seekc / cam->pagedsize) % buffer.frames);
 		}
+		
 		
 		buf->data = (void *)((char *)buf->map);
 		buf->info = (iti_info_t *)((char *)buf->data + cam->rawsize);
 		
-		if ((i % 15420) < 3  || (i % 15420) > 15417) {
+		if (overcnt < 5) {
 			printf("images: \n");
 			for (f=0; f<buffer.frames; f++) {
 				pixs = 0;
@@ -700,10 +703,11 @@ int main(int argc, char *argv[]) {
 				}
 				printf("H: %d\n", (int) sqrt(pixs));
 			}
+			overcnt++;
 		}
 		
 		seekc = lseek(cam->fd, cam->pagedsize, SEEK_CUR);
-		if ((i % 15420) < 3  || (i % 15420) > 15417)
+		if (overcnt < 5) 
 			printf("lseek fd %d seek_cur: %d | END\n\n", cam->pagedsize, (int) seekc);
 
 		if (seekc == -1)
