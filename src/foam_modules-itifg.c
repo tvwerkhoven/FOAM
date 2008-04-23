@@ -650,7 +650,7 @@ int main(int argc, char *argv[]) {
 
 	printf("Starting long run\n");
 	// test images
-	for (i=0; i<2*30840+5; i++) {
+	for (i=0; i<10*30840+5; i++) {
 		FD_ZERO (&in_fdset);
 		FD_ZERO (&ex_fdset);
 		FD_SET (camera.fd, &in_fdset);
@@ -664,32 +664,37 @@ int main(int argc, char *argv[]) {
 		else if (result == 0)
 			printf("Timeout in drvGetImg().\n");	
 		
-		if ((i > 30835 && i < 30845) || i > 61675) 
+		if ((i % 154200) < 2  || (i % 15420) > 15417)
 			printf("select: %d | ", result);
 
 		seeke = lseek(cam->fd, 0, SEEK_END);
 		if (seeke == -1)
 			printf("SEEK_END failed: %s\n", strerror(errno));
 		
-		if ((i > 30835 && i < 30845) || i > 61675) 
+		if ((i % 154200) < 2  || (i % 15420) > 15417)
 			printf("lseek fd 0 seek_end: %d | ", (int) seeke);
 
 		seekc = lseek(cam->fd, 0, SEEK_CUR);
 		if (seekc == -1)
 			printf("SEEK_CUR failed: %s\n", strerror(errno));
 		if (seekc < seekco) {
-			printf("Overflow at frame %d!\n",i);
-			overoff += (1<<30) % cam->pagedsize;
+			if ((seekc / cam->pagedsize) * cam->pagedsize != seekc) {
+				overoff += (1<<30) % cam->pagedsize;
+				printf("Overflow at frame %d! wrapping necessary, offset: %d\n", overoff);
+			}
+			else {
+				printf("Overflow at frame %d! wrapping not necessary\n");
+			}
 		}
 
 		seekco = seekc;
-		if ((i > 30835 && i < 30845) || i > 61675) 
+		if ((i % 154200) < 2  || (i % 15420) > 15417)
 			printf("lseek fd 0 seek_cur: %d | frame from %d to %d or %d to %d\n", (int) seekc, (int) seekc + overoff, (int) seeke + overoff, ((int) seekc + overoff) / cam->pagedsize % 4, ((int) seeke + overoff) / cam->pagedsize % 4);
 		
 		buf->data = (void *)((char *)buf->map);
 		buf->info = (iti_info_t *)((char *)buf->data + cam->rawsize);
 		
-		if ((i > 30835 && i < 30845) || i > 61675) {
+		if ((i % 154200) < 2  || (i % 15420) > 15417) {
 			printf("images: \n");
 			for (f=0; f<buffer.frames; f++) {
 				pixs = 0;
@@ -703,28 +708,12 @@ int main(int argc, char *argv[]) {
 		}
 		
 		seekc = lseek(cam->fd, cam->pagedsize, SEEK_CUR);
-		if ((i > 30835 && i < 30845) || i > 61675) 
+		if ((i % 154200) < 2  || (i % 15420) > 15417)
 			printf("lseek fd %d seek_cur: %d | END\n", cam->pagedsize, (int) seekc);
 
 		if (seekc == -1)
 			printf("SEEK_CUR failed: %s\n", strerror(errno));
 
-		// reset frame capture
-		/*
-		if (seekc >= buffer.frames * camera.pagedsize)  {
-			seeke = lseek(camera.fd, buffer.frames * camera.pagedsize, SEEK_END);
-			printf("RESET: lseek fd %d SEEK_END: %d\n", buffer.frames * camera.pagedsize,(int) seeke);
-		}
-		*/
-//		if (seekc >= buffer.frames * camera.pagedsize) 
-//			lseek(camera.fd, buffer.frames * camera.pagedsize, SEEK_END);
-
-		// reset frame capture
-		/*
-		if (seekc >= buffer.frames * camera.pagedsize) 
-			lseek(camera.fd, buffer.frames * camera.pagedsize, SEEK_END);
-		*/
-		
 	}
 	lseek(camera.fd, -LONG_MAX, SEEK_END);
 
