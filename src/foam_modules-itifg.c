@@ -679,7 +679,7 @@ int main(int argc, char *argv[]) {
 			printf("SEEK_CUR failed: %s\n", strerror(errno));
 		if (seekc < seekco) {
 			printf("Overflow at frame %d!\n",i);
-			overoff += 2^30 % cam->pagedsize;
+			overoff += (1<<30) % cam->pagedsize;
 		}
 
 		seekco = seekc;
