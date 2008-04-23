@@ -590,7 +590,7 @@ int main(int argc, char *argv[]) {
 		if (seekc == -1)
 			printf("SEEK_CUR failed: %s\n", strerror(errno));
 		
-		printf("lseek fd 0 seek_cur: %d | frame from %d to %d\n", (int) seekc, (int) seekc, (int) seeke);
+		printf("lseek fd 0 seek_cur: %d | frame from %d to %d or %d to %d\n", (int) seekc, (int) seekc, (int) seeke, (int) seekc % cam->pagedsize, (int) seeke % cam->pagedsize);
 		
 		buf->data = (void *)((char *)buf->map);
 		buf->info = (iti_info_t *)((char *)buf->data + cam->rawsize);
@@ -640,9 +640,87 @@ int main(int argc, char *argv[]) {
 		
 	}
 	lseek(camera.fd, -LONG_MAX, SEEK_END);
+	
+	
+	lseek(camera.fd, +LONG_MAX, SEEK_END);
+
+	printf("Starting long run\n");
+	// test images
+	for (i=0; i<30845; i++) {
+		FD_ZERO (&in_fdset);
+		FD_ZERO (&ex_fdset);
+		FD_SET (camera.fd, &in_fdset);
+		FD_SET (camera.fd, &ex_fdset);
+		
+		//result = poll(&pfd, 1, timeout);
+		result = select(1024, &in_fdset, NULL, &ex_fdset, timeout);
+		
+		if (result == -1)
+			printf("Select() returned no active FD's, error:%s\n", strerror(errno));
+		else if (result == 0)
+			printf("Timeout in drvGetImg().\n");	
+		
+		if (i > 30835) 
+			printf("select: %d | ", result);
+
+		seeke = lseek(cam->fd, 0, SEEK_END);
+		if (seeke == -1)
+			printf("SEEK_END failed: %s\n", strerror(errno));
+		
+		if (i > 30835) 
+			printf("lseek fd 0 seek_end: %d | ", (int) seeke);
+
+		seekc = lseek(cam->fd, 0, SEEK_CUR);
+		if (seekc == -1)
+			printf("SEEK_CUR failed: %s\n", strerror(errno));
+		
+		if (i > 30835) 
+			printf("lseek fd 0 seek_cur: %d | frame from %d to %d or %d to %d\n", (int) seekc, (int) seekc, (int) seeke, (int) seekc % cam->pagedsize, (int) seeke % cam->pagedsize);
+		
+		buf->data = (void *)((char *)buf->map);
+		buf->info = (iti_info_t *)((char *)buf->data + cam->rawsize);
+		
+		if (i > 30835)  {
+			printf("images: \n");
+			for (f=0; f<buffer.frames; f++) {
+				pixs = 0;
+				for (j=0; j<25; j++) { 
+					pix = *( ((unsigned char *) (buffer.data)) + j + f*camera.pagedsize); 
+					pixs += pow(2,j) * pix;
+					printf("%d,", pix);
+				}
+				printf("H: %d\n", (int) sqrt(pixs));
+			}
+		}
+		
+		seekc = lseek(cam->fd, cam->pagedsize, SEEK_CUR);
+		if (i > 30835)  
+			printf("lseek fd %d seek_cur: %d | END\n", cam->pagedsize, (int) seekc);
+
+		if (seekc == -1)
+			printf("SEEK_CUR failed: %s\n", strerror(errno));
+
+		// reset frame capture
+		/*
+		if (seekc >= buffer.frames * camera.pagedsize)  {
+			seeke = lseek(camera.fd, buffer.frames * camera.pagedsize, SEEK_END);
+			printf("RESET: lseek fd %d SEEK_END: %d\n", buffer.frames * camera.pagedsize,(int) seeke);
+		}
+		*/
+//		if (seekc >= buffer.frames * camera.pagedsize) 
+//			lseek(camera.fd, buffer.frames * camera.pagedsize, SEEK_END);
+
+		// reset frame capture
+		/*
+		if (seekc >= buffer.frames * camera.pagedsize) 
+			lseek(camera.fd, buffer.frames * camera.pagedsize, SEEK_END);
+		*/
+		
+	}
+	lseek(camera.fd, -LONG_MAX, SEEK_END);
+
 	exit(0);
-	
-	
+
 	printf("Testing various lseek combinations...\n");
 	printf("***************************************\n");
 		
