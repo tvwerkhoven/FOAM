@@ -563,7 +563,6 @@ int main(int argc, char *argv[]) {
 	fd_set in_fdset, ex_fdset;
 	int pix, pixs;
 	
-	goto longrun;
 	
 	// test images
 	for (i=0; i<10; i++) {
@@ -596,7 +595,7 @@ int main(int argc, char *argv[]) {
 		buf->data = (void *)((char *)buf->map);
 		buf->info = (iti_info_t *)((char *)buf->data + cam->rawsize);
 		
-		printf("image: \n");
+		printf("images: \n");
 		for (f=0; f<buffer.frames; f++) {
 			pixs = 0;
 			for (j=0; j<25; j++) { 
@@ -613,18 +612,23 @@ int main(int argc, char *argv[]) {
 			printf("SEEK_CUR failed: %s\n", strerror(errno));
 
 		// reset frame capture
+		/*
 		if (seekc >= buffer.frames * camera.pagedsize)  {
 			seeke = lseek(camera.fd, buffer.frames * camera.pagedsize, SEEK_END);
 			printf("RESET: lseek fd %d SEEK_END: %d\n", buffer.frames * camera.pagedsize,(int) seeke);
 		}
+		*/
 //		if (seekc >= buffer.frames * camera.pagedsize) 
 //			lseek(camera.fd, buffer.frames * camera.pagedsize, SEEK_END);
 
 		// reset frame capture
+		/*
 		if (seekc >= buffer.frames * camera.pagedsize) 
 			lseek(camera.fd, buffer.frames * camera.pagedsize, SEEK_END);
+		*/
 		
 	}
+	lseek(camera.fd, -LONG_MAX, SEEK_END);
 	exit(0);
 	
 	
