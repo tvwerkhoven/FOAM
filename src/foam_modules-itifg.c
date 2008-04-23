@@ -649,6 +649,7 @@ int main(int argc, char *argv[]) {
 	lseek(camera.fd, +LONG_MAX, SEEK_END);
 
 	printf("Starting long run\n");
+	int overcnt = 0;
 	// test images
 	for (i=0; i<30840 + 40*16384; i++) {
 		FD_ZERO (&in_fdset);
