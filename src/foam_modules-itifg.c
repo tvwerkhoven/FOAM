@@ -605,6 +605,17 @@ int main(int argc, char *argv[]) {
 			}
 			printf("H: %d\n", (int) sqrt(pixs));
 		}
+		usleep(5000);
+		printf("images: \n");
+		for (f=0; f<buffer.frames; f++) {
+			pixs = 0;
+			for (j=0; j<25; j++) { 
+				pix = *( ((unsigned char *) (buffer.data)) + j + f*camera.pagedsize); 
+				pixs += pow(2,j) * pix;
+				printf("%d,", pix);
+			}
+			printf("H: %d\n", (int) sqrt(pixs));
+		}
 		
 		seekc = lseek(cam->fd, cam->pagedsize, SEEK_CUR);
 		printf("lseek fd %d seek_cur: %d | END\n", cam->pagedsize, (int) seekc);
