@@ -665,7 +665,7 @@ int main(int argc, char *argv[]) {
 			printf("Timeout in drvGetImg().\n");	
 		
 		if ((i % 15420) < 3  || (i % 15420) > 15417)
-			printf("frame: %d | select: %d | ", i result);
+			printf("frame: %d | select: %d | ", i, result);
 
 		seeke = lseek(cam->fd, 0, SEEK_END);
 		if (seeke == -1)
@@ -688,9 +688,10 @@ int main(int argc, char *argv[]) {
 		}
 
 		seekco = seekc;
-		if ((i % 15420) < 3  || (i % 15420) > 15417)
+		if ((i % 15420) < 3  || (i % 15420) > 15417) {
 			printf("lseek fd 0 seek_cur: %d | ", (int) seekc);
 			printf("(mod) frame from %d to %d or %d to %d\n", (int) seekc + overoff, (int) seeke + overoff, ((int) seekc + overoff) / cam->pagedsize % 4, ((int) seeke + overoff) / cam->pagedsize % 4);
+		}
 		
 		buf->data = (void *)((char *)buf->map);
 		buf->info = (iti_info_t *)((char *)buf->data + cam->rawsize);
