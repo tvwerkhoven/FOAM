@@ -678,19 +678,12 @@ int main(int argc, char *argv[]) {
 		if (seekc == -1)
 			printf("SEEK_CUR failed: %s\n", strerror(errno));
 		if (seekc < seekco) {
-			if ((seekc / cam->pagedsize) * cam->pagedsize != seekc) {
-				overoff += (1<<30) % cam->pagedsize;
-				printf("Overflow at frame %d! wrapping necessary, offset: %d\n",i, overoff);
-			}
-			else {
-				printf("Overflow at frame %d! wrapping not necessary\n", i);
-			}
+			printf("Overflow at frame %d! from %d to %d, diff %d\n",i, seekco, seekc, seekco-seekc);
 		}
 
 		seekco = seekc;
 		if ((i % 15420) < 3  || (i % 15420) > 15417) {
 			printf("lseek fd 0 seek_cur: %d | ", (int) seekc);
-			printf("(mod) frame from %d to %d or %d to %d\n", (int) seekc + overoff, (int) seeke + overoff, ((int) seekc + overoff) / cam->pagedsize % 4, ((int) seeke + overoff) / cam->pagedsize % 4);
 		}
 		
 		buf->data = (void *)((char *)buf->map);
