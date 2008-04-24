@@ -161,9 +161,9 @@ int modWritePGMSurf(char *fname, SDL_Surface *img, int maxval, int pgmtype) {
 	// HEADER //
 	////////////
 	if (pgmtype == 0) // We're making ascii
-		fprintf(fd, "P2%\n");
+		fprintf(fd, "P2\n");
 	else // We're making binary
-		fprintf(fd, "P5%\n");
+		fprintf(fd, "P5\n");
 
 	fprintf(fd, "%d %d\n", img->w, img->h);
 	fprintf(fd, "%d\n", maxval);
@@ -253,9 +253,9 @@ int modWritePGMArr(char *fname, void *img, int datatype, coord_t res, int maxval
 	// Write header //
 	//////////////////
 	if (type == 0) // We're making ascii
-		fprintf(fd, "P2%\n");
+		fprintf(fd, "P2\n");
 	else // We're making binary
-		fprintf(fd, "P5%\n");
+		fprintf(fd, "P5\n");
 	
 	fprintf(fd, "%d %d\n", res.x, res.y);
 	fprintf(fd, "%d\n", maxval);
