@@ -16,8 +16,19 @@
 extern pthread_mutex_t mode_mutex;
 extern pthread_cond_t mode_cond;
 
-// some globals we use
+#define FOAM_MCMATH_DISPLAY 1
+
+// GLOBALS //
+/***********/
+
+// Displaying
+#ifdef FOAM_MCMATH_DISPLAY
 mod_display_t disp;
+#endif
+
+// ITIFG camera & buffer
+mod_itifg_cam_t camera;
+mod_itifg_buf_t buffer;
 
 int modInitModule(control_t *ptc, config_t *cs_config) {
 	logInfo(0, "This is the McMath prime module, enjoy.");
@@ -69,6 +80,14 @@ int modInitModule(control_t *ptc, config_t *cs_config) {
 	ptc->filter[0].filters[1] = FILT_OPEN;
 	ptc->filter[0].filters[2] = FILT_CLOSED;
 	
+	// configure ITIFG camera
+	
+	camera.module = 48;
+	camera.device_name = "/dev/ic0dma";
+	camera.config_file = "conf/dalsa-cad6-pcd.cam";
+	
+	buffer.frames = 8;
+	
 	// configure cs_config here
 	cs_config->listenip = "0.0.0.0";	// listen on any IP by defaul
 	cs_config->listenport = 10000;		// listen on port 10000 by default
@@ -81,29 +100,64 @@ int modInitModule(control_t *ptc, config_t *cs_config) {
 	cs_config->errfile = NULL;
 	cs_config->debugfile = NULL;
 
-	return EXIT_SUCCESS;
-}
-
-int modOpenInit(control_t *ptc) {
+#ifdef FOAM_MCMATH_DISPLAY
 	// init display
-	disp.caption = "MM - WFS";
+	disp.caption = "McMath - WFS";
 	disp.res.x = ptc->wfs[0].res.x;
 	disp.res.y = ptc->wfs[0].res.y;
 	disp.flags = SDL_HWSURFACE | SDL_DOUBLEBUF | SDL_RESIZABLE;
 	
 	modInitDraw(&disp);
+#endif
+	
+	drvInitBoard(&camera);
+	drvInitBufs(&buffer, &camera);
+	
 	return EXIT_SUCCESS;
 }
+
 void modStopModule(control_t *ptc) {
 	// placeholder ftw!
-	modFinishDraw
+#ifdef FOAM_MCMATH_DISPLAY
+	modFinishDraw();
+#endif
+	
+	drvStopGrab(&camera);
+	drvStopBufs(&buffer, &camera);
+	drvStopBoard(&camera);
+}
+
+// OPEN LOOP ROUTINES //
+/*********************/
+
+int modOpenInit(control_t *ptc) {
+	// start grabbing frames
+	drvInitGrab(&camera);
+	return EXIT_SUCCESS;
 }
 
 int modOpenLoop(control_t *ptc) {
+	// get an image, without using a timeout
+	drvGetImg(&camera, &buffer, NULL);
+
+#ifdef FOAM_MCMATH_DISPLAY
+	
+#endif
 	return EXIT_SUCCESS;
 }
 
+int modOpenFinishx(control_t *ptc) {
+	// stop grabbing frames
+	drvStopGrab(&camera);
+	return EXIT_SUCCESS;
+}
+
+// CLOSED LOOP ROUTINES //
+/************************/
+
 int modClosedInit(control_t *ptc) {
+	// start grabbing frames
+	drvInitGrab(&camera);
 	return EXIT_SUCCESS;
 }
 
@@ -111,22 +165,67 @@ int modClosedLoop(control_t *ptc) {
 	return EXIT_SUCCESS;
 }
 
+int modClosedFinish(control_t *ptc) {
+	// stop grabbing frames
+	drvStopGrab(&camera);
+
+	return EXIT_SUCCESS;
+}
+
+// MISC ROUTINES //
+/*****************/
+
 int modCalibrate(control_t *ptc) {
 	return EXIT_SUCCESS;
 }
 
 int modMessage(control_t *ptc, const client_t *client, char *list[], const int count) {
-	// spaces are important!!!	
+	// Quick recap of messaging codes:
+	// 400 UNKNOWN
+	// 401 UNKNOWN MODE
+	// 402 MODE REQUIRES ARG
+	// 403 MODE FORBIDDEN
+	// 200 OK 
+	
  	if (strcmp(list[0],"help") == 0) {
 		// give module specific help here
 		if (count > 1) { 
-			// we don't know. tell this to parseCmd by returning 0
-			return 0;
+
+			if (strcmp(list[1], "display") == 0) {
+#ifdef FOAM_MCMATH_DISPLAY
+				tellClient(client->buf_ev, "\
+200 OK HELP DISPLAY\n\
+display <raw|calib>:    display raw ccd output or calibrated image with meta-info.");
+#endif
+			}
+			else // we don't know. tell this to parseCmd by returning 0
+				return 0;
 		}
 		else {
 			tellClient(client->buf_ev, "This is the dummy module and does not provide any additional commands");
 		}
 	}
+#ifdef FOAM_MCMATH_DISPLAY
+ 	else if (strcmp(list[0], "display") == 0) {
+		// give module specific help here
+		if (count > 1) {
+			if (strcmp(list[1], "raw") == 0) {
+				tellClient(client->buf_ev, "200 OK DISPLAY RAW");
+			}
+			else if (strcmp(list[1], "calib") == 0) {
+				tellClient(client->buf_ev, "200 OK DISPLAY CALIB");
+			}
+			else {
+				tellClient(client->buf_ev, "401 UNKNOWN DISPLAY");
+				// we don't know. tell this to parseCmd by returning 0
+				return 0;
+			}
+		}
+		else {
+			tellClient(client->buf_ev, "402 DISPLAY REQUIRES ARGS");
+		}
+	}
+#endif
 	else { // no valid command found? return 0 so that the main thread knows this
 		return 0;
 	} // strcmp stops here

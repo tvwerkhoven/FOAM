@@ -72,30 +72,10 @@ typedef enum { //fwheel_t
 #include "foam_cs_library.h"
 // These are specific for McMath
 
+#ifdef FOAM_MCMATH_DISPLAY
+// for displaying stuff (SDL)
 #include "foam_modules-display.h"
+#endif
+
+// for image file I/O
 #include "foam_modules-img.h"
-
-	// !!!:tim:20080414 datatype initialized in sh module, porting can begin
-
-//float *refim;					//!< reference image for correlation tracking (unused now)
-//
-//gsl_vector_float *singular;		//!< stores singular values from SVD (nact big)
-//gsl_matrix_float *dmmodes;		//!< stores dmmodes from SVD (nact*nact big)
-//gsl_matrix_float *wfsmodes;		//!< stores wfsmodes from SVD (nact*nsubap*2 big)
-//
-//int cells[2];					//!< number of cells in this WFS (SH only)
-//int shsize[2];					//!< cells/res, resolution per cell (redundant, but easy -> phase this out)
-//coord_t track;					//!< tracker window resolution in pixels (i.e. 1/2 of shsize)
-//
-//int (*subc)[2];					//!< this will hold the coordinates of each subapt
-//int (*gridc)[2];				//!< this will hold the grid origina for a certain subaperture
-////	float (*refc)[2];				//!< reference displacements
-////	float (*disp)[2];				//!< measured displacements (compare with refence for actual shift)
-//gsl_vector_float *refc;			//!< reference displacements
-//gsl_vector_float *disp;			//!< measured displacements (compare with refence for actual shift)
-//fcoord_t stepc;					//!< add this to the reference displacement during correction
-//
-//char pinhole[FILENAMELEN];		//!< filename to store the pinhole calibration (in *(refc))
-//char influence[FILENAMELEN];	//!< filename to store the influence matrix
-//
-//int nsubap;						//!< amount of subapertures used (coordinates stored in subc)

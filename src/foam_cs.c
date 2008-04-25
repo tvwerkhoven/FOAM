@@ -43,10 +43,15 @@ static pthread_attr_t attr;
 // These come from modules, these MUST be defined there
 extern void modStopModule(control_t *ptc);
 extern int modInitModule(control_t *ptc, config_t *cs_config);
+
 extern int modOpenInit(control_t *ptc);
 extern int modOpenLoop(control_t *ptc);
+extern int modOpenFinish(control_t *ptc);
+
 extern int modClosedInit(control_t *ptc);
 extern int modClosedLoop(control_t *ptc);
+extern int modClosedFinish(control_t *ptc);
+
 extern int modCalibrate(control_t *ptc);
 extern int modMessage(control_t *ptc, const client_t *client, char *list[], const int count);
 
@@ -479,6 +484,13 @@ void modeOpen() {
 		}
 	}
 	
+	// Finish the open loop here
+	if (modOpenFinish(&ptc) != EXIT_SUCCESS) {		// check if we can finish
+		logWarn("modOpenFinish failed");
+		ptc.mode = AO_MODE_LISTEN;
+		return;
+	}
+	
 	return; // mode is not open anymore, decide what to to next in modeListen
 }
 
@@ -510,6 +522,14 @@ void modeClosed() {
 		}							
 		ptc.frames++;								// increment the amount of frames parsed
 	}
+	
+	// Finish the open loop here
+	if (modClosedFinish(&ptc) != EXIT_SUCCESS) {	// check if we can finish
+		logWarn("modClosedFinish failed");
+		ptc.mode = AO_MODE_LISTEN;
+		return;
+	}
+	
 	
 	return;					// back to modeListen (or where we came from)
 }

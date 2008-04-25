@@ -123,10 +123,10 @@ typedef struct {
 	size_t rawsize;			//!< (mod) size of the raw frame (width*height*depth)
 	union iti_cam_t itcam;	//!< (mod) see iti_cam_t (itifg driver)
 	int module;				//!< (user) module used, 48 in mcmath setup
-	char device_name[512];	//!< (user) something like '/dev/ic0dma'
-	char config_file[512];	//!< (user) something like '../conffiles/dalsa-cad6.cam'
-	char camera_name[512];	//!< (mod) camera name, as stored in the configuration file
-	char exo_name[512];		//!< (mod) exo filename, as stored in the configuration file
+	char *device_name;		//!< (user) something like '/dev/ic0dma'
+	char *config_file;		//!< (user) something like '../conffiles/dalsa-cad6.cam'
+	char *camera_name;		//!< (mod) camera name, as stored in the configuration file
+	char *exo_name;			//!< (mod) exo filename, as stored in the configuration file
 } mod_itifg_cam_t;
 
 /*!
