@@ -25,13 +25,13 @@
 	Functions provided by this module are listed below. Typical usage would be to use the functions from top
 	to bottom consecutively.
  
-	\li drvInitBoard() - Initialize a framegrabber board
-	\li drvInitBufs() - Initialize buffers and memory for use with a framegrabber board
-	\li drvInitGrab() - Start grabbing frames
-	\li drvGetImg() - Grab the next available image
-	\li drvStopGrab() - Stop grabbing frames
-	\li drvStopBufs() - Release the memory used by the buffers
-	\li drvStopBoard() - Stop the board and cleanup
+	\li drvInitBoard() - (1) Initialize a framegrabber board
+	\li drvInitBufs() - (2) Initialize buffers and memory for use with a framegrabber board
+	\li drvInitGrab() - (i>2) Start grabbing frames
+	\li drvGetImg() - (s>g>i) Grab the next available image
+	\li drvStopGrab() - (n-1>s>g) Stop grabbing frames
+	\li drvStopBufs() - (n-1) Release the memory used by the buffers
+	\li drvStopBoard() - (n) Stop the board and cleanup
  
 	\section Dependencies
  
@@ -39,6 +39,9 @@
 	to access a variety of framegrabbers, including the PC-DIG board used here.
 
 	\section History
+ 
+    \li 2008-04-25 Code improved after discussing some things with the author of itifg, Matthias Stein 
+ (see http://sourceforge.net/mailarchive/forum.php?forum_name=itifg-tech for details)
  
 	\li 2008-04-14 api improved, now works with variables instead of defines
 	This file is partially based on itifg.cc, part of filter_control by Guus Sliepen <guus@sliepen.eu.org>
@@ -236,7 +239,6 @@ int drvStopBoard(mod_itifg_cam_t *cam);
 int drvStopBufs(mod_itifg_buf_t *buf, mod_itifg_cam_t *cam);
 
 int drvInitBoard(mod_itifg_cam_t *cam) {
-	// TvW: | O_SYNC | O_APPEND also used in test_itifg.c
 	int flags = O_RDWR | O_APPEND | O_SYNC | O_NONBLOCK;
 	int zero = 0;
 	int one = 1;
@@ -266,7 +268,6 @@ int drvInitBoard(mod_itifg_cam_t *cam) {
 		logWarn("%s: error setting camera: %s", cam->device_name, strerror(errno));
 		return EXIT_FAILURE;
 	}
-	//union iti_cam_t tmpcam;
 	
 	if (ioctl(cam->fd, GIOC_GET_CAMCNF, &(cam->itcam)) < 0) {
 		close(cam->fd);
@@ -275,7 +276,6 @@ int drvInitBoard(mod_itifg_cam_t *cam) {
 	}
 
 	
-//	if ((result = iti_read_config(cam->config_file, &(cam->itcam), 0, cam->module, 0, cam->camera_name, cam->exo_name)) < 0) {
 	if ((result = iti_read_config(cam->config_file, &(cam->itcam), 0, cam->module, 0, cam->camera_name, cam->exo_name)) < 0) {
 		close(cam->fd);
 		logWarn("%s: error reading camera configuration from file %s: %s", cam->device_name, cam->config_file, strerror(errno));
@@ -385,13 +385,11 @@ int drvInitBufs(mod_itifg_buf_t *buf, mod_itifg_cam_t *cam) {
 }
 
 int drvInitGrab(mod_itifg_cam_t *cam) {
-	// reset stats if possible
-//	ioctl(cam->fd, GIOC_SET_STATS, NULL);
 #ifdef FOAM_MODITIFG_DEBUG
 	logDebug(0, "Starting grab, lseeking to %ld.", +LONG_MAX);
 #endif
 	
-	// start the framegrabber by seeking a lot???
+	// start the framegrabber by seeking to +LONG_MAX
 	if ( lseek(cam->fd, +LONG_MAX, SEEK_END) == -1) {
 		logWarn("Error starting grab: %s", strerror(errno));
 		return EXIT_FAILURE;
@@ -404,7 +402,7 @@ int drvStopGrab(mod_itifg_cam_t *cam) {
 #ifdef FOAM_MODITIFG_DEBUG
 	logDebug(0, "Stopping grab, lseeking to %ld.", -LONG_MAX);
 #endif
-	// stop the framegrabber by seeking a lot???
+	// stop the framegrabber by seeking to -LONG_MAX
 	if ( lseek(cam->fd, -LONG_MAX, SEEK_END) == -1) {
 		logWarn("Error stopping grab: %s", strerror(errno));
 		return EXIT_FAILURE;
@@ -414,10 +412,8 @@ int drvStopGrab(mod_itifg_cam_t *cam) {
 }
 
 int drvGetImg(mod_itifg_cam_t *cam, mod_itifg_buf_t *buf, struct timeval *timeout) {
-	off_t seek;
+	off_t seeke, seekc;
 	int result;
-//	struct iti_acc_t acc;
-	//struct pollfd pfd = {cam->fd, POLLIN, 0};
 #ifdef FOAM_MODITIFG_DEBUG
 	logDebug(0, "Grabbing image...");	
 #endif
@@ -427,13 +423,14 @@ int drvGetImg(mod_itifg_cam_t *cam, mod_itifg_buf_t *buf, struct timeval *timeou
 	FD_SET (cam->fd, &in_fdset);
 	FD_SET (cam->fd, &ex_fdset);
 
-	//result = poll(&pfd, 1, timeout);
 	result = select(FOAM_MODITIFG_MAXFD, &in_fdset, NULL, &ex_fdset, timeout);
 	
 	if (result == -1)  {
+		// error in select()
 		logWarn("Select() returned no active FD's, error:%s", strerror(errno));
 		return EXIT_FAILURE;
 	}
+	
 	if (result == 0) {
 		// timeout occured, return immediately
 #ifdef FOAM_MODITIFG_DEBUG
@@ -443,52 +440,51 @@ int drvGetImg(mod_itifg_cam_t *cam, mod_itifg_buf_t *buf, struct timeval *timeou
 	}
 
 #ifdef FOAM_MODITIFG_DEBUG
-	logDebug(0, "lseek 0 SEEK_END...");	
+	logDebug(0, "lseek 0 SEEK_CUR...");	
 #endif
-	seek = lseek(cam->fd, 0, SEEK_END);
-	if (seek == -1) {
-		logWarn("SEEK_END failed: %s", strerror(errno));
+	seekc = lseek(cam->fd, 0, SEEK_CUR);
+	if (seekc == -1) {
+		logWarn("SEEK_CUR failed: %s", strerror(errno));
 		return EXIT_FAILURE;
 	}
 
 #ifdef FOAM_MODITIFG_DEBUG
-	logDebug(0, "Select returned: %d, SEEK_END: %d", result, (int) seek);	
+	logDebug(0, "lseek 0 SEEK_END...");	
+#endif
+	seeke = lseek(cam->fd, 0, SEEK_END);
+	if (seeke == -1) {
+		logWarn("SEEK_END failed: %s", strerror(errno));
+		return EXIT_FAILURE;
+	}
+	
+	
+#ifdef FOAM_MODITIFG_DEBUG
+	logDebug(0, "Select returned: %d, SEEK_CUR: %d, SEEK_END: %d", result, (int) seekc, (int) seeke);	
 #endif
 
-//	buf->data = (void *)((char *)buf->map + ((int) seek % (buf->frames * cam->pagedsize)));
-//	buf->data = (void *)((char *)buf->map + ((1 - 1) % buf->frames) * cam->pagedsize);
-	buf->data = (void *)((char *)buf->map);
+	// The next new image is located at the beginning of the buffer (buf->map)
+	// plus an offset returned by SEEK_CUR, which must be wrapped around
+	// the buffer size. SEEK_CUR returns an absolute offset wrt the beginning
+	// of the mmap()ed memory, i.e. 45*paged_size. If the buffer is only
+	// 4 frames big, the newest image is located at 
+	// (((45*paged_size)/paged_size) % 4) * paged_size, which is 1* paged_size
+	// info is located after the frame itself, so buf->data + rawsize
+	buf->data = (void *)((char *)buf->map + ( (((int) seekc / cam->pagedsize) % buf->frames) * cam->pagedsize ) );
 	buf->info = (iti_info_t *)((char *)buf->data + cam->rawsize);
 
-//	struct timeval timestamp;
-//	memcpy (&timestamp, &(buf->info->acq.timestamp), sizeof(struct timeval));
-
-#ifdef FOAM_MODITIFG_DEBUG
-	//logDebug(0, "acq.captured %d acq.lost %d, acq.timestamp.tv_sec: %d .tv_usec: %d", buf->info->acq.captured, buf->info->acq.lost, (int) buf->info->acq.timestamp.tv_sec, (int) buf->info->acq.timestamp.tv_usec);
-	//logDebug(0, "dma.transfered %d ", buf->info->dma.transfered);
-#endif
 
 #ifdef FOAM_MODITIFG_DEBUG
 	logDebug(0, "lseek %d SEEK_CUR...", cam->pagedsize);	
 #endif
-	seek = lseek(cam->fd, cam->pagedsize, SEEK_CUR);
+	seekc = lseek(cam->fd, cam->pagedsize, SEEK_CUR);
 	//seek = lseek(cam->fd, seek, SEEK_CUR);
-	if (seek == -1) {
+	if (seekc == -1) {
 		logWarn("SEEK_CUR failed: %s", strerror(errno));
 		return EXIT_FAILURE;
-	}	
+	}
 #ifdef FOAM_MODITIFG_DEBUG
-	logDebug(0, "Select returned: %d, SEEK_CUR: %d", result, (int) seek);	
+	logDebug(0, "Select returned: %d, SEEK_CUR: %d", result, (int) seekc);	
 #endif
-//	iti_info_t *imageinfo;
-//	imageinfo = (iti_info_t *)((char *)buf->data + cam->rawsize);
-//	logDebug(0, "Captured %d frames", imageinfo->acq.captured);
-
-	// TvW: hoes does this work, exactly?
-//	if (acc.transfered != info->framenums.transfered) {
-//		logWarn("Frame %lu not in right place in mmap area (%lu is in its spot)", acc.transfered, info->framenums.transfered);
-//		return EXIT_FAILURE;
-//	}
 	
 	return EXIT_SUCCESS;
 }
@@ -498,6 +494,7 @@ int drvStopBufs(mod_itifg_buf_t *buf, mod_itifg_cam_t *cam) {
 		logWarn("Error unmapping camera memory: %s", strerror(errno));
 		return EXIT_FAILURE;
 	}
+	
 	return EXIT_SUCCESS;
 }
 

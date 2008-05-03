@@ -849,14 +849,14 @@ int parseCmd(char *msg, const int len, client_t *client) {
 	}
 	else if (strcmp(list[0],"image") == 0) {
 		if (count > 1) {
-			tmpint = (int) strtol(list[0], NULL, 10);
+			tmpint = (int) strtol(list[1], NULL, 10);
 			if (tmpint < ptc.wfs_count) {
 				tellClient(client->buf_ev, "200 OK IMAGE WFS %d - NOT IMPLEMENTED", tmpint);
-				tellClient(client->buf_ev, "SIZE %d", ptc.wfs[tmpint].res.x * ptc.wfs[tmpint].res.y);
-				bufferevent_write(client->buf_ev, ptc.wfs[tmpint].image, ptc.wfs[tmpint].res.x * ptc.wfs[tmpint].res.y * ptc.wfs[tmpint].res.x * ptc.wfs[tmpint].bpp);
+				tellClient(client->buf_ev, "SIZE %d", ptc.wfs[tmpint].res.x * ptc.wfs[tmpint].res.y * ptc.wfs[tmpint].bpp/8);
+				bufferevent_write(client->buf_ev, ptc.wfs[tmpint].image, ptc.wfs[tmpint].res.x * ptc.wfs[tmpint].res.y * ptc.wfs[tmpint].res.x * ptc.wfs[tmpint].bpp/8);
 			}
 			else {
-				tellClient(client->buf_ev,"401 UNKNOWN WFS %ld", tmpint);
+				tellClient(client->buf_ev,"401 UNKNOWN WFS %d", tmpint);
 			}
 		}
 		else {

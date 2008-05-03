@@ -167,6 +167,62 @@ void drawDeltaLine(int x0, int y0, int dx, int dy, SDL_Surface *screen) {
 	drawLine(x0, y0, x0+dx, y0+dy, screen);
 }
 
+int modDisplayRaw(void *img, coord_t res, int type, SDL_Surface *screen) {
+	// type == 2: float
+	// type == 1: char
+	int x, y, i;
+	float max;
+	float min;
+	
+	// we need this loop to check the maximum and minimum intensity. 
+	// TODO: Do we need that? can't SDL do that?
+	for (x=0; x < res.x*res.y; x++) {
+		if (img[x] > max)
+			max = img[x];
+		if (img[x] < min)
+			min = img[x];
+	}
+	
+	logDebug(0, "Displaying image, min: %5.3f, max: %5.3f.", min, max);
+	
+	Uint32 color;
+	switch (screen->format->BytesPerPixel) {
+		case 1: { // Assuming 8-bpp
+			Uint8 *bufp;
+			
+			for (x=0; x<res.x; x++) {
+				for (y=0; y<res.y; y++) {
+					i = (int) ((img[y*res.x + x]-min)/(max-min)*255);
+					color = SDL_MapRGB(screen->format, i, i, i);
+					bufp = (Uint8 *)screen->pixels + y*screen->pitch + x;
+					*bufp = color;
+				}
+			}
+		}
+			break;
+		case 4: { // Probably 32-bpp
+			Uint32 *bufp;
+			
+			// draw the image itself
+			for (x=0; x<res.x; x++) {
+				for (y=0; y<res.y; y++) {
+					i = (int) ((img[y*res.x + x]-min)/(max-min)*255);
+					color = SDL_MapRGB(screen->format, i, i, i);
+					bufp = (Uint32 *)screen->pixels + y*screen->pitch/4 + x;
+					*bufp = color;
+				}
+			}
+		}
+			break;
+		default: {
+			logWarn("Warning, unsupported bitdepth encounterd (only 8 & 32 bpp implemented)");
+			return EXIT_FAILURE;
+		}
+	}
+	
+	return EXIT_SUCCESS;
+}
+
 int modDisplayImg(float *img, coord_t res, SDL_Surface *screen) {
 	// ONLY does float images as input
 	int x, y, i;
