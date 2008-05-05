@@ -851,7 +851,7 @@ int parseCmd(char *msg, const int len, client_t *client) {
 		if (count > 1) {
 			tmpint = (int) strtol(list[1], NULL, 10);
 			if (tmpint < ptc.wfs_count) {
-				tellClient(client->buf_ev, "200 OK IMAGE WFS %d - NOT IMPLEMENTED", tmpint);
+				tellClient(client->buf_ev, "200 OK IMAGE WFS %d", tmpint);
 				tellClient(client->buf_ev, "SIZE %d", ptc.wfs[tmpint].res.x * ptc.wfs[tmpint].res.y * ptc.wfs[tmpint].bpp/8);
 				bufferevent_write(client->buf_ev, ptc.wfs[tmpint].image, ptc.wfs[tmpint].res.x * ptc.wfs[tmpint].res.y * ptc.wfs[tmpint].res.x * ptc.wfs[tmpint].bpp/8);
 			}

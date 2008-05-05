@@ -50,6 +50,7 @@ int modInitModule(control_t *ptc, config_t *cs_config) {
 	ptc->wfs[0].name = "SH WFS";
 	ptc->wfs[0].res.x = 256;
 	ptc->wfs[0].res.y = 256;
+	ptc->wfs[0].bpp = 8;
 	ptc->wfs[0].darkfile = NULL;
 	ptc->wfs[0].flatfile = NULL;
 	ptc->wfs[0].skyfile = NULL;
@@ -162,6 +163,10 @@ int modClosedInit(control_t *ptc) {
 }
 
 int modClosedLoop(control_t *ptc) {
+	// get an image, without using a timeout
+	drvGetImg(&camera, &buffer, NULL);
+	
+	
 	return EXIT_SUCCESS;
 }
 
@@ -234,3 +239,13 @@ display <raw|calib>:    display raw ccd output or calibrated image with meta-inf
 	return 1;
 	
 }
+
+// SITE-SPECIFIC ROUTINES //
+/**************************/
+
+int MMfilter() {
+	
+}
+
+int MM
+

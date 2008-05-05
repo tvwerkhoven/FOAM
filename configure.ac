@@ -96,7 +96,7 @@ AC_ARG_ENABLE([ui],
 		*) AC_MSG_ERROR([bad value ${enableval} for --enable-ui]) ;;
 	esac],[ui=true])
 	
-# Test if we want to include the UI or not
+# Test if we want to do hardware debugging (stand alone modules)
 AC_ARG_ENABLE([hwdebug],
 		AC_HELP_STRING([--enable-hwdebug], [enable hardware debugging]),
 		[case "${enableval}" in
@@ -105,14 +105,14 @@ AC_ARG_ENABLE([hwdebug],
 		*) AC_MSG_ERROR([bad value ${enableval} for --enable-hwdebug]) ;;
 	esac],[hwdebug=true])
 
-# Test if we want ITIFG enabled (default no, unfinished stuff)
-AC_ARG_ENABLE([itifg],
-		AC_HELP_STRING([--enable-itifg], [enable itifg mode]),
+# Test if we want mcmath enabled (default no, unfinished stuff)
+AC_ARG_ENABLE([mcmath],
+		AC_HELP_STRING([--enable-mcmath], [enable mcmath mode]),
 		[case "${enableval}" in
-		yes) itifg=true ;;
-		no)  itifg=disabled ;;
-		*) AC_MSG_ERROR([bad value ${enableval} for --enable-itifg]) ;;
-	esac],[itifg=disabled])
+		yes) mcmath=true ;;
+		no)  mcmath=disabled ;;
+		*) AC_MSG_ERROR([bad value ${enableval} for --enable-mcmath]) ;;
+	esac],[mcmath=disabled])
 
 ### SIMULATION MODE ###
 #######################
@@ -215,26 +215,51 @@ AC_SUBST(STATSIMULATION_CFLAGS)
 AC_SUBST(STATSIMULATION_LIBS)
 AM_CONDITIONAL([STATSIMULATION], [test x$statsimul = xtrue])
 
-### ITIFG MODE ### 
-##################
-if test "$itifg" = true ; then
-	# search for itifg libs here
-	itifgmissing=""
-	AC_MSG_NOTICE([itifg enabled, checking for extra libs])
+### MCMATH MODE ### 
+###################
+if test "$mcmath" = true ; then
+	# search for mcmath libs here
+	mcmathmissing=""
+	AC_MSG_NOTICE([mcmath enabled, checking for extra libs])
 	LIBS=""
+
+	AC_SEARCH_LIBS([IMG_Load], [SDL_image] ,[], 
+		[AC_MSG_WARN([This package needs sdl-image in mcmath mode.])
+		mcmath=false
+		mcmathmissing+=" sdl-image"
+		]
+	)
+	
+	AC_SEARCH_LIBS([gdImageCreate], [gd] ,[], 
+		[AC_MSG_WARN([This package needs libgd in mcmath mode.])
+		mcmath=false
+		mcmathmissing+=" gd"
+		]
+	)
+	
+	AC_SEARCH_LIBS([gdImagePng], [png] ,[], 
+		[AC_MSG_WARN([This package needs libpng in mcmath mode.])
+		mcmath=false
+		mcmathmissing+=" png"
+		]
+	)	
+
+	# fix mcmath cflags / libs
+	MCMATH_CFLAGS+="$SDL_CFLAGS"
+	MCMATH_LIBS+="$LIBS $SDL_LIBS"
 else 
 	# search for runtime libs here (camera stuff), exit if not found
-	AC_MSG_NOTICE([itifg disabled])
+	AC_MSG_NOTICE([mcmath disabled])
 fi
-AC_SUBST(ITIFG_LIBS)
-AC_SUBST(ITIFG_CFLAGS)
-AM_CONDITIONAL([ITIFG], [test x$itifg = xtrue])
+AC_SUBST(MCMATH_LIBS)
+AC_SUBST(MCMATH_CFLAGS)
+AM_CONDITIONAL([MCMATH], [test x$mcmath = xtrue])
 
 ### UI MODE ###
 ###############
 if test "$ui" = true ; then
 	uimissing=""
-	# search for itifg libs here
+	# search for ui libs here
 	AC_MSG_NOTICE([Cheking UI libs])
 	LIBS=""
 	AC_SEARCH_LIBS([SDL_Init], [sdl] ,[], 
@@ -281,6 +306,15 @@ else
 	AC_MSG_NOTICE([Static sim mode: missing: $statsimulmissing])
 fi
 
+if test "$mcmath" = true ; then
+	AC_MSG_NOTICE([mcmath mode:     available])
+elif test "$mcmath" = disabled; then
+	AC_MSG_NOTICE([mcmath mode:     disabled])
+else
+	AC_MSG_NOTICE([mcmath mode:     not available])
+	AC_MSG_NOTICE([mcmath mode:     missing: $mcmathmissing])
+fi
+
 if test "$ui" = true ; then
 	AC_MSG_NOTICE([UI:              available])
 elif test "$ui" = disabled; then
@@ -288,15 +322,6 @@ elif test "$ui" = disabled; then
 else
 	AC_MSG_NOTICE([UI:              not available])
 	AC_MSG_NOTICE([UI:              missing: $uimissing])
-fi
-
-if test "$itifg" = true ; then
-	AC_MSG_NOTICE([ITIFG mode:      available])
-elif test "$itifg" = disabled; then
-	AC_MSG_NOTICE([ITIFG mode:      disabled])
-else
-	AC_MSG_ERROR([ITIFG mode:      not available])
-	AC_MSG_ERROR([ITIFG mode:      missing: $itifgmissing])
 fi
 
 AC_MSG_NOTICE([==============================])

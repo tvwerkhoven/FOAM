@@ -83,6 +83,8 @@
 #include <sys/mman.h>	// for mmap()
 
 #include <sys/time.h>	// for timeval
+
+// Old stuff from test_itifg begins here:
 //#include <signal.h> // ?
 //#include <setjmp.h> // ?
 

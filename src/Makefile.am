@@ -83,12 +83,27 @@ endif
 
 #endif
 
-if ITIFG
-# this does not work ATM, no useful modules present
-bin_PROGRAMS += foamcs-itifg
-foamcs_itifg_SOURCES = foam_cs.c foam_library.c foam_cs_library.c
-foamcs_itifg_SOURCES += foam_library.h foam_cs_library.h
-foamcs_itifg_CPPFLAGS = -include "foam_modules-itifg.h"
-foamcs_itifg_CFLAGS = $(ITIFG_CFLAGS)
-foamcs_itifg_LDFLAGS = $(ITIFG_LIBS)
+
+if MCMATH
+# Compile mcmath site specific prime module
+bin_PROGRAMS += foamcs-mcmath
+
+# Use the prime module C-file
+foamcs_mcmath_SOURCES = foam_primemod-mcmath.c
+
+# Use the common libs / header files
+foamcs_mcmath_SOURCES += $(FRAME_SRC) $(FRAME_HDR)
+
+# Use some modules
+foamcs_mcmath_SOURCES += foam_modules-sh.c foam_modules-calib.c foam_modules-img.c foam_modules-itifg.c foam_modules-okodm.c foam_modules-serial.c foam_modules-daq2k.c
+foamcs_mcmath_SOURCES += foam_modules-sh.h foam_modules-calib.h foam_modules-img.h
+
+# Make sure we include the prototypes for functions and datatypes everytime
+foamcs_mcmath_CPPFLAGS = -include "foam_modules-mcmath.h"
+
+# Add some cflags and libs too, please
+foamcs_mcmath_CFLAGS = $(MCMATH_CFLAGS)
+foamcs_mcmath_LDFLAGS = $(MCMATH_LIBS)
+
+# endif MCMATH
 endif
