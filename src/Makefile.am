@@ -3,7 +3,8 @@ bin_PROGRAMS =
 
 # some shared compiler flags which must always be used
 # (not using AM_* flags because of http://sourceware.org/automake/automake.html#Flag-Variables-Ordering)
-CFLAGS=-pipe -Wall -Wextra -O3 -ftree-vectorize
+CFLAGS=-pipe -Wall -Wextra
+#-O3 -ftree-vectorize
 LDFLAGS=$(COMMON_LIBS) -lc
 
 # (un)comment this to toggle GSL inlining
@@ -99,7 +100,7 @@ foamcs_mcmath_SOURCES += foam_modules-sh.c foam_modules-calib.c foam_modules-img
 foamcs_mcmath_SOURCES += foam_modules-sh.h foam_modules-calib.h foam_modules-img.h
 
 # Make sure we include the prototypes for functions and datatypes everytime
-foamcs_mcmath_CPPFLAGS = -include "foam_modules-mcmath.h"
+foamcs_mcmath_CPPFLAGS = -include "foam_primemod-mcmath.h"
 
 # Add some cflags and libs too, please
 foamcs_mcmath_CFLAGS = $(MCMATH_CFLAGS)

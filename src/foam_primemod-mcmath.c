@@ -17,6 +17,7 @@ extern pthread_mutex_t mode_mutex;
 extern pthread_cond_t mode_cond;
 
 #define FOAM_MCMATH_DISPLAY 1
+#undef FOAM_MCMATH_DISPLAY
 
 // GLOBALS //
 /***********/

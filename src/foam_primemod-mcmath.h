@@ -79,3 +79,11 @@ typedef enum { //fwheel_t
 
 // for image file I/O
 #include "foam_modules-img.h"
+// for itifg stuff
+#include "foam_modules-itifg.h"
+// for daq2k board stuff
+#include "foam_modules-daq2k.h"
+// for serial port stuff
+#include "foam_modules-serial.h"
+// for calibrating the image lateron
+#include "foam_modules-calib.h"
