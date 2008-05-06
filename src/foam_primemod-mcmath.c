@@ -9,9 +9,6 @@
 // HEADERS //
 /***********/
 
-// this is done via the command line using -include, see Makefile.am
-//#include "foam_primemod-dummy.h"
-
 // We need these for modMessage, see foam_cs.c
 extern pthread_mutex_t mode_mutex;
 extern pthread_cond_t mode_cond;
@@ -30,6 +27,19 @@ mod_display_t disp;
 // ITIFG camera & buffer
 mod_itifg_cam_t camera;
 mod_itifg_buf_t buffer;
+
+// DAQboard types
+mod_daq2k_board_t daqboard;
+
+// Okotech DM type
+mod_okodm_t okodm;
+
+// Helper shortcuts to filterwheels
+typedef enum {
+	MMFILT_DARK,
+	MMFILT_PINHOLE,
+	MMFILT_FLAT
+} mmfilt_t;
 
 int modInitModule(control_t *ptc, config_t *cs_config) {
 	logInfo(0, "This is the McMath prime module, enjoy.");
@@ -89,6 +99,30 @@ int modInitModule(control_t *ptc, config_t *cs_config) {
 	camera.config_file = "conf/dalsa-cad6-pcd.cam";
 	
 	buffer.frames = 8;
+	
+	// configure the daqboard
+	
+	daqboard.device = "daqBoard2k0";	// we use the first daqboard
+	daqboard.nchans = 4;				// we use 4 analog chans [-10, 10] V
+	daqboard.minvolt = -10.0;
+	daqboard.maxvolt = 10.0;
+	daqboard.iop2conf[0] = 0;
+	daqboard.iop2conf[1] = 0;
+	daqboard.iop2conf[2] = 1;
+	daqboard.iop2conf[3] = 1;		// use digital IO ports for {out, out, in, in}
+	
+	// configure DM here
+	
+	okodm.minvolt = 0;
+	okodm.midvolt = 180;
+	okodm.maxvolt = 255;
+	okodm.nchan = 38;
+	okodm.port = "/dev/port";
+	okodm.pcioffset = 4;
+	okodm.pcibase[0] = 0xc000;
+	okodm.pcibase[1] = 0xc400;
+	okodm.pcibase[2] = 0xffff;
+	okodm.pcibase[3] = 0xffff;
 	
 	// configure cs_config here
 	cs_config->listenip = "0.0.0.0";	// listen on any IP by defaul
@@ -191,7 +225,10 @@ int modMessage(control_t *ptc, const client_t *client, char *list[], const int c
 	// 401 UNKNOWN MODE
 	// 402 MODE REQUIRES ARG
 	// 403 MODE FORBIDDEN
+	// 300 ERROR
 	// 200 OK 
+	int tmpint;
+	float tmpfloat;
 	
  	if (strcmp(list[0],"help") == 0) {
 		// give module specific help here
@@ -201,7 +238,9 @@ int modMessage(control_t *ptc, const client_t *client, char *list[], const int c
 #ifdef FOAM_MCMATH_DISPLAY
 				tellClient(client->buf_ev, "\
 200 OK HELP DISPLAY\n\
-display <raw|calib>:    display raw ccd output or calibrated image with meta-info.");
+display <raw|calib>:    display raw ccd output or calibrated image with meta-info.\n\
+resetdm [voltage]:      reset the DM to a certain voltage for all acts. default=0\n\
+");
 #endif
 			}
 			else // we don't know. tell this to parseCmd by returning 0
@@ -232,6 +271,58 @@ display <raw|calib>:    display raw ccd output or calibrated image with meta-inf
 		}
 	}
 #endif
+ 	else if (strcmp(list[0], "resetdm") == 0) {
+		// give module specific help here
+		if (count > 1) {
+			tmpint = strtol(list[1], NULL, 10);
+			
+			if (tmpint >= okodm.minvolt && tmpint <= okodm.maxvolt) {
+				if (drvSetAllOkoDM(&okodm, tmpint) == EXIT_SUCCESS)
+					tellClients("200 OK RESETDM %dV", tmpint);
+				else
+					tellClient(client->buf_ev, "300 ERROR RESETTING DM");
+					
+			}
+			else {
+				tellClient(client->buf_ev, "403 INCORRECT VOLTAGE!");
+				return 0;
+			}
+		}
+		else {
+			if (drvRstOkoDM(&okodm) == EXIT_SUCCESS)
+				tellClients("200 OK RESETDM 0V");
+			else 
+				tellClient(client->buf_ev, "300 ERROR RESETTING DM");
+			
+		}
+	}
+ 	else if (strcmp(list[0], "resetdaq") == 0) {
+		// give module specific help here
+		if (count > 1) {
+			tmpfloat = strtof(list[1], NULL);
+			
+			if (tmpfloat >= daqboard.minvolt && tmpfloat <= daqboard.maxvolt) {
+				if (drvDaqSetDACs(&daqboard, (int) 65536*(tmpfloat-daqboard.minvolt)\
+								  /(daqboard.maxvolt-daqboard.minvolt) == EXIT_SUCCESS)
+					tellClients("200 OK RESETDAQ %fV", tmpfloat);
+				else
+					tellClient(client->buf_ev, "300 ERROR RESETTING DAQ");
+				
+			}
+			else {
+				tellClient(client->buf_ev, "403 INCORRECT VOLTAGE!");
+				return 0;
+			}
+		}
+		else {
+				if (drvDaqSetDACs(&daqboard, 65536*(-daqboard.minvolt)\
+									  /(daqboard.maxvolt-daqboard.minvolt) == EXIT_SUCCESS)
+				tellClients("200 OK RESETDAQ 0.0V");
+			else 
+				tellClient(client->buf_ev, "300 ERROR RESETTING DAQ");
+			
+		}
+	}
 	else { // no valid command found? return 0 so that the main thread knows this
 		return 0;
 	} // strcmp stops here
@@ -244,9 +335,7 @@ display <raw|calib>:    display raw ccd output or calibrated image with meta-inf
 // SITE-SPECIFIC ROUTINES //
 /**************************/
 
-int MMfilter() {
+int MMfilter(mmfilt_t filter) {
 	
+	return EXIT_SUCCESS;
 }
-
-int MM
-

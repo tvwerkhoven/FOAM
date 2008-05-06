@@ -185,6 +185,19 @@ int drvRstOkoDM(mod_okodm_t *dm) {
 	return EXIT_SUCCESS;
 }
 
+int drvSetAllOkoDM(mod_okodm_t *dm, int volt) {
+	int i;
+	
+	for (i=1; i< dm->nchan; i++) {
+		if (okoWrite(dm->fd, dm->addr[i], volt) == EXIT_FAILURE)
+			return EXIT_FAILURE;
+		
+	}
+	
+	return EXIT_SUCCESS;
+}
+
+
 int drvInitOkoDM(mod_okodm_t *dm) {
 	// Set the global list of addresses for the various actuators:
 	okoSetAddr(dm);
