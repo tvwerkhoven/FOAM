@@ -366,7 +366,7 @@ resetdaq [voltage]:     reset the DAQ analog outputs to a certain voltage. defau
 // SITE-SPECIFIC ROUTINES //
 /**************************/
 
-drvSetActuator(control_t *ptc, int wfc) {
+int drvSetActuator(control_t *ptc, int wfc) {
 	if (wfc == 0) {			// Okotech DM
 		// use okodm routines here
 	}
@@ -377,7 +377,7 @@ drvSetActuator(control_t *ptc, int wfc) {
 	return EXIT_SUCCESS;
 }
 
-drvFilterWheel(control_t *ptc, fwheel_t filter) {
+int drvFilterWheel(control_t *ptc, fwheel_t filter) {
 	if (filter == FILT_PINHOLE) {
 	}
 	else if (filter == FILT_DARK) {
