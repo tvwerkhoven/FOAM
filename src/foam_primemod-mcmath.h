@@ -74,6 +74,12 @@ typedef enum { //fwheel_t
 #include "foam_cs_library.h"
 // These are specific for McMath
 
+// some specific routines
+
+int MMAvgFramesByte(gsl_matrix_float *output, wfs_t *wfs, int rounds);
+int MMfilter(mmfilt_t filter);
+int MMDarkFlatCorrByte(wfs_t *wfs);
+
 #ifdef FOAM_MCMATH_DISPLAY
 // for displaying stuff (SDL)
 #include "foam_modules-display.h"

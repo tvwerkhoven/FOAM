@@ -219,15 +219,13 @@ int modClosedFinish(control_t *ptc) {
 /*****************/
 
 int modCalibrate(control_t *ptc) {
-	int i;
 	if (ptc->calmode == CAL_DARK) {
 		// take 100 dark frames, and average
-		MMAvgFramesByte(wfs->darkim, wfs, 100);
+		MMAvgFramesByte(ptc->wfs[0]->darkim, ptc->wfs[0], 100);
 	}
 	else if (ptc->calmode == CAL_FLAT) {
 		// take 100 flat frames, and average
-		MMAvgFramesByte(wfs->flatim, wfs, 100);
-
+		MMAvgFramesByte(ptc->wfs[0]->flatim, ptc->wfs[0], 100);
 	}
 
 	return EXIT_SUCCESS;
@@ -371,6 +369,7 @@ int MMfilter(mmfilt_t filter) {
 
 int MMAvgFramesByte(gsl_matrix_float *output, wfs_t *wfs, int rounds) {
 	int k, i, j;
+	uint8_t* imagesrc = (uint8_t) wfs->image;
 	
 	for (k=0; k<rounds; k++) {
 		drvGetImg(&camera, &buffer, NULL);
@@ -379,7 +378,7 @@ int MMAvgFramesByte(gsl_matrix_float *output, wfs_t *wfs, int rounds) {
 			for (i=0; i<wfs->res.y; i++) {
 				gsl_matrix_float_set(output, i, j, \
 					 (float) gsl_matrix_float_get(output, i, j) + \
-					 (uint8_t) wfs->image[j*wfs->res.x +i]);
+					 (uint8_t) imagesrc[j*wfs->res.x +i]);
 			}
 		}
 		gsl_matrix_float_scale( output, 1/(float) rounds);
@@ -391,19 +390,20 @@ int MMAvgFramesByte(gsl_matrix_float *output, wfs_t *wfs, int rounds) {
 // Dark flat calibration
 int MMDarkFlatCorrByte(wfs_t *wfs) {
 	size_t i, j; // size_t because gsl wants this
+	uint8_t* imagesrc = (uint8_t) wfs->image;
 	
 	if (wfs->darkim != NULL && wfs->flatim != NULL) {
 		// copy raw image to corrected image memory first
-		for (j=0; j<wfs->res.x; j++) {
-			for (i=0; i<wfs->res.y; i++) {
+		for (j=0; j < wfs->res.x; j++) {
+			for (i=0; i < wfs->res.y; i++) {
 				// !!!:tim:20080505 double casting a little weird?
-				gsl_matrix_float_set(wfs->corrim, i, j, (float) (uint8_t) wfs->image[j*wfs->res.x +i]);
+				gsl_matrix_float_set(wfs->corrim, i, j, (float) imagesrc[j*wfs->res.x +i]);
 			}
 		}
 		
 		// now do raw-dark/(flat-dark), flat-dark is already stored in wfs->flatim
 		gsl_matrix_float_sub (wfs->corrim, wfs->darkim);
-		gsl_matrix_float_div (wfs->corrim, wfs->flatim);
+		gsl_matrix_float_div_elements (wfs->corrim, wfs->flatim);
 	}
 	return EXIT_SUCCESS;
 }
