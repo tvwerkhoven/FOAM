@@ -52,6 +52,9 @@
 	\li Automatically read the module number during initialization using iti_parse_info
 */
 
+#ifndef FOAM_MODULES_ITIFG
+#define FOAM_MODULES_ITIFG
+
 #ifdef FOAM_MODITIFG_ALONE
 #define FOAM_MODITIFG_DEBUG 1
 #endif
@@ -124,10 +127,13 @@ typedef struct {
 	short height;			//!< (mod) CCD height
 	int depth;				//!< (mod) CCD depth (i.e. 8bit)
 	int fd;					//!< (mod) FD to the framegrabber
+    
 	size_t pagedsize;		//!< (mod) size of the complete frame + some metadata
 	size_t rawsize;			//!< (mod) size of the raw frame (width*height*depth)
+    
 	union iti_cam_t itcam;	//!< (mod) see iti_cam_t (itifg driver)
 	int module;				//!< (user) module used, 48 in mcmath setup
+    
 	char *device_name;		//!< (user) something like '/dev/ic0dma'
 	char *config_file;		//!< (user) something like '../conffiles/dalsa-cad6.cam'
 	char *camera_name;		//!< (mod) camera name, as stored in the configuration file
@@ -144,7 +150,7 @@ typedef struct {
  */
 typedef struct {
 	int frames;				//!< (user) how many frames should the buffer hold?
-	iti_info_t *info;		//!< (mod) information on the current frame
+	iti_info_t *info;		//!< (mod) information on the current frame (not available in itifg-8.4.0)
 	void *data;				//!< (mod) location of the current frame
 	void *map;				//!< (mod) location of the mmap()'ed memory
 } mod_itifg_buf_t;
@@ -240,3 +246,4 @@ int drvStopBoard(mod_itifg_cam_t *cam);
  */
 int drvStopBufs(mod_itifg_buf_t *buf, mod_itifg_cam_t *cam);
 
+#endif //#ifdef FOAM_MODULES_ITIFG

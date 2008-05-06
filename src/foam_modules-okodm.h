@@ -44,6 +44,9 @@
  
  */
 
+#ifdef FOAM_MODULES_OKODM
+#define FOAM_MODULES_OKODM
+
 // HEADERS //
 /***********/
 
@@ -148,3 +151,4 @@ int drvInitOkoDM(mod_okodm_t *dm);
  */
 int drvCloseOkoDM(mod_okodm_t *dm);
 
+#endif //#ifdef FOAM_MODULES_OKODM

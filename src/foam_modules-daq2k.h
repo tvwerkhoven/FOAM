@@ -51,6 +51,9 @@
 
 */
 
+#ifdef FOAM_MODULES_DAQ2k
+#define FOAM_MODULES_DAQ2k
+
 #include <stdio.h>
 #include <stdlib.h>
 #define DLINUX 1			// necessary for next header file
@@ -149,3 +152,5 @@ void drvDaqSetDAC(mod_daq2k_board_t *board, int chan, int val);
  @param [in] val The value to write [0, 65535], 16bit
  */
 void drvDaqSetDACs(mod_daq2k_board_t *board, int val);
+
+#endif // #ifdef FOAM_MODULES_DAQ2k
