@@ -25,7 +25,7 @@ mod_display_t disp;
 #endif
 
 // ITIFG camera & buffer
-mod_itifg_cam_t camera;
+mod_itifg_cam_t dalsacam;
 mod_itifg_buf_t buffer;
 
 // DAQboard types
@@ -91,9 +91,9 @@ int modInitModule(control_t *ptc, config_t *cs_config) {
 	
 	// configure ITIFG camera
 	
-	camera.module = 48;
-	camera.device_name = "/dev/ic0dma";
-	camera.config_file = "conf/dalsa-cad6-pcd.cam";
+	dalsacam.module = 48;
+	dalsacam.device_name = "/dev/ic0dma";
+	dalsacam.config_file = "conf/dalsa-cad6-pcd.cam";
 	
 	buffer.frames = 8;
 	
@@ -151,8 +151,8 @@ int modInitModule(control_t *ptc, config_t *cs_config) {
 	modInitDraw(&disp);
 #endif
 	
-	drvInitBoard(&camera);
-	drvInitBufs(&buffer, &camera);
+	drvInitBoard(&dalsacam);
+	drvInitBufs(&buffer, &dalsacam);
 	
 	return EXIT_SUCCESS;
 }
@@ -163,9 +163,9 @@ void modStopModule(control_t *ptc) {
 	modFinishDraw();
 #endif
 	
-	drvStopGrab(&camera);
-	drvStopBufs(&buffer, &camera);
-	drvStopBoard(&camera);
+	drvStopGrab(&dalsacam);
+	drvStopBufs(&buffer, &dalsacam);
+	drvStopBoard(&dalsacam);
 }
 
 // OPEN LOOP ROUTINES //
@@ -173,13 +173,13 @@ void modStopModule(control_t *ptc) {
 
 int modOpenInit(control_t *ptc) {
 	// start grabbing frames
-	drvInitGrab(&camera);
+	drvInitGrab(&dalsacam);
 	return EXIT_SUCCESS;
 }
 
 int modOpenLoop(control_t *ptc) {
 	// get an image, without using a timeout
-	drvGetImg(&camera, &buffer, NULL);
+	drvGetImg(&dalsacam, &buffer, NULL);
 
 	MMDarkFlatCorrByte(&(ptc->wfs[0]));
 	
@@ -189,9 +189,9 @@ int modOpenLoop(control_t *ptc) {
 	return EXIT_SUCCESS;
 }
 
-int modOpenFinishx(control_t *ptc) {
+int modOpenFinish(control_t *ptc) {
 	// stop grabbing frames
-	drvStopGrab(&camera);
+	drvStopGrab(&dalsacam);
 	return EXIT_SUCCESS;
 }
 
@@ -200,13 +200,13 @@ int modOpenFinishx(control_t *ptc) {
 
 int modClosedInit(control_t *ptc) {
 	// start grabbing frames
-	drvInitGrab(&camera);
+	drvInitGrab(&dalsacam);
 	return EXIT_SUCCESS;
 }
 
 int modClosedLoop(control_t *ptc) {
 	// get an image, without using a timeout
-	drvGetImg(&camera, &buffer, NULL);
+	drvGetImg(&dalsacam, &buffer, NULL);
 	
 	
 	return EXIT_SUCCESS;
@@ -214,7 +214,7 @@ int modClosedLoop(control_t *ptc) {
 
 int modClosedFinish(control_t *ptc) {
 	// stop grabbing frames
-	drvStopGrab(&camera);
+	drvStopGrab(&dalsacam);
 
 	return EXIT_SUCCESS;
 }
@@ -377,7 +377,7 @@ int drvSetActuator(control_t *ptc, int wfc) {
 	return EXIT_SUCCESS;
 }
 
-int drvFilterWheel(control_t *ptc, fwheel_t filter) {
+drvFilterWheel(control_t *ptc, fwheel_t filter) {
 	if (filter == FILT_PINHOLE) {
 	}
 	else if (filter == FILT_DARK) {
@@ -394,7 +394,7 @@ int MMAvgFramesByte(gsl_matrix_float *output, wfs_t *wfs, int rounds) {
 	uint8_t* imagesrc = (uint8_t *) wfs->image;
 	
 	for (k=0; k<rounds; k++) {
-		drvGetImg(&camera, &buffer, NULL);
+		drvGetImg(&dalsacam, &buffer, NULL);
 		
 		for (j=0; j<wfs->res.x; j++) {
 			for (i=0; i<wfs->res.y; i++) {
