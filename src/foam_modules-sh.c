@@ -299,6 +299,9 @@ int modSelSubaptsByte(void *image, mod_sh_track_t *shtrack, wfs_t *shwfs, int *t
 	int apmap[shtrack->cells.x][shtrack->cells.y];		// aperture map
 	int apmap2[shtrack->cells.x][shtrack->cells.y];		// aperture map 2
 	
+	// cast the void pointer to byte pointer, we know the image is a byte image.
+	uint8_t * byteimg = (uint8_t *) image;
+	
 	logInfo(0, "Selecting subapertures.");
 	for (isy=0; isy<shtrack->cells.y; isy++) { // loops over all potential subapertures
 		for (isx=0; isx<shtrack->cells.x; isx++) {
@@ -310,7 +313,7 @@ int modSelSubaptsByte(void *image, mod_sh_track_t *shtrack, wfs_t *shwfs, int *t
 			sum=0.0; cs[0] = 0.0; cs[1] = 0.0; csum = 0.0;
 			for (iy=0; iy<shsize[1]; iy++) { // sum all pixels in the subapt
 				for (ix=0; ix<shsize[0]; ix++) {
-					fi = (uint8_t) image[isy*shsize[1]*shwfs->res.x + isx*shsize[0] + ix+ iy*shwfs->res.x];
+					fi = byteimg[isy*shsize[1]*shwfs->res.x + isx*shsize[0] + ix+ iy*shwfs->res.x];
 					sum += fi;
 					// for center of gravity, only pixels above the threshold are used;
 					// otherwise the position estimate always gets pulled to the center;
@@ -358,7 +361,7 @@ int modSelSubaptsByte(void *image, mod_sh_track_t *shtrack, wfs_t *shwfs, int *t
 			csa = i; 		// new best guess for central subaperture
 		}
 	}
-	logInfo(0, "Reference apt best guess: %d (%d,%d)", csa, subc[csa][0], subc[csa][1]);
+	logInfo(0, "Reference apt best guess: %d (%d,%d)", csa, shtrack->subc[csa].x, shtrack->[csa].y);
 	// put reference subaperture as subaperture 0
 	cs[0]				= shtrack->subc[0].x; 		cs[1]				= shtrack->subc[0].y;
 	shtrack->subc[0].x	= shtrack->subc[csa].x; 	shtrack->subc[0].y 	= shtrack->subc[csa].y;
@@ -377,7 +380,7 @@ int modSelSubaptsByte(void *image, mod_sh_track_t *shtrack, wfs_t *shwfs, int *t
 	for (iy=0; iy<shsize[1]; iy++) {
 		for (ix=0; ix<shsize[0]; ix++) {
 			// loop over the whole shsize^2 big ref subapt here, so subc-shsize/4 is the beginning coordinate
-			fi = (uint8_t) image[(shtrack->subc[0].x-shsize[1]/4+iy)* shwfs->res.x + shtrack->subc[0].x-shsize[0]/4+ix];
+			fi = byteimg[(shtrack->subc[0].x-shsize[1]/4+iy)* shwfs->res.x + shtrack->subc[0].x-shsize[0]/4+ix];
 			
 			// for center of gravity, only pixels above the threshold are used;
 			// otherwise the position estimate always gets pulled to the center;
