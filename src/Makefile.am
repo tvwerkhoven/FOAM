@@ -101,10 +101,12 @@ foamcs_mcmath_SOURCES += foam_modules-sh.h foam_modules-calib.h foam_modules-img
 
 # Make sure we include the prototypes for functions and datatypes everytime
 foamcs_mcmath_CPPFLAGS = -include "foam_primemod-mcmath.h"
+#foamcs_mcmath_CPPFLAGS += -DDEBUG_ITIFG=255
 
 # Add some cflags and libs too, please
-foamcs_mcmath_CFLAGS = $(MCMATH_CFLAGS)
-foamcs_mcmath_LDFLAGS = $(MCMATH_LIBS)
+DRIVERDIR=/home/tim/foam/drivers
+foamcs_mcmath_CFLAGS = $(MCMATH_CFLAGS) -I$(DRIVERDIR)/itifg/include -I$(DRIVERDIR)/daq2k/include
+foamcs_mcmath_LDFLAGS = $(MCMATH_LIBS) -litifg -ldaqx -L$(DRIVERDIR)/itifg/lib -L$(DRIVERDIR)/daq2k/lib
 
 # endif MCMATH
 endif
