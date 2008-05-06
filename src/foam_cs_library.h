@@ -165,7 +165,7 @@ typedef struct { // wfs_t
 
 	void *image;					//!< (foam) pointer to the WFS output
 	gsl_matrix_float *darkim;		//!< (foam) darkfield for the CCD 
-	gsl_matrix_float *flatim;		//!< (foam) flatfield for the CCD
+	gsl_matrix_float *flatim;		//!< (foam) flatfield for the CCD (actually: flat-dark, as we never use flat directly)
 	gsl_matrix_float *skyim;		//!< (foam) skyfield for the CCD
 	gsl_matrix_float *corrim;		//!< (foam) corrected image to be processed
 	

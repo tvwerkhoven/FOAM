@@ -319,6 +319,9 @@ void checkAOConfig(control_t *ptc) {
 			// check dark, flat and sky calibration files, allocate memory if necessary
 			checkFieldFiles(&(ptc->wfs[i]));
 			
+			// allocate memory for corrected image
+			ptc->wfs[0].corrim = gsl_matrix_float_alloc(ptc->wfs[0].res.x, ptc->wfs[0].res.y);
+			
 			// check scandir
 			if (ptc->wfs[i].scandir != AO_AXES_XY && ptc->wfs[i].scandir != AO_AXES_Y && ptc->wfs[i].scandir != AO_AXES_X) {
 				logWarn("Scandir not set to either AO_AXES_XY, AO_AXES_X or AO_AXES_Y, defaulting to AO_AXES_XY");

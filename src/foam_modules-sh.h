@@ -115,7 +115,7 @@ void modCogTrack(gsl_matrix_float *image, int (*subc)[2], int nsubap, coord_t tr
 
 TODO: doc
 */
-int modCalcCtrl(control_t *ptc, int wfs, int nmodes);
+int modCalcCtrl(control_t *ptc, mod_sh_track_t *shtrack, const int wfs, int nmodes);
 
 /*!
 @brief Search for a maxium within (xc, yc) -> (xc+width, yc+height) in a certain wfs output.

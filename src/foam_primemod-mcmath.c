@@ -46,25 +46,26 @@ int modInitModule(control_t *ptc, config_t *cs_config) {
 	
 	// populate ptc here
 	ptc->mode = AO_MODE_LISTEN;			// start in listen mode (safe bet, you probably want this)
-	ptc->calmode = CAL_INFL;			// this is not really relevant
+	ptc->calmode = CAL_INFL;			// this is not really relevant initialliy
 	ptc->wfs_count = 1;					// 2 FW, 1 WFS and 2 WFC
 	ptc->wfc_count = 2;
 	ptc->fw_count = 2;
 	
 	// allocate memory for filters, wfcs and wfss
 	// use malloc to make the memory globally available
-	ptc->filter = (filtwheel_t *) malloc(ptc->fw_count * sizeof(filtwheel_t));
-	ptc->wfc = (wfc_t *) malloc(ptc->wfc_count * sizeof(wfc_t));
-	ptc->wfs = (wfs_t *) malloc(ptc->wfs_count * sizeof(wfs_t));
+	ptc->filter = (filtwheel_t *) calloc(ptc->fw_count, sizeof(filtwheel_t));
+	ptc->wfc = (wfc_t *) calloc(ptc->wfc_count, sizeof(wfc_t));
+	ptc->wfs = (wfs_t *) calloc(ptc->wfs_count, sizeof(wfs_t));
 	
 	// configure WFS 0
 	ptc->wfs[0].name = "SH WFS";
 	ptc->wfs[0].res.x = 256;
 	ptc->wfs[0].res.y = 256;
 	ptc->wfs[0].bpp = 8;
-	ptc->wfs[0].darkfile = NULL;
-	ptc->wfs[0].flatfile = NULL;
-	ptc->wfs[0].skyfile = NULL;
+	// this is where we will look for dark/flat/sky images
+	ptc->wfs[0].darkfile = "mcmath_dark.gsldump";	
+	ptc->wfs[0].flatfile = "mcmath_flat.gsldump";
+	ptc->wfs[0].skyfile = "mcmath_sky.gsldump";
 	ptc->wfs[0].scandir = AO_AXES_XY;
 	
 	// configure WFC 0
@@ -176,6 +177,8 @@ int modOpenLoop(control_t *ptc) {
 	// get an image, without using a timeout
 	drvGetImg(&camera, &buffer, NULL);
 
+	MMDarkFlatCorrByte(&(ptc->wfs[0]));
+	
 #ifdef FOAM_MCMATH_DISPLAY
 	
 #endif
@@ -216,6 +219,17 @@ int modClosedFinish(control_t *ptc) {
 /*****************/
 
 int modCalibrate(control_t *ptc) {
+	int i;
+	if (ptc->calmode == CAL_DARK) {
+		// take 100 dark frames, and average
+		MMAvgFramesByte(wfs->darkim, wfs, 100);
+	}
+	else if (ptc->calmode == CAL_FLAT) {
+		// take 100 flat frames, and average
+		MMAvgFramesByte(wfs->flatim, wfs, 100);
+
+	}
+
 	return EXIT_SUCCESS;
 }
 
@@ -240,6 +254,7 @@ int modMessage(control_t *ptc, const client_t *client, char *list[], const int c
 200 OK HELP DISPLAY\n\
 display <raw|calib>:    display raw ccd output or calibrated image with meta-info.\n\
 resetdm [voltage]:      reset the DM to a certain voltage for all acts. default=0\n\
+resetdaq [voltage]:     reset the DAQ analog outputs to a certain voltage. default=0\n\
 ");
 #endif
 			}
@@ -315,13 +330,35 @@ resetdm [voltage]:      reset the DM to a certain voltage for all acts. default=
 			tellClients("200 OK RESETDAQ 0.0V");			
 		}
 	}
+ 	else if (strcmp(list[0], "calibrate") == 0) {
+		if (count > 1) {
+			if (strcmp(list[1], "dark") == 0) {
+				ptc->mode = AO_MODE_CAL;
+				ptc->calmode = CAL_DARK;
+				// add message to the users
+			}
+			else if (strcmp(list[1], "flat") == 0) {
+				ptc->mode = AO_MODE_CAL;
+				ptc->calmode = CAL_FLAT;
+				// add message to the users
+
+			}
+			else {
+				tellClient(client->buf_ev, "401 UNKNOWN CALIBRATION");
+				return 0;
+			}
+		}
+		else {
+			tellClient(client->buf_ev, "402 CALIBRATE REQUIRES ARGS");
+			return 0;
+		}
+	}
 	else { // no valid command found? return 0 so that the main thread knows this
 		return 0;
 	} // strcmp stops here
 	
 	// if we end up here, we didn't return 0, so we found a valid command
 	return 1;
-	
 }
 
 // SITE-SPECIFIC ROUTINES //
@@ -329,5 +366,44 @@ resetdm [voltage]:      reset the DM to a certain voltage for all acts. default=
 
 int MMfilter(mmfilt_t filter) {
 	
+	return EXIT_SUCCESS;
+}
+
+int MMAvgFramesByte(gsl_matrix_float *output, wfs_t *wfs, int rounds) {
+	int k, i, j;
+	
+	for (k=0; k<rounds; k++) {
+		drvGetImg(&camera, &buffer, NULL);
+		
+		for (j=0; j<wfs->res.x; j++) {
+			for (i=0; i<wfs->res.y; i++) {
+				gsl_matrix_float_set(output, i, j, \
+					 (float) gsl_matrix_float_get(output, i, j) + \
+					 (uint8_t) wfs->image[j*wfs->res.x +i]);
+			}
+		}
+		gsl_matrix_float_scale( output, 1/(float) rounds);
+	}
+	
+	return EXIT_SUCCESS;
+}
+
+// Dark flat calibration
+int MMDarkFlatCorrByte(wfs_t *wfs) {
+	size_t i, j; // size_t because gsl wants this
+	
+	if (wfs->darkim != NULL && wfs->flatim != NULL) {
+		// copy raw image to corrected image memory first
+		for (j=0; j<wfs->res.x; j++) {
+			for (i=0; i<wfs->res.y; i++) {
+				// !!!:tim:20080505 double casting a little weird?
+				gsl_matrix_float_set(wfs->corrim, i, j, (float) (uint8_t) wfs->image[j*wfs->res.x +i]);
+			}
+		}
+		
+		// now do raw-dark/(flat-dark), flat-dark is already stored in wfs->flatim
+		gsl_matrix_float_sub (wfs->corrim, wfs->darkim);
+		gsl_matrix_float_div (wfs->corrim, wfs->flatim);
+	}
 	return EXIT_SUCCESS;
 }
