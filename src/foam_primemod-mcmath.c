@@ -34,13 +34,6 @@ mod_daq2k_board_t daqboard;
 // Okotech DM type
 mod_okodm_t okodm;
 
-// Helper shortcuts to filterwheels
-typedef enum {
-	MMFILT_DARK,
-	MMFILT_PINHOLE,
-	MMFILT_FLAT
-} mmfilt_t;
-
 int modInitModule(control_t *ptc, config_t *cs_config) {
 	logInfo(0, "This is the McMath prime module, enjoy.");
 	
@@ -221,11 +214,11 @@ int modClosedFinish(control_t *ptc) {
 int modCalibrate(control_t *ptc) {
 	if (ptc->calmode == CAL_DARK) {
 		// take 100 dark frames, and average
-		MMAvgFramesByte(ptc->wfs[0]->darkim, ptc->wfs[0], 100);
+		MMAvgFramesByte(ptc->wfs[0].darkim, &(ptc->wfs[0]), 100);
 	}
 	else if (ptc->calmode == CAL_FLAT) {
 		// take 100 flat frames, and average
-		MMAvgFramesByte(ptc->wfs[0]->flatim, ptc->wfs[0], 100);
+		MMAvgFramesByte(ptc->wfs[0].flatim, &(ptc->wfs[0]), 100);
 	}
 
 	return EXIT_SUCCESS;
@@ -369,7 +362,7 @@ int MMfilter(mmfilt_t filter) {
 
 int MMAvgFramesByte(gsl_matrix_float *output, wfs_t *wfs, int rounds) {
 	int k, i, j;
-	uint8_t* imagesrc = (uint8_t) wfs->image;
+	uint8_t* imagesrc = (uint8_t *) wfs->image;
 	
 	for (k=0; k<rounds; k++) {
 		drvGetImg(&camera, &buffer, NULL);
@@ -390,7 +383,7 @@ int MMAvgFramesByte(gsl_matrix_float *output, wfs_t *wfs, int rounds) {
 // Dark flat calibration
 int MMDarkFlatCorrByte(wfs_t *wfs) {
 	size_t i, j; // size_t because gsl wants this
-	uint8_t* imagesrc = (uint8_t) wfs->image;
+	uint8_t* imagesrc = (uint8_t*) wfs->image;
 	
 	if (wfs->darkim != NULL && wfs->flatim != NULL) {
 		// copy raw image to corrected image memory first
