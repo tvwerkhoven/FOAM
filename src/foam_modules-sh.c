@@ -284,6 +284,215 @@ int modSelSubapts(float *image, coord_t res, int cells[2], int (*subc)[2], int (
 	return EXIT_SUCCESS;
 }
 
+int modSelSubaptsByte(void *image, mod_sh_track_t *shtrack, wfs_t shwfs, int *totnsubap, float samini, int samxr) {
+	// stolen from ao3.c by CUK :)
+	int isy, isx, iy, ix, i, sn=0, nsubap=0; //init sn to zero!!
+	float sum=0.0, fi;					// check 'intensity' of a subapt
+	float csum=0.0, cs[] = {0.0, 0.0}; 	// for center of gravity
+	float cx=0, cy=0;					// for CoG
+	float dist, rmin;					// minimum distance
+	int csa=0;							// estimate for best subapt
+	
+	int shsize[] = {shtrack->shsize.x, shtrack->shsize.y};		// subapt pixel resolution
+	
+	// we store our subaperture map in here when deciding which subapts to use
+	int apmap[shtrack->cells.x][shtrack->cells.y];		// aperture map
+	int apmap2[shtrack->cells.x][shtrack->cells.y];		// aperture map 2
+	
+	logInfo(0, "Selecting subapertures.");
+	for (isy=0; isy<shtrack->cells.y; isy++) { // loops over all potential subapertures
+		for (isx=0; isx<shtrack->cells.x; isx++) {
+			// set apmap and apmap2 to zero
+			apmap[isx][isy] = 0;
+			apmap2[isx][isy] = 0;
+			
+			// check one potential subapt (isy,isx)
+			sum=0.0; cs[0] = 0.0; cs[1] = 0.0; csum = 0.0;
+			for (iy=0; iy<shsize[1]; iy++) { // sum all pixels in the subapt
+				for (ix=0; ix<shsize[0]; ix++) {
+					fi = (uint8_t) image[isy*shsize[1]*shwfs->res.x + isx*shsize[0] + ix+ iy*shwfs->res.x];
+					sum += fi;
+					// for center of gravity, only pixels above the threshold are used;
+					// otherwise the position estimate always gets pulled to the center;
+					// good background elimination is crucial for this to work !!!
+					fi -= samini;    		// subtract threshold
+					if (fi<0.0) fi = 0.0;	// clip
+					csum = csum + fi;		// add this pixel's intensity to sum
+					cs[0] += + fi * ix;	// center of gravity of subaperture intensity 
+					cs[1] += + fi * iy;
+				}
+			}
+			// check if the summed subapt intensity is above zero (e.g. do we use it?)
+			if (csum > 0.0) { // good as long as pixels above background exist
+				// we add 0.5 to make sure the integer division is 'fair' (e.g. simulate round(), but faster)
+				subc[sn][0] = isx*shsize[0]+shsize[0]/4 + (int) (cs[0]/csum+0.5) - shsize[0]/2;	// subapt coordinates
+				subc[sn][1] = isy*shsize[1]+shsize[1]/4 + (int) (cs[1]/csum+0.5) - shsize[1]/2;	// TODO: sort this out
+				// ^^ coordinate in big image,  ^^ CoG of one subapt, /4 because that's half a trakcer windows
+				
+				cx += isx*shsize[0];
+				cy += isy*shsize[1];
+				apmap[isx][isy] = 1; // set aperture map
+				shtrack->gridc[sn].x = isx;
+				shtrack->gridc[sn].y = isy;
+				sn++;
+			} else {
+				apmap[isx][isy] = 0; // don't use this subapt
+			}
+		}
+	}
+	logInfo(0, "CoG for subapts done, found %d with intensity > 0.", sn);
+	
+	nsubap = sn; 			// nsubap: variable that contains number of subapertures
+	cx = cx / (float) sn; 	// TODO what does this do? why?
+	cy = cy / (float) sn;
+	
+	// determine central aperture that will be reference
+	// initial value for rmin is the distance of the first subapt. TODO: this should work, right?
+	csa = 0;
+	rmin = sqrt((shtrack->subc[0].x-cx)*(shtrack->subc[0].x-cx) + (shtrack->subc[0].y-cy)*(shtrack->subc[0].y-cy));
+	
+	for (i=0; i<nsubap; i++) {
+		dist = sqrt((shtrack->subc[i].x-cx)*(shtrack->subc[i].x-cx) + (shtrack->subc[i].y-cy)*(shtrack->subc[i].y-cy));
+		if (dist < rmin) {
+			rmin = dist;
+			csa = i; 		// new best guess for central subaperture
+		}
+	}
+	logInfo(0, "Reference apt best guess: %d (%d,%d)", csa, subc[csa][0], subc[csa][1]);
+	// put reference subaperture as subaperture 0
+	cs[0]				= shtrack->subc[0].x; 		cs[1]				= shtrack->subc[0].y;
+	shtrack->subc[0].x	= shtrack->subc[csa].x; 	shtrack->subc[0].y 	= shtrack->subc[csa].y;
+	shtrack->subc[csa].x = cs[0];					shtrack->subc[csa].y = cs[1];
+	
+	// and fix aperture map accordingly
+	cs[0]					= shtrack->gridc[0].x;		cs[1]					= shtrack->gridc[0].y;
+	shtrack->gridc[0].x		= shtrack->gridc[csa].x;	shtrack->gridc[0].y 	= shtrack->gridc[csa].y;
+	shtrack->gridc[csa].x	= cs[0];					shtrack->gridc[csa].y 	= cs[1];
+	
+	// center central subaperture; it might not be centered if there is
+	// a large shift between the expected and the actual position in the
+	// center of gravity approach above
+	// TODO: might not be necessary? leftover?
+	cs[0] = 0.0; cs[1] = 0.0; csum = 0.0;
+	for (iy=0; iy<shsize[1]; iy++) {
+		for (ix=0; ix<shsize[0]; ix++) {
+			// loop over the whole shsize^2 big ref subapt here, so subc-shsize/4 is the beginning coordinate
+			fi = (uint8_t) image[(shtrack->subc[0].x-shsize[1]/4+iy)*res.x+shtrack->subc[0].x-shsize[0]/4+ix];
+			
+			// for center of gravity, only pixels above the threshold are used;
+			// otherwise the position estimate always gets pulled to the center;
+			// good background elimination is crucial for this to work !!!
+			fi -= samini;
+			if (fi < 0.0) fi=0.0;
+			csum += fi;
+			cs[0] += fi * ix;
+			cs[1] += fi * iy;
+		}
+	}
+	
+	logInfo(0, "old subx=%d, old suby=%d",shtrack->subc[0].x, shtrack->subc[0].y);
+	shtrack->subc[0].x += (int) (cs[0]/csum+0.5) - shsize[0]/2; // +0.5 to prevent integer cropping rounding error
+	shtrack->subc[0].y += (int) (cs[1]/csum+0.5) - shsize[1]/2; // use shsize/2 because or CoG is for a larger subapt (shsize and not shsize/2)
+	logInfo(0, "new subx=%d, new suby=%d",shtrack->subc[0].x, shtrack->subc[0].y);
+	
+	// enforce maximum radial distance from center of gravity of all
+	// potential subapertures if samxr is positive
+	if (samxr > 0) {
+		sn = 1;
+		while (sn < nsubap) {
+			if (sqrt((shtrack->subc[sn].x-cx)*(shtrack->subc[sn].x-cx) + \
+					 (shtrack->subc[sn].y-cy)*(shtrack->subc[sn].y-cy)) > samxr) { // TODO: why remove subapts? might be bad subapts
+				for (i=sn; i<(nsubap-1); i++) {
+					shtrack->subc[i].x = shtrack->subc[i+1].x; // remove erroneous subapts
+					shtrack->subc[i].y = shtrack->subc[i+1].y;
+					shtrack->gridc[i].x = shtrack->gridc[i+1].x; // and remove erroneous grid coordinates
+					shtrack->gridc[i].y = shtrack->gridc[i+1].y;
+				}
+				nsubap--;
+			} else {
+				sn++;
+			}
+		}
+	}
+	
+	// edge erosion if samxr is negative; 
+	// this is good for non-circular apertures
+	while (samxr < 0) {
+		samxr = samxr + 1;
+		// print ASCII map of aperture
+		logInfo(0, "ASCII map of aperture:");
+		for (isy=0; isy<shtrack->cells.y; isy++) {
+			logInfo(LOG_NOFORMAT, "%d:", isy);
+			for (isx=0; isx<shtrack->cells.x; isx++)
+				if (apmap[isx][isy] == 0) logInfo(LOG_NOFORMAT, " "); 
+				else logInfo(LOG_NOFORMAT, "X");
+			logInfo(LOG_NOFORMAT, "\n");
+		}
+		
+		// always take the reference subapt to the new map, 
+		// otherwise we lose it during the first copying
+		apmap2[shtrack->gridc[0].x][shtrack->gridc[0].y] = 1;
+		
+		sn = 1; // start with subaperture 1 since subaperture 0 is the reference
+		while (sn < nsubap) {
+			isx = apcoo[sn][0]; isy = apcoo[sn][1];
+			if ((isx == 0) || (isx >= shtrack->cells.x-1) || (isy == 0) || (isy >= shtrack->cells.y-1) ||
+				(apmap[isx-1 % shtrack->cells.x][isy] == 0) ||
+				(apmap[isx+1 % shtrack->cells.x][isy] == 0) ||
+				(apmap[isx][isy-1 % shtrack->cells.y] == 0) ||
+				(apmap[isx][isy+1 % shtrack->cells.y] == 0)) {
+				
+				apmap2[isx][isy] = 0;
+				for (i=sn; i<(nsubap-1); i++) {
+					shtrack->subc[i].x = shtrack->subc[i+1].x; // remove erroneous subapts
+					shtrack->subc[i].y = shtrack->subc[i+1].y;
+					shtrack->gridc[i].x = shtrack->gridc[i+1].x; // and remove erroneous grid coordinates
+					shtrack->gridc[i].y = shtrack->gridc[i+1].y;					
+				}
+				nsubap--;
+			} else {
+				apmap2[isx][isy] = 1;
+				sn++;
+			}
+		}
+		
+		// copy new aperture map to old aperture map for next iteration
+		for (isy=0; isy<shtrack->cells.y; isy++)
+			for (isx=0; isx<shtrack->cells.x; isx++)
+				apmap[isx][isy] = apmap2[isx][isy];
+		
+	}
+	*totnsubap = nsubap;		// store to external variable
+	logInfo(0, "Selected %d usable subapertures", nsubap);
+	
+	logInfo(0, "ASCII map of aperture:");
+	for (isy=0; isy<shtrack->cells.y; isy++) {
+		logInfo(LOG_NOFORMAT, "%d:", isy);
+		for (isx=0; isx<shtrack->cells.x; isx++)
+			if (apmap[isx][isy] == 0) logInfo(LOG_NOFORMAT, " "); 
+			else logInfo(LOG_NOFORMAT, "X");
+		logInfo(LOG_NOFORMAT, "\n");
+	}
+	
+	// set remaining subaperture coordinates to 0
+	for (sn=nsubap; sn<shtrack->cells.x*shtrack->cells.y; sn++) {
+		shtrack->subc[sn].x = 0; 
+		shtrack->subc[sn].y = 0;
+		shtrack->gridc[sn].x = 0; 
+		shtrack->gridc[sn].y = 0;
+	}
+	
+	logDebug(0, "final gridcs:");
+	for (sn=0; sn<nsubap; sn++) {
+		shtrack->gridc[sn].y *= shsize[1];
+		shtrack->gridc[sn].x *= shsize[0];
+		logDebug(LOG_NOFORMAT, "%d (%d,%d) ", sn, shtrack->gridc[sn].x, shtrack->gridc[sn].y);
+	}
+	logDebug(LOG_NOFORMAT, "\n");
+	
+	return EXIT_SUCCESS;
+}
+
 void modCogTrack(gsl_matrix_float *image, int (*subc)[2], int nsubap, coord_t track, float *aver, float *max, float coords[][2]) {
 	int ix, iy, sn=0;
 	float csx, csy, csum, fi, cmax; 			// variables for center-of-gravity
@@ -410,11 +619,11 @@ int modParseSH(gsl_matrix_float *image, int (*subc)[2], int (*gridc)[2], int nsu
 	return EXIT_SUCCESS;
 }
 
-int modCalcCtrl(control_t *ptc, const int wfs, int nmodes) {
+int modCalcCtrl(control_t *ptc, mod_sh_track_t *shtrack, const int wfs, int nmodes) {
 	logDebug(LOG_SOMETIMES, "Calculating WFC ctrls");
 	// function assumes presence of dmmodes, singular and wfsmodes...
 	// TODO: this has to be placed elsewhere, in the end...
-	if (ptc->wfs[wfs].dmmodes == NULL || ptc->wfs[wfs].singular == NULL || ptc->wfs[wfs].wfsmodes == NULL) {
+	if (shtrack->dmmodes == NULL || shtrack->singular == NULL || shtrack->wfsmodes == NULL) {
 		logWarn("Cannot calculate WFC ctrls, calibration incomplete.");
 		return EXIT_FAILURE;
 	}
@@ -423,7 +632,7 @@ int modCalcCtrl(control_t *ptc, const int wfs, int nmodes) {
 //	float sum; 					// temporary sum
 	int nacttot=0;
 	size_t oldsize;
-	int nsubap = ptc->wfs[wfs].nsubap;
+	int nsubap = shtrack->nsubap;
 	
 	// calculate total nr of act for all wfc
 	for (wfc=0; wfc< ptc->wfc_count; wfc++)
@@ -443,28 +652,29 @@ int modCalcCtrl(control_t *ptc, const int wfs, int nmodes) {
 
 	// TODO: this is a hack :P (problem: disp vector is allocated more space than used, but at allocation time, this is unknown
 	// we now tell gsl that the vector is only as long as we're using, while the actual allocated space is more)
-	oldsize = ptc->wfs[wfs].disp->size;
-	ptc->wfs[wfs].disp->size = nsubap*2;
+//	oldsize = ptc->wfs[wfs].disp->size;
+	oldsize = shtrack->disp->size;
+	shtrack->disp->size = nsubap*2;
 	
 	logDebug(LOG_SOMETIMES, "Calculating control stuff for WFS %d (modes: %d)", wfs, nmodes);
 	for (i=0; i < nsubap; i++)
-		logDebug(LOG_SOMETIMES | LOG_NOFORMAT, "(%f, %f)", gsl_vector_float_get(ptc->wfs[wfs].disp, 2*i+0), gsl_vector_float_get(ptc->wfs[wfs].disp, 2*i+1));
+		logDebug(LOG_SOMETIMES | LOG_NOFORMAT, "(%f, %f)", gsl_vector_float_get(shtrack->disp, 2*i+0), gsl_vector_float_get(shtrack->disp, 2*i+1));
 		
 	logDebug(LOG_SOMETIMES | LOG_NOFORMAT, "\n");
 	
 //	gsl_linalg_SV_solve(ptc->wfs[wfs].wfsmodes, v, sing, testout, testinrec);	
 	
-    gsl_blas_sgemv (CblasTrans, 1.0, ptc->wfs[wfs].wfsmodes, ptc->wfs[wfs].disp, 0.0, work);
+    gsl_blas_sgemv (CblasTrans, 1.0, shtrack->wfsmodes, shtrack->disp, 0.0, work);
 
     for (i = 0; i < nmodes; i++) {
         float wi = gsl_vector_float_get (work, i);
-        float alpha = gsl_vector_float_get (ptc->wfs[wfs].singular, i);
+        float alpha = gsl_vector_float_get (shtrack->singular, i);
         if (alpha != 0)
           alpha = 1.0 / alpha;
         gsl_vector_float_set (work, i, alpha * wi);
       }
 
-    gsl_blas_sgemv (CblasNoTrans, 1.0, ptc->wfs[wfs].dmmodes, work, 0.0, total);
+    gsl_blas_sgemv (CblasNoTrans, 1.0, shtrack->dmmodes, work, 0.0, total);
 	// testinrecf should hold the float version of the reconstructed vector 'testinf'
 	
 	
@@ -497,7 +707,7 @@ int modCalcCtrl(control_t *ptc, const int wfs, int nmodes) {
 	logDebug(LOG_SOMETIMES | LOG_NOFORMAT, "\n");
 	
 	// unhack the disp vector (see above)
-	ptc->wfs[wfs].disp->size = oldsize;
+	shtrack->disp->size = oldsize;
 			
 	return EXIT_SUCCESS;
 }
