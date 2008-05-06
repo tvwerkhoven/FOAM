@@ -22,7 +22,7 @@
 
 	\section Dependencies
 	
-	This module does not depend on other modules.
+	This module depends on the shack-hartmann module (modules-sh), as most calibration is SH-specific.
 
 	\section License
 	

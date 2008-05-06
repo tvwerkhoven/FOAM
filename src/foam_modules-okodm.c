@@ -7,9 +7,35 @@
 
 */
 
-// headers
+// LOCAL FUNCTIONS //
+/*******************/
+
+/*!
+ @brief This local function opens the mirror and stores the FD
+ 
+ @return EXIT_SUCCESS on success, EXIT_FAILURE otherwise.
+ */
+static int okoOpen(mod_okodm_t *dm);
+
+/*!
+ @brief This local function fills an array with the actuator addresses.
+ */
+static int okoSetAddr(mod_okodm_t *dm);
+
+/*!
+ @brief This local function writes the first byte of an integer to the address given by addr
+ 
+ @return EXIT_SUCCESS on success, EXIT_FAILURE otherwise.
+ */
+static int okoWrite(int dmfd, int addr, int voltage);
+
+// HEADERS //
+/***********/
 
 #include "foam_modules-okodm.h"
+
+// ROUTINES //
+/************/
 
 static int okoOpen(mod_okodm_t *dm) {
 	dm->fd = open(dm->port, O_RDWR);

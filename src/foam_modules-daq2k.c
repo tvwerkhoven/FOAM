@@ -5,6 +5,39 @@
 
 	@brief This file contains routines to drive a DaqBoard 2000 PCI board
 	*/
+
+// local function prototypes
+/*!
+ @brief Local function to initialize the DAC part of the Daqboard
+ 
+ This configures the digital to analog converting ports on the Daqboard
+ to be used. All channels are configured to output constant DC voltages 
+ which are initialized at 0V.
+ 
+ If some configuration fails, this function sets board->dacinit to 0.
+ This function returns EXIT_SUCCESS immediately if the corresponding 
+ board->fd is -1 (and thus the devices failed to open).
+ 
+ @param [in] *board The board to initialize the DACs for
+ @return EXIT_SUCCESS on success, EXIT_FAILURE otherwise.
+ */
+static int initDaqDac(mod_daq2k_board_t *board);
+
+/*!
+ @brief Local function to initialize the digital IO part of the Daqboard
+ 
+ Configures the digital IO ports (portA, portB and portC, 8bit each) 
+ corresponding to the board->iop2conf configuration.
+ 
+ If some configuration fails, board->iop2init is set to 0.
+ This function returns EXIT_SUCCESS immediately if the corresponding 
+ board->fd is -1 (and thus the devices failed to open).
+ 
+ @param [in] *board The board to initialize the IO ports for
+ @return EXIT_SUCCESS on success, EXIT_FAILURE otherwise.
+ */
+static int initDaqIOP2(mod_daq2k_board_t *board);
+
 #include "foam_modules-daq2k.h"
 
 static int initDaqDac(mod_daq2k_board_t *board) {

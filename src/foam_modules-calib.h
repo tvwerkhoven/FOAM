@@ -13,6 +13,7 @@
 /**************/
 
 #include "foam_cs_library.h"
+#include "foam_modules-sh.h"
 #include <sys/stat.h>
 
 // DEPENDENCIES //

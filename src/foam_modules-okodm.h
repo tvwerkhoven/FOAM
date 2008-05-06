@@ -1,50 +1,51 @@
 /*! 
-	@file foam_modules-okodm.h
-	@author @authortim
-	@date 2008-03-20 10:07
-
-	@brief This file contains prototypes for routines to drive a 37 actuator Okotech DM using PCI interface
-
-	\section Info
-	
-	The Okotech 37ch DM has 38 actuators (one being the substrate) leaving 37 for AO. The mirror
-	is controlled through a PCI board. This requires setting some hardware addresses, but not much
-	more. See mirror.h and rotate.c supplied on CD with the Okotech mirror for examples.
-
-	Manufacturers website:
-	<tt>http://www.okotech.com/content/oko/pics/gallery/Typical%20PDM%2037%20passport_.pdf</tt>
+ @file foam_modules-okodm.h
+ @author @authortim
+ @date 2008-03-20 10:07
  
-	This module also compiles on its own like:\n
-	<tt>gcc foam_modules-okodm.c -lm -lc -lgslcblas -lgsl -Wall -DFOAM_MODOKODM_ALONE=1 -std=c99</tt>
-	
-	\section Functions
-	
-	\li drvInitOkoDM() - Initialize the Okotech DM (call this first!)
-	\li drvSetOkoDM() - Sets the Okotech 37ch DM to a certain voltage set.
-	\li drvRstOkoDM() - Resets the Okotech DM to FOAM_MODOKODM_RSTVOLT
-	\li drvCloseOkoDM() - Calls drvRstOkoDM, then closes the Okotech DM (call this at the end!)
+ @brief This file contains prototypes for routines to drive a 37 actuator Okotech DM using PCI interface
  
-	\section Configuration
+ \section Info
  
-	There are several things that can be configured about this module. The following defines are used:
-	\li \b FOAM_MODOKODM_MAXVOLT (255), the maximum voltage allowed (all voltages are logically AND'd with this value)
-	\li \b FOAM_MODOKODM_ALONE (*undef*), ifdef, this module will compile on it's own, imlies FOAM_MODOKODM_DEBUG
-	\li \b FOAM_MODOKODM_DEBUG (*undef*), ifdef, this module will give lowlevel debugs through printf
+ The Okotech 37ch DM has 38 actuators (one being the substrate) leaving 37 for AO. The mirror
+ is controlled through a PCI board. This requires setting some hardware addresses, but not much
+ more. See mirror.h and rotate.c supplied on CD with the Okotech mirror for examples.
  
-	\section Dependencies
+ Manufacturers website:
+ <tt>http://www.okotech.com/content/oko/pics/gallery/Typical%20PDM%2037%20passport_.pdf</tt>
  
-	This module depends on GSL because it uses the gsl_vector* datatypes to store DM commands in. 
-	This is done because this this format is suitable for doing fast calculations, and
-	the control vector is usually the output of some matrix multiplication.
+ This module also compiles on its own like:\n
+ <tt>gcc foam_modules-okodm.c -lm -lc -lgslcblas -lgsl -Wall -DFOAM_MODOKODM_ALONE=1 -std=c99</tt>
+ 
+ \section Functions
+ 
+ \li drvInitOkoDM() - Initialize the Okotech DM (call this first!)
+ \li drvSetOkoDM() - Sets the Okotech 37ch DM to a certain voltage set.
+ \li drvRstOkoDM() - Resets the Okotech DM to FOAM_MODOKODM_RSTVOLT
+ \li drvCloseOkoDM() - Calls drvRstOkoDM, then closes the Okotech DM (call this at the end!)
+ 
+ \section Configuration
+ 
+ There are several things that can be configured about this module. The following defines are used:
+ \li \b FOAM_MODOKODM_MAXVOLT (255), the maximum voltage allowed (all voltages are logically AND'd with this value)
+ \li \b FOAM_MODOKODM_ALONE (*undef*), ifdef, this module will compile on it's own, imlies FOAM_MODOKODM_DEBUG
+ \li \b FOAM_MODOKODM_DEBUG (*undef*), ifdef, this module will give lowlevel debugs through printf
+ 
+ \section Dependencies
+ 
+ This module depends on GSL because it uses the gsl_vector* datatypes to store DM commands in. 
+ This is done because this this format is suitable for doing fast calculations, and
+ the control vector is usually the output of some matrix multiplication.
+ 
+ \section History
+ 
+ \li 2008-04-14: api update, defines deprecated, replaced by struct
+ \li 2008-04-02: init
+ 
+ */
 
-	\section History
- 
-	\li 2008-04-14: api update, defines deprecated, replaced by struct
-	\li 2008-04-02: init
-
-*/
-
-// headers
+// HEADERS //
+/***********/
 
 #include <gsl/gsl_vector.h>
 #include <stdio.h>
@@ -56,7 +57,8 @@
 #include <string.h>
 #include <math.h>
 
-// defines
+// DEFINES //
+/***********/
 
 #define FOAM_MODOKODM_MAXVOLT 255		//!< Maximum voltage to set to the PCI card
 
@@ -64,7 +66,8 @@
 #define FOAM_MODOKODM_DEBUG 1			//!< set to 1 for debugging, in that case this module compiles on its own
 #endif
 
-// datatypes
+// DATATYPES //
+/*************/
 
 /*!
  @brief Metadata on DM operations, typically an Okotech DM using a PCI board
@@ -88,29 +91,8 @@ typedef struct {
 	int pcibase[4];		//!< (user) max 4 PCI base addresses
 } mod_okodm_t;
 
-
-// local function prototypes
-
-/*!
- @brief This local function opens the mirror and stores the FD
- 
- @return EXIT_SUCCESS on success, EXIT_FAILURE otherwise.
- */
-static int okoOpen(mod_okodm_t *dm);
-
-/*!
- @brief This local function fills an array with the actuator addresses.
- */
-static int okoSetAddr(mod_okodm_t *dm);
-
-/*!
- @brief This local function writes the first byte of an integer to the address given by addr
- 
- @return EXIT_SUCCESS on success, EXIT_FAILURE otherwise.
- */
-static int okoWrite(int dmfd, int addr, int voltage);
-
-// public function prototypes
+// PUBLIC PROTOTYPES //
+/*********************/
 
 /*!
  @brief This function sets the DM to the values given by *ctrl to the DM at *dm
@@ -141,7 +123,6 @@ int drvRstOkoDM(mod_okodm_t *dm);
  @param [in] *dm DM configuration information, filled by drvInitOkoDM()
  @return EXIT_SUCCESS on success, EXIT_FAILURE otherwise.
  */
-
 int drvSetAllOkoDM(mod_okodm_t *dm, int volt);
 
 /*!
