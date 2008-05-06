@@ -79,6 +79,8 @@ typedef enum { //fwheel_t
 
 // for image file I/O
 #include "foam_modules-img.h"
+// for okodm things
+#include "foam_modules-okodm.h"
 // for itifg stuff
 #include "foam_modules-itifg.h"
 // for daq2k board stuff

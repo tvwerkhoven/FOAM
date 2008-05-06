@@ -175,14 +175,7 @@ int drvRstOkoDM(mod_okodm_t *dm) {
 //#endif
 //		return EXIT_FAILURE;
 //	}
-	
-	for (i=1; i< dm->nchan; i++) {
-		if (okoWrite(dm->fd, dm->addr[i], dm->midvolt) == EXIT_FAILURE)
-			return EXIT_FAILURE;
-		
-	}
-	
-	return EXIT_SUCCESS;
+	return drvSetAllOkoDM(dm, dm->minvolt);
 }
 
 int drvSetAllOkoDM(mod_okodm_t *dm, int volt) {

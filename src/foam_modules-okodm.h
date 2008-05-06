@@ -83,7 +83,7 @@ typedef struct {
 	int nchan;			//!< (user) number of channels, including substrate (i.e. 38)
 	int *addr;			//!< (mod) pointer to array storing hardware addresses
 	int fd;				//!< (mod) fd used with a mirror (to open the port)
-	char port[64];		//!< (user) port to use (i.e. "/dev/port")
+	char *port;			//!< (user) port to use (i.e. "/dev/port")
 	int pcioffset;		//!< (user) pci offset to use (4 on 32 bit systems)
 	int pcibase[4];		//!< (user) max 4 PCI base addresses
 } mod_okodm_t;
@@ -127,12 +127,22 @@ static int okoWrite(int dmfd, int addr, int voltage);
 int drvSetOkoDM(gsl_vector_float *ctrl, mod_okodm_t *dm);
 
 /*!
- @brief Resets all actuators on the DM to dm->midvolt
+ @brief Resets all actuators on the DM to dm->minvolt
  
  @param [in] *dm DM configuration information, filled by drvInitOkoDM()
  @return EXIT_SUCCESS on success, EXIT_FAILURE otherwise.
  */
 int drvRstOkoDM(mod_okodm_t *dm);
+
+/*!
+ @brief Sets all actuators on the substrate to a certain voltage.
+ 
+ @param [in] volt The voltage to set on all actuators
+ @param [in] *dm DM configuration information, filled by drvInitOkoDM()
+ @return EXIT_SUCCESS on success, EXIT_FAILURE otherwise.
+ */
+
+int drvSetAllOkoDM(mod_okodm_t *dm, int volt);
 
 /*!
  @brief Initialize the module (software and hardware)

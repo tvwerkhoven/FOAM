@@ -303,7 +303,7 @@ resetdm [voltage]:      reset the DM to a certain voltage for all acts. default=
 			
 			if (tmpfloat >= daqboard.minvolt && tmpfloat <= daqboard.maxvolt) {
 				if (drvDaqSetDACs(&daqboard, (int) 65536*(tmpfloat-daqboard.minvolt)\
-								  /(daqboard.maxvolt-daqboard.minvolt) == EXIT_SUCCESS)
+								  /(daqboard.maxvolt-daqboard.minvolt)) == EXIT_SUCCESS)
 					tellClients("200 OK RESETDAQ %fV", tmpfloat);
 				else
 					tellClient(client->buf_ev, "300 ERROR RESETTING DAQ");
@@ -316,7 +316,7 @@ resetdm [voltage]:      reset the DM to a certain voltage for all acts. default=
 		}
 		else {
 				if (drvDaqSetDACs(&daqboard, 65536*(-daqboard.minvolt)\
-									  /(daqboard.maxvolt-daqboard.minvolt) == EXIT_SUCCESS)
+									  /(daqboard.maxvolt-daqboard.minvolt)) == EXIT_SUCCESS)
 				tellClients("200 OK RESETDAQ 0.0V");
 			else 
 				tellClient(client->buf_ev, "300 ERROR RESETTING DAQ");

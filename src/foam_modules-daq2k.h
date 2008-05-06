@@ -70,7 +70,7 @@
  filled by this module.
  */
 typedef struct {
-	char device[64];	//!< (user) device name of the board
+	char *device;		//!< (user) device name of the board
 	int fd;				//!< (mod) device fd
 	int nchans;			//!< (user) number of DAC channels (used) on the board
 	float minvolt;		//!< (user) minimum voltage for the DAC ports
