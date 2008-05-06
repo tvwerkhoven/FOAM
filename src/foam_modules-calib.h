@@ -18,7 +18,7 @@
 // DEPENDENCIES //
 /****************/
 extern int drvFilterWheel(control_t *ptc, fwheel_t mode);
-extern int drvSetActuator();
+extern int drvSetActuator(control_t *ptc, int wfc);
 
 // PROTOTYPES //
 /**************/
@@ -33,12 +33,12 @@ are stored in seperate files. These can later be read to memory
 and using these SVD'd matrices, the control vectors for all WFCs
 for a given WFS can be calculated.
 */
-int modCalWFC(control_t *ptc, int wfs);
+int modCalWFC(control_t *ptc, int wfs, mod_sh_track_t *shtrack);
 
 /*!
 @brief Checks whether modCalWFC has been performed.
 */
-int modCalWFCChk(control_t *ptc, int wfs);
+int modCalWFCChk(control_t *ptc, int wfs, mod_sh_track_t *shtrack);
 
 /*!
 @brief Measure the reference displacement and store it.
@@ -48,13 +48,13 @@ are set to zero for a certain WFS. These coordinates are
 then stored and used as a reference coordinate when correcting
 the wavefront.
 */
-int modCalPinhole(control_t *ptc, int wfs);
+int modCalPinhole(control_t *ptc, int wfs, mod_sh_track_t *shtrack);
 
 /*!
 @brief Checks whether modCalPinhole has been performed.
 */
 
-int modCalPinholeChk(control_t *ptc, int wfs);
+int modCalPinholeChk(control_t *ptc, int wfs, mod_sh_track_t *shtrack);
 
 /*!
 @brief Used to SVD the influence matrix and store the result to file.
@@ -64,7 +64,7 @@ to calculate the inverse of the influence matrix. We need this
 inverse matrix to calculate the control vectors for the WFC's, given
 the displacements measured on a certain WFS.
 */
-int modSVDGSL(control_t *ptc, int wfs);
+int modSVDGSL(control_t *ptc, int wfs, mod_sh_track_t *shtrack);
 
 /*!
 @brief Do a dark- and flat-field correction on image

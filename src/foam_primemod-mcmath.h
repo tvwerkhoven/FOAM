@@ -65,7 +65,9 @@ typedef enum { // axes_t
 typedef enum { //fwheel_t
 	FILT_PINHOLE,	//!< Pinhole used for pinhole calibration
 	FILT_OPEN,		//!< Open position, don't filter
-	FILT_CLOSED		//!< Closed, don't let light through
+	FILT_FLAT,		//!< For flatfielding, very probably same as FILT_OPEN
+	FILT_CLOSED,	//!< Closed, don't let light through
+	FILT_DARK		//!< For darkfielding, very probably same as FILT_CLOSED
 } fwheel_t;
 
 // We always use config.h
@@ -73,19 +75,19 @@ typedef enum { //fwheel_t
 // We always use the main library for datatypes etc
 #include "foam_cs_library.h"
 
-// These are specific for McMath
+// ROUTINE PROTOTYPES //
+/**********************/
 
-// Helper shortcuts to filterwheels
-typedef enum {
-	MMFILT_DARK,
-	MMFILT_PINHOLE,
-	MMFILT_FLAT
-} mmfilt_t;
+// These *must* be defined in a prime module
+int drvFilterWheel(control_t *ptc, fwheel_t filter);
+int drvSetActuator(control_t *ptc, int wfc);
 
-// some specific routines
+// These are McMath specific (for the time being)
 int MMAvgFramesByte(gsl_matrix_float *output, wfs_t *wfs, int rounds);
-int MMfilter(mmfilt_t filter);
 int MMDarkFlatCorrByte(wfs_t *wfs);
+
+// LIBRARIES //
+/*************/
 
 #ifdef FOAM_MCMATH_DISPLAY
 // for displaying stuff (SDL)

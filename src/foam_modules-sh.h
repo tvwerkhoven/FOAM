@@ -30,11 +30,13 @@
  by this or other modules. (runtime) is something the user can change during runtime.
  */
 typedef struct {
-	int nsubap;						//!< (user) amount of subapertures used (coordinates stored in subc)
+	int nsubap;						//!< (mod) amount of subapertures used (coordinates stored in subc)
+	int skipframes;					//!< (user) amount of frames to skip before measuring WFC influence
+	int measurecount;				//!< (user) amount of measurements to average for WFC influence
 	
 	coord_t cells;					//!< (user) number of cells in this SH WFS (i.e. lenslet resolution)
-	coord_t shsize;					//!< (mod) pixel resolution per cell
-	coord_t track;					//!< (mod) tracker window resolution in pixels (i.e. 1/2 of shsize per definition)
+	coord_t shsize;					//!< (user) pixel resolution per cell
+	coord_t track;					//!< (user) tracker window resolution in pixels (i.e. 1/2 of shsize per definition)
 	
 	gsl_vector_float *singular;		//!< (mod) stores singular values from SVD (nact big)
 	gsl_matrix_float *dmmodes;		//!< (mod) stores dmmodes from SVD (nact*nact big)
@@ -47,8 +49,8 @@ typedef struct {
 	
 	fcoord_t stepc;					//!< (runtime) add this to the reference displacement during correction
 	
-	char pinhole[FILENAMELEN];		//!< (user) filename to store the pinhole calibration (stored in *refc)
-	char influence[FILENAMELEN];	//!< (user) filename to store the influence matrix
+	char *pinhole;					//!< (user) filename to store the pinhole calibration (also stored in *refc)
+	char *influence;				//!< (user) filename to store the influence matrix
 } mod_sh_track_t;
 
 // PROTOTYPES //

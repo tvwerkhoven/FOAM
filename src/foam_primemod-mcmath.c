@@ -34,6 +34,9 @@ mod_daq2k_board_t daqboard;
 // Okotech DM type
 mod_okodm_t okodm;
 
+// Shack Hartmann tracking info
+mod_sh_track_t shtrack;
+
 int modInitModule(control_t *ptc, config_t *cs_config) {
 	logInfo(0, "This is the McMath prime module, enjoy.");
 	
@@ -103,20 +106,28 @@ int modInitModule(control_t *ptc, config_t *cs_config) {
 	daqboard.iop2conf[0] = 0;
 	daqboard.iop2conf[1] = 0;
 	daqboard.iop2conf[2] = 1;
-	daqboard.iop2conf[3] = 1;		// use digital IO ports for {out, out, in, in}
+	daqboard.iop2conf[3] = 1;			// use digital IO ports for {out, out, in, in}
 	
 	// configure DM here
 	
-	okodm.minvolt = 0;
+	okodm.minvolt = 0;					// nice voltage range is 0--255, middle is 180
 	okodm.midvolt = 180;
 	okodm.maxvolt = 255;
-	okodm.nchan = 38;
-	okodm.port = "/dev/port";
-	okodm.pcioffset = 4;
-	okodm.pcibase[0] = 0xc000;
+	okodm.nchan = 38;					// 37 acts + substrate = 38 channels
+	okodm.port = "/dev/port";			// access pci board here
+	okodm.pcioffset = 4;				// offset is 4 (sizeof(int)?)
+	okodm.pcibase[0] = 0xc000;			// base addresses from lspci -v
 	okodm.pcibase[1] = 0xc400;
 	okodm.pcibase[2] = 0xffff;
 	okodm.pcibase[3] = 0xffff;
+	
+	// shtrack configuring
+	shtrack.cells.x = 8;				// we're using a 8x8 lenslet array
+	shtrack.cells.y = 8;
+	shtrack.shsize.x = ptc->wfs[0].res.x/shtrack.cells.x;
+	shtrack.shsize.y = ptc->wfs[0].res.y/shtrack.cells.y;
+	shtrack.pinhole = "mcmath_pinhole.gsldump";
+	shtrack.influence = "mcmath_influence.gsldump";
 	
 	// configure cs_config here
 	cs_config->listenip = "0.0.0.0";	// listen on any IP by defaul
@@ -355,7 +366,25 @@ resetdaq [voltage]:     reset the DAQ analog outputs to a certain voltage. defau
 // SITE-SPECIFIC ROUTINES //
 /**************************/
 
-int MMfilter(mmfilt_t filter) {
+drvSetActuator(control_t *ptc, int wfc) {
+	if (wfc == 0) {			// Okotech DM
+		// use okodm routines here
+	}
+	else if (wfc == 1) {	// Tip-tilt mirror
+		// use daq routines here
+	}
+	
+	return EXIT_SUCCESS;
+}
+
+drvFilterWheel(control_t *ptc, fwheel_t filter) {
+	if (filter == FILT_PINHOLE) {
+	}
+	else if (filter == FILT_DARK) {
+	}
+	else {
+		logWarn("Unknown filter '%d'", filter);
+	}
 	
 	return EXIT_SUCCESS;
 }
@@ -400,3 +429,4 @@ int MMDarkFlatCorrByte(wfs_t *wfs) {
 	}
 	return EXIT_SUCCESS;
 }
+
