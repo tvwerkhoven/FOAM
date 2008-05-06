@@ -101,7 +101,7 @@ int modReadIMGArr(char *fname, float **img, coord_t *outres) {
 //	}
 
 	// copy image from SDL_Surface to *img
-	*img = malloc(sdlimg->w * sdlimg->h, sizeof(float));
+	*img = malloc(sdlimg->w * sdlimg->h * sizeof(float));
 	if (*img == NULL)
 		logErr("Failed to allocate memory in modReadIMGArr().");
 		
@@ -180,7 +180,7 @@ int modWritePGMSurf(char *fname, SDL_Surface *img, int maxval, int pgmtype) {
 				
 			if (pgmtype == 0) { // ASCII
 				fprintf(fd, "%d ", val);
-				linew += chars 
+				linew += chars;
 				// ASCII PGM lines cannot be longer than 70 characters :P
 				if (linew + chars > 70) fprintf(fd, "\n");
 			}
@@ -252,7 +252,7 @@ int modWritePGMArr(char *fname, void *img, int datatype, coord_t res, int maxval
 	
 	// Write header //
 	//////////////////
-	if (type == 0) // We're making ascii
+	if (pgmtype == 0) // We're making ascii
 		fprintf(fd, "P2\n");
 	else // We're making binary
 		fprintf(fd, "P5\n");
@@ -263,13 +263,14 @@ int modWritePGMArr(char *fname, void *img, int datatype, coord_t res, int maxval
 	// Write image body //
 	//////////////////////
 	if (datatype == 0) { // float!
+		float *imgc = (float *) img;
 		for (x=0; x < res.x * res.y; x++) {
 			linew = 0;
 			val = (int) (maxval * (imgc[x]-min) / (max-min));
 			
-			if (type == 0) { // ASCII
+			if (pgmtype == 0) { // ASCII
 				fprintf(fd, "%d ", val);
-				linew += chars 
+				linew += chars;
 				// ASCII PGM lines cannot be longer than 70 characters :P
 				if (linew + chars > 70) fprintf(fd, "\n");
 				// print a newline every row of the image
@@ -286,15 +287,16 @@ int modWritePGMArr(char *fname, void *img, int datatype, coord_t res, int maxval
 	}
 
 	if (datatype == 0) { // char!
+		char *imgc = (char *) img;
 		for (x=0; x < res.x * res.y; x++) {
 			linew = 0;
 			chars = 1 + (int) ceilf(log10f((float) maxval));
 			val = (int) (maxval * (imgc[x]-min) / (max-min));
 			
-			if (type == 0) {
+			if (pgmtype == 0) {
 				// ASCII
 				fprintf(fd, "%d ", val);
-				linew += chars 
+				linew += chars;
 				// ASCII PGM lines cannot be longer than 70 characters :P
 				if (linew + chars > 70) fprintf(fd, "\n");
 				// print a newline every row of the image

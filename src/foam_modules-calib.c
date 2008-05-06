@@ -60,7 +60,7 @@ int modCalPinhole(control_t *ptc, int wfs, mod_sh_track_t *shtrack) {
 	
 	// collect displacement vectors and store as reference
 	logInfo(0, "Found following reference coordinates:");
-	for (j=0; j < ptc->wfs[wfs].nsubap; j++) {
+	for (j=0; j < shtrack->nsubap; j++) {
 		gsl_vector_float_set(shtrack->refc, 2*j+0, gsl_vector_float_get(shtrack->disp, 2*j+0)); // x
 		gsl_vector_float_set(shtrack->refc, 2*j+1, gsl_vector_float_get(shtrack->disp, 2*j+1)); // y
 		// gsl_vector_float_set(ptc->wfs[wfs].refc, 2*j+0, 7); // x
@@ -203,7 +203,7 @@ int modCalWFC(control_t *ptc, int wfs, mod_sh_track_t *shtrack) {
 	
 	logDebug(0, "Checking pinhole calibration, file %s", shtrack->pinhole);
 	
-	if (modCalPinholeChk(ptc, wfs) != EXIT_SUCCESS) {
+	if (modCalPinholeChk(ptc, wfs, shtrack) != EXIT_SUCCESS) {
 		logWarn("WFC calibration failed, first perform pinhole calibration.");
 		return EXIT_FAILURE;
 	}
@@ -274,8 +274,8 @@ int modCalWFC(control_t *ptc, int wfs, mod_sh_track_t *shtrack) {
 		
 				// take the shifts and store those (wrt to reference shifts)
 	    		for (i=0;i<nsubap;i++) { 	
-					q0x[i] += gsl_vector_float_get(shtrack->disp, 2*i+0) / (float) measurecount; // x
-					q0y[i] += gsl_vector_float_get(shtrack->disp, 2*i+1) / (float) measurecount; // y
+					q0x[i] += gsl_vector_float_get(shtrack->disp, 2*i+0) / (float) shtrack->measurecount; // x
+					q0y[i] += gsl_vector_float_get(shtrack->disp, 2*i+1) / (float) shtrack->measurecount; // y
 					// q0x[i] += (ptc->wfs[wfs].disp[i][0] - ptc->wfs[wfs].refc[i][0]) / (float) measurecount;
 					// q0y[i] += (ptc->wfs[wfs].disp[i][1] - ptc->wfs[wfs].refc[i][1]) / (float) measurecount;
 				}
@@ -284,13 +284,13 @@ int modCalWFC(control_t *ptc, int wfs, mod_sh_track_t *shtrack) {
 				gsl_vector_float_set(ptc->wfc[wfc].ctrl, j, DM_MINVOLT);
 				drvSetActuator(ptc, wfc);
 						
-				for (skip=0; skip<skipframes+1; skip++) // skip some frames here
+				for (skip=0; skip< shtrack->skipframes +1; skip++) // skip some frames here
 					modOpenLoop(ptc);
 		
 				// take the shifts and subtract those store those (wrt to reference shifts)
 	    		for (i=0;i<nsubap;i++) { 
-					q0x[i] -= gsl_vector_float_get(shtrack->disp, 2*i+0) / (float) measurecount; // x
-					q0y[i] -= gsl_vector_float_get(shtrack->disp, 2*i+1) / (float) measurecount; // y
+					q0x[i] -= gsl_vector_float_get(shtrack->disp, 2*i+0) / (float) shtrack->measurecount; // x
+					q0y[i] -= gsl_vector_float_get(shtrack->disp, 2*i+1) / (float) shtrack->measurecount; // y
 					// q0x[i] -= (ptc->wfs[wfs].disp[i][0] - ptc->wfs[wfs].refc[i][0]) / (float) measurecount;
 					// q0y[i] -= (ptc->wfs[wfs].disp[i][1] - ptc->wfs[wfs].refc[i][1]) / (float) measurecount;
 				}
@@ -325,7 +325,7 @@ int modCalWFC(control_t *ptc, int wfs, mod_sh_track_t *shtrack) {
 
 	logInfo(0, "WFS %d (%s) influence function saved for in file %s", wfs, ptc->wfs[wfs].name, shtrack->influence);
 	
-	modSVDGSL(ptc, wfs);
+	modSVDGSL(ptc, wfs, shtrack);
 	
 	return EXIT_SUCCESS;
 }
