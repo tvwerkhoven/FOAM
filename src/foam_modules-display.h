@@ -10,8 +10,41 @@
 #define FOAM_MODULES_DISPLAY
 
 #include "foam_cs_library.h"
+
+#ifdef FOAM_MODULES_DISLAY_SHSUPPORT
+// The user wants to have SH specific drawing routines, include sh header for datatypes
+#include "foam_modules_sh.h"
+#endif //#ifdef FOAM_MODULES_DISLAY_SHSUPPORT
+
 #include "SDL.h" 	// most portable way according to 
 					//http://www.libsdl.org/cgi/docwiki.cgi/FAQ_20Including_20SDL_20Headers
+
+// DATATYPES //
+/*************/
+
+/*!
+ @brief This struct stores some properties on how to handle the displaying.
+ 
+ Baiscally a wrapper for thins like resolution, SDL_Surface pointer, captions etc.
+ Also lets the user define whether or not to do brightness/contrast themselves.
+ If autocontrast = 1, the drawing routines in this module make sure that the whole
+ displayscale is used (i.e. pixel intensities from 0 to 255 typically). If set to
+ 0, the user can control this by changing contrast and brightness. The pixel values
+ will then be scaled as (<raw intensity> - brightness) * contrast.
+  */
+typedef struct {
+	SDL_Surface *screen;		//!< (mod) SDL_Surface to use
+	SDL_Event event;			//!< (mod) SDL_Event to use
+	char *caption;				//!< (user) Caption for the SDL window
+	coord_t res;				//!< (user) Resolution for the SDL window
+	Uint32 flags;				//!< (user) Flags to use with SDL_SetVideoMode
+    int autocontrast;           //!< (user/runtime) 1 = foam handles contrast, 0 = user handles contrast
+    int contrast;               //!< (user) if autocontrast=0, use this to scale the pixel intensities
+    int brightness;             //!< (user) if autocontrast=0, use this to shift the pixel intensities
+} mod_display_t;
+
+// ROUTINES //
+/************/
 
 /*!
 @brief This draws a rectangle starting at {coord[0], coord[1]} with size {size[0], size[1]} on screen *screen

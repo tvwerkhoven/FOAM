@@ -122,10 +122,15 @@ int modInitModule(control_t *ptc, config_t *cs_config) {
 	okodm.pcibase[3] = 0xffff;
 	
 	// shtrack configuring
+    // we have a CCD of WxH, with a lenslet array of WlxHl, such that
+    // each lenslet occupies W/Wl x H/Hl pixels, and we use track.x x track.y
+    // pixels to track the CoG or do correlation tracking.
 	shtrack.cells.x = 8;				// we're using a 8x8 lenslet array
 	shtrack.cells.y = 8;
 	shtrack.shsize.x = ptc->wfs[0].res.x/shtrack.cells.x;
 	shtrack.shsize.y = ptc->wfs[0].res.y/shtrack.cells.y;
+	shtrack.track.x = shtrack.shsize.x/2;   // tracker windows are half the size of the lenslet grid things
+    shtrack.track.y = shtrack.shsize.y/2;
 	shtrack.pinhole = "mcmath_pinhole.gsldump";
 	shtrack.influence = "mcmath_influence.gsldump";
 	
@@ -147,6 +152,7 @@ int modInitModule(control_t *ptc, config_t *cs_config) {
 	disp.res.x = ptc->wfs[0].res.x;
 	disp.res.y = ptc->wfs[0].res.y;
 	disp.flags = SDL_HWSURFACE | SDL_DOUBLEBUF | SDL_RESIZABLE;
+    disp.autocontrast = 1;
 	
 	modInitDraw(&disp);
 #endif
@@ -181,10 +187,10 @@ int modOpenLoop(control_t *ptc) {
 	// get an image, without using a timeout
 	drvGetImg(&dalsacam, &buffer, NULL);
 
-	MMDarkFlatCorrByte(&(ptc->wfs[0]));
+//	MMDarkFlatCorrByte(&(ptc->wfs[0]));
 	
 #ifdef FOAM_MCMATH_DISPLAY
-	
+	modDrawStuff();
 #endif
 	return EXIT_SUCCESS;
 }
@@ -377,10 +383,15 @@ int drvSetActuator(control_t *ptc, int wfc) {
 	return EXIT_SUCCESS;
 }
 
-drvFilterWheel(control_t *ptc, fwheel_t filter) {
+int drvFilterWheel(control_t *ptc, fwheel_t filter) {
 	if (filter == FILT_PINHOLE) {
+        logInfo(0, "Setting filter to pinhole '%d'", filter);
 	}
-	else if (filter == FILT_DARK) {
+	else if (filter == FILT_DARK || filter == FILT_CLOSED) {
+        logInfo(0, "Setting filter to closed/darkfield '%d'", filter);
+	}
+	else if (filter == FILT_OPEN || filter == FILT_FLAT) {
+        logInfo(0, "Setting filter to open/flatfield '%d'", filter);
 	}
 	else {
 		logWarn("Unknown filter '%d'", filter);
