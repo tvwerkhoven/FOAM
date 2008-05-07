@@ -38,12 +38,12 @@ mod_okodm_t okodm;
 mod_sh_track_t shtrack;
 
 int modInitModule(control_t *ptc, config_t *cs_config) {
-	logInfo(0, "This is the McMath prime module, enjoy.");
+	logInfo(0, "This is the McMath-pierce prime module, enjoy.");
 	
 	// populate ptc here
 	ptc->mode = AO_MODE_LISTEN;			// start in listen mode (safe bet, you probably want this)
 	ptc->calmode = CAL_INFL;			// this is not really relevant initialliy
-	ptc->logfrac = 100;			// log verbose messages only every 100 frames
+	ptc->logfrac = 100;                 // log verbose messages only every 100 frames
 	ptc->wfs_count = 1;					// 2 FW, 1 WFS and 2 WFC
 	ptc->wfc_count = 2;
 	ptc->fw_count = 2;
@@ -64,31 +64,38 @@ int modInitModule(control_t *ptc, config_t *cs_config) {
 	ptc->wfs[0].flatfile = "mcmath_flat.gsldump";
 	ptc->wfs[0].skyfile = "mcmath_sky.gsldump";
 	ptc->wfs[0].scandir = AO_AXES_XY;
+    ptc->wfs[0].id = 0;
 	
 	// configure WFC 0
 	ptc->wfc[0].name = "Okotech DM";
 	ptc->wfc[0].nact = 37;
 	ptc->wfc[0].gain = 1.0;
 	ptc->wfc[0].type = WFC_DM;
+    ptc->wfc[0].id = 0;
 	
 	// configure WFC 1
 	ptc->wfc[1].name = "TT";
 	ptc->wfc[1].nact = 2;
 	ptc->wfc[1].gain = 1.0;
 	ptc->wfc[1].type = WFC_TT;
+    ptc->wfc[1].id = 1;
 	
 	// configure filter 0
 	ptc->filter[0].name = "Telescope FW";
-	ptc->filter[0].nfilts = 3;
+	ptc->filter[0].id = 0;
+    ptc->filter[0].delay = 2;
+	ptc->filter[0].nfilts = 4;
 	ptc->filter[0].filters[0] = FILT_PINHOLE;
 	ptc->filter[0].filters[1] = FILT_OPEN;
-	ptc->filter[0].filters[2] = FILT_CLOSED;
+    ptc->filter[0].filters[2] = FILT_TARGET;
+    ptc->filter[0].filters[3] = FILT_CLOSED;
 
-	ptc->filter[0].name = "WFS FW";
-	ptc->filter[0].nfilts = 3;
-	ptc->filter[0].filters[0] = FILT_PINHOLE;
-	ptc->filter[0].filters[1] = FILT_OPEN;
-	ptc->filter[0].filters[2] = FILT_CLOSED;
+	ptc->filter[1].name = "WFS FW";
+	ptc->filter[1].id = 1;
+	ptc->filter[1].nfilts = 2;
+    ptc->filter[1].delay = 2;
+    ptc->filter[1].filters[0] = FILT_PINHOLE;
+	ptc->filter[1].filters[1] = FILT_OPEN;
 	
 	// configure ITIFG camera
 	
@@ -139,7 +146,7 @@ int modInitModule(control_t *ptc, config_t *cs_config) {
 	cs_config->listenip = "0.0.0.0";	// listen on any IP by defaul
 	cs_config->listenport = 10000;		// listen on port 10000 by default
 	cs_config->use_syslog = false;		// don't use the syslog
-	cs_config->syslog_prepend = "foam-mm";	// prepend logging with 'foam'
+	cs_config->syslog_prepend = "foam-mm";	// prepend logging with 'foam-mm'
 	cs_config->use_stdout = true;		// do use stdout
 	cs_config->loglevel = LOGDEBUG;		// log error, info and debug
 	cs_config->infofile = NULL;			// don't log anything to file
@@ -370,8 +377,8 @@ resetdaq [voltage]:     reset the DAQ analog outputs to a certain voltage. defau
 // SITE-SPECIFIC ROUTINES //
 /**************************/
 
-int drvSetActuator(control_t *ptc, int wfc) {
-	if (wfc == 0) {			// Okotech DM
+int drvSetActuator(wfc_t *wfc) {
+	if (wfc->type == 0) {			// Okotech DM
 		// use okodm routines here
 	}
 	else if (wfc == 1) {	// Tip-tilt mirror
@@ -381,21 +388,32 @@ int drvSetActuator(control_t *ptc, int wfc) {
 	return EXIT_SUCCESS;
 }
 
-int drvFilterWheel(control_t *ptc, fwheel_t filter) {
-	if (filter == FILT_PINHOLE) {
-        logInfo(0, "Setting filter to pinhole '%d'", filter);
-	}
-	else if (filter == FILT_DARK || filter == FILT_CLOSED) {
-        logInfo(0, "Setting filter to closed/darkfield '%d'", filter);
-	}
-	else if (filter == FILT_OPEN || filter == FILT_FLAT) {
-        logInfo(0, "Setting filter to open/flatfield '%d'", filter);
-	}
-	else {
-		logWarn("Unknown filter '%d'", filter);
-	}
-	
-	return EXIT_SUCCESS;
+int drvSetupHardware(control_t *ptc, aomode_t aomode, calmode_t calmode) {
+    if (aomode == AO_MODE_CAL) {
+        if (calmode == CAL_DARK) {
+            logInfo(0, "Configuring hardware for darkfield calibration");
+        }
+        else if (calmode == CAL_FLAT) {
+            logInfo(0, "Configuring hardware for flatfield calibration");
+        }
+        else if (calmode == CAL_INFL) {
+            logInfo(0, "Configuring hardware for influence matrix calibration");
+        }
+        else if (calmode == CAL_PINHOLE) {
+            logInfo(0, "Configuring hardware for subaperture reference calibration");
+        }
+        else {
+            logWarn("No special setup needed for this calibration mode, ignored");
+        }
+    }
+    else if (aomode == AO_MODE_OPEN || aomode == AO_MODE_CLOSED) {
+        logInfo(0, "Configuring hardware for open/closed loop mode calibration");
+    }
+    else {
+        logWarn("No special setup needed for this aomode, ignored");
+    }        
+    
+    return EXIT_SUCCESS;
 }
 
 int MMAvgFramesByte(gsl_matrix_float *output, wfs_t *wfs, int rounds) {

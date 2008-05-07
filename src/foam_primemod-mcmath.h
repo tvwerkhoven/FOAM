@@ -49,10 +49,9 @@ typedef enum { // calmode_t
 } calmode_t;
 
 /*!
- @brief Helper enum for WFC types
+ @brief Enum for WFC types
  
- This should be enough for now, but can be expanded to include other
- WFCs as well.
+ A list of all WFC's used in the system
  */
 typedef enum { // axes_t
 	WFC_TT=0,		//!< WFC Type for tip-tilt mirrors
@@ -60,18 +59,16 @@ typedef enum { // axes_t
 } wfctype_t;
 
 /*!
- @brief Helper enum for filterwheel types
- 
- This should be enough for now, but can be expanded to include other
- filterwheels as well.
+ @brief Enum for filterwheel types
+
+ This enum includes all filterwheels present in the hardware system. 
  */
-typedef enum { //fwheel_t
-	FILT_PINHOLE,	//!< Pinhole used for pinhole calibration
-	FILT_OPEN,		//!< Open position, don't filter
-	FILT_FLAT,		//!< For flatfielding, very probably same as FILT_OPEN
-	FILT_CLOSED,	//!< Closed, don't let light through
-	FILT_DARK		//!< For darkfielding, very probably same as FILT_CLOSED
-} fwheel_t;
+typedef enum { //filter_t
+	FILT_PINHOLE,	//!< Pinhole used for subaperture selection (pinhole in front of SH lenslet array, after TT/DM)
+    FILT_OPEN,      //!< Normal operations filter position
+	FILT_CLOSED,	//!< Closed filter position
+    FILT_TARGET     //!< A target for doing stuff
+} filter_t;
 
 // We always use config.h
 #include "config.h"
@@ -82,7 +79,7 @@ typedef enum { //fwheel_t
 /**********************/
 
 // These *must* be defined in a prime module
-int drvFilterWheel(control_t *ptc, fwheel_t filter);
+int drvSetupHardware(control_t *ptc, aomode_t aomode, calmode_t calmode);
 int drvSetActuator(control_t *ptc, int wfc);
 
 // These are McMath specific (for the time being)

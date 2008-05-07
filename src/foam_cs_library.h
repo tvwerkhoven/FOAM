@@ -133,8 +133,10 @@ typedef enum { // axes_t
 typedef struct {
 	char *name;			//!< (user) Filterwheel name
 	int nfilts;			//!< (user) Number of filters present in this wheel
-	fwheel_t curfilt;	//!< (foam) Current filter in place
-	fwheel_t filters[MAX_FILTERS];	//!< (user) All filters present in this wheel
+	filter_t curfilt;	//!< (foam) Current filter in place
+	filter_t filters[MAX_FILTERS];	//!< (user) All filters present in this wheel
+    int delay;          //!< (user) The time in seconds the filterwheel needs to adjust, which is used in a sleep() call to give the filterwheel time
+    int id;             //!< (user) a unique ID to identify the filterwheel
 } filtwheel_t;
 
 /*!
@@ -151,6 +153,7 @@ typedef struct { // wfc_t
 	gsl_vector_float *ctrl;		//!< (foam) pointer to array of controls for the WFC (i.e. `voltages')
 	float gain;					//!< (user) gain used in calculating the new controls
 	wfctype_t type;				//!< (user) type of WFC we're dealing with (0 = TT, 1 = DM)
+    int id;                     //!< (user) a unique ID to identify the actuator
 } wfc_t;
 
 /*!
@@ -177,6 +180,7 @@ typedef struct { // wfs_t
 	char *skyfile;					//!< (user) filename for the flatfield calibration
     
 	axes_t scandir; 				//!< (user) scanning direction(s) used
+    int id;                         //!< (user) a unique ID to identify the wfs
 } wfs_t;
 
 

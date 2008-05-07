@@ -32,11 +32,9 @@
 
 #include "foam_modules-calib.h"
 
-#define DM_MAXVOLT 1	// these are normalized and converted to the right values by drvSetActuator()
+#define DM_MAXVOLT 1	// these are normalized and should be converted to the right values by drvSetActuator()
 #define DM_MIDVOLT 0
 #define DM_MINVOLT -1
-#define FOAM_MODCALIB_DMIF "../config/ao_dmif"
-#define FOAM_MODCALIB_LIN "../config/ao_linearity"
 
 // TODO: document
 int modCalPinhole(control_t *ptc, int wfs, mod_sh_track_t *shtrack) {
@@ -44,7 +42,7 @@ int modCalPinhole(control_t *ptc, int wfs, mod_sh_track_t *shtrack) {
 	FILE *fd;
 
 	// set filterwheel to pinhole
-	drvFilterWheel(ptc, FILT_PINHOLE);
+	drvSetupHardware(ptc, ptc->mode, ptc->calmode);
 	
 	// set control vector to zero (+-180 volt for an okotech DM)
 	// TODO: we wrongly set the actuators to 0.5, so that our pinhole calibration is wrong. Let's see what this does
@@ -125,7 +123,7 @@ int modLinTest(control_t *ptc, int wfs) {
 	float q0x[nsubap], q0y[nsubap];
 	
 	// set filterwheel to pinhole
-	drvFilterWheel(ptc, FILT_PINHOLE);
+	drvSetupHardware(ptc, ptc->mode, ptc->calmode);
 	
 	// run openInit once to read the sensors and get subapertures
 	modOpenInit(ptc);
@@ -162,7 +160,7 @@ int modLinTest(control_t *ptc, int wfs) {
 			for (k=0; k<niter; k++) {	// split up the range DM_MAXVOLT - DM_MINVOLT in niter pieces
 				ptc->wfc[wfc].ctrl[j] = (k+1)/(niter) * (DM_MAXVOLT - DM_MINVOLT) + DM_MINVOLT;
 
-				drvSetActuator(ptc, wfc);
+				drvSetActuator(&(ptc->wfc[wfc]));
 				
 				for (skip=0; skip<skipframes+1; skip++) // skip some frames here
 					modOpenLoop(ptc);
@@ -224,7 +222,7 @@ int modCalWFC(control_t *ptc, int wfs, mod_sh_track_t *shtrack) {
 	if (unlink(file) != 0) logWarn("Problem removing old SVD files: %s", strerror(errno));
 		
 	// set filterwheel to pinhole
-	drvFilterWheel(ptc, FILT_PINHOLE);
+	drvSetupHardware(ptc, ptc->mode, ptc->calmode);
 		
 	// get total nr of actuators, set all actuators to zero (180 volt for an okotech DM)
 	for (i=0; i < ptc->wfc_count; i++) {
@@ -265,7 +263,7 @@ int modCalWFC(control_t *ptc, int wfs, mod_sh_track_t *shtrack) {
 //				ptc->wfc[wfc].ctrl[j] = DM_MAXVOLT;
 				gsl_vector_float_set(ptc->wfc[wfc].ctrl, j, DM_MAXVOLT);
 				
-				drvSetActuator(ptc, wfc);
+                drvSetActuator(&(ptc->wfc[wfc]));
 				// run the open loop *once*, which will approx do the following:
 				// read sensor, apply some SH WF sensing, set actuators, 
 		
@@ -282,7 +280,7 @@ int modCalWFC(control_t *ptc, int wfs, mod_sh_track_t *shtrack) {
 		
 //				ptc->wfc[wfc].ctrl[j] = DM_MINVOLT;
 				gsl_vector_float_set(ptc->wfc[wfc].ctrl, j, DM_MINVOLT);
-				drvSetActuator(ptc, wfc);
+                drvSetActuator(&(ptc->wfc[wfc]));
 						
 				for (skip=0; skip< shtrack->skipframes +1; skip++) // skip some frames here
 					modOpenLoop(ptc);

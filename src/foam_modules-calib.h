@@ -18,8 +18,8 @@
 
 // DEPENDENCIES //
 /****************/
-extern int drvFilterWheel(control_t *ptc, fwheel_t mode);
-extern int drvSetActuator(control_t *ptc, int wfc);
+extern int drvSetupHardware(control_t *ptc, aomode_t mode, calmode_t calmode);
+extern int drvSetActuator(wfc_t *wfc);
 
 // PROTOTYPES //
 /**************/
