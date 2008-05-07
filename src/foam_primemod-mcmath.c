@@ -179,8 +179,7 @@ void modStopModule(control_t *ptc) {
 
 int modOpenInit(control_t *ptc) {
 	// start grabbing frames
-	drvInitGrab(&dalsacam);
-	return EXIT_SUCCESS;
+	return drvInitGrab(&dalsacam);
 }
 
 int modOpenLoop(control_t *ptc) {
@@ -206,8 +205,7 @@ int modOpenFinish(control_t *ptc) {
 
 int modClosedInit(control_t *ptc) {
 	// start grabbing frames
-	drvInitGrab(&dalsacam);
-	return EXIT_SUCCESS;
+	return drvInitGrab(&dalsacam);
 }
 
 int modClosedLoop(control_t *ptc) {

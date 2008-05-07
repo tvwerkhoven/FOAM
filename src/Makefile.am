@@ -25,9 +25,8 @@ FRAME_HDR = foam_cs_library.h foam_library.h foam_cs_config.h
 
 # dummy moduleset
 bin_PROGRAMS += foamcs-dummy
-foamcs_dummy_SOURCES = foam_primemod-dummy.c
-foamcs_dummy_SOURCES += $(FRAME_SRC) $(FRAME_HDR)
-foamcs_dummy_SOURCES += foam_primemod-dummy.h
+foamcs_dummy_SOURCES = foam_primemod-dummy.c $(FRAME_SRC) 
+foamcs_dummy_SOURCES += foam_primemod-dummy.h $(FRAME_HDR)
 foamcs_dummy_CPPFLAGS = -include "foam_primemod-dummy.h"
 foamcs_dummy_CFLAGS = -g
 

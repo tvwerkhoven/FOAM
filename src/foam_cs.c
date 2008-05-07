@@ -91,6 +91,18 @@ int main(int argc, char *argv[]) {
 	
 	// BEGIN FOAM //
 	/**************/
+	logInfo(LOG_NOFORMAT,"      ___           ___           ___           ___     \n\
+     /\\  \\         /\\  \\         /\\  \\         /\\__\\    \n\
+    /::\\  \\       /::\\  \\       /::\\  \\       /::|  |   \n\
+   /:/\\:\\  \\     /:/\\:\\  \\     /:/\\:\\  \\     /:|:|  |   \n\
+  /::\\~\\:\\  \\   /:/  \\:\\  \\   /::\\~\\:\\  \\   /:/|:|__|__ \n\
+ /:/\\:\\ \\:\\__\\ /:/__/ \\:\\__\\ /:/\\:\\ \\:\\__\\ /:/ |::::\\__\\\n\
+ \\/__\\:\\ \\/__/ \\:\\  \\ /:/  / \\/__\\:\\/:/  / \\/__/~~/:/  /\n\
+      \\:\\__\\    \\:\\  /:/  /       \\::/  /        /:/  / \n\
+       \\/__/     \\:\\/:/  /        /:/  /        /:/  /  \n\
+                  \\::/  /        /:/  /        /:/  /   \n\
+                   \\/__/         \\/__/         \\/__/ \n");
+
 	logInfo(0,"Starting %s (%s) by %s", PACKAGE_NAME, PACKAGE_VERSION, PACKAGE_BUGREPORT);
     
 
@@ -242,8 +254,8 @@ void checkFieldFiles(wfs_t *wfsinfo) {
 			// point and store the calibration in wfsinfo->darkfile.
 			// to indicate we need to do darkfield calibration, set .darkim
 			// to NULL
-			logInfo(0, "Darkfield file could not be opened, will create darkfield calibration later (%s).", strerror(errno));
-			wfsinfo->darkim = NULL;
+			logInfo(0, "Darkfield file (%s) could not be opened, will create darkfield calibration later (%s).", wfsinfo->darkfile, strerror(errno));
+			//wfsinfo->darkim = NULL;
 		}
 		else {
 			// if we can open the file, there is already darkfield calibration
@@ -252,9 +264,9 @@ void checkFieldFiles(wfs_t *wfsinfo) {
 			// checking alloc is not necessary because we use gsl's own checking
 			wfsinfo->darkim = gsl_matrix_float_alloc(wfsinfo->res.x, wfsinfo->res.y);
 			gsl_matrix_float_fscanf(fieldfd, wfsinfo->darkim);
+			// close the file
+			fclose(fieldfd);
 		}
-		// close the file
-		fclose(fieldfd);
 	}
 	
 	// same for flatfield
@@ -264,16 +276,16 @@ void checkFieldFiles(wfs_t *wfsinfo) {
 	else {
 		fieldfd = fopen(wfsinfo->flatfile, "r");
 		if (fieldfd == NULL) {
-			logInfo(0, "Flatfield file could not be opened, will create flatfield calibration later (%s).", strerror(errno));
+			logInfo(0, "Flatfield file (%s) could not be opened, will create flatfield calibration later (%s).", wfsinfo->flatfile, strerror(errno));
 			wfsinfo->flatim = NULL;
 		}
 		else {
 			logInfo(0, "Flatfield file found and, trying to import into memory.");
 			wfsinfo->flatim = gsl_matrix_float_alloc(wfsinfo->res.x, wfsinfo->res.y);
 			gsl_matrix_float_fscanf(fieldfd, wfsinfo->flatim);
+			// close the file
+			fclose(fieldfd);
 		}
-		// close the file
-		fclose(fieldfd);
 	}
 	
 	// same for skyfield
@@ -283,16 +295,16 @@ void checkFieldFiles(wfs_t *wfsinfo) {
 	else {
 		fieldfd = fopen(wfsinfo->skyfile, "r");
 		if (fieldfd == NULL) {
-			logInfo(0, "Skyfield file could not be opened, will create skyfield calibration later (%s).", strerror(errno));
+			logInfo(0, "Skyfield file (%s) could not be opened, will create skyfield calibration later (%s).", wfsinfo->skyfile, strerror(errno));
 			wfsinfo->skyim = NULL;
 		}
 		else {
 			logInfo(0, "Skyfield file found and, trying to import into memory.");
 			wfsinfo->skyim = gsl_matrix_float_alloc(wfsinfo->res.x, wfsinfo->res.y);
 			gsl_matrix_float_fscanf(fieldfd, wfsinfo->skyim);
+			// close the file
+			fclose(fieldfd);
 		}
-		// close the file
-		fclose(fieldfd);
 	}
 }
 
