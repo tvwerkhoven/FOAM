@@ -16,6 +16,7 @@ control_t ptc = { //!< Global struct to hold system characteristics and other da
 	.wfc_count = 0,
 	.fw_count = 0,
 	.frames = 0,
+	.logfrac = 1000,
 	.capped = 0,
 };
 
@@ -32,7 +33,6 @@ config_t cs_config = { //!< Global struct to hold system configuration. Init wit
 	.syslog_prepend = "foam",
 	.use_stdout = true,
 	.loglevel = LOGDEBUG,
-	.logfrac = 1000,
 	.nthreads = 0
 };
 
@@ -116,7 +116,7 @@ void logInfo(const int flag, const char *msg, ...) {
 		return;
 	
 												// We only print log messages every logfrac frames
-	if (flag & LOG_SOMETIMES && (ptc.frames % cs_config.logfrac) != 0)
+	if (flag & LOG_SOMETIMES && (ptc.frames % ptc.logfrac) != 0)
 		return;
 	
 	char logmessage[COMMANDLEN];
@@ -158,7 +158,7 @@ void logDebug(const int flag, const char *msg, ...) {
 		return;
 	
 												// We only print log messages every logfrac frames
-	if (flag & LOG_SOMETIMES && (ptc.frames % cs_config.logfrac) != 0)
+	if (flag & LOG_SOMETIMES && (ptc.frames % ptc.logfrac) != 0)
 		return;
 	
 	char logmessage[COMMANDLEN];

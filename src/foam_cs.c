@@ -372,7 +372,7 @@ void checkAOConfig(control_t *ptc) {
 	}
 	
 	// Check filter configuration here //
-	//////////////////////////////////
+	/////////////////////////////////////
 	
 	// first check the amount of FWs
 	if (ptc->fw_count < 0 || ptc->fw_count > 3) {
@@ -392,6 +392,14 @@ void checkAOConfig(control_t *ptc) {
 			}
 		}
 	}
+
+    // Check other configuration here //
+	////////////////////////////////////
+    
+	if (ptc->logfrac < 1)
+		ptc->logfrac = 0;
+	else if (ptc->logfrac > 10000)
+		logWarn("%d might be a rather large value for logfrac.", ptc->logfrac);
 	
 	logInfo(0, "AO Configuration for wavefront sensors, wavefront correctors, and filterwheels verified.");
 }
@@ -401,11 +409,6 @@ void checkFOAMConfig(config_t *conf) {
 		logWarn("Warning, port invalid, choose between 1 and 65535. Defaulting to 10000.");
 		conf->listenport = 10000;
 	}
-	
-	if (conf->logfrac < 1)
-		conf->logfrac = 0;
-	else if (conf->logfrac > 10000)
-		logWarn("%d might be a rather large value for logfrac.");
 	
 	// Check the info, error and debug files that we possibly have to log to
 	initLogFiles();

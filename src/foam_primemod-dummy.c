@@ -20,6 +20,7 @@ int modInitModule(control_t *ptc, config_t *cs_config) {
 	// populate ptc here
 	ptc->mode = AO_MODE_LISTEN;			// start in listen mode (safe bet, you probably want this)
 	ptc->calmode = CAL_INFL;			// this is not really relevant
+	ptc->logfrac = 100;                 // log verbose messages only every 100 frames    
 	ptc->wfs_count = 1;					// 1 FW, WFS and WFC
 	ptc->wfc_count = 1;
 	ptc->fw_count = 1;
@@ -59,7 +60,6 @@ int modInitModule(control_t *ptc, config_t *cs_config) {
 	cs_config->syslog_prepend = "foam";	// prepend logging with 'foam'
 	cs_config->use_stdout = true;		// do use stdout
 	cs_config->loglevel = LOGDEBUG;		// log error, info and debug
-	cs_config->logfrac = 100;			// log verbose messages only every 100 frames
 	cs_config->infofile = NULL;			// don't log anything to file
 	cs_config->errfile = NULL;
 	cs_config->debugfile = NULL;

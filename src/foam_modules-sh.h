@@ -49,8 +49,8 @@ typedef struct {
 	
 	fcoord_t stepc;					//!< (runtime) add this to the reference displacement during correction
 	
-	char *pinhole;					//!< (user) filename to store the pinhole calibration (also stored in *refc)
-	char *influence;				//!< (user) filename to store the influence matrix
+	char *pinhole;					//!< (user) base filename to store the pinhole calibration (stored in *refc)
+	char *influence;				//!< (user) base filename to store the influence matrix (stored in singular/dmmodes/wfsmodes)
 } mod_sh_track_t;
 
 // PROTOTYPES //
