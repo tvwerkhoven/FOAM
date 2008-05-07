@@ -64,7 +64,7 @@ void logErr(const char *msg, ...) {
 	va_copy(aq, ap);
 	va_copy(ar, ap);
 	
-	formatLog(logmessage, " <error>: ", msg);
+	formatLog(logmessage, " <ERROR>: ", msg);
 
 	if (cs_config.errfd != NULL)				// Do we want to log this to a file?
 		vfprintf(cs_config.errfd, logmessage, ap);
@@ -94,7 +94,7 @@ void logWarn(const char *msg, ...) {
 	va_copy(aq, ap);
 	va_copy(ar, ap);
 	
-	formatLog(logmessage, " <warning>: ", msg);
+	formatLog(logmessage, " <WARNING>: ", msg);
 	
 	if (cs_config.errfd != NULL)				// Do we want to log this to a file?
 		vfprintf(cs_config.errfd, logmessage, ap);

@@ -91,8 +91,8 @@ int main(int argc, char *argv[]) {
 	
 	// BEGIN FOAM //
 	/**************/
-	
 	logInfo(0,"Starting %s (%s) by %s", PACKAGE_NAME, PACKAGE_VERSION, PACKAGE_BUGREPORT);
+    
 
 	ptc.starttime = time (NULL);
 	loctime = localtime (&ptc.starttime);

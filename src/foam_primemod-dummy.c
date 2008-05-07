@@ -78,11 +78,20 @@ int modOpenLoop(control_t *ptc) {
 	return EXIT_SUCCESS;
 }
 
+int modOpenFinish(control_t *ptc) {
+	return EXIT_SUCCESS;
+}
+
+
 int modClosedInit(control_t *ptc) {
 	return EXIT_SUCCESS;
 }
 
 int modClosedLoop(control_t *ptc) {
+	return EXIT_SUCCESS;
+}
+
+int modClosedFinish(control_t *ptc) {
 	return EXIT_SUCCESS;
 }
 
