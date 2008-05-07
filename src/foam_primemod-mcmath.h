@@ -8,6 +8,9 @@
 	some aspects of the framework in general.
 */
 
+#ifndef FOAM_PRIME_MCMATH
+#define FOAM_PRIME_MCMATH
+
 // GENERAL //
 /***********/
 
@@ -106,3 +109,6 @@ int MMDarkFlatCorrByte(wfs_t *wfs);
 #include "foam_modules-serial.h"
 // for calibrating the image lateron
 #include "foam_modules-calib.h"
+
+#endif // #ifndef FOAM_PRIME_MCMATH
+

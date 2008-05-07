@@ -27,7 +27,7 @@
  \li 2008-04-02: init
  */
 
-#ifdef FOAM_MODULES_SERIAL
+#ifndef FOAM_MODULES_SERIAL
 #define FOAM_MODULES_SERIAL
 
 #include <stdio.h>		// for stuff
@@ -54,4 +54,4 @@
  */
 int drvSetSerial(const char *port, const char *cmd);
 
-#endif //#ifdef FOAM_MODULES_SERIAL
+#endif //#ifndef FOAM_MODULES_SERIAL

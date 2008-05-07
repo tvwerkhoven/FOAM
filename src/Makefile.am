@@ -3,7 +3,7 @@ bin_PROGRAMS =
 
 # some shared compiler flags which must always be used
 # (not using AM_* flags because of http://sourceware.org/automake/automake.html#Flag-Variables-Ordering)
-CFLAGS=-pipe -Wall -Wextra
+CFLAGS=-pipe -Wall -Wextra #-Wl,-verbose
 #-O3 -ftree-vectorize
 LDFLAGS=$(COMMON_LIBS) -lc
 
@@ -106,7 +106,8 @@ foamcs_mcmath_CPPFLAGS = -include "foam_primemod-mcmath.h"
 # Add some cflags and libs too, please
 DRIVERDIR=/home/tim/foam/drivers
 foamcs_mcmath_CFLAGS = $(MCMATH_CFLAGS) -I$(DRIVERDIR)/itifg/include -I$(DRIVERDIR)/daq2k/include
-foamcs_mcmath_LDFLAGS = $(MCMATH_LIBS) -litifg -ldaqx -L$(DRIVERDIR)/itifg/lib -L$(DRIVERDIR)/daq2k/lib
+foamcs_mcmath_LDFLAGS = $(MCMATH_LIBS) -ldaqx -L$(DRIVERDIR)/itifg/lib -L$(DRIVERDIR)/daq2k/lib
+foamcs_mcmath_LDADD = -litifg
 
 # endif MCMATH
 endif

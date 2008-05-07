@@ -51,7 +51,7 @@
 
 */
 
-#ifdef FOAM_MODULES_DAQ2k
+#ifndef FOAM_MODULES_DAQ2k
 #define FOAM_MODULES_DAQ2k
 
 #include <stdio.h>
@@ -153,4 +153,4 @@ void drvDaqSetDAC(mod_daq2k_board_t *board, int chan, int val);
  */
 void drvDaqSetDACs(mod_daq2k_board_t *board, int val);
 
-#endif // #ifdef FOAM_MODULES_DAQ2k
+#endif // #ifndef FOAM_MODULES_DAQ2k
