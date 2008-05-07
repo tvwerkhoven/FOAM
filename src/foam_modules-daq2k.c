@@ -6,7 +6,14 @@
 	@brief This file contains routines to drive a DaqBoard 2000 PCI board
 	*/
 
-// local function prototypes
+// HEADERS //
+/***********/
+
+#include "foam_modules-daq2k.h"
+
+// LOCAL FUNCTIONS //
+/*******************/
+
 /*!
  @brief Local function to initialize the DAC part of the Daqboard
  
@@ -38,7 +45,6 @@ static int initDaqDac(mod_daq2k_board_t *board);
  */
 static int initDaqIOP2(mod_daq2k_board_t *board);
 
-#include "foam_modules-daq2k.h"
 
 static int initDaqDac(mod_daq2k_board_t *board) {
 	// FD not open? then just return

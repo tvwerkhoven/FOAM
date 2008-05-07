@@ -136,8 +136,8 @@ typedef struct {
     
 	char *device_name;		//!< (user) something like '/dev/ic0dma'
 	char *config_file;		//!< (user) something like '../conffiles/dalsa-cad6.cam'
-	char *camera_name;		//!< (mod) camera name, as stored in the configuration file
-	char *exo_name;			//!< (mod) exo filename, as stored in the configuration file
+	char camera_name[128];		//!< (mod) camera name, as stored in the configuration file
+	char exo_name[128];			//!< (mod) exo filename, as stored in the configuration file
 } mod_itifg_cam_t;
 
 /*!

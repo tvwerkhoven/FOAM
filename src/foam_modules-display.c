@@ -106,15 +106,14 @@ void drawLoop() {
 
 void drawRect(coord_t coord, coord_t size, SDL_Surface *screen) {
 	// lower line
-	drawLine(coord[0], coord[1], coord[0] + size[0] + 1, coord[1], screen);
+	drawLine(coord.x, coord.y, coord.x + size.x + 1, coord.y, screen);
 	// top line
-	drawLine(coord[0], coord[1] + size[1], coord[0] + size[0], coord[1] + size[1], screen);
+	drawLine(coord.x, coord.y + size.y, coord.x + size.x, coord.y + size.y, screen);
 	// left line
-	drawLine(coord[0], coord[1], coord[0], coord[1] + size[1], screen);
+	drawLine(coord.x, coord.y, coord.x, coord.y + size.y, screen);
 	// right line
-	drawLine(coord[0] + size[0], coord[1], coord[0] + size[0], coord[1] + size[1], screen);
+	drawLine(coord.x + size.x, coord.y, coord.x + size.x, coord.y + size.y, screen);
 	// done
-    
 }
 
 void drawLine(int x0, int y0, int x1, int y1, SDL_Surface *screen) {
@@ -156,6 +155,8 @@ void drawDeltaLine(int x0, int y0, int dx, int dy, SDL_Surface *screen) {
 	drawLine(x0, y0, x0+dx, y0+dy, screen);
 }
 
+// Todo: fix img dereferencing
+/*
 int modDisplayRaw(void *img, coord_t res, int datatype, SDL_Surface *screen) {
 	// datatype == 2: float
 	// datatype == 1: char (uint8_t)
@@ -210,6 +211,7 @@ int modDisplayRaw(void *img, coord_t res, int datatype, SDL_Surface *screen) {
 	
 	return EXIT_SUCCESS;
 }
+*/
 
 int modDisplayImg(float *img, coord_t res, SDL_Surface *screen) {
 	// ONLY does float images as input
@@ -349,7 +351,6 @@ void drawPixel(SDL_Surface *screen, int x, int y, Uint8 R, Uint8 G, Uint8 B) {
 
 #ifdef FOAM_MODULES_DISLAY_SHSUPPORT
 
-#error CONTINUE HERE with implementing the new mod_sh_track_t types
 // !!!:tim:20080414 shortcut for SH display routines
 int modDrawSubapts(mod_sh_track_t *shtrack, SDL_Surface *screen) {
 	if (shtrack->nsubap == 0)
@@ -405,32 +406,33 @@ int modDrawVecs(mod_sh_track_t *shtrack, SDL_Surface *screen) {
 	
 	return EXIT_SUCCESS;
 }
-#endif
 
-int modDrawGrid(int gridres[2], SDL_Surface *screen) {
+int modDrawGrid(coord_t gridres, SDL_Surface *screen) {
 	int xc, yc;
-	int gridw = screen->w/gridres[0];
-	int gridh = screen->h/gridres[1];
+	int gridw = screen->w/gridres.x;
+	int gridh = screen->h/gridres.y;
     
-	for (xc=1; xc < gridres[0]; xc++)
+	for (xc=1; xc < gridres.x; xc++)
 		drawDash(xc*gridw, 0, xc*gridw, screen->h, screen);
 	
-	for (yc=1; yc< gridres[1]; yc++)
+	for (yc=1; yc< gridres.y; yc++)
 		drawDash(0, yc*gridh, screen->w, yc*gridh, screen);
     
 	return EXIT_SUCCESS;
 }
+#endif
 
-void modDrawStuff(control_t *ptc, int wfs, SDL_Surface *screen) {
+#ifdef FOAM_MODULES_DISLAY_SHSUPPORT
+void modDrawStuff(control_t *ptc, int wfs, SDL_Surface *screen, mod_sh_track_t *shtrack) {
 	modBeginDraw(screen);
 	modDisplayImg(ptc->wfs[wfs].image, ptc->wfs[wfs].res, screen);
-	modDrawGrid((ptc->wfs[wfs].cells), screen);
-#ifdef FOAM_MODULES_DISLAY_SHSUPPORT
-	modDrawSubapts(&(ptc->wfs[0]), screen);
-	modDrawVecs(&(ptc->wfs[0]), screen);
-#endif
+	modDrawGrid(shtrack->cells, screen);
+	modDrawSubapts(shtrack, screen);
+	modDrawVecs(shtrack, screen);
 	modFinishDraw(screen);
 }
+#endif
+
 
 void modDrawSens(control_t *ptc, int wfs, SDL_Surface *screen) {	
 	modBeginDraw(screen);

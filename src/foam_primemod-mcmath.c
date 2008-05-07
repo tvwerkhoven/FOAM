@@ -13,8 +13,8 @@
 extern pthread_mutex_t mode_mutex;
 extern pthread_cond_t mode_cond;
 
-#define FOAM_MCMATH_DISPLAY 1
-#undef FOAM_MCMATH_DISPLAY
+//#define FOAM_MCMATH_DISPLAY 1
+//#undef FOAM_MCMATH_DISPLAY
 
 // GLOBALS //
 /***********/
@@ -93,7 +93,7 @@ int modInitModule(control_t *ptc, config_t *cs_config) {
 	
 	dalsacam.module = 48;
 	dalsacam.device_name = "/dev/ic0dma";
-	dalsacam.config_file = "conf/dalsa-cad6-pcd.cam";
+	dalsacam.config_file = "../config/dalsa-cad6-pcd.cam";
 	
 	buffer.frames = 8;
 	
@@ -164,9 +164,8 @@ int modInitModule(control_t *ptc, config_t *cs_config) {
 }
 
 void modStopModule(control_t *ptc) {
-	// placeholder ftw!
 #ifdef FOAM_MCMATH_DISPLAY
-	modFinishDraw();
+	modFinishDraw(disp.screen);
 #endif
 	
 	drvStopGrab(&dalsacam);
@@ -189,7 +188,7 @@ int modOpenLoop(control_t *ptc) {
 //	MMDarkFlatCorrByte(&(ptc->wfs[0]));
 	
 #ifdef FOAM_MCMATH_DISPLAY
-	modDrawStuff();
+	modDrawStuff(ptc, 0, disp.screen, &shtrack);
 #endif
 	return EXIT_SUCCESS;
 }

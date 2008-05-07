@@ -13,7 +13,7 @@
 
 #ifdef FOAM_MODULES_DISLAY_SHSUPPORT
 // The user wants to have SH specific drawing routines, include sh header for datatypes
-#include "foam_modules_sh.h"
+#include "foam_modules-sh.h"
 #endif //#ifdef FOAM_MODULES_DISLAY_SHSUPPORT
 
 #include "SDL.h" 	// most portable way according to 
@@ -47,13 +47,22 @@ typedef struct {
 /************/
 
 /*!
+ @brief This routine is used to initialize SDL
+
+ Call this routine before calling any other routine in this module.
+
+ @param [in] *disp A pointer to a prefilled mod_display_t struct
+*/
+int modInitDraw(mod_display_t *disp);
+
+/*!
 @brief This draws a rectangle starting at {coord[0], coord[1]} with size {size[0], size[1]} on screen *screen
 
 @param [in] coord Lower left coordinate of the rectangle to be drawn
 @param [in] size Size of the rectangle to be drawn 
 @param [in] *screen SDL_Surface to draw on
 */
-void drawRect(int coord[2], int size[2], SDL_Surface*screen);
+void drawRect(coord_t coord, coord_t size, SDL_Surface *screen); 
 
 /*!
 @brief This draws a line from {x0, y0} to {x1, y1} without any aliasing
@@ -74,7 +83,7 @@ Do not forget to call modBeginDraw()/modFinishDraw().
 @param [in] *wfsinfo wfs_t struct with info on the current wfs
 @param [in] *screen SDL_Surface to draw on
 */
-int modDrawSubapts(wfs_t *wfsinfo, SDL_Surface *screen);
+int modDrawSubapts(mod_sh_track_t *shtrack, SDL_Surface *screen);
 
 /*!
 @brief This draws vectors from the center of the grid to the detected center of gravity
@@ -84,7 +93,7 @@ Do not forget to call modBeginDraw()/modFinishDraw().
 @param [in] *wfsinfo wfs_t struct with info on the current wfs
 @param [in] *screen SDL_Surface to draw on
 */
-int modDrawVecs(wfs_t *wfsinfo, SDL_Surface *screen);
+int modDrawVecs(mod_sh_track_t *shtrack, SDL_Surface *screen); 
 
 /*!
 @brief This draws a grid on the screen
@@ -94,7 +103,7 @@ Do not forget to call modBeginDraw()/modFinishDraw().
 @param [in] gridres The grid resolution to draw on the screen (i.e. 8x8)
 @param [in] *screen SDL_Surface to draw on
 */
-int modDrawGrid(int gridres[2], SDL_Surface *screen);
+int modDrawGrid(coord_t gridres, SDL_Surface *screen);
 
 /*!
 @brief This displays an image img with resolution res.
@@ -130,7 +139,9 @@ the tracker windows and the displacement vectors on the screen.
 You do \e not need to call modBeginDraw()/modFinishDraw() when using
 this routine.
 */
-void modDrawStuff(control_t *ptc, int wfs, SDL_Surface *screen);
+#ifdef FOAM_MODULES_DISLAY_SHSUPPORT
+void modDrawStuff(control_t *ptc, int wfs, SDL_Surface *screen, mod_sh_track_t *shtrack);
+#endif
 
 /*!
 @brief Draw sensor output to screen

@@ -20,6 +20,9 @@
 #include <string.h>
 #include <unistd.h>
 #include <sys/time.h>
+#ifndef _GNU_SOURCE				
+#define _GNU_SOURCE				// for vasprintf / asprintf
+#endif
 #include <stdio.h>
 #include <math.h>					// we need math
 #include <sys/socket.h>				// networking

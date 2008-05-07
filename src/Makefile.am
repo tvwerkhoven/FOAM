@@ -11,7 +11,7 @@ LDFLAGS=$(COMMON_LIBS) -lc
 CPPFLAGS+=-DHAVE_INLINE -DGSL_RANGE_CHECK_OFF
 
 # (un)comment this to toggle debugging
-#CFLAGS+=-g -DDEBUG_ITIFG=255
+CFLAGS+=-g -DDEBUG_ITIFG=255
 # (un)comment this to toggle malloc debugging
 HAVE_DMALLOC=1
 #LDFLAGS+=-ldmalloc 
@@ -95,13 +95,13 @@ foamcs_mcmath_SOURCES = foam_primemod-mcmath.c
 foamcs_mcmath_SOURCES += $(FRAME_SRC) $(FRAME_HDR)
 
 # Use some modules
-foamcs_mcmath_SOURCES += foam_modules-sh.c foam_modules-calib.c foam_modules-img.c foam_modules-itifg.c foam_modules-okodm.c foam_modules-serial.c foam_modules-daq2k.c
-foamcs_mcmath_SOURCES += foam_modules-sh.h foam_modules-calib.h foam_modules-img.h
+foamcs_mcmath_SOURCES += foam_modules-sh.c foam_modules-calib.c foam_modules-img.c foam_modules-itifg.c foam_modules-okodm.c foam_modules-serial.c foam_modules-daq2k.c foam_modules-display.c
+foamcs_mcmath_SOURCES += foam_modules-sh.h foam_modules-calib.h foam_modules-img.h foam_modules-itifg.h foam_modules-okodm.h foam_modules-serial.h foam_modules-daq2k.h foam_modules-display.h
 
 # Make sure we include the prototypes for functions and datatypes everytime
 foamcs_mcmath_CPPFLAGS = -include "foam_primemod-mcmath.h"
 #foamcs_mcmath_CPPFLAGS += -DDEBUG_ITIFG=255 
-foamcs_mcmath_CPPFLAGS += -DFOAM_MCMATH_DISPLAY=1
+foamcs_mcmath_CPPFLAGS += -DFOAM_MCMATH_DISPLAY=1 -DFOAM_MODULES_DISLAY_SHSUPPORT=1
 
 # Add some cflags and libs too, please
 DRIVERDIR=/home/tim/foam/drivers
@@ -111,3 +111,4 @@ foamcs_mcmath_LDADD = -litifg
 
 # endif MCMATH
 endif
+

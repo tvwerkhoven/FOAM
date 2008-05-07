@@ -7,6 +7,11 @@
 
 */
 
+// HEADERS //
+/***********/
+
+#include "foam_modules-okodm.h"
+
 // LOCAL FUNCTIONS //
 /*******************/
 
@@ -28,11 +33,6 @@ static int okoSetAddr(mod_okodm_t *dm);
  @return EXIT_SUCCESS on success, EXIT_FAILURE otherwise.
  */
 static int okoWrite(int dmfd, int addr, int voltage);
-
-// HEADERS //
-/***********/
-
-#include "foam_modules-okodm.h"
 
 // ROUTINES //
 /************/
