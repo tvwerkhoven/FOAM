@@ -1,5 +1,6 @@
-# init the bin_programs variable
-bin_PROGRAMS = serial-test okodm-test daq2k-test modimg-test
+# install the test programs in a foam-test subdir
+foamtestdir = $(bindir)/foam-test
+foamtest_PROGRAMS = serial-test okodm-test daq2k-test modimg-test
 # itifg-test done manually
 
 # some shared compiler flags which must always be used
@@ -41,7 +42,7 @@ daq2k_test_CFLAGS = -std=c99
 # img module test
 modimg_test_SOURCES = $(SRCDIR)/foam_modules-img.c
 modimg_test_CPPFLAGS = -DFOAM_MODIMG_ALONE=1
-modimg_test_LDFLAGS = -lc -lm  `sdl-config --libs`
+modimg_test_LDFLAGS = -lc -lm  `sdl-config --libs` -lgd -lpng -lSDL_image
 modimg_test_CFLAGS = -std=c99 `sdl-config --cflags`
 
 # itifg test

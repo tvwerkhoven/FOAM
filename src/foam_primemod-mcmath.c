@@ -43,6 +43,7 @@ int modInitModule(control_t *ptc, config_t *cs_config) {
 	// populate ptc here
 	ptc->mode = AO_MODE_LISTEN;			// start in listen mode (safe bet, you probably want this)
 	ptc->calmode = CAL_INFL;			// this is not really relevant initialliy
+	ptc->logfrac = 100;			// log verbose messages only every 100 frames
 	ptc->wfs_count = 1;					// 2 FW, 1 WFS and 2 WFC
 	ptc->wfc_count = 2;
 	ptc->fw_count = 2;
@@ -141,7 +142,6 @@ int modInitModule(control_t *ptc, config_t *cs_config) {
 	cs_config->syslog_prepend = "foam-mm";	// prepend logging with 'foam'
 	cs_config->use_stdout = true;		// do use stdout
 	cs_config->loglevel = LOGDEBUG;		// log error, info and debug
-	cs_config->logfrac = 100;			// log verbose messages only every 100 frames
 	cs_config->infofile = NULL;			// don't log anything to file
 	cs_config->errfile = NULL;
 	cs_config->debugfile = NULL;
@@ -188,8 +188,8 @@ int modOpenLoop(control_t *ptc) {
 //	MMDarkFlatCorrByte(&(ptc->wfs[0]));
 	
 #ifdef FOAM_MCMATH_DISPLAY
-    if (ptc->frames % cs_config.logfrac == 0)
-        modDrawStuff(ptc->wfs[0], disp.screen, &shtrack);
+    if (ptc->frames % ptc->logfrac == 0)
+        modDrawStuff((&ptc->wfs[0]), disp.screen, &shtrack);
 #endif
 	return EXIT_SUCCESS;
 }

@@ -536,7 +536,7 @@ void modDrawStuff(wfs_t *wfsinfo, SDL_Surface *screen, mod_sh_track_t *shtrack) 
 
 void modDrawSens(wfs_t *wfsinfo, SDL_Surface *screen) {	
 	modBeginDraw(screen);
-	modDisplayImg(wfsinfo->image, wfsinfo->res, screen);
+	modDisplayImg(wfsinfo->image, wfsinfo->res, screen, wfsinfo->bpp);
 	modFinishDraw(screen);
 }
 

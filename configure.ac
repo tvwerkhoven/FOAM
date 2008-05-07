@@ -112,7 +112,7 @@ AC_ARG_ENABLE([mcmath],
 		yes) mcmath=true ;;
 		no)  mcmath=disabled ;;
 		*) AC_MSG_ERROR([bad value ${enableval} for --enable-mcmath]) ;;
-	esac],[mcmath=disabled])
+	esac],[mcmath=true])
 
 ### SIMULATION MODE ###
 #######################

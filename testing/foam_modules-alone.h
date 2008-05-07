@@ -1,6 +1,6 @@
 // Some definities necessary to run modules on their own
 
-#ifdef FOAM_MODULES_ALONE
+#ifndef FOAM_MODULES_ALONE
 #define FOAM_MODULES_ALONE
 
 #define FILENAMELEN 64
