@@ -188,7 +188,8 @@ int modOpenLoop(control_t *ptc) {
 //	MMDarkFlatCorrByte(&(ptc->wfs[0]));
 	
 #ifdef FOAM_MCMATH_DISPLAY
-	modDrawStuff(ptc, 0, disp.screen, &shtrack);
+    if (ptc->frames % cs_config.logfrac == 0)
+        modDrawStuff(ptc->wfs[0], disp.screen, &shtrack);
 #endif
 	return EXIT_SUCCESS;
 }

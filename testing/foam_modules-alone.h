@@ -1,5 +1,8 @@
 // Some definities necessary to run modules on their own
 
+#ifdef FOAM_MODULES_ALONE
+#define FOAM_MODULES_ALONE
+
 #define FILENAMELEN 64
 #define COMMANDLEN 1024
 
@@ -51,3 +54,5 @@ void logDebug(int flg, const char *msg, ...) {
 	vfprintf(stderr, msg, ap);
 	fprintf(stderr, "\n");
 }
+
+#endif //#ifdef FOAM_MODULES_ALONE

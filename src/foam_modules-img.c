@@ -316,7 +316,7 @@ int modWritePGMArr(char *fname, void *img, int datatype, coord_t res, int maxval
 	return EXIT_SUCCESS;
 }
 
-int modWritePNGArr(char *fname, void *imgc, coord_t res, int type) {
+int modWritePNGArr(char *fname, void *imgc, coord_t res, int datatype) {
 	FILE *fd;
 	float max, min, pix;
 	int x, y, i;
@@ -333,7 +333,7 @@ int modWritePNGArr(char *fname, void *imgc, coord_t res, int type) {
 
 	// Begin branching depending on datatype //
 	///////////////////////////////////////////
-	if (type == 0) {
+	if (datatype == 0) {
 		//imgc = (float *) imgc;
 		float *img = (float *) imgc;
 		min = max = (float) img[0];
@@ -353,7 +353,7 @@ int modWritePNGArr(char *fname, void *imgc, coord_t res, int type) {
 			}
 		}		
 	}
-	else if (type == 1) {
+	else if (datatype == 1) {
 		unsigned char *img = (unsigned char *) imgc;
 		
 		min = max = (float) img[0];

@@ -157,65 +157,66 @@ void drawDeltaLine(int x0, int y0, int dx, int dy, SDL_Surface *screen) {
 
 // Todo: fix img dereferencing
 /*
-int modDisplayRaw(void *img, coord_t res, int datatype, SDL_Surface *screen) {
-	// datatype == 2: float
-	// datatype == 1: char (uint8_t)
-	int x, y, i;
-	float max;
-	float min;
-	
-	// we need this loop to check the maximum and minimum intensity. 
-	for (x=0; x < res.x*res.y; x++) {
-		if (img[x] > max)
-			max = img[x];
-		if (img[x] < min)
-			min = img[x];
-	}
-	
-	logDebug(0, "Displaying image, min: %5.3f, max: %5.3f.", min, max);
-	
-	Uint32 color;
-	switch (screen->format->BytesPerPixel) {
-		case 1: { // Assuming 8-bpp
-			Uint8 *bufp;
-			
-			for (x=0; x<res.x; x++) {
-				for (y=0; y<res.y; y++) {
-					i = (int) ((img[y*res.x + x]-min)/(max-min)*255);
-					color = SDL_MapRGB(screen->format, i, i, i);
-					bufp = (Uint8 *)screen->pixels + y*screen->pitch + x;
-					*bufp = color;
-				}
-			}
-		}
-			break;
-		case 4: { // Probably 32-bpp
-			Uint32 *bufp;
-			
-			// draw the image itself
-			for (x=0; x<res.x; x++) {
-				for (y=0; y<res.y; y++) {
-					i = (int) ((img[y*res.x + x]-min)/(max-min)*255);
-					color = SDL_MapRGB(screen->format, i, i, i);
-					bufp = (Uint32 *)screen->pixels + y*screen->pitch/4 + x;
-					*bufp = color;
-				}
-			}
-		}
-			break;
-		default: {
-			logWarn("Warning, unsupported bitdepth encounterd (only 8 & 32 bpp implemented)");
-			return EXIT_FAILURE;
-		}
-	}
-	
-	return EXIT_SUCCESS;
-}
-*/
+ int modDisplayRaw(void *img, coord_t res, int datatype, SDL_Surface *screen) {
+ // datatype == 0: float
+ // datatype == 1: char (uint8_t)
+ int x, y, i;
+ float max;
+ float min;
+ 
+ // we need this loop to check the maximum and minimum intensity. 
+ for (x=0; x < res.x*res.y; x++) {
+ if (img[x] > max)
+ max = img[x];
+ if (img[x] < min)
+ min = img[x];
+ }
+ 
+ logDebug(0, "Displaying image, min: %5.3f, max: %5.3f.", min, max);
+ 
+ Uint32 color;
+ switch (screen->format->BytesPerPixel) {
+ case 1: { // Assuming 8-bpp
+ Uint8 *bufp;
+ 
+ for (x=0; x<res.x; x++) {
+ for (y=0; y<res.y; y++) {
+ i = (int) ((img[y*res.x + x]-min)/(max-min)*255);
+ color = SDL_MapRGB(screen->format, i, i, i);
+ bufp = (Uint8 *)screen->pixels + y*screen->pitch + x;
+ *bufp = color;
+ }
+ }
+ }
+ break;
+ case 4: { // Probably 32-bpp
+ Uint32 *bufp;
+ 
+ // draw the image itself
+ for (x=0; x<res.x; x++) {
+ for (y=0; y<res.y; y++) {
+ i = (int) ((img[y*res.x + x]-min)/(max-min)*255);
+ color = SDL_MapRGB(screen->format, i, i, i);
+ bufp = (Uint32 *)screen->pixels + y*screen->pitch/4 + x;
+ *bufp = color;
+ }
+ }
+ }
+ break;
+ default: {
+ logWarn("Warning, unsupported bitdepth encounterd (only 8 & 32 bpp implemented)");
+ return EXIT_FAILURE;
+ }
+ }
+ 
+ return EXIT_SUCCESS;
+ }
+ */
 
-int modDisplayImg(float *img, coord_t res, SDL_Surface *screen) {
+int modDisplayImgFloat(float *img, coord_t res, SDL_Surface *screen) {
 	// ONLY does float images as input
-	int x, y, i;
+	int x, y;
+    Uint8 i;
 	float max=img[0];
 	float min=img[0];
 	
@@ -224,7 +225,7 @@ int modDisplayImg(float *img, coord_t res, SDL_Surface *screen) {
 	for (x=0; x < res.x*res.y; x++) {
 		if (img[x] > max)
 			max = img[x];
-		if (img[x] < min)
+		else if (img[x] < min)
 			min = img[x];
 	}
 	
@@ -238,7 +239,7 @@ int modDisplayImg(float *img, coord_t res, SDL_Surface *screen) {
             
             for (x=0; x<res.x; x++) {
                 for (y=0; y<res.y; y++) {
-                    i = (int) ((img[y*res.x + x]-min)/(max-min)*255);
+                    i = (Uint8) ((img[y*res.x + x]-min)*255/(max-min));
                     color = SDL_MapRGB(screen->format, i, i, i);
                     bufp = (Uint8 *)screen->pixels + y*screen->pitch + x;
                     *bufp = color;
@@ -251,7 +252,7 @@ int modDisplayImg(float *img, coord_t res, SDL_Surface *screen) {
             
             for (x=0; x<res.x; x++) {
                 for (y=0; y<res.y; y++) {
-                    i = (int) ((img[y*res.x + x]-min)/(max-min)*255);
+                    i = (Uint8) ((img[y*res.x + x]-min)*255/(max-min));
                     color = SDL_MapRGB(screen->format, i, i, i);
                     bufp = (Uint16 *)screen->pixels + y*screen->pitch/2 + x;
                     *bufp = color;
@@ -264,7 +265,7 @@ int modDisplayImg(float *img, coord_t res, SDL_Surface *screen) {
             
             for (x=0; x<res.x; x++) {
                 for (y=0; y<res.y; y++) {
-                    i = (int) ((img[y*res.x + x]-min)/(max-min)*255);
+                    i = (Uint8) ((img[y*res.x + x]-min)*255/(max-min));
                     color = SDL_MapRGB(screen->format, i, i, i);
                     bufp = (Uint8 *)screen->pixels + y*screen->pitch + x * 3;
                     if(SDL_BYTEORDER == SDL_LIL_ENDIAN) {
@@ -286,7 +287,92 @@ int modDisplayImg(float *img, coord_t res, SDL_Surface *screen) {
             // draw the image itself
             for (x=0; x<res.x; x++) {
                 for (y=0; y<res.y; y++) {
-                    i = (int) ((img[y*res.x + x]-min)/(max-min)*255);
+                    i = (Uint8) ((img[y*res.x + x]-min)*255/(max-min));
+                    color = SDL_MapRGB(screen->format, i, i, i);
+                    bufp = (Uint32 *)screen->pixels + y*screen->pitch/4 + x;
+                    *bufp = color;
+                }
+            }
+        }
+            break;
+	}
+	
+	return EXIT_SUCCESS;
+}
+
+int modDisplayImgByte(uint8_t *img, coord_t res, SDL_Surface *screen) {
+	int x, y;
+    Uint8 i;                // SDL type
+	uint8_t max=img[0];     // stdint type
+	uint8_t min=img[0];
+	
+	// we need this loop to check the maximum and minimum intensity. 
+	for (x=0; x < res.x*res.y; x++) {
+		if (img[x] > max)
+			max = img[x];
+		else if (img[x] < min)
+			min = img[x];
+	}
+	
+	logDebug(0, "Displaying image, min: %d, max: %d.", min, max);
+    
+	Uint32 color;
+	// trust me, i'm not proud of this code either ;) TODO
+	switch (screen->format->BytesPerPixel) {
+		case 1: { // Assuming 8-bpp
+            Uint8 *bufp;
+            
+            for (x=0; x<res.x; x++) {
+                for (y=0; y<res.y; y++) {
+                    i = (Uint8) ((img[y*res.x + x]-min)*255/(max-min));
+                    color = SDL_MapRGB(screen->format, i, i, i);
+                    bufp = (Uint8 *)screen->pixels + y*screen->pitch + x;
+                    *bufp = color;
+                }
+            }
+        }
+			break;
+		case 2: {// Probably 15-bpp or 16-bpp
+            Uint16 *bufp;
+            
+            for (x=0; x<res.x; x++) {
+                for (y=0; y<res.y; y++) {
+                    i = (Uint8) ((img[y*res.x + x]-min)*255/(max-min));
+                    color = SDL_MapRGB(screen->format, i, i, i);
+                    bufp = (Uint16 *)screen->pixels + y*screen->pitch/2 + x;
+                    *bufp = color;
+                }
+            }
+        }
+			break;
+		case 3: { // Slow 24-bpp mode, usually not used
+            Uint8 *bufp;
+            
+            for (x=0; x<res.x; x++) {
+                for (y=0; y<res.y; y++) {
+                    i = (Uint8) ((img[y*res.x + x]-min)*255/(max-min));
+                    color = SDL_MapRGB(screen->format, i, i, i);
+                    bufp = (Uint8 *)screen->pixels + y*screen->pitch + x * 3;
+                    if(SDL_BYTEORDER == SDL_LIL_ENDIAN) {
+                        bufp[0] = color;
+                        bufp[1] = color >> 8;
+                        bufp[2] = color >> 16;
+                    } else {
+                        bufp[2] = color;
+                        bufp[1] = color >> 8;
+                        bufp[0] = color >> 16;
+                    }
+                }
+            }
+        }
+			break;
+		case 4: { // Probably 32-bpp
+            Uint32 *bufp;
+            
+            // draw the image itself
+            for (x=0; x<res.x; x++) {
+                for (y=0; y<res.y; y++) {
+                    i = (Uint8) ((img[y*res.x + x]-min)*255/(max-min));
                     color = SDL_MapRGB(screen->format, i, i, i);
                     bufp = (Uint32 *)screen->pixels + y*screen->pitch/4 + x;
                     *bufp = color;
@@ -295,9 +381,25 @@ int modDisplayImg(float *img, coord_t res, SDL_Surface *screen) {
         }
 			break;
 	}
-	
 	return EXIT_SUCCESS;
 }
+
+int modDisplayImg(void *img, coord_t res, SDL_Surface *screen, int databpp) {
+    // !!!:tim:20080507 this is probably not very clean (float is not 16 bpp)
+    // databpp == 16 
+    // databpp == 8 char (uint8_t)
+    if (databpp == 8) {
+        uint8_t *imgc = (uint8_t *) img;
+        modDisplayImgByte(imgc, res, screen);
+    }
+    else if (databpp == 16) {
+        float *imgc = (float *) img;
+        modDisplayImgFloat(imgc, res, screen);
+    }
+    
+    return EXIT_FAILURE;
+}
+    
 
 void drawPixel(SDL_Surface *screen, int x, int y, Uint8 R, Uint8 G, Uint8 B) {
 	Uint32 color = SDL_MapRGB(screen->format, R, G, B);
@@ -420,12 +522,10 @@ int modDrawGrid(coord_t gridres, SDL_Surface *screen) {
     
 	return EXIT_SUCCESS;
 }
-#endif
 
-#ifdef FOAM_MODULES_DISLAY_SHSUPPORT
-void modDrawStuff(control_t *ptc, int wfs, SDL_Surface *screen, mod_sh_track_t *shtrack) {
+void modDrawStuff(wfs_t *wfsinfo, SDL_Surface *screen, mod_sh_track_t *shtrack) {
 	modBeginDraw(screen);
-	modDisplayImg(ptc->wfs[wfs].image, ptc->wfs[wfs].res, screen);
+	modDisplayImg(wfsinfo->image, wfsinfo->res, screen, wfsinfo->bpp);
 	modDrawGrid(shtrack->cells, screen);
 	modDrawSubapts(shtrack, screen);
 	modDrawVecs(shtrack, screen);
@@ -434,9 +534,9 @@ void modDrawStuff(control_t *ptc, int wfs, SDL_Surface *screen, mod_sh_track_t *
 #endif
 
 
-void modDrawSens(control_t *ptc, int wfs, SDL_Surface *screen) {	
+void modDrawSens(wfs_t *wfsinfo, SDL_Surface *screen) {	
 	modBeginDraw(screen);
-	modDisplayImg(ptc->wfs[wfs].image, ptc->wfs[wfs].res, screen);	
+	modDisplayImg(wfsinfo->image, wfsinfo->res, screen);
 	modFinishDraw(screen);
 }
 
@@ -451,5 +551,7 @@ void modFinishDraw(SDL_Surface *screen) {
 	if ( SDL_MUSTLOCK(screen) )
 		SDL_UnlockSurface(screen);
 	
+    // SDL_Flip works for double buffered displays, but has a fallback 
+    // is double buffering is not used, so it's safe to use in any case
 	SDL_Flip(screen);
 }
