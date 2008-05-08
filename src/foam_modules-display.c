@@ -219,15 +219,23 @@ int modDisplayImgFloat(float *img, coord_t res, SDL_Surface *screen) {
     Uint8 i;
 	float max=img[0];
 	float min=img[0];
+	float shift, scale;   // use shift and scale to adjust the pixel intensities    
 	
 	// we need this loop to check the maximum and minimum intensity. 
-	// TODO: Do we need that? can't SDL do that?
-	for (x=0; x < res.x*res.y; x++) {
-		if (img[x] > max)
-			max = img[x];
-		else if (img[x] < min)
-			min = img[x];
-	}
+    if (disp->autocontrast == 1) {
+        for (x=0; x < res.x*res.y; x++) {
+            if (img[x] > max)
+                max = img[x];
+            else if (img[x] < min)
+                min = img[x];
+        }
+        shift = -min;
+        scale = 255/(max-min);
+    }
+    else {
+        shift = disp->brightness;
+        scale = disp->contrast;
+    }
 	
 	logDebug(0, "Displaying image, min: %5.3f, max: %5.3f.", min, max);
     
@@ -239,7 +247,7 @@ int modDisplayImgFloat(float *img, coord_t res, SDL_Surface *screen) {
             
             for (x=0; x<res.x; x++) {
                 for (y=0; y<res.y; y++) {
-                    i = (Uint8) ((img[y*res.x + x]-min)*255/(max-min));
+                    i = (Uint8) ((img[y*res.x + x]+shift)*scale);
                     color = SDL_MapRGB(screen->format, i, i, i);
                     bufp = (Uint8 *)screen->pixels + y*screen->pitch + x;
                     *bufp = color;
@@ -252,7 +260,7 @@ int modDisplayImgFloat(float *img, coord_t res, SDL_Surface *screen) {
             
             for (x=0; x<res.x; x++) {
                 for (y=0; y<res.y; y++) {
-                    i = (Uint8) ((img[y*res.x + x]-min)*255/(max-min));
+                    i = (Uint8) ((img[y*res.x + x]+shift)*scale);
                     color = SDL_MapRGB(screen->format, i, i, i);
                     bufp = (Uint16 *)screen->pixels + y*screen->pitch/2 + x;
                     *bufp = color;
@@ -265,7 +273,7 @@ int modDisplayImgFloat(float *img, coord_t res, SDL_Surface *screen) {
             
             for (x=0; x<res.x; x++) {
                 for (y=0; y<res.y; y++) {
-                    i = (Uint8) ((img[y*res.x + x]-min)*255/(max-min));
+                    i = (Uint8) ((img[y*res.x + x]+shift)*scale);
                     color = SDL_MapRGB(screen->format, i, i, i);
                     bufp = (Uint8 *)screen->pixels + y*screen->pitch + x * 3;
                     if(SDL_BYTEORDER == SDL_LIL_ENDIAN) {
@@ -287,7 +295,7 @@ int modDisplayImgFloat(float *img, coord_t res, SDL_Surface *screen) {
             // draw the image itself
             for (x=0; x<res.x; x++) {
                 for (y=0; y<res.y; y++) {
-                    i = (Uint8) ((img[y*res.x + x]-min)*255/(max-min));
+                    i = (Uint8) ((img[y*res.x + x]+shift)*scale);
                     color = SDL_MapRGB(screen->format, i, i, i);
                     bufp = (Uint32 *)screen->pixels + y*screen->pitch/4 + x;
                     *bufp = color;
@@ -300,19 +308,30 @@ int modDisplayImgFloat(float *img, coord_t res, SDL_Surface *screen) {
 	return EXIT_SUCCESS;
 }
 
-int modDisplayImgByte(uint8_t *img, coord_t res, SDL_Surface *screen) {
+int modDisplayImgByte(uint8_t *img, mod_display_t *disp) {
 	int x, y;
     Uint8 i;                // SDL type
 	uint8_t max=img[0];     // stdint type
 	uint8_t min=img[0];
-	
-	// we need this loop to check the maximum and minimum intensity. 
-	for (x=0; x < res.x*res.y; x++) {
-		if (img[x] > max)
-			max = img[x];
-		else if (img[x] < min)
-			min = img[x];
-	}
+	uint8_t shift, scale;   // use shift and scale to adjust the pixel intensities
+
+    if (disp->autocontrast == 1) {
+        // we need this loop to check the maximum and minimum intensity. 
+        for (x=0; x < disp->res.x * disp->res.y; x++) {
+            if (img[x] > max)
+                max = img[x];
+            else if (img[x] < min)
+                min = img[x];
+        }
+        shift = -min;
+        scale = 255/(max-min);
+    }
+    else {
+        // use static brightness and contrast
+        shift = disp->brightness;
+        scale = disp->contrast;
+    }
+    
 	
 	logDebug(0, "Displaying image, min: %d, max: %d.", min, max);
     
@@ -324,7 +343,7 @@ int modDisplayImgByte(uint8_t *img, coord_t res, SDL_Surface *screen) {
             
             for (x=0; x<res.x; x++) {
                 for (y=0; y<res.y; y++) {
-                    i = (Uint8) ((img[y*res.x + x]-min)*255/(max-min));
+                    i = (Uint8) ((img[y*res.x + x]+shift)*scale);
                     color = SDL_MapRGB(screen->format, i, i, i);
                     bufp = (Uint8 *)screen->pixels + y*screen->pitch + x;
                     *bufp = color;
@@ -337,7 +356,7 @@ int modDisplayImgByte(uint8_t *img, coord_t res, SDL_Surface *screen) {
             
             for (x=0; x<res.x; x++) {
                 for (y=0; y<res.y; y++) {
-                    i = (Uint8) ((img[y*res.x + x]-min)*255/(max-min));
+                    i = (Uint8) ((img[y*res.x + x]+shift)*scale);
                     color = SDL_MapRGB(screen->format, i, i, i);
                     bufp = (Uint16 *)screen->pixels + y*screen->pitch/2 + x;
                     *bufp = color;
@@ -350,7 +369,7 @@ int modDisplayImgByte(uint8_t *img, coord_t res, SDL_Surface *screen) {
             
             for (x=0; x<res.x; x++) {
                 for (y=0; y<res.y; y++) {
-                    i = (Uint8) ((img[y*res.x + x]-min)*255/(max-min));
+                    i = (Uint8) ((img[y*res.x + x]+shift)*scale);
                     color = SDL_MapRGB(screen->format, i, i, i);
                     bufp = (Uint8 *)screen->pixels + y*screen->pitch + x * 3;
                     if(SDL_BYTEORDER == SDL_LIL_ENDIAN) {
@@ -372,7 +391,7 @@ int modDisplayImgByte(uint8_t *img, coord_t res, SDL_Surface *screen) {
             // draw the image itself
             for (x=0; x<res.x; x++) {
                 for (y=0; y<res.y; y++) {
-                    i = (Uint8) ((img[y*res.x + x]-min)*255/(max-min));
+                    i = (Uint8) ((img[y*res.x + x]+shift)*scale);
                     color = SDL_MapRGB(screen->format, i, i, i);
                     bufp = (Uint32 *)screen->pixels + y*screen->pitch/4 + x;
                     *bufp = color;

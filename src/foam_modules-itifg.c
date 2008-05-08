@@ -29,7 +29,7 @@ int drvInitBoard(mod_itifg_cam_t *cam) {
 //		logWarn("%s: error linearising LUTs: %s", cam->device_name, strerror(errno));
 //		return EXIT_FAILURE;
 //	}
-/*	
+
 	if (ioctl(cam->fd, GIOC_SET_DEFCNF, NULL) < 0) {
 		close(cam->fd);
 		logWarn("%s: error setting camera configuration: %s", cam->device_name, strerror(errno));
@@ -41,7 +41,6 @@ int drvInitBoard(mod_itifg_cam_t *cam) {
 		logWarn("%s: error setting camera: %s", cam->device_name, strerror(errno));
 		return EXIT_FAILURE;
 	}
-	*/
 	
 	if (ioctl(cam->fd, GIOC_GET_CAMCNF, &(cam->itcam)) < 0) {
 		close(cam->fd);
@@ -189,7 +188,7 @@ int drvGetImg(mod_itifg_cam_t *cam, mod_itifg_buf_t *buf, struct timeval *timeou
 	off_t seeke, seekc;
 	int result;
 #ifdef FOAM_DEBUG
-	logDebug(0, "Grabbing image...");	
+	logDebug(0, "Grabbing image...");
 #endif
 	fd_set in_fdset, ex_fdset;
 	FD_ZERO (&in_fdset);
@@ -207,9 +206,7 @@ int drvGetImg(mod_itifg_cam_t *cam, mod_itifg_buf_t *buf, struct timeval *timeou
 	
 	if (result == 0) {
 		// timeout occured, return immediately
-#ifdef FOAM_DEBUG
-		logWarn("Timeout in drvGetImg().");	
-#endif
+		logInfo("Timeout in drvGetImg(). Might be an error.");	
 		return EXIT_SUCCESS;
 	}
 
@@ -321,6 +318,8 @@ int main(int argc, char *argv[]) {
 	disp.res.y = (int) camera.height;
 	disp.flags = SDL_HWSURFACE | SDL_DOUBLEBUF | SDL_RESIZABLE;
 	disp.autocontrast = 0;
+    disp.brightness = 0;
+    disp.contrast = 1;
 
 	modInitDraw(&disp);
 
@@ -339,9 +338,10 @@ int main(int argc, char *argv[]) {
 	int pix, pixs;
 	
 	lseek(camera.fd, +LONG_MAX, SEEK_END);
-	
+    logDebug("Giving 50 manual lseek images");
+    
 	// test images
-	for (i=0; i<10000; i++) {
+	for (i=0; i<50; i++) {
 		FD_ZERO (&in_fdset);
 		FD_ZERO (&ex_fdset);
 		FD_SET (camera.fd, &in_fdset);
@@ -409,6 +409,29 @@ int main(int argc, char *argv[]) {
 	}
 	lseek(camera.fd, -LONG_MAX, SEEK_END);
 	
+    logDebug(0, "Giving 10000 images using the module API, displaying every 100th");
+    clock_t last = clock();
+    clock_t cur;
+    float fps;
+    
+    drvInitGrab(cam);
+    for (i=0; i<10000; i++) {
+        
+        drvGetImg(cam, buf, NULL);
+        
+        if (i & 100 == 0) {
+            cur = clock();
+            fps = 100.0 / ((cur-last)/(float) CLOCKS_PER_SEC);
+            logDebug(0, "Drawing image, fps: %f", fps);
+            last = cur;
+            modBeginDraw(disp.screen);
+            modDisplayImgByte((uint8_t *) buf->data, res, disp.screen) ;
+            modFinishDraw(disp.screen);
+        }
+        
+    }
+    drvStopGrab(cam);
+    
 	
 	/*
 	lseek(camera.fd, +LONG_MAX, SEEK_END);
