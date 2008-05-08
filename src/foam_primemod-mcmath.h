@@ -80,7 +80,7 @@ typedef enum { //filter_t
 
 // These *must* be defined in a prime module
 int drvSetupHardware(control_t *ptc, aomode_t aomode, calmode_t calmode);
-int drvSetActuator(control_t *ptc, int wfc);
+int drvSetActuator(wfc_t *wfc);
 
 // These are McMath specific (for the time being)
 int MMAvgFramesByte(gsl_matrix_float *output, wfs_t *wfs, int rounds);

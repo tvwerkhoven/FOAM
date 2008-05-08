@@ -55,17 +55,16 @@
 #ifndef FOAM_MODULES_ITIFG
 #define FOAM_MODULES_ITIFG
 
-#ifdef FOAM_MODITIFG_ALONE
-#define FOAM_MODITIFG_DEBUG 1
-#endif
-
 #define FOAM_MODITIFG_MAXFD 1024	//!< Maximum FD that select() polls
 
 //#include "foam_modules-itifg.h"
 
 #ifdef FOAM_MODITIFG_ALONE
+#define FOAM_DEBUG 1
 // used for writing the frames to disk
 #include "foam_modules-img.h"
+// used for displaying stuff
+#include "foam_modules-display.h"
 // necessary for coord_t
 #include "foam_cs_library.h"
 #endif
@@ -85,7 +84,10 @@
 #include <sys/ioctl.h>	// for ioctl()
 #include <sys/mman.h>	// for mmap()
 
+#ifndef FOAM_MODITIFG_ALONE
+// itifg does not like timeval if built standalone...
 #include <sys/time.h>	// for timeval
+#endif
 
 // Old stuff from test_itifg begins here:
 //#include <signal.h> // ?

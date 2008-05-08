@@ -28,8 +28,8 @@
  
  There are several things that can be configured about this module. The following defines are used:
  \li \b FOAM_MODOKODM_MAXVOLT (255), the maximum voltage allowed (all voltages are logically AND'd with this value)
- \li \b FOAM_MODOKODM_ALONE (*undef*), ifdef, this module will compile on it's own, imlies FOAM_MODOKODM_DEBUG
- \li \b FOAM_MODOKODM_DEBUG (*undef*), ifdef, this module will give lowlevel debugs through printf
+ \li \b FOAM_MODOKODM_ALONE (*undef*), ifdef, this module will compile on it's own, imlies FOAM_DEBUG
+ \li \b FOAM_DEBUG (*undef*), ifdef, this module will give lowlevel debugs through printf
  
  \section Dependencies
  
@@ -66,7 +66,7 @@
 #define FOAM_MODOKODM_MAXVOLT 255		//!< Maximum voltage to set to the PCI card
 
 #ifdef FOAM_MODOKODM_ALONE
-#define FOAM_MODOKODM_DEBUG 1			//!< set to 1 for debugging, in that case this module compiles on its own
+#define FOAM_DEBUG 1			//!< set to 1 for debugging, in that case this module compiles on its own
 #endif
 
 // DATATYPES //

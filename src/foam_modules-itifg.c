@@ -9,7 +9,7 @@
 #include "foam_modules-itifg.h"
 
 int drvInitBoard(mod_itifg_cam_t *cam) {
-	int flags = O_RDWR | O_APPEND | O_SYNC | O_NONBLOCK;
+	int flags = O_RDWR | O_APPEND | O_SYNC; 
 	int zero = 0;
 	int one = 1;
 	int result;	
@@ -19,6 +19,9 @@ int drvInitBoard(mod_itifg_cam_t *cam) {
 		logWarn("Error opening device %s: %s", cam->device_name, strerror(errno));
 		return EXIT_FAILURE;
 	}
+#ifdef FOAM_DEBUG
+	logDebug(0, "Camera device '%s' opened with flags %d, fd = %d", cam->device_name, flags, cam->fd);
+#endif
 
 // ???:tim:20080408 might not be necessary?
 //	if (ioctl(cam->fd, GIOC_SET_LUT_LIN) < 0) {
@@ -26,7 +29,7 @@ int drvInitBoard(mod_itifg_cam_t *cam) {
 //		logWarn("%s: error linearising LUTs: %s", cam->device_name, strerror(errno));
 //		return EXIT_FAILURE;
 //	}
-	
+/*	
 	if (ioctl(cam->fd, GIOC_SET_DEFCNF, NULL) < 0) {
 		close(cam->fd);
 		logWarn("%s: error setting camera configuration: %s", cam->device_name, strerror(errno));
@@ -38,6 +41,7 @@ int drvInitBoard(mod_itifg_cam_t *cam) {
 		logWarn("%s: error setting camera: %s", cam->device_name, strerror(errno));
 		return EXIT_FAILURE;
 	}
+	*/
 	
 	if (ioctl(cam->fd, GIOC_GET_CAMCNF, &(cam->itcam)) < 0) {
 		close(cam->fd);
@@ -51,7 +55,7 @@ int drvInitBoard(mod_itifg_cam_t *cam) {
 		logWarn("%s: error reading camera configuration from file %s: %s", cam->device_name, cam->config_file, strerror(errno));
 		return EXIT_FAILURE;		
 	}
-#ifdef FOAM_MODITIFG_DEBUG
+#ifdef FOAM_DEBUG
 	logDebug(0, "Read config '%s'. Camera: '%s', exo: '%s'", cam->config_file, cam->camera_name, cam->exo_name);
 #endif
 	
@@ -66,7 +70,7 @@ int drvInitBoard(mod_itifg_cam_t *cam) {
 //		logWarn("%s: error setting timeout: %s", cam->device_name, strerror(errno));
 //		return EXIT_FAILURE;
 //	}
-//#ifdef FOAM_MODITIFG_DEBUG
+//#ifdef FOAM_DEBUG
 //	logDebug(0, "Timout set to {0,0}");
 //#endif
 	
@@ -81,7 +85,7 @@ int drvInitBoard(mod_itifg_cam_t *cam) {
 		logWarn("%s: error setting vertical decimation: %s", cam->device_name, strerror(errno));
 		return EXIT_FAILURE;
 	}
-#ifdef FOAM_MODITIFG_DEBUG
+#ifdef FOAM_DEBUG
 	logDebug(0, "decimation set to {1,1} (i.e. we want full frames)");
 #endif
 	
@@ -102,7 +106,7 @@ int drvInitBoard(mod_itifg_cam_t *cam) {
 		logWarn("%s: error getting depth: %s", cam->device_name, strerror(errno));
 		return EXIT_FAILURE;
 	}
-#ifdef FOAM_MODITIFG_DEBUG
+#ifdef FOAM_DEBUG
 	logDebug(0, "width x height x depth: %dx%dx%d", cam->width, cam->height, cam->depth);
 #endif
 	
@@ -117,7 +121,7 @@ int drvInitBoard(mod_itifg_cam_t *cam) {
 		logWarn("%s: error getting paged size: %s", cam->device_name, strerror(errno));
 		return EXIT_FAILURE;
 	}
-#ifdef FOAM_MODITIFG_DEBUG
+#ifdef FOAM_DEBUG
 	logDebug(0, "raw size: %d, paged size: %d", (int) cam->rawsize, (int) cam->pagedsize);
 #endif
 	
@@ -127,7 +131,7 @@ int drvInitBoard(mod_itifg_cam_t *cam) {
 		return EXIT_FAILURE;
 	}
 
-#ifdef FOAM_MODITIFG_DEBUG
+#ifdef FOAM_DEBUG
 	logDebug(0, "Camera configuration done.");
 #endif
 	
@@ -147,7 +151,7 @@ int drvInitBufs(mod_itifg_buf_t *buf, mod_itifg_cam_t *cam) {
 	buf->data = buf->map;
 	buf->info = (iti_info_t *)((char *)buf->data + cam->rawsize);
 
-#ifdef FOAM_MODITIFG_DEBUG
+#ifdef FOAM_DEBUG
 	logDebug(0, "mmap() successful.");
 #endif
 	
@@ -155,7 +159,7 @@ int drvInitBufs(mod_itifg_buf_t *buf, mod_itifg_cam_t *cam) {
 }
 
 int drvInitGrab(mod_itifg_cam_t *cam) {
-#ifdef FOAM_MODITIFG_DEBUG
+#ifdef FOAM_DEBUG
 	logDebug(0, "Starting grab, lseeking to %ld.", +LONG_MAX);
 #endif
 	
@@ -169,7 +173,7 @@ int drvInitGrab(mod_itifg_cam_t *cam) {
 }
 
 int drvStopGrab(mod_itifg_cam_t *cam) {
-#ifdef FOAM_MODITIFG_DEBUG
+#ifdef FOAM_DEBUG
 	logDebug(0, "Stopping grab, lseeking to %ld.", -LONG_MAX);
 #endif
 	// stop the framegrabber by seeking to -LONG_MAX
@@ -184,7 +188,7 @@ int drvStopGrab(mod_itifg_cam_t *cam) {
 int drvGetImg(mod_itifg_cam_t *cam, mod_itifg_buf_t *buf, struct timeval *timeout) {
 	off_t seeke, seekc;
 	int result;
-#ifdef FOAM_MODITIFG_DEBUG
+#ifdef FOAM_DEBUG
 	logDebug(0, "Grabbing image...");	
 #endif
 	fd_set in_fdset, ex_fdset;
@@ -203,13 +207,13 @@ int drvGetImg(mod_itifg_cam_t *cam, mod_itifg_buf_t *buf, struct timeval *timeou
 	
 	if (result == 0) {
 		// timeout occured, return immediately
-#ifdef FOAM_MODITIFG_DEBUG
+#ifdef FOAM_DEBUG
 		logWarn("Timeout in drvGetImg().");	
 #endif
 		return EXIT_SUCCESS;
 	}
 
-#ifdef FOAM_MODITIFG_DEBUG
+#ifdef FOAM_DEBUG
 	logDebug(0, "lseek 0 SEEK_CUR...");	
 #endif
 	seekc = lseek(cam->fd, 0, SEEK_CUR);
@@ -218,7 +222,7 @@ int drvGetImg(mod_itifg_cam_t *cam, mod_itifg_buf_t *buf, struct timeval *timeou
 		return EXIT_FAILURE;
 	}
 
-#ifdef FOAM_MODITIFG_DEBUG
+#ifdef FOAM_DEBUG
 	logDebug(0, "lseek 0 SEEK_END...");	
 #endif
 	seeke = lseek(cam->fd, 0, SEEK_END);
@@ -228,7 +232,7 @@ int drvGetImg(mod_itifg_cam_t *cam, mod_itifg_buf_t *buf, struct timeval *timeou
 	}
 	
 	
-#ifdef FOAM_MODITIFG_DEBUG
+#ifdef FOAM_DEBUG
 	logDebug(0, "Select returned: %d, SEEK_CUR: %d, SEEK_END: %d", result, (int) seekc, (int) seeke);	
 #endif
 
@@ -243,7 +247,7 @@ int drvGetImg(mod_itifg_cam_t *cam, mod_itifg_buf_t *buf, struct timeval *timeou
 	buf->info = (iti_info_t *)((char *)buf->data + cam->rawsize);
 
 
-#ifdef FOAM_MODITIFG_DEBUG
+#ifdef FOAM_DEBUG
 	logDebug(0, "lseek %d SEEK_CUR...", cam->pagedsize);	
 #endif
 	seekc = lseek(cam->fd, cam->pagedsize, SEEK_CUR);
@@ -252,7 +256,7 @@ int drvGetImg(mod_itifg_cam_t *cam, mod_itifg_buf_t *buf, struct timeval *timeou
 		logWarn("SEEK_CUR failed: %s", strerror(errno));
 		return EXIT_FAILURE;
 	}
-#ifdef FOAM_MODITIFG_DEBUG
+#ifdef FOAM_DEBUG
 	logDebug(0, "Select returned: %d, SEEK_CUR: %d", result, (int) seekc);	
 #endif
 	
@@ -294,8 +298,8 @@ int main(int argc, char *argv[]) {
 	char *file;
 	
 	camera.module = 48; // some number taken from test_itifg
-	strncpy(camera.device_name, "/dev/ic0dma", 512-1);
-	strncpy(camera.config_file, argv[1], 512-1);
+	camera.device_name = "/dev/ic0dma";
+	camera.config_file = argv[1];
 
 	buffer.frames = 4; // ringbuffer will be 4 frames big
 	
@@ -310,11 +314,15 @@ int main(int argc, char *argv[]) {
 	if (drvInitBufs(&buffer, &camera) != EXIT_SUCCESS)
 		return EXIT_FAILURE;
 
-	// init grab
-//	drvInitGrab(&camera);
-	// start grabbing with a 4 frame loop
-	//lseek(camera.fd, buffer.frames * camera.pagedsize, SEEK_END);
-	//lseek(camera.fd, buffer.frames * camera.pagedsize, SEEK_END);
+	// init display
+	mod_display_t disp;
+	disp.caption = "McMath - WFS";
+	disp.res.x = (int) camera.width;
+	disp.res.y = (int) camera.height;
+	disp.flags = SDL_HWSURFACE | SDL_DOUBLEBUF | SDL_RESIZABLE;
+	disp.autocontrast = 0;
+
+	modInitDraw(&disp);
 
 	coord_t res;
 	res.x = (int) camera.width;
@@ -330,12 +338,10 @@ int main(int argc, char *argv[]) {
 	fd_set in_fdset, ex_fdset;
 	int pix, pixs;
 	
-	goto longrun;
-
 	lseek(camera.fd, +LONG_MAX, SEEK_END);
 	
 	// test images
-	for (i=0; i<10; i++) {
+	for (i=0; i<10000; i++) {
 		FD_ZERO (&in_fdset);
 		FD_ZERO (&ex_fdset);
 		FD_SET (camera.fd, &in_fdset);
@@ -365,17 +371,9 @@ int main(int argc, char *argv[]) {
 		buf->data = (void *)((char *)buf->map);
 		buf->info = (iti_info_t *)((char *)buf->data + cam->rawsize);
 		
-		printf("images: \n");
-		for (f=0; f<buffer.frames; f++) {
-			pixs = 0;
-			for (j=0; j<25; j++) { 
-				pix = *( ((unsigned char *) (buffer.data)) + j + f*camera.pagedsize); 
-				pixs += pow(2,j) * pix;
-				printf("%d,", pix);
-			}
-			printf("H: %d\n", (int) sqrt(pixs));
-		}
-		usleep(5000);
+		modBeginDraw(disp.screen);
+		modDisplayImgByte((uint8_t *) buf->data, res, disp.screen) ;
+		modFinishDraw(disp.screen);
 		printf("images: \n");
 		for (f=0; f<buffer.frames; f++) {
 			pixs = 0;
@@ -411,11 +409,10 @@ int main(int argc, char *argv[]) {
 	}
 	lseek(camera.fd, -LONG_MAX, SEEK_END);
 	
-	longrun:
 	
+	/*
 	lseek(camera.fd, +LONG_MAX, SEEK_END);
 
-	int overcnt = 0;
 	printf("Starting long run\n");
 	int overcnt = 0;
 	// test images
@@ -447,14 +444,14 @@ int main(int argc, char *argv[]) {
 		if (seekc == -1)
 			printf("SEEK_CUR failed: %s\n", strerror(errno));
 		if (seekc < seekco) {
-			printf("Overflow at frame %d! from %d to %d, diff %d\n",i, seekco, seekc, seekco-seekc);
+			printf("Overflow at frame %d! from %d to %d, diff %d\n",i, (int)seekco, (int) seekc, (int) (seekco-seekc));
 			overcnt = 0;
 		}
 
 		seekco = seekc;
 		if (overcnt < 5) {
 			printf("lseek fd 0 seek_cur: %d | ", (int) seekc);
-			printf("frame from %d to %d or pos %d | ", seekc, seeke, (seekc / cam->pagedsize) % buffer.frames);
+			printf("frame from %d to %d or pos %d | ", (int) seekc,(int) seeke,(int) (seekc / cam->pagedsize) % buffer.frames);
 		}
 		
 		
@@ -858,6 +855,7 @@ int main(int argc, char *argv[]) {
 		}
 		printf("\n");
 	}
+	*/
 	
 	printf("\n");
 	printf("cleaning up now\n");
@@ -867,6 +865,7 @@ int main(int argc, char *argv[]) {
 	drvStopBufs(&buffer, &camera);
 	
 	// end
+	modFinishDraw(disp.screen);
 	printf("exit\n");
 	
 	return 0;

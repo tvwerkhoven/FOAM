@@ -37,8 +37,8 @@
 	
 	Configuration for this modules goes through define statements:
 	
-	\li	\b FOAM_MODDAQ2K_ALONE (*undef*), ifdef, compiles on its own (implies FOAM_MODDAQ2K_DEBUG)
-	\li \b FOAM_MODDAQ2K_DEBUG (*undef*), ifdef, gives lowlevel prinft debug statements
+	\li	\b FOAM_MODDAQ2K_ALONE (*undef*), ifdef, compiles on its own (implies FOAM_DEBUG)
+	\li \b FOAM_DEBUG (*undef*), ifdef, gives lowlevel prinft debug statements
 
 	\section Dependencies
  
@@ -63,7 +63,7 @@
 #include <unistd.h>			// for usleep
 
 #ifdef FOAM_MODDAQ2K_ALONE
-#define FOAM_MODDAQ2K_DEBUG 1				//!< set to 1 for debugging, in that case this module compiles on its own
+#define FOAM_DEBUG 1				//!< set to 1 for debugging, in that case this module compiles on its own
 #endif
 
 /*!

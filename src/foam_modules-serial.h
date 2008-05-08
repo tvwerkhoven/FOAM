@@ -20,7 +20,7 @@
  
  This module only supports these configurations:
  \li \b FOAM_MODSERIAL_ALONE (*undef*), ifdef, this module compiles on its own
- \li \b FOAM_MODSERIAL_DEBUG (*undef*), ifdef, gives lowlevel debug information
+ \li \b FOAM_DEBUG (*undef*), ifdef, gives lowlevel debug information
  
  \section History
  
@@ -42,7 +42,7 @@
 //#include <math.h>
 
 #ifdef FOAM_MODSERIAL_ALONE
-#define FOAM_MODSERIAL_DEBUG 1		//!< set to 1 for debugging, in that case this module compiles on its OwnerGrabButtonMask
+#define FOAM_DEBUG 1		//!< set to 1 for debugging, in that case this module compiles on its OwnerGrabButtonMask
 #endif
 
 /*!

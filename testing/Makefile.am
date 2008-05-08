@@ -1,7 +1,6 @@
 # install the test programs in a foam-test subdir
 foamtestdir = $(bindir)/foam-test
-foamtest_PROGRAMS = serial-test okodm-test daq2k-test modimg-test
-# itifg-test done manually
+foamtest_PROGRAMS = serial-test okodm-test daq2k-test modimg-test itifg-test
 
 # some shared compiler flags which must always be used
 # (not using AM_* flags because of http://sourceware.org/automake/automake.html#Flag-Variables-Ordering)
@@ -9,13 +8,13 @@ CFLAGS=-pipe -Wall -Wextra
 LDFLAGS=$(COMMON_LIBS) -lc
 
 # (un)comment this to toggle GSL inlining
-CPPFLAGS+=-DHAVE_INLINE -DGSL_RANGE_CHECK_OFF
+CPPFLAGS+=-DHAVE_INLINE -DGSL_RANGE_CHECK_OFF -DFOAM_DEBUG -I$(SRCDIR)
 
 # (un)comment this to toggle debugging
 CFLAGS+=-g -DDEBUG_ITIFG=255
 # (un)comment this to toggle malloc debugging
 HAVE_DMALLOC=1
-#LDFLAGS+=-ldmalloc 
+LDFLAGS+=-ldmalloc 
 
 SRCDIR=$(abs_top_srcdir)/src
 
@@ -40,8 +39,8 @@ daq2k_test_LDFLAGS = -lc -lm -ldaqx -Ldaq2k/lib
 daq2k_test_CFLAGS = -std=c99
 
 # img module test
-modimg_test_SOURCES = $(SRCDIR)/foam_modules-img.c
-modimg_test_CPPFLAGS = -DFOAM_MODIMG_ALONE=1
+modimg_test_SOURCES = $(SRCDIR)/foam_modules-img.c $(SRCDIR)/foam_cs_library.c
+modimg_test_CPPFLAGS = -DFOAM_MODIMG_ALONE=1 -include "foam_modules-alone.h"
 modimg_test_LDFLAGS = -lc -lm  `sdl-config --libs` -lgd -lpng -lSDL_image
 modimg_test_CFLAGS = -std=c99 `sdl-config --cflags`
 
@@ -51,14 +50,10 @@ modimg_test_CFLAGS = -std=c99 `sdl-config --cflags`
 #itifg_test_LDFLAGS = -lm -lc -lgd -lpng -lSDL_image `sdl-config --libs` /home/tim/foam/drivers/itifg/lib/libitifg.a 
 #itifg_test_CFLAGS = -Wall -g 
 
-# here comes the itifg hack:
-itifg-test: $(SRCDIR)/foam_modules-itifg.c
-	$(CC) $(CFLAGS) $(GFLAGS) $(LIFLAGS) $(LLFLAGS) \
-	-Iitifg/include  \
-	-Litifg/lib  \
-	-I../src/ \
-	-include "foam_modules-alone.h" \
-	-DFOAM_MODITIFG_ALONE=1 \
-	-o $@ $^ \
-	-litifg -lm -lc -g \
-	-lgd -lpng -lSDL_image `sdl-config --libs --cflags`
+# here comes itifg:
+itifg_test_SOURCES = $(SRCDIR)/foam_modules-itifg.c $(SRCDIR)/foam_cs_library.c $(SRCDIR)/foam_modules-img.c $(SRCDIR)/foam_modules-display.c
+itifg_test_CPPFLAGS = -DFOAM_MODITIFG_ALONE=1 -Iitifg/include -include "foam_modules-alone.h" -DLinux
+itifg_test_LDFLAGS = -lm -lc -lgd -lpng -lSDL_image `sdl-config --libs` -Litifg/lib
+itifg_test_CFLAGS = -std=c99  `sdl-config --cflags`
+itifg_test_LDADD = -litifg
+

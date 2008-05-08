@@ -40,7 +40,7 @@ static int okoWrite(int dmfd, int addr, int voltage);
 static int okoOpen(mod_okodm_t *dm) {
 	dm->fd = open(dm->port, O_RDWR);
 	if (dm->fd < 0) {	
-#ifdef FOAM_MODOKODM_DEBUG
+#ifdef FOAM_DEBUG
 		printf("Could not open port (%s) for Okotech DM: %s\n", dm->port, strerror(errno));
 #else
 		logWarn("Could not open port (%s) for Okotech DM: %s", dm->port, strerror(errno));
@@ -60,7 +60,7 @@ static int okoSetAddr(mod_okodm_t *dm) {
 	
 	// malloc address memory
 	if (dm->nchan != 38) {
-#ifdef FOAM_MODOKODM_DEBUG
+#ifdef FOAM_DEBUG
 		printf("Warning, number of actuators greater not equal to 38 (is %d). This will not work!\n", dm->nchan);
 #else
 		logWarn("Warning, number of actuators greater not equal to 38 (is %d). This will not work!", dm->nchan);
@@ -70,7 +70,7 @@ static int okoSetAddr(mod_okodm_t *dm) {
 
 	dm->addr = malloc((size_t) dm->nchan * sizeof(dm->addr));
 	if (dm->addr == NULL) {
-#ifdef FOAM_MODOKODM_DEBUG
+#ifdef FOAM_DEBUG
 		printf("Could not allocate memory for DM hardware addresses!\n");
 #else
 		logWarn("Could not allocate memory for DM hardware addresses!\n");
@@ -137,7 +137,7 @@ static int okoWrite(int dmfd, int addr, int voltage) {
 	
 	offset = lseek(dmfd, addr, SEEK_SET);
 	if (offset == (off_t) -1) {
-#ifdef FOAM_MODOKODM_DEBUG
+#ifdef FOAM_DEBUG
 		printf("Could not seek DM port: %s\n", strerror(errno));
 #else
 		logWarn("Could not seek DM port: %s", strerror(errno));
@@ -146,7 +146,7 @@ static int okoWrite(int dmfd, int addr, int voltage) {
 	}
 	w_out = write(dmfd, &volt8, 1);
 	if (w_out != 1) {
-#ifdef FOAM_MODOKODM_DEBUG
+#ifdef FOAM_DEBUG
 		printf("Could not write to DM port: %s\n", strerror(errno));
 #else
 		logWarn("Could not write to DM port: %s", strerror(errno));
@@ -163,7 +163,7 @@ int drvSetOkoDM(gsl_vector_float *ctrl, mod_okodm_t *dm) {
 
 // !!!:tim:20080414 removed, not really necessary, blame the user :P
 //	if (Okodminit != 1) {
-//#ifdef FOAM_MODOKODM_DEBUG
+//#ifdef FOAM_DEBUG
 //		printf("Mirror not initialized yet, please do that first\n");
 //#else
 //		logWarn("Mirror not initialized yet, please do that first");
@@ -178,11 +178,11 @@ int drvSetOkoDM(gsl_vector_float *ctrl, mod_okodm_t *dm) {
 		if (okoWrite(dm->fd, dm->addr[i], volt) != EXIT_SUCCESS)
 			return EXIT_FAILURE;
 
-#ifdef FOAM_MODOKODM_DEBUG
+#ifdef FOAM_DEBUG
 		//printf("(%d) ", volt);
 #endif		
 	}
-#ifdef FOAM_MODOKODM_DEBUG
+#ifdef FOAM_DEBUG
 	//printf("\n");
 #endif
 	
@@ -194,7 +194,7 @@ int drvRstOkoDM(mod_okodm_t *dm) {
 
 	// !!!:tim:20080414 removed, not really necessary, blame the user :P
 //	if (Okodminit != 1) {
-//#ifdef FOAM_MODOKODM_DEBUG
+//#ifdef FOAM_DEBUG
 //		printf("Mirror not initialized yet, please do that first\n");
 //#else
 //		logWarn("Mirror not initialized yet, please do that first");
@@ -231,7 +231,7 @@ int drvInitOkoDM(mod_okodm_t *dm) {
 int drvCloseOkoDM(mod_okodm_t *dm) {
 	// reset the mirror
 	if (drvRstOkoDM(dm) == EXIT_FAILURE) {
-#ifdef FOAM_MODOKODM_DEBUG
+#ifdef FOAM_DEBUG
 		printf("Could not reset the DM to voltage %d\n", dm->midvolt);
 #else
 		logWarn("Could not reset the DM to voltage %d", dm->midvolt);
@@ -240,7 +240,7 @@ int drvCloseOkoDM(mod_okodm_t *dm) {
 	
 	// Close access to the pci card
 	if (!(dm->fd >= 0)) {
-#ifdef FOAM_MODOKODM_DEBUG
+#ifdef FOAM_DEBUG
 		printf("DM fd not valid, this cannot be an open FD (fd is: %d)\n", dm->fd);
 #else
 		logWarn("DM fd not valid, this cannot be an open FD (fd is: %d)\n", dm->fd);
@@ -249,7 +249,7 @@ int drvCloseOkoDM(mod_okodm_t *dm) {
 	}
 	
 	if (close(dm->fd) < 0) {
-#ifdef FOAM_MODOKODM_DEBUG
+#ifdef FOAM_DEBUG
 		printf("Could not close port (%s) for Okotech DM: %s\n", dm->port, strerror(errno));
 #else
 		logWarn("Could not close port (%s) for Okotech DM: %s", dm->port, strerror(errno));

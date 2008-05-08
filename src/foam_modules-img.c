@@ -38,11 +38,6 @@
 // HEADERS //
 /***********/
 
-#ifdef FOAM_MODIMG_ALONE
-#define FOAM_MODIMG_DEBUG 1
-#include "foam_modules-alone.h"
-#endif
-
 #include "foam_modules-img.h"
 
 //void logErr(const char *msg, ...) {

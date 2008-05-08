@@ -8,6 +8,10 @@
 #ifndef FOAM_MODULES_IMG
 #define FOAM_MODULES_IMG
 
+#ifdef FOAM_MODIMG_ALONE
+#define FOAM_DEBUG 1
+#endif
+
 #include "foam_cs_library.h"		// we link to the main program here (i.e. we use common (log) functions)
 #include "SDL_image.h"				// we need this to read image files
 #include <gd.h>						// we need this to write png/jpg files

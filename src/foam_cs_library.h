@@ -19,7 +19,11 @@
 
 #include <string.h>
 #include <unistd.h>
+#ifndef FOAM_MODITIFG_ALONE
+// We must not include sys/time.h if we're only building the itifg module
+// This is a little ugly but somehow itifg decided to redefine timeval
 #include <sys/time.h>
+#endif
 #ifndef _GNU_SOURCE				
 #define _GNU_SOURCE				// for vasprintf / asprintf
 #endif
@@ -27,9 +31,15 @@
 #include <math.h>					// we need math
 #include <sys/socket.h>				// networking
 #include <arpa/inet.h>				// networking
+#ifndef FOAM_MODITIFG_ALONE
+// Same as above, itifg redefines u_int32_t
 #include <sys/types.h>
+#endif
 #include <sys/errno.h>
+#ifndef FOAM_MODITIFG_ALONE
+// Same as above, itifg redefines u_int32_t
 #include <stdlib.h>
+#endif
 #include <syslog.h> 				// used for syslogging
 #include <stdarg.h>
 #include <pthread.h> 				// threads

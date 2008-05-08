@@ -21,7 +21,7 @@ int drvSetSerial(const char *port, const char *cmd) {
 
 	
     if (fd == -1) {
-#ifdef FOAM_MODSERIAL_DEBUG
+#ifdef FOAM_DEBUG
 		printf("Unable to access serial port %s: %s\n", port, strerror(errno));
 #else
 		logErr("Unable to access serial port %s: %s", port, strerror(errno));
@@ -31,13 +31,13 @@ int drvSetSerial(const char *port, const char *cmd) {
 	else 
 		fcntl(fd, F_SETFL, 0);
 
-#ifdef FOAM_MODSERIAL_DEBUG
+#ifdef FOAM_DEBUG
 	printf("opened port '%s'\n", port);
 #endif
 	
     int n = write(fd, cmd, strlen(cmd));
     if (n == -1)
-#ifdef FOAM_MODSERIAL_DEBUG
+#ifdef FOAM_DEBUG
 		printf("Unable to write to serial port, asked to write %s (%d bytes) to %s, which failed: %s\n", \
 			   cmd, (int) strlen(cmd), port, strerror(errno));
 #else
@@ -48,7 +48,7 @@ int drvSetSerial(const char *port, const char *cmd) {
 	
     close(fd);
 	
-#ifdef FOAM_MODSERIAL_DEBUG
+#ifdef FOAM_DEBUG
 	printf("wrote to port\n");
 #endif
 	

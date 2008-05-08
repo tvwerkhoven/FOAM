@@ -3,21 +3,27 @@ bin_PROGRAMS =
 
 # some shared compiler flags which must always be used
 # (not using AM_* flags because of http://sourceware.org/automake/automake.html#Flag-Variables-Ordering)
-CFLAGS=-pipe -Wall -Wextra #-Wl,-verbose
-#-O3 -ftree-vectorize
+CFLAGS=-pipe -Wall -Wextra 
+# To diagnose linker errors:
+#CFLAGS+=-Wl,-verbose
+# To get some optimization:
+#CFLAGS+=-O3 -ftree-vectorize
+
 LDFLAGS=$(COMMON_LIBS) -lc
 
 # (un)comment this to toggle GSL inlining
-CPPFLAGS+=-DHAVE_INLINE -DGSL_RANGE_CHECK_OFF
+CPPFLAGS+=-DHAVE_INLINE -DGSL_RANGE_CHECK_OFF 
+# (un) comment this to toggle lowlevel debugging in some modules 
+# absolutely not recommended for production systems
+CPPFLAGS+=-DFOAM_DEBUG=1
+# This is necessary for itifg
+CPPFLAGS+= -DDEBUG_ITIFG=255 -DLinux
 
 # (un)comment this to toggle debugging
-CFLAGS+=-g -DDEBUG_ITIFG=255
-# (un)comment this to toggle malloc debugging
+CFLAGS+=-g
+# (un)comment these to toggle malloc debugging
 HAVE_DMALLOC=1
-#LDFLAGS+=-ldmalloc 
-
-# extra files that are not compiled
-# EXTRA_DIST =
+LDFLAGS+=-ldmalloc 
 
 # basic framework files which are always needed
 FRAME_SRC = foam_cs.c foam_library.c foam_cs_library.c
@@ -74,15 +80,6 @@ foamcs_simdm_CPPFLAGS = -include "foam_primemod-sim-dm.h"
 foamcs_simdm_CFLAGS = $(SIMULATION_CFLAGS)
 foamcs_simdm_LDFLAGS = $(SIMULATION_LIBS)
 endif
-
-# Compile some debug programs for the hardware (okodm, daq, serial, itifg)
-#if DEBUG
-#bin_PROGRAMS += foamcs-debug-okodm
-#foamcs_debug_okodm_SOURCES = foam_modules-okodm.c
-#foamcs_debug_okodm_CPPFLAGS = -D
-
-#endif
-
 
 if MCMATH
 # Compile mcmath site specific prime module

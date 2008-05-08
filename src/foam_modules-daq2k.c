@@ -55,7 +55,7 @@ static int initDaqDac(mod_daq2k_board_t *board) {
 	DaqError err;	
 	CHAR errmsg[512];
 
-#ifdef FOAM_MODDAQ2K_DEBUG
+#ifdef FOAM_DEBUG
 	printf("Opening %d DAC channels on board %s, channel...", board->nchans, board->device);
 #endif
 	
@@ -67,7 +67,7 @@ static int initDaqDac(mod_daq2k_board_t *board) {
 		// oops, we got an error! return immediately, and do not use Daqboard DAC routines anymore
 		if (err != DerrNoError) {
 			daqFormatError(err, (PCHAR) errmsg);
-#ifdef FOAM_MODDAQ2K_DEBUG
+#ifdef FOAM_DEBUG
 			printf("Error writing voltage to DAC ports for board %s: %s\n", board->device, errmsg);
 #else
 			logWarn("Error writing voltage to DAC ports for board %s: %s", board->device, errmsg);
@@ -75,13 +75,13 @@ static int initDaqDac(mod_daq2k_board_t *board) {
 			board->dacinit = 0;
 			return EXIT_FAILURE;
 		}
-#ifdef FOAM_MODDAQ2K_DEBUG
+#ifdef FOAM_DEBUG
 		printf("%d...", chan);
 #endif		
 		
 	}
 	
-#ifdef FOAM_MODDAQ2K_DEBUG
+#ifdef FOAM_DEBUG
 	printf("done!\n");
 #endif
 	
@@ -102,7 +102,7 @@ static int initDaqIOP2(mod_daq2k_board_t *board) {
 	//  first 0: A as output
 	//  second 0: B as output
 	// 3rd, 4th 1: C low and high nibble as inputs
-#ifdef FOAM_MODDAQ2K_DEBUG
+#ifdef FOAM_DEBUG
 	printf("Setting up P2 on board %s as: (0x%x, 0x%x, 0x%x, 0x%x) ", board->device, \
 		   board->iop2conf[0], board->iop2conf[1], \
 		   board->iop2conf[2], board->iop2conf[3]);
@@ -115,7 +115,7 @@ static int initDaqIOP2(mod_daq2k_board_t *board) {
 						   (BOOL) board->iop2conf[3], &config);
 	if (err != DerrNoError) {
 		daqFormatError(err, (PCHAR) errmsg);
-#ifdef FOAM_MODDAQ2K_DEBUG
+#ifdef FOAM_DEBUG
 		printf("Error configuring digital IO on 8255 for board %s: %s\n", board->device, errmsg);
 #else
 		logWarn("Error configuring digital IO on 8255 for board %s: %s", board->device, errmsg);
@@ -130,7 +130,7 @@ static int initDaqIOP2(mod_daq2k_board_t *board) {
 	
 	if (err != DerrNoError) {
 		daqFormatError(err, (PCHAR) errmsg);
-#ifdef FOAM_MODDAQ2K_DEBUG
+#ifdef FOAM_DEBUG
 		printf("Error configuring digital IO on 8255 for board %s: %s\n", board->device, errmsg);
 #else
 		logWarn("Error configuring digital IO on 8255 for board %s: %s", board->device, errmsg);
@@ -144,7 +144,7 @@ static int initDaqIOP2(mod_daq2k_board_t *board) {
 	daqIOWrite(board->fd, DiodtLocal8255, Diodp8255B, 0, DioepP2, 1);
 	daqIOWrite(board->fd, DiodtLocal8255, Diodp8255C, 0, DioepP2, 1);
 	
-#ifdef FOAM_MODDAQ2K_DEBUG
+#ifdef FOAM_DEBUG
 	printf("Successfully set up P2!\n");
 #endif
 	
@@ -158,14 +158,14 @@ int drvInitDaq2k(mod_daq2k_board_t *board) {
 	
 	board->fd = daqOpen(board->device);
 	if (board->fd == -1) {
-#ifdef FOAM_MODDAQ2K_DEBUG
+#ifdef FOAM_DEBUG
 		printf("Could not connect to board %s: %s\n", board->device, strerror(errno));
 #else
 		logWarn("Could not connect to board %s: %s", board->device, strerror(errno));
 #endif
 	}
 	
-#ifdef FOAM_MODDAQ2K_DEBUG
+#ifdef FOAM_DEBUG
 	printf("Opened daqboard %s\n", board->device);
 #endif
 	
@@ -177,7 +177,7 @@ int drvInitDaq2k(mod_daq2k_board_t *board) {
 
 	
 	if (board->dacinit != 1 && board->iop2init != 1) {
-#ifdef FOAM_MODDAQ2K_DEBUG
+#ifdef FOAM_DEBUG
 		printf("Failed to set up Daqboard %s\n", board->device);
 #else
 		logWarn("Failed to set up Daqboard %s", board->device);
@@ -187,20 +187,20 @@ int drvInitDaq2k(mod_daq2k_board_t *board) {
 
 	
 	if (board->iop2init != 1)
-#ifdef FOAM_MODDAQ2K_DEBUG
+#ifdef FOAM_DEBUG
 		printf("Failed to set IO ports on Daqboard %s\n", board->device);
 #else
 		logWarn("Failed to set IO ports on Daqboard %s", board->device);
 #endif
 	
 	if (board->dacinit != 1)
-#ifdef FOAM_MODDAQ2K_DEBUG
+#ifdef FOAM_DEBUG
 		printf("Failed to set up DAC units on Daqboard %s\n", board->device);
 #else
 		logWarn("Failed to set up DAC units on Daqboard %s", board->device);
 #endif
 	
-#ifdef FOAM_MODDAQ2K_DEBUG
+#ifdef FOAM_DEBUG
 	printf("Daqboard %s is now set up!\n", board->device);
 #endif
 	

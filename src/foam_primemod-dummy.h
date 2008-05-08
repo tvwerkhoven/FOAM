@@ -58,11 +58,11 @@ typedef enum { // axes_t
  This should be enough for now, but can be expanded to include other
  filterwheels as well.
  */
-typedef enum { //fwheel_t
+typedef enum { // filter_t
 	FILT_PINHOLE,	//!< Pinhole used for pinhole calibration
 	FILT_OPEN,		//!< Open position, don't filter
 	FILT_CLOSED		//!< Closed, don't let light through
-} fwheel_t;
+} filter_t;
 
 #include "config.h"
 #include "foam_cs_library.h"

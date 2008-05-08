@@ -26,33 +26,8 @@ typedef enum { //fwheel_t
 	FILT_PINHOLE,	
 	FILT_OPEN,		
 	FILT_CLOSED		
-} fwheel_t;
+} filter_t;
 
 #include "foam_cs_library.h"		
-
-void logErr(const char *msg, ...) {
-	va_list ap;
-	va_start(ap, msg);
-	vfprintf(stderr, msg, ap);
-	fprintf(stderr, "\n");
-}
-void logWarn(const char *msg, ...) {
-	va_list ap;
-	va_start(ap, msg);
-	vfprintf(stderr, msg, ap);
-	fprintf(stderr, "\n");
-}
-void logInfo(int flg, const char *msg, ...) {
-	va_list ap;
-	va_start(ap, msg);
-	vfprintf(stderr, msg, ap);
-	fprintf(stderr, "\n");
-}
-void logDebug(int flg, const char *msg, ...) {
-	va_list ap;
-	va_start(ap, msg);
-	vfprintf(stderr, msg, ap);
-	fprintf(stderr, "\n");
-}
 
 #endif //#ifdef FOAM_MODULES_ALONE
