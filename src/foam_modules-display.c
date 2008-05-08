@@ -43,9 +43,9 @@
 
 // these are not used atm, TvW 2008-05-06 17:07
 #define FOAM_MODDISPLAY_PRIO 1
-static pthread_t moddisplay_thread;
-static pthread_attr_t moddisplay_attr;
-static int moddisplay_drawing = 1;
+//static pthread_t moddisplay_thread;
+//static pthread_attr_t moddisplay_attr;
+//static int moddisplay_drawing = 1;
 
 // ROUTINES //
 /************/
@@ -213,7 +213,7 @@ void drawDeltaLine(int x0, int y0, int dx, int dy, SDL_Surface *screen) {
  }
  */
 
-int modDisplayImgFloat(float *img, coord_t res, SDL_Surface *screen) {
+int modDisplayImgFloat(float *img, mod_display_t *disp) {
 	// ONLY does float images as input
 	int x, y;
     Uint8 i;
@@ -223,7 +223,7 @@ int modDisplayImgFloat(float *img, coord_t res, SDL_Surface *screen) {
 	
 	// we need this loop to check the maximum and minimum intensity. 
     if (disp->autocontrast == 1) {
-        for (x=0; x < res.x*res.y; x++) {
+        for (x=0; x < disp->res.x*disp->res.y; x++) {
             if (img[x] > max)
                 max = img[x];
             else if (img[x] < min)
@@ -241,15 +241,15 @@ int modDisplayImgFloat(float *img, coord_t res, SDL_Surface *screen) {
     
 	Uint32 color;
 	// trust me, i'm not proud of this code either ;) TODO
-	switch (screen->format->BytesPerPixel) {
+	switch (disp->screen->format->BytesPerPixel) {
 		case 1: { // Assuming 8-bpp
             Uint8 *bufp;
             
-            for (x=0; x<res.x; x++) {
-                for (y=0; y<res.y; y++) {
-                    i = (Uint8) ((img[y*res.x + x]+shift)*scale);
-                    color = SDL_MapRGB(screen->format, i, i, i);
-                    bufp = (Uint8 *)screen->pixels + y*screen->pitch + x;
+            for (x=0; x<disp->res.x; x++) {
+                for (y=0; y<disp->res.y; y++) {
+                    i = (Uint8) ((img[y*disp->res.x + x]+shift)*scale);
+                    color = SDL_MapRGB(disp->screen->format, i, i, i);
+                    bufp = (Uint8 *)disp->screen->pixels + y*disp->screen->pitch + x;
                     *bufp = color;
                 }
             }
@@ -258,11 +258,11 @@ int modDisplayImgFloat(float *img, coord_t res, SDL_Surface *screen) {
 		case 2: {// Probably 15-bpp or 16-bpp
             Uint16 *bufp;
             
-            for (x=0; x<res.x; x++) {
-                for (y=0; y<res.y; y++) {
-                    i = (Uint8) ((img[y*res.x + x]+shift)*scale);
-                    color = SDL_MapRGB(screen->format, i, i, i);
-                    bufp = (Uint16 *)screen->pixels + y*screen->pitch/2 + x;
+            for (x=0; x<disp->res.x; x++) {
+                for (y=0; y<disp->res.y; y++) {
+                    i = (Uint8) ((img[y*disp->res.x + x]+shift)*scale);
+                    color = SDL_MapRGB(disp->screen->format, i, i, i);
+                    bufp = (Uint16 *)disp->screen->pixels + y*disp->screen->pitch/2 + x;
                     *bufp = color;
                 }
             }
@@ -271,11 +271,11 @@ int modDisplayImgFloat(float *img, coord_t res, SDL_Surface *screen) {
 		case 3: { // Slow 24-bpp mode, usually not used
             Uint8 *bufp;
             
-            for (x=0; x<res.x; x++) {
-                for (y=0; y<res.y; y++) {
-                    i = (Uint8) ((img[y*res.x + x]+shift)*scale);
-                    color = SDL_MapRGB(screen->format, i, i, i);
-                    bufp = (Uint8 *)screen->pixels + y*screen->pitch + x * 3;
+            for (x=0; x<disp->res.x; x++) {
+                for (y=0; y<disp->res.y; y++) {
+                    i = (Uint8) ((img[y*disp->res.x + x]+shift)*scale);
+                    color = SDL_MapRGB(disp->screen->format, i, i, i);
+                    bufp = (Uint8 *)disp->screen->pixels + y*disp->screen->pitch + x * 3;
                     if(SDL_BYTEORDER == SDL_LIL_ENDIAN) {
                         bufp[0] = color;
                         bufp[1] = color >> 8;
@@ -293,11 +293,11 @@ int modDisplayImgFloat(float *img, coord_t res, SDL_Surface *screen) {
             Uint32 *bufp;
             
             // draw the image itself
-            for (x=0; x<res.x; x++) {
-                for (y=0; y<res.y; y++) {
-                    i = (Uint8) ((img[y*res.x + x]+shift)*scale);
-                    color = SDL_MapRGB(screen->format, i, i, i);
-                    bufp = (Uint32 *)screen->pixels + y*screen->pitch/4 + x;
+            for (x=0; x<disp->res.x; x++) {
+                for (y=0; y<disp->res.y; y++) {
+                    i = (Uint8) ((img[y*disp->res.x + x]+shift)*scale);
+                    color = SDL_MapRGB(disp->screen->format, i, i, i);
+                    bufp = (Uint32 *)disp->screen->pixels + y*disp->screen->pitch/4 + x;
                     *bufp = color;
                 }
             }
@@ -337,15 +337,15 @@ int modDisplayImgByte(uint8_t *img, mod_display_t *disp) {
     
 	Uint32 color;
 	// trust me, i'm not proud of this code either ;) TODO
-	switch (screen->format->BytesPerPixel) {
+	switch (disp->screen->format->BytesPerPixel) {
 		case 1: { // Assuming 8-bpp
             Uint8 *bufp;
             
-            for (x=0; x<res.x; x++) {
-                for (y=0; y<res.y; y++) {
-                    i = (Uint8) ((img[y*res.x + x]+shift)*scale);
-                    color = SDL_MapRGB(screen->format, i, i, i);
-                    bufp = (Uint8 *)screen->pixels + y*screen->pitch + x;
+            for (x=0; x<disp->res.x; x++) {
+                for (y=0; y<disp->res.y; y++) {
+                    i = (Uint8) ((img[y*disp->res.x + x]+shift)*scale);
+                    color = SDL_MapRGB(disp->screen->format, i, i, i);
+                    bufp = (Uint8 *)disp->screen->pixels + y*disp->screen->pitch + x;
                     *bufp = color;
                 }
             }
@@ -354,11 +354,11 @@ int modDisplayImgByte(uint8_t *img, mod_display_t *disp) {
 		case 2: {// Probably 15-bpp or 16-bpp
             Uint16 *bufp;
             
-            for (x=0; x<res.x; x++) {
-                for (y=0; y<res.y; y++) {
-                    i = (Uint8) ((img[y*res.x + x]+shift)*scale);
-                    color = SDL_MapRGB(screen->format, i, i, i);
-                    bufp = (Uint16 *)screen->pixels + y*screen->pitch/2 + x;
+            for (x=0; x<disp->res.x; x++) {
+                for (y=0; y<disp->res.y; y++) {
+                    i = (Uint8) ((img[y*disp->res.x + x]+shift)*scale);
+                    color = SDL_MapRGB(disp->screen->format, i, i, i);
+                    bufp = (Uint16 *)disp->screen->pixels + y*disp->screen->pitch/2 + x;
                     *bufp = color;
                 }
             }
@@ -367,11 +367,11 @@ int modDisplayImgByte(uint8_t *img, mod_display_t *disp) {
 		case 3: { // Slow 24-bpp mode, usually not used
             Uint8 *bufp;
             
-            for (x=0; x<res.x; x++) {
-                for (y=0; y<res.y; y++) {
-                    i = (Uint8) ((img[y*res.x + x]+shift)*scale);
-                    color = SDL_MapRGB(screen->format, i, i, i);
-                    bufp = (Uint8 *)screen->pixels + y*screen->pitch + x * 3;
+            for (x=0; x<disp->res.x; x++) {
+                for (y=0; y<disp->res.y; y++) {
+                    i = (Uint8) ((img[y*disp->res.x + x]+shift)*scale);
+                    color = SDL_MapRGB(disp->screen->format, i, i, i);
+                    bufp = (Uint8 *)disp->screen->pixels + y*disp->screen->pitch + x * 3;
                     if(SDL_BYTEORDER == SDL_LIL_ENDIAN) {
                         bufp[0] = color;
                         bufp[1] = color >> 8;
@@ -389,11 +389,11 @@ int modDisplayImgByte(uint8_t *img, mod_display_t *disp) {
             Uint32 *bufp;
             
             // draw the image itself
-            for (x=0; x<res.x; x++) {
-                for (y=0; y<res.y; y++) {
-                    i = (Uint8) ((img[y*res.x + x]+shift)*scale);
-                    color = SDL_MapRGB(screen->format, i, i, i);
-                    bufp = (Uint32 *)screen->pixels + y*screen->pitch/4 + x;
+            for (x=0; x<disp->res.x; x++) {
+                for (y=0; y<disp->res.y; y++) {
+                    i = (Uint8) ((img[y*disp->res.x + x]+shift)*scale);
+                    color = SDL_MapRGB(disp->screen->format, i, i, i);
+                    bufp = (Uint32 *)disp->screen->pixels + y*disp->screen->pitch/4 + x;
                     *bufp = color;
                 }
             }
@@ -403,17 +403,17 @@ int modDisplayImgByte(uint8_t *img, mod_display_t *disp) {
 	return EXIT_SUCCESS;
 }
 
-int modDisplayImg(void *img, coord_t res, SDL_Surface *screen, int databpp) {
+int modDisplayImg(void *img, mod_display_t *disp, int databpp) {
     // !!!:tim:20080507 this is probably not very clean (float is not 16 bpp)
     // databpp == 16 
     // databpp == 8 char (uint8_t)
     if (databpp == 8) {
         uint8_t *imgc = (uint8_t *) img;
-        modDisplayImgByte(imgc, res, screen);
+        modDisplayImgByte(imgc, disp);
     }
     else if (databpp == 16) {
         float *imgc = (float *) img;
-        modDisplayImgFloat(imgc, res, screen);
+        modDisplayImgFloat(imgc, disp);
     }
     
     return EXIT_FAILURE;
@@ -542,21 +542,21 @@ int modDrawGrid(coord_t gridres, SDL_Surface *screen) {
 	return EXIT_SUCCESS;
 }
 
-void modDrawStuff(wfs_t *wfsinfo, SDL_Surface *screen, mod_sh_track_t *shtrack) {
-	modBeginDraw(screen);
-	modDisplayImg(wfsinfo->image, wfsinfo->res, screen, wfsinfo->bpp);
-	modDrawGrid(shtrack->cells, screen);
-	modDrawSubapts(shtrack, screen);
-	modDrawVecs(shtrack, screen);
-	modFinishDraw(screen);
+void modDrawStuff(wfs_t *wfsinfo, mod_display_t *disp, mod_sh_track_t *shtrack) {
+	modBeginDraw(disp->screen);
+	modDisplayImg(wfsinfo->image, disp, wfsinfo->bpp);
+	modDrawGrid(shtrack->cells, disp->screen);
+	modDrawSubapts(shtrack, disp->screen);
+	modDrawVecs(shtrack, disp->screen);
+	modFinishDraw(disp->screen);
 }
 #endif
 
 
-void modDrawSens(wfs_t *wfsinfo, SDL_Surface *screen) {	
-	modBeginDraw(screen);
-	modDisplayImg(wfsinfo->image, wfsinfo->res, screen, wfsinfo->bpp);
-	modFinishDraw(screen);
+void modDrawSens(wfs_t *wfsinfo, mod_display_t *disp, SDL_Surface *screen) {	
+	modBeginDraw(disp->screen);
+	modDisplayImg(wfsinfo->image, disp, wfsinfo->bpp);
+	modFinishDraw(disp->screen);
 }
 
 void modBeginDraw(SDL_Surface *screen) {

@@ -83,23 +83,22 @@ void drawLine(int x0, int y0, int x1, int y1, SDL_Surface*screen);
  this must not be bigger than the resolution of the SDL_Surface. Do not forget
  to call modBeginDraw()/modFinishDraw().
  
- @param [in] *img pointer to the image
- @param [in] res resolution of the image
- @param [in] *screen SDL_Surface to draw on
- @param [in] datatype The datatype of img (0 for float, 1 for uint8_t).
+ @param [in] *img void pointer to the image
+ @param [in] *disp pre-filled mod_display_t structure
+ @param [in] databpp The bitdepth of the image (8 for byte, 16 for float atm)
  */
-int modDisplayImg(void *img, coord_t res, SDL_Surface *screen, int datatype);
+int modDisplayImg(void *img, mod_display_t *disp, int databpp);
 
 
 /*!
  @brief This displays a byte image img with resolution res (called from modDisplayImg())
  */
-int modDisplayImgByte(uint8_t *img, coord_t res, SDL_Surface *screen);
+int modDisplayImgByte(uint8_t *img, mod_display_t *disp);
 
 /*!
  @brief This displays a float image img with resolution res (called from modDisplayImg())
  */
-int modDisplayImgFloat(float *img, coord_t res, SDL_Surface *screen);
+int modDisplayImgFloat(float *img, mod_display_t *disp);
 
 /*!
  @brief This draws one RGB pixel at a specific coordinate
@@ -152,7 +151,7 @@ int modDrawGrid(coord_t gridres, SDL_Surface *screen);
  You do \e not need to call modBeginDraw()/modFinishDraw() when using
  this routine.
  */
-void modDrawStuff(wfs_t *wfsinfo, SDL_Surface *screen, mod_sh_track_t *shtrack);
+void modDrawStuff(wfs_t *wfsinfo, mod_display_t *disp, mod_sh_track_t *shtrack);
 #endif
 
 /*!
@@ -162,7 +161,7 @@ void modDrawStuff(wfs_t *wfsinfo, SDL_Surface *screen, mod_sh_track_t *shtrack);
  You do \e not need to call modBeginDraw()/modFinishDraw() when using
  this routine.
  */
-void modDrawSens(wfs_t *wfsinfo, SDL_Surface *screen);
+void modDrawSens(wfs_t *wfsinfo, mod_display_t *disp, SDL_Surface *screen);
     
 /*!
  @brief Finish drawing (unlock the screen)

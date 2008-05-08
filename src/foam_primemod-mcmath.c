@@ -190,7 +190,8 @@ int modOpenInit(control_t *ptc) {
 
 int modOpenLoop(control_t *ptc) {
 	// get an image, without using a timeout
-	drvGetImg(&dalsacam, &buffer, NULL);
+	if (drvGetImg(&dalsacam, &buffer, NULL) != EXIT_SUCCESS)
+		return EXIT_FAILURE;
 
 //	MMDarkFlatCorrByte(&(ptc->wfs[0]));
 	

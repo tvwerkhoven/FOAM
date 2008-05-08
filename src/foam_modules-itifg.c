@@ -188,7 +188,7 @@ int drvGetImg(mod_itifg_cam_t *cam, mod_itifg_buf_t *buf, struct timeval *timeou
 	off_t seeke, seekc;
 	int result;
 #ifdef FOAM_DEBUG
-	logDebug(0, "Grabbing image...");
+//	logDebug(0, "Grabbing image...");
 #endif
 	fd_set in_fdset, ex_fdset;
 	FD_ZERO (&in_fdset);
@@ -206,12 +206,12 @@ int drvGetImg(mod_itifg_cam_t *cam, mod_itifg_buf_t *buf, struct timeval *timeou
 	
 	if (result == 0) {
 		// timeout occured, return immediately
-		logInfo("Timeout in drvGetImg(). Might be an error.");	
+		logInfo(0, "Timeout in drvGetImg(). Might be an error.");	
 		return EXIT_SUCCESS;
 	}
 
 #ifdef FOAM_DEBUG
-	logDebug(0, "lseek 0 SEEK_CUR...");	
+	//logDebug(0, "lseek 0 SEEK_CUR...");	
 #endif
 	seekc = lseek(cam->fd, 0, SEEK_CUR);
 	if (seekc == -1) {
@@ -220,7 +220,7 @@ int drvGetImg(mod_itifg_cam_t *cam, mod_itifg_buf_t *buf, struct timeval *timeou
 	}
 
 #ifdef FOAM_DEBUG
-	logDebug(0, "lseek 0 SEEK_END...");	
+	//logDebug(0, "lseek 0 SEEK_END...");	
 #endif
 	seeke = lseek(cam->fd, 0, SEEK_END);
 	if (seeke == -1) {
@@ -230,7 +230,7 @@ int drvGetImg(mod_itifg_cam_t *cam, mod_itifg_buf_t *buf, struct timeval *timeou
 	
 	
 #ifdef FOAM_DEBUG
-	logDebug(0, "Select returned: %d, SEEK_CUR: %d, SEEK_END: %d", result, (int) seekc, (int) seeke);	
+	//logDebug(0, "Select returned: %d, SEEK_CUR: %d, SEEK_END: %d", result, (int) seekc, (int) seeke);	
 #endif
 
 	// The next new image is located at the beginning of the buffer (buf->map)
@@ -245,7 +245,7 @@ int drvGetImg(mod_itifg_cam_t *cam, mod_itifg_buf_t *buf, struct timeval *timeou
 
 
 #ifdef FOAM_DEBUG
-	logDebug(0, "lseek %d SEEK_CUR...", cam->pagedsize);	
+	//logDebug(0, "lseek %d SEEK_CUR...", cam->pagedsize);	
 #endif
 	seekc = lseek(cam->fd, cam->pagedsize, SEEK_CUR);
 	//seek = lseek(cam->fd, seek, SEEK_CUR);
@@ -254,7 +254,7 @@ int drvGetImg(mod_itifg_cam_t *cam, mod_itifg_buf_t *buf, struct timeval *timeou
 		return EXIT_FAILURE;
 	}
 #ifdef FOAM_DEBUG
-	logDebug(0, "Select returned: %d, SEEK_CUR: %d", result, (int) seekc);	
+	//logDebug(0, "Select returned: %d, SEEK_CUR: %d", result, (int) seekc);	
 #endif
 	
 	return EXIT_SUCCESS;
@@ -294,6 +294,14 @@ int main(int argc, char *argv[]) {
 	mod_itifg_buf_t buffer;
 	char *file;
 	
+	// let's make ourselves important :)
+	struct sched_param schedp;
+	sched_getparam(0, &schedp);
+	schedp.sched_priority = 50;
+	if (sched_setscheduler(0,SCHED_FIFO, &schedp)) {
+		printf("Unable to make ourselves important (i.e. raise prio)\n");
+	}
+	
 	camera.module = 48; // some number taken from test_itifg
 	camera.device_name = "/dev/ic0dma";
 	camera.config_file = argv[1];
@@ -319,7 +327,7 @@ int main(int argc, char *argv[]) {
 	disp.flags = SDL_HWSURFACE | SDL_DOUBLEBUF | SDL_RESIZABLE;
 	disp.autocontrast = 0;
     disp.brightness = 0;
-    disp.contrast = 1;
+    disp.contrast = 20;
 
 	modInitDraw(&disp);
 
@@ -338,7 +346,7 @@ int main(int argc, char *argv[]) {
 	int pix, pixs;
 	
 	lseek(camera.fd, +LONG_MAX, SEEK_END);
-    logDebug("Giving 50 manual lseek images");
+    logDebug(0, "Giving 50 manual lseek images");
     
 	// test images
 	for (i=0; i<50; i++) {
@@ -372,7 +380,7 @@ int main(int argc, char *argv[]) {
 		buf->info = (iti_info_t *)((char *)buf->data + cam->rawsize);
 		
 		modBeginDraw(disp.screen);
-		modDisplayImgByte((uint8_t *) buf->data, res, disp.screen) ;
+		modDisplayImgByte((uint8_t *) buf->data, &disp) ;
 		modFinishDraw(disp.screen);
 		printf("images: \n");
 		for (f=0; f<buffer.frames; f++) {
@@ -410,8 +418,8 @@ int main(int argc, char *argv[]) {
 	lseek(camera.fd, -LONG_MAX, SEEK_END);
 	
     logDebug(0, "Giving 10000 images using the module API, displaying every 100th");
-    clock_t last = clock();
-    clock_t cur;
+    struct timeval last, cur;
+    gettimeofday(&last, NULL);
     float fps;
     
     drvInitGrab(cam);
@@ -419,13 +427,14 @@ int main(int argc, char *argv[]) {
         
         drvGetImg(cam, buf, NULL);
         
-        if (i & 100 == 0) {
-            cur = clock();
-            fps = 100.0 / ((cur-last)/(float) CLOCKS_PER_SEC);
-            logDebug(0, "Drawing image, fps: %f", fps);
+        if ((i % 100) == 0) {
+    		gettimeofday(&cur, NULL);
+            fps = (cur.tv_sec * 1000000 + cur.tv_usec)- (last.tv_sec*1000000 + last.tv_usec);
+	    fps = 100*1000000/fps;
+            logDebug(0, "Drawing image, fps: %f ", fps);
             last = cur;
             modBeginDraw(disp.screen);
-            modDisplayImgByte((uint8_t *) buf->data, res, disp.screen) ;
+            modDisplayImgByte((uint8_t *) buf->data, &disp) ;
             modFinishDraw(disp.screen);
         }
         
