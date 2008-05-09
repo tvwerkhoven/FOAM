@@ -1,10 +1,10 @@
 /*! 
-	@file foam_primemod-mcmath.c
-	@author @authortim
-	@date isoD	2008-04-18
-
-	@brief This is the McMath prime-module which can be used at that telescope.
-*/
+ @file foam_primemod-mcmath.c
+ @author @authortim
+ @date isoD	2008-04-18
+ 
+ @brief This is the McMath prime-module which can be used at that telescope.
+ */
 
 // HEADERS //
 /***********/
@@ -94,7 +94,7 @@ int modInitModule(control_t *ptc, config_t *cs_config) {
 	ptc->filter[0].filters[1] = FILT_OPEN;
     ptc->filter[0].filters[2] = FILT_TARGET;
     ptc->filter[0].filters[3] = FILT_CLOSED;
-
+	
 	ptc->filter[1].name = "WFS FW";
 	ptc->filter[1].id = 1;
 	ptc->filter[1].nfilts = 2;
@@ -157,7 +157,7 @@ int modInitModule(control_t *ptc, config_t *cs_config) {
 	cs_config->infofile = NULL;			// don't log anything to file
 	cs_config->errfile = NULL;
 	cs_config->debugfile = NULL;
-
+	
 #ifdef FOAM_MCMATH_DISPLAY
 	// init display
 	disp.caption = "McMath - WFS";
@@ -175,7 +175,7 @@ int modInitModule(control_t *ptc, config_t *cs_config) {
 	
 	drvInitBoard(&dalsacam);
 	drvInitBufs(&buffer, &dalsacam);
-
+	
 	// update the pointer to the wfs image
 	ptc->wfs[0].image = buffer.data;
 	
@@ -202,13 +202,13 @@ int modOpenInit(control_t *ptc) {
 
 int modOpenLoop(control_t *ptc) {
 	// get an image, without using a timeout
-	if (drvGetImg(&dalsacam, &buffer, NULL) != EXIT_SUCCESS)
+	if (drvGetImg(&dalsacam, &buffer, NULL, &(wfs->image)) != EXIT_SUCCESS)
 		return EXIT_FAILURE;
-
+	
 	// update the pointer to the wfs image
 	ptc->wfs[0].image = buffer.data;
-
-//	MMDarkFlatCorrByte(&(ptc->wfs[0]));
+	
+	//	MMDarkFlatCorrByte(&(ptc->wfs[0]));
 	
 #ifdef FOAM_MCMATH_DISPLAY
     if (ptc->frames % ptc->logfrac == 0) {
@@ -235,7 +235,7 @@ int modClosedInit(control_t *ptc) {
 
 int modClosedLoop(control_t *ptc) {
 	// get an image, without using a timeout
-	drvGetImg(&dalsacam, &buffer, NULL);
+	drvGetImg(&dalsacam, &buffer, NULL, &(wfs->image));
 	// update the pointer to the wfs image
 	ptc->wfs[0].image = buffer.data;
 	
@@ -245,7 +245,7 @@ int modClosedLoop(control_t *ptc) {
 int modClosedFinish(control_t *ptc) {
 	// stop grabbing frames
 	drvStopGrab(&dalsacam);
-
+	
 	return EXIT_SUCCESS;
 }
 
@@ -263,7 +263,7 @@ int modCalibrate(control_t *ptc) {
 		modOpenInit(ptc);
 		MMAvgFramesByte(ptc->wfs[0].flatim, &(ptc->wfs[0]), 100);
 	}
-
+	
 	return EXIT_SUCCESS;
 }
 
@@ -281,14 +281,14 @@ int modMessage(control_t *ptc, const client_t *client, char *list[], const int c
  	if (strcmp(list[0],"help") == 0) {
 		// give module specific help here
 		if (count > 1) { 
-
+			
 			if (strcmp(list[1], "display") == 0) {
 				tellClient(client->buf_ev, "\
-200 OK HELP DISPLAY\n\
-display <raw|calib>:    display raw ccd output or calibrated image with meta-info.\n\
-resetdm [voltage]:      reset the DM to a certain voltage for all acts. default=0\n\
-resetdaq [voltage]:     reset the DAQ analog outputs to a certain voltage. default=0\n\
-");
+						   200 OK HELP DISPLAY\n\
+						   display <raw|calib>:    display raw ccd output or calibrated image with meta-info.\n\
+						   resetdm [voltage]:      reset the DM to a certain voltage for all acts. default=0\n\
+						   resetdaq [voltage]:     reset the DAQ analog outputs to a certain voltage. default=0\n\
+						   ");
 			}
 			else // we don't know. tell this to parseCmd by returning 0
 				return 0;
@@ -335,7 +335,7 @@ resetdaq [voltage]:     reset the DAQ analog outputs to a certain voltage. defau
 					tellClients("200 OK RESETDM %dV", tmpint);
 				else
 					tellClient(client->buf_ev, "300 ERROR RESETTING DM");
-					
+				
 			}
 			else {
 				tellClient(client->buf_ev, "403 INCORRECT VOLTAGE!");
@@ -450,13 +450,13 @@ int MMAvgFramesByte(gsl_matrix_float *output, wfs_t *wfs, int rounds) {
 	for (k=0; k<rounds; k++) {
 		fprintf(stderr, ".");
         logDebug(LOG_NOFORMAT, ".");
-		drvGetImg(&dalsacam, &buffer, NULL);
+		drvGetImg(&dalsacam, &buffer, NULL, &(wfs->image));
 		
 		for (j=0; j<wfs->res.x; j++) {
 			for (i=0; i<wfs->res.y; i++) {
 				gsl_matrix_float_set(output, i, j, \
-					 (float) gsl_matrix_float_get(output, i, j) + \
-					 (uint8_t) imagesrc[j*wfs->res.x +i]);
+									 (float) gsl_matrix_float_get(output, i, j) + \
+									 (uint8_t) imagesrc[j*wfs->res.x +i]);
 			}
 		}
 		gsl_matrix_float_scale( output, 1/(float) rounds);

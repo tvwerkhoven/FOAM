@@ -224,9 +224,10 @@ int drvStopGrab(mod_itifg_cam_t *cam);
  @param [in] *buf Struct previously filled by a drvInitBufs() call.
  @param [in] *cam Struct previously filled by a drvInitBoard() call.
  @param [in] *timeout Timeout used with the select() call. Use NULL to disable
+ @param [out] **newdata Pass the address of a void pointer here and that pointer will point to the new data upon succesful completion, can ben NULL.
  @return EXIT_SUCCESS on new frame or timeout, EXIT_FAILURE otherwise. 
  */
-int drvGetImg(mod_itifg_cam_t *cam, mod_itifg_buf_t *buf, struct timeval *timeout);
+int drvGetImg(mod_itifg_cam_t *cam, mod_itifg_buf_t *buf, struct timeval *timeout, void **newdata);
 
 /*!
  @brief Stops a framegrabber board
