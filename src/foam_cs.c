@@ -258,7 +258,7 @@ void checkFieldFiles(wfs_t *wfsinfo) {
 			// to indicate we need to do darkfield calibration, set .darkim
 			// to NULL
 			logInfo(0, "Darkfield file (%s) could not be opened, will create darkfield calibration later (%s).", wfsinfo->darkfile, strerror(errno));
-			//wfsinfo->darkim = NULL;
+			wfsinfo->darkim = NULL;
 		}
 		else {
 			// if we can open the file, there is already darkfield calibration

@@ -202,7 +202,7 @@ int modOpenInit(control_t *ptc) {
 
 int modOpenLoop(control_t *ptc) {
 	// get an image, without using a timeout
-	if (drvGetImg(&dalsacam, &buffer, NULL, &(wfs->image)) != EXIT_SUCCESS)
+	if (drvGetImg(&dalsacam, &buffer, NULL, &(ptc->wfs->image)) != EXIT_SUCCESS)
 		return EXIT_FAILURE;
 		
 	
@@ -219,8 +219,7 @@ int modOpenLoop(control_t *ptc) {
 
 int modOpenFinish(control_t *ptc) {
 	// stop grabbing frames
-	drvStopGrab(&dalsacam);
-	return EXIT_SUCCESS;
+	return drvStopGrab(&dalsacam);
 }
 
 // CLOSED LOOP ROUTINES //
@@ -233,7 +232,7 @@ int modClosedInit(control_t *ptc) {
 
 int modClosedLoop(control_t *ptc) {
 	// get an image, without using a timeout
-	drvGetImg(&dalsacam, &buffer, NULL, &(wfs->image));
+	drvGetImg(&dalsacam, &buffer, NULL, &(ptc->wfs->image));
 	// update the pointer to the wfs image
 	ptc->wfs[0].image = buffer.data;
 	
@@ -253,12 +252,26 @@ int modClosedFinish(control_t *ptc) {
 int modCalibrate(control_t *ptc) {
 	if (ptc->calmode == CAL_DARK) {
 		// take 100 dark frames, and average
-		modOpenInit(ptc);
+		if (modOpenInit(ptc) != EXIT_SUCCESS) {
+			logDebug(0, "could not init darkfielding");
+			return EXIT_FAILURE;
+		}
+
+		// check if memory is allocated yet
+		if (ptc->wfs[0].darkim == NULL) {
+			ptc->wfs[0].darkim = gsl_matrix_float_alloc(ptc->wfs[0].res.x, ptc->wfs[0].res.y);
+		}
+		logDebug(0,"Darkfield image allocated, trying to get 100 images");
+
 		MMAvgFramesByte(ptc->wfs[0].darkim, &(ptc->wfs[0]), 100);
 	}
 	else if (ptc->calmode == CAL_FLAT) {
 		// take 100 flat frames, and average
 		modOpenInit(ptc);
+		// check if memory is allocated yet
+		if (ptc->wfs[0].flatim == NULL) {
+			ptc->wfs[0].flatim = gsl_matrix_float_alloc(ptc->wfs[0].res.x, ptc->wfs[0].res.y);
+		}
 		MMAvgFramesByte(ptc->wfs[0].flatim, &(ptc->wfs[0]), 100);
 	}
 	
@@ -373,12 +386,14 @@ int modMessage(control_t *ptc, const client_t *client, char *list[], const int c
 				ptc->mode = AO_MODE_CAL;
 				ptc->calmode = CAL_DARK;
                 tellClient(client->buf_ev, "200 OK DARKFIELDING NOW");
+		pthread_cond_signal(&mode_cond);
 				// add message to the users
 			}
 			else if (strcmp(list[1], "flat") == 0) {
 				ptc->mode = AO_MODE_CAL;
 				ptc->calmode = CAL_FLAT;
                 tellClient(client->buf_ev, "200 OK FLATFIELDING NOW");
+		pthread_cond_signal(&mode_cond);
 			}
 			else {
 				tellClient(client->buf_ev, "401 UNKNOWN CALIBRATION");

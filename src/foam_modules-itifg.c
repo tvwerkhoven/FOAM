@@ -429,7 +429,7 @@ int main(int argc, char *argv[]) {
     drvInitGrab(cam);
     for (i=0; i<500; i++) {
         
-        drvGetImg(cam, buf, NULL);
+        drvGetImg(cam, buf, NULL, NULL);
         
         if ((i % 100) == 0) {
     		gettimeofday(&cur, NULL);
