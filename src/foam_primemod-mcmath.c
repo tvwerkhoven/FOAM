@@ -166,6 +166,9 @@ int modInitModule(control_t *ptc, config_t *cs_config) {
 	
 	drvInitBoard(&dalsacam);
 	drvInitBufs(&buffer, &dalsacam);
+
+	// update the pointer to the wfs image
+	ptc->wfs[0].image = buffer.data;
 	
 	return EXIT_SUCCESS;
 }
@@ -193,11 +196,16 @@ int modOpenLoop(control_t *ptc) {
 	if (drvGetImg(&dalsacam, &buffer, NULL) != EXIT_SUCCESS)
 		return EXIT_FAILURE;
 
+	// update the pointer to the wfs image
+	ptc->wfs[0].image = buffer.data;
+
 //	MMDarkFlatCorrByte(&(ptc->wfs[0]));
 	
 #ifdef FOAM_MCMATH_DISPLAY
-    if (ptc->frames % ptc->logfrac == 0)
-        modDrawStuff((&ptc->wfs[0]), disp.screen, &shtrack);
+    if (ptc->frames % ptc->logfrac == 0) {
+		modDrawStuff((&ptc->wfs[0]), &disp, &shtrack);
+	    logInfo(0, "Current framerate: %.2f FPS", ptc->fps);
+    }
 #endif
 	return EXIT_SUCCESS;
 }
@@ -219,7 +227,8 @@ int modClosedInit(control_t *ptc) {
 int modClosedLoop(control_t *ptc) {
 	// get an image, without using a timeout
 	drvGetImg(&dalsacam, &buffer, NULL);
-	
+	// update the pointer to the wfs image
+	ptc->wfs[0].image = buffer.data;
 	
 	return EXIT_SUCCESS;
 }

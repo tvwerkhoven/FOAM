@@ -324,12 +324,15 @@ int main(int argc, char *argv[]) {
 	disp.caption = "McMath - WFS";
 	disp.res.x = (int) camera.width;
 	disp.res.y = (int) camera.height;
-	disp.flags = SDL_HWSURFACE | SDL_DOUBLEBUF | SDL_RESIZABLE;
+	disp.flags = SDL_HWSURFACE | SDL_DOUBLEBUF;
 	disp.autocontrast = 0;
     disp.brightness = 0;
     disp.contrast = 20;
 
 	modInitDraw(&disp);
+
+	printf("Reseting framegrabber now...\n");
+	lseek(camera.fd, -LONG_MAX, SEEK_END);
 
 	coord_t res;
 	res.x = (int) camera.width;
@@ -423,7 +426,7 @@ int main(int argc, char *argv[]) {
     float fps;
     
     drvInitGrab(cam);
-    for (i=0; i<10000; i++) {
+    for (i=0; i<500; i++) {
         
         drvGetImg(cam, buf, NULL);
         

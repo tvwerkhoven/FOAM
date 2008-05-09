@@ -542,13 +542,13 @@ int modDrawGrid(coord_t gridres, SDL_Surface *screen) {
 	return EXIT_SUCCESS;
 }
 
-void modDrawStuff(wfs_t *wfsinfo, mod_display_t *disp, mod_sh_track_t *shtrack) {
-	modBeginDraw(disp->screen);
-	modDisplayImg(wfsinfo->image, disp, wfsinfo->bpp);
-	modDrawGrid(shtrack->cells, disp->screen);
-	modDrawSubapts(shtrack, disp->screen);
-	modDrawVecs(shtrack, disp->screen);
-	modFinishDraw(disp->screen);
+void modDrawStuff(wfs_t *wfsinfo, mod_display_t *display, mod_sh_track_t *shtrack) {
+	modBeginDraw(display->screen);
+	modDisplayImg(wfsinfo->image, display, wfsinfo->bpp);
+	modDrawGrid(shtrack->cells, display->screen);
+	modDrawSubapts(shtrack, display->screen);
+	modDrawVecs(shtrack, display->screen);
+	modFinishDraw(display->screen);
 }
 #endif
 

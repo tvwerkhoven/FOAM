@@ -91,7 +91,7 @@ int main(int argc, char *argv[]) {
 	
 	// BEGIN FOAM //
 	/**************/
-	logInfo(LOG_NOFORMAT,"      ___           ___           ___           ___     \n\
+	logInfo(LOG_NOFORMAT, "      ___           ___           ___           ___     \n\
      /\\  \\         /\\  \\         /\\  \\         /\\__\\    \n\
     /::\\  \\       /::\\  \\       /::\\  \\       /::|  |   \n\
    /:/\\:\\  \\     /:/\\:\\  \\     /:/\\:\\  \\     /:|:|  |   \n\
@@ -159,6 +159,8 @@ int main(int argc, char *argv[]) {
 	struct sigaction act;
 	
 	act.sa_handler = catchSIGINT;
+	act.sa_flags = 0;		// No special flags
+	act.sa_mask = signal_mask;	// Use this mask
 	sigaction(SIGINT, &act, NULL);
 	pthread_sigmask (SIG_UNBLOCK, &signal_mask, NULL);
 	
@@ -474,10 +476,15 @@ int initLogFiles() {
 }
 
 void modeOpen() {
-	ptc.frames++;
+	// for FPS tracking
+	struct timeval last, cur;
+	long lastframes, curframes;
+	gettimeofday(&last, NULL);
+	lastframes = ptc.frames;
+
 	logInfo(0, "Entering open loop.");
 
-	if (ptc.wfs_count == 0) {				// we need wave front sensors
+	if (ptc.wfs_count == 0) {	// we need wave front sensors
 		logWarn("Error, no WFSs defined.");
 		ptc.mode = AO_MODE_LISTEN;
 		return;
@@ -490,15 +497,24 @@ void modeOpen() {
 		ptc.mode = AO_MODE_LISTEN;
 		return;
 	}
+	ptc.frames++;
 	
 	// tellClients("201 MODE OPEN SUCCESSFUL");
 	while (ptc.mode == AO_MODE_OPEN) {
-		ptc.frames++;								// increment the amount of frames parsed
-		// logInfo(0, "Entering open loop.");
 		if (modOpenLoop(&ptc) != EXIT_SUCCESS) {
 			logWarn("modOpenLoop failed");
 			ptc.mode = AO_MODE_LISTEN;
 			return;
+		}
+		ptc.frames++;	// increment the amount of frames parsed
+		if (ptc.frames % ptc.logfrac == 0) {
+			curframes = ptc.frames;
+			gettimeofday(&cur, NULL);
+			ptc.fps = (cur.tv_sec * 1000000 + cur.tv_usec)- (last.tv_sec*1000000 + last.tv_usec);	
+			ptc.fps /= 1000000;
+			ptc.fps = (curframes-lastframes)/ptc.fps;
+			last = cur;
+			lastframes = curframes;
 		}
 	}
 	

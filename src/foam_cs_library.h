@@ -219,7 +219,8 @@ typedef struct { // control_t
 	time_t lasttime;	//!< (foam) use this to track the framerate
     
 	long frames;		//!< (foam) store the number of frames parsed
-	int capped;			//!< (foam) stores the number of frames captured earlier (i.e. what files already exist)
+	long capped;			//!< (foam) stores the number of frames captured earlier (i.e. what files already exist)
+	float fps;		//!< (foam) stores the currect FPS
     
 	int logfrac;        //!< (user) fraction to log for certain info and debug (1 is always, 50 is 1/50 times), default 1000
 	
