@@ -16,11 +16,30 @@
 #include "foam_modules-sh.h"
 #endif //#ifdef FOAM_MODULES_DISLAY_SHSUPPORT
 
+
 #include "SDL.h" 	// most portable way according to 
 //http://www.libsdl.org/cgi/docwiki.cgi/FAQ_20Including_20SDL_20Headers
 
 // DATATYPES //
 /*************/
+
+/*!
+ @brief This enum lists the available display source
+ */
+typedef enum {
+    DISPSRC_RAW,       //!< Display the raw uncorrect image from the camera
+    DISPSRC_CALIB,     //!< Display the dark/flat field corrected image
+    DISPSRC_DARK,      //!< Display the darkfield used (probably rarely used)
+    DISPSRC_FLAT       //!< Display the flatfield used (probably rarely used)
+} dispsrc_t;
+
+// We define the possible display overlays here
+#ifdef FOAM_MODULES_DISLAY_SHSUPPORT
+#define DISPOVERLAY_SUBAPS 0x1
+#define DISPOVERLAY_GRID 0x2
+#define DISPOVERLAY_VECTORS 0x4
+#endif // FOAM_MODULES_DISLAY_SHSUPPORT
+    
 
 /*!
  @brief This struct stores some properties on how to handle the displaying.
@@ -38,7 +57,9 @@ typedef struct {
 	char *caption;				//!< (user) Caption for the SDL window
 	coord_t res;				//!< (user) Resolution for the SDL window
 	Uint32 flags;				//!< (user) Flags to use with SDL_SetVideoMode
-    int autocontrast;           //!< (user/runtime) 1 = foam handles contrast, 0 = user handles contrast
+    dispsrc_t dispsrc;          //!< (user) The display source, can be DISP_RAW, DISP_CALIB, DISP_DARK, DISP_FLAT
+    uint32_t dispover;          //!< (user) The overlays to display, see DISPOVERLAY_* defines
+    autocontrast;               //!< (user/runtime) 1 = foam handles contrast, 0 = user handles contrast
     int contrast;               //!< (user) if autocontrast=0, use this to scale the pixel intensities
     int brightness;             //!< (user) if autocontrast=0, use this to shift the pixel intensities
 } mod_display_t;

@@ -130,11 +130,11 @@ int main(int argc, char *argv[]) {
     sigemptyset(&signal_mask);
     sigaddset(&signal_mask, SIGINT); // 'user' stuff
     sigaddset(&signal_mask, SIGTERM);
+    sigaddset(&signal_mask, SIGPIPE);
 	
 	sigaddset(&signal_mask, SIGSEGV); // 'bad' stuff, try to do a clean exit
 	sigaddset(&signal_mask, SIGBUS);
-
-	
+    
 	int threadrc;
 	
 	threadrc = pthread_sigmask (SIG_BLOCK, &signal_mask, NULL);
@@ -162,6 +162,7 @@ int main(int argc, char *argv[]) {
 	act.sa_flags = 0;		// No special flags
 	act.sa_mask = signal_mask;	// Use this mask
 	sigaction(SIGINT, &act, NULL);
+    sigaction(SIGINT, &act, NULL);
 	pthread_sigmask (SIG_UNBLOCK, &signal_mask, NULL);
 	
 	sockListen(); 			// After initialization, start in open mode

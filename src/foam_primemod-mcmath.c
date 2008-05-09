@@ -21,6 +21,11 @@ extern pthread_cond_t mode_cond;
 
 // Displaying
 #ifdef FOAM_MCMATH_DISPLAY
+
+#ifndef FOAM_MODULES_DISLAY_SHSUPPORT
+#define FOAM_MODULES_DISLAY_SHSUPPORT
+#endif
+
 mod_display_t disp;
 #endif
 
@@ -97,7 +102,7 @@ int modInitModule(control_t *ptc, config_t *cs_config) {
     ptc->filter[1].filters[0] = FILT_PINHOLE;
 	ptc->filter[1].filters[1] = FILT_OPEN;
 	
-	// configure ITIFG camera
+	// configure ITIFG camera & buffer
 	
 	dalsacam.module = 48;
 	dalsacam.device_name = "/dev/ic0dma";
@@ -160,6 +165,10 @@ int modInitModule(control_t *ptc, config_t *cs_config) {
 	disp.res.y = ptc->wfs[0].res.y;
 	disp.flags = SDL_HWSURFACE | SDL_DOUBLEBUF | SDL_RESIZABLE;
     disp.autocontrast = 1;
+    disp.brightness = 0;
+    disp.contrast = 5;
+    disp.dispsrc = DISPSRC_RAW;         // use the raw ccd output
+    disp.dispover = DISPOVERLAY_GRID;   // display the SH grid
 	
 	modInitDraw(&disp);
 #endif
@@ -294,8 +303,15 @@ resetdaq [voltage]:     reset the DAQ analog outputs to a certain voltage. defau
 		if (count > 1) {
 			if (strcmp(list[1], "raw") == 0) {
 				tellClient(client->buf_ev, "200 OK DISPLAY RAW");
+                disp.dispmode &= !DISPMODE_RAW;
+                // example how to remove mask 'DISPMODE_RAW' from dispmode
+                // raw mode:  00001
+                // !raw mode: 11110
+                // old mode:  01101
+                // !raw&old:  01100 
 			}
 			else if (strcmp(list[1], "calib") == 0) {
+                disp.dispmode |= DISPMODE_RAW;
 				tellClient(client->buf_ev, "200 OK DISPLAY CALIB");
 			}
 			else {
