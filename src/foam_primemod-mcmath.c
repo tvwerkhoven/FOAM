@@ -204,9 +204,7 @@ int modOpenLoop(control_t *ptc) {
 	// get an image, without using a timeout
 	if (drvGetImg(&dalsacam, &buffer, NULL, &(wfs->image)) != EXIT_SUCCESS)
 		return EXIT_FAILURE;
-	
-	// update the pointer to the wfs image
-	ptc->wfs[0].image = buffer.data;
+		
 	
 	//	MMDarkFlatCorrByte(&(ptc->wfs[0]));
 	
