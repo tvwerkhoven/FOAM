@@ -241,48 +241,67 @@ int modClosedLoop(control_t *ptc) {
 
 int modClosedFinish(control_t *ptc) {
 	// stop grabbing frames
-	drvStopGrab(&dalsacam);
-	
-	return EXIT_SUCCESS;
+	return drvStopGrab(&dalsacam);
 }
 
 // MISC ROUTINES //
 /*****************/
 
 int modCalibrate(control_t *ptc) {
+	FILE *fieldfd;
+	wfs_t *wfsinfo = &(ptc->wfs[0]);
 	if (ptc->calmode == CAL_DARK) {
 		// take 100 dark frames, and average
-		if (modOpenInit(ptc) != EXIT_SUCCESS) {
-			logDebug(0, "could not init darkfielding");
+		logInfo(0, "Starting darkfield calibration now");
+		if (drvInitGrab(&dalsacam) != EXIT_SUCCESS) 
 			return EXIT_FAILURE;
-		}
 
 		// check if memory is allocated yet
-		if (ptc->wfs[0].darkim == NULL) {
-			ptc->wfs[0].darkim = gsl_matrix_float_alloc(ptc->wfs[0].res.x, ptc->wfs[0].res.y);
+		if (wfsinfo->darkim == NULL) {
+			wfsinfo->darkim = gsl_matrix_float_calloc(wfsinfo->res.x, wfsinfo->res.y);
 		}
 		logDebug(0,"Darkfield image allocated, trying to get 100 images");
 
-		MMAvgFramesByte(ptc->wfs[0].darkim, &(ptc->wfs[0]), 100);
+		MMAvgFramesByte(wfsinfo->darkim, &(ptc->wfs[0]), 100);
+		if (drvStopGrab(&dalsacam) != EXIT_SUCCESS)
+			return EXIT_FAILURE;
+		// saving image for later usage
+		fieldfd = fopen(wfsinfo->darkfile, "w+");	
+		if (!fieldfd)  {
+			logWarn("Could not open darkfield storage file '%s', not saving darkfield (%s).", wfsinfo->darkfile, strerror(errno));
+			return EXIT_SUCCESS;
+		}
+		gsl_matrix_float_fprintf(fieldfd, wfsinfo->darkim, "%.10f");
+		fclose(fieldfd);
+		logInfo(0, "Darkfield calibration done, and stored to disk.");
 	}
 	else if (ptc->calmode == CAL_FLAT) {
+		logInfo(0, "Starting flatfield calibration now");
 		// take 100 flat frames, and average
-		modOpenInit(ptc);
+		if (drvInitGrab(&dalsacam) != EXIT_SUCCESS) 
+			return EXIT_FAILURE;
 		// check if memory is allocated yet
-		if (ptc->wfs[0].flatim == NULL) {
-			ptc->wfs[0].flatim = gsl_matrix_float_alloc(ptc->wfs[0].res.x, ptc->wfs[0].res.y);
+		if (wfsinfo->flatim == NULL) {
+			wfsinfo->flatim = gsl_matrix_float_calloc(wfsinfo->res.x, wfsinfo->res.y);
 		}
-		MMAvgFramesByte(ptc->wfs[0].flatim, &(ptc->wfs[0]), 100);
+		MMAvgFramesByte(wfsinfo->flatim, &(ptc->wfs[0]), 100);
+		if (drvStopGrab(&dalsacam) != EXIT_SUCCESS)
+			return EXIT_FAILURE;
+		// saving image for later usage
+		fieldfd = fopen(wfsinfo->flatfile, "w+");	
+		if (!fieldfd)  {
+			logWarn("Could not open flatfield storage file '%s', not saving flatfield (%s).", wfsinfo->flatfile, strerror(errno));
+			return EXIT_SUCCESS;
+		}
+		gsl_matrix_float_fprintf(fieldfd, wfsinfo->flatim, "%.10f");
+		fclose(fieldfd);
+		logInfo(0, "Flatfield calibration done, and stored to disk.");
 	}
-	else if (ptc->calmode == CAL_SHOWFLAT) {
-		// show the flat image
-		modOpenInit(ptc);
-#ifdef FOAM_MCMATH_DISPLAY
-		modDisplayGSLImg
-		modDrawStuff((&ptc->wfs[0]), &disp, &shtrack);
-#endif
+	else if (ptc->calmode == CAL_SUBAPSEL) {
+		logInfo(0, "Starting subaperture selection now");
+		// take 100 flat frames, and average
+		//modOpenInit(ptc);
 	}
-	
 	
 	return EXIT_SUCCESS;
 }
@@ -308,7 +327,8 @@ int modMessage(control_t *ptc, const client_t *client, char *list[], const int c
 display <raw|calib>:    display raw ccd output or calibrated image with meta-info.\n\
 resetdm [voltage]:      reset the DM to a certain voltage for all acts. default=0\n\
 resetdaq [voltage]:     reset the DAQ analog outputs to a certain voltage. default=0\n\
-calibrate <dark|flat>:  take a dark or flat image immediately after the call.\n\
+calibrate <dark|flat|subaps>:  \n\
+                        calibrate the ao system (dark, flat, subapt selection).\n\
 show <dark|flat>:       display the stored dark or flat image in the window.\n\
 						   ");
 			}
@@ -337,12 +357,22 @@ show <dark|flat>:       display the stored dark or flat image in the window.\n\
 				tellClient(client->buf_ev, "200 OK DISPLAY CALIB");
 			}
 			else if (strcmp(list[1], "dark") == 0) {
-                disp.dispsrc = DISPSRC_DARK;
-				tellClient(client->buf_ev, "200 OK DISPLAY DARK");
+				if  (ptc->wfs[0].darkim == NULL) {
+					tellClient(client->buf_ev, "400 ERROR DARKFIELD NOT AVAILABLE");
+				}
+				else {
+					disp.dispsrc = DISPSRC_DARK;
+					tellClient(client->buf_ev, "200 OK DISPLAY DARK");
+				}
 			}
 			else if (strcmp(list[1], "flat") == 0) {
-                disp.dispsrc = DISPSRC_FLAT;
-				tellClient(client->buf_ev, "200 OK DISPLAY FLAT");
+				if  (ptc->wfs[0].flatim == NULL) {
+					tellClient(client->buf_ev, "400 ERROR FLATFIELD NOT AVAILABLE");
+				}
+				else {
+					disp.dispsrc = DISPSRC_FLAT;
+					tellClient(client->buf_ev, "200 OK DISPLAY FLAT");
+				}
 			}
 			else {
 				tellClient(client->buf_ev, "401 UNKNOWN DISPLAY");
@@ -397,6 +427,44 @@ show <dark|flat>:       display the stored dark or flat image in the window.\n\
 		else {
 			drvDaqSetDACs(&daqboard, 65536*(-daqboard.minvolt)/(daqboard.maxvolt-daqboard.minvolt));
 			tellClients("200 OK RESETDAQ 0.0V");			
+		}
+	}
+ 	else if (strcmp(list[0], "vid") == 0) {
+		if (count > 1) {
+			if (strcmp(list[1], "auto") == 0) {
+				disp.autocontrast = 1;
+				tellClient(client->buf_ev, "200 OK USING AUTO SCALING");
+			}
+			else if (strcmp(list[1], "c") == 0) {
+				if (count > 2) {
+					tmpint = strtol(list[2], NULL, 10);
+					disp.autocontrast = 0;
+					disp.contrast = tmpint;
+					tellClient(client->buf_ev, "200 OK CONTRAST %d", tmpint);
+				}
+				else {
+					tellClient(client->buf_ev, "402 NO CONTRAST GIVEN");
+				}
+			}
+			else if (strcmp(list[1], "b") == 0) {
+				if (count > 2) {
+					tmpint = strtol(list[2], NULL, 10);
+					disp.autocontrast = 0;
+					disp.brightness = tmpint;
+					tellClient(client->buf_ev, "200 OK BRIGHTNESS %d", tmpint);
+				}
+				else {
+					tellClient(client->buf_ev, "402 NO BRIGHTNESS GIVEN");
+				}
+			}
+			else {
+				tellClient(client->buf_ev, "401 UNKNOWN CALIBRATION");
+				return 0;
+			}
+		}
+		else {
+			tellClient(client->buf_ev, "402 CALIBRATE REQUIRES ARGS");
+			return 0;
 		}
 	}
  	else if (strcmp(list[0], "calibrate") == 0) {
@@ -476,23 +544,34 @@ int drvSetupHardware(control_t *ptc, aomode_t aomode, calmode_t calmode) {
 
 int MMAvgFramesByte(gsl_matrix_float *output, wfs_t *wfs, int rounds) {
 	int k, i, j;
-	uint8_t* imagesrc = (uint8_t *) wfs->image;
-    logDebug(0, "Running in MMAvgFramesByte now for %d rounds", rounds);
-	
+	float min, max, sum, tmpvar;
+	uint8_t *imgsrc;
+    logDebug(0, "Averaging %d frames now (dark, flat, whatever)", rounds);
+
+	gsl_matrix_float_set_zero(output);
 	for (k=0; k<rounds; k++) {
-		fprintf(stderr, ".");
-        logDebug(LOG_NOFORMAT, ".");
+       		logDebug(LOG_NOFORMAT, ".");
 		drvGetImg(&dalsacam, &buffer, NULL, &(wfs->image));
+		imgsrc = (uint8_t *) wfs->image;
 		
-		for (j=0; j<wfs->res.x; j++) {
-			for (i=0; i<wfs->res.y; i++) {
-				gsl_matrix_float_set(output, i, j, \
-									 (float) gsl_matrix_float_get(output, i, j) + \
-									 (uint8_t) imagesrc[j*wfs->res.x +i]);
+       		logDebug(LOG_NOFORMAT, "%d,", imgsrc[0]);
+		for (i=0; i<wfs->res.y; i++) {
+			for (j=0; j<wfs->res.x; j++) {
+				tmpvar = gsl_matrix_float_get(output, i, j) + (float) imgsrc[i*wfs->res.x +j];
+				gsl_matrix_float_set(output, i, j, tmpvar);
 			}
 		}
-		gsl_matrix_float_scale( output, 1/(float) rounds);
 	}
+
+	gsl_matrix_float_scale( output, 1/(float) rounds);
+	gsl_matrix_float_minmax(output, &min, &max);
+	for (j=0; j<wfs->res.x; j++) 
+		for (i=0; i<wfs->res.y; i++) 
+			sum += gsl_matrix_float_get(output, i, j);
+				
+        logDebug(LOG_NOFORMAT, " done\n");
+        logDebug(0, "Result: min: %f, max: %f, sum: %f, avg: %f", \
+		min, max, sum, sum/(wfs->res.x * wfs->res.y) );
 	
 	return EXIT_SUCCESS;
 }

@@ -237,7 +237,11 @@ int modDisplayImgFloat(float *img, mod_display_t *disp) {
                 min = img[x];
         }
         shift = -min;
-        scale = 255/(max-min);
+	if (max-min != 0)
+		scale = 255/(max-min);
+	else 
+		scale = 1;
+		
     }
     else {
         shift = disp->brightness;
@@ -331,7 +335,10 @@ int modDisplayImgByte(uint8_t *img, mod_display_t *disp) {
                 min = img[x];
         }
         shift = -min;
-        scale = 255/(max-min);
+	if (max-min != 0)
+		scale = 255/(max-min);
+	else 
+		scale = 1;
     }
     else {
         // use static brightness and contrast
@@ -412,16 +419,21 @@ int modDisplayImgByte(uint8_t *img, mod_display_t *disp) {
 
 int modDisplayGSLImg(gsl_matrix_float *gslimg, mod_display_t *disp) {
 	int i, j;
+	float min, max;
 	// we want to display a GSL image, copy it over the normal image 
-	if (tmpimgb == NULL)
-		tmpimgb = malloc(disp->res.x disp->res.y);
-	
-	for (j=0; j < disp->res.y; j++) {
-		for (i=0; i < disp->res.x; i++) {
-			tmpimgb[j*disp->res.x + i] = (uint8_t) gsl_matrix_float_get(gslimg, i, j);
+	if (tmpimg_b == NULL)
+		tmpimg_b = malloc(disp->res.x * disp->res.y);
+
+	gsl_matrix_float_minmax(gslimg, &min, &max);
+	gsl_matrix_float_add_constant(gslimg, -min);
+	gsl_matrix_float_scale(gslimg, 255/(max-min));
+
+	for (i=0; i < disp->res.x; i++) {
+		for (j=0; j < disp->res.y; j++) {
+			tmpimg_b[i*disp->res.x + j] = (uint8_t) gsl_matrix_float_get(gslimg, i, j);
 		}
 	}
-	modDisplayImgByte(tmpimgb, disp);
+	return modDisplayImgByte(tmpimg_b, disp);
 }
 
 int modDisplayImg(wfs_t *wfsinfo, mod_display_t *disp) {
@@ -584,7 +596,7 @@ void modDrawStuff(wfs_t *wfsinfo, mod_display_t *display, mod_sh_track_t *shtrac
 
 void modDrawSens(wfs_t *wfsinfo, mod_display_t *disp, SDL_Surface *screen) {	
 	modBeginDraw(disp->screen);
-	modDisplayImg(wfsinfo->image, disp, wfsinfo->bpp);
+	modDisplayImg(wfsinfo, disp);
 	modFinishDraw(disp->screen);
 }
 

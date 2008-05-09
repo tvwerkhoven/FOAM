@@ -44,6 +44,7 @@ typedef enum { // calmode_t
 	CAL_PINHOLE,	//!< determine reference shifts after inserting a pinhole
 	CAL_INFL,		//!< determine the influence functions for each WFS-WFC pair
 	CAL_LINTEST,	//!< linearity test for WFCs
+	CAL_SUBAPSEL,		//!< For subaperture selection
 	CAL_DARK,		//!< dark fielding
 	CAL_FLAT		//!< flat fielding
 } calmode_t;

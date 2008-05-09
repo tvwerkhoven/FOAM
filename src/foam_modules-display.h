@@ -104,11 +104,10 @@ void drawLine(int x0, int y0, int x1, int y1, SDL_Surface*screen);
  this must not be bigger than the resolution of the SDL_Surface. Do not forget
  to call modBeginDraw()/modFinishDraw().
  
- @param [in] *img void pointer to the image
+ @param [in] *wfsinfo pointer to the wfs to show the image for
  @param [in] *disp pre-filled mod_display_t structure
- @param [in] databpp The bitdepth of the image (8 for byte, 16 for float atm)
  */
-int modDisplayImg(void *img, mod_display_t *disp, int databpp);
+int modDisplayImg(wfs_t *wfsinfo, mod_display_t *disp)	;
 
 
 /*!
