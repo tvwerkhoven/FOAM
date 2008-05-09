@@ -47,6 +47,13 @@
 //static pthread_attr_t moddisplay_attr;
 //static int moddisplay_drawing = 1;
 
+// this will be used to temporarily store an image if displaying a GSL matrix
+// since this needs conversion from the GSL datatype to a simple row-major
+// matrix, we need a place to store it, and that's right here. Note that the
+// data will only be allocated when necessary, and will only be as big the 
+// wavefront sensor.
+static uint8_t *tmpimg_b=NULL;
+
 // ROUTINES //
 /************/
 
@@ -314,7 +321,7 @@ int modDisplayImgByte(uint8_t *img, mod_display_t *disp) {
 	uint8_t max=img[0];     // stdint type
 	uint8_t min=img[0];
 	uint8_t shift, scale;   // use shift and scale to adjust the pixel intensities
-
+	
     if (disp->autocontrast == 1) {
         // we need this loop to check the maximum and minimum intensity. 
         for (x=0; x < disp->res.x * disp->res.y; x++) {
@@ -403,22 +410,44 @@ int modDisplayImgByte(uint8_t *img, mod_display_t *disp) {
 	return EXIT_SUCCESS;
 }
 
-int modDisplayImg(void *img, mod_display_t *disp, int databpp) {
+int modDisplayGSLImg(gsl_matrix_float *gslimg, mod_display_t *disp) {
+	int i, j;
+	// we want to display a GSL image, copy it over the normal image 
+	if (tmpimgb == NULL)
+		tmpimgb = malloc(disp->res.x disp->res.y);
+	
+	for (j=0; j < disp->res.y; j++) {
+		for (i=0; i < disp->res.x; i++) {
+			tmpimgb[j*disp->res.x + i] = (uint8_t) gsl_matrix_float_get(gslimg, i, j);
+		}
+	}
+	modDisplayImgByte(tmpimgb, disp);
+}
+
+int modDisplayImg(wfs_t *wfsinfo, mod_display_t *disp) {
     // !!!:tim:20080507 this is probably not very clean (float is not 16 bpp)
     // databpp == 16 
     // databpp == 8 char (uint8_t)
-    if (databpp == 8) {
-        uint8_t *imgc = (uint8_t *) img;
-        modDisplayImgByte(imgc, disp);
-    }
-    else if (databpp == 16) {
-        float *imgc = (float *) img;
-        modDisplayImgFloat(imgc, disp);
-    }
+	if (disp->dispsrc == DISPSRC_RAW) {
+		if (wfsinfo->bpp == 8) {
+			uint8_t *imgc = (uint8_t *) wfsinfo->image;
+			modDisplayImgByte(imgc, disp);
+		}
+		else if (wfsinfo->bpp == 16) {
+			float *imgc = (float *) wfsinfo->image;
+			modDisplayImgFloat(imgc, disp);
+		}
+	}
+	else if (disp->dispsrc == DISPSRC_DARK) {
+		modDisplayGSLImg(wfsinfo->darkim, disp);
+	}
+	else if (disp->dispsrc == DISPSRC_FLAT) {
+		modDisplayGSLImg(wfsinfo->flatim, disp);
+	}
     
     return EXIT_FAILURE;
 }
-    
+
 
 void drawPixel(SDL_Surface *screen, int x, int y, Uint8 R, Uint8 G, Uint8 B) {
 	Uint32 color = SDL_MapRGB(screen->format, R, G, B);
@@ -544,7 +573,7 @@ int modDrawGrid(coord_t gridres, SDL_Surface *screen) {
 
 void modDrawStuff(wfs_t *wfsinfo, mod_display_t *display, mod_sh_track_t *shtrack) {
 	modBeginDraw(display->screen);
-	modDisplayImg(wfsinfo->image, display, wfsinfo->bpp);
+	modDisplayImg(wfsinfo, display);
 	modDrawGrid(shtrack->cells, display->screen);
 	modDrawSubapts(shtrack, display->screen);
 	modDrawVecs(shtrack, display->screen);

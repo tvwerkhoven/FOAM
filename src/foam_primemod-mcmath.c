@@ -204,7 +204,7 @@ int modOpenLoop(control_t *ptc) {
 	// get an image, without using a timeout
 	if (drvGetImg(&dalsacam, &buffer, NULL, &(ptc->wfs->image)) != EXIT_SUCCESS)
 		return EXIT_FAILURE;
-		
+	
 	
 	//	MMDarkFlatCorrByte(&(ptc->wfs[0]));
 	
@@ -274,6 +274,15 @@ int modCalibrate(control_t *ptc) {
 		}
 		MMAvgFramesByte(ptc->wfs[0].flatim, &(ptc->wfs[0]), 100);
 	}
+	else if (ptc->calmode == CAL_SHOWFLAT) {
+		// show the flat image
+		modOpenInit(ptc);
+#ifdef FOAM_MCMATH_DISPLAY
+		modDisplayGSLImg
+		modDrawStuff((&ptc->wfs[0]), &disp, &shtrack);
+#endif
+	}
+	
 	
 	return EXIT_SUCCESS;
 }
@@ -295,10 +304,12 @@ int modMessage(control_t *ptc, const client_t *client, char *list[], const int c
 			
 			if (strcmp(list[1], "display") == 0) {
 				tellClient(client->buf_ev, "\
-						   200 OK HELP DISPLAY\n\
-						   display <raw|calib>:    display raw ccd output or calibrated image with meta-info.\n\
-						   resetdm [voltage]:      reset the DM to a certain voltage for all acts. default=0\n\
-						   resetdaq [voltage]:     reset the DAQ analog outputs to a certain voltage. default=0\n\
+200 OK HELP DISPLAY\n\
+display <raw|calib>:    display raw ccd output or calibrated image with meta-info.\n\
+resetdm [voltage]:      reset the DM to a certain voltage for all acts. default=0\n\
+resetdaq [voltage]:     reset the DAQ analog outputs to a certain voltage. default=0\n\
+calibrate <dark|flat>:  take a dark or flat image immediately after the call.\n\
+show <dark|flat>:       display the stored dark or flat image in the window.\n\
 						   ");
 			}
 			else // we don't know. tell this to parseCmd by returning 0
@@ -324,6 +335,14 @@ int modMessage(control_t *ptc, const client_t *client, char *list[], const int c
 			else if (strcmp(list[1], "calib") == 0) {
                 disp.dispsrc = DISPSRC_CALIB;
 				tellClient(client->buf_ev, "200 OK DISPLAY CALIB");
+			}
+			else if (strcmp(list[1], "dark") == 0) {
+                disp.dispsrc = DISPSRC_DARK;
+				tellClient(client->buf_ev, "200 OK DISPLAY DARK");
+			}
+			else if (strcmp(list[1], "flat") == 0) {
+                disp.dispsrc = DISPSRC_FLAT;
+				tellClient(client->buf_ev, "200 OK DISPLAY FLAT");
 			}
 			else {
 				tellClient(client->buf_ev, "401 UNKNOWN DISPLAY");
