@@ -374,13 +374,13 @@ resetdaq [voltage]:     reset the DAQ analog outputs to a certain voltage. defau
 			if (strcmp(list[1], "dark") == 0) {
 				ptc->mode = AO_MODE_CAL;
 				ptc->calmode = CAL_DARK;
+                tellClient(client->buf_ev, "200 OK DARKFIELDING NOW");
 				// add message to the users
 			}
 			else if (strcmp(list[1], "flat") == 0) {
 				ptc->mode = AO_MODE_CAL;
 				ptc->calmode = CAL_FLAT;
-				// add message to the users
-
+                tellClient(client->buf_ev, "200 OK FLATFIELDING NOW");
 			}
 			else {
 				tellClient(client->buf_ev, "401 UNKNOWN CALIBRATION");
@@ -445,8 +445,10 @@ int drvSetupHardware(control_t *ptc, aomode_t aomode, calmode_t calmode) {
 int MMAvgFramesByte(gsl_matrix_float *output, wfs_t *wfs, int rounds) {
 	int k, i, j;
 	uint8_t* imagesrc = (uint8_t *) wfs->image;
+    logDebug(0, "Running in MMAvgFramesByte now for %d rounds", rounds);
 	
 	for (k=0; k<rounds; k++) {
+        logDebug(LOG_NOFORMAT, ".");
 		drvGetImg(&dalsacam, &buffer, NULL);
 		
 		for (j=0; j<wfs->res.x; j++) {
