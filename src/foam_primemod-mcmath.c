@@ -255,10 +255,12 @@ int modClosedFinish(control_t *ptc) {
 int modCalibrate(control_t *ptc) {
 	if (ptc->calmode == CAL_DARK) {
 		// take 100 dark frames, and average
+		modOpenInit(ptc);
 		MMAvgFramesByte(ptc->wfs[0].darkim, &(ptc->wfs[0]), 100);
 	}
 	else if (ptc->calmode == CAL_FLAT) {
 		// take 100 flat frames, and average
+		modOpenInit(ptc);
 		MMAvgFramesByte(ptc->wfs[0].flatim, &(ptc->wfs[0]), 100);
 	}
 
@@ -281,14 +283,12 @@ int modMessage(control_t *ptc, const client_t *client, char *list[], const int c
 		if (count > 1) { 
 
 			if (strcmp(list[1], "display") == 0) {
-#ifdef FOAM_MCMATH_DISPLAY
 				tellClient(client->buf_ev, "\
 200 OK HELP DISPLAY\n\
 display <raw|calib>:    display raw ccd output or calibrated image with meta-info.\n\
 resetdm [voltage]:      reset the DM to a certain voltage for all acts. default=0\n\
 resetdaq [voltage]:     reset the DAQ analog outputs to a certain voltage. default=0\n\
 ");
-#endif
 			}
 			else // we don't know. tell this to parseCmd by returning 0
 				return 0;
@@ -303,7 +303,7 @@ resetdaq [voltage]:     reset the DAQ analog outputs to a certain voltage. defau
 		if (count > 1) {
 			if (strcmp(list[1], "raw") == 0) {
 				tellClient(client->buf_ev, "200 OK DISPLAY RAW");
-                disp.dispmode &= !DISPMODE_RAW;
+                disp.dispsrc = DISPSRC_RAW;
                 // example how to remove mask 'DISPMODE_RAW' from dispmode
                 // raw mode:  00001
                 // !raw mode: 11110
@@ -311,7 +311,7 @@ resetdaq [voltage]:     reset the DAQ analog outputs to a certain voltage. defau
                 // !raw&old:  01100 
 			}
 			else if (strcmp(list[1], "calib") == 0) {
-                disp.dispmode |= DISPMODE_RAW;
+                disp.dispsrc = DISPSRC_CALIB;
 				tellClient(client->buf_ev, "200 OK DISPLAY CALIB");
 			}
 			else {
@@ -448,6 +448,7 @@ int MMAvgFramesByte(gsl_matrix_float *output, wfs_t *wfs, int rounds) {
     logDebug(0, "Running in MMAvgFramesByte now for %d rounds", rounds);
 	
 	for (k=0; k<rounds; k++) {
+		fprintf(stderr, ".");
         logDebug(LOG_NOFORMAT, ".");
 		drvGetImg(&dalsacam, &buffer, NULL);
 		
