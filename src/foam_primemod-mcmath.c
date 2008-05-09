@@ -74,14 +74,18 @@ int modInitModule(control_t *ptc, config_t *cs_config) {
 	// configure WFC 0
 	ptc->wfc[0].name = "Okotech DM";
 	ptc->wfc[0].nact = 37;
-	ptc->wfc[0].gain = 1.0;
+	ptc->wfc[0].gain.p = 1.0;
+	ptc->wfc[0].gain.i = 1.0;
+	ptc->wfc[0].gain.d = 1.0;
 	ptc->wfc[0].type = WFC_DM;
     ptc->wfc[0].id = 0;
 	
 	// configure WFC 1
 	ptc->wfc[1].name = "TT";
 	ptc->wfc[1].nact = 2;
-	ptc->wfc[1].gain = 1.0;
+	ptc->wfc[1].gain.p = 1.0;
+	ptc->wfc[1].gain.i = 1.0;
+	ptc->wfc[1].gain.d = 1.0;
 	ptc->wfc[1].type = WFC_TT;
     ptc->wfc[1].id = 1;
 	
