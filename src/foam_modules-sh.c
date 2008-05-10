@@ -40,8 +40,8 @@
 
 int modInitSH(mod_sh_track_t *shtrack) {
 	logInfo(0, "Initializing SH tracking module");
-	shtrack->subc = calloc(shtrack->nsubap, sizeof(coord_t));
-	shtrack->gridc = calloc(shtrack->nsubap, sizeof(coord_t));
+	shtrack->subc = calloc(shtrack->cells.x * shtrack->cells.y, sizeof(coord_t));
+	shtrack->gridc = calloc(shtrack->cells.x * shtrack->cells.y , sizeof(coord_t));
 	if (shtrack->subc == NULL || shtrack->gridc == NULL) {
 		logErr("Error: could not allocate memory in modInitSH()!");
 		return EXIT_FAILURE;
@@ -265,13 +265,15 @@ int modSelSubapts(float *image, coord_t res, int cells[2], int (*subc)[2], int (
 	return EXIT_SUCCESS;
 }
 
-int modSelSubaptsByte(void *image, mod_sh_track_t *shtrack, wfs_t *shwfs, int *totnsubap, float samini, int samxr) {
+int modSelSubaptsByte(uint8_t *image, mod_sh_track_t *shtrack, wfs_t *shwfs) {
 	// stolen from ao3.c by CUK :)
 	int isy, isx, iy, ix, i, sn=0, nsubap=0; //init sn to zero!!
-	float sum=0.0, fi;					// check 'intensity' of a subapt
+	float sum=0.0, fi=0.0;					// check 'intensity' of a subapt
 	float csum=0.0, cs[] = {0.0, 0.0}; 	// for center of gravity
 	float cx=0, cy=0;					// for CoG
 	float dist, rmin;					// minimum distance
+	float samini = shtrack->samini;		// temp copy
+	int samxr = shtrack->samxr;		// temp copy
 	int csa=0;							// estimate for best subapt
 	
 	int shsize[] = {shtrack->shsize.x, shtrack->shsize.y};		// subapt pixel resolution
@@ -281,7 +283,18 @@ int modSelSubaptsByte(void *image, mod_sh_track_t *shtrack, wfs_t *shwfs, int *t
 	int apmap2[shtrack->cells.x][shtrack->cells.y];		// aperture map 2
 	
 	// cast the void pointer to byte pointer, we know the image is a byte image.
-	uint8_t * byteimg = (uint8_t *) image;
+	uint8_t *byteimg = image;
+	int max = byteimg[0];
+	int min = byteimg[0];
+	for (i=0; i<shwfs->res.x*shwfs->res.y; i++) {
+		sum += byteimg[i];
+		if (byteimg[i] > max) max = byteimg[i];
+		else if (byteimg[i] < min) min = byteimg[i];
+	}	
+	logInfo(0, "Image info: sum: %f, avg: %f, range: (%d,%d)", sum, (float) sum / (shwfs->res.x*shwfs->res.y), min, max);
+
+
+	sum = 0;
 	
 	logInfo(0, "Selecting subapertures.");
 	for (isy=0; isy<shtrack->cells.y; isy++) { // loops over all potential subapertures
@@ -318,11 +331,11 @@ int modSelSubaptsByte(void *image, mod_sh_track_t *shtrack, wfs_t *shwfs, int *t
 				apmap[isx][isy] = 1; // set aperture map
 				shtrack->gridc[sn].x = isx;
 				shtrack->gridc[sn].y = isy;
+				logDebug(0, "cog (%.2f,%.2f) subc (%d,%d) gridc (%d,%d) sum %f (min: %f, max: %d)", cs[0], cs[1], shtrack->subc[sn].x, shtrack->subc[sn].y, isx, isy, csum, samini, samxr);
 				sn++;
 			} else {
 				apmap[isx][isy] = 0; // don't use this subapt
 			}
-			logDebug(0, "cog (%d,%d) subc (%d,%d) gridc (%d,%d) sum %d (min: %f, max: %d)", cs[0], cs[1], shtrack->subc[sn].x, shtrack->subc[sn].y, isx, isy, csum, samini, samxr);
 		}
 	}
 	logInfo(0, "CoG for subapts done, found %d with intensity > 0.", sn);
@@ -386,7 +399,7 @@ int modSelSubaptsByte(void *image, mod_sh_track_t *shtrack, wfs_t *shwfs, int *t
 		sn = 1;
 		while (sn < nsubap) {
 			if (sqrt((shtrack->subc[sn].x-cx)*(shtrack->subc[sn].x-cx) + \
-					 (shtrack->subc[sn].y-cy)*(shtrack->subc[sn].y-cy)) > samxr) { // TODO: why remove subapts? might be bad subapts
+					 (shtrack->subc[sn].y-cy)*(shtrack->subc[sn].y-cy)) > samxr) { // remove subapts, might be bad subapts and not useful
 				for (i=sn; i<(nsubap-1); i++) {
 					shtrack->subc[i].x = shtrack->subc[i+1].x; // remove erroneous subapts
 					shtrack->subc[i].y = shtrack->subc[i+1].y;
@@ -447,8 +460,25 @@ int modSelSubaptsByte(void *image, mod_sh_track_t *shtrack, wfs_t *shwfs, int *t
 				apmap[isx][isy] = apmap2[isx][isy];
 		
 	}
-	*totnsubap = nsubap;		// store to external variable
+	//*totnsubap = nsubap;		// store to external variable
+	shtrack->nsubap = nsubap;
 	logInfo(0, "Selected %d usable subapertures", nsubap);
+	
+	// WARNING! I don't know what goes wrong, but somehow x and y 
+	// are swapped. I manually reset it here, but this is indeed a 
+	// rather nasty solution. This definately needs closer inspection
+	int tmpswap;
+	for (sn=0; sn<nsubap; sn++) {
+		logDebug(LOG_NOFORMAT, "before: (%d,%d) and (%d,%d) ", shtrack->gridc[sn].x, shtrack->gridc[sn].y, shtrack->subc[sn].x, shtrack->subc[sn].y);
+		tmpswap = shtrack->gridc[sn].y;
+		shtrack->gridc[sn].y = shtrack->gridc[sn].x;
+		shtrack->gridc[sn].x = tmpswap;
+		tmpswap = shtrack->subc[sn].y;
+		shtrack->subc[sn].y = shtrack->subc[sn].x;
+		shtrack->subc[sn].x = tmpswap;
+		logDebug(LOG_NOFORMAT, "after: (%d,%d) and (%d,%d)\n", shtrack->gridc[sn].x, shtrack->gridc[sn].y, shtrack->subc[sn].x, shtrack->subc[sn].y);
+	}
+	// END WARNING
 	
 	logInfo(0, "ASCII map of aperture:");
 	for (isy=0; isy<shtrack->cells.y; isy++) {

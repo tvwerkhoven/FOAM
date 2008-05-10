@@ -143,14 +143,16 @@ int modInitModule(control_t *ptc, config_t *cs_config) {
     // we have a CCD of WxH, with a lenslet array of WlxHl, such that
     // each lenslet occupies W/Wl x H/Hl pixels, and we use track.x x track.y
     // pixels to track the CoG or do correlation tracking.
-	shtrack.cells.x = 8;				// we're using a 8x8 lenslet array
-	shtrack.cells.y = 8;
+	shtrack.cells.x = 16;				// we're using a 8x8 lenslet array
+	shtrack.cells.y = 16;
 	shtrack.shsize.x = ptc->wfs[0].res.x/shtrack.cells.x;
 	shtrack.shsize.y = ptc->wfs[0].res.y/shtrack.cells.y;
 	shtrack.track.x = shtrack.shsize.x/2;   // tracker windows are half the size of the lenslet grid things
 	shtrack.track.y = shtrack.shsize.y/2;
 	shtrack.pinhole = "mcmath_pinhole.gsldump";
 	shtrack.influence = "mcmath_influence.gsldump";
+	shtrack.samxr = -1;			// 1 row edge erosion
+	shtrack.samini = 10;			// minimum intensity for subaptselection 10
 	// init the shtrack module now
 	modInitSH(&shtrack);	
 	
@@ -167,7 +169,7 @@ int modInitModule(control_t *ptc, config_t *cs_config) {
 	
 #ifdef FOAM_MCMATH_DISPLAY
 	// init display
-	disp.caption = "McMath - WFS";
+	disp.caption = "WFS #1";
 	disp.res.x = ptc->wfs[0].res.x;
 	disp.res.y = ptc->wfs[0].res.y;
 	disp.flags = SDL_HWSURFACE | SDL_DOUBLEBUF | SDL_RESIZABLE;
@@ -220,7 +222,7 @@ int modOpenLoop(control_t *ptc) {
     if (ptc->frames % ptc->logfrac == 0) {
 	modDrawStuff((&ptc->wfs[0]), &disp, &shtrack);
 	logInfo(0, "Current framerate: %.2f FPS", ptc->fps);
-	snprintf(title, 64, "%s - %.2f FPS", disp.caption, ptc->fps);
+	snprintf(title, 64, "%s (O) %.2f FPS", disp.caption, ptc->fps);
 	SDL_WM_SetCaption(title, 0);
     }
 #endif
@@ -236,16 +238,29 @@ int modOpenFinish(control_t *ptc) {
 /************************/
 
 int modClosedInit(control_t *ptc) {
+	// set disp source to calib
+	disp.dispsrc = DISPSRC_CALIB;		
 	// start grabbing frames
 	return drvInitGrab(&dalsacam);
 }
 
 int modClosedLoop(control_t *ptc) {
+	static char title[64];
 	// get an image, without using a timeout
-	drvGetImg(&dalsacam, &buffer, NULL, &(ptc->wfs->image));
-	// update the pointer to the wfs image
-	ptc->wfs[0].image = buffer.data;
+	if (drvGetImg(&dalsacam, &buffer, NULL, &(ptc->wfs->image)) != EXIT_SUCCESS)
+		return EXIT_FAILURE;
 	
+	
+	MMDarkFlatCorrByte(&(ptc->wfs[0]), &shtrack);
+	
+#ifdef FOAM_MCMATH_DISPLAY
+    if (ptc->frames % ptc->logfrac == 0) {
+	modDrawStuff((&ptc->wfs[0]), &disp, &shtrack);
+	logInfo(0, "Current framerate: %.2f FPS", ptc->fps);
+	snprintf(title, 64, "%s (C) %.2f FPS", disp.caption, ptc->fps);
+	SDL_WM_SetCaption(title, 0);
+    }
+#endif
 	return EXIT_SUCCESS;
 }
 
@@ -258,8 +273,12 @@ int modClosedFinish(control_t *ptc) {
 /*****************/
 
 int modCalibrate(control_t *ptc) {
-	FILE *fieldfd;
-	wfs_t *wfsinfo = &(ptc->wfs[0]);
+	FILE *fieldfd;		// to open some files
+	char title[64]; 	// for the window title
+	wfs_t *wfsinfo = &(ptc->wfs[0]); // shortcut
+	dispsrc_t oldsrc = disp.dispsrc; // store the old display source here since we might just have to show dark or flatfields
+	int oldover = disp.dispover;	// store the old overlay here
+
 	if (ptc->calmode == CAL_DARK) {
 		// take dark frames, and average
 		logInfo(0, "Starting darkfield calibration now");
@@ -283,6 +302,15 @@ int modCalibrate(control_t *ptc) {
 		gsl_matrix_float_fprintf(fieldfd, wfsinfo->darkim, "%.10f");
 		fclose(fieldfd);
 		logInfo(0, "Darkfield calibration done, and stored to disk.");
+		// set new display settings to show the darkfield
+		disp.dispsrc = DISPSRC_DARK;
+		disp.dispover = 0;
+		modDrawStuff(wfsinfo, &disp, &shtrack);
+		snprintf(title, 64, "%s - Darkfield", disp.caption);
+		SDL_WM_SetCaption(title, 0);
+		// reset the display settings
+		disp.dispsrc = oldsrc;
+		disp.dispover = oldover;
 	}
 	else if (ptc->calmode == CAL_FLAT) {
 		logInfo(0, "Starting flatfield calibration now");
@@ -305,6 +333,15 @@ int modCalibrate(control_t *ptc) {
 		gsl_matrix_float_fprintf(fieldfd, wfsinfo->flatim, "%.10f");
 		fclose(fieldfd);
 		logInfo(0, "Flatfield calibration done, and stored to disk.");
+		// set new display settings to show the darkfield
+		disp.dispsrc = DISPSRC_FLAT;
+		disp.dispover = 0;
+		modDrawStuff(wfsinfo, &disp, &shtrack);
+		snprintf(title, 64, "%s - Flatfield", disp.caption);
+		SDL_WM_SetCaption(title, 0);
+		// reset the display settings
+		disp.dispsrc = oldsrc;
+		disp.dispover = oldover;
 	}
 	else if (ptc->calmode == CAL_SUBAPSEL) {
 		logInfo(0, "Starting subaperture selection now");
@@ -314,20 +351,36 @@ int modCalibrate(control_t *ptc) {
 		// get a single image
 		drvGetImg(&dalsacam, &buffer, NULL, &(wfsinfo->image));
 		
-		
-		// run subapsel on this image
-		int nsubap=0;
-		float samini = 5;
-		int samxr = -5;
-		modSelSubaptsByte(&(wfsinfo->image), &shtrack, wfsinfo, &nsubap, samini, samxr);
-			//modSelSubaptsByte(void *image, mod_sh_track_t *shtrack, wfs_t *shwfs, int *totnsubap, float samini, int samxr) 
-
-	
 		// stop grabbing
 		if (drvStopGrab(&dalsacam) != EXIT_SUCCESS)
 			return EXIT_FAILURE;
 
-		logInfo(0, "Subaperture selection complete, found %d subapertures.", nsubap);
+		uint8_t *tmpimg = (uint8_t *) wfsinfo->image;
+		int tmpmax = tmpimg[0];
+		int tmpmin = tmpimg[0];
+		int tmpsum, i;
+		for (i=0; i<wfsinfo->res.x*wfsinfo->res.y; i++) {
+			tmpsum += tmpimg[i];
+			if (tmpimg[i] > tmpmax) tmpmax = tmpimg[i];
+			else if (tmpimg[i] < tmpmin) tmpmin = tmpimg[i];
+		}           
+		logInfo(0, "Image info: sum: %d, avg: %f, range: (%d,%d)", tmpsum, (float) tmpsum / (wfsinfo->res.x*wfsinfo->res.y), tmpmin, tmpmax);
+
+		// run subapsel on this image
+		modSelSubaptsByte((uint8_t *) wfsinfo->image, &shtrack, wfsinfo);
+			//modSelSubaptsByte(void *image, mod_sh_track_t *shtrack, wfs_t *shwfs, int *totnsubap, float samini, int samxr) 
+
+	
+		logInfo(0, "Subaperture selection complete, found %d subapertures.", shtrack.nsubap);
+		// set new display settings to show the darkfield
+		disp.dispsrc = DISPSRC_RAW;
+		disp.dispover = DISPOVERLAY_SUBAPS | DISPOVERLAY_GRID;
+		modDrawStuff(wfsinfo, &disp, &shtrack);
+		snprintf(title, 64, "%s - Subaps", disp.caption);
+		SDL_WM_SetCaption(title, 0);
+		// reset the display settings
+		disp.dispsrc = oldsrc;
+		disp.dispover = oldover;
 	}
 	
 	return EXIT_SUCCESS;
@@ -344,11 +397,11 @@ int modMessage(control_t *ptc, const client_t *client, char *list[], const int c
 	int tmpint;
 	float tmpfloat;
 	
- 	if (strcmp(list[0],"help") == 0) {
+ 	if (strncmp(list[0],"help",3) == 0) {
 		// give module specific help here
 		if (count > 1) { 
 			
-			if (strcmp(list[1], "display") == 0) {
+			if (strncmp(list[1], "disp",3) == 0) {
 				tellClient(client->buf_ev, "\
 200 OK HELP DISPLAY\n\
 display <source>:       change the display source.\n\
@@ -358,31 +411,33 @@ display <source>:       change the display source.\n\
    flat:                show the flatfield being used.\
 ");
 			}
-			else if (strcmp(list[1], "vid") == 0) {
+			else if (strncmp(list[1], "vid",3) == 0) {
 				tellClient(client->buf_ev, "\
 200 OK HELP VID\n\
 vid <mode> [val]:       configure the video output.\n\
    auto:                use auto contrast/brightness.\n\
-   c [int]:             use manual c/b with this contrast.\n\
-   b [int]:             use manual c/b with this brightness.\
+   c [i]:               use manual c/b with this contrast.\n\
+   b [i]:               use manual c/b with this brightness.\
 ");
 			}
-			else if (strcmp(list[1], "set") == 0) {
+			else if (strncmp(list[1], "set",3) == 0) {
 				tellClient(client->buf_ev, "\
 200 OK HELP SET\n\
 set [prop] [val]:       set or query property values.\n\
-   lf [int]:            set the logfraction.\n\
-   ff [int]:            set the number of frames to use for dark/flats.\n\
+   lf [i]:              set the logfraction.\n\
+   ff [i]:              set the number of frames to use for dark/flats.\n\
+   samini [f]:          set the minimum intensity for subapt selection.\n\
+   samxr [i]:           set maxr used for subapt selection.\n\
    -:                   if no prop is given, query the values.\
 ");
 			}
-			else if (strcmp(list[1], "calibrate") == 0) {
+			else if (strncmp(list[1], "cal",3) == 0) {
 				tellClient(client->buf_ev, "\
 200 OK HELP CALIBRATE\n\
 calibrate <mode>:       calibrate the ao system.\n\
    dark:                take a darkfield by averaging %d frames.\n\
    flat:                take a flatfield by averaging %d frames.\n\
-   subapsel:            select some subapertures.\
+   selsubap:            select some subapertures.\
 ", ptc->wfs[0].fieldframes, ptc->wfs[0].fieldframes);
 			}
 			else // we don't know. tell this to parseCmd by returning 0
@@ -392,31 +447,39 @@ calibrate <mode>:       calibrate the ao system.\n\
 			tellClient(client->buf_ev, "\
 === prime module options ===\n\
 display <source>:       tell foam what display source to use.\n\
-vid <auto|c|v> [int]:   use autocontrast/brightness, or set manually.\n\
-resetdm [voltage]:      reset the DM to a certain voltage for all acts. def=0\n\
-resetdaq [voltage]:     reset the DAQ analog outputs to a certain voltage. def=0\n\
+vid <auto|c|v> [i]:     use autocontrast/brightness, or set manually.\n\
+resetdm [i]:            reset the DM to a certain voltage for all acts. def=0\n\
+resetdaq [i]:           reset the DAQ analog outputs to a certain voltage. def=0\n\
 set [prop]:             set or query certain properties.\n\
 calibrate <mode>:       calibrate the ao system (dark, flat, subapt, etc).\
 ");
 		}
 	}
 #ifdef FOAM_MCMATH_DISPLAY
- 	else if (strcmp(list[0], "display") == 0) {
+ 	else if (strncmp(list[0], "disp",3) == 0) {
 		if (count > 1) {
-			if (strcmp(list[1], "raw") == 0) {
+			if (strncmp(list[1], "raw",3) == 0) {
 				tellClient(client->buf_ev, "200 OK DISPLAY RAW");
-                disp.dispsrc = DISPSRC_RAW;
-                // example how to remove mask 'DISPMODE_RAW' from dispmode
-                // raw mode:  00001
-                // !raw mode: 11110
-                // old mode:  01101
-                // !raw&old:  01100 
+				disp.dispsrc = DISPSRC_RAW;
 			}
-			else if (strcmp(list[1], "calib") == 0) {
-                disp.dispsrc = DISPSRC_CALIB;
+			else if (strncmp(list[1], "cal",3) == 0) {
+				disp.dispsrc = DISPSRC_CALIB;
 				tellClient(client->buf_ev, "200 OK DISPLAY CALIB");
 			}
-			else if (strcmp(list[1], "dark") == 0) {
+			else if (strncmp(list[1], "grid",3) == 0) {
+				logDebug(0, "overlay was: %d, is: %d, mask: %d", disp.dispover, disp.dispover ^ DISPOVERLAY_GRID, DISPOVERLAY_GRID);
+				disp.dispover ^= DISPOVERLAY_GRID;
+				tellClient(client->buf_ev, "200 OK TOGGLING GRID OVERLAY");
+			}
+			else if (strncmp(list[1], "subaps",3) == 0) {
+				disp.dispover ^= DISPOVERLAY_SUBAPS;
+				tellClient(client->buf_ev, "200 OK TOGGLING SUBAPERTURE OVERLAY");
+			}
+			else if (strncmp(list[1], "vectors",3) == 0) {
+				disp.dispover ^= DISPOVERLAY_VECTORS;
+				tellClient(client->buf_ev, "200 OK TOGGLING DISPLACEMENT VECTOR OVERLAY");
+			}
+			else if (strncmp(list[1], "dark",3) == 0) {
 				if  (ptc->wfs[0].darkim == NULL) {
 					tellClient(client->buf_ev, "400 ERROR DARKFIELD NOT AVAILABLE");
 				}
@@ -425,7 +488,7 @@ calibrate <mode>:       calibrate the ao system (dark, flat, subapt, etc).\
 					tellClient(client->buf_ev, "200 OK DISPLAY DARK");
 				}
 			}
-			else if (strcmp(list[1], "flat") == 0) {
+			else if (strncmp(list[1], "flat",3) == 0) {
 				if  (ptc->wfs[0].flatim == NULL) {
 					tellClient(client->buf_ev, "400 ERROR FLATFIELD NOT AVAILABLE");
 				}
@@ -483,7 +546,7 @@ calibrate <mode>:       calibrate the ao system (dark, flat, subapt, etc).\
 			tellClients("200 OK RESETDAQ 0.0V");			
 		}
 	}
- 	else if (strcmp(list[0], "set") == 0) {
+ 	else if (strncmp(list[0], "set",3) == 0) {
 		if (count > 2) {
 			tmpint = strtol(list[2], NULL, 10);
 			tmpfloat = strtof(list[2], NULL);
@@ -495,6 +558,14 @@ calibrate <mode>:       calibrate the ao system (dark, flat, subapt, etc).\
 				ptc->wfs[0].fieldframes = tmpint;
 				tellClient(client->buf_ev, "200 OK SET FIELDFRAMES TO %d", tmpint);
 			}
+			else if (strcmp(list[1], "samini") == 0) {
+				shtrack.samini = tmpfloat;
+				tellClient(client->buf_ev, "200 OK SET SAMINI TO %.2f", tmpfloat);
+			}
+			else if (strcmp(list[1], "samxr") == 0) {
+				shtrack.samxr = tmpint;
+				tellClient(client->buf_ev, "200 OK SET SAMXR TO %d", tmpint);
+			}
 			else {
 				tellClient(client->buf_ev, "401 UNKNOWN PROPERTY, CANNOT SET");
 			}
@@ -503,16 +574,19 @@ calibrate <mode>:       calibrate the ao system (dark, flat, subapt, etc).\
 			tellClient(client->buf_ev, "200 OK VALUES AS FOLLOWS:\n\
 logfrac (lf):           %d\n\
 fieldframes (ff):       %d\n\
-SH array:               %dx%d\n\
-cell size:              %dx%d\n\
-ccd size:               %dx%d\n\
+SH array:               %dx%d cells\n\
+cell size:              %dx%d pixels\n\
+track size:             %dx%d pixels\n\
+ccd size:               %dx%d pixels\n\
+samxr:                  %d\n\
+samini:                 %.2f\n\
 ", ptc->logfrac, ptc->wfs[0].fieldframes, shtrack.cells.x, shtrack.cells.y,\
-shtrack.shsize.x, shtrack.shsize.y, ptc->wfs[0].res.x, ptc->wfs[0].res.y);
+shtrack.shsize.x, shtrack.shsize.y, shtrack.track.x, shtrack.track.y, ptc->wfs[0].res.x, ptc->wfs[0].res.y, shtrack.samxr, shtrack.samini);
 		}
 	}
- 	else if (strcmp(list[0], "vid") == 0) {
+ 	else if (strncmp(list[0], "vid",3) == 0) {
 		if (count > 1) {
-			if (strcmp(list[1], "auto") == 0) {
+			if (strncmp(list[1], "auto",3) == 0) {
 				disp.autocontrast = 1;
 				tellClient(client->buf_ev, "200 OK USING AUTO SCALING");
 			}
@@ -546,22 +620,22 @@ shtrack.shsize.x, shtrack.shsize.y, ptc->wfs[0].res.x, ptc->wfs[0].res.y);
 			tellClient(client->buf_ev, "402 VID REQUIRES ARGS");
 		}
 	}
- 	else if (strcmp(list[0], "calibrate") == 0) {
+ 	else if (strncmp(list[0], "cal",3) == 0) {
 		if (count > 1) {
-			if (strcmp(list[1], "dark") == 0) {
+			if (strncmp(list[1], "dark",3) == 0) {
 				ptc->mode = AO_MODE_CAL;
 				ptc->calmode = CAL_DARK;
                 tellClient(client->buf_ev, "200 OK DARKFIELDING NOW");
 		pthread_cond_signal(&mode_cond);
 				// add message to the users
 			}
-			else if (strcmp(list[1], "subapsel") == 0) {
+			else if (strncmp(list[1], "sel",3) == 0) {
 				ptc->mode = AO_MODE_CAL;
 				ptc->calmode = CAL_SUBAPSEL;
                 tellClient(client->buf_ev, "200 OK SELECTING SUBAPTS");
 		pthread_cond_signal(&mode_cond);
 			}
-			else if (strcmp(list[1], "flat") == 0) {
+			else if (strncmp(list[1], "flat",3) == 0) {
 				ptc->mode = AO_MODE_CAL;
 				ptc->calmode = CAL_FLAT;
 				tellClient(client->buf_ev, "200 OK FLATFIELDING NOW");
@@ -660,31 +734,40 @@ int MMAvgFramesByte(gsl_matrix_float *output, wfs_t *wfs, int rounds) {
 }
 
 // Dark flat calibration
-int MMDarkFlatCorrByte(wfs_t *wfs) {
+int MMDarkFlatCorrByte(wfs_t *wfs, mod_sh_track_t *shtrack) {
 	logDebug(LOG_SOMETIMES, "Dark correcting now, flat not implemented yet");
+	int sn;
 	size_t i, j; // size_t because gsl wants this
 	uint8_t* imagesrc = (uint8_t*) wfs->image;
 	
-	if (wfs->darkim != NULL && wfs->flatim != NULL) {
-		// copy raw image to corrected image memory first
-		for (i=0; i < wfs->res.y; i++) {
-			for (j=0; j < wfs->res.x; j++) {
-				// this says: (imgsrc - dark) / (flat-dark)
-				gsl_matrix_float_set(wfs->corrim, i, j, \
-				(((float) imagesrc[i*wfs->res.x +j]) -\
-				gsl_matrix_float_get(wfs->darkim, i, j)) / \
-				(gsl_matrix_float_get(wfs->flatim, i, j) - \
-				gsl_matrix_float_get(wfs->darkim, i, j)) \
+	if (wfs->darkim == NULL || wfs->flatim == NULL) {
+		logWarn("Dark- or flatfield not available, please calibrate first");
+		return EXIT_FAILURE;
+	}
+	// loop over all subapertures, and correct only the
+	// tracker windows for dark and flat
+	for (sn=0; sn<shtrack->nsubap; sn++) {
+		// correcting tracker window for subapt 'sn' now
+		// which is shtrack->track.x by track.y big
+		// and which is located at shtrack->subc.x by subc.y
+
+		for (i=0; i < shtrack->track.y; i++) {
+			for (j=0; j < shtrack->track.x; j++) {
+				// source pixel at:
+				// img[subc.x + subc.y *res.x + i *res.x + j]
+				// dst at corrim,
+				// corrim = img-dark
+				gsl_matrix_float_set(wfs->corrim, i + shtrack->subc[sn].y, j + shtrack->subc[sn].x, \
+				(((float) imagesrc[shtrack->subc[sn].y * wfs->res.x + shtrack->subc[sn].x + i*wfs->res.x +j]) -\
+				gsl_matrix_float_get(wfs->darkim, i + shtrack->subc[sn].y, j + shtrack->subc[sn].x))  \
 				);
 			}
 		}
-		
-		// now do raw-dark/(flat-dark), flat-dark is already stored in wfs->flatim
-		//gsl_matrix_float_sub (wfs->corrim, wfs->darkim);
-		//gsl_matrix_float_div_elements (wfs->corrim, wfs->flatim);
 	}
-	else 
-		return EXIT_FAILURE;
+	
+	// now do raw-dark/(flat-dark), flat-dark is already stored in wfs->flatim
+	//gsl_matrix_float_sub (wfs->corrim, wfs->darkim);
+	//gsl_matrix_float_div_elements (wfs->corrim, wfs->flatim);
 
 	return EXIT_SUCCESS;
 }

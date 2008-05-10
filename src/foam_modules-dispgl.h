@@ -60,7 +60,7 @@ typedef struct {
 	int bpp;					//!< (mod) The bpp of the display (not the source!)
 	Uint32 flags;				//!< (user) Flags to use with SDL_SetVideoMode
     dispsrc_t dispsrc;          //!< (user) The display source, can be DISP_RAW, DISP_CALIB, DISP_DARK, DISP_FLAT
-    uint32_t dispover;          //!< (user) The overlays to display, see DISPOVERLAY_* defines
+    int dispover;          //!< (user) The overlays to display, see DISPOVERLAY_* defines
     int autocontrast;			//!< (user/runtime) 1 = foam handles contrast, 0 = user handles contrast
     int contrast;               //!< (user) if autocontrast=0, use this to scale the pixel intensities
     int brightness;             //!< (user) if autocontrast=0, use this to shift the pixel intensities

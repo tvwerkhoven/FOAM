@@ -248,7 +248,7 @@ int modDisplayImgFloat(float *img, mod_display_t *disp) {
         scale = disp->contrast;
     }
 	
-	logDebug(0, "Displaying image, (%5.3f, %5.3f) -> (%5.3f, %5.3f).", min, max, (min+shift) * scale, (max+shift)*scale);
+	//logDebug(0, "Displaying image, (%5.3f, %5.3f) -> (%5.3f, %5.3f).", min, max, (min+shift) * scale, (max+shift)*scale);
     
 	Uint32 color;
 	// trust me, i'm not proud of this code either ;) TODO
@@ -324,7 +324,7 @@ int modDisplayImgByte(uint8_t *img, mod_display_t *disp) {
     Uint8 i;                // SDL type
 	uint8_t max=img[0];     // stdint type
 	uint8_t min=img[0];
-	uint8_t shift, scale;   // use shift and scale to adjust the pixel intensities
+	uint8_t shift=0, scale=1;   // use shift and scale to adjust the pixel intensities
 	
     //if (disp->autocontrast == 1) {
         // we need this loop to check the maximum and minimum intensity. 
@@ -348,7 +348,7 @@ int modDisplayImgByte(uint8_t *img, mod_display_t *disp) {
     }
     
 	
-	logDebug(0, "Displaying image, (%d, %d) -> (%5.3f, %5.3f).", min, max, (min+shift) * scale, (max+shift)*scale);
+	//logDebug(0, "Displaying image, (%d, %d) -> (%5.3f, %5.3f).", min, max, (min+shift) * scale, (max+shift)*scale);
     
 	Uint32 color;
 	// trust me, i'm not proud of this code either ;) TODO
@@ -541,13 +541,16 @@ int modDrawSubapts(mod_sh_track_t *shtrack, SDL_Surface *screen) {
     refcoord.y = shtrack->subc[0].y - (shtrack->shsize.y - shtrack->track.y)/2;
     
 	drawRect(refcoord, shtrack->shsize, screen);
+	//logDebug(0, "Drawing reference subapt now (%d,%d) -> (%d,%d)", refcoord.x, refcoord.y, shtrack->shsize.x, shtrack->shsize.y);
 	
 	for (sn=1; sn< shtrack->nsubap; sn++) {
 		// subapt with lower coordinates (subc[sn][0],subc[sn][1])
 		// first subapt has size (shsize[0],shsize[1]),
 		// the rest are (subsize[0],subsize[1])
+		//logDebug(LOG_NOFORMAT, "%d (%d,%d) ", sn, shtrack->subc[sn].x, shtrack->subc[sn].y);
 		drawRect(shtrack->subc[sn], shtrack->track, screen);
 	}
+	//logDebug(LOG_NOFORMAT, "\n");
 	
 	return EXIT_SUCCESS;
 }
@@ -591,10 +594,18 @@ int modDrawGrid(coord_t gridres, SDL_Surface *screen) {
 
 void modDrawStuff(wfs_t *wfsinfo, mod_display_t *display, mod_sh_track_t *shtrack) {
 	modBeginDraw(display->screen);
+
+	// display image (raw, calibrated, dark, flat)
 	modDisplayImg(wfsinfo, display);
-	modDrawGrid(shtrack->cells, display->screen);
-	modDrawSubapts(shtrack, display->screen);
-	modDrawVecs(shtrack, display->screen);
+
+	// display overlays (grid, subapts, vectors)
+	if (display->dispover & DISPOVERLAY_GRID) 
+		modDrawGrid(shtrack->cells, display->screen);
+	if (display->dispover & DISPOVERLAY_SUBAPS)
+		modDrawSubapts(shtrack, display->screen);
+	if (display->dispover & DISPOVERLAY_VECTORS) 
+		modDrawVecs(shtrack, display->screen);
+
 	modFinishDraw(display->screen);
 }
 #endif

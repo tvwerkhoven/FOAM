@@ -37,6 +37,8 @@ typedef struct {
 	coord_t cells;					//!< (user) number of cells in this SH WFS (i.e. lenslet resolution)
 	coord_t shsize;					//!< (user) pixel resolution per cell
 	coord_t track;					//!< (user) tracker window resolution in pixels (i.e. 1/2 of shsize per definition)
+	int samxr;					//!< (user) use this for edge erosion or to force maximum distance from reference subapt
+	float samini;					//!< (user) use this value as a minimum intensity for valid subapertures
 	
 	gsl_vector_float *singular;		//!< (mod) stores singular values from SVD (nact big)
 	gsl_matrix_float *dmmodes;		//!< (mod) stores dmmodes from SVD (nact*nact big)
@@ -57,6 +59,15 @@ typedef struct {
 /**************/
 
 /*!
+ @brief Initialize the SH module for a certain configuration.
+
+ This routine allocates some data for you so you don't have to :) 
+ Call this before using any routines in this module.
+ @param [in] *shtrack A pre-filled mod_sh_track_t struct with the SH sensor configuration
+ */
+int modInitSH(mod_sh_track_t *shtrack);
+
+/*!
  @brief Selects suitable subapts to work with
  
  This routine checks all subapertures and sees whether they are useful or not.
@@ -68,12 +79,23 @@ typedef struct {
  @param [in] cells The cell-resolution (lenslet size) of the SH sensor
  @param [out] *subc The coordinates of the tracker windows
  @param [out] *apcoo The coordinates of the grid associated with a window
- @param [out] &totnsubap The number of usable subapertures in the system
+ @param [out] *totnsubap The number of usable subapertures in the system
  @param [in] samini The minimum intensity a useful subaperture should have
  @param [in] samxr The maximum radius to enforce if positive, or the amount of subapts to erode if negative.
  */
 int modSelSubapts(float *image, coord_t res, int cells[2], int (*subc)[2], int (*apcoo)[2], int *totnsubap, float samini, int samxr);
-
+ 
+/*!
+ @brief Selects suitable subapts to work with (works with bytes)
+ 
+ This is an updated version of the routine modSelSubapts(), works on byte data only.
+ 
+ @param [in] *image The image that we need to look for subapts on
+ @param [in] *shtrack The SH sensor configuration for this WFS
+ @param [in] *shwfs The wavefront sensor configuration
+ @param [out] *totnsubap The number of usable subapertures in the system
+ */
+int modSelSubaptsByte(uint8_t *image, mod_sh_track_t *shtrack, wfs_t *shwfs);
 
 /*!
  @brief Parses output from Shack-Hartmann WFSs.
