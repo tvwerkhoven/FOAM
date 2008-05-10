@@ -38,6 +38,19 @@
 // ROUTINES //
 /************/
 
+int modInitSH(mod_sh_track_t *shtrack) {
+	logInfo(0, "Initializing SH tracking module");
+	shtrack->subc = calloc(shtrack->nsubap, sizeof(coord_t));
+	shtrack->gridc = calloc(shtrack->nsubap, sizeof(coord_t));
+	if (shtrack->subc == NULL || shtrack->gridc == NULL) {
+		logErr("Error: could not allocate memory in modInitSH()!");
+		return EXIT_FAILURE;
+	}
+
+	return EXIT_SUCCESS;
+}
+
+
 int modSelSubapts(float *image, coord_t res, int cells[2], int (*subc)[2], int (*apcoo)[2], int *totnsubap, float samini, int samxr) {
 	// stolen from ao3.c by CUK :)
 	int isy, isx, iy, ix, i, sn=0, nsubap=0; //init sn to zero!!
@@ -309,6 +322,7 @@ int modSelSubaptsByte(void *image, mod_sh_track_t *shtrack, wfs_t *shwfs, int *t
 			} else {
 				apmap[isx][isy] = 0; // don't use this subapt
 			}
+			logDebug(0, "cog (%d,%d) subc (%d,%d) gridc (%d,%d) sum %d (min: %f, max: %d)", cs[0], cs[1], shtrack->subc[sn].x, shtrack->subc[sn].y, isx, isy, csum, samini, samxr);
 		}
 	}
 	logInfo(0, "CoG for subapts done, found %d with intensity > 0.", sn);

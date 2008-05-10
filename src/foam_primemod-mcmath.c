@@ -148,9 +148,11 @@ int modInitModule(control_t *ptc, config_t *cs_config) {
 	shtrack.shsize.x = ptc->wfs[0].res.x/shtrack.cells.x;
 	shtrack.shsize.y = ptc->wfs[0].res.y/shtrack.cells.y;
 	shtrack.track.x = shtrack.shsize.x/2;   // tracker windows are half the size of the lenslet grid things
-    shtrack.track.y = shtrack.shsize.y/2;
+	shtrack.track.y = shtrack.shsize.y/2;
 	shtrack.pinhole = "mcmath_pinhole.gsldump";
 	shtrack.influence = "mcmath_influence.gsldump";
+	// init the shtrack module now
+	modInitSH(&shtrack);	
 	
 	// configure cs_config here
 	cs_config->listenip = "0.0.0.0";	// listen on any IP by defaul
@@ -206,17 +208,20 @@ int modOpenInit(control_t *ptc) {
 }
 
 int modOpenLoop(control_t *ptc) {
+	static char title[64];
 	// get an image, without using a timeout
 	if (drvGetImg(&dalsacam, &buffer, NULL, &(ptc->wfs->image)) != EXIT_SUCCESS)
 		return EXIT_FAILURE;
 	
 	
-	MMDarkFlatCorrByte(&(ptc->wfs[0]));
+	//MMDarkFlatCorrByte(&(ptc->wfs[0]));
 	
 #ifdef FOAM_MCMATH_DISPLAY
     if (ptc->frames % ptc->logfrac == 0) {
 	modDrawStuff((&ptc->wfs[0]), &disp, &shtrack);
 	logInfo(0, "Current framerate: %.2f FPS", ptc->fps);
+	snprintf(title, 64, "%s - %.2f FPS", disp.caption, ptc->fps);
+	SDL_WM_SetCaption(title, 0);
     }
 #endif
 	return EXIT_SUCCESS;
@@ -303,7 +308,26 @@ int modCalibrate(control_t *ptc) {
 	}
 	else if (ptc->calmode == CAL_SUBAPSEL) {
 		logInfo(0, "Starting subaperture selection now");
-		//modOpenInit(ptc);
+		// init grabbing
+		if (drvInitGrab(&dalsacam) != EXIT_SUCCESS) 
+			return EXIT_FAILURE;
+		// get a single image
+		drvGetImg(&dalsacam, &buffer, NULL, &(wfsinfo->image));
+		
+		
+		// run subapsel on this image
+		int nsubap=0;
+		float samini = 5;
+		int samxr = -5;
+		modSelSubaptsByte(&(wfsinfo->image), &shtrack, wfsinfo, &nsubap, samini, samxr);
+			//modSelSubaptsByte(void *image, mod_sh_track_t *shtrack, wfs_t *shwfs, int *totnsubap, float samini, int samxr) 
+
+	
+		// stop grabbing
+		if (drvStopGrab(&dalsacam) != EXIT_SUCCESS)
+			return EXIT_FAILURE;
+
+		logInfo(0, "Subaperture selection complete, found %d subapertures.", nsubap);
 	}
 	
 	return EXIT_SUCCESS;
@@ -331,7 +355,7 @@ display <source>:       change the display source.\n\
    raw:                 direct images from the camera.\n\
    calib:               dark/flat corrected images.\n\
    dark:                show the darkfield being used.\n\
-   flat:                show the flatfield being used.\n\
+   flat:                show the flatfield being used.\
 ");
 			}
 			else if (strcmp(list[1], "vid") == 0) {
@@ -340,7 +364,7 @@ display <source>:       change the display source.\n\
 vid <mode> [val]:       configure the video output.\n\
    auto:                use auto contrast/brightness.\n\
    c [int]:             use manual c/b with this contrast.\n\
-   c [int]:             use manual c/b with this brightness.\n\
+   b [int]:             use manual c/b with this brightness.\
 ");
 			}
 			else if (strcmp(list[1], "set") == 0) {
@@ -358,7 +382,7 @@ set [prop] [val]:       set or query property values.\n\
 calibrate <mode>:       calibrate the ao system.\n\
    dark:                take a darkfield by averaging %d frames.\n\
    flat:                take a flatfield by averaging %d frames.\n\
-   subapsel:            select some subapertures.\n\
+   subapsel:            select some subapertures.\
 ", ptc->wfs[0].fieldframes, ptc->wfs[0].fieldframes);
 			}
 			else // we don't know. tell this to parseCmd by returning 0
@@ -412,8 +436,6 @@ calibrate <mode>:       calibrate the ao system (dark, flat, subapt, etc).\
 			}
 			else {
 				tellClient(client->buf_ev, "401 UNKNOWN DISPLAY");
-				// we don't know. tell this to parseCmd by returning 0
-				return 0;
 			}
 		}
 		else {
@@ -434,7 +456,6 @@ calibrate <mode>:       calibrate the ao system (dark, flat, subapt, etc).\
 			}
 			else {
 				tellClient(client->buf_ev, "403 INCORRECT VOLTAGE!");
-				return 0;
 			}
 		}
 		else {
@@ -455,7 +476,6 @@ calibrate <mode>:       calibrate the ao system (dark, flat, subapt, etc).\
 			}
 			else {
 				tellClient(client->buf_ev, "403 INCORRECT VOLTAGE!");
-				return 0;
 			}
 		}
 		else {
@@ -470,7 +490,6 @@ calibrate <mode>:       calibrate the ao system (dark, flat, subapt, etc).\
 			if (strcmp(list[1], "lf") == 0) {
 				ptc->logfrac = tmpint;
 				tellClient(client->buf_ev, "200 OK SET LOGFRAC TO %d", tmpint);
-				return 1;
 			}
 			else if (strcmp(list[1], "ff") == 0) {
 				ptc->wfs[0].fieldframes = tmpint;
@@ -478,7 +497,6 @@ calibrate <mode>:       calibrate the ao system (dark, flat, subapt, etc).\
 			}
 			else {
 				tellClient(client->buf_ev, "401 UNKNOWN PROPERTY, CANNOT SET");
-				return 0;
 			}
 		}
 		else {
@@ -500,10 +518,10 @@ shtrack.shsize.x, shtrack.shsize.y, ptc->wfs[0].res.x, ptc->wfs[0].res.y);
 			}
 			else if (strcmp(list[1], "c") == 0) {
 				if (count > 2) {
-					tmpint = strtol(list[2], NULL, 10);
+					tmpfloat = strtof(list[2], NULL);
 					disp.autocontrast = 0;
-					disp.contrast = tmpint;
-					tellClient(client->buf_ev, "200 OK CONTRAST %d", tmpint);
+					disp.contrast = tmpfloat;
+					tellClient(client->buf_ev, "200 OK CONTRAST %f", tmpfloat);
 				}
 				else {
 					tellClient(client->buf_ev, "402 NO CONTRAST GIVEN");
@@ -521,13 +539,11 @@ shtrack.shsize.x, shtrack.shsize.y, ptc->wfs[0].res.x, ptc->wfs[0].res.y);
 				}
 			}
 			else {
-				tellClient(client->buf_ev, "401 UNKNOWN CALIBRATION");
-				return 0;
+				tellClient(client->buf_ev, "401 UNKNOWN VID");
 			}
 		}
 		else {
-			tellClient(client->buf_ev, "402 CALIBRATE REQUIRES ARGS");
-			return 0;
+			tellClient(client->buf_ev, "402 VID REQUIRES ARGS");
 		}
 	}
  	else if (strcmp(list[0], "calibrate") == 0) {
@@ -539,20 +555,24 @@ shtrack.shsize.x, shtrack.shsize.y, ptc->wfs[0].res.x, ptc->wfs[0].res.y);
 		pthread_cond_signal(&mode_cond);
 				// add message to the users
 			}
+			else if (strcmp(list[1], "subapsel") == 0) {
+				ptc->mode = AO_MODE_CAL;
+				ptc->calmode = CAL_SUBAPSEL;
+                tellClient(client->buf_ev, "200 OK SELECTING SUBAPTS");
+		pthread_cond_signal(&mode_cond);
+			}
 			else if (strcmp(list[1], "flat") == 0) {
 				ptc->mode = AO_MODE_CAL;
 				ptc->calmode = CAL_FLAT;
-                tellClient(client->buf_ev, "200 OK FLATFIELDING NOW");
-		pthread_cond_signal(&mode_cond);
+				tellClient(client->buf_ev, "200 OK FLATFIELDING NOW");
+				pthread_cond_signal(&mode_cond);
 			}
 			else {
 				tellClient(client->buf_ev, "401 UNKNOWN CALIBRATION");
-				return 0;
 			}
 		}
 		else {
 			tellClient(client->buf_ev, "402 CALIBRATE REQUIRES ARGS");
-			return 0;
 		}
 	}
 	else { // no valid command found? return 0 so that the main thread knows this
@@ -649,15 +669,23 @@ int MMDarkFlatCorrByte(wfs_t *wfs) {
 		// copy raw image to corrected image memory first
 		for (i=0; i < wfs->res.y; i++) {
 			for (j=0; j < wfs->res.x; j++) {
-				// !!!:tim:20080505 double casting a little weird?
-				gsl_matrix_float_set(wfs->corrim, i, j, (float) imagesrc[i*wfs->res.x +j]);
+				// this says: (imgsrc - dark) / (flat-dark)
+				gsl_matrix_float_set(wfs->corrim, i, j, \
+				(((float) imagesrc[i*wfs->res.x +j]) -\
+				gsl_matrix_float_get(wfs->darkim, i, j)) / \
+				(gsl_matrix_float_get(wfs->flatim, i, j) - \
+				gsl_matrix_float_get(wfs->darkim, i, j)) \
+				);
 			}
 		}
 		
 		// now do raw-dark/(flat-dark), flat-dark is already stored in wfs->flatim
-		gsl_matrix_float_sub (wfs->corrim, wfs->darkim);
+		//gsl_matrix_float_sub (wfs->corrim, wfs->darkim);
 		//gsl_matrix_float_div_elements (wfs->corrim, wfs->flatim);
 	}
+	else 
+		return EXIT_FAILURE;
+
 	return EXIT_SUCCESS;
 }
 

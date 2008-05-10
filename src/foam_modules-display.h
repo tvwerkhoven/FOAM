@@ -60,7 +60,7 @@ typedef struct {
     dispsrc_t dispsrc;          //!< (user) The display source, can be DISP_RAW, DISP_CALIB, DISP_DARK, DISP_FLAT
     uint32_t dispover;          //!< (user) The overlays to display, see DISPOVERLAY_* defines
     int autocontrast;               //!< (user/runtime) 1 = foam handles contrast, 0 = user handles contrast
-    int contrast;               //!< (user) if autocontrast=0, use this to scale the pixel intensities
+    float contrast;               //!< (user) if autocontrast=0, use this to scale the pixel intensities
     int brightness;             //!< (user) if autocontrast=0, use this to shift the pixel intensities
 } mod_display_t;
 
@@ -109,6 +109,19 @@ void drawLine(int x0, int y0, int x1, int y1, SDL_Surface*screen);
  */
 int modDisplayImg(wfs_t *wfsinfo, mod_display_t *disp)	;
 
+/*!
+ @brief This displays a GSL matrix on the screen
+ 
+ This converts a GSL image stored in  *gslimg to a byte image ready to
+ be displayed on a screen. doscale can be used to apply scaling when
+ converting floats to bytes or to directly cast it.
+ Do not forget to call modBeginDraw()/modFinishDraw().
+ 
+ @param [in] *gslimg pointer to the gsl float matrix to be drawn
+ @param [in] *disp pre-filled mod_display_t structure
+ @param [in] doscale scale floats during byte conversion (1) or not (0)
+ */
+int modDisplayGSLImg(gsl_matrix_float *gslimg, mod_display_t *disp, int doscale);
 
 /*!
  @brief This displays a byte image img with resolution res (called from modDisplayImg())

@@ -248,7 +248,7 @@ int modDisplayImgFloat(float *img, mod_display_t *disp) {
         scale = disp->contrast;
     }
 	
-	logDebug(0, "Displaying image, min: %5.3f, max: %5.3f.", min, max);
+	logDebug(0, "Displaying image, (%5.3f, %5.3f) -> (%5.3f, %5.3f).", min, max, (min+shift) * scale, (max+shift)*scale);
     
 	Uint32 color;
 	// trust me, i'm not proud of this code either ;) TODO
@@ -326,7 +326,7 @@ int modDisplayImgByte(uint8_t *img, mod_display_t *disp) {
 	uint8_t min=img[0];
 	uint8_t shift, scale;   // use shift and scale to adjust the pixel intensities
 	
-    if (disp->autocontrast == 1) {
+    //if (disp->autocontrast == 1) {
         // we need this loop to check the maximum and minimum intensity. 
         for (x=0; x < disp->res.x * disp->res.y; x++) {
             if (img[x] > max)
@@ -339,15 +339,16 @@ int modDisplayImgByte(uint8_t *img, mod_display_t *disp) {
 		scale = 255/(max-min);
 	else 
 		scale = 1;
-    }
-    else {
+    //}
+    if (disp->autocontrast == 0) {
+    //else {
         // use static brightness and contrast
         shift = disp->brightness;
         scale = disp->contrast;
     }
     
 	
-	logDebug(0, "Displaying image, min: %d, max: %d.", min, max);
+	logDebug(0, "Displaying image, (%d, %d) -> (%5.3f, %5.3f).", min, max, (min+shift) * scale, (max+shift)*scale);
     
 	Uint32 color;
 	// trust me, i'm not proud of this code either ;) TODO
@@ -417,16 +418,18 @@ int modDisplayImgByte(uint8_t *img, mod_display_t *disp) {
 	return EXIT_SUCCESS;
 }
 
-int modDisplayGSLImg(gsl_matrix_float *gslimg, mod_display_t *disp) {
+int modDisplayGSLImg(gsl_matrix_float *gslimg, mod_display_t *disp, int doscale) {
 	int i, j;
 	float min, max;
 	// we want to display a GSL image, copy it over the normal image 
 	if (tmpimg_b == NULL)
 		tmpimg_b = malloc(disp->res.x * disp->res.y);
 
-	gsl_matrix_float_minmax(gslimg, &min, &max);
-	gsl_matrix_float_add_constant(gslimg, -min);
-	gsl_matrix_float_scale(gslimg, 255/(max-min));
+	if (doscale == 1) {
+		gsl_matrix_float_minmax(gslimg, &min, &max);
+		gsl_matrix_float_add_constant(gslimg, -min);
+		gsl_matrix_float_scale(gslimg, 255/(max-min));
+	}
 
 	for (i=0; i < disp->res.x; i++) {
 		for (j=0; j < disp->res.y; j++) {
@@ -451,13 +454,13 @@ int modDisplayImg(wfs_t *wfsinfo, mod_display_t *disp) {
 		}
 	}
 	else if (disp->dispsrc == DISPSRC_DARK) {
-		modDisplayGSLImg(wfsinfo->darkim, disp);
+		modDisplayGSLImg(wfsinfo->darkim, disp, 1);
 	}
 	else if (disp->dispsrc == DISPSRC_FLAT) {
-		modDisplayGSLImg(wfsinfo->flatim, disp);
+		modDisplayGSLImg(wfsinfo->flatim, disp, 1);
 	}
 	else if (disp->dispsrc == DISPSRC_CALIB) {
-		modDisplayGSLImg(wfsinfo->corrim, disp);
+		modDisplayGSLImg(wfsinfo->corrim, disp, 1);
 	}
     
     return EXIT_FAILURE;

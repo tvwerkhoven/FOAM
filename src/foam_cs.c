@@ -188,6 +188,7 @@ void stopFOAM() {
 	
 	// Tell the clients we're going down
 	tellClients("200 OK SHUTTING DOWN NOW");
+	logInfo(0, "Shutting down FOAM now");
 	
 	// disconnect all clients
 	for (i=0; i < MAX_CLIENTS; i++) {
@@ -223,12 +224,12 @@ void stopFOAM() {
 			logWarn("There was a problem joining worker thread %d/%d, return code was: %d (%s)", \
 					i+1, cs_config.nthreads, rc, strerror(errno));
 		else
-			logInfo(0, "Thread %d/%d joined successfully, exit status was: %ld", \
+			logDebug(0, "Thread %d/%d joined successfully, exit status was: %ld", \
 					i+1, cs_config.nthreads, (long) status);
 
 	}
 	
-	logInfo(0, "Destroying thread configuration (mutex, cond, attr)...");
+	logDebug(0, "Destroying thread configuration (mutex, cond, attr)...");
 	pthread_mutex_destroy(&mode_mutex);
 	pthread_cond_destroy(&mode_cond);
 	pthread_attr_destroy(&attr);
