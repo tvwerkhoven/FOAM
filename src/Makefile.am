@@ -3,11 +3,12 @@ bin_PROGRAMS =
 
 # some shared compiler flags which must always be used
 # (not using AM_* flags because of http://sourceware.org/automake/automake.html#Flag-Variables-Ordering)
+CC=/usr/bin/gcc-4.1
 CFLAGS=-pipe -Wall -Wextra 
 # To diagnose linker errors:
 #CFLAGS+=-Wl,-verbose
 # To get some optimization:
-#CFLAGS+=-O3 -ftree-vectorize
+CFLAGS+=-O3 -ftree-vectorize
 
 LDFLAGS=$(COMMON_LIBS) -lc
 

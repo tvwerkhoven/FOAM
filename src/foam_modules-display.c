@@ -456,6 +456,9 @@ int modDisplayImg(wfs_t *wfsinfo, mod_display_t *disp) {
 	else if (disp->dispsrc == DISPSRC_FLAT) {
 		modDisplayGSLImg(wfsinfo->flatim, disp);
 	}
+	else if (disp->dispsrc == DISPSRC_CALIB) {
+		modDisplayGSLImg(wfsinfo->corrim, disp);
+	}
     
     return EXIT_FAILURE;
 }

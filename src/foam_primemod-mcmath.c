@@ -211,12 +211,12 @@ int modOpenLoop(control_t *ptc) {
 		return EXIT_FAILURE;
 	
 	
-	//	MMDarkFlatCorrByte(&(ptc->wfs[0]));
+	MMDarkFlatCorrByte(&(ptc->wfs[0]));
 	
 #ifdef FOAM_MCMATH_DISPLAY
     if (ptc->frames % ptc->logfrac == 0) {
-		modDrawStuff((&ptc->wfs[0]), &disp, &shtrack);
-	    logInfo(0, "Current framerate: %.2f FPS", ptc->fps);
+	modDrawStuff((&ptc->wfs[0]), &disp, &shtrack);
+	logInfo(0, "Current framerate: %.2f FPS", ptc->fps);
     }
 #endif
 	return EXIT_SUCCESS;
@@ -641,21 +641,22 @@ int MMAvgFramesByte(gsl_matrix_float *output, wfs_t *wfs, int rounds) {
 
 // Dark flat calibration
 int MMDarkFlatCorrByte(wfs_t *wfs) {
+	logDebug(LOG_SOMETIMES, "Dark correcting now, flat not implemented yet");
 	size_t i, j; // size_t because gsl wants this
 	uint8_t* imagesrc = (uint8_t*) wfs->image;
 	
 	if (wfs->darkim != NULL && wfs->flatim != NULL) {
 		// copy raw image to corrected image memory first
-		for (j=0; j < wfs->res.x; j++) {
-			for (i=0; i < wfs->res.y; i++) {
+		for (i=0; i < wfs->res.y; i++) {
+			for (j=0; j < wfs->res.x; j++) {
 				// !!!:tim:20080505 double casting a little weird?
-				gsl_matrix_float_set(wfs->corrim, i, j, (float) imagesrc[j*wfs->res.x +i]);
+				gsl_matrix_float_set(wfs->corrim, i, j, (float) imagesrc[i*wfs->res.x +j]);
 			}
 		}
 		
 		// now do raw-dark/(flat-dark), flat-dark is already stored in wfs->flatim
 		gsl_matrix_float_sub (wfs->corrim, wfs->darkim);
-		gsl_matrix_float_div_elements (wfs->corrim, wfs->flatim);
+		//gsl_matrix_float_div_elements (wfs->corrim, wfs->flatim);
 	}
 	return EXIT_SUCCESS;
 }
