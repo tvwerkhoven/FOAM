@@ -1,7 +1,7 @@
 /*! 
  @file foam_primemod-mcmath.c
  @author @authortim
- @date isoD	2008-04-18
+ @date 2008-04-18
  
  @brief This is the McMath prime-module which can be used at that telescope.
  */
@@ -43,7 +43,7 @@ mod_okodm_t okodm;
 mod_sh_track_t shtrack;
 
 int modInitModule(control_t *ptc, config_t *cs_config) {
-	logInfo(0, "This is the McMath-pierce prime module, enjoy.");
+	logInfo(0, "This is the McMath-Pierce prime module, enjoy.");
 	
 	// populate ptc here
 	ptc->mode = AO_MODE_LISTEN;			// start in listen mode (safe bet, you probably want this)
@@ -69,7 +69,8 @@ int modInitModule(control_t *ptc, config_t *cs_config) {
 	ptc->wfs[0].flatfile = "mcmath_flat.gsldump";
 	ptc->wfs[0].skyfile = "mcmath_sky.gsldump";
 	ptc->wfs[0].scandir = AO_AXES_XY;
-    ptc->wfs[0].id = 0;
+    	ptc->wfs[0].id = 0;
+	ptc->wfs[0].fieldframes = 1000;     // take 1000 frames for a dark or flatfield
 	
 	// configure WFC 0
 	ptc->wfc[0].name = "Okotech DM";
@@ -255,7 +256,7 @@ int modCalibrate(control_t *ptc) {
 	FILE *fieldfd;
 	wfs_t *wfsinfo = &(ptc->wfs[0]);
 	if (ptc->calmode == CAL_DARK) {
-		// take 100 dark frames, and average
+		// take dark frames, and average
 		logInfo(0, "Starting darkfield calibration now");
 		if (drvInitGrab(&dalsacam) != EXIT_SUCCESS) 
 			return EXIT_FAILURE;
@@ -264,9 +265,8 @@ int modCalibrate(control_t *ptc) {
 		if (wfsinfo->darkim == NULL) {
 			wfsinfo->darkim = gsl_matrix_float_calloc(wfsinfo->res.x, wfsinfo->res.y);
 		}
-		logDebug(0,"Darkfield image allocated, trying to get 100 images");
 
-		MMAvgFramesByte(wfsinfo->darkim, &(ptc->wfs[0]), 100);
+		MMAvgFramesByte(wfsinfo->darkim, &(ptc->wfs[0]), wfsinfo->fieldframes);
 		if (drvStopGrab(&dalsacam) != EXIT_SUCCESS)
 			return EXIT_FAILURE;
 		// saving image for later usage
@@ -281,14 +281,14 @@ int modCalibrate(control_t *ptc) {
 	}
 	else if (ptc->calmode == CAL_FLAT) {
 		logInfo(0, "Starting flatfield calibration now");
-		// take 100 flat frames, and average
+		// take flat frames, and average
 		if (drvInitGrab(&dalsacam) != EXIT_SUCCESS) 
 			return EXIT_FAILURE;
 		// check if memory is allocated yet
 		if (wfsinfo->flatim == NULL) {
 			wfsinfo->flatim = gsl_matrix_float_calloc(wfsinfo->res.x, wfsinfo->res.y);
 		}
-		MMAvgFramesByte(wfsinfo->flatim, &(ptc->wfs[0]), 100);
+		MMAvgFramesByte(wfsinfo->flatim, &(ptc->wfs[0]), wfsinfo->fieldframes);
 		if (drvStopGrab(&dalsacam) != EXIT_SUCCESS)
 			return EXIT_FAILURE;
 		// saving image for later usage
@@ -303,7 +303,6 @@ int modCalibrate(control_t *ptc) {
 	}
 	else if (ptc->calmode == CAL_SUBAPSEL) {
 		logInfo(0, "Starting subaperture selection now");
-		// take 100 flat frames, and average
 		//modOpenInit(ptc);
 	}
 	
@@ -328,24 +327,57 @@ int modMessage(control_t *ptc, const client_t *client, char *list[], const int c
 			if (strcmp(list[1], "display") == 0) {
 				tellClient(client->buf_ev, "\
 200 OK HELP DISPLAY\n\
-display <raw|calib>:    display raw ccd output or calibrated image with meta-info.\n\
-resetdm [voltage]:      reset the DM to a certain voltage for all acts. default=0\n\
-resetdaq [voltage]:     reset the DAQ analog outputs to a certain voltage. default=0\n\
-calibrate <dark|flat|subaps>:  \n\
-                        calibrate the ao system (dark, flat, subapt selection).\n\
-show <dark|flat>:       display the stored dark or flat image in the window.\n\
-						   ");
+display <source>:       change the display source.\n\
+   raw:                 direct images from the camera.\n\
+   calib:               dark/flat corrected images.\n\
+   dark:                show the darkfield being used.\n\
+   flat:                show the flatfield being used.\n\
+");
+			}
+			else if (strcmp(list[1], "vid") == 0) {
+				tellClient(client->buf_ev, "\
+200 OK HELP VID\n\
+vid <mode> [val]:       configure the video output.\n\
+   auto:                use auto contrast/brightness.\n\
+   c [int]:             use manual c/b with this contrast.\n\
+   c [int]:             use manual c/b with this brightness.\n\
+");
+			}
+			else if (strcmp(list[1], "set") == 0) {
+				tellClient(client->buf_ev, "\
+200 OK HELP SET\n\
+set [prop] [val]:       set or query property values.\n\
+   lf [int]:            set the logfraction.\n\
+   ff [int]:            set the number of frames to use for dark/flats.\n\
+   -:                   if no prop is given, query the values.\
+");
+			}
+			else if (strcmp(list[1], "calibrate") == 0) {
+				tellClient(client->buf_ev, "\
+200 OK HELP CALIBRATE\n\
+calibrate <mode>:       calibrate the ao system.\n\
+   dark:                take a darkfield by averaging %d frames.\n\
+   flat:                take a flatfield by averaging %d frames.\n\
+   subapsel:            select some subapertures.\n\
+", ptc->wfs[0].fieldframes, ptc->wfs[0].fieldframes);
 			}
 			else // we don't know. tell this to parseCmd by returning 0
 				return 0;
 		}
 		else {
-			tellClient(client->buf_ev, "This is the dummy module and does not provide any additional commands");
+			tellClient(client->buf_ev, "\
+=== prime module options ===\n\
+display <source>:       tell foam what display source to use.\n\
+vid <auto|c|v> [int]:   use autocontrast/brightness, or set manually.\n\
+resetdm [voltage]:      reset the DM to a certain voltage for all acts. def=0\n\
+resetdaq [voltage]:     reset the DAQ analog outputs to a certain voltage. def=0\n\
+set [prop]:             set or query certain properties.\n\
+calibrate <mode>:       calibrate the ao system (dark, flat, subapt, etc).\
+");
 		}
 	}
 #ifdef FOAM_MCMATH_DISPLAY
  	else if (strcmp(list[0], "display") == 0) {
-		// give module specific help here
 		if (count > 1) {
 			if (strcmp(list[1], "raw") == 0) {
 				tellClient(client->buf_ev, "200 OK DISPLAY RAW");
@@ -390,7 +422,6 @@ show <dark|flat>:       display the stored dark or flat image in the window.\n\
 	}
 #endif
  	else if (strcmp(list[0], "resetdm") == 0) {
-		// give module specific help here
 		if (count > 1) {
 			tmpint = strtol(list[1], NULL, 10);
 			
@@ -415,7 +446,6 @@ show <dark|flat>:       display the stored dark or flat image in the window.\n\
 		}
 	}
  	else if (strcmp(list[0], "resetdaq") == 0) {
-		// give module specific help here
 		if (count > 1) {
 			tmpfloat = strtof(list[1], NULL);
 			
@@ -431,6 +461,35 @@ show <dark|flat>:       display the stored dark or flat image in the window.\n\
 		else {
 			drvDaqSetDACs(&daqboard, 65536*(-daqboard.minvolt)/(daqboard.maxvolt-daqboard.minvolt));
 			tellClients("200 OK RESETDAQ 0.0V");			
+		}
+	}
+ 	else if (strcmp(list[0], "set") == 0) {
+		if (count > 2) {
+			tmpint = strtol(list[2], NULL, 10);
+			tmpfloat = strtof(list[2], NULL);
+			if (strcmp(list[1], "lf") == 0) {
+				ptc->logfrac = tmpint;
+				tellClient(client->buf_ev, "200 OK SET LOGFRAC TO %d", tmpint);
+				return 1;
+			}
+			else if (strcmp(list[1], "ff") == 0) {
+				ptc->wfs[0].fieldframes = tmpint;
+				tellClient(client->buf_ev, "200 OK SET FIELDFRAMES TO %d", tmpint);
+			}
+			else {
+				tellClient(client->buf_ev, "401 UNKNOWN PROPERTY, CANNOT SET");
+				return 0;
+			}
+		}
+		else {
+			tellClient(client->buf_ev, "200 OK VALUES AS FOLLOWS:\n\
+logfrac (lf):           %d\n\
+fieldframes (ff):       %d\n\
+SH array:               %dx%d\n\
+cell size:              %dx%d\n\
+ccd size:               %dx%d\n\
+", ptc->logfrac, ptc->wfs[0].fieldframes, shtrack.cells.x, shtrack.cells.y,\
+shtrack.shsize.x, shtrack.shsize.y, ptc->wfs[0].res.x, ptc->wfs[0].res.y);
 		}
 	}
  	else if (strcmp(list[0], "vid") == 0) {
@@ -554,11 +613,12 @@ int MMAvgFramesByte(gsl_matrix_float *output, wfs_t *wfs, int rounds) {
 
 	gsl_matrix_float_set_zero(output);
 	for (k=0; k<rounds; k++) {
-       		logDebug(LOG_NOFORMAT, ".");
+		if ((k % (rounds/10)) == 0 && k > 0)
+       			logDebug(0 , "Frame %d", k);
+
 		drvGetImg(&dalsacam, &buffer, NULL, &(wfs->image));
 		imgsrc = (uint8_t *) wfs->image;
 		
-       		logDebug(LOG_NOFORMAT, "%d,", imgsrc[0]);
 		for (i=0; i<wfs->res.y; i++) {
 			for (j=0; j<wfs->res.x; j++) {
 				tmpvar = gsl_matrix_float_get(output, i, j) + (float) imgsrc[i*wfs->res.x +j];
@@ -573,8 +633,7 @@ int MMAvgFramesByte(gsl_matrix_float *output, wfs_t *wfs, int rounds) {
 		for (i=0; i<wfs->res.y; i++) 
 			sum += gsl_matrix_float_get(output, i, j);
 				
-        logDebug(LOG_NOFORMAT, " done\n");
-        logDebug(0, "Result: min: %f, max: %f, sum: %f, avg: %f", \
+        logDebug(0, "Result: min: %.2f, max: %.2f, sum: %.2f, avg: %.2f", \
 		min, max, sum, sum/(wfs->res.x * wfs->res.y) );
 	
 	return EXIT_SUCCESS;

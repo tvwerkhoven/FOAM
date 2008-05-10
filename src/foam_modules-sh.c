@@ -668,7 +668,7 @@ int modCalcCtrl(control_t *ptc, mod_sh_track_t *shtrack, const int wfs, int nmod
 			ctrl = gsl_vector_float_get(total, j);
 			old = gsl_vector_float_get(ptc->wfc[wfc].ctrl, i);
 			
-			gsl_vector_float_set(ptc->wfc[wfc].ctrl, i, old- (ctrl*ptc->wfc[wfc].gain)); //*ptc->wfc[wfc].gain
+			gsl_vector_float_set(ptc->wfc[wfc].ctrl, i, old- (ctrl*ptc->wfc[wfc].gain.d)); 
 			logDebug(LOG_SOMETIMES | LOG_NOFORMAT, "%f -> (%d,%d) ", gsl_vector_float_get(ptc->wfc[wfc].ctrl, i), wfc, i);
 			j++;
 //			if (j >= nmodes) break;

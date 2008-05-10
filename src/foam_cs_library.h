@@ -197,7 +197,8 @@ typedef struct { // wfs_t
 	
 	char *darkfile;					//!< (user) filename for the darkfield calibration
 	char *flatfile;					//!< (user) filename for the flatfield calibration
-	char *skyfile;					//!< (user) filename for the flatfield calibration
+	char *skyfile;		 			//!< (user) filename for the flatfield calibration
+	int fieldframes;				//!< (user) take this many frames when dark or flatfielding.
     
 	axes_t scandir; 				//!< (user) scanning direction(s) used
     int id;                         //!< (user) a unique ID to identify the wfs
