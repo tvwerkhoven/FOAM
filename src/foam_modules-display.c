@@ -38,14 +38,16 @@
 
 #include "foam_modules-display.h"
 
+// Include the OpenGL backend if available. 
+#ifdef FOAM_OPENGL
+#include "foam_modules-dispgl.h"
+#else
+#include "foam_modules-dispsdl.h"
+#endif
+
 // GLOBAL VARIABLES //
 /********************/
 
-// these are not used atm, TvW 2008-05-06 17:07
-#define FOAM_MODDISPLAY_PRIO 1
-//static pthread_t moddisplay_thread;
-//static pthread_attr_t moddisplay_attr;
-//static int moddisplay_drawing = 1;
 
 // this will be used to temporarily store an image if displaying a GSL matrix
 // since this needs conversion from the GSL datatype to a simple row-major
@@ -57,367 +59,31 @@ static uint8_t *tmpimg_b=NULL;
 // ROUTINES //
 /************/
 
+public routines:
+displayInit();
+displayDraw();
+-> should be able to draw:
+ raw images (byte)
+ dark imaes
+ flat images
+-> and toggle 
+ grid (SH)
+ subap (SH)
+ vec (SH)
+displayEvent();
+displayFinish();
 
-int modInitDraw(mod_display_t *disp) {
-    if (SDL_Init(SDL_INIT_VIDEO) == -1) {
-		logWarn("Could not initialize SDL: %s", SDL_GetError());
-		return EXIT_FAILURE;
-	}
-	
-	atexit(SDL_Quit);
-	
-	SDL_WM_SetCaption(disp->caption, 0);
-	
-	disp->screen = SDL_SetVideoMode(disp->res.x, disp->res.y, 0, disp->flags);
-	//SDL_HWSURFACE | SDL_DOUBLEBUF | SDL_RESIZABLE
-	if (disp->screen == NULL) {
-		logWarn("Unable to set video: %s", SDL_GetError());
-		return EXIT_FAILURE;
-	}
-	
-	// we use this routine to startup a helper thread which will do the actual SDL
-	// such that the drawing calls are non-blocking.
-    //	int rc;
-    //
-    //	pthread_attr_init(&moddisplay_attr);
-    //	pthread_attr_setdetachstate(&moddisplay_attr, PTHREAD_CREATE_JOINABLE);
-    //	
-    //	rc = pthread_create(&moddisplay_thread, &moddisplay_attr, drawLoop, NULL);
-    //	if (rc) {
-    //		logWarn("Failed to initalize drawing module, drawing will not work.");
-    //		return EXIT_FAILURE;
-    //	}
-    //	
-	return EXIT_SUCCESS;
-}
+// in hardware routines: displayInit()
+int modInitDraw(mod_display_t *disp);
 
-int modStopDraw() {
-	// we're done, let the thread finish
-    //	moddisplay_drawing = 0;
-	
-	// join with the display thread
-    //	pthread_join(moddisplay_thread, NULL);
-	
-    //	pthread_attr_destroy(&moddisplay_attr);
-	return EXIT_SUCCESS;
-}
 
-void drawLoop() {
-    //	while (moddisplay_drawing == 1) {
-    //		
-    //	}
-	
-	// ok, we're done with drawing, stop here and join with the calling thread
-    //	pthread_exit(0);
-}
 
-void drawRect(coord_t coord, coord_t size, SDL_Surface *screen) {
-	// lower line
-	drawLine(coord.x, coord.y, coord.x + size.x + 1, coord.y, screen);
-	// top line
-	drawLine(coord.x, coord.y + size.y, coord.x + size.x, coord.y + size.y, screen);
-	// left line
-	drawLine(coord.x, coord.y, coord.x, coord.y + size.y, screen);
-	// right line
-	drawLine(coord.x + size.x, coord.y, coord.x + size.x, coord.y + size.y, screen);
-	// done
-}
-
-void drawLine(int x0, int y0, int x1, int y1, SDL_Surface *screen) {
-	int step = abs(x1-x0);
-	int i;
-	if (abs(y1-y0) > step) step = abs(y1-y0); // this can be done faster?
-    
-	float dx = (x1-x0)/(float) step;
-	float dy = (y1-y0)/(float) step;
-    
-	drawPixel(screen, x0, y0, 255, 255, 255);
-	for(i=0; i<step; i++) {
-		x1 = x0+i*dx; // since x1 is an integer, we can't just increment this, steps of 0.7 pixels wouldn't work...
-		y1 = y0+i*dy;
-		drawPixel(screen, x1, y1, 255, 255, 255); // draw directly to the screen in white
-	}
-}
-
-void drawDash(int x0, int y0, int x1, int y1, SDL_Surface *screen) {
-	int step = abs(x1-x0);
-	int i;
-	if (abs(y1-y0) > step) step = abs(y1-y0); // this can be done faster?
-    
-	float dx = (x1-x0)/(float) step;
-	float dy = (y1-y0)/(float) step;
-    
-	drawPixel(screen, x0, y0, 255, 255, 255);
-	for(i=0; i<step; i++) {
-		if ((i / 10) % 2 == 1) // we're drawing a dash, so don't always draw a pixel
-			continue;
-        
-		x1 = x0+i*dx; // since x1 is an integer, we can't just increment this, steps of 0.7 pixels wouldn't work...
-		y1 = y0+i*dy;
-		drawPixel(screen, x1, y1, 255, 255, 255); // draw directly to the screen in white
-	}
-}
-
-void drawDeltaLine(int x0, int y0, int dx, int dy, SDL_Surface *screen) {
-	drawLine(x0, y0, x0+dx, y0+dy, screen);
-}
-
-// Todo: fix img dereferencing
-/*
- int modDisplayRaw(void *img, coord_t res, int datatype, SDL_Surface *screen) {
- // datatype == 0: float
- // datatype == 1: char (uint8_t)
- int x, y, i;
- float max;
- float min;
- 
- // we need this loop to check the maximum and minimum intensity. 
- for (x=0; x < res.x*res.y; x++) {
- if (img[x] > max)
- max = img[x];
- if (img[x] < min)
- min = img[x];
- }
- 
- logDebug(0, "Displaying image, min: %5.3f, max: %5.3f.", min, max);
- 
- Uint32 color;
- switch (screen->format->BytesPerPixel) {
- case 1: { // Assuming 8-bpp
- Uint8 *bufp;
- 
- for (x=0; x<res.x; x++) {
- for (y=0; y<res.y; y++) {
- i = (int) ((img[y*res.x + x]-min)/(max-min)*255);
- color = SDL_MapRGB(screen->format, i, i, i);
- bufp = (Uint8 *)screen->pixels + y*screen->pitch + x;
- *bufp = color;
- }
- }
- }
- break;
- case 4: { // Probably 32-bpp
- Uint32 *bufp;
- 
- // draw the image itself
- for (x=0; x<res.x; x++) {
- for (y=0; y<res.y; y++) {
- i = (int) ((img[y*res.x + x]-min)/(max-min)*255);
- color = SDL_MapRGB(screen->format, i, i, i);
- bufp = (Uint32 *)screen->pixels + y*screen->pitch/4 + x;
- *bufp = color;
- }
- }
- }
- break;
- default: {
- logWarn("Warning, unsupported bitdepth encounterd (only 8 & 32 bpp implemented)");
- return EXIT_FAILURE;
- }
- }
- 
- return EXIT_SUCCESS;
- }
- */
-
-int modDisplayImgFloat(float *img, mod_display_t *disp) {
-	// ONLY does float images as input
-	int x, y;
-    Uint8 i;
-	float max=img[0];
-	float min=img[0];
-	float shift, scale;   // use shift and scale to adjust the pixel intensities    
-	
-	// we need this loop to check the maximum and minimum intensity. 
-    if (disp->autocontrast == 1) {
-        for (x=0; x < disp->res.x*disp->res.y; x++) {
-            if (img[x] > max)
-                max = img[x];
-            else if (img[x] < min)
-                min = img[x];
-        }
-        shift = -min;
-	if (max-min != 0)
-		scale = 255/(max-min);
-	else 
-		scale = 1;
-		
-    }
-    else {
-        shift = disp->brightness;
-        scale = disp->contrast;
-    }
-	
-	//logDebug(0, "Displaying image, (%5.3f, %5.3f) -> (%5.3f, %5.3f).", min, max, (min+shift) * scale, (max+shift)*scale);
-    
-	Uint32 color;
-	// trust me, i'm not proud of this code either ;) TODO
-	switch (disp->screen->format->BytesPerPixel) {
-		case 1: { // Assuming 8-bpp
-            Uint8 *bufp;
-            
-            for (x=0; x<disp->res.x; x++) {
-                for (y=0; y<disp->res.y; y++) {
-                    i = (Uint8) ((img[y*disp->res.x + x]+shift)*scale);
-                    color = SDL_MapRGB(disp->screen->format, i, i, i);
-                    bufp = (Uint8 *)disp->screen->pixels + y*disp->screen->pitch + x;
-                    *bufp = color;
-                }
-            }
-        }
-			break;
-		case 2: {// Probably 15-bpp or 16-bpp
-            Uint16 *bufp;
-            
-            for (x=0; x<disp->res.x; x++) {
-                for (y=0; y<disp->res.y; y++) {
-                    i = (Uint8) ((img[y*disp->res.x + x]+shift)*scale);
-                    color = SDL_MapRGB(disp->screen->format, i, i, i);
-                    bufp = (Uint16 *)disp->screen->pixels + y*disp->screen->pitch/2 + x;
-                    *bufp = color;
-                }
-            }
-        }
-			break;
-		case 3: { // Slow 24-bpp mode, usually not used
-            Uint8 *bufp;
-            
-            for (x=0; x<disp->res.x; x++) {
-                for (y=0; y<disp->res.y; y++) {
-                    i = (Uint8) ((img[y*disp->res.x + x]+shift)*scale);
-                    color = SDL_MapRGB(disp->screen->format, i, i, i);
-                    bufp = (Uint8 *)disp->screen->pixels + y*disp->screen->pitch + x * 3;
-                    if(SDL_BYTEORDER == SDL_LIL_ENDIAN) {
-                        bufp[0] = color;
-                        bufp[1] = color >> 8;
-                        bufp[2] = color >> 16;
-                    } else {
-                        bufp[2] = color;
-                        bufp[1] = color >> 8;
-                        bufp[0] = color >> 16;
-                    }
-                }
-            }
-        }
-			break;
-		case 4: { // Probably 32-bpp
-            Uint32 *bufp;
-            
-            // draw the image itself
-            for (x=0; x<disp->res.x; x++) {
-                for (y=0; y<disp->res.y; y++) {
-                    i = (Uint8) ((img[y*disp->res.x + x]+shift)*scale);
-                    color = SDL_MapRGB(disp->screen->format, i, i, i);
-                    bufp = (Uint32 *)disp->screen->pixels + y*disp->screen->pitch/4 + x;
-                    *bufp = color;
-                }
-            }
-        }
-            break;
-	}
-	
-	return EXIT_SUCCESS;
-}
-
-int modDisplayImgByte(uint8_t *img, mod_display_t *disp) {
-	int x, y;
-    Uint8 i;                // SDL type
-	uint8_t max=img[0];     // stdint type
-	uint8_t min=img[0];
-	uint8_t shift=0, scale=1;   // use shift and scale to adjust the pixel intensities
-	
-    //if (disp->autocontrast == 1) {
-        // we need this loop to check the maximum and minimum intensity. 
-        for (x=0; x < disp->res.x * disp->res.y; x++) {
-            if (img[x] > max)
-                max = img[x];
-            else if (img[x] < min)
-                min = img[x];
-        }
-        shift = -min;
-	if (max-min != 0)
-		scale = 255/(max-min);
-	else 
-		scale = 1;
-    //}
-    if (disp->autocontrast == 0) {
-    //else {
-        // use static brightness and contrast
-        shift = disp->brightness;
-        scale = disp->contrast;
-    }
-    
-	
-	//logDebug(0, "Displaying image, (%d, %d) -> (%5.3f, %5.3f).", min, max, (min+shift) * scale, (max+shift)*scale);
-    
-	Uint32 color;
-	// trust me, i'm not proud of this code either ;) TODO
-	switch (disp->screen->format->BytesPerPixel) {
-		case 1: { // Assuming 8-bpp
-            Uint8 *bufp;
-            
-            for (x=0; x<disp->res.x; x++) {
-                for (y=0; y<disp->res.y; y++) {
-                    i = (Uint8) ((img[y*disp->res.x + x]+shift)*scale);
-                    color = SDL_MapRGB(disp->screen->format, i, i, i);
-                    bufp = (Uint8 *)disp->screen->pixels + y*disp->screen->pitch + x;
-                    *bufp = color;
-                }
-            }
-        }
-			break;
-		case 2: {// Probably 15-bpp or 16-bpp
-            Uint16 *bufp;
-            
-            for (x=0; x<disp->res.x; x++) {
-                for (y=0; y<disp->res.y; y++) {
-                    i = (Uint8) ((img[y*disp->res.x + x]+shift)*scale);
-                    color = SDL_MapRGB(disp->screen->format, i, i, i);
-                    bufp = (Uint16 *)disp->screen->pixels + y*disp->screen->pitch/2 + x;
-                    *bufp = color;
-                }
-            }
-        }
-			break;
-		case 3: { // Slow 24-bpp mode, usually not used
-            Uint8 *bufp;
-            
-            for (x=0; x<disp->res.x; x++) {
-                for (y=0; y<disp->res.y; y++) {
-                    i = (Uint8) ((img[y*disp->res.x + x]+shift)*scale);
-                    color = SDL_MapRGB(disp->screen->format, i, i, i);
-                    bufp = (Uint8 *)disp->screen->pixels + y*disp->screen->pitch + x * 3;
-                    if(SDL_BYTEORDER == SDL_LIL_ENDIAN) {
-                        bufp[0] = color;
-                        bufp[1] = color >> 8;
-                        bufp[2] = color >> 16;
-                    } else {
-                        bufp[2] = color;
-                        bufp[1] = color >> 8;
-                        bufp[0] = color >> 16;
-                    }
-                }
-            }
-        }
-			break;
-		case 4: { // Probably 32-bpp
-            Uint32 *bufp;
-            
-            // draw the image itself
-            for (x=0; x<disp->res.x; x++) {
-                for (y=0; y<disp->res.y; y++) {
-                    i = (Uint8) ((img[y*disp->res.x + x]+shift)*scale);
-                    color = SDL_MapRGB(disp->screen->format, i, i, i);
-                    bufp = (Uint32 *)disp->screen->pixels + y*disp->screen->pitch/4 + x;
-                    *bufp = color;
-                }
-            }
-        }
-			break;
-	}
-	return EXIT_SUCCESS;
-}
-
+// to SDL lib:
+void drawRect(coord_t coord, coord_t size, SDL_Surface *screen) 
+void drawLine(int x0, int y0, int x1, int y1, SDL_Surface *screen)
+void drawDash(int x0, int y0, int x1, int y1, SDL_Surface *screen)
+void drawDeltaLine(int x0, int y0, int dx, int dy, SDL_Surface *screen)
+int modDisplayImgFloat(float *img, mod_display_t *disp)
 int modDisplayGSLImg(gsl_matrix_float *gslimg, mod_display_t *disp, int doscale) {
 	int i, j;
 	float min, max;

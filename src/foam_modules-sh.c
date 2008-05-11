@@ -319,6 +319,7 @@ int modSelSubaptsByte(uint8_t *image, mod_sh_track_t *shtrack, wfs_t *shwfs) {
 					cs[1] += + fi * iy;
 				}
 			}
+
 			// check if the summed subapt intensity is above zero (e.g. do we use it?)
 			if (csum > 0.0) { // good as long as pixels above background exist
 				// we add 0.5 to make sure the integer division is 'fair' (e.g. simulate round(), but faster)

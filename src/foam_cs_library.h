@@ -195,6 +195,11 @@ typedef struct { // wfs_t
 	gsl_matrix_float *skyim;		//!< (foam) skyfield for the CCD
 	gsl_matrix_float *corrim;		//!< (foam) corrected image to be processed
 	
+	// gsl might not be as fast as I wanted :<
+	void *darkim2;					//!< (foam) store darkfield here
+	void *flatim2;					//!< (foam) store flatim here
+	void *corrim2;					//!< (foam) store corrim here
+	
 	char *darkfile;					//!< (user) filename for the darkfield calibration
 	char *flatfile;					//!< (user) filename for the flatfield calibration
 	char *skyfile;		 			//!< (user) filename for the flatfield calibration

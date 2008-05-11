@@ -62,9 +62,9 @@ typedef struct {
     dispsrc_t dispsrc;          //!< (user) The display source, can be DISP_RAW, DISP_CALIB, DISP_DARK, DISP_FLAT
     int dispover;          //!< (user) The overlays to display, see DISPOVERLAY_* defines
     int autocontrast;			//!< (user/runtime) 1 = foam handles contrast, 0 = user handles contrast
-    int contrast;               //!< (user) if autocontrast=0, use this to scale the pixel intensities
+    float contrast;               //!< (user) if autocontrast=0, use this to scale the pixel intensities
     int brightness;             //!< (user) if autocontrast=0, use this to shift the pixel intensities
-} mod_dispgl_t;
+} mod_display_t;
 
 // ROUTINES //
 /************/

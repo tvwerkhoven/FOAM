@@ -6,21 +6,47 @@
  @brief This file contains functions to display stuff using SDL & OpenGL
  
  \section Info
- This module can be used to display images, lines, rectangles etc. using hardware accelartion.
- If available, usage of opengl is recommended. This has the advantage of being much
- easier to use (less error-prone), much faster if hardware is available, and provides non-blocking 
- flush commands to quickly deliver the drawing commands. 
+ This module can be used to display data on a screen which is rather useful when 
+ doing AO. Typical usage would start by initializing one or more mod_display_t 
+ structs, and then pass each of these to displayInit(). This will give a blank 
+ screen which can be used later on.
  
  Fortunately, even northbridge-integrated video chips have hardware accelartion nowadays so 
  this constraint shouldn't be too bad. If OpenGL is not an option, use the display module instead.
  
+ To actually display stuff, call displayDraw() whenever you want. This module is 
+ probably thread safe, so you can draw from different threads if you want. 
+ 
+ Cleaning up should be done by calling displayFinish() at the end. Furthermore, 
+ some lower level routines are also available, but are probably not necessary 
+ with typical usage. If you think you know what you're doing, you might get away 
+ with using them.
+ 
  \section Functions
  
  The functions provided to the outside world are:
+ \li displayInit() - Initialize this module (setup SDL, OpenGL etc)
+ \li displayDraw() - Actually draw stuff on the display. OpenGL is nonblocking, so this can be fast
+ \li displayEvent() - Process events that might occur (not configurable yet)
+ \li displayFinish() - Clean up the module
+ 
+ Some lower level routines include:
+ \li displayBeginDraw() - Used to initialize the drawing of a single frame. Necessary if one functiones below are used. 
+ \li displayFinishDraw() - Used to finalize the drawing of a single frame. Necessary if one functiones below are used. 
+ \li displayImgByte() - Display an image stored as unsigned byte (8 bit) 
+ \li displayGSLImgFloat() - Display a GSL matrix stored as floats. This routine first converts floats to bytes and then calls the previous function. This means that this function is rather slow.
+ \li displayGrid() - Display a (square) grid showing the lenslet array (SH)
+ \li displaySubapts() - Displays the current location of the subaperture tracking windows (SH)
+ \li displayVecs() - Draw vectors between the center of the grid and the center of the tracker window (SH)
+ 
+ 
+ The functions with (SH) appendices are Shack-Hartmann specific routines and are 
+ only available if this module is compiled with FOAM_MODULES_DISLAY_SHSUPPORT.
  
  \section Dependencies
  
- This module does not depend on other modules.
+ This module might depend on the Shack Hartmann module if you want define 
+ FOAM_MODULES_DISLAY_SHSUPPORT
  
  \section License
  
@@ -35,9 +61,9 @@
 // PRIVATE ROUTINES //
 /********************/
 
-static void resizeWindow(mod_dispgl_t *dispgl) {
+static void resizeWindow(mod_display_t *disp) {
 	// Resize the opengl viewport to the new windowsize
-	glViewport(0, 0, (GLsizei) (dispgl->windowres.x), (GLsizei) (dispgl->windowres.y)); 
+	glViewport(0, 0, (GLsizei) (disp->windowres.x), (GLsizei) (disp->windowres.y)); 
 	// Reset the coordinate system to the source image size
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
@@ -64,30 +90,30 @@ static void drawRect(coord_t origin, coord_t size) {
 // PUBLIC ROUTINES //
 /*******************/
 
-void dispglBeginDraw() {
+void displayBeginDraw(mod_display_t *disp) {
 	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 }
 
-void dispglFinishDraw() {
+void displayFinishDraw(mod_display_t *disp) {
 	glFlush();
 	SDL_GL_SwapBuffers();
 }
 
-int dispglInit(mod_dispgl_t *dispgl) {
+int displayInit(mod_display_t *disp) {
 	
     if (SDL_Init(SDL_INIT_VIDEO) == -1) {
 		logWarn("Could not initialize SDL: %s", SDL_GetError());
 		return EXIT_FAILURE;
 	}
 	
-	dispgl->info = SDL_GetVideoInfo( );
+	disp->info = SDL_GetVideoInfo( );
 	
-	if (!dispgl->info) {
+	if (!disp->info) {
 		logWarn("Could not get video info from SDL: %s", SDL_GetError());
 		return EXIT_FAILURE;
 	}
 	
-	dispgl->bpp = dispgl->info->vfmt->BitsPerPixel;
+	disp->bpp = disp->info->vfmt->BitsPerPixel;
 	
 	// a minimal opengl setup, we don't need much so don't ask too much
 	SDL_GL_SetAttribute( SDL_GL_RED_SIZE, 5 );
@@ -98,13 +124,13 @@ int dispglInit(mod_dispgl_t *dispgl) {
 	
 	atexit(SDL_Quit);
 	
-	SDL_WM_SetCaption(dispgl->caption, 0);
+	SDL_WM_SetCaption(disp->caption, 0);
 	
 	// flags should be like:
 	// SDL_HWSURFACE | SDL_OPENGL | SDL_RESIZABLE
-	dispgl->screen = SDL_SetVideoMode(dispgl->windowres.x, dispgl->windowres.y, dispglgl->bpp, dispgl->flags);
+	disp->screen = SDL_SetVideoMode(disp->windowres.x, disp->windowres.y, disp->bpp, disp->flags);
 	
-	if (dispgl->screen == NULL) {
+	if (disp->screen == NULL) {
 		logWarn("Unable to set video mode using SDL: %s", SDL_GetError());
 		return EXIT_FAILURE;
 	}
@@ -113,10 +139,10 @@ int dispglInit(mod_dispgl_t *dispgl) {
     glClearDepth(1.0f );
 	
 	
-    glViewport( 0, 0, ( GLsizei )dispgl->windowres.x, ( GLsizei )dispgl->windowres.y );
+    glViewport( 0, 0, ( GLsizei )disp->windowres.x, ( GLsizei )disp->windowres.y );
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
-    gluOrtho2D(0, dispgl->res.x, dispgl->res.y, 0);
+    gluOrtho2D(0, disp->res.x, disp->res.y, 0);
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
 	
@@ -124,21 +150,28 @@ int dispglInit(mod_dispgl_t *dispgl) {
 	return EXIT_SUCCESS;
 }
 
-int dispglShowImg(void *img, mod_dispgl_t *dispgl, int databpp) {
+int displayFinish(mod_display_t *disp) {
+	// no cleaning up necessary for SDL w/ OpenGL
+	return EXIT_SUCCESS;
+}
+
+int displayImgByte(uint8_t *img, mod_display_t *disp) {
     // !!!:tim:20080507 this is probably not very clean (float is not 16 bpp)
     // databpp == 16 
     // databpp == 8 char (uint8_t)
-    if (databpp == 8) {
-		glDrawPixels((GLsizei) dispgl->res.x, (GLsizei) dispgl->res.y, GL_LUMINANCE, GL_UNSIGNED_BYTE, (const GLvoid *) img);
+    if (disp->bpp == 8) {
+		glDrawPixels((GLsizei) disp->res.x, (GLsizei) disp->res.y, GL_LUMINANCE, GL_UNSIGNED_BYTE, (const GLvoid *) img);
+		return EXIT_SUCCESS;
     }
-    else if (databpp == 16) {
-		glDrawPixels((GLsizei) dispgl->res.x, (GLsizei) dispgl->res.y, GL_LUMINANCE, GL_FLOAT, (const GLvoid *) img);
-    }
+	
+//    else if (databpp == 16) {
+//		glDrawPixels((GLsizei) disp->res.x, (GLsizei) disp->res.y, GL_LUMINANCE, GL_FLOAT, (const GLvoid *) img);
+//    }
     
     return EXIT_FAILURE;
 }
 
-void dispglSDLEvents(mod_dispgl_t *dispgl) {
+void displaySDLEvents(mod_display_t *disp) {
 	// Poll for events, and handle the ones we care about.
 	SDL_Event event;
 	while (SDL_PollEvent(&event)) 
@@ -157,12 +190,12 @@ void dispglSDLEvents(mod_dispgl_t *dispgl) {
 				logDebug(0, "Resizing window to %d,%d\n", event.resize.w, event.resize.h);
 				
 				// update window information in the struct
-				dispgl->windowres.x = event.resize.w
-				dispgl->windowres.y = event.resize.h
+				disp->windowres.x = event.resize.w
+				disp->windowres.y = event.resize.h
 				// Get new SDL video mode
-				dispgl->screen = SDL_SetVideoMode( event.resize.w,event.resize.h, bpp, flags);
+				disp->screen = SDL_SetVideoMode( event.resize.w,event.resize.h, bpp, flags);
 				// Do the actual (opengl) resizing)
-				dispglResize(dispgl);
+				dispResize(disp);
 				
 				break;
 			case SDL_QUIT:
@@ -173,8 +206,7 @@ void dispglSDLEvents(mod_dispgl_t *dispgl) {
 
 #ifdef FOAM_MODULES_DISLAY_SHSUPPORT
 
-// !!!:tim:20080414 shortcut for SH display routines
-void dispglDrawSubapts(mod_sh_track_t *shtrack) {
+void displaySubapts(mod_sh_track_t *shtrack, mod_display_t *disp) {
 	if (shtrack->nsubap == 0)
 		return;				// if there's nothing to draw, don't draw (shouldn't happen)
     
@@ -199,7 +231,7 @@ void dispglDrawSubapts(mod_sh_track_t *shtrack) {
 }
 
 // !!!:tim:20080414 shortcut for SH display routines
-void dispglDrawVecs(mod_sh_track_t *shtrack) {
+void displayVecs(mod_sh_track_t *shtrack, mod_display_t *disp) {
 	if (shtrack->nsubap == 0)
 		return;		// if there's nothing to draw, don't draw (shouldn't happen)
 	
@@ -219,7 +251,7 @@ void dispglDrawVecs(mod_sh_track_t *shtrack) {
 	
 }
 
-void dispglGrid(coord_t gridres, coord_t imgres) {
+void displayGrid(coord_t gridres, coord_t imgres) {
 	int j;
 	glBegin(GL_LINES);
 	glColor3f(0.0, 1.0, 0.0);
@@ -240,18 +272,49 @@ void dispglGrid(coord_t gridres, coord_t imgres) {
 #endif
 
 #ifdef FOAM_MODULES_DISLAY_SHSUPPORT
-void dispglDrawStuff(wfs_t *wfsinfo, mod_dispgl_t *dispgl, mod_sh_track_t *shtrack) {
+int displayDraw(wfs_t *wfsinfo, mod_display_t *disp, mod_sh_track_t *shtrack) {
 #else
-void dispglDrawStuff(wfs_t *wfsinfo, mod_dispgl_t *dispgl) {
+int displayDraw(wfs_t *wfsinfo, mod_display_t *disp) {
 #endif
-	dispglBeginDraw();
-	dispglShowImg(wfsinfo->image, dispgl, wfsinfo->bpp);
 	
-#ifdef FOAM_MODULES_DISLAY_SHSUPPORT	
-	dispglGrid(shtrack->cells, wfsinfo->res);
-	dispglDrawSubapts(shtrack) {
-	dispglDrawVecs(shtrack)
+	displayBeginDraw(disp);
+	
+    if (disp->dispsrc == DISPSRC_RAW) {
+		if (wfsinfo->bpp == 8) {
+			//			uint8_t *imgc = 
+			displayImgByte((uint8_t *) wfsinfo->image, disp);
+		}
+		else {
+			displayFinishDraw(disp);
+			return EXIT_FAILURE;
+		}
+		// !!!:tim:20080510 floats deprecated for the moment
+		//		else if (wfsinfo->bpp == 16) {
+		//			float *imgc = (float *) wfsinfo->image;
+		//			modDisplayImgFloat(imgc, disp);
+		//		}
+	}
+	else if (disp->dispsrc == DISPSRC_DARK) {
+		displayGSLImg(wfsinfo->darkim, disp, 1);
+	}
+	else if (disp->dispsrc == DISPSRC_FLAT) {
+		displayGSLImg(wfsinfo->flatim, disp, 1);
+	}
+	else if (disp->dispsrc == DISPSRC_CALIB) {
+		displayGSLImg(wfsinfo->corrim, disp, 1);
+	}
+	
+#ifdef FOAM_MODULES_DISLAY_SHSUPPORT
+	// display overlays (grid, subapts, vectors)
+	if (display->dispover & DISPOVERLAY_GRID) 
+		displayGrid(shtrack->cells, display);
+	if (display->dispover & DISPOVERLAY_SUBAPS)
+		displaySubapts(shtrack, display);
+	if (display->dispover & DISPOVERLAY_VECTORS) 
+		displayVecs(shtrack, display);
 #endif
-		
-	dispglFinishDraw();
+	
+	displayFinishDraw(display);
+	
+    return EXIT_FAILURE;
 }

@@ -42,6 +42,9 @@ mod_okodm_t okodm;
 // Shack Hartmann tracking info
 mod_sh_track_t shtrack;
 
+// field images here:
+uint8_t cimg[SX*SY*NS] __attribute__ ((aligned (32)));
+
 int modInitModule(control_t *ptc, config_t *cs_config) {
 	logInfo(0, "This is the McMath-Pierce prime module, enjoy.");
 	
@@ -288,6 +291,7 @@ int modCalibrate(control_t *ptc) {
 		// check if memory is allocated yet
 		if (wfsinfo->darkim == NULL) {
 			wfsinfo->darkim = gsl_matrix_float_calloc(wfsinfo->res.x, wfsinfo->res.y);
+			wfsinfo->darkim2 = 
 		}
 
 		MMAvgFramesByte(wfsinfo->darkim, &(ptc->wfs[0]), wfsinfo->fieldframes);
