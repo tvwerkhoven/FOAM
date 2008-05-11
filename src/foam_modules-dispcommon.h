@@ -61,7 +61,7 @@ typedef struct {
 
 	char *caption;				//!< (user) Caption for the SDL window
 	coord_t res;				//!< (user) Resolution of the source image (i.e. ccd resolution)
-	coord_t windowres;			//!< (user) Initial resolution for the window
+	coord_t windowres;			//!< (mod) Resolution for the window (might be altered at runtime)
     dispsrc_t dispsrc;          //!< (user) The display source, see possibilities at dispsrc_t
     int dispover;				//!< (user) The overlays to display, see DISPOVERLAY_* defines
     int autocontrast;			//!< (user/runtime) 1 = foam handles contrast, 0 = user handles contrast

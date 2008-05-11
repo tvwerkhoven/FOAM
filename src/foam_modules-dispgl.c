@@ -126,8 +126,11 @@ int displayInit(mod_display_t *disp) {
 	
 	SDL_WM_SetCaption(disp->caption, 0);
 	
+	// init the windowres coordinates to the ccd resolution
+	disp->windowres.x = disp->res.x;
+	disp->windowres.y = disp->res.y;
 	// flags should be like:
-	// SDL_HWSURFACE | SDL_OPENGL | SDL_RESIZABLE
+	disp->flags = SDL_HWSURFACE | SDL_OPENGL | SDL_RESIZABLE;
 	disp->screen = SDL_SetVideoMode(disp->windowres.x, disp->windowres.y, disp->bpp, disp->flags);
 	
 	if (disp->screen == NULL) {
