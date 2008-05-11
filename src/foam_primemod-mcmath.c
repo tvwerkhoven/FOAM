@@ -44,8 +44,14 @@ mod_okodm_t okodm;
 // Shack Hartmann tracking info
 mod_sh_track_t shtrack;
 
-// field images here:
-// uint8_t cimg[SX*SY*NS] __attribute__ ((aligned (32)));
+// field images here. 
+// We store darkfield * 256 in dark, 256 * (1/(flatfield-darkfield)) in
+// gain, and then calculate corrim = (raw*256 - dark) * gain / 256
+#define MAXSUBAPS 16*16
+#define MAXSUBAPSIZE 16*16
+uint8_t corrim[MAXSUBAPS * MAXSUBAPSIZE] __attribute__ ((aligned (32)));
+uint16_t dark[MAXSUBAPS * MAXSUBAPSIZE] __attribute__ ((aligned (32)));
+uint16_t gain[MAXSUBAPS * MAXSUBAPSIZE] __attribute__ ((aligned (32)));
 
 int modInitModule(control_t *ptc, config_t *cs_config) {
 	logInfo(0, "This is the McMath-Pierce prime module, enjoy.");
@@ -196,9 +202,13 @@ int modPostInitModule(control_t *ptc, config_t *cs_config) {
 	disp.contrast = 5;
 	disp.dispsrc = DISPSRC_RAW;         // use the raw ccd output
 	disp.dispover = DISPOVERLAY_GRID;   // display the SH grid
+	disp.col.r = 255;
+	disp.col.g = 255;
+	disp.col.b = 255;
 	
 	displayInit(&disp);
 #endif
+	return EXIT_SUCCESS;
 }
 
 void modStopModule(control_t *ptc) {
@@ -417,10 +427,16 @@ int modMessage(control_t *ptc, const client_t *client, char *list[], const int c
 				tellClient(client->buf_ev, "\
 200 OK HELP DISPLAY\n\
 display <source>:       change the display source.\n\
+   <sources:>\n\
    raw:                 direct images from the camera.\n\
    calib:               dark/flat corrected images.\n\
    dark:                show the darkfield being used.\n\
-   flat:                show the flatfield being used.\
+   flat:                show the flatfield being used.\n\
+   <overlays:>\n\
+   subap:               toggle displat of the subapertures.\n\
+   grid:                toggle display of the grid.\n\
+   vecs:                toggle display of the displacement vectors.\
+   col [f] [f] [f]:     change the overlay color (OpenGL only).\
 ");
 			}
 			else if (strncmp(list[1], "vid",3) == 0) {
@@ -490,6 +506,17 @@ calibrate <mode>:       calibrate the ao system (dark, flat, subapt, etc).\
 			else if (strncmp(list[1], "vectors",3) == 0) {
 				disp.dispover ^= DISPOVERLAY_VECTORS;
 				tellClient(client->buf_ev, "200 OK TOGGLING DISPLACEMENT VECTOR OVERLAY");
+			}
+			else if (strncmp(list[1], "col",3) == 0) {
+				if (count > 4) {
+					disp.col.r = strtol(list[2], NULL, 10);
+					disp.col.g = strtol(list[3], NULL, 10);
+					disp.col.b = strtol(list[4], NULL, 10);
+					tellClient(client->buf_ev, "200 OK COLOR IS NOW (%d,%d,%d)", disp.col.r, disp.col.g, disp.col.b);
+				}
+				else {
+					tellClient(client->buf_ev, "402 COLOR REQUIRES RGB FLOAT TRIPLET");
+				}
 			}
 			else if (strncmp(list[1], "dark",3) == 0) {
 				if  (ptc->wfs[0].darkim == NULL) {

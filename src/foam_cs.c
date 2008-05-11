@@ -227,6 +227,9 @@ void stopFOAM() {
 	// signal the change to the other thread(s)
 	pthread_cond_signal(&mode_cond);
 	
+	// sleep a while to give the modules time to stop
+	usleep(100000); // 0.1 sec
+
 	// get the time to see how long we've run
 	end = time (NULL);
 	loctime = localtime (&end);

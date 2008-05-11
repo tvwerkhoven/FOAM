@@ -92,6 +92,10 @@ static void drawRect(coord_t origin, coord_t size) {
 
 void displayBeginDraw(mod_display_t *disp) {
 	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
+	// this might be redundant, but since these values
+	// are changed in a different thread, we cannot easily
+	// change it from there.
+	glColor3ub(disp->col.r, disp->col.g, disp->col.b);
 }
 
 void displayFinishDraw(mod_display_t *disp) {
@@ -139,14 +143,23 @@ int displayInit(mod_display_t *disp) {
 	}
 
 	glClearColor(0.0, 0.0, 0.0, 0.0);
-    glClearDepth(1.0f );
-	
-	
-    glViewport( 0, 0, ( GLsizei )disp->windowres.x, ( GLsizei )disp->windowres.y );
-    glMatrixMode(GL_PROJECTION);
-    glLoadIdentity();
-    gluOrtho2D(0, disp->res.x, disp->res.y, 0);
-    glMatrixMode(GL_MODELVIEW);
+	glClearDepth(1.0f );
+	// set the colors for the overlays (all lines etc will be drawn with this color from here on, only set once)
+	if (disp->col.r > 255 || disp->col.r < 0 || \
+		disp->col.g > 255 || disp->col.g < 0 || \
+		disp->col.b > 255 || disp->col.b < 0) {
+		logWarn("Warning, color range invalid, please give RGB values between 0 and 255, defaulting to white (255,255,255)");
+		disp->col.r = disp->col.g = disp->col.b = 255;
+	}
+
+	glColor3ub(disp->col.r, disp->col.g, disp->col.b);
+
+
+	glViewport( 0, 0, ( GLsizei )disp->windowres.x, ( GLsizei )disp->windowres.y );
+	glMatrixMode(GL_PROJECTION);
+	glLoadIdentity();
+	gluOrtho2D(0, disp->res.x, disp->res.y, 0);
+	glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
 	
 	
@@ -160,6 +173,7 @@ int displayFinish(mod_display_t *disp) {
 
 int displayImgByte(uint8_t *img, mod_display_t *disp) {
 	if (disp->autocontrast == 1) {
+		// auto scaler code goes here
 	}
 	else {
 		glPixelTransferf(GL_RED_SCALE, (GLfloat) disp->contrast);
@@ -185,6 +199,14 @@ int displayGSLImg(gsl_matrix_float *img, mod_display_t *disp, int doscale) {
 		    gsltmp[i*disp->res.y + j] = gsl_matrix_float_get(img, i, j);
 	    }
     }
+	if (disp->autocontrast == 0) {
+		glPixelTransferf(GL_RED_SCALE, (GLfloat) disp->contrast);
+		glPixelTransferf(GL_GREEN_SCALE, (GLfloat) disp->contrast);
+		glPixelTransferf(GL_BLUE_SCALE, (GLfloat) disp->contrast);
+		glPixelTransferf(GL_RED_BIAS, (GLfloat) disp->brightness);
+		glPixelTransferf(GL_GREEN_BIAS, (GLfloat) disp->brightness);
+		glPixelTransferf(GL_BLUE_BIAS, (GLfloat) disp->brightness);
+	}
     glDrawPixels((GLsizei) disp->res.x, (GLsizei) disp->res.y, GL_LUMINANCE, GL_FLOAT, (const GLvoid *) gsltmp);
 
     return EXIT_FAILURE;
@@ -249,18 +271,19 @@ int displaySubapts(mod_sh_track_t *shtrack, mod_display_t *disp) {
 	return EXIT_SUCCESS;
 }
 
-// !!!:tim:20080414 shortcut for SH display routines
 int displayVecs(mod_sh_track_t *shtrack, mod_display_t *disp) {
 	if (shtrack->nsubap == 0)
 		return EXIT_SUCCESS;		// if there's nothing to draw, don't draw (shouldn't happen)
-	
+
 	int sn=0;
-	
-    // To draw the displacement vector relative to the center of the lenslet grid,
-    // we take gridc, which are lower left coordinates of the grid cells, and 
-    // add half the grid size to get to the center, and then use the disp vector
-    // to draw the vector itself.
-	glColor3f(1.0, 1.0, 0.0);
+
+	// To draw the displacement vector relative to the center of the lenslet grid,
+	// we take gridc, which are lower left coordinates of the grid cells, and 
+	// add half the grid size to get to the center, and then use the disp vector
+	// to draw the vector itself.
+	// color already set at init, unecessary if no change
+	//glColor3f(1.0, 1.0, 0.0);
+	//glColor3f(disp->col.r, disp->col.g, disp->col.b);
 	glBegin(GL_LINES);
 	for (sn=0; sn < shtrack->nsubap; sn++) {
 		glVertex2f(shtrack->gridc[sn].x + (shtrack->shsize.x/2), shtrack->gridc[sn].y + (shtrack->shsize.y/2));
@@ -274,7 +297,9 @@ int displayVecs(mod_sh_track_t *shtrack, mod_display_t *disp) {
 int displayGrid(coord_t gridres, mod_display_t *disp) {
 	int j;
 	glBegin(GL_LINES);
-	glColor3f(0.0, 1.0, 0.0);
+	// color already set at init, unecessary if no change
+	//glColor3f(disp->col.r, disp->col.g, disp->col.b);
+	//glColor3f(0.0, 1.0, 0.0);
 	for (j=1; j < gridres.x; j++) {
 		glVertex2f(j*disp->res.x/gridres.x, 0);
 		glVertex2f(j*disp->res.x/gridres.x, disp->res.y);

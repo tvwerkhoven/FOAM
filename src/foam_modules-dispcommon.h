@@ -48,6 +48,15 @@ typedef enum {
     DISPSRC_FLAT       //!< Display the flatfield used (probably rarely used)
 } dispsrc_t;
 
+/*!
+ @brief Used to store RGB values of colors
+ */
+typedef struct {
+	uint8_t r;	//!< Red component [0,255]
+	uint8_t g;	//!< Green component [0,255]
+	uint8_t b;	//!< Blue component [0,255]
+} rgbcolor_t;
+
 // We define the possible display overlays here
 #ifdef FOAM_MODULES_DISLAY_SHSUPPORT
 #define DISPOVERLAY_SUBAPS 0x1		//!< Display the subaperture tracker windows
@@ -75,6 +84,7 @@ typedef struct {
 	coord_t windowres;			//!< (mod) Resolution for the window (might be altered at runtime)
     dispsrc_t dispsrc;          //!< (user) The display source, see possibilities at dispsrc_t
     int dispover;				//!< (user) The overlays to display, see DISPOVERLAY_* defines
+    rgbcolor_t col;				//!< (user) An RGB color triplet to use for display overlays (i.e. grid, subapts etc)
     int autocontrast;			//!< (user/runtime) 1 = foam handles contrast, 0 = user handles contrast
     float contrast;				//!< (user) if autocontrast=0, use this to scale the pixel intensities
     int brightness;				//!< (user) if autocontrast=0, use this to shift the pixel intensities
@@ -180,7 +190,6 @@ int displayVecs(mod_sh_track_t *shtrack, mod_display_t *disp);
  @param [in] gridres The grid resolution to draw on the screen (i.e. 8x8)
  @param [in] *screen SDL_Surface to draw on
  */
-#warning "display grid is here"
 int displayGrid(coord_t gridres, mod_display_t *disp);
 
 #endif
