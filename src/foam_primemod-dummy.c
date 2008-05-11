@@ -69,6 +69,10 @@ int modInitModule(control_t *ptc, config_t *cs_config) {
 	return EXIT_SUCCESS;
 }
 
+int modPostInitModule(control_t *ptc, config_t *cs_config) {
+	return EXIT_SUCCESS;
+}
+
 int modOpenInit(control_t *ptc) {
 	return EXIT_SUCCESS;
 }

@@ -68,11 +68,11 @@ static void resizeWindow(mod_display_t *disp) {
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
 	// This defines the coordinate system we're using, which is in the CCD-space so to say
-	gluOrtho2D(0, sourcesize.x, sourcesize.y, 0);
+	gluOrtho2D(0, disp->res.x, disp->res.y, 0);
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
 	// Set the pixelzooming
-	glPixelZoom((GLfloat) windowsize.w/sourcesize.x, (GLfloat) windowsize.h/sourcesize.y);
+	glPixelZoom((GLfloat) disp->windowres.x/disp->res.x, (GLfloat) disp->windowres.y/disp->res.y);
 	glFlush();
 	SDL_GL_SwapBuffers();
 }
@@ -130,7 +130,7 @@ int displayInit(mod_display_t *disp) {
 	disp->windowres.x = disp->res.x;
 	disp->windowres.y = disp->res.y;
 	// flags should be like:
-	disp->flags = SDL_HWSURFACE | SDL_OPENGL | SDL_RESIZABLE;
+	disp->flags = SDL_OPENGL | SDL_RESIZABLE;
 	disp->screen = SDL_SetVideoMode(disp->windowres.x, disp->windowres.y, disp->bpp, disp->flags);
 	
 	if (disp->screen == NULL) {
@@ -159,23 +159,39 @@ int displayFinish(mod_display_t *disp) {
 }
 
 int displayImgByte(uint8_t *img, mod_display_t *disp) {
-    // !!!:tim:20080507 this is probably not very clean (float is not 16 bpp)
-    // databpp == 16 
-    // databpp == 8 char (uint8_t)
-    if (disp->bpp == 8) {
-		glDrawPixels((GLsizei) disp->res.x, (GLsizei) disp->res.y, GL_LUMINANCE, GL_UNSIGNED_BYTE, (const GLvoid *) img);
-		return EXIT_SUCCESS;
-    }
-	
-//    else if (databpp == 16) {
-//		glDrawPixels((GLsizei) disp->res.x, (GLsizei) disp->res.y, GL_LUMINANCE, GL_FLOAT, (const GLvoid *) img);
-//    }
-    
-    return EXIT_FAILURE;
+	if (disp->autocontrast == 1) {
+	}
+	else {
+		glPixelTransferf(GL_RED_SCALE, (GLfloat) disp->contrast);
+		glPixelTransferf(GL_GREEN_SCALE, (GLfloat) disp->contrast);
+		glPixelTransferf(GL_BLUE_SCALE, (GLfloat) disp->contrast);
+		glPixelTransferf(GL_RED_BIAS, (GLfloat) disp->brightness);
+		glPixelTransferf(GL_GREEN_BIAS, (GLfloat) disp->brightness);
+		glPixelTransferf(GL_BLUE_BIAS, (GLfloat) disp->brightness);
+	}
+	glDrawPixels((GLsizei) disp->res.x, (GLsizei) disp->res.y, GL_LUMINANCE, GL_UNSIGNED_BYTE, (const GLvoid *) img);
+	return EXIT_SUCCESS;
 }
 
+int displayGSLImg(gsl_matrix_float *img, mod_display_t *disp, int doscale) {
+    static float *gsltmp=NULL;
+    int i, j;
+    if (gsltmp == NULL) {
+	    gsltmp = malloc(disp->res.x * disp->res.y * sizeof(float));
+    }
+
+    for (i=0; i< disp->res.y; i++) {
+	    for (j=0; j<disp->res.x; j++) {
+		    gsltmp[i*disp->res.y + j] = gsl_matrix_float_get(img, i, j);
+	    }
+    }
+    glDrawPixels((GLsizei) disp->res.x, (GLsizei) disp->res.y, GL_LUMINANCE, GL_FLOAT, (const GLvoid *) gsltmp);
+
+    return EXIT_FAILURE;
+}
 void displaySDLEvents(mod_display_t *disp) {
 	// Poll for events, and handle the ones we care about.
+
 	SDL_Event event;
 	while (SDL_PollEvent(&event)) 
 	{
@@ -186,32 +202,31 @@ void displaySDLEvents(mod_display_t *disp) {
 				break;
 			case SDL_KEYUP:
 				// If escape is pressed, return (and thus, quit)
-				if (event.key.keysym.sym == SDLK_ESCAPE)
-					stopFoam();
+				//if (event.key.keysym.sym == SDLK_ESCAPE)
+					//stopFoam();
 				break;
 			case SDL_VIDEORESIZE:
 				logDebug(0, "Resizing window to %d,%d\n", event.resize.w, event.resize.h);
 				
 				// update window information in the struct
-				disp->windowres.x = event.resize.w
-				disp->windowres.y = event.resize.h
+				disp->windowres.x = event.resize.w;
+				disp->windowres.y = event.resize.h;
 				// Get new SDL video mode
-				disp->screen = SDL_SetVideoMode( event.resize.w,event.resize.h, bpp, flags);
+				disp->screen = SDL_SetVideoMode( event.resize.w, event.resize.h, disp->bpp, disp->flags);
 				// Do the actual (opengl) resizing)
-				dispResize(disp);
+				resizeWindow(disp);
 				
 				break;
 			case SDL_QUIT:
-				stopFoam();
+					return;
 		}
 	}
 }
-
 #ifdef FOAM_MODULES_DISLAY_SHSUPPORT
 
-void displaySubapts(mod_sh_track_t *shtrack, mod_display_t *disp) {
+int displaySubapts(mod_sh_track_t *shtrack, mod_display_t *disp) {
 	if (shtrack->nsubap == 0)
-		return;				// if there's nothing to draw, don't draw (shouldn't happen)
+		return EXIT_SUCCESS;				// if there's nothing to draw, don't draw (shouldn't happen)
     
 	int sn=0;
     
@@ -231,12 +246,13 @@ void displaySubapts(mod_sh_track_t *shtrack, mod_display_t *disp) {
 		// the rest are (track.x, track.y)
 		drawRect(shtrack->subc[sn], shtrack->track);
 	}
+	return EXIT_SUCCESS;
 }
 
 // !!!:tim:20080414 shortcut for SH display routines
-void displayVecs(mod_sh_track_t *shtrack, mod_display_t *disp) {
+int displayVecs(mod_sh_track_t *shtrack, mod_display_t *disp) {
 	if (shtrack->nsubap == 0)
-		return;		// if there's nothing to draw, don't draw (shouldn't happen)
+		return EXIT_SUCCESS;		// if there's nothing to draw, don't draw (shouldn't happen)
 	
 	int sn=0;
 	
@@ -251,20 +267,21 @@ void displayVecs(mod_sh_track_t *shtrack, mod_display_t *disp) {
 		glVertex2f(gsl_vector_float_get(shtrack->disp, sn*2+0), gsl_vector_float_get(shtrack->disp, sn*2+1));
 	}
 	glEnd();
-	
+
+	return EXIT_SUCCESS;	
 }
 
-void displayGrid(coord_t gridres, coord_t imgres) {
+int displayGrid(coord_t gridres, mod_display_t *disp) {
 	int j;
 	glBegin(GL_LINES);
 	glColor3f(0.0, 1.0, 0.0);
 	for (j=1; j < gridres.x; j++) {
-		glVertex2f(j*imgres.x/gridres.x, 0);
-		glVertex2f(j*imgres.x/gridres.x, imgres.y);
+		glVertex2f(j*disp->res.x/gridres.x, 0);
+		glVertex2f(j*disp->res.x/gridres.x, disp->res.y);
 	}
-	for (j=1; j < shtrack->cells.y; j++) {
-		glVertex2f(j*imgres.y/gridres.y, 0);
-		glVertex2f(j*imgres.y/gridres.y, imgres.x);
+	for (j=1; j < gridres.y; j++) {
+		glVertex2f(0, j*disp->res.y/gridres.y);
+		glVertex2f(disp->res.x, j*disp->res.y/gridres.y);
 	}
 	
 	glEnd();
@@ -284,8 +301,8 @@ int displayDraw(wfs_t *wfsinfo, mod_display_t *disp) {
 	
     if (disp->dispsrc == DISPSRC_RAW) {
 		if (wfsinfo->bpp == 8) {
-			//			uint8_t *imgc = 
-			displayImgByte((uint8_t *) wfsinfo->image, disp);
+			uint8_t *imgc = (uint8_t *) wfsinfo->image;
+			displayImgByte(imgc, disp);
 		}
 		else {
 			displayFinishDraw(disp);
@@ -298,26 +315,29 @@ int displayDraw(wfs_t *wfsinfo, mod_display_t *disp) {
 		//		}
 	}
 	else if (disp->dispsrc == DISPSRC_DARK) {
+	    logDebug(LOG_NOFORMAT, "disp dark ");
 		displayGSLImg(wfsinfo->darkim, disp, 1);
 	}
 	else if (disp->dispsrc == DISPSRC_FLAT) {
+	    logDebug(LOG_NOFORMAT, "disp flat ");
 		displayGSLImg(wfsinfo->flatim, disp, 1);
 	}
 	else if (disp->dispsrc == DISPSRC_CALIB) {
+	    logDebug(LOG_NOFORMAT, "disp calib ");
 		displayGSLImg(wfsinfo->corrim, disp, 1);
 	}
 	
 #ifdef FOAM_MODULES_DISLAY_SHSUPPORT
 	// display overlays (grid, subapts, vectors)
-	if (display->dispover & DISPOVERLAY_GRID) 
-		displayGrid(shtrack->cells, display);
-	if (display->dispover & DISPOVERLAY_SUBAPS)
-		displaySubapts(shtrack, display);
-	if (display->dispover & DISPOVERLAY_VECTORS) 
-		displayVecs(shtrack, display);
+	if (disp->dispover & DISPOVERLAY_GRID) 
+		displayGrid(shtrack->cells, disp);
+	if (disp->dispover & DISPOVERLAY_SUBAPS)
+		displaySubapts(shtrack, disp);
+	if (disp->dispover & DISPOVERLAY_VECTORS) 
+		displayVecs(shtrack, disp);
 #endif
 	
-	displayFinishDraw(display);
+	displayFinishDraw(disp);
 	
-    return EXIT_FAILURE;
+	return EXIT_FAILURE;
 }

@@ -51,7 +51,7 @@ modimg_test_CFLAGS = -std=c99 `sdl-config --cflags`
 #itifg_test_CFLAGS = -Wall -g 
 
 # here comes itifg:
-itifg_test_SOURCES = $(SRCDIR)/foam_modules-itifg.c $(SRCDIR)/foam_cs_library.c $(SRCDIR)/foam_modules-img.c $(SRCDIR)/foam_modules-display.c
+itifg_test_SOURCES = $(SRCDIR)/foam_modules-itifg.c $(SRCDIR)/foam_cs_library.c $(SRCDIR)/foam_modules-img.c $(SRCDIR)/foam_modules-dispsdl.c
 itifg_test_CPPFLAGS = -DFOAM_MODITIFG_ALONE=1 -Iitifg/include -include "foam_modules-alone.h" -DLinux
 itifg_test_LDFLAGS = -lm -lc -lgd -lpng -lSDL_image `sdl-config --libs` -Litifg/lib
 itifg_test_CFLAGS = -std=c99  `sdl-config --cflags`

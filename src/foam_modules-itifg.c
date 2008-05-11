@@ -325,12 +325,13 @@ int main(int argc, char *argv[]) {
 	disp.caption = "McMath - WFS";
 	disp.res.x = (int) camera.width;
 	disp.res.y = (int) camera.height;
-	disp.flags = SDL_HWSURFACE | SDL_DOUBLEBUF;
+	disp.dispsrc = DISPSRC_RAW;
+	disp.dispover = 0;
 	disp.autocontrast = 0;
-    disp.brightness = 0;
+	disp.brightness = 0;
     disp.contrast = 20;
 	
-	modInitDraw(&disp);
+	displayInit(&disp);
 	
 	printf("Reseting framegrabber now...\n");
 	lseek(camera.fd, -LONG_MAX, SEEK_END);
@@ -383,9 +384,9 @@ int main(int argc, char *argv[]) {
 		buf->data = (void *)((char *)buf->map);
 		buf->info = (iti_info_t *)((char *)buf->data + cam->rawsize);
 		
-		modBeginDraw(disp.screen);
-		modDisplayImgByte((uint8_t *) buf->data, &disp) ;
-		modFinishDraw(disp.screen);
+		displayBeginDraw(&disp);
+		displayImgByte((uint8_t *) buf->data, &disp);
+		displayFinishDraw(&disp);
 		printf("images: \n");
 		for (f=0; f<buffer.frames; f++) {
 			pixs = 0;
@@ -437,9 +438,9 @@ int main(int argc, char *argv[]) {
 			fps = 100*1000000/fps;
             logDebug(0, "Drawing image, fps: %f ", fps);
             last = cur;
-            modBeginDraw(disp.screen);
-            modDisplayImgByte((uint8_t *) buf->data, &disp) ;
-            modFinishDraw(disp.screen);
+		displayBeginDraw(&disp);
+		displayImgByte((uint8_t *) buf->data, &disp);
+		displayFinishDraw(&disp);
         }
         
     }
@@ -901,7 +902,7 @@ int main(int argc, char *argv[]) {
 	drvStopBufs(&buffer, &camera);
 	
 	// end
-	modFinishDraw(disp.screen);
+	displayFinish(&disp);
 	printf("exit\n");
 	
 	return 0;

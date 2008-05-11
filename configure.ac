@@ -71,25 +71,25 @@ PKG_CHECK_MODULES(SDL, sdl)
 
 # Test if we want to run as simulation or not
 AC_ARG_ENABLE([simulation],
-		AC_HELP_STRING([--enable-simulation], [enable simulation mode])],
+		AC_HELP_STRING([--enable-simulation], [enable simulation mode (def: no)]),
 		[case "${enableval}" in
 		yes) simul=true ;;
 		no)  simul=disabled ;;
 		*) AC_MSG_ERROR([bad value ${enableval} for --enable-simulation]) ;;
-	esac],[simul=true])
+	esac],[simul=disabled])
 
 # Test if we want to run as simulation or not
 AC_ARG_ENABLE([statsimulation],
-		AC_HELP_STRING([--enable-statsimulation], [enable static simulation mode])],
+		AC_HELP_STRING([--enable-statsimulation], [enable static simulation mode (def: no)]),
 		[case "${enableval}" in
 		yes) statsimul=true ;;
 		no)  statsimul=disabled ;;
 		*) AC_MSG_ERROR([bad value ${enableval} for --enable-statsimulation]) ;;
-	esac],[statsimul=true])
+	esac],[statsimul=disabled])
 		
 # Test if we want to include the UI or not
 AC_ARG_ENABLE([ui],
-		AC_HELP_STRING([--enable-ui], [enable the UI]),
+		AC_HELP_STRING([--enable-ui], [enable the UI (def: yes)]),
 		[case "${enableval}" in
 		yes) ui=true ;;
 		no)  ui=disabled ;;
@@ -98,21 +98,29 @@ AC_ARG_ENABLE([ui],
 	
 # Test if we want to do hardware debugging (stand alone modules)
 AC_ARG_ENABLE([hwdebug],
-		AC_HELP_STRING([--enable-hwdebug], [enable hardware debugging]),
+		AC_HELP_STRING([--enable-hwdebug], [enable hardware debugging (def: yes)]),
 		[case "${enableval}" in
 		yes) hwdebug=true ;;
 		no)  hwdebug=disabled ;;
 		*) AC_MSG_ERROR([bad value ${enableval} for --enable-hwdebug]) ;;
 	esac],[hwdebug=true])
 
-# Test if we want mcmath enabled (default no, unfinished stuff)
+# Test if we want mcmath enabled 
 AC_ARG_ENABLE([mcmath],
-		AC_HELP_STRING([--enable-mcmath], [enable mcmath mode]),
+		AC_HELP_STRING([--enable-mcmath], [enable mcmath mode (def: yes)]),
 		[case "${enableval}" in
 		yes) mcmath=true ;;
 		no)  mcmath=disabled ;;
 		*) AC_MSG_ERROR([bad value ${enableval} for --enable-mcmath]) ;;
 	esac],[mcmath=true])
+
+AC_ARG_ENABLE([opengl],
+		AC_HELP_STRING([--enable-opengl], [enable usage of opengl instead of plain SDL (def: yes)]),
+		[case "${enableval}" in
+		yes) opengl=true ;;
+		no)  opengl=disabled ;;
+		*) AC_MSG_ERROR([bad value ${enableval} for --enable-opengl]) ;;
+	esac],[opengl=true])
 
 ### SIMULATION MODE ###
 #######################
@@ -255,6 +263,38 @@ AC_SUBST(MCMATH_LIBS)
 AC_SUBST(MCMATH_CFLAGS)
 AM_CONDITIONAL([MCMATH], [test x$mcmath = xtrue])
 
+### OPENGL FEATURE ### 
+######################
+if test "$opengl" = true ; then
+	# search for opengl libs here
+	openglmissing=""
+	AC_MSG_NOTICE([opengl enabled, checking for extra libs])
+	LIBS=""
+
+	AC_SEARCH_LIBS([glClear], [GL] ,[], 
+		[AC_MSG_WARN([OpenGL could not be found on this system.])
+		opengl=false
+		openglmissing+=" libgl"
+		]
+	)
+
+	AC_SEARCH_LIBS([gluOrtho2D], [GLU] ,[], 
+		[AC_MSG_WARN([libGLU could not be found on this system.])
+		opengl=false
+		openglmissing+=" libglu"
+		]
+	)
+
+	# fix opengl cflags / libs
+	OPENGL_CFLAGS+=""
+	OPENGL_LIBS+="$LIBS"
+else 
+	AC_MSG_NOTICE([OpenGL disabled])
+fi
+AC_SUBST(OPENGL_LIBS)
+AC_SUBST(OPENGL_CFLAGS)
+AM_CONDITIONAL([OPENGL], [test x$opengl = xtrue])
+
 ### UI MODE ###
 ###############
 if test "$ui" = true ; then
@@ -262,12 +302,12 @@ if test "$ui" = true ; then
 	# search for ui libs here
 	AC_MSG_NOTICE([Cheking UI libs])
 	LIBS=""
-	AC_SEARCH_LIBS([SDL_Init], [sdl] ,[], 
+	AC_SEARCH_LIBS([SDL_Init], [SDL] ,[], 
 		[AC_MSG_WARN([This package needs libsdl in ui mode.])
 		ui=false
 		uimissing+=" sdl"
 		]
-	) 
+	)
  
 	# fix simulation Cflags (mainly SDL)
 	UI_CFLAGS+="$SDL_CFLAGS"

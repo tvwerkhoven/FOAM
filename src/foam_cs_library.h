@@ -333,6 +333,14 @@ typedef struct {
 int modInitModule(control_t *ptc, config_t *cs_config);
 
 /*!
+ @brief This routine is run right after threading from the thread that will call all mod* routines.
+ 
+ This routine can be used to initialize things that are not thread safe,
+ such as OpenGL. See modInitModule for more details.
+ */
+int modPostInitModule(control_t *ptc, config_t *cs_config);
+
+/*!
  @brief This routine is run at the very end of the @name program.
  
  modStopModule() can be used to wrap up things related to the module, like stop cameras, set
@@ -407,6 +415,15 @@ int modCalibrate(control_t *ptc);
  @param [in] count The amount of words received over the network
  */
 int modMessage(control_t *ptc, const client_t *client, char *list[], const int count);
+
+// FOAM (LIBRARY) ROUTINES BEGIN HERE //
+/**************************************/
+
+/*!
+ @brief This is the routine that is run after threading, and should run modeListen after some init.
+
+ */
+void startThread();
 
 /*!
  @brief logInfo() prints out info messages to the appropriate streams.

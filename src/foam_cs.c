@@ -43,6 +43,7 @@ static pthread_attr_t attr;
 // These come from modules, these MUST be defined there
 extern void modStopModule(control_t *ptc);
 extern int modInitModule(control_t *ptc, config_t *cs_config);
+extern int modPostInitModule(control_t *ptc, config_t *cs_config);
 
 extern int modOpenInit(control_t *ptc);
 extern int modOpenLoop(control_t *ptc);
@@ -149,25 +150,42 @@ int main(int argc, char *argv[]) {
 	
 	// Create thread which does all the work
 	// this thread inherits the signal blocking defined above
-	threadrc = pthread_create(&(cs_config.threads[0]), &attr, (void *) modeListen, NULL);
+	threadrc = pthread_create(&(cs_config.threads[0]), &attr, (void *) startThread, NULL);
 	if (threadrc)
 		logErr("Error in pthread_create, return code was: %d.", threadrc);
 
 	cs_config.nthreads = 1;
 	
 	// now make sure the main thread handles the signals by unblocking them:
+	// SIGNAL HANDLING //
+	/*******************/
 	struct sigaction act;
 	
 	act.sa_handler = catchSIGINT;
 	act.sa_flags = 0;		// No special flags
 	act.sa_mask = signal_mask;	// Use this mask
 	sigaction(SIGINT, &act, NULL);
-    sigaction(SIGINT, &act, NULL);
+	sigaction(SIGINT, &act, NULL);
 	pthread_sigmask (SIG_UNBLOCK, &signal_mask, NULL);
 	
-	sockListen(); 			// After initialization, start in open mode
+	// START LISTENING ON SOCKET//
+	/****************************/
+	sockListen(); 		
 
 	return EXIT_SUCCESS;
+}
+
+void startThread() {
+	// POST-THREADING MODULE INIT//
+	/*****************************/
+	
+	// some things have to be init'ed after threading, like
+	// my rather crude implementation of OpenGL.
+	// That's done here
+	modPostInitModule(&ptc, &cs_config);
+
+	// directly afterwards, start modeListen
+	modeListen();
 }
 
 void catchSIGINT() {

@@ -10,19 +10,30 @@
 #define FOAM_MODULES_DISPLAY
 
 #include "foam_cs_library.h"
+#include "SDL.h" 	// most portable way according to 
+//http://www.libsdl.org/cgi/docwiki.cgi/FAQ_20Including_20SDL_20Headers
 
 #ifdef FOAM_MODULES_DISLAY_SHSUPPORT
-// The user wants to have SH specific drawing routines, include sh header for datatypes
-#include "foam_modules-sh.h"
+	// The user wants to have SH specific drawing routines, include sh header for datatypes
+	#include "foam_modules-sh.h"
 #endif //#ifdef FOAM_MODULES_DISLAY_SHSUPPORT
 
 #ifdef FOAM_MODULES_DISPLAY_OPENGL
 // The user wants  to use OpenGL with SDL, include appropriate libraries
 #include "SDL_opengl.h"
+#ifdef __APPLE__
+    #include <OpenGL/glu.h>
+    #include <OpenGL/glext.h>
+#else
+    #include <GL/glu.h>
+    #include <GL/glext.h>
+    #include <GL/glx.h>
+    #include <GL/glxext.h>
+    //#define glXGetProcAddress(x) (*glXGetProcAddressARB)((const GLubyte*)x)
 #endif
 
-#include "SDL.h" 	// most portable way according to 
-//http://www.libsdl.org/cgi/docwiki.cgi/FAQ_20Including_20SDL_20Headers
+#endif
+
 
 // DATATYPES //
 /*************/
@@ -56,7 +67,7 @@ typedef enum {
  */
 typedef struct {
 	SDL_Surface *screen;		//!< (mod) SDL_Surface to use
-	const SDL_VideoInfo* info	//!< (mod) VideoInfo pointer to use (OpenGL, read only)	
+	const SDL_VideoInfo* info;	//!< (mod) VideoInfo pointer to use (OpenGL, read only)	
 	int bpp;					//!< (mod) The bpp of the display (not the source!)	
 
 	char *caption;				//!< (user) Caption for the SDL window
@@ -169,6 +180,7 @@ int displayVecs(mod_sh_track_t *shtrack, mod_display_t *disp);
  @param [in] gridres The grid resolution to draw on the screen (i.e. 8x8)
  @param [in] *screen SDL_Surface to draw on
  */
+#warning "display grid is here"
 int displayGrid(coord_t gridres, mod_display_t *disp);
 
 #endif

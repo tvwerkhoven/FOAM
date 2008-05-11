@@ -468,6 +468,7 @@ int modSelSubaptsByte(uint8_t *image, mod_sh_track_t *shtrack, wfs_t *shwfs) {
 	// WARNING! I don't know what goes wrong, but somehow x and y 
 	// are swapped. I manually reset it here, but this is indeed a 
 	// rather nasty solution. This definately needs closer inspection
+	/*
 	int tmpswap;
 	for (sn=0; sn<nsubap; sn++) {
 		logDebug(LOG_NOFORMAT, "before: (%d,%d) and (%d,%d) ", shtrack->gridc[sn].x, shtrack->gridc[sn].y, shtrack->subc[sn].x, shtrack->subc[sn].y);
@@ -479,6 +480,7 @@ int modSelSubaptsByte(uint8_t *image, mod_sh_track_t *shtrack, wfs_t *shwfs) {
 		shtrack->subc[sn].x = tmpswap;
 		logDebug(LOG_NOFORMAT, "after: (%d,%d) and (%d,%d)\n", shtrack->gridc[sn].x, shtrack->gridc[sn].y, shtrack->subc[sn].x, shtrack->subc[sn].y);
 	}
+	*/
 	// END WARNING
 	
 	logInfo(0, "ASCII map of aperture:");

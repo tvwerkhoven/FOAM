@@ -496,14 +496,14 @@ int displayDraw(wfs_t *wfsinfo, mod_display_t *disp) {
 #ifdef FOAM_MODULES_DISLAY_SHSUPPORT
 	// display overlays (grid, subapts, vectors)
 	if (display->dispover & DISPOVERLAY_GRID) 
-		displayGrid(shtrack->cells, display);
+		displayGrid(shtrack->cells, disp);
 	if (display->dispover & DISPOVERLAY_SUBAPS)
-		displaySubapts(shtrack, display);
+		displaySubapts(shtrack, disp);
 	if (display->dispover & DISPOVERLAY_VECTORS) 
-		displayVecs(shtrack, display);
+		displayVecs(shtrack, disp);
 #endif
 	
-	displayFinishDraw(display);
+	displayFinishDraw(disp);
 	
     return EXIT_FAILURE;
 }

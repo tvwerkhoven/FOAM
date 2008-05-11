@@ -51,8 +51,8 @@ if STATSIMULATION
 bin_PROGRAMS += foamcs-statsim
 foamcs_statsim_SOURCES = foam_primemod-simstatic.c
 foamcs_statsim_SOURCES += $(FRAME_SRC) $(FRAME_HDR)
-foamcs_statsim_SOURCES += foam_modules-sh.c foam_modules-calib.c foam_modules-display.c foam_modules-img.c
-foamcs_statsim_SOURCES += foam_modules-sh.h foam_modules-calib.h foam_modules-display.h foam_modules-img.h foam_primemod-simstatic.h
+foamcs_statsim_SOURCES += foam_modules-sh.c foam_modules-calib.c foam_modules-dispgl.c foam_modules-img.c
+foamcs_statsim_SOURCES += foam_modules-sh.h foam_modules-calib.h foam_modules-dispcommon.h foam_modules-img.h foam_primemod-simstatic.h
 foamcs_statsim_CPPFLAGS = -include "foam_primemod-simstatic.h"
 foamcs_statsim_CFLAGS = $(SIMULATION_CFLAGS)
 foamcs_statsim_LDFLAGS = $(SIMULATION_LIBS)
@@ -65,8 +65,8 @@ if SIMULATION
 bin_PROGRAMS += foamcs-simtt
 foamcs_simtt_SOURCES = foam_primemod-sim.c
 foamcs_simtt_SOURCES += $(FRAME_SRC) $(FRAME_HDR)
-foamcs_simtt_SOURCES += foam_modules-dm.c foam_modules-sh.c foam_modules-sim.c foam_modules-display.c foam_modules-calib.c foam_modules-img.c 
-foamcs_simtt_SOURCES += foam_modules-dm.h foam_modules-sh.h foam_modules-sim.h foam_modules-display.h foam_modules-calib.h foam_modules-img.h foam_primemod-sim-tt.h
+foamcs_simtt_SOURCES += foam_modules-dm.c foam_modules-sh.c foam_modules-sim.c foam_modules-dispgl.c foam_modules-calib.c foam_modules-img.c 
+foamcs_simtt_SOURCES += foam_modules-dm.h foam_modules-sh.h foam_modules-sim.h foam_modules-dispcommon.h foam_modules-calib.h foam_modules-img.h foam_primemod-sim-tt.h
 foamcs_simtt_CPPFLAGS = -include "foam_primemod-sim-tt.h"
 foamcs_simtt_CFLAGS = $(SIMULATION_CFLAGS)
 foamcs_simtt_LDFLAGS = $(SIMULATION_LIBS)
@@ -75,8 +75,8 @@ foamcs_simtt_LDFLAGS = $(SIMULATION_LIBS)
 bin_PROGRAMS += foamcs-simdm
 foamcs_simdm_SOURCES =  foam_primemod-sim.c
 foamcs_simdm_SOURCES += $(FRAME_SRC) $(FRAME_HDR)
-foamcs_simdm_SOURCES += foam_modules-dm.c foam_modules-sh.c foam_modules-sim.c foam_modules-display.c foam_modules-calib.c foam_modules-img.c
-foamcs_simdm_SOURCES += foam_modules-dm.h foam_modules-sh.h foam_modules-sim.h foam_modules-display.h foam_modules-calib.h foam_modules-img.h foam_primemod-sim-dm.h
+foamcs_simdm_SOURCES += foam_modules-dm.c foam_modules-sh.c foam_modules-sim.c foam_modules-dispgl.c foam_modules-calib.c foam_modules-img.c
+foamcs_simdm_SOURCES += foam_modules-dm.h foam_modules-sh.h foam_modules-sim.h foam_modules-dispcommon.h foam_modules-calib.h foam_modules-img.h foam_primemod-sim-dm.h
 foamcs_simdm_CPPFLAGS = -include "foam_primemod-sim-dm.h"
 foamcs_simdm_CFLAGS = $(SIMULATION_CFLAGS)
 foamcs_simdm_LDFLAGS = $(SIMULATION_LIBS)
@@ -93,18 +93,29 @@ foamcs_mcmath_SOURCES = foam_primemod-mcmath.c
 foamcs_mcmath_SOURCES += $(FRAME_SRC) $(FRAME_HDR)
 
 # Use some modules
-foamcs_mcmath_SOURCES += foam_modules-sh.c foam_modules-calib.c foam_modules-img.c foam_modules-itifg.c foam_modules-okodm.c foam_modules-serial.c foam_modules-daq2k.c foam_modules-display.c
-foamcs_mcmath_SOURCES += foam_modules-sh.h foam_modules-calib.h foam_modules-img.h foam_modules-itifg.h foam_modules-okodm.h foam_modules-serial.h foam_modules-daq2k.h foam_modules-display.h
+foamcs_mcmath_SOURCES += foam_modules-sh.c foam_modules-calib.c foam_modules-img.c foam_modules-itifg.c foam_modules-okodm.c foam_modules-serial.c foam_modules-daq2k.c
+
+if OPENGL
+foamcs_mcmath_SOURCES += foam_modules-dispgl.c
+else
+foamcs_mcmath_SOURCES += foam_modules-dispsdl.c
+endif
+
+foamcs_mcmath_SOURCES += foam_modules-sh.h foam_modules-calib.h foam_modules-img.h foam_modules-itifg.h foam_modules-okodm.h foam_modules-serial.h foam_modules-daq2k.h foam_modules-dispcommon.h
 
 # Make sure we include the prototypes for functions and datatypes everytime
 foamcs_mcmath_CPPFLAGS = -include "foam_primemod-mcmath.h"
 #foamcs_mcmath_CPPFLAGS += -DDEBUG_ITIFG=255 
-foamcs_mcmath_CPPFLAGS += -DFOAM_MCMATH_DISPLAY=1 -DFOAM_MODULES_DISLAY_SHSUPPORT=1
+foamcs_mcmath_CPPFLAGS += -DFOAM_MCMATH_DISPLAY=1 -DFOAM_MODULES_DISPLAY_OPENGL=1 -DFOAM_MODULES_DISLAY_SHSUPPORT=1
 
 # Add some cflags and libs too, please
 DRIVERDIR=/home/tim/foam/drivers
 foamcs_mcmath_CFLAGS = $(MCMATH_CFLAGS) -I$(DRIVERDIR)/itifg/include -I$(DRIVERDIR)/daq2k/include
 foamcs_mcmath_LDFLAGS = $(MCMATH_LIBS) -ldaqx -L$(DRIVERDIR)/itifg/lib -L$(DRIVERDIR)/daq2k/lib
+if OPENGL
+foamcs_mcmath_LDFLAGS += $(OPENGL_LIBS)
+endif
+
 foamcs_mcmath_LDADD = -litifg
 
 # endif MCMATH

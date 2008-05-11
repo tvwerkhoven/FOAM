@@ -22,9 +22,11 @@ extern pthread_cond_t mode_cond;
 // Displaying
 #ifdef FOAM_MCMATH_DISPLAY
 
-#ifndef FOAM_MODULES_DISLAY_SHSUPPORT
-#define FOAM_MODULES_DISLAY_SHSUPPORT
-#endif
+// these are done at compile time (in Makefile)
+//#define FOAM_MODULES_DISLAY_OPENGL
+//#ifndef FOAM_MODULES_DISLAY_SHSUPPORT
+//#define FOAM_MODULES_DISLAY_SHSUPPORT
+//#endif
 
 mod_display_t disp;
 #endif
@@ -43,7 +45,7 @@ mod_okodm_t okodm;
 mod_sh_track_t shtrack;
 
 // field images here:
-uint8_t cimg[SX*SY*NS] __attribute__ ((aligned (32)));
+// uint8_t cimg[SX*SY*NS] __attribute__ ((aligned (32)));
 
 int modInitModule(control_t *ptc, config_t *cs_config) {
 	logInfo(0, "This is the McMath-Pierce prime module, enjoy.");
@@ -170,21 +172,8 @@ int modInitModule(control_t *ptc, config_t *cs_config) {
 	cs_config->errfile = NULL;
 	cs_config->debugfile = NULL;
 	
-#ifdef FOAM_MCMATH_DISPLAY
-	// init display
-	disp.caption = "WFS #1";
-	disp.res.x = ptc->wfs[0].res.x;
-	disp.res.y = ptc->wfs[0].res.y;
-	disp.flags = SDL_HWSURFACE | SDL_DOUBLEBUF | SDL_RESIZABLE;
-    disp.autocontrast = 1;
-    disp.brightness = 0;
-    disp.contrast = 5;
-    disp.dispsrc = DISPSRC_RAW;         // use the raw ccd output
-    disp.dispover = DISPOVERLAY_GRID;   // display the SH grid
-	
-	modInitDraw(&disp);
-#endif
-	
+
+
 	drvInitBoard(&dalsacam);
 	drvInitBufs(&buffer, &dalsacam);
 	
@@ -194,9 +183,27 @@ int modInitModule(control_t *ptc, config_t *cs_config) {
 	return EXIT_SUCCESS;
 }
 
+int modPostInitModule(control_t *ptc, config_t *cs_config) {
+	// we initialize OpenGL here, because it doesn't like threading
+	// a lot
+#ifdef FOAM_MCMATH_DISPLAY
+	// init display
+	disp.caption = "WFS #1";
+	disp.res.x = ptc->wfs[0].res.x;
+	disp.res.y = ptc->wfs[0].res.y;
+	disp.autocontrast = 0;
+	disp.brightness = 0;
+	disp.contrast = 5;
+	disp.dispsrc = DISPSRC_RAW;         // use the raw ccd output
+	disp.dispover = DISPOVERLAY_GRID;   // display the SH grid
+	
+	displayInit(&disp);
+#endif
+}
+
 void modStopModule(control_t *ptc) {
 #ifdef FOAM_MCMATH_DISPLAY
-	modFinishDraw(disp.screen);
+	displayFinish(&disp);
 #endif
 	
 	drvStopGrab(&dalsacam);
@@ -208,6 +215,7 @@ void modStopModule(control_t *ptc) {
 /*********************/
 
 int modOpenInit(control_t *ptc) {
+	
 	// start grabbing frames
 	return drvInitGrab(&dalsacam);
 }
@@ -223,7 +231,8 @@ int modOpenLoop(control_t *ptc) {
 	
 #ifdef FOAM_MCMATH_DISPLAY
     if (ptc->frames % ptc->logfrac == 0) {
-	modDrawStuff((&ptc->wfs[0]), &disp, &shtrack);
+	displayDraw((&ptc->wfs[0]), &disp, &shtrack);
+	displaySDLEvents(&disp);
 	logInfo(0, "Current framerate: %.2f FPS", ptc->fps);
 	snprintf(title, 64, "%s (O) %.2f FPS", disp.caption, ptc->fps);
 	SDL_WM_SetCaption(title, 0);
@@ -258,7 +267,7 @@ int modClosedLoop(control_t *ptc) {
 	
 #ifdef FOAM_MCMATH_DISPLAY
     if (ptc->frames % ptc->logfrac == 0) {
-	modDrawStuff((&ptc->wfs[0]), &disp, &shtrack);
+	displayDraw((&ptc->wfs[0]), &disp, &shtrack);
 	logInfo(0, "Current framerate: %.2f FPS", ptc->fps);
 	snprintf(title, 64, "%s (C) %.2f FPS", disp.caption, ptc->fps);
 	SDL_WM_SetCaption(title, 0);
@@ -291,7 +300,6 @@ int modCalibrate(control_t *ptc) {
 		// check if memory is allocated yet
 		if (wfsinfo->darkim == NULL) {
 			wfsinfo->darkim = gsl_matrix_float_calloc(wfsinfo->res.x, wfsinfo->res.y);
-			wfsinfo->darkim2 = 
 		}
 
 		MMAvgFramesByte(wfsinfo->darkim, &(ptc->wfs[0]), wfsinfo->fieldframes);
@@ -309,7 +317,7 @@ int modCalibrate(control_t *ptc) {
 		// set new display settings to show the darkfield
 		disp.dispsrc = DISPSRC_DARK;
 		disp.dispover = 0;
-		modDrawStuff(wfsinfo, &disp, &shtrack);
+	displayDraw(wfsinfo, &disp, &shtrack);
 		snprintf(title, 64, "%s - Darkfield", disp.caption);
 		SDL_WM_SetCaption(title, 0);
 		// reset the display settings
@@ -340,7 +348,7 @@ int modCalibrate(control_t *ptc) {
 		// set new display settings to show the darkfield
 		disp.dispsrc = DISPSRC_FLAT;
 		disp.dispover = 0;
-		modDrawStuff(wfsinfo, &disp, &shtrack);
+	displayDraw(wfsinfo, &disp, &shtrack);
 		snprintf(title, 64, "%s - Flatfield", disp.caption);
 		SDL_WM_SetCaption(title, 0);
 		// reset the display settings
@@ -379,7 +387,7 @@ int modCalibrate(control_t *ptc) {
 		// set new display settings to show the darkfield
 		disp.dispsrc = DISPSRC_RAW;
 		disp.dispover = DISPOVERLAY_SUBAPS | DISPOVERLAY_GRID;
-		modDrawStuff(wfsinfo, &disp, &shtrack);
+	displayDraw(wfsinfo, &disp, &shtrack);
 		snprintf(title, 64, "%s - Subaps", disp.caption);
 		SDL_WM_SetCaption(title, 0);
 		// reset the display settings

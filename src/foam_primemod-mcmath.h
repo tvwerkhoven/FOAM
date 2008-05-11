@@ -88,7 +88,7 @@ int drvSetActuator(wfc_t *wfc);
 
 #ifdef FOAM_MCMATH_DISPLAY
 // for displaying stuff (SDL)
-#include "foam_modules-display.h"
+#include "foam_modules-dispcommon.h"
 #endif
 
 // for image file I/O

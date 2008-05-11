@@ -64,7 +64,7 @@
 // used for writing the frames to disk
 #include "foam_modules-img.h"
 // used for displaying stuff
-#include "foam_modules-display.h"
+#include "foam_modules-dispcommon.h"
 // necessary for coord_t
 #include "foam_cs_library.h"
 #endif
