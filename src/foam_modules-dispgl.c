@@ -56,7 +56,7 @@
 // HEADERS //
 /***********/
 
-#include "foam_modules-dispgl.h"
+#include "foam_modules-dispcommon.h"
 
 // PRIVATE ROUTINES //
 /********************/

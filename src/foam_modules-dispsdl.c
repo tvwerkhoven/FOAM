@@ -54,7 +54,7 @@
 // HEADERS //
 /***********/
 
-#include "foam_modules-dispsdl.h"
+#include "foam_modules-dispcommon.h"
 
 // GLOBAL VARIABLES //
 /********************/
