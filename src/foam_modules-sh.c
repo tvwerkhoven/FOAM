@@ -46,7 +46,7 @@ int modInitSH(mod_sh_track_t *shtrack) {
 		logErr("Error: could not allocate memory in modInitSH()!");
 		return EXIT_FAILURE;
 	}
-
+	
 	return EXIT_SUCCESS;
 }
 
