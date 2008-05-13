@@ -1,6 +1,9 @@
+# only do this if we want hardware debugging 
 # install the test programs in a foam-test subdir
 foamtestdir = $(bindir)/foam-test
+if HWDEBUG
 foamtest_PROGRAMS = serial-test okodm-test daq2k-test modimg-test itifg-test
+endif
 
 # some shared compiler flags which must always be used
 # (not using AM_* flags because of http://sourceware.org/automake/automake.html#Flag-Variables-Ordering)
@@ -14,13 +17,13 @@ CPPFLAGS+=-DHAVE_INLINE -DGSL_RANGE_CHECK_OFF -DFOAM_DEBUG -I$(SRCDIR)
 CFLAGS+=-g -DDEBUG_ITIFG=255
 # (un)comment this to toggle malloc debugging
 HAVE_DMALLOC=1
-LDFLAGS+=-ldmalloc 
+#LDFLAGS+=-ldmalloc 
 
-SRCDIR=$(abs_top_srcdir)/src
+SRCDIR=../src
 
 # we don't need or use the common libs here
 LIBS=
-
+if HWDEBUG
 # serial module test
 serial_test_SOURCES = $(SRCDIR)/foam_modules-serial.c
 serial_test_CPPFLAGS = -DFOAM_MODSERIAL_ALONE=1
@@ -57,3 +60,4 @@ itifg_test_LDFLAGS = -lm -lc -lgd -lpng -lSDL_image `sdl-config --libs` -Litifg/
 itifg_test_CFLAGS = -std=c99  `sdl-config --cflags`
 itifg_test_LDADD = -litifg
 
+endif

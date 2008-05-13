@@ -89,6 +89,10 @@ int modSimDM(char *boundarymask, char *actuatorpat, int nact, gsl_vector_float *
 
 	// read boundary mask file if this has not already been done before
 	if (boundary == NULL) {
+		fprintf(stderr, "please update modReadIMGArr, the API changed. Note to self 2008-05-13 14:26\n");
+#warning "Please update modReadIMGArr, the API changed. Note to self 2008-05-13 14:26"
+		exit(0);
+		
 		if (modReadIMGArr(boundarymask, &boundary, boundaryres) != EXIT_SUCCESS)
 			logErr("Cannot read boundary mask");
 			

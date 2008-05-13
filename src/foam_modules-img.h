@@ -25,13 +25,13 @@
 // int modReadPGM(char *fname, SDL_Surface **img);
 
 /*!
- @brief Reads a image file from disk into an array
+ @brief Reads a image file from disk into a uint8_t array
  
  @param [in] *fname the filename to read
  @param [out] **img the array that will hold the image (does not have to be allocated yet)
  @param [out] *outres this will hold the resolution of img
  */
-int modReadIMGArr(char *fname, float **img, coord_t *outres);
+int modReadIMGArrByte(char *fname, uint8_t **img, coord_t *outres);
 
 /*!
  @brief Writes a 8-bit ASCII PGM file from memory to disk

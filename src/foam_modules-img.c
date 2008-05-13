@@ -81,22 +81,18 @@ int modReadIMGSurf(char *fname, SDL_Surface **surf) {
 	return EXIT_SUCCESS;
 }
 
-int modReadIMGArr(char *fname, float **img, coord_t *outres) {
+int modReadIMGArrByte(char *fname, uint8_t **img, coord_t *outres) {
 	SDL_Surface *sdlimg;
 	int x, y;
+	uint8_t pix;
+	uint8_t min, max;
+	uint64_t sum=0;
 	
 	if (modReadIMGSurf(fname, &sdlimg) != EXIT_SUCCESS)
 		return EXIT_FAILURE;
 
-	// !!!:tim:20080326 update we export this part to modReadIMGSurf such that 
-//	sdlimg = IMG_Load(fname);
-//	if (!sdlimg) {
-//		logWarn("Error in IMG_Load: %s\n", IMG_GetError());
-//		return EXIT_FAILURE;
-//	}
-
 	// copy image from SDL_Surface to *img
-	*img = malloc(sdlimg->w * sdlimg->h * sizeof(float));
+	*img = (uint8_t *) malloc(sdlimg->w * sdlimg->h * sizeof(float));
 	if (*img == NULL)
 		logErr("Failed to allocate memory in modReadIMGArr().");
 		
@@ -105,13 +101,19 @@ int modReadIMGArr(char *fname, float **img, coord_t *outres) {
 	for (y=0; y < sdlimg->h; y++) {
 		for (x=0; x<sdlimg->w; x++) {
 			// beware: pointer trickery begins
-			(*img)[y*sdlimg->w + x] = (float) getPixel(sdlimg, x, y);
+			pix = (uint8_t) getPixel(sdlimg, x, y);
+			(*img)[y*sdlimg->w + x] = pix;
+			if (pix > max) max = pix;
+			else if (pix < min) min = pix;
+			sum += pix;
 		}
 	}
 	
 	SDL_FreeSurface(sdlimg);
 
-	logDebug(0, "ReadIMGArr Succesfully finished");
+	logDebug(0, "modReadIMGArrByte: Read byte image (%dx%d), min: %d, max: %d, sum: %ld, avg: %ld", \
+			 outres->x, outres->y, min, max, sum, sum/(sdlimg->h * sdlimg->w));
+	
 	return EXIT_SUCCESS;
 }
 

@@ -1,13 +1,15 @@
 /*! 
-	@file foam_primemod-simstatic.h
+	@file foam_primemod-mcmath.h
 	@author @authortim
-	@date 2008-03-12
+	@date 2008-04-18 12:55
 
-	@brief This header file links the prime module `simstatic' to various modules.
+	@brief This is the prime module header file for 'mcmath', which holds some the definition of some
+	datatypes that can vary from setup to setup. There are also some define statement to control
+	some aspects of the framework in general.
 */
 
-#ifndef FOAM_MODULES_SIMSTATIC
-#define FOAM_MODULES_SIMSTATIC
+#ifndef FOAM_PRIME_SIMSTATIC
+#define FOAM_PRIME_SIMSTATIC
 
 // GENERAL //
 /***********/
@@ -41,14 +43,17 @@
 typedef enum { // calmode_t
 	CAL_PINHOLE,	//!< determine reference shifts after inserting a pinhole
 	CAL_INFL,		//!< determine the influence functions for each WFS-WFC pair
-	CAL_LINTEST		//!< linearity test for WFCs
+	CAL_LINTEST,	//!< linearity test for WFCs
+	CAL_SUBAPSEL,		//!< For subaperture selection
+	CAL_DARK,		//!< dark fielding
+	CAL_FLAT,		//!< flat fielding
+	CAL_DARKGAIN		//!< generate dark and gain only for the subapertures for fast dark/flat fielding
 } calmode_t;
 
 /*!
- @brief Helper enum for WFC types
+ @brief Enum for WFC types
  
- This should be enough for now, but can be expanded to include other
- WFCs as well.
+ A list of all WFC's used in the system
  */
 typedef enum { // axes_t
 	WFC_TT=0,		//!< WFC Type for tip-tilt mirrors
@@ -56,70 +61,47 @@ typedef enum { // axes_t
 } wfctype_t;
 
 /*!
- @brief Helper enum for filterwheel types
- 
- This should be enough for now, but can be expanded to include other
- filterwheels as well.
+ @brief Enum for filterwheel types
+
+ This enum includes all filterwheels present in the hardware system. 
  */
-typedef enum { //fwheel_t
-	FILT_PINHOLE,	//!< Pinhole used for pinhole calibration
-	FILT_OPEN,		//!< Open position, don't filter
-	FILT_CLOSED		//!< Closed, don't let light through
-} fwheel_t;
+typedef enum { //filter_t
+	FILT_PINHOLE,	//!< Pinhole used for subaperture selection (pinhole in front of SH lenslet array, after TT/DM)
+    FILT_OPEN,      //!< Normal operations filter position
+	FILT_CLOSED,	//!< Closed filter position
+    FILT_TARGET     //!< A target for doing stuff
+} filter_t;
 
+// We always use config.h
 #include "config.h"
-#include "foam_cs_library.h"		// we link to the main program here (i.e. we use common (log) functions)
+// We always use the main library for datatypes etc
+#include "foam_cs_library.h"
 
-#include "foam_modules-display.h"	// we need the display module to show debug output
-#include "foam_modules-sh.h"		// we want the SH subroutines so we can track targets
-#include "foam_modules-img.h"		// we need img routines
-#include "foam_modules-calib.h"		// we want the dark/flat calibration
+// ROUTINE PROTOTYPES //
+/**********************/
 
-// These are defined in foam_cs_library.c
-extern control_t ptc;
-extern config_t cs_config;
+// These *must* be defined in a prime module
+int drvSetupHardware(control_t *ptc, aomode_t aomode, calmode_t calmode);
+int drvSetActuator(wfc_t *wfc);
 
-// PROTOTYPES //
-/**************/
+// LIBRARIES //
+/*************/
 
-/*!
-@brief Simulates sensor(s) read-out and outputs to ptc.wfs[n].image.
+#ifdef FOAM_MCMATH_DISPLAY
+// for displaying stuff (SDL)
+#include "foam_modules-dispcommon.h"
+#endif
 
-During simulation, this function takes care of simulating the atmosphere, 
-the telescope, the tip-tilt mirror, the DM and the (SH) sensor itself, since
-these all occur in sequence. The sensor output will be stored in ptc.wfs[n].image,
-which must be globally available and allocated.
+// for image file I/O
+#include "foam_modules-img.h"
+// for calibrating the image lateron
+#include "foam_modules-calib.h"
 
-@return EXIT_SUCCESS on success, EXIT_FAILURE otherwise.
-*/
-int drvReadSensor();
+// These are simstatic specific (for the time being)
+int MMAvgFramesByte(gsl_matrix_float *output, wfs_t *wfs, int rounds);
+int MMDarkFlatFullByte(wfs_t *wfs, mod_sh_track_t *shtrack);
 
-/*!
-@brief This sets the various actuators (WFCs).
 
-This simulates setting the actuators to the right voltages etc. 
 
-@return EXIT_SUCCESS on success, EXIT_FAILURE otherwise.
-*/
-int drvSetActuator();
-
-/*!
-@brief This drives the filterwheel.
-
-This simulates setting the filterwheel. The actual simulation is not done here,
-but in drvReadSensor() which checks which filterwheel is being used and 
-acts accordingly. With a real filterwheel, this would set some hardware address.
-
-@return EXIT_SUCCESS on success, EXIT_FAILURE otherwise.
-*/
-int drvFilterWheel(control_t *ptc, fwheel_t mode);
-
-/*!
-@brief Fake Control vector calculation, only simulate the computational load.
-
-@return EXIT_SUCCESS on success, EXIT_FAILURE otherwise.
-*/
-int modCalcCtrlFake(control_t *ptc, const int wfs, int nmodes);
-
-#endif /* FOAM_MODULES_SIMSTATIC */
+#endif // #ifndef FOAM_PRIME_MCMATH
 

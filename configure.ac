@@ -1,10 +1,13 @@
 # dynamic versioning does not work :<
 #MAJOR=alpha
 #MINOR=$(shell svn log -r HEAD | head -n 2 | tail -n 1 | awk '{print$1"-"$5}')
-AC_INIT([FOAM], [alpha-2008-04-02], [T.I.M.vanWerkhoven@phys.uu.nl])
+AC_INIT([FOAM], [alpha-2008-05-13], [T.I.M.vanWerkhoven@phys.uu.nl])
 AC_COPYRIGHT([Copyright 2007-2008 Tim van Werkhoven <T.I.M.vanWerkhoven@phys.uu.nl>])
 
-AC_REVISION($Revision: 195 $)
+AC_REVISION($Revision: 399 $)
+
+#AC_CANONICAL_SYSTEM
+
 
 AC_CONFIG_HEADERS([src/config.h])
 AC_CONFIG_AUX_DIR([build-aux])
@@ -79,13 +82,13 @@ AC_ARG_ENABLE([simulation],
 	esac],[simul=disabled])
 
 # Test if we want to run as simulation or not
-AC_ARG_ENABLE([statsimulation],
-		AC_HELP_STRING([--enable-statsimulation], [enable static simulation mode (def: no)]),
+AC_ARG_ENABLE([simstat],
+		AC_HELP_STRING([--enable-simstat], [enable static simulation mode (def: yes)]),
 		[case "${enableval}" in
-		yes) statsimul=true ;;
-		no)  statsimul=disabled ;;
-		*) AC_MSG_ERROR([bad value ${enableval} for --enable-statsimulation]) ;;
-	esac],[statsimul=disabled])
+		yes) simstat=true ;;
+		no)  simstat=disabled ;;
+		*) AC_MSG_ERROR([bad value ${enableval} for --enable-simstat]) ;;
+	esac],[simstat=true])
 		
 # Test if we want to include the UI or not
 AC_ARG_ENABLE([ui],
@@ -105,6 +108,15 @@ AC_ARG_ENABLE([hwdebug],
 		*) AC_MSG_ERROR([bad value ${enableval} for --enable-hwdebug]) ;;
 	esac],[hwdebug=true])
 
+# test if we need OS X OpenGL (with frameworks)
+AC_ARG_ENABLE([osxopengl],
+		AC_HELP_STRING([--enable-osxopengl], [use opengl framework on OS X]),
+		[case "${enableval}" in
+		yes) osxopengl=true ;;
+		no)  osxopengl=disabled ;;
+		*) AC_MSG_ERROR([bad value ${enableval} for --enable-osxopengl]) ;;
+	esac],[osxopengl=false])
+
 # Test if we want mcmath enabled 
 AC_ARG_ENABLE([mcmath],
 		AC_HELP_STRING([--enable-mcmath], [enable mcmath mode (def: yes)]),
@@ -121,6 +133,13 @@ AC_ARG_ENABLE([opengl],
 		no)  opengl=disabled ;;
 		*) AC_MSG_ERROR([bad value ${enableval} for --enable-opengl]) ;;
 	esac],[opengl=true])
+
+### HWDEBUG or not? ###
+#######################
+
+AM_CONDITIONAL([HWDEBUG], [test x$hwdebug = xtrue])
+#if test "$hwdebug" = true ; then
+#fi
 
 ### SIMULATION MODE ###
 #######################
@@ -178,50 +197,43 @@ AM_CONDITIONAL([SIMULATION], [test x$simul = xtrue])
 
 ### STATIC SIMULATION MODE ###
 ##############################
-if test "$statsimul" = true ; then
+if test "$simstat" = true ; then
 	# search for static simulation libraries here, exit if not found
 	AC_MSG_NOTICE([static simulation enabled, checking for extra libs])
 	# this is kinda ugly
-	statsimulmissing=""
+	simstatmissing=""
 	LIBS=""
-	AC_SEARCH_LIBS([SDL_Init], [SDL] ,[], 
-		[AC_MSG_WARN([This package needs libsdl in static simulation mode.])
-		statsimul=false
-		statsimulmissing+=" sdl"
-		]
-	)
-
 	AC_SEARCH_LIBS([IMG_Load], [SDL_image] ,[], 
-		[AC_MSG_WARN([This package needs sdl-image in static simulation mode.])
-		statsimul=false
-		statsimulmissing+=" sdl-image"
+		[AC_MSG_WARN([This package needs sdl-image in simstat mode.])
+		simstat=false
+		simstatmissing+=" sdl-image"
 		]
 	)
 	
 	AC_SEARCH_LIBS([gdImageCreate], [gd] ,[], 
-		[AC_MSG_WARN([This package needs libgd in simulation mode.])
-		simul=false
-		simulmissing+=" gd"
+		[AC_MSG_WARN([This package needs libgd in simstat mode.])
+		simstat=false
+		simstatmissing+=" gd"
 		]
 	)
 	
 	AC_SEARCH_LIBS([gdImagePng], [png] ,[], 
-		[AC_MSG_WARN([This package needs libpng in simulation mode.])
-		simul=false
-		simulmissing+=" png"
+		[AC_MSG_WARN([This package needs libpng in simstat mode.])
+		simstat=false
+		simstatmissing+=" png"
 		]
 	)	
 	
 	# fix simulation Cflags (mainly SDL)
-	STATSIMULATION_CFLAGS+="$SDL_CFLAGS"
-	STATSIMULATION_LIBS+="$LIBS $SDL_LIBS"
+	SIMSTAT_CFLAGS+="$SDL_CFLAGS"
+	SIMSTAT_LIBS+="$LIBS $SDL_LIBS"
 else 
 	# search for runtime libs here (camera stuff), exit if not found
 	AC_MSG_NOTICE([static simulation disabled])
 fi
-AC_SUBST(STATSIMULATION_CFLAGS)
-AC_SUBST(STATSIMULATION_LIBS)
-AM_CONDITIONAL([STATSIMULATION], [test x$statsimul = xtrue])
+AC_SUBST(SIMSTAT_CFLAGS)
+AC_SUBST(SIMSTAT_LIBS)
+AM_CONDITIONAL([SIMSTAT], [test x$simstat = xtrue])
 
 ### MCMATH MODE ### 
 ###################
@@ -266,28 +278,36 @@ AM_CONDITIONAL([MCMATH], [test x$mcmath = xtrue])
 ### OPENGL FEATURE ### 
 ######################
 if test "$opengl" = true ; then
-	# search for opengl libs here
-	openglmissing=""
 	AC_MSG_NOTICE([opengl enabled, checking for extra libs])
-	LIBS=""
+	if test "$osxopengl" = true ; then
+		AC_MSG_NOTICE([opengl: checking for OS X libs])
+# OS X specific OpenGL config
+		OPENGL_CFLAGS+="-FOpenGL"
+		OPENGL_LIBS+="-framework OpenGL"
+	else
+# search for opengl libs here, generic search
+		AC_MSG_NOTICE([opengl: checking for generic libs (non OS X)])
+		openglmissing=""
+		LIBS=""
 
-	AC_SEARCH_LIBS([glClear], [GL] ,[], 
-		[AC_MSG_WARN([OpenGL could not be found on this system.])
-		opengl=false
-		openglmissing+=" libgl"
-		]
-	)
+		AC_SEARCH_LIBS([glClear], [GL] ,[], 
+				[AC_MSG_WARN([OpenGL could not be found on this system.])
+				opengl=false
+				openglmissing+=" libgl"
+				]
+			      )
 
-	AC_SEARCH_LIBS([gluOrtho2D], [GLU] ,[], 
-		[AC_MSG_WARN([libGLU could not be found on this system.])
-		opengl=false
-		openglmissing+=" libglu"
-		]
-	)
+		AC_SEARCH_LIBS([gluOrtho2D], [GLU] ,[], 
+				[AC_MSG_WARN([libGLU could not be found on this system.])
+				opengl=false
+				openglmissing+=" libglu"
+				]
+			      )
 
-	# fix opengl cflags / libs
-	OPENGL_CFLAGS+=""
-	OPENGL_LIBS+="$LIBS"
+# fix opengl cflags / libs
+		OPENGL_CFLAGS+=""
+		OPENGL_LIBS+="$LIBS"
+	fi
 else 
 	AC_MSG_NOTICE([OpenGL disabled])
 fi
@@ -337,13 +357,13 @@ else
 	AC_MSG_NOTICE([Simulation mode: missing: $simulmissing])
 fi
 
-if test "$statsimul" = true ; then
+if test "$simstat" = true ; then
 	AC_MSG_NOTICE([Static sim mode: available])
-elif test "$statsimul" = disabled; then
+elif test "$simstat" = disabled; then
 	AC_MSG_NOTICE([Static sim mode: disabled])
 else
 	AC_MSG_NOTICE([Static sim mode: not available])
-	AC_MSG_NOTICE([Static sim mode: missing: $statsimulmissing])
+	AC_MSG_NOTICE([Static sim mode: missing: $simstatmissing])
 fi
 
 if test "$mcmath" = true ; then
@@ -353,6 +373,14 @@ elif test "$mcmath" = disabled; then
 else
 	AC_MSG_NOTICE([mcmath mode:     not available])
 	AC_MSG_NOTICE([mcmath mode:     missing: $mcmathmissing])
+fi
+
+if test "$hwdebug" = true ; then
+	AC_MSG_NOTICE([hwdebug mode:    available])
+elif test "$hwdebug" = disabled; then
+	AC_MSG_NOTICE([hwdebug mode:    disabled])
+else
+	AC_MSG_NOTICE([hwdebug mode:    unknown])
 fi
 
 if test "$ui" = true ; then

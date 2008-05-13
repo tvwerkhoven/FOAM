@@ -3,7 +3,7 @@ bin_PROGRAMS =
 
 # some shared compiler flags which must always be used
 # (not using AM_* flags because of http://sourceware.org/automake/automake.html#Flag-Variables-Ordering)
-CC=/usr/bin/gcc-4.1
+#CC=/usr/bin/gcc-4.1
 CFLAGS=-pipe -Wall -Wextra 
 # To diagnose linker errors:
 #CFLAGS+=-Wl,-verbose
@@ -24,7 +24,7 @@ CPPFLAGS+= -DDEBUG_ITIFG=255 -DLinux
 CFLAGS+=-g
 # (un)comment these to toggle malloc debugging
 HAVE_DMALLOC=1
-LDFLAGS+=-ldmalloc 
+#LDFLAGS+=-ldmalloc 
 
 # basic framework files which are always needed
 FRAME_SRC = foam_cs.c foam_library.c foam_cs_library.c
@@ -47,15 +47,41 @@ foamui_LDFLAGS = $(UI_LIBS)
 endif
 
 # programs depend on whether or not we want static simulation...
-if STATSIMULATION
-bin_PROGRAMS += foamcs-statsim
-foamcs_statsim_SOURCES = foam_primemod-simstatic.c
-foamcs_statsim_SOURCES += $(FRAME_SRC) $(FRAME_HDR)
-foamcs_statsim_SOURCES += foam_modules-sh.c foam_modules-calib.c foam_modules-dispgl.c foam_modules-img.c
-foamcs_statsim_SOURCES += foam_modules-sh.h foam_modules-calib.h foam_modules-dispcommon.h foam_modules-img.h foam_primemod-simstatic.h
-foamcs_statsim_CPPFLAGS = -include "foam_primemod-simstatic.h"
-foamcs_statsim_CFLAGS = $(SIMULATION_CFLAGS)
-foamcs_statsim_LDFLAGS = $(SIMULATION_LIBS)
+if SIMSTAT
+# Program name simstat
+bin_PROGRAMS += foamcs-simstat
+
+# prime module C file
+foamcs_simstat_SOURCES = foam_primemod-simstatic.c
+# Other C files
+foamcs_simstat_SOURCES += $(FRAME_SRC) $(FRAME_HDR)
+foamcs_simstat_SOURCES += foam_modules-sh.c foam_modules-calib.c foam_modules-img.c
+
+# Are we going to use OpenGL or not?
+if OPENGL
+foamcs_simstat_SOURCES += foam_modules-dispgl.c
+else
+foamcs_simstat_SOURCES += foam_modules-dispsdl.c
+endif
+
+# header files are part of the sources as well
+foamcs_simstat_SOURCES += foam_modules-sh.h foam_modules-calib.h foam_modules-dispcommon.h foam_modules-img.h foam_primemod-simstatic.h
+
+# Some CPP flags (include the primemod header, and configure some options)
+foamcs_simstat_CPPFLAGS = -include "foam_primemod-simstatic.h"
+#foamcs_mcmath_CPPFLAGS += -DDEBUG_ITIFG=255 
+foamcs_simstat_CPPFLAGS += -DFOAM_MCMATH_DISPLAY=1 -DFOAM_MODULES_DISPLAY_OPENGL=1 -DFOAM_MODULES_DISLAY_SHSUPPORT=1
+
+# specific flags and libraries
+foamcs_simstat_CFLAGS = $(SIMSTAT_CFLAGS)
+foamcs_simstat_LDFLAGS = $(SIMSTAT_LIBS)
+if OPENGL
+# add some flags necessary for OpenGL
+foamcs_simstat_CFLAGS += $(OPENGL_CFLAGS)
+foamcs_simstat_LDFLAGS += $(OPENGL_LIBS)
+endif
+
+# endif SIMSTAT
 endif
 
 # programs depend on whether or not we want simulation...
@@ -114,6 +140,7 @@ foamcs_mcmath_CFLAGS = $(MCMATH_CFLAGS) -I$(DRIVERDIR)/itifg/include -I$(DRIVERD
 foamcs_mcmath_LDFLAGS = $(MCMATH_LIBS) -ldaqx -L$(DRIVERDIR)/itifg/lib -L$(DRIVERDIR)/daq2k/lib
 if OPENGL
 foamcs_mcmath_LDFLAGS += $(OPENGL_LIBS)
+foamcs_mcmath_CFLAGS += $(OPENGL_CFLAGS)
 endif
 
 foamcs_mcmath_LDADD = -litifg
