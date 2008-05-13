@@ -46,7 +46,8 @@ typedef enum { // calmode_t
 	CAL_LINTEST,	//!< linearity test for WFCs
 	CAL_SUBAPSEL,		//!< For subaperture selection
 	CAL_DARK,		//!< dark fielding
-	CAL_FLAT		//!< flat fielding
+	CAL_FLAT,		//!< flat fielding
+	CAL_DARKGAIN		//!< generate dark and gain only for the subapertures for fast dark/flat fielding
 } calmode_t;
 
 /*!

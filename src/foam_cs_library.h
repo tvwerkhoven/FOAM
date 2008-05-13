@@ -194,8 +194,8 @@ typedef struct { // wfs_t
 	gsl_matrix_float *flatim;		//!< (foam) flatfield for the CCD (actually: flat-dark, as we never use flat directly)
 	gsl_matrix_float *skyim;		//!< (foam) skyfield for the CCD
 	gsl_matrix_float *corrim;		//!< (foam) corrected image to be processed
-	void *dark;						//!< (foam) dark field actually used in calculations (actually for SH)
-	void *gain;						//!< (foam) gain used (1/(flat-dark)) in calculations (actually for SH)
+	void *dark;				//!< (foam) dark field actually used in calculations (actually for SH)
+	void *gain;				//!< (foam) gain used (1/(flat-dark)) in calculations (actually for SH)
 	
 	// gsl might not be as fast as I wanted :<
 	void *darkim2;					//!< (foam) store darkfield here

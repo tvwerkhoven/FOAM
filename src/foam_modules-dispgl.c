@@ -199,14 +199,14 @@ int displayGSLImg(gsl_matrix_float *img, mod_display_t *disp, int doscale) {
 		    gsltmp[i*disp->res.y + j] = gsl_matrix_float_get(img, i, j);
 	    }
     }
-	if (disp->autocontrast == 0) {
-		glPixelTransferf(GL_RED_SCALE, (GLfloat) disp->contrast);
-		glPixelTransferf(GL_GREEN_SCALE, (GLfloat) disp->contrast);
-		glPixelTransferf(GL_BLUE_SCALE, (GLfloat) disp->contrast);
-		glPixelTransferf(GL_RED_BIAS, (GLfloat) disp->brightness);
-		glPixelTransferf(GL_GREEN_BIAS, (GLfloat) disp->brightness);
-		glPixelTransferf(GL_BLUE_BIAS, (GLfloat) disp->brightness);
-	}
+    if (disp->autocontrast == 0) {
+    glPixelTransferf(GL_RED_SCALE, (GLfloat) disp->contrast);
+    glPixelTransferf(GL_GREEN_SCALE, (GLfloat) disp->contrast);
+    glPixelTransferf(GL_BLUE_SCALE, (GLfloat) disp->contrast);
+    glPixelTransferf(GL_RED_BIAS, (GLfloat) disp->brightness);
+    glPixelTransferf(GL_GREEN_BIAS, (GLfloat) disp->brightness);
+    glPixelTransferf(GL_BLUE_BIAS, (GLfloat) disp->brightness);
+    }
     glDrawPixels((GLsizei) disp->res.x, (GLsizei) disp->res.y, GL_LUMINANCE, GL_FLOAT, (const GLvoid *) gsltmp);
 
     return EXIT_FAILURE;
@@ -340,15 +340,15 @@ int displayDraw(wfs_t *wfsinfo, mod_display_t *disp) {
 		//		}
 	}
 	else if (disp->dispsrc == DISPSRC_DARK) {
-	    logDebug(LOG_NOFORMAT, "disp dark ");
+	    //logDebug(LOG_NOFORMAT, "disp dark ");
 		displayGSLImg(wfsinfo->darkim, disp, 1);
 	}
 	else if (disp->dispsrc == DISPSRC_FLAT) {
-	    logDebug(LOG_NOFORMAT, "disp flat ");
+	    //logDebug(LOG_NOFORMAT, "disp flat ");
 		displayGSLImg(wfsinfo->flatim, disp, 1);
 	}
 	else if (disp->dispsrc == DISPSRC_CALIB) {
-	    logDebug(LOG_NOFORMAT, "disp calib ");
+	    //logDebug(LOG_NOFORMAT, "disp calib ");
 		displayGSLImg(wfsinfo->corrim, disp, 1);
 	}
 	
