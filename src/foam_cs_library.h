@@ -196,11 +196,7 @@ typedef struct { // wfs_t
 	gsl_matrix_float *corrim;		//!< (foam) corrected image to be processed
 	void *dark;				//!< (foam) dark field actually used in calculations (actually for SH)
 	void *gain;				//!< (foam) gain used (1/(flat-dark)) in calculations (actually for SH)
-	
-	// gsl might not be as fast as I wanted :<
-	void *darkim2;					//!< (foam) store darkfield here
-	void *flatim2;					//!< (foam) store flatim here
-	void *corrim2;					//!< (foam) store corrim here
+	void *corr;				//!< (foam) this is used to store the corrected image if we're doing closed loop (we only dark/flat the subapts we're using here and we do it in fast ASM code)
 	
 	char *darkfile;					//!< (user) filename for the darkfield calibration
 	char *flatfile;					//!< (user) filename for the flatfield calibration

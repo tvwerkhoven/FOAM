@@ -42,7 +42,13 @@ int modInitSH(mod_sh_track_t *shtrack) {
 	logInfo(0, "Initializing SH tracking module");
 	shtrack->subc = calloc(shtrack->cells.x * shtrack->cells.y, sizeof(coord_t));
 	shtrack->gridc = calloc(shtrack->cells.x * shtrack->cells.y , sizeof(coord_t));
-	if (shtrack->subc == NULL || shtrack->gridc == NULL) {
+	// we store displacement coordinates here
+	shtrack->disp = gsl_vector_calloc(shtrack->cells.x * shtrack->cells.y * 2);
+	// we store reference coordinates here
+	shtrack->refc = gsl_vector_calloc(shtrack->cells.x * shtrack->cells.y * 2);
+
+	if (shtrack->subc == NULL || shtrack->gridc == NULL || shtrack->disp == NULL || \
+		shtrack->refc == NULL) {
 		logErr("Error: could not allocate memory in modInitSH()!");
 		return EXIT_FAILURE;
 	}
@@ -332,7 +338,7 @@ int modSelSubaptsByte(uint8_t *image, mod_sh_track_t *shtrack, wfs_t *shwfs) {
 				apmap[isx][isy] = 1; // set aperture map
 				shtrack->gridc[sn].x = isx;
 				shtrack->gridc[sn].y = isy;
-				logDebug(0, "cog (%.2f,%.2f) subc (%d,%d) gridc (%d,%d) sum %f (min: %f, max: %d)", cs[0], cs[1], shtrack->subc[sn].x, shtrack->subc[sn].y, isx, isy, csum, samini, samxr);
+				//logDebug(0, "cog (%.2f,%.2f) subc (%d,%d) gridc (%d,%d) sum %f (min: %f, max: %d)", cs[0], cs[1], shtrack->subc[sn].x, shtrack->subc[sn].y, isx, isy, csum, samini, samxr);
 				sn++;
 			} else {
 				apmap[isx][isy] = 0; // don't use this subapt
@@ -511,26 +517,23 @@ int modSelSubaptsByte(uint8_t *image, mod_sh_track_t *shtrack, wfs_t *shwfs) {
 	return EXIT_SUCCESS;
 }
 
-void modCogTrack(gsl_matrix_float *image, int (*subc)[2], int nsubap, coord_t track, float *aver, float *max, float coords[][2]) {
+void modCogTrackGSL(gsl_matrix_float *image, mod_sh_track_t *shtrack, float *aver, float *max) {
+//void modCogTrack(gsl_matrix_float *image, int (*subc)[2], int nsubap, coord_t track, float *aver, float *max, float coords[][2]) {
 	int ix, iy, sn=0;
 	float csx, csy, csum, fi, cmax; 			// variables for center-of-gravity
 	float sum = 0;
 	
 	// loop over all subapertures (treat those all equal)
-	for (sn=0; sn<nsubap; sn++) {
+	for (sn=0; sn < shtrack->nsubap; sn++) {
 		csx = 0.0; csy = 0.0; csum = 0.0;
 		
-		// TvW: TODO continue here!
-		// modCogTrackGSL(image, subc[sn], track, &csx, &csy, &csum, &cmax);
-		// modCogTrackLoop(image, subc[sn], track, &csx, &csy, &csum, &cmax);
-		
-		for (iy=0; iy<track.y; iy++) {
-			for (ix=0; ix<track.x; ix++) {
-				fi = gsl_matrix_float_get(image, subc[sn][1]+iy, subc[sn][0]+ix);
-				//image[subc[sn][1]*res.x+subc[sn][0] + iy*res.x + ix];
-				// fi = image->data[(subc[sn][1]+iy) * image->tda + (subc[sn][0]+ix)];
+		for (iy=0; iy < shtrack->track.y; iy++) {
+			for (ix=0; ix < shtrack->track.x; ix++) {
+				fi = gsl_matrix_float_get(image, shtrack->subc[sn].y+iy, shtrack->subc[sn].x+ix);
+				//image[subc[sn][1]*res.x+shtrack->subc[sn].x + iy*res.x + ix];
+				// fi = image->data[(subc[sn][1]+iy) * image->tda + (shtrack->subc[sn].x+ix)];
 
-				if (fi > *max) *max = fi;
+				if (max != NULL && fi > *max) *max = fi;
 				
 				csum += fi;				// add this pixel's intensity to sum
 				csx += fi * ix; 		// center of gravity of subaperture intensity 
@@ -540,16 +543,23 @@ void modCogTrack(gsl_matrix_float *image, int (*subc)[2], int nsubap, coord_t tr
 		sum += csum;
 
 		if (csum > 0.0) {				// if there is any signal at all
-			coords[sn][0] = csx/csum - track.x/2; // positive now
-			coords[sn][1] = csy/csum - track.y/2; // /2 because our tracker cells are track[] wide and high
+			gsl_vector_float_set(shtrack->disp, 2*sn + 0, \
+				csx/csum - shtrack->track.x/2); // positive now
+			gsl_vector_float_set(shtrack->disp, 2*sn + 1, \
+				csy/csum - shtrack->track.y/2); // /2 because our tracker cells are track[] wide and high
 		} 
-		else
-			coords[sn][0] = coords[sn][1] = 0.0;
+		else {
+			//coords[sn][0] = coords[sn][1] = 0.0;
+			gsl_vector_float_set(shtrack->disp, 2*sn + 0, 0.0);
+			gsl_vector_float_set(shtrack->disp, 2*sn + 1, 0.0);
+		}
+
 		
 	}
 	
 	// Calculate average subaperture intensity
-	*aver = sum / ((float) (track.x*track.y*nsubap));
+	if (aver != NULL)
+		*aver = sum / ((float) (shtrack->track.x * shtrack->track.y * shtrack->nsubap));
 }
 
 void modCogFind(wfs_t *wfsinfo, int xc, int yc, int width, int height, float samini, float *sumout, float *cog) {
@@ -588,7 +598,8 @@ int modParseSH(gsl_matrix_float *image, int (*subc)[2], int (*gridc)[2], int nsu
 	int i;
 
 	// track the maxima using CoG
-	modCogTrack(image, subc, nsubap, track, &aver, &max, coords);
+	printf("modcogtrack turned off\n");
+	//modCogTrack(image, subc, nsubap, track, &aver, &max, coords);
 	
 	// logDebug(0 | LOG_SOMETIMES, "Coords: ");	
 	for (i=0; i<nsubap; i++) {
@@ -651,6 +662,7 @@ int modCalcCtrl(control_t *ptc, mod_sh_track_t *shtrack, const int wfs, int nmod
 	int nacttot=0;
 	size_t oldsize;
 	int nsubap = shtrack->nsubap;
+	float wi, alpha;
 	
 	// calculate total nr of act for all wfc
 	for (wfc=0; wfc< ptc->wfc_count; wfc++)
@@ -664,12 +676,16 @@ int modCalcCtrl(control_t *ptc, mod_sh_track_t *shtrack, const int wfs, int nmod
 		nmodes = nacttot;
 	}
 
-	gsl_vector_float *work, *total; // temp work vector and vector to store all control commands for all WFCs
-	work = gsl_vector_float_calloc(nacttot);
-	total = gsl_vector_float_calloc(nacttot);
+	static gsl_vector_float *work=NULL, *total=NULL; // temp work vector and vector to store all control commands for all WFCs
+	if (work == NULL)
+		work = gsl_vector_float_calloc(nacttot);
+	if (total == NULL)
+		total = gsl_vector_float_calloc(nacttot);
 
-	// TODO: this is a hack :P (problem: disp vector is allocated more space than used, but at allocation time, this is unknown
-	// we now tell gsl that the vector is only as long as we're using, while the actual allocated space is more)
+	// TODO: this is a hack :P (problem: disp vector is 
+	// allocated more space than used, but at allocation time,
+	// this is unknown we now tell gsl that the vector is 
+	// only as long as we're using, while the actual allocated space is more)
 //	oldsize = ptc->wfs[wfs].disp->size;
 	oldsize = shtrack->disp->size;
 	shtrack->disp->size = nsubap*2;
@@ -682,18 +698,28 @@ int modCalcCtrl(control_t *ptc, mod_sh_track_t *shtrack, const int wfs, int nmod
 	
 //	gsl_linalg_SV_solve(ptc->wfs[wfs].wfsmodes, v, sing, testout, testinrec);	
 	
+	// Below we calculate the control vector to the actuators using
+	// the measured displacements in the subapertures. We use the
+	// previously pseudo-inverted influence matrix of the actuators
+	// to solve this problem.
+
+	// we multiply the disp vector with the wfsmodes matrix here,
+	// using the GSL link to a CBLAS in single precision (floats)
     gsl_blas_sgemv (CblasTrans, 1.0, shtrack->wfsmodes, shtrack->disp, 0.0, work);
 
+	// we multiply the output vector from above with 'nmodes' singular
+	// values to get through the second stage of the SVD thing
     for (i = 0; i < nmodes; i++) {
-        float wi = gsl_vector_float_get (work, i);
-        float alpha = gsl_vector_float_get (shtrack->singular, i);
+        wi = gsl_vector_float_get (work, i);
+        alpha = gsl_vector_float_get (shtrack->singular, i);
         if (alpha != 0)
           alpha = 1.0 / alpha;
         gsl_vector_float_set (work, i, alpha * wi);
       }
 
+	// Finally we multiply the output vector of the previous multiplication
+	// with the dmmodes matrix.
     gsl_blas_sgemv (CblasNoTrans, 1.0, shtrack->dmmodes, work, 0.0, total);
-	// testinrecf should hold the float version of the reconstructed vector 'testinf'
 	
 	
 	// // U^T . meas:
@@ -706,7 +732,11 @@ int modCalcCtrl(control_t *ptc, mod_sh_track_t *shtrack, const int wfs, int nmod
 	// // V . (diag(1/w_j) . (U^T . meas)):
 	// gsl_blas_sgemv(CblasNoTrans, 1.0, ptc->wfs[wfs].dmmodes, work, 0.0, total);
 	
-	// copy complete control vector to seperate vectors
+	// After calculating the control vector in one go (one vector for all 
+	// controls), we split these up into the seperate vectors assigned
+	// to each WFC. In doing so we apply the gain at the same time, 
+	// as the calculated controls are actually *corrections* to the
+	// control commands already being used
 	logDebug(LOG_SOMETIMES, "Storing reconstructed actuator command to seperate vectors:");
 	j=0;
 	float old, ctrl;

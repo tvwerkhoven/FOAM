@@ -145,12 +145,14 @@ int displayInit(mod_display_t *disp) {
 	glClearColor(0.0, 0.0, 0.0, 0.0);
 	glClearDepth(1.0f );
 	// set the colors for the overlays (all lines etc will be drawn with this color from here on, only set once)
-	if (disp->col.r > 255 || disp->col.r < 0 || \
-		disp->col.g > 255 || disp->col.g < 0 || \
-		disp->col.b > 255 || disp->col.b < 0) {
-		logWarn("Warning, color range invalid, please give RGB values between 0 and 255, defaulting to white (255,255,255)");
-		disp->col.r = disp->col.g = disp->col.b = 255;
-	}
+	
+//	Unecessary, col.[r|g|b] is uint8_t
+//	if (disp->col.r > 255 || disp->col.r < 0 || \
+//		disp->col.g > 255 || disp->col.g < 0 || \
+//		disp->col.b > 255 || disp->col.b < 0) {
+//		logWarn("Warning, color range invalid, please give RGB values between 0 and 255, defaulting to white (255,255,255)");
+//		disp->col.r = disp->col.g = disp->col.b = 255;
+//	}
 
 	glColor3ub(disp->col.r, disp->col.g, disp->col.b);
 
@@ -172,24 +174,55 @@ int displayFinish(mod_display_t *disp) {
 }
 
 int displayImgByte(uint8_t *img, mod_display_t *disp) {
+	// contrasting is done like this:
+	// We're using an 8 bit camera (at least that's the assumption :P)
+	// which gives pixel values of [0,255]. Since ao3.c used this, we also
+	// use this, and an image is diplayed over the whole intensity range
+	// if the scaled values range from 0 to 255. Consider a darkfield image
+	// with average intensity 5, brightness 0 and contrast 10, this will
+	// scale the pixels from 0 to 50, giving a dark-gray darkfield image.
+	// Because OpenGL accepts only [0,1], we divide the actual brightness
+	// and contrast by 255 so that the image is scaled between 0 and 1
+	// (again, avg intensity 5, b=0, c=10 gives scaled avg 5*(10/255))
+	int i, j;
+	float min, max;
 	if (disp->autocontrast == 1) {
-		// auto scaler code goes here
+		// if autocontrast is set to one, we calculate the min and max
+		// values once, and use to calculate brightness and contrast
+		// which are then used to scale the intensity from 0 to 255
+		min = max = (float) img[0];
+		for (i=0; i<disp->res.y; i++) {
+			for (j=0; j<disp->res.x; j++) {
+				if (img[i * disp->res.x + j] > max) max = (float) img[i * disp->res.x + j];
+				else if (img[i * disp->res.x + j] < min) min = (float) img[i * disp->res.x + j];
+			}
+		}
+		disp->brightness = -min;
+		disp->contrast = 255.0/(max-min);
+		disp->autocontrast = 0;
+		logInfo(0, "Autocontrast found min: %f, max: %f, giving brightness: %d, contrast: %f", \
+			min, max, disp->brightness, disp->contrast);
 	}
-	else {
-		glPixelTransferf(GL_RED_SCALE, (GLfloat) disp->contrast);
-		glPixelTransferf(GL_GREEN_SCALE, (GLfloat) disp->contrast);
-		glPixelTransferf(GL_BLUE_SCALE, (GLfloat) disp->contrast);
-		glPixelTransferf(GL_RED_BIAS, (GLfloat) disp->brightness);
-		glPixelTransferf(GL_GREEN_BIAS, (GLfloat) disp->brightness);
-		glPixelTransferf(GL_BLUE_BIAS, (GLfloat) disp->brightness);
-	}
+	// using the brightness and contrast values (which should
+	// scale the image in the [0,255] range), we do not scale here 
+	// because this is a byte image.
+	glPixelTransferf(GL_RED_SCALE, (GLfloat) disp->contrast);
+	glPixelTransferf(GL_GREEN_SCALE, (GLfloat) disp->contrast);
+	glPixelTransferf(GL_BLUE_SCALE, (GLfloat) disp->contrast);
+	glPixelTransferf(GL_RED_BIAS, (GLfloat) disp->brightness);
+	glPixelTransferf(GL_GREEN_BIAS, (GLfloat) disp->brightness);
+	glPixelTransferf(GL_BLUE_BIAS, (GLfloat) disp->brightness);
 	glDrawPixels((GLsizei) disp->res.x, (GLsizei) disp->res.y, GL_LUMINANCE, GL_UNSIGNED_BYTE, (const GLvoid *) img);
 	return EXIT_SUCCESS;
 }
 
 int displayGSLImg(gsl_matrix_float *img, mod_display_t *disp, int doscale) {
+	// TvW, May 13, 2008, this code can be improved because we do not need
+	// to manually copy the gsl matrix to a foat array, OpenGL can
+	// directly copy floats even if the stride != width of the image.
     static float *gsltmp=NULL;
     int i, j;
+	float min, max;
     if (gsltmp == NULL) {
 	    gsltmp = malloc(disp->res.x * disp->res.y * sizeof(float));
     }
@@ -199,14 +232,27 @@ int displayGSLImg(gsl_matrix_float *img, mod_display_t *disp, int doscale) {
 		    gsltmp[i*disp->res.y + j] = gsl_matrix_float_get(img, i, j);
 	    }
     }
-    if (disp->autocontrast == 0) {
-    glPixelTransferf(GL_RED_SCALE, (GLfloat) disp->contrast);
-    glPixelTransferf(GL_GREEN_SCALE, (GLfloat) disp->contrast);
-    glPixelTransferf(GL_BLUE_SCALE, (GLfloat) disp->contrast);
-    glPixelTransferf(GL_RED_BIAS, (GLfloat) disp->brightness);
-    glPixelTransferf(GL_GREEN_BIAS, (GLfloat) disp->brightness);
-    glPixelTransferf(GL_BLUE_BIAS, (GLfloat) disp->brightness);
-    }
+	// see contrast hints above
+	if (disp->autocontrast == 1) {
+		min = max = gsltmp[0];
+		for (i=0; i<disp->res.y; i++) {
+			for (j=0; j<disp->res.x; j++) {
+				if (gsltmp[i * disp->res.x + j] > max) max = gsltmp[i * disp->res.x + j];
+				else if (gsltmp[i * disp->res.x + j] < min) min = gsltmp[i * disp->res.x + j];
+			}
+		}
+		disp->brightness = -min;
+		disp->contrast = 255.0/(max-min);
+		disp->autocontrast = 0;
+		logInfo(0, "Autocontrast found min: %f, max: %f, giving brightness: %d, contrast: %f", \
+			min, max, disp->brightness, disp->contrast);
+	}
+	glPixelTransferf(GL_RED_SCALE, (GLfloat) disp->contrast/255.0);
+	glPixelTransferf(GL_GREEN_SCALE, (GLfloat) disp->contrast/255.0);
+	glPixelTransferf(GL_BLUE_SCALE, (GLfloat) disp->contrast/255.0);
+	glPixelTransferf(GL_RED_BIAS, (GLfloat) disp->brightness/255.0);
+	glPixelTransferf(GL_GREEN_BIAS, (GLfloat) disp->brightness/255.0);
+	glPixelTransferf(GL_BLUE_BIAS, (GLfloat) disp->brightness/255.0);
     glDrawPixels((GLsizei) disp->res.x, (GLsizei) disp->res.y, GL_LUMINANCE, GL_FLOAT, (const GLvoid *) gsltmp);
 
     return EXIT_FAILURE;
@@ -287,7 +333,10 @@ int displayVecs(mod_sh_track_t *shtrack, mod_display_t *disp) {
 	glBegin(GL_LINES);
 	for (sn=0; sn < shtrack->nsubap; sn++) {
 		glVertex2f(shtrack->gridc[sn].x + (shtrack->shsize.x/2), shtrack->gridc[sn].y + (shtrack->shsize.y/2));
-		glVertex2f(gsl_vector_float_get(shtrack->disp, sn*2+0), gsl_vector_float_get(shtrack->disp, sn*2+1));
+		glVertex2f(shtrack->gridc[sn].x + (shtrack->shsize.x/2) + \
+		gsl_vector_float_get(shtrack->disp, sn*2+0),\
+		shtrack->gridc[sn].y + (shtrack->shsize.y/2) + \
+		gsl_vector_float_get(shtrack->disp, sn*2+1));
 	}
 	glEnd();
 

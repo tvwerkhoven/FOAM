@@ -150,21 +150,19 @@ float sae(float *subapt, float *refapt, int len);
 void imcal(float *corrim, float *image, float *darkim, float *flatim, float *sum, float *max, coord_t res, coord_t window);
 
 /*!
- @brief Tracks the seeing using center of gravity tracking
+ @brief Tracks the targets in center of gravity tracking
  
- This calculates the center of gravity of each subaperture. The coordinates will be relative to the center of the
- tracking window. Note that this will only work for star-like images, extended
- images will not work.
+ This calculates the center of gravity of each subaperture. The coordinates 
+ will be relative to the center of the tracking window. Note that this will 
+ only work for star-like images, extended images will probably not work.
  
- @param [in] *image The image to parse through CoG tracking
- @param [in] *subc The starting coordinates of the tracker windows
- @param [in] nsubap The number of subapertures (i.e. the length of the subc[] array)
- @param [in] track The size of the tracker windows
- @param [out] *aver The average pixel intensity (good for CCD saturation)
- @param [out] *max The maximum pixel intensity
- @param [out] coords A list of coordinates the spots were found at wrt the center of the tracker windows
+ @param [in] *image A float GSL matrix to parse through CoG tracking
+ @param [in] *shtrack An initialized mod_sh_track_t struct.
+ @param [out] *aver The average pixel intensity in all tracked subapertures.
+ @param [out] *max The maximum pixel intensity in all tracked subapertures.
  */
-void modCogTrack(gsl_matrix_float *image, int (*subc)[2], int nsubap, coord_t track, float *aver, float *max, float coords[][2]);
+void modCogTrackGSL(gsl_matrix_float *image, mod_sh_track_t *shtrack, float *aver, float *max);
+//void modCogTrack(gsl_matrix_float *image, int (*subc)[2], int nsubap, coord_t track, float *aver, float *max, float coords[][2]);
 
 /*!
  @brief Calculates the controls to be sent to the various WFC, given displacements.

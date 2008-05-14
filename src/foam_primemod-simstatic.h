@@ -100,6 +100,7 @@ int drvSetActuator(wfc_t *wfc);
 // These are simstatic specific (for the time being)
 int MMAvgFramesByte(gsl_matrix_float *output, wfs_t *wfs, int rounds);
 int MMDarkFlatFullByte(wfs_t *wfs, mod_sh_track_t *shtrack);
+int MMDarkFlatSubapByte(wfs_t *wfs, mod_sh_track_t *shtrack);
 
 
 

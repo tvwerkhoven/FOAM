@@ -50,6 +50,7 @@ int modInitModule(control_t *ptc, config_t *cs_config) {
 	coord_t imgres;
 	uint8_t *imgptr = (uint8_t *) ptc->wfs[0].image;
 	modReadIMGArrByte("../config/simstatic.pgm", &(imgptr), &imgres);
+	ptc->wfs[0].image  = (void *) imgptr;
 	
 	// configure WFS 0
 	ptc->wfs[0].name = "SH WFS - static";
@@ -68,8 +69,8 @@ int modInitModule(control_t *ptc, config_t *cs_config) {
     // we have an image of WxH, with a lenslet array of WlxHl, such that
     // each lenslet occupies W/Wl x H/Hl pixels, and we use track.x x track.y
     // pixels to track the CoG or do correlation tracking.
-	shtrack.cells.x = 16;				// we're using a 16x16 lenslet array (fake)
-	shtrack.cells.y = 16;
+	shtrack.cells.x = 8;				// we're using a 16x16 lenslet array (fake)
+	shtrack.cells.y = 8;
 	shtrack.shsize.x = ptc->wfs[0].res.x/shtrack.cells.x;
 	shtrack.shsize.y = ptc->wfs[0].res.y/shtrack.cells.y;
 	shtrack.track.x = shtrack.shsize.x/2;   // tracker windows are half the size of the lenslet grid things
@@ -159,7 +160,7 @@ int modOpenLoop(control_t *ptc) {
 //		return EXIT_FAILURE;
 	
 	// dark-flat the whole frame
-//	MMDarkFlatFullByte(&(ptc->wfs[0]), &shtrack);
+	MMDarkFlatFullByte(&(ptc->wfs[0]), &shtrack);
 	
 #ifdef FOAM_MCMATH_DISPLAY
     if (ptc->frames % ptc->logfrac == 0) {
@@ -170,6 +171,7 @@ int modOpenLoop(control_t *ptc) {
 		SDL_WM_SetCaption(title, 0);
     }
 #endif
+	usleep(10000);
 	return EXIT_SUCCESS;
 }
 
@@ -190,21 +192,34 @@ int modClosedInit(control_t *ptc) {
 
 int modClosedLoop(control_t *ptc) {
 	static char title[64];
+	int sn;
 	// get an image
 //	if (drvGetImg(&(ptc->wfs->image)) != EXIT_SUCCESS)
 //		return EXIT_FAILURE;
 	
 	// dark-flat the whole frame
-	MMDarkFlatFullByte(&(ptc->wfs[0]), &shtrack);
+	MMDarkFlatSubapByte(&(ptc->wfs[0]), &shtrack);
+
+	// try to get the center of gravity 
+	modCogTrackGSL(ptc->wfs[0].corrim, &shtrack, NULL, NULL);
+	//int (*subc)[2], int nsubap, coord_t track, float *aver, floa t *max, float coords[][2]) {
 	
 #ifdef FOAM_MCMATH_DISPLAY
     if (ptc->frames % ptc->logfrac == 0) {
 		displayDraw((&ptc->wfs[0]), &disp, &shtrack);
 		logInfo(0, "Current framerate: %.2f FPS", ptc->fps);
+		logInfo(0, "Displacements per subapt in (subap, x, y) pairs (%d subaps):", shtrack.nsubap);
+		for (sn = 0; sn < shtrack.nsubap; sn++)
+			logInfo(LOG_NOFORMAT, "(%d,%.2f,%.2f) ", sn, \
+			gsl_vector_float_get(shtrack.disp, 2*sn + 0), \
+			gsl_vector_float_get(shtrack.disp, 2*sn + 1));
+
+		logInfo(LOG_NOFORMAT, "\n");
 		snprintf(title, 64, "%s (C) %.2f FPS", disp.caption, ptc->fps);
 		SDL_WM_SetCaption(title, 0);
     }
 #endif
+	usleep(10000);
 	return EXIT_SUCCESS;
 }
 
@@ -220,6 +235,7 @@ int modCalibrate(control_t *ptc) {
 	FILE *fieldfd;		// to open some files (dark, flat, ...)
 	char title[64]; 	// for the window title
 	int i, j, sn;
+	float min, max, sum, pix;	// some fielding stats
 	wfs_t *wfsinfo = &(ptc->wfs[0]); // shortcut
 	dispsrc_t oldsrc = disp.dispsrc; // store the old display source here since we might just have to show dark or flatfields
 	int oldover = disp.dispover;	// store the old overlay here
@@ -234,9 +250,15 @@ int modCalibrate(control_t *ptc) {
 		}
 		
 		// we fake a darkfield here (random pixels between 2-6)
+		min = max = 4.0;
+		sum = 0.0;
 		for (i=0; i<wfsinfo->res.y; i++) {
 			 for (j=0; j<wfsinfo->res.x; j++) {
-				 gsl_matrix_float_set(wfsinfo->darkim, i, j, (drand48()*4.0)+2.0);
+				 pix = (drand48()*4.0)+2.0;
+				 gsl_matrix_float_set(wfsinfo->darkim, i, j, pix);
+				 if (pix > max) max = pix;
+				 else if (pix < min) min = pix;
+				 sum += pix;
 			 }
 		}
 
@@ -248,7 +270,7 @@ int modCalibrate(control_t *ptc) {
 		}
 		gsl_matrix_float_fprintf(fieldfd, wfsinfo->darkim, "%.10f");
 		fclose(fieldfd);
-		logInfo(0, "Darkfield calibration done, and stored to disk.");
+		logInfo(0, "Darkfield calibration done (m: %f, m: %f, s: %f, a: %f), and stored to disk.", min, max, sum, sum/(wfsinfo->res.x * wfsinfo->res.y));
 		
 		// set new display settings to show the darkfield
 		disp.dispsrc = DISPSRC_DARK;
@@ -316,13 +338,17 @@ int modCalibrate(control_t *ptc) {
 			
 		}
 		if (wfsinfo->gain == NULL) {
-			// allocate data for dark (nsubaps.x * nsubaps.y * subapsize)
+			// allocate data for gain (nsubaps.x * nsubaps.y * subapsize), gain is 16 bits
 			wfsinfo->gain = valloc((shtrack.cells.x * shtrack.cells.y * shtrack.track.x * shtrack.track.y) * wfsinfo->bpp * 2);
+		}
+		if (wfsinfo->corr == NULL) {
+			// allocate data for corrected img (nsubaps.x * nsubaps.y * subapsize), corr is 8 bit
+			wfsinfo->corr = valloc((shtrack.cells.x * shtrack.cells.y * shtrack.track.x * shtrack.track.y) * wfsinfo->bpp);
 		}
 		
 		// check if allocation worked
-		if (wfsinfo->dark == NULL || wfsinfo->gain == NULL) {
-			logErr("Unable to allocate data for dark and gain data (derived from dark and flat)");
+		if (wfsinfo->dark == NULL || wfsinfo->gain == NULL || wfsinfo->corr == NULL) {
+			logErr("Unable to allocate data for dark, gain or corrected img");
 			return EXIT_FAILURE;
 		}
 		
@@ -425,8 +451,8 @@ display <source>:       change the display source.\n\
    <overlays:>\n\
    subap:               toggle displat of the subapertures.\n\
    grid:                toggle display of the grid.\n\
-   vecs:                toggle display of the displacement vectors.\
-   col [f] [f] [f]:     change the overlay color (OpenGL only).\
+   vecs:                toggle display of the displacement vectors.\n\
+   col [i] [i] [i]:     change the overlay color (OpenGL only).\
 ");
 			}
 			else if (strncmp(list[1], "vid",3) == 0) {
@@ -735,6 +761,32 @@ int MMDarkFlatSubapByte(wfs_t *wfs, mod_sh_track_t *shtrack) {
 	// and we have wfs->dark and wfs->gain to scale the image with like
 	// corrected = ((img*256 - dark) * gain)/256. In ASM (MMX/SSE2)
 	// this can be done relatively fast (see ao3.c)
+	if (wfs->dark == NULL || wfs->gain == NULL || wfs->corr == NULL) 
+		return EXIT_FAILURE;
+
+	// make some temp pointers for easy handling
+	uint8_t *src = (uint8_t *) wfs->image;
+	uint16_t *dp = (uint16_t *) wfs->dark;
+	uint16_t *gp = (uint16_t *) wfs->gain;
+	uint8_t *cp = (uint8_t *) wfs->corr;
+	// TvW: init not entirely clean, but should work :P
+	uint8_t min=255, max=0;
+	float sum=0;
+	
+	int i, j, sn;
+	// loop over all subapertures...
+	for (sn = 0; sn < shtrack->nsubap; sn++) {
+		// and then loop over all pixels and calculate corr = (raw-dark)*gain
+		for (i=0; i < shtrack->track.y; i++) {
+			for (j=0; j < shtrack->track.x; j++) {
+				cp[i*shtrack->track.x+j] = ((src[i*shtrack->track.x+j]*256-dp[i*shtrack->track.x+j])*gp[i*shtrack->track.x+j])/256;
+				if (cp[i*shtrack->track.x+j] > max) max = cp[i*shtrack->track.x+j];
+				else if (cp[i*shtrack->track.x+j] < min) min = cp[i*shtrack->track.x+j];
+				sum += cp[i*shtrack->track.x+j];
+			}
+		}
+	}
+	logDebug(LOG_SOMETIMES, "Fast darkflat corrected: min: %d, max: %d, avg: %f", min, max, sum/(shtrack->track.x*shtrack->track.y*shtrack->nsubap));
 }
 
 // Dark flat calibration
@@ -751,14 +803,17 @@ int MMDarkFlatFullByte(wfs_t *wfs, mod_sh_track_t *shtrack) {
 	// copy the image to corrim, while doing dark/flat fielding at the same time
 	float max[3], sum[3];
 	sum[0] = sum[1] = sum[2] = 0.0;
-	max[0] = imagesrc[i*wfs->res.x +j];
-	max[1] = gsl_matrix_float_get( wfs->darkim, i, j);
+	max[0] = imagesrc[0];
+	max[1] = gsl_matrix_float_get( wfs->darkim, 0, 0);
 	max[2] = max[0] - max[1];
 	for (i=0; i < wfs->res.y; i++) {
 		for (j=0; j < wfs->res.x; j++) {
 			gsl_matrix_float_set(wfs->corrim, i, j, \
-								 (((float) imagesrc[i*wfs->res.x +j]) - \
-								 gsl_matrix_float_get(wfs->darkim, i, j)) );
+								 fmaxf((((float) imagesrc[i*wfs->res.x +j]) - \
+								 gsl_matrix_float_get(wfs->darkim, i, j)), 0) );
+			if (imagesrc[i*wfs->res.x +j] > 0) {
+				//logDebug(0,"(%d, %.2f, %.2f) ", imagesrc[i*wfs->res.x +j], gsl_matrix_float_get(wfs->darkim, i, j), gsl_matrix_float_get(wfs->corrim, i, j));
+			}
 			sum[0] += imagesrc[i*wfs->res.x +j];
 			sum[1] += gsl_matrix_float_get(wfs->darkim, i, j);
 			sum[2] += gsl_matrix_float_get(wfs->corrim, i, j);
@@ -772,9 +827,10 @@ int MMDarkFlatFullByte(wfs_t *wfs, mod_sh_track_t *shtrack) {
 //								  gsl_matrix_float_get(wfs->darkim, i, j)));
 		}
 	}
-	printf("src: max %f, sum %f, avg %f\n", max[0], sum[0], sum[0]/(wfs->res.x*wfs->res.y));
-	printf("dark: max %f, sum %f, avg %f\n", max[1], sum[1], sum[1]/(wfs->res.x*wfs->res.y));
-	printf("corr: max %f, sum %f, avg %f\n", max[2], sum[2], sum[2]/(wfs->res.x*wfs->res.y));
+	
+	//logDebug(LOG_SOMETIMES, "src: max %f, sum %f, avg %f", max[0], sum[0], sum[0]/(wfs->res.x*wfs->res.y));
+	//logDebug(LOG_SOMETIMES, "dark: max %f, sum %f, avg %f", max[1], sum[1], sum[1]/(wfs->res.x*wfs->res.y));
+	//logDebug(LOG_SOMETIMES, "corr: max %f, sum %f, avg %f", max[2], sum[2], sum[2]/(wfs->res.x*wfs->res.y));
 	
 	// old code which only does subaperture correction (superseded by fast ASM code)
 	/*

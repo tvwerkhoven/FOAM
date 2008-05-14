@@ -41,15 +41,20 @@ int modCalPinhole(control_t *ptc, int wfs, mod_sh_track_t *shtrack) {
 	int i, j;
 	FILE *fd;
 
-	// set filterwheel to pinhole
+	// set filterwheel to pinhole and set voltages to 180V
 	drvSetupHardware(ptc, ptc->mode, ptc->calmode);
 	
 	// set control vector to zero (+-180 volt for an okotech DM)
-	// TODO: we wrongly set the actuators to 0.5, so that our pinhole calibration is wrong. Let's see what this does
 	for (i=0; i < ptc->wfc_count; i++)
 		for (j=0; j < ptc->wfc[i].nact; j++)
 			gsl_vector_float_set(ptc->wfc[i].ctrl, j , 0.0);
 		
+	// TvW, TODO, May 13, 2008, this may not be a very portable solution
+	// because we don't know what openInit and openLoop do. All we want
+	// is that the hardware is setup right and that we have a fresh image
+	// in our buffer. Solution: use drvSetupHardware and drvGetImg as 
+	// general routines that are further specified by the prime mod?
+	
 	// run open loop initialisation once
 	modOpenInit(ptc);
 	

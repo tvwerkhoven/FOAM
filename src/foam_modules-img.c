@@ -98,12 +98,16 @@ int modReadIMGArrByte(char *fname, uint8_t **img, coord_t *outres) {
 		
 	outres->x = sdlimg->w;
 	outres->y = sdlimg->h;
+	max = min = getPixel(sdlimg, 0, 0);
 	for (y=0; y < sdlimg->h; y++) {
 		for (x=0; x<sdlimg->w; x++) {
 			// beware: pointer trickery begins
 			pix = (uint8_t) getPixel(sdlimg, x, y);
 			(*img)[y*sdlimg->w + x] = pix;
-			if (pix > max) max = pix;
+			if (pix > max) { 
+				max = pix;
+				//logDebug(0, "max update at (%d, %d): %d\n", x,y, max);
+			}
 			else if (pix < min) min = pix;
 			sum += pix;
 		}
@@ -111,8 +115,7 @@ int modReadIMGArrByte(char *fname, uint8_t **img, coord_t *outres) {
 	
 	SDL_FreeSurface(sdlimg);
 
-	logDebug(0, "modReadIMGArrByte: Read byte image (%dx%d), min: %d, max: %d, sum: %ld, avg: %ld", \
-			 outres->x, outres->y, min, max, sum, sum/(sdlimg->h * sdlimg->w));
+	logDebug(0, "modReadIMGArrByte: Read byte image (%dx%d), min: %d, max: %d, sum: %lld, avg: %f", outres->x, outres->y, min, max, sum, 39330.0/65536.0);
 	
 	return EXIT_SUCCESS;
 }
