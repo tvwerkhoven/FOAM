@@ -185,7 +185,7 @@ int modOpenFinish(control_t *ptc) {
 
 int modClosedInit(control_t *ptc) {
 	// set disp source to calib
-	disp.dispsrc = DISPSRC_CALIB;		
+	disp.dispsrc = DISPSRC_FASTCALIB;		
 	// start
 	return EXIT_SUCCESS;
 }
@@ -208,9 +208,9 @@ int modClosedLoop(control_t *ptc) {
     if (ptc->frames % ptc->logfrac == 0) {
 		displayDraw((&ptc->wfs[0]), &disp, &shtrack);
 		logInfo(0, "Current framerate: %.2f FPS", ptc->fps);
-		logInfo(0, "Displacements per subapt in (subap, x, y) pairs (%d subaps):", shtrack.nsubap);
+		logInfo(0, "Displacements per subapt in (x, y) pairs (%d subaps):", shtrack.nsubap);
 		for (sn = 0; sn < shtrack.nsubap; sn++)
-			logInfo(LOG_NOFORMAT, "(%d,%.2f,%.2f) ", sn, \
+			logInfo(LOG_NOFORMAT, "(%.1f,%.1f)", \
 			gsl_vector_float_get(shtrack.disp, 2*sn + 0), \
 			gsl_vector_float_get(shtrack.disp, 2*sn + 1));
 
@@ -371,9 +371,9 @@ int modCalibrate(control_t *ptc) {
 		for (sn=0; sn < shtrack.nsubap; sn++) {
 			for (i=0; i< shtrack.track.y; i++) {
 				for (j=0; j< shtrack.track.x; j++) {
-					darktmp[i*shtrack.track.x + j] = \
+					darktmp[sn*(shtrack.track.x*shtrack.track.y) + i*shtrack.track.x + j] = \
 						(uint16_t) (256.0 * gsl_matrix_float_get(wfsinfo->darkim, shtrack.subc[sn].y + i, shtrack.subc[sn].x + j));
-					gaintmp[i*shtrack.track.x + j] = (uint16_t) (256.0 * tmpavg / \
+					gaintmp[sn*(shtrack.track.x*shtrack.track.y) + i*shtrack.track.x + j] = (uint16_t) (256.0 * tmpavg / \
 						(gsl_matrix_float_get(wfsinfo->flatim, shtrack.subc[sn].y + i, shtrack.subc[sn].x + j) - \
 						 gsl_matrix_float_get(wfsinfo->darkim, shtrack.subc[sn].y + i, shtrack.subc[sn].x + j)));
 				}
@@ -445,7 +445,8 @@ int modMessage(control_t *ptc, const client_t *client, char *list[], const int c
 display <source>:       change the display source.\n\
    <sources:>\n\
    raw:                 direct images from the camera.\n\
-   calib:               dark/flat corrected images.\n\
+   cfull:               full dark/flat corrected images.\n\
+   cfast:               fast partial dark/flat corrected images.\n\
    dark:                show the darkfield being used.\n\
    flat:                show the flatfield being used.\n\
    <overlays:>\n\
@@ -507,8 +508,12 @@ calibrate <mode>:       calibrate the ao system (dark, flat, subapt, etc).\
 				tellClient(client->buf_ev, "200 OK DISPLAY RAW");
 				disp.dispsrc = DISPSRC_RAW;
 			}
-			else if (strncmp(list[1], "cal",3) == 0) {
-				disp.dispsrc = DISPSRC_CALIB;
+			else if (strncmp(list[1], "cfull",3) == 0) {
+				disp.dispsrc = DISPSRC_FULLCALIB;
+				tellClient(client->buf_ev, "200 OK DISPLAY CALIB");
+			}
+			else if (strncmp(list[1], "cfast",3) == 0) {
+				disp.dispsrc = DISPSRC_FASTCALIB;
 				tellClient(client->buf_ev, "200 OK DISPLAY CALIB");
 			}
 			else if (strncmp(list[1], "grid",3) == 0) {
@@ -773,16 +778,27 @@ int MMDarkFlatSubapByte(wfs_t *wfs, mod_sh_track_t *shtrack) {
 	uint8_t min=255, max=0;
 	float sum=0;
 	
-	int i, j, sn;
+	int i, j, sn, offsm, off;
 	// loop over all subapertures...
 	for (sn = 0; sn < shtrack->nsubap; sn++) {
 		// and then loop over all pixels and calculate corr = (raw-dark)*gain
 		for (i=0; i < shtrack->track.y; i++) {
 			for (j=0; j < shtrack->track.x; j++) {
-				cp[i*shtrack->track.x+j] = ((src[i*shtrack->track.x+j]*256-dp[i*shtrack->track.x+j])*gp[i*shtrack->track.x+j])/256;
-				if (cp[i*shtrack->track.x+j] > max) max = cp[i*shtrack->track.x+j];
-				else if (cp[i*shtrack->track.x+j] < min) min = cp[i*shtrack->track.x+j];
-				sum += cp[i*shtrack->track.x+j];
+				offsm = sn * (shtrack->track.x * shtrack->track.y) + i*shtrack->track.x+j;
+				off = shtrack->subc[sn].y * wfs->res.x + shtrack->subc[sn].x + i * wfs->res.x + j;
+				if (((uint16_t) src[off])*256 - dp[offsm] > src[off]*256) { 
+					cp[offsm] = 0;
+				}
+				else {
+					cp[offsm] = (((uint16_t) src[off])*256)/256*gp[offsm]/256;
+				}
+				//cp[offsm] *= gp[offsm]/256;
+				// cp[offsm] = (((uint16_t) src[off])*256-dp[offsm])/256;
+				//((src[i*shtrack->track.x+j]*256-dp[i*shtrack->track.x+j])*gp[i*shtrack->track.x+j])/256;
+
+				if (cp[offsm] > max) max = cp[offsm];
+				else if (cp[offsm] < min) min = cp[offsm];
+				sum += cp[offsm];
 			}
 		}
 	}

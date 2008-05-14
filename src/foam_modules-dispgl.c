@@ -68,7 +68,7 @@ static void resizeWindow(mod_display_t *disp) {
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
 	// This defines the coordinate system we're using, which is in the CCD-space so to say
-	gluOrtho2D(0, disp->res.x, disp->res.y, 0);
+	gluOrtho2D(0, disp->res.x, 0, disp->res.y);
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
 	// Set the pixelzooming
@@ -160,7 +160,7 @@ int displayInit(mod_display_t *disp) {
 	glViewport( 0, 0, ( GLsizei )disp->windowres.x, ( GLsizei )disp->windowres.y );
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
-	gluOrtho2D(0, disp->res.x, disp->res.y, 0);
+	gluOrtho2D(0, disp->res.x, 0, disp->res.y);
 	glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
 	
@@ -173,7 +173,11 @@ int displayFinish(mod_display_t *disp) {
 	return EXIT_SUCCESS;
 }
 
+#ifdef FOAM_MODULES_DISLAY_SHSUPPORT
+int displayImgByte(uint8_t *img, mod_display_t *disp, mod_sh_track_t *shtrack) {
+#else
 int displayImgByte(uint8_t *img, mod_display_t *disp) {
+#endif
 	// contrasting is done like this:
 	// We're using an 8 bit camera (at least that's the assumption :P)
 	// which gives pixel values of [0,255]. Since ao3.c used this, we also
@@ -184,18 +188,28 @@ int displayImgByte(uint8_t *img, mod_display_t *disp) {
 	// Because OpenGL accepts only [0,1], we divide the actual brightness
 	// and contrast by 255 so that the image is scaled between 0 and 1
 	// (again, avg intensity 5, b=0, c=10 gives scaled avg 5*(10/255))
-	int i, j;
+	int i, pixels;
 	float min, max;
 	if (disp->autocontrast == 1) {
 		// if autocontrast is set to one, we calculate the min and max
 		// values once, and use to calculate brightness and contrast
 		// which are then used to scale the intensity from 0 to 255
 		min = max = (float) img[0];
-		for (i=0; i<disp->res.y; i++) {
-			for (j=0; j<disp->res.x; j++) {
-				if (img[i * disp->res.x + j] > max) max = (float) img[i * disp->res.x + j];
-				else if (img[i * disp->res.x + j] < min) min = (float) img[i * disp->res.x + j];
-			}
+
+		// if we're displaying a raw img, we have all pixels 
+		// otherwise we just have track.x*.y * nsubap pixels,
+		// since we don't correct the whole field, but just 
+		// the illuminated pixels
+		if (disp->dispsrc == DISPSRC_RAW) 
+			pixels = disp->res.x * disp->res.y;
+#ifdef FOAM_MODULES_DISLAY_SHSUPPORT
+		else if (disp->dispsrc == DISPSRC_FASTCALIB) 
+			pixels = shtrack->nsubap * shtrack->track.x * shtrack->track.y;
+#endif
+
+		for (i=0; i<pixels; i++) {
+			if (img[i] > max) max = (float) img[i];
+			else if (img[i] < min) min = (float) img[i];
 		}
 		disp->brightness = -min;
 		disp->contrast = 255.0/(max-min);
@@ -212,7 +226,29 @@ int displayImgByte(uint8_t *img, mod_display_t *disp) {
 	glPixelTransferf(GL_RED_BIAS, (GLfloat) disp->brightness);
 	glPixelTransferf(GL_GREEN_BIAS, (GLfloat) disp->brightness);
 	glPixelTransferf(GL_BLUE_BIAS, (GLfloat) disp->brightness);
-	glDrawPixels((GLsizei) disp->res.x, (GLsizei) disp->res.y, GL_LUMINANCE, GL_UNSIGNED_BYTE, (const GLvoid *) img);
+	if (disp->dispsrc == DISPSRC_RAW)  {
+		glDrawPixels((GLsizei) disp->res.x, (GLsizei) disp->res.y, GL_LUMINANCE, GL_UNSIGNED_BYTE, (const GLvoid *) img);
+	}
+#ifdef FOAM_MODULES_DISLAY_SHSUPPORT
+	else if (disp->dispsrc == DISPSRC_FASTCALIB) {
+		float f[4];
+		//glGetFloatv(GL_CURRENT_RASTER_POSITION, f);
+		//logDebug(0, "Drawing subapts, first at (%d, %d), rast at: (%.2f, %.2f, %.2f, %.2f)", shtrack->subc[0].x, shtrack->subc[0].y, f[0], f[1], f[2], f[3]);
+		for (i=0; i<shtrack->nsubap; i++) {
+			// we loop over all subapts, and display them one by
+			// one at coordinates subc[i].x, .y with size
+			// (track.x, .y). Rasterposition (re)sets the coor-
+			// dinates where pixels are drawn.
+			glRasterPos2i(shtrack->subc[i].x, shtrack->subc[i].y);
+			glDrawPixels((GLsizei) shtrack->track.x, (GLsizei) shtrack->track.y, GL_LUMINANCE, GL_UNSIGNED_BYTE, (const GLvoid *) img);
+		}
+		// reset raster position
+		glRasterPos2i(0, 0);
+		//glGetFloatv(GL_CURRENT_RASTER_POSITION, f);
+		//logDebug(0, "Rast at: (%.2f, %.2f, %.2f, %.2f)", f[0], f[1], f[2], f[3]);
+	}
+#endif
+		pixels = shtrack->nsubap * shtrack->track.x * shtrack->track.y;
 	return EXIT_SUCCESS;
 }
 
@@ -376,7 +412,7 @@ int displayDraw(wfs_t *wfsinfo, mod_display_t *disp) {
     if (disp->dispsrc == DISPSRC_RAW) {
 		if (wfsinfo->bpp == 8) {
 			uint8_t *imgc = (uint8_t *) wfsinfo->image;
-			displayImgByte(imgc, disp);
+			displayImgByte(imgc, disp, shtrack);
 		}
 		else {
 			displayFinishDraw(disp);
@@ -396,9 +432,14 @@ int displayDraw(wfs_t *wfsinfo, mod_display_t *disp) {
 	    //logDebug(LOG_NOFORMAT, "disp flat ");
 		displayGSLImg(wfsinfo->flatim, disp, 1);
 	}
-	else if (disp->dispsrc == DISPSRC_CALIB) {
+	else if (disp->dispsrc == DISPSRC_FULLCALIB) {
 	    //logDebug(LOG_NOFORMAT, "disp calib ");
 		displayGSLImg(wfsinfo->corrim, disp, 1);
+	}
+	else if (disp->dispsrc == DISPSRC_FASTCALIB) {
+	    //logDebug(LOG_NOFORMAT, "disp calib ");
+		uint8_t *imgc = (uint8_t *) wfsinfo->corr;
+		displayImgByte(imgc, disp, shtrack);
 	}
 	
 #ifdef FOAM_MODULES_DISLAY_SHSUPPORT

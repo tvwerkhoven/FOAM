@@ -43,7 +43,8 @@
  */
 typedef enum {
     DISPSRC_RAW,       //!< Display the raw uncorrect image from the camera
-    DISPSRC_CALIB,     //!< Display the dark/flat field corrected image
+    DISPSRC_FULLCALIB,     //!< Display the full dark/flat field corrected image
+    DISPSRC_FASTCALIB,     //!< Display the fast (partially) dark/flat field corrected image
     DISPSRC_DARK,      //!< Display the darkfield used (probably rarely used)
     DISPSRC_FLAT       //!< Display the flatfield used (probably rarely used)
 } dispsrc_t;
@@ -132,7 +133,11 @@ void displaySDLEvents(mod_display_t *disp);
  @param [in] *wfsinfo pointer to the wfs to show the image for
  @param [in] *disp pre-filled mod_display_t structure
  */
+#ifdef FOAM_MODULES_DISLAY_SHSUPPORT
+int displayImgByte(uint8_t *img, mod_display_t *disp, mod_sh_track_t *shtrack);
+#else
 int displayImgByte(uint8_t *img, mod_display_t *disp);
+#endif
 
 /*!
  @brief This displays a GSL matrix on the screen

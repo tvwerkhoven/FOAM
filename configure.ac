@@ -35,7 +35,7 @@ AC_C_CONST
 
 # We always need these libs
 AC_SEARCH_LIBS([sin], [m] ,[], AC_MSG_ERROR([This package needs libm.]) ) 
-AC_SEARCH_LIBS([event_init], [event] ,[], AC_MSG_ERROR([This package needs libevent.]) ) 
+AC_SEARCH_LIBS([bufferevent_base_set], [event] ,[], AC_MSG_ERROR([This package needs libevent.]) ) 
 AC_SEARCH_LIBS([pthread_create], [pthread] ,[], AC_MSG_ERROR([This package needs libpthread.]) ) 
 AC_SEARCH_LIBS([cblas_dgemm],[gslcblas], [], AC_MSG_ERROR([This package needs a cblas supplied with gsl like atlas]) ) 
 AC_SEARCH_LIBS([gsl_blas_dgemm],[gsl], [], AC_MSG_ERROR([This package needs libgsl.]) ) 
@@ -65,7 +65,7 @@ if test x"$PKG_CONFIG_PATH" = x ; then
 	AC_MSG_ERROR([Abort])
 fi
 
-PKG_CHECK_MODULES(SDL, sdl) 
+PKG_CHECK_MODULES([SDL], [sdl]) 
 #SDL_CFLAGS = $(pkg-config SDL --cflags),
 #SDL_LIBS = $(pkg-config SDL --libs)
 
