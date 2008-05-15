@@ -439,7 +439,7 @@ int modSelSubapts(void *image, foam_datat_t data, mod_sh_align_t align, mod_sh_t
 	 */
 	
 	if (data == DATA_UINT8) {		// data is stored in unsigned 8 bit ints
-		uint8_t *datapt = (uint8_t *) data;
+		uint8_t *datapt = (uint8_t *) image;
 		for (iy=0; iy<shtrack->shsize.y; iy++) { // sum all pixels in the subapt
 			for (ix=0; ix<shtrack->shsize.x; ix++) {
 				// !!!:tim:20080514 this might not work if shtrack->track is 
