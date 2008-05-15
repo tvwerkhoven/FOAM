@@ -83,12 +83,12 @@ AC_ARG_ENABLE([simulation],
 
 # Test if we want to run as simulation or not
 AC_ARG_ENABLE([simstat],
-		AC_HELP_STRING([--enable-simstat], [enable static simulation mode (def: yes)]),
+		AC_HELP_STRING([--enable-simstat], [enable static simulation mode (def: no)]),
 		[case "${enableval}" in
 		yes) simstat=true ;;
 		no)  simstat=disabled ;;
 		*) AC_MSG_ERROR([bad value ${enableval} for --enable-simstat]) ;;
-	esac],[simstat=true])
+	esac],[simstat=disabled])
 		
 # Test if we want to include the UI or not
 AC_ARG_ENABLE([ui],
@@ -101,21 +101,31 @@ AC_ARG_ENABLE([ui],
 	
 # Test if we want to do hardware debugging (stand alone modules)
 AC_ARG_ENABLE([hwdebug],
-		AC_HELP_STRING([--enable-hwdebug], [enable hardware debugging (def: yes)]),
+		AC_HELP_STRING([--enable-hwdebug], [enable hardware debugging (def: no)]),
 		[case "${enableval}" in
 		yes) hwdebug=true ;;
 		no)  hwdebug=disabled ;;
 		*) AC_MSG_ERROR([bad value ${enableval} for --enable-hwdebug]) ;;
-	esac],[hwdebug=true])
+	esac],[hwdebug=disabled])
 
-# test if we need OS X OpenGL (with frameworks)
+# are we using OpenGL?
+AC_ARG_ENABLE([opengl],
+		AC_HELP_STRING([--enable-opengl], [enable usage of opengl instead of plain SDL (def: yes)]),
+		[case "${enableval}" in
+		yes) opengl=true ;;
+		no)  opengl=disabled ;;
+		*) AC_MSG_ERROR([bad value ${enableval} for --enable-opengl]) ;;
+	esac],[opengl=true])
+
+
+# test if we need OS X OpenGL (with frameworks, different compiling)
 AC_ARG_ENABLE([osxopengl],
-		AC_HELP_STRING([--enable-osxopengl], [use opengl framework on OS X]),
+		AC_HELP_STRING([--enable-osxopengl], [use opengl framework on OS X (def: no)]),
 		[case "${enableval}" in
 		yes) osxopengl=true ;;
 		no)  osxopengl=disabled ;;
 		*) AC_MSG_ERROR([bad value ${enableval} for --enable-osxopengl]) ;;
-	esac],[osxopengl=false])
+	esac],[osxopengl=disabled])
 
 # Test if we want mcmath enabled 
 AC_ARG_ENABLE([mcmath],
@@ -125,21 +135,22 @@ AC_ARG_ENABLE([mcmath],
 		no)  mcmath=disabled ;;
 		*) AC_MSG_ERROR([bad value ${enableval} for --enable-mcmath]) ;;
 	esac],[mcmath=true])
-
-AC_ARG_ENABLE([opengl],
-		AC_HELP_STRING([--enable-opengl], [enable usage of opengl instead of plain SDL (def: yes)]),
+	
+# Test if we want to simulate the hardware or not
+AC_ARG_ENABLE([simhw],
+		AC_HELP_STRING([--enable-simhw], [enable simulation of hardware (def: yes)]),
 		[case "${enableval}" in
-		yes) opengl=true ;;
-		no)  opengl=disabled ;;
-		*) AC_MSG_ERROR([bad value ${enableval} for --enable-opengl]) ;;
-	esac],[opengl=true])
+		yes) simhw=true ;;
+		no)  simhw=disabled ;;
+		*) AC_MSG_ERROR([bad value ${enableval} for --enable-simhw]) ;;
+	esac],[simhw=true])
+	
 
-### HWDEBUG or not? ###
-#######################
+### Set some automake variables ###
+###################################
 
 AM_CONDITIONAL([HWDEBUG], [test x$hwdebug = xtrue])
-#if test "$hwdebug" = true ; then
-#fi
+AM_CONDITIONAL([SIMHW], [test x$simhw = xtrue])
 
 ### SIMULATION MODE ###
 #######################
@@ -346,8 +357,8 @@ LIBS=""
 ### END CHECKING FOR MODES ###
 ##############################
 
-AC_MSG_NOTICE([Configuration summary follows:])
-AC_MSG_NOTICE([==============================])
+AC_MSG_NOTICE([===========Summary============])
+
 if test "$simul" = true ; then
 	AC_MSG_NOTICE([Simulation mode: available])
 elif test "$simul" = disabled; then
@@ -394,5 +405,12 @@ fi
 
 AC_MSG_NOTICE([==============================])
 
+if test "$simhw" = true ; then
+	AC_MSG_NOTICE([Are we simulating hardware: yes])
+else
+	AC_MSG_NOTICE([Are we simulating hardware: no])
+fi
+
+AC_MSG_NOTICE([==============================])
 
 AC_OUTPUT

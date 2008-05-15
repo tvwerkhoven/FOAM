@@ -348,7 +348,7 @@ void checkAOConfig(control_t *ptc) {
 			if (ptc->wfs[i].res.x < 0 || ptc->wfs[i].res.x > 1024 || ptc->wfs[i].res.y < 0 || ptc->wfs[i].res.y > 1024) 
 				logWarn("Resolution of WFS %d is odd: %dx%d", i, ptc->wfs[i].res.x, ptc->wfs[i].res.y);
 
-			if (ptc->wfs[i].bpp != 8 && ptc->wfs[i].bpp != 16) {
+			if (ptc->wfs[i].bpp != 8) {
 				logWarn("Bitdepth %d for WFS %d unsupported, defaulting to 8.", ptc->wfs[i].bpp, i);
 				ptc->wfs[i].bpp = 8;
 			}
@@ -386,7 +386,7 @@ void checkAOConfig(control_t *ptc) {
 			else {
 				if (ptc->wfc[i].nact > 1000) logInfo(0, "%d actuators for WFC %d? Impressive...", ptc->wfc[i].nact, i);
 				logInfo(0, "Allocating memory for %d actuator control voltages.", ptc->wfc[i].nact);
-				ptc->wfc[i].ctrl = gsl_vector_float_alloc(ptc->wfc[i].nact);
+				ptc->wfc[i].ctrl = gsl_vector_float_calloc(ptc->wfc[i].nact);
 			}
 			
 			if (ptc->wfc[0].type != WFC_DM && ptc->wfc[0].type != WFC_TT) {
@@ -408,7 +408,7 @@ void checkAOConfig(control_t *ptc) {
 		for (i=0; i< ptc->fw_count; i++) {
 			if (ptc->filter[0].nfilts > MAX_FILTERS) {
 				logWarn("Warning, number of filters (%d) for filterwheel %d larger than MAX_FILTERS, filters above position %d will not be used.", \
-						ptc->filter[0].nfilts, i, MAX_FILTERS);
+				ptc->filter[0].nfilts, i, MAX_FILTERS);
 				ptc->filter[0].nfilts = MAX_FILTERS;
 			}
 			else if (ptc->filter[0].nfilts <= 0) {

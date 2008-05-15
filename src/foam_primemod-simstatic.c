@@ -51,7 +51,7 @@ int modInitModule(control_t *ptc, config_t *cs_config) {
 	// set image to something static
 	coord_t imgres;
 	uint8_t *imgptr = (uint8_t *) ptc->wfs[0].image;
-	modReadIMGArrByte("../config/simstatic.pgm", &(imgptr), &imgres);
+	modReadIMGArrByte("../config/simstatic-irr.pgm", &(imgptr), &imgres);
 	ptc->wfs[0].image  = (void *) imgptr;
 	
 	// configure WFS 0

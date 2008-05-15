@@ -59,8 +59,11 @@ int modCalPinhole(control_t *ptc, int wfs, mod_sh_track_t *shtrack) {
 	// run open loop initialisation once
 	modOpenInit(ptc);
 	
-	// run open loop once
+	// run open loop once to get an image
 	modOpenLoop(ptc);
+	
+	// stop the open loop
+	modOpenFinish(ptc);
 	
 	// collect displacement vectors and store as reference
 	logInfo(0, "Found following reference coordinates:");
