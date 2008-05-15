@@ -25,13 +25,13 @@
 	Functions provided by this module are listed below. Typical usage would be to use the functions from top
 	to bottom consecutively.
  
-	\li drvInitBoard() - (1) Initialize a framegrabber board
-	\li drvInitBufs() - (2) Initialize buffers and memory for use with a framegrabber board
-	\li drvInitGrab() - (i>2) Start grabbing frames
-	\li drvGetImg() - (s>g>i) Grab the next available image
-	\li drvStopGrab() - (n-1>s>g) Stop grabbing frames
-	\li drvStopBufs() - (n-1) Release the memory used by the buffers
-	\li drvStopBoard() - (n) Stop the board and cleanup
+	\li itifgInitBoard() - (1) Initialize a framegrabber board
+	\li itifgInitBufs() - (2) Initialize buffers and memory for use with a framegrabber board
+	\li itifgInitGrab() - (i>2) Start grabbing frames
+	\li itifgGetImg() - (s>g>i) Grab the next available image
+	\li itifgStopGrab() - (n-1>s>g) Stop grabbing frames
+	\li itifgStopBufs() - (n-1) Release the memory used by the buffers
+	\li itifgStopBoard() - (n) Stop the board and cleanup
  
 	\section Dependencies
  
@@ -167,20 +167,20 @@ typedef struct {
  @param [in] *cam A struct with at least device_name, config_file and module.
  @return EXIT_SUCCESS on success, EXIT_FAILURE otherwise.
  */
-int drvInitBoard(mod_itifg_cam_t *cam);
+int itifgInitBoard(mod_itifg_cam_t *cam);
 
 /*!
  @brief Initialize buffers for a framegrabber board
  
  This function requires a previously initialized mod_itifg_cam_t struct filled
- by drvInitBoard(), and a mod_itifg_buf_t struct which holds only 'frames'. The 
+ by itifgInitBoard(), and a mod_itifg_buf_t struct which holds only 'frames'. The 
  buffer will hold this many frames.
  
- @param [in] *cam Struct previously filled by a drvInitBoard() call.
+ @param [in] *cam Struct previously filled by a itifgInitBoard() call.
  @param [in] *buf Struct with only member .frames set indicating the size of the buffer
  @return EXIT_SUCCESS on success, EXIT_FAILURE otherwise. 
  */
-int drvInitBufs(mod_itifg_buf_t *buf, mod_itifg_cam_t *cam);
+int itifgInitBufs(mod_itifg_buf_t *buf, mod_itifg_cam_t *cam);
 
 /*!
  @brief Start the actual framegrabbing
@@ -188,25 +188,25 @@ int drvInitBufs(mod_itifg_buf_t *buf, mod_itifg_cam_t *cam);
  This function starts the framegrabbing for *cam.
  
  Starting and stopping the framegrabber can be done multiple times without problems. If
- no frames are necessary for example, grabbing can be (temporarily) stopped by drvStopGrab()
+ no frames are necessary for example, grabbing can be (temporarily) stopped by itifgStopGrab()
  and later resumed with this function.
  
- @param [in] *cam Struct previously filled by a drvInitBoard() call.
+ @param [in] *cam Struct previously filled by a itifgInitBoard() call.
  @return EXIT_SUCCESS on success, EXIT_FAILURE otherwise. 
  */
-int drvInitGrab(mod_itifg_cam_t *cam);
+int itifgInitGrab(mod_itifg_cam_t *cam);
 
 /*!
  @brief Stop framegrabbing
   
  This function stops the framegrabbing for *cam.
  
- See also drvInitGrab()
+ See also itifgInitGrab()
  
- @param [in] *cam Struct previously filled by a drvInitBoard() call.
+ @param [in] *cam Struct previously filled by a itifgInitBoard() call.
  @return EXIT_SUCCESS on success, EXIT_FAILURE otherwise. 
  */
-int drvStopGrab(mod_itifg_cam_t *cam);
+int itifgStopGrab(mod_itifg_cam_t *cam);
 
 /*!
  @brief Get the next available image from the camera
@@ -221,32 +221,32 @@ int drvStopGrab(mod_itifg_cam_t *cam);
  Additionally, a timeout can be given which is used in the select() call. If a 
  timeout occurs, this function returns with EXIT_SUCCESS.
  
- @param [in] *buf Struct previously filled by a drvInitBufs() call.
- @param [in] *cam Struct previously filled by a drvInitBoard() call.
+ @param [in] *buf Struct previously filled by a itifgInitBufs() call.
+ @param [in] *cam Struct previously filled by a itifgInitBoard() call.
  @param [in] *timeout Timeout used with the select() call. Use NULL to disable
  @param [out] **newdata Pass the address of a void pointer here and that pointer will point to the new data upon succesful completion, can ben NULL.
  @return EXIT_SUCCESS on new frame or timeout, EXIT_FAILURE otherwise. 
  */
-int drvGetImg(mod_itifg_cam_t *cam, mod_itifg_buf_t *buf, struct timeval *timeout, void **newdata);
+int itifgGetImg(mod_itifg_cam_t *cam, mod_itifg_buf_t *buf, struct timeval *timeout, void **newdata);
 
 /*!
  @brief Stops a framegrabber board
  
- This function stops the framegrabber that was started previously by drvInitBoard().
+ This function stops the framegrabber that was started previously by itifgInitBoard().
  
- @param [in] *cam Struct previously filled by a drvInitBoard() call.
+ @param [in] *cam Struct previously filled by a itifgInitBoard() call.
  @return EXIT_SUCCESS on success, EXIT_FAILURE otherwise.
  */
-int drvStopBoard(mod_itifg_cam_t *cam);
+int itifgStopBoard(mod_itifg_cam_t *cam);
 
 /*!
  @brief Closes and frees buffers for a framegrabber board
  
  This function closes buffers used an frees the memory associated with it. 
- @param [in] *cam Struct previously filled by a drvInitBoard() call.
- @param [in] *buf Struct previously filled by a drvInitBufs() call.
+ @param [in] *cam Struct previously filled by a itifgInitBoard() call.
+ @param [in] *buf Struct previously filled by a itifgInitBufs() call.
  @return EXIT_SUCCESS on success, EXIT_FAILURE otherwise. 
  */
-int drvStopBufs(mod_itifg_buf_t *buf, mod_itifg_cam_t *cam);
+int itifgStopBufs(mod_itifg_buf_t *buf, mod_itifg_cam_t *cam);
 
 #endif //#ifdef FOAM_MODULES_ITIFG

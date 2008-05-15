@@ -166,8 +166,8 @@ int modInitModule(control_t *ptc, config_t *cs_config) {
 	shtrack.influence = "mcmath_influence.gsldump";
 	shtrack.samxr = -1;			// 1 row edge erosion
 	shtrack.samini = 10;			// minimum intensity for subaptselection 10
-	// init the shtrack module now
-	modInitSH(&shtrack);	
+	// init the shtrack module for wfs 0 here
+	modInitSH(&(ptc->wfs[0]), &shtrack);	
 	
 	// configure cs_config here
 	cs_config->listenip = "0.0.0.0";	// listen on any IP by defaul
@@ -233,11 +233,11 @@ int modOpenInit(control_t *ptc) {
 int modOpenLoop(control_t *ptc) {
 	static char title[64];
 	// get an image, without using a timeout
-	if (drvGetImg(ptc, 0)) != EXIT_SUCCESS)
+	if (drvGetImg(ptc, 0) != EXIT_SUCCESS)
 		return EXIT_FAILURE;
 	
 	
-	MMDarkFlatFullByte(&(ptc->wfs[0]), &shtrack);
+	//MMDarkFlatFullByte(&(ptc->wfs[0]), &shtrack);
 	
 #ifdef FOAM_MCMATH_DISPLAY
     if (ptc->frames % ptc->logfrac == 0) {
@@ -261,7 +261,7 @@ int modOpenFinish(control_t *ptc) {
 
 int modClosedInit(control_t *ptc) {
 	// set disp source to calib
-	disp.dispsrc = DISPSRC_CALIB;		
+	disp.dispsrc = DISPSRC_FULLCALIB;		
 	// start grabbing frames
 	return itifgInitGrab(&dalsacam);
 }
@@ -269,7 +269,7 @@ int modClosedInit(control_t *ptc) {
 int modClosedLoop(control_t *ptc) {
 	static char title[64];
 	// get an image, without using a timeout
-	if (drvGetImg(ptc, 0)) != EXIT_SUCCESS)
+	if (drvGetImg(ptc, 0) != EXIT_SUCCESS)
 		return EXIT_FAILURE;
 	
 	
@@ -551,7 +551,7 @@ calibrate <mode>:       calibrate the ao system (dark, flat, subapt, etc).\
 				disp.dispsrc = DISPSRC_RAW;
 			}
 			else if (strncmp(list[1], "cal",3) == 0) {
-				disp.dispsrc = DISPSRC_CALIB;
+				disp.dispsrc = DISPSRC_FULLCALIB;
 				tellClient(client->buf_ev, "200 OK DISPLAY CALIB");
 			}
 			else if (strncmp(list[1], "grid",3) == 0) {
@@ -811,7 +811,7 @@ int drvSetupHardware(control_t *ptc, aomode_t aomode, calmode_t calmode) {
     return EXIT_SUCCESS;
 }
 
-int MMAvgFramesByte(gsl_matrix_float *output, wfs_t *wfs, int rounds) {
+int MMAvgFramesByte(control_t *ptc, gsl_matrix_float *output, wfs_t *wfs, int rounds) {
 	int k, i, j;
 	float min, max, sum, tmpvar;
 	uint8_t *imgsrc;
@@ -889,9 +889,9 @@ int MMDarkFlatFullByte(wfs_t *wfs, mod_sh_track_t *shtrack) {
 //								  gsl_matrix_float_get(wfs->darkim, i, j)));
 		}
 	}
-	printf("src: max %d, sum %d, avg %d\n", max[0], sum[0], sum[0]/(wfs->res.x*wfs->res.y));
-	printf("dark: max %d, sum %d, avg %d\n", max[1], sum[1], sum[1]/(wfs->res.x*wfs->res.y));
-	printf("corr: max %d, sum %d, avg %d\n", max[2], sum[2], sum[2]/(wfs->res.x*wfs->res.y));
+	printf("src: max %f, sum %f, avg %f\n", max[0], sum[0], sum[0]/(wfs->res.x*wfs->res.y));
+	printf("dark: max %f, sum %f, avg %f\n", max[1], sum[1], sum[1]/(wfs->res.x*wfs->res.y));
+	printf("corr: max %f, sum %f, avg %f\n", max[2], sum[2], sum[2]/(wfs->res.x*wfs->res.y));
 	
 	// old code which only does subaperture correction (superseded by fast ASM code)
 	/*

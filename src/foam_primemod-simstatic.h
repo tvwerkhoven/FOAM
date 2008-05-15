@@ -82,7 +82,8 @@ typedef enum { //filter_t
 
 // These *must* be defined in a prime module
 int drvSetupHardware(control_t *ptc, aomode_t aomode, calmode_t calmode);
-int drvSetActuator(wfc_t *wfc);
+int drvSetActuator(control_t *ptc, int wfc);
+int drvGetImg(control_t *ptc, int wfs);
 
 // LIBRARIES //
 /*************/
@@ -99,7 +100,7 @@ int drvSetActuator(wfc_t *wfc);
 
 // These are simstatic specific (for the time being)
 int MMAvgFramesByte(gsl_matrix_float *output, wfs_t *wfs, int rounds);
-void MMDarkFlatFullByte(wfs_t *wfs, mod_sh_track_t *shtrack);
+int MMDarkFlatFullByte(wfs_t *wfs, mod_sh_track_t *shtrack);
 void MMDarkFlatSubapByte(wfs_t *wfs, mod_sh_track_t *shtrack);
 
 

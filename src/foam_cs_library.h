@@ -196,7 +196,7 @@ typedef struct { // wfc_t
 	gsl_vector_float *ctrl;		//!< (foam) pointer to array of controls for the WFC, must be [-1,1] (i.e. `voltages')
 	gain_t gain;				//!< (user) gain used in calculating the new controls
 	wfctype_t type;				//!< (user) type of WFC we're dealing with (0 = TT, 1 = DM)
-	float calrange[2]			//!< (user) the range over which the calibration should be done (should be same datatype as ctrl)
+	float calrange[2];			//!< (user) the range over which the calibration should be done (should be same datatype as ctrl)
     int id;                     //!< (user) a unique ID to identify the actuator
 } wfc_t;
 

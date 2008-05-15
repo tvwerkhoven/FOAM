@@ -640,13 +640,13 @@ shtrack.shsize.x, shtrack.shsize.y, shtrack.track.x, shtrack.track.y, ptc->wfs[0
 // SITE-SPECIFIC ROUTINES //
 /**************************/
 
-int drvSetActuator(wfc_t *wfc) {
-	if (wfc->type == 0) {			// Okotech DM
+int drvSetActuator(control_t *ptc, int wfc) {
+	if (ptc->wfc[wfc].type == 0) {			// Okotech DM
 		// use okodm routines here
 	}
-	else if (wfc == 1) {	// Tip-tilt mirror
+	/*else if (wfc == 1) {	// Tip-tilt mirror
 		// use daq routines here
-	}
+	}*/
 	
 	return EXIT_SUCCESS;
 }
@@ -714,7 +714,7 @@ int MMAvgFramesByte(gsl_matrix_float *output, wfs_t *wfs, int rounds) {
 }
 
 // Dark flat calibration, only for subapertures we found previously
-void MMDarkFlatSubapByte(wfs_t *wfs, mod_sh_track_t *shtrack) {
+int MMDarkFlatSubapByte(wfs_t *wfs, mod_sh_track_t *shtrack) {
 	// if correct, CAL_DARKGAIN was run before this is called,
 	// and we have wfs->dark and wfs->gain to scale the image with like
 	// corrected = ((img*256 - dark) * gain)/256. In ASM (MMX/SSE2)
@@ -756,6 +756,7 @@ void MMDarkFlatSubapByte(wfs_t *wfs, mod_sh_track_t *shtrack) {
 		}
 	}
 	logDebug(LOG_SOMETIMES, "Fast darkflat corrected: min: %d, max: %d, avg: %f", min, max, sum/(shtrack->track.x*shtrack->track.y*shtrack->nsubap));
+	return EXIT_SUCCESS;
 }
 
 // Dark flat calibration
