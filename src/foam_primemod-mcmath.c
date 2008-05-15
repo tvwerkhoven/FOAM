@@ -163,8 +163,8 @@ int modInitModule(control_t *ptc, config_t *cs_config) {
     // we have a CCD of WxH, with a lenslet array of WlxHl, such that
     // each lenslet occupies W/Wl x H/Hl pixels, and we use track.x x track.y
     // pixels to track the CoG or do correlation tracking.
-	shtrack.cells.x = 8;				// we're using a 16x16 lenslet array
-	shtrack.cells.y = 8;
+	shtrack.cells.x = 16;				// we're using a 16x16 lenslet array
+	shtrack.cells.y = 16;
 	shtrack.shsize.x = ptc->wfs[0].res.x/shtrack.cells.x;
 	shtrack.shsize.y = ptc->wfs[0].res.y/shtrack.cells.y;
 	shtrack.track.x = shtrack.shsize.x/2;   // tracker windows are half the size of the lenslet grid things
@@ -734,6 +734,7 @@ shtrack.shsize.x, shtrack.shsize.y, shtrack.track.x, shtrack.track.y, ptc->wfs[0
 				shtrack.stepc.y = tmpfloat;
 				tellClient(client->buf_ev, "200 OK STEP Y %+f", tmpfloat);
 			}
+		}
 		else {
 			tellClient(client->buf_ev, "402 STEP REQUIRES PARAMS");
 		}
@@ -823,7 +824,7 @@ int drvGetImg(control_t *ptc, int wfs) {
 #ifndef FOAM_SIMHW
 	// we're using an itifg driver, fetch an image to wfs 0
 	if (wfs == 0)
-		return itifgGetImg(&dalsacam, &buffer, NULL, ptc->wfs[0].image);
+		return itifgGetImg(&dalsacam, &buffer, NULL, &(ptc->wfs[0].image));
 #else
 	if (wfs == 0) {
 		if (ptc->mode != AO_MODE_CAL) {
