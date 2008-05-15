@@ -387,6 +387,14 @@ int modClosedLoop(control_t *ptc);
 int modClosedInit(control_t *ptc);
 
 /*! 
+ @brief This routine is run after closed loop.
+ 
+ modClosedFinish() can be used to shut down camera's temporarily, i.e.
+ to stop grabbing frames or something similar.
+ */
+int modClosedFinish(control_t *ptc);
+
+/*! 
  @brief This routine is run during open loop.
  
  modOpenLoop() should be provided by a module which does the necessary things in open loop.
@@ -399,6 +407,14 @@ int modOpenLoop(control_t *ptc);
  modOpenInit() should be provided by a module which does the necessary things just before open loop.
  */
 int modOpenInit(control_t *ptc);
+
+/*! 
+ @brief This routine is run after open loop.
+ 
+ modOpenFinish() can be used to shut down camera's temporarily, i.e.
+ to stop grabbing frames or something similar.
+ */
+int modOpenFinish(control_t *ptc);
 
 /*! 
  @brief This routine is run in calibration mode.

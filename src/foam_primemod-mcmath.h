@@ -95,6 +95,12 @@ int drvGetImg(control_t *ptc, int wfs);
 
 // for image file I/O
 #include "foam_modules-img.h"
+// for calibrating the image lateron
+#include "foam_modules-calib.h"
+// for SH routines
+#include "foam_modules-sh.h"
+
+#ifndef FOAM_SIMHW
 // for okodm things
 #include "foam_modules-okodm.h"
 // for itifg stuff
@@ -103,13 +109,12 @@ int drvGetImg(control_t *ptc, int wfs);
 #include "foam_modules-daq2k.h"
 // for serial port stuff
 #include "foam_modules-serial.h"
-// for calibrating the image lateron
-#include "foam_modules-calib.h"
+#endif
 
 // These are McMath specific (for the time being)
-int MMAvgFramesByte(gsl_matrix_float *output, wfs_t *wfs, int rounds);
+int MMAvgFramesByte(control_t *ptc, gsl_matrix_float *output, wfs_t *wfs, int rounds);
 int MMDarkFlatFullByte(wfs_t *wfs, mod_sh_track_t *shtrack);
-
+int MMDarkFlatSubapByte(wfs_t *wfs, mod_sh_track_t *shtrack);
 
 
 #endif // #ifndef FOAM_PRIME_MCMATH

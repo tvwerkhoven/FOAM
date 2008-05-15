@@ -44,7 +44,7 @@ foamui_SOURCES = foam_ui.c foam_ui_library.c  foam_library.c
 foamui_SOURCES += foam_ui_library.h foam_library.h
 foamui_CFLAGS = $(UI_CFLAGS)
 foamui_LDFLAGS = $(UI_LIBS)
-endif
+endif UI
 
 # programs depend on whether or not we want static simulation...
 if SIMSTAT
@@ -60,9 +60,9 @@ foamcs_simstat_SOURCES += foam_modules-sh.c foam_modules-calib.c foam_modules-im
 # Are we going to use OpenGL or not?
 if OPENGL
 foamcs_simstat_SOURCES += foam_modules-dispgl.c
-else
+else !OPENGL
 foamcs_simstat_SOURCES += foam_modules-dispsdl.c
-endif
+endif !OPENGL
 
 # header files are part of the sources as well
 foamcs_simstat_SOURCES += foam_modules-sh.h foam_modules-calib.h foam_modules-dispcommon.h foam_modules-img.h foam_primemod-simstatic.h
@@ -80,10 +80,10 @@ if OPENGL
 # add some flags necessary for OpenGL
 foamcs_simstat_CFLAGS += $(OPENGL_CFLAGS)
 foamcs_simstat_LDFLAGS += $(OPENGL_LIBS)
-endif
+endif OPENGL
 
 # endif SIMSTAT
-endif
+endif SIMSTAT
 
 # programs depend on whether or not we want simulation...
 # if SIMULATION
@@ -123,18 +123,18 @@ foamcs_mcmath_SOURCES += $(FRAME_SRC) $(FRAME_HDR)
 foamcs_mcmath_SOURCES += foam_modules-sh.c foam_modules-calib.c foam_modules-img.c
 if !SIMHW
 foamcs_mcmath_SOURCES += foam_modules-itifg.c foam_modules-okodm.c foam_modules-serial.c foam_modules-daq2k.c
-endif
+endif !SIMHW
 
 if OPENGL
 foamcs_mcmath_SOURCES += foam_modules-dispgl.c
-else
+else !OPENGL
 foamcs_mcmath_SOURCES += foam_modules-dispsdl.c
-endif
+endif !OPENGL
 
 foamcs_mcmath_SOURCES += foam_modules-sh.h foam_modules-calib.h foam_modules-img.h 
 if !SIMHW
 foamcs_mcmath_SOURCES += foam_modules-itifg.h foam_modules-okodm.h foam_modules-serial.h foam_modules-daq2k.h foam_modules-dispcommon.h
-endif
+endif !SIMHW
 
 # Make sure we include the prototypes for functions and datatypes everytime
 foamcs_mcmath_CPPFLAGS = -include "foam_primemod-mcmath.h"
@@ -142,26 +142,29 @@ foamcs_mcmath_CPPFLAGS = -include "foam_primemod-mcmath.h"
 foamcs_mcmath_CPPFLAGS += -DFOAM_MCMATH_DISPLAY=1 -DFOAM_MODULES_DISLAY_SHSUPPORT=1
 if SIMHW
 foamcs_mcmath_CPPFLAGS += -DFOAM_SIMHW=1
-endif
+endif SIMHW
+
+foamcs_mcmath_CFLAGS = $(MCMATH_CFLAGS)
+foamcs_mcmath_LDFLAGS = $(MCMATH_LIBS)
 
 # Add some cflags and libs too, please (if not simulating the hardware)
 if !SIMHW
 DRIVERDIR=/home/tim/foam/drivers
-foamcs_mcmath_CFLAGS = $(MCMATH_CFLAGS) -I$(DRIVERDIR)/itifg/include -I$(DRIVERDIR)/daq2k/include
-foamcs_mcmath_LDFLAGS = $(MCMATH_LIBS) -ldaqx -L$(DRIVERDIR)/itifg/lib -L$(DRIVERDIR)/daq2k/lib
-endif
+foamcs_mcmath_CFLAGS += $(MCMATH_CFLAGS) -I$(DRIVERDIR)/itifg/include -I$(DRIVERDIR)/daq2k/include
+foamcs_mcmath_LDFLAGS += $(MCMATH_LIBS) -ldaqx -L$(DRIVERDIR)/itifg/lib -L$(DRIVERDIR)/daq2k/lib
+endif !SIMHW
 foamcs_mcmath_CPPFLAGS += -DFOAM_MODULES_DISPLAY_OPENGL=1
 
 if OPENGL
 foamcs_mcmath_LDFLAGS += $(OPENGL_LIBS)
 foamcs_mcmath_CFLAGS += $(OPENGL_CFLAGS)
-endif
+endif OPENGL
 
 # we need to include this static library last, otherwise we get errors
 if !SIMHW
 foamcs_mcmath_LDADD = -litifg
-endif
+endif !SIMHW
 
 # endif MCMATH
-endif
+endif MCMATH
 

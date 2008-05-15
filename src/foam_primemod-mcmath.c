@@ -18,14 +18,12 @@ extern pthread_cond_t mode_cond;
 
 // GLOBALS //
 /***********/
-#define FOAM_SIMHW
 
 #ifdef FOAM_SIMHW
 #define FOAM_CONFIG_PRE "mcmath-sim"
 #else
 #define FOAM_CONFIG_PRE "mcmath"
 #endif
-
 
 
 // Displaying
@@ -43,6 +41,11 @@ mod_daq2k_board_t daqboard;
 
 // Okotech DM type
 mod_okodm_t okodm;
+#else
+// we need this to simular raw, dark and flat images
+uint8_t *rawsrc;
+uint8_t *darksrc;
+uint8_t *flatsrc;
 #endif
 
 // Shack Hartmann tracking info
@@ -187,10 +190,6 @@ int modInitModule(control_t *ptc, config_t *cs_config) {
 #ifdef FOAM_SIMHW
 	// If we're simulating, we want to load static dark, flat and sensor images
 	coord_t imgres;
-	int ii;
-	uint8_t *rawsrc;
-	uint8_t *darksrc;
-	uint8_t *flatsrc;
 	modReadIMGArrByte("../config/simstatic-irr.pgm", &(rawsrc), &imgres);
 	modReadIMGArrByte("../config/simstatic-dark.pgm", &(darksrc), &imgres);
 	modReadIMGArrByte("../config/simstatic-flat.pgm", &(flatsrc), &imgres);
@@ -271,7 +270,7 @@ int modOpenLoop(control_t *ptc) {
 	MMDarkFlatFullByte(&(ptc->wfs[0]), &shtrack);
 	
 	// Track the CoG using the full-frame corrected image
-	modCogTrack(ptc->wfs[0]->corrim, DATA_GSL_M_F, ALIGN_RECT, &shtrack, NULL, NULL);
+	modCogTrack(ptc->wfs[0].corrim, DATA_GSL_M_F, ALIGN_RECT, &shtrack, NULL, NULL);
 	
 #ifdef FOAM_MCMATH_DISPLAY
     if (ptc->frames % ptc->logfrac == 0) {
@@ -290,7 +289,7 @@ int modOpenFinish(control_t *ptc) {
 #ifndef FOAM_SIMHW
 	return itifgStopGrab(&dalsacam);
 #else
-	return EXIT_SUCESS;
+	return EXIT_SUCCESS;
 #endif
 }
 
@@ -318,7 +317,7 @@ int modClosedLoop(control_t *ptc) {
 	MMDarkFlatSubapByte(&(ptc->wfs[0]), &shtrack);
 	
 	// Track the CoG using the partial corrected frame
-	modCogTrack(ptc->wfs[0]->corr, DATA_UINT8, ALIGN_SUBAP, &shtrack, NULL, NULL);
+	modCogTrack(ptc->wfs[0].corr, DATA_UINT8, ALIGN_SUBAP, &shtrack, NULL, NULL);
 	
 	
 #ifdef FOAM_MCMATH_DISPLAY
@@ -337,7 +336,7 @@ int modClosedFinish(control_t *ptc) {
 #ifndef FOAM_SIMHW
 	return itifgStopGrab(&dalsacam);
 #else
-	return EXIT_SUCESS;
+	return EXIT_SUCCESS;
 #endif
 }
 
@@ -360,7 +359,7 @@ int modCalibrate(control_t *ptc) {
 			return EXIT_FAILURE;
 #endif
 
-		MMAvgFramesByte(wfsinfo->darkim, &(ptc->wfs[0]), wfsinfo->fieldframes);
+		MMAvgFramesByte(ptc, wfsinfo->darkim, &(ptc->wfs[0]), wfsinfo->fieldframes);
 #ifndef FOAM_SIMHW
 		if (itifgStopGrab(&dalsacam) != EXIT_SUCCESS)
 			return EXIT_FAILURE;
@@ -392,7 +391,7 @@ int modCalibrate(control_t *ptc) {
 			return EXIT_FAILURE;
 #endif
 
-		MMAvgFramesByte(wfsinfo->flatim, &(ptc->wfs[0]), wfsinfo->fieldframes);
+		MMAvgFramesByte(ptc, wfsinfo->flatim, &(ptc->wfs[0]), wfsinfo->fieldframes);
 		
 #ifndef FOAM_SIMHW
 		if (itifgStopGrab(&dalsacam) != EXIT_SUCCESS)
@@ -479,7 +478,8 @@ int modCalibrate(control_t *ptc) {
 		logInfo(0, "Image info: sum: %d, avg: %f, range: (%d,%d)", tmpsum, (float) tmpsum / (wfsinfo->res.x*wfsinfo->res.y), tmpmin, tmpmax);
 
 		// run subapsel on this image
-		modSelSubaptsByte((uint8_t *) wfsinfo->image, &shtrack, wfsinfo);
+		//modSelSubapsByte((uint8_t *) wfsinfo->image, &shtrack, wfsinfo);
+		modSelSubapts(wfsinfo->image, DATA_UINT8, ALIGN_RECT, &shtrack, wfsinfo);
 			//modSelSubaptsByte(void *image, mod_sh_track_t *shtrack, wfs_t *shwfs, int *totnsubap, float samini, int samxr) 
 
 	
@@ -796,7 +796,7 @@ int drvGetImg(control_t *ptc, int wfs) {
 	// we're using an itifg driver, fetch an image to wfs 0
 	if (wfs == 0)
 		return itifgGetImg(&dalsacam, &buffer, NULL, ptc->wfs[0].image);
-#els
+#else
 	if (wfs == 0) {
 		if (ptc->mode != AO_MODE_CAL) {
 			ptc->wfs[0].image = rawsrc;
@@ -811,7 +811,7 @@ int drvGetImg(control_t *ptc, int wfs) {
 			
 		}
 	}
-	
+#endif // FOAM_SIMHW
 	
 	return EXIT_FAILURE;
 }

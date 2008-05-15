@@ -266,7 +266,7 @@ int modCalWFC(control_t *ptc, int wfs, mod_sh_track_t *shtrack) {
 				gsl_vector_float_set(ptc->wfc[wfc].ctrl, j, ptc->wfc[wfc].calrange[1]);
 //				gsl_vector_float_set(ptc->wfc[wfc].ctrl, j, DM_MAXVOLT);
 				
-                drvSetActuator(&(ptc->wfc[wfc]));
+                drvSetActuator(ptc, wfs);
 				// run the open loop *once*, which will approx do the following:
 				// read sensor, apply some SH WF sensing, set actuators, 
 		
@@ -285,7 +285,7 @@ int modCalWFC(control_t *ptc, int wfs, mod_sh_track_t *shtrack) {
 				
 //				gsl_vector_float_set(ptc->wfc[wfc].ctrl, j, DM_MINVOLT);
 				gsl_vector_float_set(ptc->wfc[wfc].ctrl, j, ptc->wfc[wfc].calrange[0]);				
-                drvSetActuator(&(ptc->wfc[wfc]));
+                drvSetActuator(ptc, wfc);
 						
 				for (skip=0; skip< shtrack->skipframes +1; skip++) // skip some frames here
 					modOpenLoop(ptc);
