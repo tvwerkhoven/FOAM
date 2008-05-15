@@ -21,8 +21,10 @@ extern pthread_cond_t mode_cond;
 // GLOBALS //
 /***********/
 
+#define FOAM_CONFIG_PRE "simstatic"
+
 // Displaying
-#ifdef FOAM_MCMATH_DISPLAY
+#ifdef FOAM_SIMSTAT_DISPLAY
 mod_display_t disp;
 #endif
 
@@ -40,7 +42,7 @@ int modInitModule(control_t *ptc, config_t *cs_config) {
 	ptc->wfc_count = 0;
 	ptc->fw_count = 0;
 	
-	// allocate memory for filters, wfcs and wfss
+	// allocate memory for filters, wfc's and wfs's
 	// no filter, no WFS in simulation
 //	ptc->filter = (filtwheel_t *) calloc(ptc->fw_count, sizeof(filtwheel_t));
 //	ptc->wfc = (wfc_t *) calloc(ptc->wfc_count, sizeof(wfc_t));
@@ -58,9 +60,9 @@ int modInitModule(control_t *ptc, config_t *cs_config) {
 	ptc->wfs[0].res.y = imgres.y;
 	ptc->wfs[0].bpp = 8;
 	// this is where we will look for dark/flat/sky images
-	ptc->wfs[0].darkfile = "simstatic_dark.gsldump";	
-	ptc->wfs[0].flatfile = "simstatic_flat.gsldump";
-	ptc->wfs[0].skyfile = "simstatic_sky.gsldump";
+	ptc->wfs[0].darkfile = FOAM_CONFIG_PRE "_dark.gsldump";	
+	ptc->wfs[0].flatfile = FOAM_CONFIG_PRE "_flat.gsldump";
+	ptc->wfs[0].skyfile = FOAM_CONFIG_PRE "_sky.gsldump";
 	ptc->wfs[0].scandir = AO_AXES_XY;
 	ptc->wfs[0].id = 0;
 	ptc->wfs[0].fieldframes = 1000;     // take 1000 frames for a dark or flatfield
@@ -75,13 +77,12 @@ int modInitModule(control_t *ptc, config_t *cs_config) {
 	shtrack.shsize.y = ptc->wfs[0].res.y/shtrack.cells.y;
 	shtrack.track.x = shtrack.shsize.x/2;   // tracker windows are half the size of the lenslet grid things
 	shtrack.track.y = shtrack.shsize.y/2;
-	shtrack.pinhole = "simstatic_pinhole.gsldump";
-	shtrack.influence = "simstatic_influence.gsldump";
+	shtrack.pinhole = FOAM_CONFIG_PRE "_pinhole.gsldump";
+	shtrack.influence = FOAM_CONFIG_PRE "_influence.gsldump";
 	shtrack.samxr = -1;			// 1 row edge erosion
 	shtrack.samini = 30;			// minimum intensity for subaptselection 10
 	// init the shtrack module now
-	// !!!:tim:20080513 todo for simstatic
-	modInitSH(&shtrack);	
+	modInitSH(&(ptc->wfs[0]), &shtrack);
 	
 	// configure cs_config here
 	cs_config->listenip = "0.0.0.0";	// listen on any IP by defaul
@@ -100,14 +101,14 @@ int modInitModule(control_t *ptc, config_t *cs_config) {
 int modPostInitModule(control_t *ptc, config_t *cs_config) {
 	// we initialize OpenGL here, because it doesn't like threading
 	// a lot
-#ifdef FOAM_MCMATH_DISPLAY
+#ifdef FOAM_SIMSTAT_DISPLAY
 	// init display
 	disp.caption = "WFS #1";
 	disp.res.x = ptc->wfs[0].res.x;
 	disp.res.y = ptc->wfs[0].res.y;
 	disp.autocontrast = 0;
 	disp.brightness = 0;
-	disp.contrast = 5;
+	disp.contrast = 1;
 	disp.dispsrc = DISPSRC_RAW;         // use the raw ccd output
 	disp.dispover = DISPOVERLAY_GRID;   // display the SH grid
 	disp.col.r = 255;
@@ -130,7 +131,7 @@ int modPostInitModule(control_t *ptc, config_t *cs_config) {
 }
 
 void modStopModule(control_t *ptc) {
-#ifdef FOAM_MCMATH_DISPLAY
+#ifdef FOAM_SIMSTAT_DISPLAY
 	displayFinish(&disp);
 #endif
 	
@@ -155,14 +156,13 @@ int modOpenInit(control_t *ptc) {
 
 int modOpenLoop(control_t *ptc) {
 	static char title[64];
-	// get an image -> not necessary, img is always tehre (at ptc->wfs[0]->image
-//	if (drvGetImg(&(ptc->wfs	->image)) != EXIT_SUCCESS)
-//		return EXIT_FAILURE;
 	
 	// dark-flat the whole frame
 	MMDarkFlatFullByte(&(ptc->wfs[0]), &shtrack);
 	
-#ifdef FOAM_MCMATH_DISPLAY
+//	modCogTrack(ptc->wfs[0].corrim, DATA_GSL_M_F, ALIGN_RECT, &shtrack, NULL, NULL);
+	
+#ifdef FOAM_SIMSTAT_DISPLAY
     if (ptc->frames % ptc->logfrac == 0) {
 		displayDraw((&ptc->wfs[0]), &disp, &shtrack);
 		displaySDLEvents(&disp);
@@ -193,18 +193,14 @@ int modClosedInit(control_t *ptc) {
 int modClosedLoop(control_t *ptc) {
 	static char title[64];
 	int sn;
-	// get an image
-//	if (drvGetImg(&(ptc->wfs->image)) != EXIT_SUCCESS)
-//		return EXIT_FAILURE;
 	
 	// dark-flat the whole frame
 	MMDarkFlatSubapByte(&(ptc->wfs[0]), &shtrack);
 
 	// try to get the center of gravity 
-	modCogTrackGSL(ptc->wfs[0].corrim, &shtrack, NULL, NULL);
-	//int (*subc)[2], int nsubap, coord_t track, float *aver, floa t *max, float coords[][2]) {
+	modCogTrack(ptc->wfs[0].corrim, DATA_GSL_M_F, ALIGN_RECT, &shtrack, NULL, NULL);
 	
-#ifdef FOAM_MCMATH_DISPLAY
+#ifdef FOAM_SIMSTAT_DISPLAY
     if (ptc->frames % ptc->logfrac == 0) {
 		displayDraw((&ptc->wfs[0]), &disp, &shtrack);
 		logInfo(0, "Current framerate: %.2f FPS", ptc->fps);
@@ -235,20 +231,15 @@ int modCalibrate(control_t *ptc) {
 	FILE *fieldfd;		// to open some files (dark, flat, ...)
 	char title[64]; 	// for the window title
 	int i, j, sn;
-	float min, max, sum, pix;	// some fielding stats
-	wfs_t *wfsinfo = &(ptc->wfs[0]); // shortcut
-	dispsrc_t oldsrc = disp.dispsrc; // store the old display source here since we might just have to show dark or flatfields
-	int oldover = disp.dispover;	// store the old overlay here
+	float min, max, sum, pix;			// some fielding stats
+	wfs_t *wfsinfo = &(ptc->wfs[0]);	// shortcut
+	dispsrc_t oldsrc = disp.dispsrc;	// store the old display source here since we might just have to show dark or flatfields
+	int oldover = disp.dispover;		// store the old overlay here
 
 	if (ptc->calmode == CAL_DARK) {
 		// take dark frames, and average
 		logInfo(0, "Starting darkfield calibration now");
 
-		// check if memory is allocated yet
-		if (wfsinfo->darkim == NULL) {
-			wfsinfo->darkim = gsl_matrix_float_calloc(wfsinfo->res.x, wfsinfo->res.y);
-		}
-		
 		// we fake a darkfield here (random pixels between 2-6)
 		min = max = 4.0;
 		sum = 0.0;
@@ -285,21 +276,10 @@ int modCalibrate(control_t *ptc) {
 	}
 	else if (ptc->calmode == CAL_FLAT) {
 		logInfo(0, "Starting flatfield calibration now");
-		// take flat frames, and average
-//		if (drvInitGrab(&dalsacam) != EXIT_SUCCESS) 
-//			return EXIT_FAILURE;
-		// check if memory is allocated yet
-		if (wfsinfo->flatim == NULL) {
-			wfsinfo->flatim = gsl_matrix_float_calloc(wfsinfo->res.x, wfsinfo->res.y);
-		}
-		
+
 		// set flat constant so we get a gain of 1
 		// we fake a darkfield here (random pixels between 2-6)
-		for (i=0; i<wfsinfo->res.y; i++) {
-			for (j=0; j<wfsinfo->res.x; j++) {
-				gsl_matrix_float_set(wfsinfo->darkim, i, j, 32);
-			}
-		}
+		gsl_matrix_float_set_all(wfsinfo->darkim, 32.0);
 		
 		// saving image for later usage
 		fieldfd = fopen(wfsinfo->flatfile, "w+");	
@@ -323,34 +303,7 @@ int modCalibrate(control_t *ptc) {
 	}
 	else if (ptc->calmode == CAL_DARKGAIN) {
 		logInfo(0, "Taking dark and flat images to make convenient images to correct (dark/gain).");
-		if (wfsinfo->darkim == NULL || wfsinfo->flatim == NULL) { 
-			logWarn("Dark- and flatfield not present, cannot calculate dark and gain.");
-			return EXIT_FAILURE;
-		}
-		if (wfsinfo->dark == NULL) {
-			// allocate data for dark (nsubaps.x * nsubaps.y * 
-			// subapsize). As we're using bpp images, we need 
-			// twice that bitdepth for dark and flats.
-			// align to pagesize, which is overkill, but works 
-			// for me. Needs a cleaner solution
-			// !!!:tim:20080512 update alloc alignment
-			wfsinfo->dark = valloc((shtrack.cells.x * shtrack.cells.y * shtrack.track.x * shtrack.track.y) * wfsinfo->bpp * 2);
-			
-		}
-		if (wfsinfo->gain == NULL) {
-			// allocate data for gain (nsubaps.x * nsubaps.y * subapsize), gain is 16 bits
-			wfsinfo->gain = valloc((shtrack.cells.x * shtrack.cells.y * shtrack.track.x * shtrack.track.y) * wfsinfo->bpp * 2);
-		}
-		if (wfsinfo->corr == NULL) {
-			// allocate data for corrected img (nsubaps.x * nsubaps.y * subapsize), corr is 8 bit
-			wfsinfo->corr = valloc((shtrack.cells.x * shtrack.cells.y * shtrack.track.x * shtrack.track.y) * wfsinfo->bpp);
-		}
 		
-		// check if allocation worked
-		if (wfsinfo->dark == NULL || wfsinfo->gain == NULL || wfsinfo->corr == NULL) {
-			logErr("Unable to allocate data for dark, gain or corrected img");
-			return EXIT_FAILURE;
-		}
 		
 		// get the average flat-dark value for all subapertures (but not the whole image)
 		float tmpavg;
@@ -362,7 +315,7 @@ int modCalibrate(control_t *ptc) {
 				}
 			}
 		}
-		tmpavg /= (shtrack.cells.x * shtrack.cells.y * shtrack.track.x * shtrack.track.y);
+		tmpavg /= ((shtrack.cells.x * shtrack.cells.y) * (shtrack.track.x * shtrack.track.y));
 		
 		// make actual matrices from dark and flat
 		uint16_t *darktmp = (uint16_t *) wfsinfo->dark;
@@ -406,7 +359,7 @@ int modCalibrate(control_t *ptc) {
 		logInfo(0, "Image info: sum: %ld, avg: %f, range: (%d,%d)", tmpsum, (float) tmpsum / (wfsinfo->res.x*wfsinfo->res.y), tmpmin, tmpmax);
 
 		// run subapsel on this image
-		modSelSubaptsByte((uint8_t *) wfsinfo->image, &shtrack, wfsinfo);
+		modSelSubapts(wfsinfo->image, DATA_UINT8, ALIGN_RECT, &shtrack, wfsinfo);
 		//modSelSubaptsByte(void *image, mod_sh_track_t *shtrack, wfs_t *shwfs, int *totnsubap, float samini, int samxr) 
 
 		logInfo(0, "Subaperture selection complete, found %d subapertures.", shtrack.nsubap);
@@ -501,7 +454,7 @@ calibrate <mode>:       calibrate the ao system (dark, flat, subapt, etc).\
 ");
 		}
 	}
-#ifdef FOAM_MCMATH_DISPLAY
+#ifdef FOAM_SIMSTAT_DISPLAY
  	else if (strncmp(list[0], "disp",3) == 0) {
 		if (count > 1) {
 			if (strncmp(list[1], "raw",3) == 0) {
@@ -761,7 +714,7 @@ int MMAvgFramesByte(gsl_matrix_float *output, wfs_t *wfs, int rounds) {
 }
 
 // Dark flat calibration, only for subapertures we found previously
-int MMDarkFlatSubapByte(wfs_t *wfs, mod_sh_track_t *shtrack) {
+void MMDarkFlatSubapByte(wfs_t *wfs, mod_sh_track_t *shtrack) {
 	// if correct, CAL_DARKGAIN was run before this is called,
 	// and we have wfs->dark and wfs->gain to scale the image with like
 	// corrected = ((img*256 - dark) * gain)/256. In ASM (MMX/SSE2)
@@ -806,7 +759,7 @@ int MMDarkFlatSubapByte(wfs_t *wfs, mod_sh_track_t *shtrack) {
 }
 
 // Dark flat calibration
-int MMDarkFlatFullByte(wfs_t *wfs, mod_sh_track_t *shtrack) {
+void MMDarkFlatFullByte(wfs_t *wfs, mod_sh_track_t *shtrack) {
 	logDebug(LOG_SOMETIMES, "Slow full-frame darkflat correcting now");
 	int sn;
 	size_t i, j; // size_t because gsl wants this
@@ -874,9 +827,7 @@ int MMDarkFlatFullByte(wfs_t *wfs, mod_sh_track_t *shtrack) {
 	 //gsl_matrix_float_div_elements (wfs->corrim, wfs->flatim);
 	 
 	 */
-	
 
-	return EXIT_SUCCESS;
 }
 
 

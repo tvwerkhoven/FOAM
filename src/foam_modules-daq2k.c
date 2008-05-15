@@ -291,6 +291,7 @@ int main() {
 	
 	// setting digital IO ports now //
 	//////////////////////////////////
+#if (0)
 	printf("Trying to set some bit patterns values on P2:\n");
 	printf("\n");
 	printf("portA and portB (8bit): ");
@@ -345,15 +346,16 @@ int main() {
 	}
 	printf("done\n");
 	sleep(1);
-	
+#endif
 	// setting analog outputs  now //
 	/////////////////////////////////
-	printf("Setting some voltages on all %d channels of board 0 now:\n", board.nchans);
+	printf("Setting some voltages on chan 0 and 1 channels of board 0 now:\n");
 	printf("(going through the whole voltage range in 20 seconds)\n");
 	for (i=0; i<=100; i++) {
 		if (i % 10 == 0) printf("%d%%", i);
 		else printf(".");
-		drvDaqSetDACs(&board, i*65536/100);
+		//drvDaqSetDACs(&board, i*65536/100);
+		drvDaqSetDAC(&board, 0, i*65536/100 );
 		usleep(200000);
 	}
 	printf("..done\n");

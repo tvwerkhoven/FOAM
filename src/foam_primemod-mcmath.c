@@ -47,11 +47,6 @@ mod_sh_track_t shtrack;
 // field images here. 
 // We store darkfield * 256 in dark, 256 * (1/(flatfield-darkfield)) in
 // gain, and then calculate corrim = (raw*256 - dark) * gain / 256
-//#define MAXSUBAPS 16*16
-//#define MAXSUBAPSIZE 16*16
-//uint8_t corrim[MAXSUBAPS * MAXSUBAPSIZE] __attribute__ ((aligned (32)));
-//uint16_t dark[MAXSUBAPS * MAXSUBAPSIZE] __attribute__ ((aligned (32)));
-//uint16_t gain[MAXSUBAPS * MAXSUBAPSIZE] __attribute__ ((aligned (32)));
 
 int modInitModule(control_t *ptc, config_t *cs_config) {
 	logInfo(0, "This is the McMath-Pierce prime module, enjoy.");

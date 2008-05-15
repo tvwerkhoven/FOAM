@@ -96,13 +96,7 @@ int modCalPinholeChk(control_t *ptc, int wfs, mod_sh_track_t *shtrack) {
 		logWarn("Could not open file %s: %s", shtrack->pinhole, strerror(errno));
 		return EXIT_FAILURE;
 	}
-	if (shtrack->refc == NULL) {
-		shtrack->refc = gsl_vector_float_calloc(nsubap*2);
-		// !!!:tim:20080416 calloc handling done by GSL itself
-//		if (ptc->wfs[wfs].refc == NULL) 
-//			logErr("Unable to allocate data for ptc->wfs[wfs].refc for wfs %d (tried to allocate %d elements)", wfs, nsubap*2);
-	}
-	else gsl_vector_float_fscanf(fd, shtrack->refc);
+	gsl_vector_float_fscanf(fd, shtrack->refc);
 	fclose(fd);
 	
 	return EXIT_SUCCESS;
@@ -378,6 +372,11 @@ int modCalWFCChk(control_t *ptc, int wfs, mod_sh_track_t *shtrack) {
 		logWarn("Could not open file %s: %s", outfile, strerror(errno));
 		return EXIT_FAILURE;
 	}
+	// We set up SVD data (wfsmodes, singular, dmmodes) per WFS, i.e.
+	// we take all WFCs together for each WFS, measure the shifts per WFS
+	// and then calculate the controls from those shifts. To do this, we 
+	// setup data for a WFS, Sum(WFC's) pair, and we need to total nr of 
+	// actuators in the system
 	if (shtrack->singular == NULL) {
 		shtrack->singular = gsl_vector_float_calloc(nacttot);
 		if (shtrack->singular == NULL) logErr("Failed to allocate memory for singular values vector.");

@@ -132,6 +132,22 @@ typedef enum { // aomode_t
 	AO_MODE_SHUTDOWN //!< Set to this mode for the worker thread to finish
 } aomode_t;
 
+/*! 
+ @brief This enum is used to distinguish between various datatypes for processing.
+ 
+ Instead of using bpp or something else, this more general datatype identification
+ also allows identification of foreign datatypes like a GSL matrix or non-integer
+ datatypes (which is hard to distinguish between if only using bpp) like floats.
+*/
+typedef enum {
+	DATA_UINT8,			//!< ID for uint8_t
+	DATA_UINT16,		//!< ID for uint16_t
+	DATA_FL,			//!< ID for float
+	DATA_GSL_M_F,		//!< ID for gsl_matrix_float
+	DATA_GSL_V_F		//!< ID for gsl_vector_float
+} foam_datat_t;
+
+
 /*!
  @brief Helper enum for ao scanning mode
  */

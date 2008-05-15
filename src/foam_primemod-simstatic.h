@@ -87,7 +87,7 @@ int drvSetActuator(wfc_t *wfc);
 // LIBRARIES //
 /*************/
 
-#ifdef FOAM_MCMATH_DISPLAY
+#ifdef FOAM_SIMSTAT_DISPLAY
 // for displaying stuff (SDL)
 #include "foam_modules-dispcommon.h"
 #endif
@@ -99,10 +99,10 @@ int drvSetActuator(wfc_t *wfc);
 
 // These are simstatic specific (for the time being)
 int MMAvgFramesByte(gsl_matrix_float *output, wfs_t *wfs, int rounds);
-int MMDarkFlatFullByte(wfs_t *wfs, mod_sh_track_t *shtrack);
-int MMDarkFlatSubapByte(wfs_t *wfs, mod_sh_track_t *shtrack);
+void MMDarkFlatFullByte(wfs_t *wfs, mod_sh_track_t *shtrack);
+void MMDarkFlatSubapByte(wfs_t *wfs, mod_sh_track_t *shtrack);
 
 
 
-#endif // #ifndef FOAM_PRIME_MCMATH
+#endif // #ifndef FOAM_PRIME_SIMSTATIC
 

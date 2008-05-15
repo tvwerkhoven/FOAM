@@ -70,11 +70,12 @@ foamcs_simstat_SOURCES += foam_modules-sh.h foam_modules-calib.h foam_modules-di
 # Some CPP flags (include the primemod header, and configure some options)
 foamcs_simstat_CPPFLAGS = -include "foam_primemod-simstatic.h"
 #foamcs_mcmath_CPPFLAGS += -DDEBUG_ITIFG=255 
-foamcs_simstat_CPPFLAGS += -DFOAM_MCMATH_DISPLAY=1 -DFOAM_MODULES_DISPLAY_OPENGL=1 -DFOAM_MODULES_DISLAY_SHSUPPORT=1
+foamcs_simstat_CPPFLAGS += -DFOAM_SIMSTAT_DISPLAY=1 -DFOAM_MODULES_DISLAY_SHSUPPORT=1
 
 # specific flags and libraries
 foamcs_simstat_CFLAGS = $(SIMSTAT_CFLAGS)
 foamcs_simstat_LDFLAGS = $(SIMSTAT_LIBS)
+foamcs_simstat_CPPFLAGS += -DFOAM_MODULES_DISPLAY_OPENGL=1 
 if OPENGL
 # add some flags necessary for OpenGL
 foamcs_simstat_CFLAGS += $(OPENGL_CFLAGS)
@@ -132,12 +133,14 @@ foamcs_mcmath_SOURCES += foam_modules-sh.h foam_modules-calib.h foam_modules-img
 # Make sure we include the prototypes for functions and datatypes everytime
 foamcs_mcmath_CPPFLAGS = -include "foam_primemod-mcmath.h"
 #foamcs_mcmath_CPPFLAGS += -DDEBUG_ITIFG=255 
-foamcs_mcmath_CPPFLAGS += -DFOAM_MCMATH_DISPLAY=1 -DFOAM_MODULES_DISPLAY_OPENGL=1 -DFOAM_MODULES_DISLAY_SHSUPPORT=1
+foamcs_mcmath_CPPFLAGS += -DFOAM_MCMATH_DISPLAY=1 -DFOAM_MODULES_DISLAY_SHSUPPORT=1
 
 # Add some cflags and libs too, please
 DRIVERDIR=/home/tim/foam/drivers
 foamcs_mcmath_CFLAGS = $(MCMATH_CFLAGS) -I$(DRIVERDIR)/itifg/include -I$(DRIVERDIR)/daq2k/include
 foamcs_mcmath_LDFLAGS = $(MCMATH_LIBS) -ldaqx -L$(DRIVERDIR)/itifg/lib -L$(DRIVERDIR)/daq2k/lib
+foamcs_mcmath_CPPFLAGS += -DFOAM_MODULES_DISPLAY_OPENGL=1
+
 if OPENGL
 foamcs_mcmath_LDFLAGS += $(OPENGL_LIBS)
 foamcs_mcmath_CFLAGS += $(OPENGL_CFLAGS)

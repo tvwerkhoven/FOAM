@@ -38,25 +38,45 @@
 // ROUTINES //
 /************/
 
-int modInitSH(mod_sh_track_t *shtrack) {
+int modInitSH(wfs_t *wfsinfo, mod_sh_track_t *shtrack) {
 	logInfo(0, "Initializing SH tracking module");
+	
 	shtrack->subc = calloc(shtrack->cells.x * shtrack->cells.y, sizeof(coord_t));
 	shtrack->gridc = calloc(shtrack->cells.x * shtrack->cells.y , sizeof(coord_t));
 	// we store displacement coordinates here
-	shtrack->disp = gsl_vector_calloc(shtrack->cells.x * shtrack->cells.y * 2);
+	shtrack->disp = gsl_vector_float_calloc(shtrack->cells.x * shtrack->cells.y * 2);
 	// we store reference coordinates here
-	shtrack->refc = gsl_vector_calloc(shtrack->cells.x * shtrack->cells.y * 2);
-
+	shtrack->refc = gsl_vector_float_calloc(shtrack->cells.x * shtrack->cells.y * 2);
+	
 	if (shtrack->subc == NULL || shtrack->gridc == NULL || shtrack->disp == NULL || \
 		shtrack->refc == NULL) {
-		logErr("Error: could not allocate memory in modInitSH()!");
+		// this is actually superfluous, errors handled by gsl
+		logErr("Could not allocate memory in modInitSH()!");
 		return EXIT_FAILURE;
 	}
+	
+	// allocate data for dark (nsubaps.x * nsubaps.y * subapsize). As we're 
+	// using bpp images, we need twice that bitdepth for dark and flats. align 
+	// to pagesize, which is overkill, but works for me. Needs a cleaner solution
+	// !!!:tim:20080512 update alloc alignment
+	wfsinfo->dark = valloc((shtrack->cells.x * shtrack->cells.y * shtrack->track.x * shtrack->track.y) * wfsinfo->bpp/8 * 2);
+	// allocate data for gain (nsubaps.x * nsubaps.y * subapsize), gain is 16 bits
+	wfsinfo->gain = valloc((shtrack->cells.x * shtrack->cells.y * shtrack->track.x * shtrack->track.y) * wfsinfo->bpp/8 * 2);
+	// allocate data for corrected img (nsubaps.x * nsubaps.y * subapsize), corr is 8 bit
+	wfsinfo->corr = valloc((shtrack->cells.x * shtrack->cells.y * shtrack->track.x * shtrack->track.y) * wfsinfo->bpp/8);
+
+	// check if allocation worked
+	if (wfsinfo->dark == NULL || wfsinfo->gain == NULL || wfsinfo->corr == NULL) {
+		logErr("Could not allocate memory in modInitSH()!");
+		return EXIT_FAILURE;
+	}
+
 	
 	return EXIT_SUCCESS;
 }
 
-
+/*
+ This is not used anymore, deprecated by a more general routine
 int modSelSubapts(float *image, coord_t res, int cells[2], int (*subc)[2], int (*apcoo)[2], int *totnsubap, float samini, int samxr) {
 	// stolen from ao3.c by CUK :)
 	int isy, isx, iy, ix, i, sn=0, nsubap=0; //init sn to zero!!
@@ -270,11 +290,12 @@ int modSelSubapts(float *image, coord_t res, int cells[2], int (*subc)[2], int (
 	
 	return EXIT_SUCCESS;
 }
+*/
 
-int modSelSubaptsByte(uint8_t *image, mod_sh_track_t *shtrack, wfs_t *shwfs) {
-	// stolen from ao3.c by CUK :)
-	int isy, isx, iy, ix, i, sn=0, nsubap=0; //init sn to zero!!
-	float sum=0.0, fi=0.0;					// check 'intensity' of a subapt
+int modSelSubapts(void *image, foam_datat_t data, mod_sh_align_t align, mod_sh_track_t *shtrack, wfs_t *shwfs) {
+	// stolen from ao3.c by CUK
+	int isy, isx, iy, ix, i, sn=0, nsubap=0;	//init sn to zero!!
+	float sum=0.0, fi=0.0;						// check 'intensity' of a subapt
 	float csum=0.0, cs[] = {0.0, 0.0}; 	// for center of gravity
 	float cx=0, cy=0;					// for CoG
 	float dist, rmin;					// minimum distance
@@ -282,15 +303,14 @@ int modSelSubaptsByte(uint8_t *image, mod_sh_track_t *shtrack, wfs_t *shwfs) {
 	int samxr = shtrack->samxr;		// temp copy
 	int csa=0;							// estimate for best subapt
 	
-	int shsize[] = {shtrack->shsize.x, shtrack->shsize.y};		// subapt pixel resolution
-	
 	// we store our subaperture map in here when deciding which subapts to use
 	int apmap[shtrack->cells.x][shtrack->cells.y];		// aperture map
 	int apmap2[shtrack->cells.x][shtrack->cells.y];		// aperture map 2
 	
 	// cast the void pointer to byte pointer, we know the image is a byte image.
-	uint8_t *byteimg = image;
-	int max = byteimg[0];
+//	uint8_t *byteimg = image;
+
+	/*int max = byteimg[0];
 	int min = byteimg[0];
 	for (i=0; i<shwfs->res.x*shwfs->res.y; i++) {
 		sum += byteimg[i];
@@ -298,50 +318,71 @@ int modSelSubaptsByte(uint8_t *image, mod_sh_track_t *shtrack, wfs_t *shwfs) {
 		else if (byteimg[i] < min) min = byteimg[i];
 	}	
 	logInfo(0, "Image info: sum: %f, avg: %f, range: (%d,%d)", sum, (float) sum / (shwfs->res.x*shwfs->res.y), min, max);
-
+	 */
+	if (align != ALIGN_RECT) {
+		logWarn("Other alignments besides simple rectangles not supported by modSelSubapts");
+		return EXIT_FAILURE;
+	}
 
 	sum = 0;
 	
-	logInfo(0, "Selecting subapertures.");
+	logInfo(0, "Selecting subapertures now.");
 	for (isy=0; isy<shtrack->cells.y; isy++) { // loops over all potential subapertures
 		for (isx=0; isx<shtrack->cells.x; isx++) {
 			// set apmap and apmap2 to zero
 			apmap[isx][isy] = 0;
 			apmap2[isx][isy] = 0;
 			
+			sum=0.0; cs[0] = 0.0; cs[1] = 0.0; csum = 0.0;			
 			// check one potential subapt (isy,isx)
-			sum=0.0; cs[0] = 0.0; cs[1] = 0.0; csum = 0.0;
-			for (iy=0; iy<shsize[1]; iy++) { // sum all pixels in the subapt
-				for (ix=0; ix<shsize[0]; ix++) {
-					fi = byteimg[isy*shsize[1]*shwfs->res.x + isx*shsize[0] + ix+ iy*shwfs->res.x];
-					sum += fi;
-					// for center of gravity, only pixels above the threshold are used;
-					// otherwise the position estimate always gets pulled to the center;
-					// good background elimination is crucial for this to work !!!
-					fi -= samini;    		// subtract threshold
-					if (fi<0.0) fi = 0.0;	// clip
-					csum = csum + fi;		// add this pixel's intensity to sum
-					cs[0] += + fi * ix;	// center of gravity of subaperture intensity 
-					cs[1] += + fi * iy;
+			if (data == DATA_UINT8) {		// data is stored in unsigned 8 bit ints
+				uint8_t *datapt = (uint8_t *) image;
+				for (iy=0; iy<shtrack->shsize.y; iy++) { // sum all pixels in the subapt
+					for (ix=0; ix<shtrack->shsize.x; ix++) {
+						fi = datapt[isy*shtrack->shsize.y*shwfs->res.x + isx*shtrack->shsize.x + ix+ iy*shwfs->res.x];
+						sum += fi;
+						// for center of gravity, only pixels above the threshold are used;
+						// otherwise the position estimate always gets pulled to the center;
+						// good background elimination is crucial for this to work !!!
+						fi -= samini;    		// subtract threshold
+						if (fi<0.0) fi = 0.0;	// clip
+						csum = csum + fi;		// add this pixel's intensity to sum
+						cs[0] += + fi * ix;	// center of gravity of subaperture intensity 
+						cs[1] += + fi * iy;
+					}
+				}
+			}
+			else if (data == DATA_GSL_M_F) {	// data is stored in GSL matrix
+				gsl_matrix_float *datapt = (gsl_matrix_float *) image;				
+				for (iy=0; iy<shtrack->shsize.y; iy++) { // sum all pixels in the subapt
+					for (ix=0; ix<shtrack->shsize.x; ix++) {
+						fi = gsl_matrix_float_get(datapt, isy*shtrack->shsize.y + iy, isx*shtrack->shsize.x + ix);
+						sum += fi; fi -= samini;
+						if (fi<0.0) fi = 0.0;
+						csum = csum + fi;
+						cs[0] += + fi * ix; cs[1] += + fi * iy;
+					}
 				}
 			}
 
 			// check if the summed subapt intensity is above zero (e.g. do we use it?)
 			if (csum > 0.0) { // good as long as pixels above background exist
 				// we add 0.5 to make sure the integer division is 'fair' (e.g. simulate round(), but faster)
-				shtrack->subc[sn].x = isx*shsize[0]+shsize[0]/4 + (int) (cs[0]/csum+0.5) - shsize[0]/2;	// subapt coordinates
-				shtrack->subc[sn].y = isy*shsize[1]+shsize[1]/4 + (int) (cs[1]/csum+0.5) - shsize[1]/2;	// TODO: sort this out
+				shtrack->subc[sn].x = isx*shtrack->shsize.x - shtrack->track.x/2 + (int) (cs[0]/csum+0.5);	// subapt coordinates
+				shtrack->subc[sn].y = isy*shtrack->shsize.y - shtrack->track.y/2 + (int) (cs[1]/csum+0.5);
+				//shtrack->subc[sn].x = isx*shtrack->shsize.x+shtrack->shsize.x/4 + (int) (cs[0]/csum+0.5) - shtrack->shsize.x/2;	// subapt coordinates
+				//shtrack->subc[sn].y = isy*shtrack->shsize.y+shtrack->shsize.y/4 + (int) (cs[1]/csum+0.5) - shtrack->shsize.y/2;	// TODO: sort this out
 				// ^^ coordinate in big image,  ^^ CoG of one subapt, /4 because that's half a trakcer windows
 				
-				cx += isx*shsize[0];
-				cy += isy*shsize[1];
+				cx += isx*shtrack->shsize.x;
+				cy += isy*shtrack->shsize.y;
 				apmap[isx][isy] = 1; // set aperture map
 				shtrack->gridc[sn].x = isx;
 				shtrack->gridc[sn].y = isy;
 				//logDebug(0, "cog (%.2f,%.2f) subc (%d,%d) gridc (%d,%d) sum %f (min: %f, max: %d)", cs[0], cs[1], shtrack->subc[sn].x, shtrack->subc[sn].y, isx, isy, csum, samini, samxr);
 				sn++;
 			} else {
-				apmap[isx][isy] = 0; // don't use this subapt
+				apmap[isx][isy] = 0; // don't use this subapt if the intensity is too low
 			}
 		}
 	}
@@ -378,11 +419,12 @@ int modSelSubaptsByte(uint8_t *image, mod_sh_track_t *shtrack, wfs_t *shwfs) {
 	// a large shift between the expected and the actual position in the
 	// center of gravity approach above
 	// TODO: might not be necessary? leftover?
+	/*
 	cs[0] = 0.0; cs[1] = 0.0; csum = 0.0;
-	for (iy=0; iy<shsize[1]; iy++) {
-		for (ix=0; ix<shsize[0]; ix++) {
+	for (iy=0; iy<shtrack->shsize.y; iy++) {
+		for (ix=0; ix<shtrack->shsize.x; ix++) {
 			// loop over the whole shsize^2 big ref subapt here, so subc-shsize/4 is the beginning coordinate
-			fi = byteimg[(shtrack->subc[0].x-shsize[1]/4+iy)* shwfs->res.x + shtrack->subc[0].x-shsize[0]/4+ix];
+			fi = byteimg[(shtrack->subc[0].y-shtrack->shsize.y/4+iy)* shwfs->res.x + shtrack->subc[0].x-shtrack->shsize.x/4+ix];
 			
 			// for center of gravity, only pixels above the threshold are used;
 			// otherwise the position estimate always gets pulled to the center;
@@ -394,10 +436,45 @@ int modSelSubaptsByte(uint8_t *image, mod_sh_track_t *shtrack, wfs_t *shwfs) {
 			cs[1] += fi * iy;
 		}
 	}
+	 */
+	
+	if (data == DATA_UINT8) {		// data is stored in unsigned 8 bit ints
+		uint8_t *datapt = (uint8_t *) data;
+		for (iy=0; iy<shtrack->shsize.y; iy++) { // sum all pixels in the subapt
+			for (ix=0; ix<shtrack->shsize.x; ix++) {
+				// !!!:tim:20080514 this might not work if shtrack->track is 
+				// (much) bigger than half of shtrack->shsize, in that case we
+				// include too much image in our selection below and the CoG might
+				// get pulled to other spots accidentally included.
+				fi = datapt[(shtrack->subc[0].y - shtrack->track.y/2 + iy)*shwfs->res.x + shtrack->subc[0].x-shtrack->track.x/2 + ix];
+				sum += fi;
+				// for center of gravity, only pixels above the threshold are used;
+				// otherwise the position estimate always gets pulled to the center;
+				// good background elimination is crucial for this to work !!!
+				fi -= samini;    		// subtract threshold
+				if (fi<0.0) fi = 0.0;	// clip
+				csum = csum + fi;		// add this pixel's intensity to sum
+				cs[0] += + fi * ix;	// center of gravity of subaperture intensity 
+				cs[1] += + fi * iy;
+			}
+		}
+	}
+	else if (data == DATA_GSL_M_F) {	// data is stored in GSL matrix
+		gsl_matrix_float *datapt = (gsl_matrix_float *) data;				
+		for (iy=0; iy<shtrack->shsize.y; iy++) { // sum all pixels in the subapt
+			for (ix=0; ix<shtrack->shsize.x; ix++) {
+				fi = gsl_matrix_float_get(datapt, shtrack->subc[0].y - shtrack->track.y/2 + iy, shtrack->subc[0].x-shtrack->track.x/2 + ix);
+				sum += fi; fi -= samini;
+				if (fi<0.0) fi = 0.0;
+				csum = csum + fi;
+				cs[0] += + fi * ix; cs[1] += + fi * iy;
+			}
+		}
+	}
 	
 	logInfo(0, "old subx=%d, old suby=%d",shtrack->subc[0].x, shtrack->subc[0].y);
-	shtrack->subc[0].x += (int) (cs[0]/csum+0.5) - shsize[0]/2; // +0.5 to prevent integer cropping rounding error
-	shtrack->subc[0].y += (int) (cs[1]/csum+0.5) - shsize[1]/2; // use shsize/2 because or CoG is for a larger subapt (shsize and not shsize/2)
+	shtrack->subc[0].x += (int) (cs[0]/csum+0.5) - shtrack->track.x; // +0.5 to prevent integer cropping rounding error
+	shtrack->subc[0].y += (int) (cs[1]/csum+0.5) - shtrack->track.y; // use track.x|y because or CoG is for a larger subapt (shsize and not shsize/2)
 	logInfo(0, "new subx=%d, new suby=%d",shtrack->subc[0].x, shtrack->subc[0].y);
 	
 	// enforce maximum radial distance from center of gravity of all
@@ -506,10 +583,10 @@ int modSelSubaptsByte(uint8_t *image, mod_sh_track_t *shtrack, wfs_t *shwfs) {
 		shtrack->gridc[sn].y = 0;
 	}
 	
-	logDebug(0, "final gridcs:");
+	logDebug(0, "Final gridcs:");
 	for (sn=0; sn<nsubap; sn++) {
-		shtrack->gridc[sn].y *= shsize[1];
-		shtrack->gridc[sn].x *= shsize[0];
+		shtrack->gridc[sn].y *= shtrack->shsize.y;
+		shtrack->gridc[sn].x *= shtrack->shsize.x;
 		logDebug(LOG_NOFORMAT, "%d (%d,%d) ", sn, shtrack->gridc[sn].x, shtrack->gridc[sn].y);
 	}
 	logDebug(LOG_NOFORMAT, "\n");
@@ -517,7 +594,8 @@ int modSelSubaptsByte(uint8_t *image, mod_sh_track_t *shtrack, wfs_t *shwfs) {
 	return EXIT_SUCCESS;
 }
 
-void modCogTrackGSL(gsl_matrix_float *image, mod_sh_track_t *shtrack, float *aver, float *max) {
+/*
+void modCogTrackGSL(gsl_matrix_float *image, mod_sh_track_t *shtrack int align, float *aver, float *max) {
 //void modCogTrack(gsl_matrix_float *image, int (*subc)[2], int nsubap, coord_t track, float *aver, float *max, float coords[][2]) {
 	int ix, iy, sn=0;
 	float csx, csy, csum, fi, cmax; 			// variables for center-of-gravity
@@ -560,6 +638,80 @@ void modCogTrackGSL(gsl_matrix_float *image, mod_sh_track_t *shtrack, float *ave
 	// Calculate average subaperture intensity
 	if (aver != NULL)
 		*aver = sum / ((float) (shtrack->track.x * shtrack->track.y * shtrack->nsubap));
+}
+*/
+
+int modCogTrack(void *image, foam_datat_t data, mod_sh_align_t align, mod_sh_track_t *shtrack, float *aver, float *max) {
+	//void modCogTrack(gsl_matrix_float *image, int (*subc)[2], int nsubap, coord_t track, float *aver, float *max, float coords[][2]) {
+	int ix, iy, sn=0;
+	float csx, csy, csum, fi, cmax; 			// variables for center-of-gravity
+	float sum = 0;
+	
+	// loop over all subapertures (treat those all equal, i.e. no preference for 
+	// a reference subaperture)
+	for (sn=0; sn < shtrack->nsubap; sn++) {
+		csx = 0.0; csy = 0.0; csum = 0.0;
+		/*
+		for (iy=0; iy < shtrack->track.y; iy++) {
+			for (ix=0; ix < shtrack->track.x; ix++) {
+				//fi = image[(shtrack->subc[sn].y+iy), shtrack->subc[sn].x+ix);
+				//image[subc[sn][1]*res.x+shtrack->subc[sn].x + iy*res.x + ix];
+				// fi = image->data[(subc[sn][1]+iy) * image->tda + (shtrack->subc[sn].x+ix)];
+				
+			}
+		}*/
+		if (data == DATA_UINT8 && align == ALIGN_SUBAP) {		// data is stored in unsigned 8 bit ints
+			uint8_t *datapt = (uint8_t *) data;
+			for (iy=0; iy<shtrack->track.y; iy++) { // sum all pixels in the tracker window
+				for (ix=0; ix<shtrack->track.x; ix++) {
+					fi = datapt[(shtrack->track.y*shtrack->track.x)*sn + (shtrack->track.y+iy)+ix];
+					if (max != NULL && fi > *max) *max = fi;
+					
+					csum += fi;				// add this pixel's intensity to sum
+					csx += fi * ix; 		// center of gravity of subaperture intensity 
+					csy += fi * iy;					
+				}
+			}
+		}
+		else if (data == DATA_GSL_M_F && align == ALIGN_RECT) {	// data is stored in GSL matrix
+			gsl_matrix_float *datapt = (gsl_matrix_float *) image;				
+			for (iy=0; iy<shtrack->track.y; iy++) { // sum all pixels in the subapt
+				for (ix=0; ix<shtrack->track.x; ix++) {
+					fi = gsl_matrix_float_get(datapt, (shtrack->subc[sn].y+iy), (shtrack->subc[sn].x+ix));
+					if (max != NULL && fi > *max) *max = fi;
+					
+					csum += fi;				// add this pixel's intensity to sum
+					csx += fi * ix; 		// center of gravity of subaperture intensity 
+					csy += fi * iy;					
+				}
+			}
+		}
+		else {
+				logWarn("Unknown datatype/alignment combination in modCogTrack");
+				return EXIT_FAILURE;
+		}
+		sum += csum;
+		
+		if (csum > 0.0) {				// if there is any signal at all
+			gsl_vector_float_set(shtrack->disp, 2*sn + 0, \
+								 csx/csum - shtrack->track.x/2); // positive now
+			gsl_vector_float_set(shtrack->disp, 2*sn + 1, \
+								 csy/csum - shtrack->track.y/2); // /2 because our tracker cells are track[] wide and high
+		} 
+		else {
+			//coords[sn][0] = coords[sn][1] = 0.0;
+			gsl_vector_float_set(shtrack->disp, 2*sn + 0, 0.0);
+			gsl_vector_float_set(shtrack->disp, 2*sn + 1, 0.0);
+		}
+		
+		
+	}
+	
+	// Calculate average subaperture intensity
+	if (aver != NULL)
+		*aver = sum / ((float) (shtrack->track.x * shtrack->track.y * shtrack->nsubap));
+	
+	return EXIT_SUCCESS;
 }
 
 void modCogFind(wfs_t *wfsinfo, int xc, int yc, int width, int height, float samini, float *sumout, float *cog) {

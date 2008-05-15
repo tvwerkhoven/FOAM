@@ -280,14 +280,14 @@ void checkFieldFiles(wfs_t *wfsinfo) {
 			// to indicate we need to do darkfield calibration, set .darkim
 			// to NULL
 			logInfo(0, "Darkfield file (%s) could not be opened, will create darkfield calibration later (%s).", wfsinfo->darkfile, strerror(errno));
-			wfsinfo->darkim = NULL;
+			wfsinfo->darkim = gsl_matrix_float_calloc(wfsinfo->res.x, wfsinfo->res.y);
 		}
 		else {
 			// if we can open the file, there is already darkfield calibration
 			// present. allocate memory for the image, and try to import it
 			logInfo(0, "Darkfield file found and, trying to import into memory.");
 			// checking alloc is not necessary because we use gsl's own checking
-			wfsinfo->darkim = gsl_matrix_float_alloc(wfsinfo->res.x, wfsinfo->res.y);
+			wfsinfo->darkim = gsl_matrix_float_calloc(wfsinfo->res.x, wfsinfo->res.y);
 			gsl_matrix_float_fscanf(fieldfd, wfsinfo->darkim);
 			// close the file
 			fclose(fieldfd);
@@ -302,11 +302,11 @@ void checkFieldFiles(wfs_t *wfsinfo) {
 		fieldfd = fopen(wfsinfo->flatfile, "r");
 		if (fieldfd == NULL) {
 			logInfo(0, "Flatfield file (%s) could not be opened, will create flatfield calibration later (%s).", wfsinfo->flatfile, strerror(errno));
-			wfsinfo->flatim = NULL;
+			wfsinfo->flatim = gsl_matrix_float_calloc(wfsinfo->res.x, wfsinfo->res.y);
 		}
 		else {
 			logInfo(0, "Flatfield file found and, trying to import into memory.");
-			wfsinfo->flatim = gsl_matrix_float_alloc(wfsinfo->res.x, wfsinfo->res.y);
+			wfsinfo->flatim = gsl_matrix_float_calloc(wfsinfo->res.x, wfsinfo->res.y);
 			gsl_matrix_float_fscanf(fieldfd, wfsinfo->flatim);
 			// close the file
 			fclose(fieldfd);
@@ -321,11 +321,11 @@ void checkFieldFiles(wfs_t *wfsinfo) {
 		fieldfd = fopen(wfsinfo->skyfile, "r");
 		if (fieldfd == NULL) {
 			logInfo(0, "Skyfield file (%s) could not be opened, will create skyfield calibration later (%s).", wfsinfo->skyfile, strerror(errno));
-			wfsinfo->skyim = NULL;
+			wfsinfo->skyim = gsl_matrix_float_calloc(wfsinfo->res.x, wfsinfo->res.y);
 		}
 		else {
 			logInfo(0, "Skyfield file found and, trying to import into memory.");
-			wfsinfo->skyim = gsl_matrix_float_alloc(wfsinfo->res.x, wfsinfo->res.y);
+			wfsinfo->skyim = gsl_matrix_float_calloc(wfsinfo->res.x, wfsinfo->res.y);
 			gsl_matrix_float_fscanf(fieldfd, wfsinfo->skyim);
 			// close the file
 			fclose(fieldfd);

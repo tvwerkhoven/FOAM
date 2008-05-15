@@ -55,6 +55,19 @@ typedef struct {
 	char *influence;				//!< (user) base filename to store the influence matrix (stored in singular/dmmodes/wfsmodes)
 } mod_sh_track_t;
 
+/*! 
+ @brief This enum distinguished between different alignments of data.
+ 
+ An image can be stored simply in row-major format in a matrix ('default' C
+ alignment), or per subaperture (meaning that the first n pixels belong to 
+ the first subaperture, followed by the next subaperture), which is used for
+ example for the gain and dark images used in fast dark-flat field calibration.
+ */
+typedef enum {
+	ALIGN_RECT,
+	ALIGN_SUBAP
+} mod_sh_align_t;
+
 // PROTOTYPES //
 /**************/
 
@@ -63,11 +76,12 @@ typedef struct {
 
  This routine allocates some data for you so you don't have to :) 
  Call this before using any routines in this module.
+ @param [in] *wfsinfo Pointer to the WFS to init for
  @param [in] *shtrack A pre-filled mod_sh_track_t struct with the SH sensor configuration
  */
-int modInitSH(mod_sh_track_t *shtrack);
+int modInitSH(wfs_t *wfsinfo, mod_sh_track_t *shtrack);
 
-/*!
+/*
  @brief Selects suitable subapts to work with
  
  This routine checks all subapertures and sees whether they are useful or not.
@@ -83,19 +97,40 @@ int modInitSH(mod_sh_track_t *shtrack);
  @param [in] samini The minimum intensity a useful subaperture should have
  @param [in] samxr The maximum radius to enforce if positive, or the amount of subapts to erode if negative.
  */
-int modSelSubapts(float *image, coord_t res, int cells[2], int (*subc)[2], int (*apcoo)[2], int *totnsubap, float samini, int samxr);
- 
+//int modSelSubapts(float *image, coord_t res, int cells[2], int (*subc)[2], int (*apcoo)[2], int *totnsubap, float samini, int samxr);
+
+
 /*!
  @brief Selects suitable subapts to work with (works with bytes)
  
  This is an updated version of the routine modSelSubapts(), works on byte data only.
  
  @param [in] *image The image that we need to look for subapts on
+ @param [in] data The datatype of 'image'
+ @param [in] align The alignment of 'image'
  @param [in] *shtrack The SH sensor configuration for this WFS
  @param [in] *shwfs The wavefront sensor configuration
  @param [out] *totnsubap The number of usable subapertures in the system
  */
-int modSelSubaptsByte(uint8_t *image, mod_sh_track_t *shtrack, wfs_t *shwfs);
+int modSelSubapts(void *image, foam_datat_t data, mod_sh_align_t align, mod_sh_track_t *shtrack, wfs_t *shwfs);
+
+/*!
+ @brief Tracks the targets in center of gravity tracking
+ 
+ This calculates the center of gravity of each subaperture. The coordinates 
+ will be relative to the center of the tracking window. Note that this will 
+ only work for star-like images, extended images will probably not work.
+ 
+ @param [in] *image A float GSL matrix to parse through CoG tracking
+ @param [in] data The datatype of 'image'
+ @param [in] align The alignment of 'image'
+ @param [in] *shtrack An initialized mod_sh_track_t struct.
+ @param [out] *aver The average pixel intensity in all tracked subapertures.
+ @param [out] *max The maximum pixel intensity in all tracked subapertures.
+ */
+int modCogTrack(void *image, foam_datat_t data, mod_sh_align_t align, mod_sh_track_t *shtrack, float *aver, float *max);
+//void modCogTrack(gsl_matrix_float *image, int (*subc)[2], int nsubap, coord_t track, float *aver, float *max, float coords[][2]);
+//void modCogTrackGSL(gsl_matrix_float *image, mod_sh_track_t *shtrack, float *aver, float *max);
 
 /*!
  @brief Parses output from Shack-Hartmann WFSs.
@@ -149,20 +184,6 @@ float sae(float *subapt, float *refapt, int len);
  */
 void imcal(float *corrim, float *image, float *darkim, float *flatim, float *sum, float *max, coord_t res, coord_t window);
 
-/*!
- @brief Tracks the targets in center of gravity tracking
- 
- This calculates the center of gravity of each subaperture. The coordinates 
- will be relative to the center of the tracking window. Note that this will 
- only work for star-like images, extended images will probably not work.
- 
- @param [in] *image A float GSL matrix to parse through CoG tracking
- @param [in] *shtrack An initialized mod_sh_track_t struct.
- @param [out] *aver The average pixel intensity in all tracked subapertures.
- @param [out] *max The maximum pixel intensity in all tracked subapertures.
- */
-void modCogTrackGSL(gsl_matrix_float *image, mod_sh_track_t *shtrack, float *aver, float *max);
-//void modCogTrack(gsl_matrix_float *image, int (*subc)[2], int nsubap, coord_t track, float *aver, float *max, float coords[][2]);
 
 /*!
  @brief Calculates the controls to be sent to the various WFC, given displacements.
