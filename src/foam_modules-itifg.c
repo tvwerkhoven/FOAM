@@ -8,7 +8,7 @@
 
 #include "foam_modules-itifg.h"
 
-int drvInitBoard(mod_itifg_cam_t *cam) {
+int itifgInitBoard(mod_itifg_cam_t *cam) {
 	int flags = O_RDWR | O_APPEND | O_SYNC; 
 	int zero = 0;
 	int one = 1;
@@ -137,7 +137,7 @@ int drvInitBoard(mod_itifg_cam_t *cam) {
 	return EXIT_SUCCESS;
 }
 
-int drvInitBufs(mod_itifg_buf_t *buf, mod_itifg_cam_t *cam) {
+int itifgInitBufs(mod_itifg_buf_t *buf, mod_itifg_cam_t *cam) {
 	
 	// start mmap
 	buf->map = mmap(NULL, cam->pagedsize * buf->frames, PROT_READ | PROT_WRITE, MAP_SHARED, cam->fd, 0);
@@ -157,7 +157,7 @@ int drvInitBufs(mod_itifg_buf_t *buf, mod_itifg_cam_t *cam) {
 	return EXIT_SUCCESS;
 }
 
-int drvInitGrab(mod_itifg_cam_t *cam) {
+int itifgInitGrab(mod_itifg_cam_t *cam) {
 #ifdef FOAM_DEBUG
 	logDebug(0, "Starting grab, lseeking to %ld.", +LONG_MAX);
 #endif
@@ -171,7 +171,7 @@ int drvInitGrab(mod_itifg_cam_t *cam) {
 	return EXIT_SUCCESS;
 }
 
-int drvStopGrab(mod_itifg_cam_t *cam) {
+int itifgStopGrab(mod_itifg_cam_t *cam) {
 #ifdef FOAM_DEBUG
 	logDebug(0, "Stopping grab, lseeking to %ld.", -LONG_MAX);
 #endif
@@ -184,7 +184,7 @@ int drvStopGrab(mod_itifg_cam_t *cam) {
 	return EXIT_SUCCESS;
 }
 
-int drvGetImg(mod_itifg_cam_t *cam, mod_itifg_buf_t *buf, struct timeval *timeout, void **newdata) {
+int itifgGetImg(mod_itifg_cam_t *cam, mod_itifg_buf_t *buf, struct timeval *timeout, void **newdata) {
 	off_t seeke, seekc;
 	int result;
 #ifdef FOAM_DEBUG
@@ -206,7 +206,7 @@ int drvGetImg(mod_itifg_cam_t *cam, mod_itifg_buf_t *buf, struct timeval *timeou
 	
 	if (result == 0) {
 		// timeout occured, return immediately
-		logInfo(0, "Timeout in drvGetImg(). Might be an error.");	
+		logInfo(0, "Timeout in itifgGetImg(). Might be an error.");	
 		return EXIT_SUCCESS;
 	}
 	
@@ -261,7 +261,7 @@ int drvGetImg(mod_itifg_cam_t *cam, mod_itifg_buf_t *buf, struct timeval *timeou
 	return EXIT_SUCCESS;
 }
 
-int drvStopBufs(mod_itifg_buf_t *buf, mod_itifg_cam_t *cam) {
+int itifgStopBufs(mod_itifg_buf_t *buf, mod_itifg_cam_t *cam) {
 	if (munmap(buf->map, cam->pagedsize * buf->frames) == -1) {
 		logWarn("Error unmapping camera memory: %s", strerror(errno));
 		return EXIT_FAILURE;
@@ -270,7 +270,7 @@ int drvStopBufs(mod_itifg_buf_t *buf, mod_itifg_cam_t *cam) {
 	return EXIT_SUCCESS;
 }
 
-int drvStopBoard(mod_itifg_cam_t *cam) {
+int itifgStopBoard(mod_itifg_cam_t *cam) {
 	if (close(cam->fd) == -1) {
 		logWarn("Unable to close framegrabber board fd: %s", strerror(errno));
 		return EXIT_FAILURE;
@@ -313,11 +313,11 @@ int main(int argc, char *argv[]) {
 	printf("Trying to do something with '%s' using '%s'\n", camera.device_name, camera.config_file);
 	
 	// init cam
-	if (drvInitBoard(&camera) != EXIT_SUCCESS)
+	if (itifgInitBoard(&camera) != EXIT_SUCCESS)
 		return EXIT_FAILURE;
 	
 	// init bufs
-	if (drvInitBufs(&buffer, &camera) != EXIT_SUCCESS)
+	if (itifgInitBufs(&buffer, &camera) != EXIT_SUCCESS)
 		return EXIT_FAILURE;
 	
 	// init display
@@ -366,7 +366,7 @@ int main(int argc, char *argv[]) {
 		if (result == -1)
 			printf("Select() returned no active FD's, error:%s\n", strerror(errno));
 		else if (result == 0)
-			printf("Timeout in drvGetImg().\n");	
+			printf("Timeout in itifgGetImg().\n");	
 		
 		printf("select: %d | ", result);
 		seeke = lseek(cam->fd, 0, SEEK_END);
@@ -430,7 +430,7 @@ int main(int argc, char *argv[]) {
     drvInitGrab(cam);
     for (i=0; i<500; i++) {
         
-        drvGetImg(cam, buf, NULL, NULL);
+        itifgGetImg(cam, buf, NULL, NULL);
         
         if ((i % 100) == 0) {
     		gettimeofday(&cur, NULL);
@@ -444,7 +444,7 @@ int main(int argc, char *argv[]) {
         }
         
     }
-    drvStopGrab(cam);
+    itifgStopGrab(cam);
     
 	
 	/*
@@ -465,7 +465,7 @@ int main(int argc, char *argv[]) {
 	 if (result == -1)
 	 printf("Select() returned no active FD's, error:%s\n", strerror(errno));
 	 else if (result == 0)
-	 printf("Timeout in drvGetImg().\n");	
+	 printf("Timeout in itifgGetImg().\n");	
 	 
 	 if (overcnt < 5)
 	 printf("frame: %d | select: %d | ", i, result);
@@ -539,7 +539,7 @@ int main(int argc, char *argv[]) {
 	 if (result == -1)
 	 printf("Select() returned no active FD's, error:%s\n", strerror(errno));
 	 else if (result == 0)
-	 printf("Timeout in drvGetImg().\n");	
+	 printf("Timeout in itifgGetImg().\n");	
 	 
 	 printf("select: %d | ", result);
 	 seeke = lseek(cam->fd, 0, SEEK_END);
@@ -571,7 +571,7 @@ int main(int argc, char *argv[]) {
 	 }
 	 
 	 printf("\n");
-	 drvStopGrab(&camera);
+	 itifgStopGrab(&camera);
 	 drvInitGrab(&camera);
 	 
 	 printf("\nseek_end 0 / buf->data = buf->map / seek_cur pagedsize...\n");
@@ -591,7 +591,7 @@ int main(int argc, char *argv[]) {
 	 if (result == -1)
 	 printf("Select() returned no active FD's, error:%s\n", strerror(errno));
 	 else if (result == 0)
-	 printf("Timeout in drvGetImg().\n");	
+	 printf("Timeout in itifgGetImg().\n");	
 	 
 	 //		printf("select: %d | ", result);
 	 seeke = lseek(cam->fd, 0, SEEK_END);
@@ -667,7 +667,7 @@ int main(int argc, char *argv[]) {
 	 }
 	 
 	 printf("\n");
-	 //	drvStopGrab(&camera);
+	 //	itifgStopGrab(&camera);
 	 //	drvInitGrab(&camera);
 	 
 	 //	printf("seek_end 0 / seek_cur <seek_end out> / buf->data = buf->map...\n");
@@ -684,7 +684,7 @@ int main(int argc, char *argv[]) {
 	 //		if (result == -1)
 	 //			printf("Select() returned no active FD's, error:%s\n", strerror(errno));
 	 //		else if (result == 0)
-	 //			printf("Timeout in drvGetImg().\n");	
+	 //			printf("Timeout in itifgGetImg().\n");	
 	 //		
 	 //		printf("select: %d | ", result);
 	 //		seeke = lseek(cam->fd, 0, SEEK_END);
@@ -716,7 +716,7 @@ int main(int argc, char *argv[]) {
 	 //	
 	 //	
 	 //	printf("\n");
-	 //	drvStopGrab(&camera);
+	 //	itifgStopGrab(&camera);
 	 //	drvInitGrab(&camera);
 	 //	printf("seek_end <seek_end out> / seek_cur pagedsize / buf->data = buf->map...\n");
 	 //	printf("****************************************\n");
@@ -734,7 +734,7 @@ int main(int argc, char *argv[]) {
 	 //		if (result == -1)
 	 //			printf("Select() returned no active FD's, error:%s\n", strerror(errno));
 	 //		else if (result == 0)
-	 //			printf("Timeout in drvGetImg().\n");	
+	 //			printf("Timeout in itifgGetImg().\n");	
 	 //		
 	 //		printf("select: %d | ", result);
 	 //		seeke = lseek(cam->fd, seekeo, SEEK_END);
@@ -767,7 +767,7 @@ int main(int argc, char *argv[]) {
 	 //		}
 	 //	}
 	 //
-	 //	drvStopGrab(&camera);
+	 //	itifgStopGrab(&camera);
 	 //	drvInitGrab(&camera);
 	 //	printf("\nseek_end 0 / seek_cur <disabled> / buf->data = buf->map...\n");
 	 //	printf("****************************************\n");
@@ -784,7 +784,7 @@ int main(int argc, char *argv[]) {
 	 //		if (result == -1)
 	 //			printf("Select() returned no active FD's, error:%s\n", strerror(errno));
 	 //		else if (result == 0)
-	 //			printf("Timeout in drvGetImg().\n");	
+	 //			printf("Timeout in itifgGetImg().\n");	
 	 //
 	 //		printf("select: %d | ", result);
 	 //		seeke = lseek(cam->fd, 0, SEEK_END);
@@ -817,7 +817,7 @@ int main(int argc, char *argv[]) {
 	 //	printf("\n");
 	 //	printf("cleaning up now\n");
 	 
-	 //drvStopGrab(&camera);
+	 //itifgStopGrab(&camera);
 	 //drvInitGrab(&camera);
 	 printf("\nseek_end 0 / seek_cur pagedsize / buf->data = buf->map... long run!\n");
 	 printf("****************************************\n");
@@ -836,7 +836,7 @@ int main(int argc, char *argv[]) {
 	 if (result == -1)
 	 printf("Select() returned no active FD's, error:%s\n", strerror(errno));
 	 else if (result == 0)
-	 printf("Timeout in drvGetImg().\n");	
+	 printf("Timeout in itifgGetImg().\n");	
 	 
 	 seeke = lseek(cam->fd, 0, SEEK_END);
 	 if (seeke == -1)
@@ -898,8 +898,9 @@ int main(int argc, char *argv[]) {
 	printf("cleaning up now\n");
 	
 	// cleanup
-	drvStopGrab(&camera);
-	drvStopBufs(&buffer, &camera);
+	itifgStopGrab(&camera);
+	itifgStopBufs(&buffer, &camera);
+	itifgStopBoard(&camera);
 	
 	// end
 	displayFinish(&disp);

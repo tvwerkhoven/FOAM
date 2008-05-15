@@ -82,7 +82,8 @@ typedef enum { //filter_t
 
 // These *must* be defined in a prime module
 int drvSetupHardware(control_t *ptc, aomode_t aomode, calmode_t calmode);
-int drvSetActuator(wfc_t *wfc);
+int drvSetActuator(control_t *ptc, int wfc);
+int drvGetImg(control_t *ptc, int wfs);
 
 // LIBRARIES //
 /*************/

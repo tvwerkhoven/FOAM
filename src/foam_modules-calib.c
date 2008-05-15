@@ -32,9 +32,10 @@
 
 #include "foam_modules-calib.h"
 
-#define DM_MAXVOLT 1	// these are normalized and should be converted to the right values by drvSetActuator()
-#define DM_MIDVOLT 0
-#define DM_MINVOLT -1
+// obsoleted by ptc->wfs[x].calrange[0] and calrange[1] for the calibration range
+//#define DM_MAXVOLT 1	// these are normalized and should be converted to the right values by drvSetActuator()
+//#define DM_MIDVOLT 0
+//#define DM_MINVOLT -1
 
 // TODO: document
 int modCalPinhole(control_t *ptc, int wfs, mod_sh_track_t *shtrack) {
@@ -259,8 +260,8 @@ int modCalWFC(control_t *ptc, int wfs, mod_sh_track_t *shtrack) {
 			for (k=0; k < shtrack->measurecount; k++) {
 
 				// we set the voltage and then set the actuators manually
-//				ptc->wfc[wfc].ctrl[j] = DM_MAXVOLT;
-				gsl_vector_float_set(ptc->wfc[wfc].ctrl, j, DM_MAXVOLT);
+				gsl_vector_float_set(ptc->wfc[wfc].ctrl, j, ptc->wfc[wfc].calrange[1]);
+//				gsl_vector_float_set(ptc->wfc[wfc].ctrl, j, DM_MAXVOLT);
 				
                 drvSetActuator(&(ptc->wfc[wfc]));
 				// run the open loop *once*, which will approx do the following:
@@ -278,7 +279,9 @@ int modCalWFC(control_t *ptc, int wfs, mod_sh_track_t *shtrack) {
 				}
 		
 //				ptc->wfc[wfc].ctrl[j] = DM_MINVOLT;
-				gsl_vector_float_set(ptc->wfc[wfc].ctrl, j, DM_MINVOLT);
+				
+//				gsl_vector_float_set(ptc->wfc[wfc].ctrl, j, DM_MINVOLT);
+				gsl_vector_float_set(ptc->wfc[wfc].ctrl, j, ptc->wfc[wfc].calrange[0]);				
                 drvSetActuator(&(ptc->wfc[wfc]));
 						
 				for (skip=0; skip< shtrack->skipframes +1; skip++) // skip some frames here
@@ -296,9 +299,11 @@ int modCalWFC(control_t *ptc, int wfs, mod_sh_track_t *shtrack) {
 			// store the measurements for actuator j (for all subapts) 
 			
 			
-			for (i=0; i<nsubap; i++) { 
-				gsl_matrix_float_set(infl, 2*i+0, j, (float) q0x[i]/(DM_MAXVOLT - DM_MINVOLT));
-				gsl_matrix_float_set(infl, 2*i+1, j, (float) q0y[i]/(DM_MAXVOLT - DM_MINVOLT));
+			for (i=0; i<nsubap; i++) {				
+				gsl_matrix_float_set(infl, 2*i+0, j, (float) q0x[i]/(ptc->wfc[wfc].calrange[1] - ptc->wfc[wfc].calrange[0]));
+				gsl_matrix_float_set(infl, 2*i+1, j, (float) q0y[i]/(ptc->wfc[wfc].calrange[1] - ptc->wfc[wfc].calrange[0]));
+//				gsl_matrix_float_set(infl, 2*i+0, j, (float) q0x[i]/(DM_MAXVOLT - DM_MINVOLT));
+//				gsl_matrix_float_set(infl, 2*i+1, j, (float) q0y[i]/(DM_MAXVOLT - DM_MINVOLT));
 //				fprintf(fp,"%.12g\n%.12g\n", (double) q0x[i]/(DM_MAXVOLT - DM_MINVOLT), (double) q0y[i]/(DM_MAXVOLT - DM_MINVOLT));
 			}
 	

@@ -831,3 +831,7 @@ void MMDarkFlatFullByte(wfs_t *wfs, mod_sh_track_t *shtrack) {
 }
 
 
+int drvGetImg(control_t *ptc, int wfs) {
+	// we're simulating and we don't have to do anything
+	return EXIT_SUCCESS;
+}

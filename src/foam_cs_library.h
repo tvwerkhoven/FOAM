@@ -147,7 +147,6 @@ typedef enum {
 	DATA_GSL_V_F		//!< ID for gsl_vector_float
 } foam_datat_t;
 
-
 /*!
  @brief Helper enum for ao scanning mode
  */
@@ -182,13 +181,22 @@ typedef struct {
  To do anything useful, FOAM must know what WFSs and WFCs you are using,
  and therefore you must fill in the (user) fields at the beginning.
  See dummy prime module for details.
+ 
+ ctrl holds the control signals for the actuators, which are normalized to
+ [-1,1] and must be converted to true signals by a driver module. Since a WFC
+ might have a bigger correction range than that can be measured by the wavefront
+ sensor (SH), calrange can be used to limit this range during calibration. I.e.
+ if you have a tip-tilt mirror which can correct more than the size of the image,
+ calibration will not work if jolting it from -1 to 1. Instead, calrange[0] and
+ calrange[1] are used to move the actuators.
  */
 typedef struct { // wfc_t
 	char *name;					//!< (user) name for the specific WFC
 	int nact;					//!< (user) number of actuators in this WFC
-	gsl_vector_float *ctrl;		//!< (foam) pointer to array of controls for the WFC (i.e. `voltages')
+	gsl_vector_float *ctrl;		//!< (foam) pointer to array of controls for the WFC, must be [-1,1] (i.e. `voltages')
 	gain_t gain;				//!< (user) gain used in calculating the new controls
 	wfctype_t type;				//!< (user) type of WFC we're dealing with (0 = TT, 1 = DM)
+	float calrange[2]			//!< (user) the range over which the calibration should be done (should be same datatype as ctrl)
     int id;                     //!< (user) a unique ID to identify the actuator
 } wfc_t;
 

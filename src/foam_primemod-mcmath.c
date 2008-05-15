@@ -121,6 +121,11 @@ int modInitModule(control_t *ptc, config_t *cs_config) {
 	
 	buffer.frames = 8;
 	
+	// init itifg
+	itifgInitBoard(&dalsacam);
+	itifgInitBufs(&buffer, &dalsacam);
+	
+	
 	// configure the daqboard
 	
 	daqboard.device = "daqBoard2k0";	// we use the first daqboard
@@ -131,6 +136,8 @@ int modInitModule(control_t *ptc, config_t *cs_config) {
 	daqboard.iop2conf[1] = 0;
 	daqboard.iop2conf[2] = 1;
 	daqboard.iop2conf[3] = 1;			// use digital IO ports for {out, out, in, in}
+	
+	drvInitDaq2k(&daqboard);
 	
 	// configure DM here
 	
@@ -173,8 +180,6 @@ int modInitModule(control_t *ptc, config_t *cs_config) {
 	cs_config->errfile = NULL;
 	cs_config->debugfile = NULL;
 
-	drvInitBoard(&dalsacam);
-	drvInitBufs(&buffer, &dalsacam);
 	
 	// update the pointer to the wfs image
 	ptc->wfs[0].image = buffer.data;
@@ -209,9 +214,11 @@ void modStopModule(control_t *ptc) {
 	displayFinish(&disp);
 #endif
 	
-	drvStopGrab(&dalsacam);
-	drvStopBufs(&buffer, &dalsacam);
-	drvStopBoard(&dalsacam);
+	itifgStopGrab(&dalsacam);
+	itifgStopBufs(&buffer, &dalsacam);
+	itifgStopBoard(&dalsacam);
+	
+	drvCloseDaq2k(&daqboard);
 }
 
 // OPEN LOOP ROUTINES //
@@ -220,13 +227,13 @@ void modStopModule(control_t *ptc) {
 int modOpenInit(control_t *ptc) {
 	
 	// start grabbing frames
-	return drvInitGrab(&dalsacam);
+	return itifgInitGrab(&dalsacam);
 }
 
 int modOpenLoop(control_t *ptc) {
 	static char title[64];
 	// get an image, without using a timeout
-	if (drvGetImg(&dalsacam, &buffer, NULL, &(ptc->wfs->image)) != EXIT_SUCCESS)
+	if (drvGetImg(ptc, 0)) != EXIT_SUCCESS)
 		return EXIT_FAILURE;
 	
 	
@@ -246,7 +253,7 @@ int modOpenLoop(control_t *ptc) {
 
 int modOpenFinish(control_t *ptc) {
 	// stop grabbing frames
-	return drvStopGrab(&dalsacam);
+	return itifgStopGrab(&dalsacam);
 }
 
 // CLOSED LOOP ROUTINES //
@@ -256,13 +263,13 @@ int modClosedInit(control_t *ptc) {
 	// set disp source to calib
 	disp.dispsrc = DISPSRC_CALIB;		
 	// start grabbing frames
-	return drvInitGrab(&dalsacam);
+	return itifgInitGrab(&dalsacam);
 }
 
 int modClosedLoop(control_t *ptc) {
 	static char title[64];
 	// get an image, without using a timeout
-	if (drvGetImg(&dalsacam, &buffer, NULL, &(ptc->wfs->image)) != EXIT_SUCCESS)
+	if (drvGetImg(ptc, 0)) != EXIT_SUCCESS)
 		return EXIT_FAILURE;
 	
 	
@@ -281,7 +288,7 @@ int modClosedLoop(control_t *ptc) {
 
 int modClosedFinish(control_t *ptc) {
 	// stop grabbing frames
-	return drvStopGrab(&dalsacam);
+	return itifgStopGrab(&dalsacam);
 }
 
 // MISC ROUTINES //
@@ -298,7 +305,7 @@ int modCalibrate(control_t *ptc) {
 	if (ptc->calmode == CAL_DARK) {
 		// take dark frames, and average
 		logInfo(0, "Starting darkfield calibration now");
-		if (drvInitGrab(&dalsacam) != EXIT_SUCCESS) 
+		if (itifgInitGrab(&dalsacam) != EXIT_SUCCESS) 
 			return EXIT_FAILURE;
 
 		// check if memory is allocated yet
@@ -307,7 +314,7 @@ int modCalibrate(control_t *ptc) {
 		}
 
 		MMAvgFramesByte(wfsinfo->darkim, &(ptc->wfs[0]), wfsinfo->fieldframes);
-		if (drvStopGrab(&dalsacam) != EXIT_SUCCESS)
+		if (itifgStopGrab(&dalsacam) != EXIT_SUCCESS)
 			return EXIT_FAILURE;
 		// saving image for later usage
 		fieldfd = fopen(wfsinfo->darkfile, "w+");	
@@ -331,14 +338,14 @@ int modCalibrate(control_t *ptc) {
 	else if (ptc->calmode == CAL_FLAT) {
 		logInfo(0, "Starting flatfield calibration now");
 		// take flat frames, and average
-		if (drvInitGrab(&dalsacam) != EXIT_SUCCESS) 
+		if (itifgInitGrab(&dalsacam) != EXIT_SUCCESS) 
 			return EXIT_FAILURE;
 		// check if memory is allocated yet
 		if (wfsinfo->flatim == NULL) {
 			wfsinfo->flatim = gsl_matrix_float_calloc(wfsinfo->res.x, wfsinfo->res.y);
 		}
 		MMAvgFramesByte(wfsinfo->flatim, &(ptc->wfs[0]), wfsinfo->fieldframes);
-		if (drvStopGrab(&dalsacam) != EXIT_SUCCESS)
+		if (itifgStopGrab(&dalsacam) != EXIT_SUCCESS)
 			return EXIT_FAILURE;
 		// saving image for later usage
 		fieldfd = fopen(wfsinfo->flatfile, "w+");	
@@ -419,13 +426,14 @@ int modCalibrate(control_t *ptc) {
 	else if (ptc->calmode == CAL_SUBAPSEL) {
 		logInfo(0, "Starting subaperture selection now");
 		// init grabbing
-		if (drvInitGrab(&dalsacam) != EXIT_SUCCESS) 
+		if (itifgInitGrab(&dalsacam) != EXIT_SUCCESS) 
 			return EXIT_FAILURE;
 		// get a single image
-		drvGetImg(&dalsacam, &buffer, NULL, &(wfsinfo->image));
+//		drvGetImg(&dalsacam, &buffer, NULL, &(wfsinfo->image));
+		drvGetImg(ptc, 0);
 		
 		// stop grabbing
-		if (drvStopGrab(&dalsacam) != EXIT_SUCCESS)
+		if (itifgStopGrab(&dalsacam) != EXIT_SUCCESS)
 			return EXIT_FAILURE;
 
 		uint8_t *tmpimg = (uint8_t *) wfsinfo->image;
@@ -751,15 +759,28 @@ shtrack.shsize.x, shtrack.shsize.y, shtrack.track.x, shtrack.track.y, ptc->wfs[0
 // SITE-SPECIFIC ROUTINES //
 /**************************/
 
-int drvSetActuator(wfc_t *wfc) {
-	if (wfc->type == 0) {			// Okotech DM
-		// use okodm routines here
-	}
-	else if (wfc == 1) {	// Tip-tilt mirror
-		// use daq routines here
-	}
+int drvGetImg(control_t *ptc, int wfs) {
+	// we're using an itifg driver, fetch an image to wfs 0
+	if (wfs == 0)
+		return itifgGetImg(&dalsacam, &buffer, NULL, &(ptc->wfs[0].image));
 	
-	return EXIT_SUCCESS;
+	return EXIT_FAILURE;
+}
+
+int drvSetActuator(control_t *ptc, int wfc) {
+	if (ptc->wfc[wfc].type == WFC_TT) {			// Tip-tilt
+		// use daq, scale [-1, 1] to 2^15--2^16 (which gives 0 to 10 volts
+		// as output). TT is on ports 0 and 1
+		// 32768 = 2^15, 16384 = 2^14, ([-1,1] + 1) * 16384 = [0,32768]
+		drvDaqSetDAC(&daqboard, 0, (int) 32768 + (gsl_vector_float_get(ptc->wfc[wfc].ctrl, 0)+1) * 16384);
+		drvDaqSetDAC(&daqboard, 1, (int) 32768 + (gsl_vector_float_get(ptc->wfc[wfc].ctrl, 1)+1) * 16384);
+		return EXIT_SUCCESS;
+	}
+/*	else if (ptc->wfc[wfc].type == WFC_DM) {	// DM
+		// use okodm
+	}
+*/	
+	return EXIT_FAILURE;
 }
 
 int drvSetupHardware(control_t *ptc, aomode_t aomode, calmode_t calmode) {
@@ -801,7 +822,8 @@ int MMAvgFramesByte(gsl_matrix_float *output, wfs_t *wfs, int rounds) {
 		if ((k % (rounds/10)) == 0 && k > 0)
        			logDebug(0 , "Frame %d", k);
 
-		drvGetImg(&dalsacam, &buffer, NULL, &(wfs->image));
+//		drvGetImg(&dalsacam, &buffer, NULL, &(wfs->image));
+		drvGetImg(ptc, 0);
 		imgsrc = (uint8_t *) wfs->image;
 		
 		for (i=0; i<wfs->res.y; i++) {
@@ -901,4 +923,3 @@ int MMDarkFlatFullByte(wfs_t *wfs, mod_sh_track_t *shtrack) {
 
 	return EXIT_SUCCESS;
 }
-
