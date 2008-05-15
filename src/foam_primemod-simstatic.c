@@ -435,7 +435,7 @@ set [prop] [val]:       set or query property values.\n\
 calibrate <mode>:       calibrate the ao system.\n\
    dark:                take a darkfield by averaging %d frames.\n\
    flat:                take a flatfield by averaging %d frames.\n\
-   gain:			    calc dark/gain to do actual corrections with.\n\
+   gain:                calc dark/gain to do actual corrections with.\n\
    selsubap:            select some subapertures.\
 ", ptc->wfs[0].fieldframes, ptc->wfs[0].fieldframes);
 			}

@@ -163,8 +163,8 @@ int modInitModule(control_t *ptc, config_t *cs_config) {
     // we have a CCD of WxH, with a lenslet array of WlxHl, such that
     // each lenslet occupies W/Wl x H/Hl pixels, and we use track.x x track.y
     // pixels to track the CoG or do correlation tracking.
-	shtrack.cells.x = 16;				// we're using a 16x16 lenslet array
-	shtrack.cells.y = 16;
+	shtrack.cells.x = 8;				// we're using a 16x16 lenslet array
+	shtrack.cells.y = 8;
 	shtrack.shsize.x = ptc->wfs[0].res.x/shtrack.cells.x;
 	shtrack.shsize.y = ptc->wfs[0].res.y/shtrack.cells.y;
 	shtrack.track.x = shtrack.shsize.x/2;   // tracker windows are half the size of the lenslet grid things
@@ -420,12 +420,14 @@ int modCalibrate(control_t *ptc) {
 		logInfo(0, "Taking dark and flat images to make convenient images to correct (dark/gain).");
 		
 		// get the average flat-dark value for all subapertures (but not the whole image)
-		float tmpavg;
+		float tmpavg, pix;
 		for (sn=0; sn < shtrack.nsubap; sn++) {
 			for (i=0; i< shtrack.track.y; i++) {
 				for (j=0; j< shtrack.track.x; j++) {
-					tmpavg += (gsl_matrix_float_get(wfsinfo->flatim, shtrack.subc[sn].y + i, shtrack.subc[sn].x + j) - \
+					pix = (gsl_matrix_float_get(wfsinfo->flatim, shtrack.subc[sn].y + i, shtrack.subc[sn].x + j) - \
 						gsl_matrix_float_get(wfsinfo->darkim, shtrack.subc[sn].y + i, shtrack.subc[sn].x + j));
+					if (pix < 0) pix = 0;
+					tmpavg += pix;
 				}
 			}
 		}
@@ -441,8 +443,8 @@ int modCalibrate(control_t *ptc) {
 					darktmp[i*shtrack.track.x + j] = \
 						(uint16_t) (256.0 * gsl_matrix_float_get(wfsinfo->darkim, shtrack.subc[sn].y + i, shtrack.subc[sn].x + j));
 					gaintmp[i*shtrack.track.x + j] = (uint16_t) (256.0 * tmpavg / \
-						(gsl_matrix_float_get(wfsinfo->flatim, shtrack.subc[sn].y + i, shtrack.subc[sn].x + j) - \
-						 gsl_matrix_float_get(wfsinfo->darkim, shtrack.subc[sn].y + i, shtrack.subc[sn].x + j)));
+						fmaxf((gsl_matrix_float_get(wfsinfo->flatim, shtrack.subc[sn].y + i, shtrack.subc[sn].x + j) - \
+						 gsl_matrix_float_get(wfsinfo->darkim, shtrack.subc[sn].y + i, shtrack.subc[sn].x + j)), 0));
 				}
 			}
 		}
@@ -519,7 +521,8 @@ int modMessage(control_t *ptc, const client_t *client, char *list[], const int c
 display <source>:       change the display source.\n\
    <sources:>\n\
    raw:                 direct images from the camera.\n\
-   calib:               dark/flat corrected images.\n\
+   cfull:               full dark/flat corrected images.\n\
+   cfast:               fast partial dark/flat corrected images.\n\
    dark:                show the darkfield being used.\n\
    flat:                show the flatfield being used.\n\
    <overlays:>\n\
@@ -555,7 +558,7 @@ set [prop] [val]:       set or query property values.\n\
 calibrate <mode>:       calibrate the ao system.\n\
    dark:                take a darkfield by averaging %d frames.\n\
    flat:                take a flatfield by averaging %d frames.\n\
-   darkgain:            calc dark/gain to do actual corrections with.\n\
+   gain:                calc dark/gain to do actual corrections with.\n\
    selsubap:            select some subapertures.\
 ", ptc->wfs[0].fieldframes, ptc->wfs[0].fieldframes);
 			}
@@ -581,8 +584,12 @@ calibrate <mode>:       calibrate the ao system (dark, flat, subapt, etc).\
 				tellClient(client->buf_ev, "200 OK DISPLAY RAW");
 				disp.dispsrc = DISPSRC_RAW;
 			}
-			else if (strncmp(list[1], "cal",3) == 0) {
+			else if (strncmp(list[1], "cfull",3) == 0) {
 				disp.dispsrc = DISPSRC_FULLCALIB;
+				tellClient(client->buf_ev, "200 OK DISPLAY CALIB");
+			}
+			else if (strncmp(list[1], "cfast",3) == 0) {
+				disp.dispsrc = DISPSRC_FASTCALIB;
 				tellClient(client->buf_ev, "200 OK DISPLAY CALIB");
 			}
 			else if (strncmp(list[1], "grid",3) == 0) {
@@ -716,6 +723,21 @@ samini:                 %.2f\n\
 shtrack.shsize.x, shtrack.shsize.y, shtrack.track.x, shtrack.track.y, ptc->wfs[0].res.x, ptc->wfs[0].res.y, shtrack.samxr, shtrack.samini);
 		}
 	}
+ 	else if (strncmp(list[0], "step",3) == 0) {
+		if (count > 2) {
+			tmpfloat = strtof(list[2], NULL);
+			if (strncmp(list[1], "x",3) == 0) {
+				shtrack.stepc.x = tmpfloat;
+				tellClient(client->buf_ev, "200 OK STEP X %+f", tmpfloat);
+			}
+			else if (strcmp(list[1], "y") == 0) {
+				shtrack.stepc.y = tmpfloat;
+				tellClient(client->buf_ev, "200 OK STEP Y %+f", tmpfloat);
+			}
+		else {
+			tellClient(client->buf_ev, "402 STEP REQUIRES PARAMS");
+		}
+	}	
  	else if (strncmp(list[0], "vid",3) == 0) {
 		if (count > 1) {
 			if (strncmp(list[1], "auto",3) == 0) {
@@ -772,6 +794,12 @@ shtrack.shsize.x, shtrack.shsize.y, shtrack.track.x, shtrack.track.y, ptc->wfs[0
 				tellClient(client->buf_ev, "200 OK FLATFIELDING NOW");
 				pthread_cond_signal(&mode_cond);
 			}
+			else if (strncmp(list[1], "gain",3) == 0) {
+				ptc->mode = AO_MODE_CAL;
+				ptc->calmode = CAL_DARKGAIN;
+				tellClient(client->buf_ev, "200 OK CALCULATING DARK/GAIN NOW");
+				pthread_cond_signal(&mode_cond);
+			}
 			else {
 				tellClient(client->buf_ev, "401 UNKNOWN CALIBRATION");
 			}
@@ -810,9 +838,11 @@ int drvGetImg(control_t *ptc, int wfs) {
 			}
 			
 		}
+		return EXIT_SUCCESS;
 	}
 #endif // FOAM_SIMHW
 	
+	// if we get here, the WFS is unknown
 	return EXIT_FAILURE;
 }
 
@@ -930,30 +960,30 @@ int MMDarkFlatFullByte(wfs_t *wfs, mod_sh_track_t *shtrack) {
 	// copy the image to corrim, while doing dark/flat fielding at the same time
 	float max[3], sum[3];
 	sum[0] = sum[1] = sum[2] = 0.0;
-	max[0] = imagesrc[i*wfs->res.x +j];
-	max[1] = gsl_matrix_float_get( wfs->darkim, i, j);
+	max[0] = imagesrc[0];
+	max[1] = gsl_matrix_float_get( wfs->darkim, 0, 0);
 	max[2] = max[0] - max[1];
 	for (i=0; i < wfs->res.y; i++) {
 		for (j=0; j < wfs->res.x; j++) {
 			gsl_matrix_float_set(wfs->corrim, i, j, \
-								 (((float) imagesrc[i*wfs->res.x +j]) - \
-								 gsl_matrix_float_get(wfs->darkim, i, j)) );
+								 fmaxf((((float) imagesrc[i*wfs->res.x +j]) - \
+								 gsl_matrix_float_get(wfs->darkim, i, j)), 0) );
 			sum[0] += imagesrc[i*wfs->res.x +j];
 			sum[1] += gsl_matrix_float_get(wfs->darkim, i, j);
 			sum[2] += gsl_matrix_float_get(wfs->corrim, i, j);
 			if ( imagesrc[i*wfs->res.x +j] > max[0])
 				max[0] = imagesrc[i*wfs->res.x +j];
-			if ( gsl_matrix_float_get(wfs->darkim, i, j))
+			if ( gsl_matrix_float_get(wfs->darkim, i, j)>max[1])
 				max[1] =  gsl_matrix_float_get(wfs->darkim, i, j);
-			if ( gsl_matrix_float_get(wfs->corrim, i, j))
+			if ( gsl_matrix_float_get(wfs->corrim, i, j)>max[2])
 				max[2] =  gsl_matrix_float_get(wfs->corrim, i, j);
 //								 (gsl_matrix_float_get(wfs->flatim, i, j) - \
 //								  gsl_matrix_float_get(wfs->darkim, i, j)));
 		}
 	}
-	printf("src: max %f, sum %f, avg %f\n", max[0], sum[0], sum[0]/(wfs->res.x*wfs->res.y));
-	printf("dark: max %f, sum %f, avg %f\n", max[1], sum[1], sum[1]/(wfs->res.x*wfs->res.y));
-	printf("corr: max %f, sum %f, avg %f\n", max[2], sum[2], sum[2]/(wfs->res.x*wfs->res.y));
+	logDebug(LOG_SOMETIMES, "src: max %f, sum %f, avg %f", max[0], sum[0], sum[0]/(wfs->res.x*wfs->res.y));
+	logDebug(LOG_SOMETIMES, "dark: max %f, sum %f, avg %f", max[1], sum[1], sum[1]/(wfs->res.x*wfs->res.y));
+	logDebug(LOG_SOMETIMES, "corr: max %f, sum %f, avg %f", max[2], sum[2], sum[2]/(wfs->res.x*wfs->res.y));
 	
 	// old code which only does subaperture correction (superseded by fast ASM code)
 	/*

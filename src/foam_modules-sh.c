@@ -396,7 +396,7 @@ int modCogTrack(void *image, foam_datat_t data, mod_sh_align_t align, mod_sh_tra
 			}
 		}*/
 		if (data == DATA_UINT8 && align == ALIGN_SUBAP) {		// data is stored in unsigned 8 bit ints
-			uint8_t *datapt = (uint8_t *) data;
+			uint8_t *datapt = (uint8_t *) image;
 			for (iy=0; iy<shtrack->track.y; iy++) { // sum all pixels in the tracker window
 				for (ix=0; ix<shtrack->track.x; ix++) {
 					fi = datapt[(shtrack->track.y*shtrack->track.x)*sn + (shtrack->track.y+iy)+ix];

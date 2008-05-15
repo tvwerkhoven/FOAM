@@ -367,11 +367,18 @@ int displayVecs(mod_sh_track_t *shtrack, mod_display_t *disp) {
 	//glColor3f(1.0, 1.0, 0.0);
 	//glColor3f(disp->col.r, disp->col.g, disp->col.b);
 	glBegin(GL_LINES);
+	sn = 0;
+	logDebug(LOG_SOMETIMES, "Drawing vectors: (%d,%d)-> (%d,%d)", \
+		shtrack->gridc[sn].x + (shtrack->shsize.x/2), shtrack->gridc[sn].y + (shtrack->shsize.y/2),  \
+		shtrack->subc[sn].x + (shtrack->shsize.x/2) + \
+		gsl_vector_float_get(shtrack->disp, sn*2+0),\
+		shtrack->subc[sn].y + (shtrack->shsize.y/2) + \
+		gsl_vector_float_get(shtrack->disp, sn*2+1));
 	for (sn=0; sn < shtrack->nsubap; sn++) {
 		glVertex2f(shtrack->gridc[sn].x + (shtrack->shsize.x/2), shtrack->gridc[sn].y + (shtrack->shsize.y/2));
-		glVertex2f(shtrack->gridc[sn].x + (shtrack->shsize.x/2) + \
+		glVertex2f(shtrack->subc[sn].x + (shtrack->track.x/2) + \
 		gsl_vector_float_get(shtrack->disp, sn*2+0),\
-		shtrack->gridc[sn].y + (shtrack->shsize.y/2) + \
+		shtrack->subc[sn].y + (shtrack->track.y/2) + \
 		gsl_vector_float_get(shtrack->disp, sn*2+1));
 	}
 	glEnd();

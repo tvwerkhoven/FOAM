@@ -552,6 +552,11 @@ void modeOpen() {
 }
 
 void modeClosed() {	
+	// for FPS tracking
+	struct timeval last, cur;
+	long lastframes, curframes;
+	gettimeofday(&last, NULL);
+	lastframes = ptc.frames;
 	logInfo(0, "Entering closed loop.");
 
 	if (ptc.wfs_count == 0) {						// we need wave front sensors
@@ -578,6 +583,15 @@ void modeClosed() {
 			return;
 		}							
 		ptc.frames++;								// increment the amount of frames parsed
+		if (ptc.frames % ptc.logfrac == 0) {
+			curframes = ptc.frames;
+			gettimeofday(&cur, NULL);
+			ptc.fps = (cur.tv_sec * 1000000 + cur.tv_usec)- (last.tv_sec*1000000 + last.tv_usec);	
+			ptc.fps /= 1000000;
+			ptc.fps = (curframes-lastframes)/ptc.fps;
+			last = cur;
+			lastframes = curframes;
+		}
 	}
 	
 	// Finish the open loop here
