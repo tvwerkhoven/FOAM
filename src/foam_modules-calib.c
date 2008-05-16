@@ -239,7 +239,7 @@ int calibWFC(control_t *ptc, int wfs, mod_sh_track_t *shtrack) {
 
 	logInfo(0, "WFS %d (%s) influence function successfully saved for in file %s", wfs, ptc->wfs[wfs].name, shtrack->influence);
 	
-	modSVDGSL(ptc, wfs, shtrack);
+	calibSVDGSL(ptc, wfs, shtrack);
 	
 	return EXIT_SUCCESS;
 }
@@ -345,11 +345,18 @@ int calibWFCChk(control_t *ptc, int wfs, mod_sh_track_t *shtrack) {
  	return EXIT_SUCCESS;
 }
 
-int modSVDGSL(control_t *ptc, int wfs, mod_sh_track_t *shtrack) {
+int calibSVDGSL(control_t *ptc, int wfs, mod_sh_track_t *shtrack) {
 	FILE *fd;
-	int i, j, nact=0, nsubap;
+	int i, j, nact=0, nsubap = shtrack->nsubap;
 	double tmp;
+	if (nsubap == 0) {
+		logWarn("Cannot do SVD if no subapertures are selected");
+		return EXIT_FAILURE;
+	}
+	for (i=0; i< ptc->wfc_count; i++)
+		nact += ptc->wfc[i].nact;
 	
+	logWarn("Doing SVD of influence function for %d subaps and %d actuators", nsubap, nact);
 	// temporary matrices to store stuff in
 	gsl_matrix *mat, *v;
 	gsl_vector *sing, *work, *testin, *testout;
@@ -359,7 +366,6 @@ int modSVDGSL(control_t *ptc, int wfs, mod_sh_track_t *shtrack) {
 	char *outfile;
 
 	// get total nr of subapertures for this WFS
-	nsubap = shtrack->nsubap;
 	
 	// allocating space for SVD:
 	mat = gsl_matrix_calloc(nsubap*2, nact);

@@ -591,7 +591,7 @@ int modCalcCtrl(control_t *ptc, mod_sh_track_t *shtrack, const int wfs, int nmod
 
 	// we multiply the disp vector with the wfsmodes matrix here,
 	// using the GSL link to a CBLAS in single precision (floats)
-    gsl_blas_sgemv (CblasTrans, 1.0, shtrack->wfsmodes, shtrack->disp, 0.0, work);
+	gsl_blas_sgemv (CblasTrans, 1.0, shtrack->wfsmodes, shtrack->disp, 0.0, work);
 
 	// we multiply the output vector from above with 'nmodes' singular
 	// values to get through the second stage of the SVD thing

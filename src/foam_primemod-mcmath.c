@@ -319,6 +319,8 @@ int modClosedLoop(control_t *ptc) {
 	// Track the CoG using the partial corrected frame
 	modCogTrack(ptc->wfs[0].corr, DATA_UINT8, ALIGN_SUBAP, &shtrack, NULL, NULL);
 	
+	// calculate the control signals
+	modCalcCtrl(ptc, &shtrack, 0, -1);
 	
 #ifdef FOAM_MCMATH_DISPLAY
     if (ptc->frames % ptc->logfrac == 0) {
@@ -757,7 +759,7 @@ shtrack.shsize.x, shtrack.shsize.y, shtrack.track.x, shtrack.track.y, ptc->wfs[0
 		}
 		else {
 tellClient(client->buf_ev, "200 OK STEP INFO\n\
-step (x,y):             (%+f, %+f)", shtrack.step.x, shtrack.step.y);	
+step (x,y):             (%+f, %+f)", shtrack.stepc.x, shtrack.stepc.y);	
 		}
 	}	
  	else if (strncmp(list[0], "vid",3) == 0) {
@@ -833,7 +835,7 @@ contrast:               %f", disp.brightness, disp.contrast);
 			}
 			else if (strncmp(list[1], "influence",3) == 0) {
 				ptc->mode = AO_MODE_CAL;
-				ptc->calmode = CAL_INFLUENCE;
+				ptc->calmode = CAL_INFL;
                 tellClient(client->buf_ev, "200 OK GETTING INFLUENCE FUNCTION");
 				pthread_cond_signal(&mode_cond);
 			}
@@ -986,7 +988,6 @@ int MMDarkFlatSubapByte(wfs_t *wfs, mod_sh_track_t *shtrack) {
 // Dark flat calibration
 int MMDarkFlatFullByte(wfs_t *wfs, mod_sh_track_t *shtrack) {
 	logDebug(LOG_SOMETIMES, "Slow full-frame darkflat correcting now");
-	int sn;
 	size_t i, j; // size_t because gsl wants this
 	uint8_t* imagesrc = (uint8_t*) wfs->image;
 	
@@ -1002,9 +1003,15 @@ int MMDarkFlatFullByte(wfs_t *wfs, mod_sh_track_t *shtrack) {
 	max[2] = max[0] - max[1];
 	for (i=0; i < wfs->res.y; i++) {
 		for (j=0; j < wfs->res.x; j++) {
-			gsl_matrix_float_set(wfs->corrim, i, j, \
-								 fmaxf((((float) imagesrc[i*wfs->res.x +j]) - \
-								 gsl_matrix_float_get(wfs->darkim, i, j)), 0) );
+			if ((gsl_matrix_float_get(wfs->flatim, i, j) - \
+				gsl_matrix_float_get(wfs->darkim, i, j)) == 0)
+				gsl_matrix_float_set(wfs->corrim, i, j, 0.0);
+			else 
+				gsl_matrix_float_set(wfs->corrim, i, j, \
+				 fmaxf((((float) imagesrc[i*wfs->res.x +j]) - \
+				 gsl_matrix_float_get(wfs->darkim, i, j)), 0)/ \
+				 (gsl_matrix_float_get(wfs->flatim, i, j) -\
+				 gsl_matrix_float_get(wfs->darkim, i, j)));
 			sum[0] += imagesrc[i*wfs->res.x +j];
 			sum[1] += gsl_matrix_float_get(wfs->darkim, i, j);
 			sum[2] += gsl_matrix_float_get(wfs->corrim, i, j);
