@@ -458,6 +458,45 @@ int modStorPNGSurf(char *filename, char *post, int seq, SDL_Surface *img) {
 	
 	return EXIT_SUCCESS;	
 }
+
+void imgGetStats(void *img, foam_datat_t data, coord_t size, float *stats) {
+	int i, j;
+	float min, max, sum=0, pix=0;
+	if (data == DATA_UINT8) {
+		uint8_t *imgc = (uint8_t *) img;
+		min = max = imgc[0];
+		for (i = 0; i < (size.x * size.y); i++) {
+			if (imgc[i] > min) max = imgc[i];
+			else if (imgc[i] < min) min = imgc[i];
+			sum += imgc[i];
+		}
+	}
+	else if (data == DATA_UINT16) {
+		uint16_t *imgc = (uint16_t *) img;
+		min = max = imgc[0];
+		for (i = 0; i < (size.x * size.y); i++) {
+			if (imgc[i] > min) max = imgc[i];
+			else if (imgc[i] < min) min = imgc[i];
+			sum += imgc[i];
+		}
+	}
+	else if (data == DATA_GSL_M_F) {
+		gsl_matrix_float *imgc = (gsl_matrix_float *) img;
+		min = max = gsl_matrix_float_get(imgc, 0, 0);
+		for (i = 0; i < size.y; i++) {
+			for (j = 0; j < size.x; j++) {
+				pix = gsl_matrix_float_get(imgc, i, j);
+				if (pix > min) max = pix;
+				else if (pix < min) min = pix;
+				sum += pix;
+			}
+		}
+	}
+	stats[0] = min;
+	stats[1] = max;
+	stats[2] = sum/(size.x * size.y);
+}
+
 	
 Uint32 getPixel(SDL_Surface *surface, int x, int y) {
     int bpp = surface->format->BytesPerPixel;
@@ -522,4 +561,8 @@ int main(int argc, char *argv[]) {
 	
 	return 0;
 }
+
+
+
+
 #endif
