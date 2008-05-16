@@ -350,6 +350,7 @@ int modCalibrate(control_t *ptc) {
 	wfs_t *wfsinfo = &(ptc->wfs[0]); // shortcut
 	dispsrc_t oldsrc = disp.dispsrc; // store the old display source here since we might just have to show dark or flatfields
 	int oldover = disp.dispover;	// store the old overlay here
+	aomode_t oldmode = ptc->mode;		// store old mode (we might want to switch back)
 
 	if (ptc->calmode == CAL_DARK) {
 		// take dark frames, and average

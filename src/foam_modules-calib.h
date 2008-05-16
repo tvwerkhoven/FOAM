@@ -25,65 +25,76 @@ extern int drvSetActuator(control_t *ptc, int wfc);
 /**************/
 
 /*!
-@brief Measure the WFC influence function and invert it.
+@brief Measure the WFC influence function and decompose it using SVD.
 
 This function measures the influence function for a single
 WFS for all WFCs and stores this in an influence matrix. After
 that, this matrix is inverted using SVD and the seperate matrices
 are stored in seperate files. These can later be read to memory
-and using these SVD'd matrices, the control vectors for all WFCs
-for a given WFS can be calculated.
+such that recalibration is not always necessary. Using this decomposition,
+the control vectors for all WFCs for a given WFS can be calculated.
+ 
+ This routine only makes sense for Shack-Hartmann wavefront sensors.
+ 
+ @param [in] *ptc Pointer to the AO configuration
+ @param [in] wfs The wfs to calibrate for
+ @param [in] *shtrack Pointer to a SH tracker configuration
+ @return EXIT_FAILURE upon failure, EXIT_SUCCESS otherwise 
 */
-int modCalWFC(control_t *ptc, int wfs, mod_sh_track_t *shtrack);
+int calibWFC(control_t *ptc, int wfs, mod_sh_track_t *shtrack);
 
 /*!
-@brief Checks whether modCalWFC has been performed.
+@brief Checks whether influence function calibration has been performed.
+ 
+ This routine tries to read the file that calibWFC() should have written it's
+ calibration to check whether this calibration has been performed.
+ 
+ @param [in] *ptc Pointer to the AO configuration
+ @param [in] wfs The wfs to calibrate for
+ @param [in] *shtrack Pointer to a SH tracker configuration
+ @return EXIT_FAILURE upon failure, EXIT_SUCCESS otherwise
 */
-int modCalWFCChk(control_t *ptc, int wfs, mod_sh_track_t *shtrack);
+int calibWFCChk(control_t *ptc, int wfs, mod_sh_track_t *shtrack);
 
 /*!
 @brief Measure the reference displacement and store it.
 
-This function measures the reference displacement when all WFC's
-are set to zero for a certain WFS. These coordinates are
-then stored and used as a reference coordinate when correcting
-the wavefront.
+ This function measures the reference displacement when all WFC's
+ are set to zero for a certain WFS. These coordinates are
+ then stored and used as a reference coordinate when correcting
+ the wavefront. Make sure you are sending a flat wavefront to the Shack
+ Hartmann wavefront sensor for this, i.e. by using a pinhole.
+ 
+ @param [in] *ptc Pointer to the AO configuration
+ @param [in] wfs The wfs to calibrate for
+ @param [in] *shtrack Pointer to a SH tracker configuration
+ @return EXIT_FAILURE upon failure, EXIT_SUCCESS otherwise
 */
-int modCalPinhole(control_t *ptc, int wfs, mod_sh_track_t *shtrack);
+int calibPinhole(control_t *ptc, int wfs, mod_sh_track_t *shtrack);
 
 /*!
-@brief Checks whether modCalPinhole has been performed.
+@brief Checks whether pinhole has been performed, and loads the calibration.
+ 
+ @param [in] *ptc Pointer to the AO configuration
+ @param [in] wfs The wfs to calibrate for
+ @param [in] *shtrack Pointer to a SH tracker configuration
+ @return EXIT_FAILURE upon failure, EXIT_SUCCESS otherwise 
 */
-
-int modCalPinholeChk(control_t *ptc, int wfs, mod_sh_track_t *shtrack);
+int calibPinholeChk(control_t *ptc, int wfs, mod_sh_track_t *shtrack);
 
 /*!
 @brief Used to SVD the influence matrix and store the result to file.
 
-This routine uses singular value decomposition as provided by GSL
-to calculate the inverse of the influence matrix. We need this
-inverse matrix to calculate the control vectors for the WFC's, given
-the displacements measured on a certain WFS.
+This routine uses singular value decomposition as provided by a GSL interface
+ to BLAS to calculate the inverse of the influence matrix. We need this
+ inverse matrix to calculate the control vectors for the WFC's, given
+ the displacements measured on a certain WFS.
+ 
+ @param [in] *ptc Pointer to the AO configuration
+ @param [in] wfs The wfs to calibrate for
+ @param [in] *shtrack Pointer to a SH tracker configuration
+ @return EXIT_FAILURE upon failure, EXIT_SUCCESS otherwise 
 */
-int modSVDGSL(control_t *ptc, int wfs, mod_sh_track_t *shtrack);
-
-/*!
-@brief Do a dark- and flat-field correction on image
-
-This routine takes image, dark and flat as input, 
-corrects dark- and flat-field on image, and stores the result in corr.
-This last image (matrix), is a gsl type such that we can lateron easily do
-stuff with it.
-@param [in] *image The image to be corrected
-@param [in] *dark The darkfield
-@param [in] *flat The flatfield
-@param [out] *corr The corrected image -- this should already be allocated with the right size
-*/
-int modCalDarkFlat(float *image, float *dark, float *flat, gsl_matrix_float *corr);
-	
-/*!
-@brief This function tests the linearity of the WFCs.
-*/
-//int modLinTest(control_t *ptc, int wfs);
+int calibSVDGSL(control_t *ptc, int wfs, mod_sh_track_t *shtrack);
 
 #endif

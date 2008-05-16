@@ -64,20 +64,23 @@
 static void resizeWindow(mod_display_t *disp) {
 	// Resize the opengl viewport to the new windowsize
 	glViewport(0, 0, (GLsizei) (disp->windowres.x), (GLsizei) (disp->windowres.y)); 
-	// Reset the coordinate system to the source image size
+	// Reset the projection matrix to identity
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
-	// This defines the coordinate system we're using, which is in the CCD-space so to say
+	// This defines the coordinate system we're using, which is just the CCD
+	// resolution. That makes it easy to track spots and draw subapertures
 	gluOrtho2D(0, disp->res.x, 0, disp->res.y);
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
-	// Set the pixelzooming
+	// Set the pixelzooming such that we fill our whole window with the pixels 
+	// that we have
 	glPixelZoom((GLfloat) disp->windowres.x/disp->res.x, (GLfloat) disp->windowres.y/disp->res.y);
 	glFlush();
 	SDL_GL_SwapBuffers();
 }
 
 static void drawRect(coord_t origin, coord_t size) {
+	// shortcut for drawing a rectangle
 	glBegin(GL_LINE_LOOP);
 	glVertex2f(origin.x			, origin.y			);
 	glVertex2f(origin.x + size.x, origin.y			);
@@ -364,18 +367,10 @@ int displayVecs(mod_sh_track_t *shtrack, mod_display_t *disp) {
 	// add half the grid size to get to the center, and then use the disp vector
 	// to draw the vector itself.
 	// color already set at init, unecessary if no change
-	//glColor3f(1.0, 1.0, 0.0);
-	//glColor3f(disp->col.r, disp->col.g, disp->col.b);
+
 	glBegin(GL_LINES);
-	sn = 0;
-	logDebug(LOG_SOMETIMES, "Drawing vectors: (%d,%d)-> (%d,%d)", \
-		shtrack->gridc[sn].x + (shtrack->shsize.x/2), shtrack->gridc[sn].y + (shtrack->shsize.y/2),  \
-		shtrack->subc[sn].x + (shtrack->shsize.x/2) + \
-		gsl_vector_float_get(shtrack->disp, sn*2+0),\
-		shtrack->subc[sn].y + (shtrack->shsize.y/2) + \
-		gsl_vector_float_get(shtrack->disp, sn*2+1));
 	for (sn=0; sn < shtrack->nsubap; sn++) {
-		glVertex2f(shtrack->gridc[sn].x + (shtrack->shsize.x/2), shtrack->gridc[sn].y + (shtrack->shsize.y/2));
+		glVertex2f((GLfloat) shtrack->gridc[sn].x + (shtrack->shsize.x/2), (GLfloat) shtrack->gridc[sn].y + (shtrack->shsize.y/2));
 		glVertex2f(shtrack->subc[sn].x + (shtrack->track.x/2) + \
 		gsl_vector_float_get(shtrack->disp, sn*2+0),\
 		shtrack->subc[sn].y + (shtrack->track.y/2) + \
@@ -388,10 +383,8 @@ int displayVecs(mod_sh_track_t *shtrack, mod_display_t *disp) {
 
 int displayGrid(coord_t gridres, mod_display_t *disp) {
 	int j;
+	// we draw the lenslet grid here
 	glBegin(GL_LINES);
-	// color already set at init, unecessary if no change
-	//glColor3f(disp->col.r, disp->col.g, disp->col.b);
-	//glColor3f(0.0, 1.0, 0.0);
 	for (j=1; j < gridres.x; j++) {
 		glVertex2f(j*disp->res.x/gridres.x, 0);
 		glVertex2f(j*disp->res.x/gridres.x, disp->res.y);
@@ -425,26 +418,17 @@ int displayDraw(wfs_t *wfsinfo, mod_display_t *disp) {
 			displayFinishDraw(disp);
 			return EXIT_FAILURE;
 		}
-		// !!!:tim:20080510 floats deprecated for the moment
-		//		else if (wfsinfo->bpp == 16) {
-		//			float *imgc = (float *) wfsinfo->image;
-		//			modDisplayImgFloat(imgc, disp);
-		//		}
 	}
 	else if (disp->dispsrc == DISPSRC_DARK) {
-	    //logDebug(LOG_NOFORMAT, "disp dark ");
 		displayGSLImg(wfsinfo->darkim, disp, 1);
 	}
 	else if (disp->dispsrc == DISPSRC_FLAT) {
-	    //logDebug(LOG_NOFORMAT, "disp flat ");
 		displayGSLImg(wfsinfo->flatim, disp, 1);
 	}
 	else if (disp->dispsrc == DISPSRC_FULLCALIB) {
-	    //logDebug(LOG_NOFORMAT, "disp calib ");
 		displayGSLImg(wfsinfo->corrim, disp, 1);
 	}
 	else if (disp->dispsrc == DISPSRC_FASTCALIB) {
-	    //logDebug(LOG_NOFORMAT, "disp calib ");
 		uint8_t *imgc = (uint8_t *) wfsinfo->corr;
 		displayImgByte(imgc, disp, shtrack);
 	}

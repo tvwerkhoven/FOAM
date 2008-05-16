@@ -40,32 +40,6 @@
 
 #include "foam_modules-img.h"
 
-//void logErr(const char *msg, ...) {
-//	va_list ap;
-//	va_start(ap, msg);
-//	vfprintf(stderr, msg, ap);
-//	fprintf(stderr, "\n");
-//}
-//void logWarn(const char *msg, ...) {
-//	va_list ap;
-//	va_start(ap, msg);
-//	vfprintf(stderr, msg, ap);
-//	fprintf(stderr, "\n");
-//}
-//void logInfo(int flg, const char *msg, ...) {
-//	va_list ap;
-//	va_start(ap, msg);
-//	vfprintf(stderr, msg, ap);
-//	fprintf(stderr, "\n");
-//}
-//void logDebug(int flg, const char *msg, ...) {
-//	va_list ap;
-//	va_start(ap, msg);
-//	vfprintf(stderr, msg, ap);
-//	fprintf(stderr, "\n");
-//}
-
-
 // ROUTINES //
 /************/
 

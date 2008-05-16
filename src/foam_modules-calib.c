@@ -7,92 +7,91 @@
 
 	\section Info
 	
-	The calibration works on any combination of WFC and WFS, and uses generic controls in the [-1,1] range. 
-	These controls must be translated to actual voltages by other routines in other modules. These must also
-	take care that the range [-1, 1] is linear. Currently calibration only works on SH WFS.
+	The calibration works on any combination of all WFCs and one WFS, and uses 
+	generic controls in the [-1,1] range. These controls must be translated to 
+	actual voltages by other routines in other modules. These must also take care 
+	that the range [-1, 1] is linear. This module only provides SH WFS calibration.
+ 
+	All WFC's are grouped together during calibration, and the influence function
+	for all actuators is measured per WFS. This is done because actual wavefront
+	correction is WFS driven: usually a camera runs at a certain speed and at
+	each new frame we want to give new control signals to the WFC's. This way we
+	can do that nicely. MCAO is not included in this analysis.
 	
 	\section Functions	
 	
 	The functions provided to the outside world are:
  
-	\li modCalPinhole() - Calibrate pinhole coordinates, used as a reference when correcting
-	\li modCalPinholeChk() - Checks whether pinhole calibration has been performed
-	\li modCalWFC() - Measures the WFC influence function and inverts this. This calibration is done per WFS for all WFC's.
-	\li modCalWFCChk() - Checks whether WFC calibration has been performed.
+	\li calibPinhole() - Calibrate pinhole coordinates, used as a reference when correcting
+	\li calibPinholeChk() - Checks whether pinhole calibration has been performed, and loads calibration data.
+	\li calibWFC() - Measures the WFC influence function and inverts this. This calibration is done per WFS for all WFC's.
+	\li calibWFCChk() - Checks whether WFC influence function calibration has been performed, and loads calibration data.
 
 	\section Dependencies
 	
-	This module depends on the shack-hartmann module (modules-sh), as most calibration is SH-specific.
+	This module depends on the shack-hartmann module (modules-sh), as the calibrations are SH-specific.
 
 	\section License
 	
 	This code is licensed under the GPL, version 2.
-			
 */
 
 #include "foam_modules-calib.h"
 
-// obsoleted by ptc->wfs[x].calrange[0] and calrange[1] for the calibration range
-//#define DM_MAXVOLT 1	// these are normalized and should be converted to the right values by drvSetActuator()
-//#define DM_MIDVOLT 0
-//#define DM_MINVOLT -1
-
-// TODO: document
-int modCalPinhole(control_t *ptc, int wfs, mod_sh_track_t *shtrack) {
+int calibPinhole(control_t *ptc, int wfs, mod_sh_track_t *shtrack) {
 	int i, j;
 	FILE *fd;
+	
+	if (shtrack->nsubap == 0) {
+		logWarn("Cannot calibrate reference coordinates if subapertures are not selected yet");
+		return EXIT_FAILURE;
+	}
+	
 
 	// set filterwheel to pinhole and set voltages to 180V
-	drvSetupHardware(ptc, ptc->mode, ptc->calmode);
+	if (drvSetupHardware(ptc, ptc->mode, ptc->calmode) != EXIT_SUCCESS) {
+		logWarn("Could not setup hardware for pinhole calibration");
+		return EXIT_FAILURE;
+	}
 	
-	// set control vector to zero (+-180 volt for an okotech DM)
-	for (i=0; i < ptc->wfc_count; i++)
-		for (j=0; j < ptc->wfc[i].nact; j++)
-			gsl_vector_float_set(ptc->wfc[i].ctrl, j , 0.0);
+	// set all actuators to the center
+	for (i=0; i < ptc->wfc_count; i++) {
+		gsl_vector_float_set_zero(ptc->wfc[i].ctrl);
+		drvSetActuator(ptc, i);
+	}
 		
-	// TvW, TODO, May 13, 2008, this may not be a very portable solution
-	// because we don't know what openInit and openLoop do. All we want
-	// is that the hardware is setup right and that we have a fresh image
-	// in our buffer. Solution: use drvSetupHardware and drvGetImg as 
-	// general routines that are further specified by the prime mod?
-	
-	// run open loop initialisation once
-	modOpenInit(ptc);
-	
-	// run open loop once to get an image
-	modOpenLoop(ptc);
-	
-	// stop the open loop
-	modOpenFinish(ptc);
+	// This is the only way I can think of now to reliably get new data in 
+	// our buffer. This requires that a modOpenInit, modOpenLoop and modOpenFinish
+	// pair at least does the following: start camera, get image, calculate 
+	// displacement, and does not modify the hardware in any way (TT, DM).
+	// This does not seem like a stringent requirement so I'm leaving it at this.
+	if (modOpenInit(ptc) != EXIT_SUCCESS || modOpenLoop(ptc) == EXIT_FAILURE ||
+		modOpenFinish(ptc) != EXIT_SUCCESS) {
+		logWarn("Could not run an open loop for pinhole calibration");
+		return EXIT_FAILURE;
+	}
 	
 	// collect displacement vectors and store as reference
 	logInfo(0, "Found following reference coordinates:");
 	for (j=0; j < shtrack->nsubap; j++) {
 		gsl_vector_float_set(shtrack->refc, 2*j+0, gsl_vector_float_get(shtrack->disp, 2*j+0)); // x
 		gsl_vector_float_set(shtrack->refc, 2*j+1, gsl_vector_float_get(shtrack->disp, 2*j+1)); // y
-		// gsl_vector_float_set(ptc->wfs[wfs].refc, 2*j+0, 7); // x
-		// gsl_vector_float_set(ptc->wfs[wfs].refc, 2*j+1, 7); // y
 				
 		logInfo(LOG_NOFORMAT, "(%f,%f) ", gsl_vector_float_get(shtrack->refc, 2*j+0), gsl_vector_float_get(shtrack->refc, 2*j+1));
-	}
-	// set the rest to zero
-	// for (j=ptc->wfs[wfs].nsubap; j < ptc->wfs[wfs].cells[0] * ptc->wfs[wfs].cells[1]; j++)
-	// 	fprintf(fp,"%f %f\n", (double) 0, (double) 0);
-	
+	}	
 	logInfo(LOG_NOFORMAT, "\n");
 	
 	// storing to file:
-	logInfo(0, "Storing reference coordinates to %s.", shtrack->pinhole);
 	fd = fopen(shtrack->pinhole, "w+");
-	if (!fd) logErr("Could not open file %s: %s", shtrack->pinhole, strerror(errno));
-	gsl_vector_float_fprintf(fd, shtrack->refc, "%.10f"); // TvW TODO: 10 digits enough? too much?
+	if (!fd) logWarn("Could not open file %s: %s", shtrack->pinhole, strerror(errno));
+	gsl_vector_float_fprintf(fd, shtrack->refc, "%.10f");
 	fclose(fd);
+	logInfo(0, "Successfully stored reference coordinates to %s.", shtrack->pinhole);
 	
 	return EXIT_SUCCESS;
 }
 
-int modCalPinholeChk(control_t *ptc, int wfs, mod_sh_track_t *shtrack) {
-	int nsubap = shtrack->nsubap;
+int calibPinholeChk(control_t *ptc, int wfs, mod_sh_track_t *shtrack) {
 	FILE *fd;
 	
 	fd = fopen(shtrack->pinhole, "r");
@@ -106,90 +105,7 @@ int modCalPinholeChk(control_t *ptc, int wfs, mod_sh_track_t *shtrack) {
 	return EXIT_SUCCESS;
 }
 
-
-// TODO: incomplete
-/*
-int modLinTest(control_t *ptc, int wfs) {
-	int i, j, k, wfc;			// some counters
-	int nsubap, nact;
-	int skip, skipframes=3;		// skip this amount of frames before measuring
-	int niter=50;				// number of measurements for linearity test
-	char *outfile;
-	float origvolt;
-	FILE *fp;
-
-
-	// get total nr of subapertures in the complete system
-	nsubap = ptc->wfs[wfs].nsubap;
-
-	// this stores some vectors :P
-	float q0x[nsubap], q0y[nsubap];
-	
-	// set filterwheel to pinhole
-	drvSetupHardware(ptc, ptc->mode, ptc->calmode);
-	
-	// run openInit once to read the sensors and get subapertures
-	modOpenInit(ptc);
-
-	// get total nr of actuators, set all actuators to zero (180 volt for an okotech DM)
-	for (i=0; i < ptc->wfc_count; i++) {
-		for (j=0; j < ptc->wfc[i].nact; j++) {
-			ptc->wfc[i].ctrl[j] = 0;
-		}
-//		nacttot += ptc->wfc[i].nact;
-	}
-
-	for (wfc=0; wfc < ptc->wfc_count; wfc++) { // loop over all wave front correctors 
-		nact = ptc->wfc[wfc].nact;
-		// write linearity test to file
-		asprintf(&outfile, "%s_wfs%d_wfc%d", FOAM_MODCALIB_LIN, wfs, wfc);
-		fp = fopen(outfile,"w+");
-		if (!fp) {
-			logWarn("Cannot open file %s for writing linearity test.", outfile);
-			return EXIT_FAILURE;
-		}
-		fprintf(fp,"3\n");
-		fprintf(fp,"%d\n%d\n%d\n", nact, niter, nsubap); // we have nact actuators (variables) and nsubap*2 measurements
-		
-		for (j=0; j<nact; j++) { // loop over all actuators and all subapts for (wfc,wfs)
-	
-			for (i=0; i<nsubap; i++) { // set averaging buffer to zero
-				q0x[i] = 0.0;
-				q0y[i] = 0.0;
-			}
-	
-			origvolt = ptc->wfc[wfc].ctrl[j];
-			
-			for (k=0; k<niter; k++) {	// split up the range DM_MAXVOLT - DM_MINVOLT in niter pieces
-				ptc->wfc[wfc].ctrl[j] = (k+1)/(niter) * (DM_MAXVOLT - DM_MINVOLT) + DM_MINVOLT;
-
-				drvSetActuator(&(ptc->wfc[wfc]));
-				
-				for (skip=0; skip<skipframes+1; skip++) // skip some frames here
-					modOpenLoop(ptc);
-				
-				// take the shifts and store those (wrt to reference shifts)
-	    		for (i=0;i<nsubap;i++) {
-					fprintf(fp,"%.12f\n%.12f\n", \
-						(ptc->wfs[wfs].disp[i][0] - ptc->wfs[wfs].refc[i][0]),
-						(ptc->wfs[wfs].disp[i][1] - ptc->wfs[wfs].refc[i][1]));
-				}
-			} // end iteration loop 
-			
-			ptc->wfc[wfc].ctrl[j] = origvolt;
-		} // end actuator loop
-		
-		fclose(fp);
-	} // end wfc loop
-	
-	logInfo(0, "Linearity test using WFS %d (%s) done, stored in file %s", wfs, ptc->wfs[wfs].name, FOAM_MODCALIB_LIN);
-	
-	return EXIT_SUCCESS;
-}
-*/
-
-// TODO: document
-int modCalWFC(control_t *ptc, int wfs, mod_sh_track_t *shtrack) {
+int calibWFC(control_t *ptc, int wfs, mod_sh_track_t *shtrack) {
 	int j, i, k, skip;
 	int nact=0, nacttot=0;			// total nr of acts for all WFCs
 	int nsubap=0; 		// nr of subapts for specific WFS
@@ -198,23 +114,25 @@ int modCalWFC(control_t *ptc, int wfs, mod_sh_track_t *shtrack) {
 	FILE *fd;
 	char *file;
 	gsl_matrix_float *infl;
+	
+	if (shtrack->nsubap == 0) {
+		logWarn("Cannot calibrate influence function if subapertures are not selected yet");
+		return EXIT_FAILURE;
+	}
 		
 	// run open loop initialisation once (to get subapertures etc)
-	modOpenInit(ptc);
+	// modOpenInit(ptc);
 	
+	/* This is not necessary
 	logDebug(0, "Checking pinhole calibration, file %s", shtrack->pinhole);
 	
-	if (modCalPinholeChk(ptc, wfs, shtrack) != EXIT_SUCCESS) {
+	if (calibPinholeChk(ptc, wfs, shtrack) != EXIT_SUCCESS) {
 		logWarn("WFC calibration failed, first perform pinhole calibration.");
 		return EXIT_FAILURE;
 	}
+	 */
 	
-	logDebug(0, "Starting WFC calibration");
-	
-	// TvW: set to zero, what does that do?
-	for (i=0; i < ptc->wfc_count; i++)
-		for (j=0; j < ptc->wfc[i].nact; j++)
-			gsl_vector_float_set(ptc->wfc[i].ctrl, j , 0.0);
+	logInfo(0, "Starting WFC influence function calibration for WFS %d", wfs);
 	
 	// delete SVD files:
 	asprintf(&file, "%s-singular", shtrack->influence);
@@ -224,28 +142,29 @@ int modCalWFC(control_t *ptc, int wfs, mod_sh_track_t *shtrack) {
 	asprintf(&file, "%s-dmmodes", shtrack->influence);
 	if (unlink(file) != 0) logWarn("Problem removing old SVD files: %s", strerror(errno));
 		
-	// set filterwheel to pinhole
+	// set hardware correctly for this calibration
 	drvSetupHardware(ptc, ptc->mode, ptc->calmode);
 		
 	// get total nr of actuators, set all actuators to zero (180 volt for an okotech DM)
 	for (i=0; i < ptc->wfc_count; i++) {
 		gsl_vector_float_set_zero(ptc->wfc[i].ctrl);
+		drvSetActuator(ptc, i);
 		nacttot += ptc->wfc[i].nact;
 	}
+	
+	// init the open loop, which starts the camera etc
+	modOpenInit(ptc);
 	
 	// total subapts for WFS
 	nsubap = shtrack->nsubap;
 	float q0x[nsubap], q0y[nsubap];
 
-	logDebug(0, "Allocating temporary matrix to store influence function (%d, %d x %d)", nsubap, nsubap*2, nact);
+	logDebug(0, "Allocating temporary matrix to store influence function (%d x %d)", nsubap*2, nact);
 	// this will store the influence matrix (which calculates displacements given actuator signals)
 	infl = gsl_matrix_float_calloc(nsubap*2, nacttot);
 				
 	logInfo(0, "Calibrating WFC's using %d actuators and WFS %d with %d subapts, storing in %s.", \
 		nacttot, wfs, nsubap, shtrack->influence);
-	// fp = fopen(ptc->wfs[wfs].influence,"w+");
-	// fprintf(fp,"3\n");								// 3 dimensions (nact, nsub, 2d-vectors)
-	// fprintf(fp,"%d\n%d\n%d\n", nact, nsubap, 2); 	// we have nact actuators (variables) and nsubap*2 measurements
 	
 	for (wfc=0; wfc < ptc->wfc_count; wfc++) { // loop over all wave front correctors 
 		nact = ptc->wfc[wfc].nact;
@@ -264,11 +183,10 @@ int modCalWFC(control_t *ptc, int wfs, mod_sh_track_t *shtrack) {
 
 				// we set the voltage and then set the actuators manually
 				gsl_vector_float_set(ptc->wfc[wfc].ctrl, j, ptc->wfc[wfc].calrange[1]);
-//				gsl_vector_float_set(ptc->wfc[wfc].ctrl, j, DM_MAXVOLT);
-				
                 drvSetActuator(ptc, wfs);
-				// run the open loop *once*, which will approx do the following:
-				// read sensor, apply some SH WF sensing, set actuators, 
+				
+				// run the open loop a few times, which will approx do the following:
+				// read sensor, apply some SH WF sensing
 		
 				for (skip=0; skip< shtrack->skipframes + 1; skip++) // skip some frames here
 					modOpenLoop(ptc);
@@ -277,13 +195,8 @@ int modCalWFC(control_t *ptc, int wfs, mod_sh_track_t *shtrack) {
 	    		for (i=0;i<nsubap;i++) { 	
 					q0x[i] += gsl_vector_float_get(shtrack->disp, 2*i+0) / (float) shtrack->measurecount; // x
 					q0y[i] += gsl_vector_float_get(shtrack->disp, 2*i+1) / (float) shtrack->measurecount; // y
-					// q0x[i] += (ptc->wfs[wfs].disp[i][0] - ptc->wfs[wfs].refc[i][0]) / (float) measurecount;
-					// q0y[i] += (ptc->wfs[wfs].disp[i][1] - ptc->wfs[wfs].refc[i][1]) / (float) measurecount;
 				}
 		
-//				ptc->wfc[wfc].ctrl[j] = DM_MINVOLT;
-				
-//				gsl_vector_float_set(ptc->wfc[wfc].ctrl, j, DM_MINVOLT);
 				gsl_vector_float_set(ptc->wfc[wfc].ctrl, j, ptc->wfc[wfc].calrange[0]);				
                 drvSetActuator(ptc, wfc);
 						
@@ -294,8 +207,6 @@ int modCalWFC(control_t *ptc, int wfs, mod_sh_track_t *shtrack) {
 	    		for (i=0;i<nsubap;i++) { 
 					q0x[i] -= gsl_vector_float_get(shtrack->disp, 2*i+0) / (float) shtrack->measurecount; // x
 					q0y[i] -= gsl_vector_float_get(shtrack->disp, 2*i+1) / (float) shtrack->measurecount; // y
-					// q0x[i] -= (ptc->wfs[wfs].disp[i][0] - ptc->wfs[wfs].refc[i][0]) / (float) measurecount;
-					// q0y[i] -= (ptc->wfs[wfs].disp[i][1] - ptc->wfs[wfs].refc[i][1]) / (float) measurecount;
 				}
 			} // end measurecount loop
 
@@ -305,52 +216,49 @@ int modCalWFC(control_t *ptc, int wfs, mod_sh_track_t *shtrack) {
 			for (i=0; i<nsubap; i++) {				
 				gsl_matrix_float_set(infl, 2*i+0, j, (float) q0x[i]/(ptc->wfc[wfc].calrange[1] - ptc->wfc[wfc].calrange[0]));
 				gsl_matrix_float_set(infl, 2*i+1, j, (float) q0y[i]/(ptc->wfc[wfc].calrange[1] - ptc->wfc[wfc].calrange[0]));
-//				gsl_matrix_float_set(infl, 2*i+0, j, (float) q0x[i]/(DM_MAXVOLT - DM_MINVOLT));
-//				gsl_matrix_float_set(infl, 2*i+1, j, (float) q0y[i]/(DM_MAXVOLT - DM_MINVOLT));
-//				fprintf(fp,"%.12g\n%.12g\n", (double) q0x[i]/(DM_MAXVOLT - DM_MINVOLT), (double) q0y[i]/(DM_MAXVOLT - DM_MINVOLT));
 			}
 	
-//			ptc->wfc[wfc].ctrl[j] = origvolt;
 			gsl_vector_float_set(ptc->wfc[wfc].ctrl, j, origvolt);
 		} // end loop over actuators
 	} // end loop over wfcs
-//	fclose(fp);
+	
+	// stop the open loop
+	modOpenFinish(ptc);
 	
 	fd = fopen(shtrack->influence, "w+");
-	if (!fd) logErr("Could not open file %s: %s", shtrack->pinhole, strerror(errno));
+	if (!fd) logErr("Could not open file %s: %s", shtrack->influence, strerror(errno));
 	gsl_matrix_float_fprintf(fd, infl, "%.10f");
 	fclose(fd);
 	
 	// save metadata too (nact, n measurements, nsubap);
 	asprintf(&file, "%s-meta", shtrack->influence);
 	fd = fopen(file, "w+");
-	if (!fd) logErr("Could not open file for saving metadata %s: %s", shtrack->pinhole, strerror(errno));
+	if (!fd) logErr("Could not open file for saving metadata %s: %s", file, strerror(errno));
 	fprintf(fd, "%d\n%d\n%d\n", nacttot, nsubap, 2*nsubap);
 	fclose(fd);
 
-	logInfo(0, "WFS %d (%s) influence function saved for in file %s", wfs, ptc->wfs[wfs].name, shtrack->influence);
+	logInfo(0, "WFS %d (%s) influence function successfully saved for in file %s", wfs, ptc->wfs[wfs].name, shtrack->influence);
 	
 	modSVDGSL(ptc, wfs, shtrack);
 	
 	return EXIT_SUCCESS;
 }
 
-// this will hold an offloading mechanism of some sort
-// !!!:tim:20080416 document
-int modOffloadTTDM() {
-	
-	return EXIT_SUCCESS;
-}
-
-int modCalWFCChk(control_t *ptc, int wfs, mod_sh_track_t *shtrack) {
+int calibWFCChk(control_t *ptc, int wfs, mod_sh_track_t *shtrack) {
 	int i, chknact, chksubap;
 	int nsubap = shtrack->nsubap, nacttot=0;
 	char *outfile;
 	FILE *fd;
 	
+	logInfo(0, "Checking if influence function calibration can be loaded from files");
 	// calculate total nr of act for all wfc
 	for (i=0; i< ptc->wfc_count; i++)
 		nacttot += ptc->wfc[i].nact;
+	
+	if (shtrack->nsubap == 0) {
+		logWarn("Cannot load influence function if subapertures are not selected yet");
+		return EXIT_FAILURE;
+	}
 	
 	// CHECK GEOMETRY //
 	////////////////////
@@ -366,7 +274,8 @@ int modCalWFCChk(control_t *ptc, int wfs, mod_sh_track_t *shtrack) {
 	}
 	if (chknact != nacttot || chksubap != nsubap) {
 		logWarn("Calibration appears to be old, please re-calibrate");
-		logDebug(0, "Calibration parameters do not match current system parameters: nact: %d vs %d, nsubap: %d vs %d", chknact, nacttot, chksubap, nsubap);
+		logWarn("Calibration parameters do not match current system parameters:");
+		logWarn("# act: file: %d current: %d, nsubap: file: %d current: %d", chknact, nacttot, chksubap, nsubap);
 		return EXIT_FAILURE;
 	}
 		
@@ -374,10 +283,10 @@ int modCalWFCChk(control_t *ptc, int wfs, mod_sh_track_t *shtrack) {
 	///////////////////
 	asprintf(&outfile, "%s-singular", shtrack->influence);
 	
-	// read vector from file (from modSVDGSL)
+	// read vector from file (should be made by calibSVDGSL)
 	fd = fopen(outfile, "r");
 	if (!fd) {
-		logWarn("Could not open file %s: %s", outfile, strerror(errno));
+		logWarn("Could not open singular values file %s: %s", outfile, strerror(errno));
 		return EXIT_FAILURE;
 	}
 	// We set up SVD data (wfsmodes, singular, dmmodes) per WFS, i.e.
@@ -398,7 +307,7 @@ int modCalWFCChk(control_t *ptc, int wfs, mod_sh_track_t *shtrack) {
 	////////////////////
 	asprintf(&outfile, "%s-wfsmodes", shtrack->influence);
 	
-	// read vector from file (from modSVDGSL)
+	// read vector from file (should be made by calibSVDGSL)
 	fd = fopen(outfile, "r");
 	if (!fd) {
 		logWarn("Could not open file %s: %s", outfile, strerror(errno));
@@ -413,10 +322,8 @@ int modCalWFCChk(control_t *ptc, int wfs, mod_sh_track_t *shtrack) {
 	gsl_matrix_float_fscanf(fd, shtrack->wfsmodes);
 	fclose(fd);
 	
-	
 	// CHECK DMMODES //
 	///////////////////
-
 	asprintf(&outfile, "%s-dmmodes", shtrack->influence);
 	
 	// read vector from file (from modSVDGSL)
@@ -434,26 +341,16 @@ int modCalWFCChk(control_t *ptc, int wfs, mod_sh_track_t *shtrack) {
 	gsl_matrix_float_fscanf(fd, shtrack->dmmodes);
 	fclose(fd);
 
+	logInfo(0, "Successfully read influence function calibration & decomposition into memory.");
  	return EXIT_SUCCESS;
-}
-
-int modCalDarkFlat(float *image, float *dark, float *flat, gsl_matrix_float *corr) {
-	// TODO: incomplete, no dark/flatfield correction yet.
-	// !!!:tim:20080506 only used by sim and simstatic, time to deprecate
-	unsigned int i, j;
-	for (i=0; i<corr->size1; i++)
-		for (j=0; j<corr->size2; j++)
-			// corr->data[i * corr->tda + j] = image[i*corr->size1 + j];
-			gsl_matrix_float_set(corr, i, j, image[i*corr->size1 + j]);
-			
-	
-	return EXIT_SUCCESS;
 }
 
 int modSVDGSL(control_t *ptc, int wfs, mod_sh_track_t *shtrack) {
 	FILE *fd;
 	int i, j, nact=0, nsubap;
 	double tmp;
+	
+	// temporary matrices to store stuff in
 	gsl_matrix *mat, *v;
 	gsl_vector *sing, *work, *testin, *testout;
 	gsl_matrix_float *matf;
@@ -461,12 +358,6 @@ int modSVDGSL(control_t *ptc, int wfs, mod_sh_track_t *shtrack) {
 	gsl_vector *testinrec, *testoutrec;
 	char *outfile;
 
-	// get total nr of actuators, set all actuators to zero (180 volt for an okotech DM)
-	for (i=0; i < ptc->wfc_count; i++) {
-		gsl_vector_float_set_zero(ptc->wfc[i].ctrl);
-		nact += ptc->wfc[i].nact;
-	}
-	
 	// get total nr of subapertures for this WFS
 	nsubap = shtrack->nsubap;
 	
@@ -494,7 +385,7 @@ int modSVDGSL(control_t *ptc, int wfs, mod_sh_track_t *shtrack) {
 		gsl_vector_float_set(testinf, j, tmp);
 	}
 	
-	// read matrix from file (from modCalWFC)
+	// read influence matrix from file (from calibWFC)
 	fd = fopen(shtrack->influence, "r");
 	if (!fd) {
 		logWarn("Could not open file %s: %s", shtrack->influence, strerror(errno));
@@ -544,7 +435,7 @@ int modSVDGSL(control_t *ptc, int wfs, mod_sh_track_t *shtrack) {
 	fclose(fd);
 
 	logDebug(0, "Re-reading stored matrices and vector into memory");
-	if (modCalWFCChk(ptc, wfs, shtrack) != EXIT_SUCCESS) {
+	if (calibWFCChk(ptc, wfs, shtrack) != EXIT_SUCCESS) {
 		logWarn("Re-reading stored SVD files failed.");
 		return EXIT_FAILURE;
 	}
