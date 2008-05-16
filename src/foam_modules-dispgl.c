@@ -7,15 +7,16 @@
  
  \section Info
  This module can be used to display data on a screen which is rather useful when 
- doing AO. Typical usage would start by initializing one or more mod_display_t 
- structs, and then pass each of these to displayInit(). This will give a blank 
+ doing AO. Typical usage would start by initializing a mod_display_t 
+ struct, and then pass this to displayInit(). This will give a blank 
  screen which can be used later on.
  
  Fortunately, even northbridge-integrated video chips have hardware accelartion nowadays so 
- this constraint shouldn't be too bad. If OpenGL is not an option, use the display module instead.
+ this constraint shouldn't be too bad. If OpenGL is not an option, use the dissdl module instead.
  
- To actually display stuff, call displayDraw() whenever you want. This module is 
- probably thread safe, so you can draw from different threads if you want. 
+ To actually display stuff, call displayDraw() whenever you want. This function
+ takes the configuration from the mod_display_t struct and displays the relevant
+ things.
  
  Cleaning up should be done by calling displayFinish() at the end. Furthermore, 
  some lower level routines are also available, but are probably not necessary 
@@ -26,8 +27,8 @@
  
  The functions provided to the outside world are:
  \li displayInit() - Initialize this module (setup SDL, OpenGL etc)
- \li displayDraw() - Actually draw stuff on the display. OpenGL is nonblocking, so this can be fast
- \li displayEvent() - Process events that might occur (not configurable yet)
+ \li displayDraw() - Actually draw stuff on the display. OpenGL is nonblocking, so this can be done fast
+ \li displayEvent() - Process events that might occur (not configurable, only handles resize)
  \li displayFinish() - Clean up the module
  
  Some lower level routines include:
@@ -38,7 +39,6 @@
  \li displayGrid() - Display a (square) grid showing the lenslet array (SH)
  \li displaySubapts() - Displays the current location of the subaperture tracking windows (SH)
  \li displayVecs() - Draw vectors between the center of the grid and the center of the tracker window (SH)
- 
  
  The functions with (SH) appendices are Shack-Hartmann specific routines and are 
  only available if this module is compiled with FOAM_MODULES_DISLAY_SHSUPPORT.
@@ -107,12 +107,13 @@ void displayFinishDraw(mod_display_t *disp) {
 }
 
 int displayInit(mod_display_t *disp) {
-	
+	// init SDL video only
     if (SDL_Init(SDL_INIT_VIDEO) == -1) {
 		logWarn("Could not initialize SDL: %s", SDL_GetError());
 		return EXIT_FAILURE;
 	}
 	
+	// get some info on the system, like bpp
 	disp->info = SDL_GetVideoInfo( );
 	
 	if (!disp->info) {
@@ -129,14 +130,18 @@ int displayInit(mod_display_t *disp) {
     SDL_GL_SetAttribute( SDL_GL_DEPTH_SIZE, 8 );
     SDL_GL_SetAttribute( SDL_GL_DOUBLEBUFFER, 1 );
 	
+	// make sure we run this at exit to clean up
 	atexit(SDL_Quit);
 	
+	// set the caption, and do not set the icon (what's that anyway)
 	SDL_WM_SetCaption(disp->caption, 0);
 	
-	// init the windowres coordinates to the ccd resolution
+	// init the windowres coordinates to the ccd resolution, we display
+	// the image exactly as it comes from the ccd, pixel by pixel
 	disp->windowres.x = disp->res.x;
 	disp->windowres.y = disp->res.y;
-	// flags should be like:
+	
+	// set some flags
 	disp->flags = SDL_OPENGL | SDL_RESIZABLE;
 	disp->screen = SDL_SetVideoMode(disp->windowres.x, disp->windowres.y, disp->bpp, disp->flags);
 	
@@ -145,28 +150,22 @@ int displayInit(mod_display_t *disp) {
 		return EXIT_FAILURE;
 	}
 
+	// set the clearing color to black
 	glClearColor(0.0, 0.0, 0.0, 0.0);
 	glClearDepth(1.0f );
-	// set the colors for the overlays (all lines etc will be drawn with this color from here on, only set once)
 	
-//	Unecessary, col.[r|g|b] is uint8_t
-//	if (disp->col.r > 255 || disp->col.r < 0 || \
-//		disp->col.g > 255 || disp->col.g < 0 || \
-//		disp->col.b > 255 || disp->col.b < 0) {
-//		logWarn("Warning, color range invalid, please give RGB values between 0 and 255, defaulting to white (255,255,255)");
-//		disp->col.r = disp->col.g = disp->col.b = 255;
-//	}
-
+	// set the colors for the overlays (all lines etc will be drawn with this color from here on, only set once)
 	glColor3ub(disp->col.r, disp->col.g, disp->col.b);
 
-
+	// set the initial coordinate system, (0,0) is in the lower left corner,
+	// (res.x, res.y) is the upper right corner (normal coorindate system, maybe
+	// less normal for video though).
 	glViewport( 0, 0, ( GLsizei )disp->windowres.x, ( GLsizei )disp->windowres.y );
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
 	gluOrtho2D(0, disp->res.x, 0, disp->res.y);
 	glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
-	
 	
 	return EXIT_SUCCESS;
 }
@@ -182,7 +181,11 @@ int displayImgByte(uint8_t *img, mod_display_t *disp, mod_sh_track_t *shtrack) {
 int displayImgByte(uint8_t *img, mod_display_t *disp) {
 #endif
 	// contrasting is done like this:
-	// We're using an 8 bit camera (at least that's the assumption :P)
+	
+	// Short: White is given by 255, black by 0. An image that uses the whole
+	// [0, 255] range is displayed over the whole dynamics range.
+
+	// Longer: We're using an 8 bit camera (at least that's the assumption :P)
 	// which gives pixel values of [0,255]. Since ao3.c used this, we also
 	// use this, and an image is diplayed over the whole intensity range
 	// if the scaled values range from 0 to 255. Consider a darkfield image
@@ -192,12 +195,12 @@ int displayImgByte(uint8_t *img, mod_display_t *disp) {
 	// and contrast by 255 so that the image is scaled between 0 and 1
 	// (again, avg intensity 5, b=0, c=10 gives scaled avg 5*(10/255))
 	int i, pixels;
-	float min, max;
+	uint8_t min, max;
 	if (disp->autocontrast == 1) {
 		// if autocontrast is set to one, we calculate the min and max
 		// values once, and use to calculate brightness and contrast
 		// which are then used to scale the intensity from 0 to 255
-		min = max = (float) img[0];
+		min = max = img[0];
 
 		// if we're displaying a raw img, we have all pixels 
 		// otherwise we just have track.x*.y * nsubap pixels,
@@ -211,18 +214,17 @@ int displayImgByte(uint8_t *img, mod_display_t *disp) {
 #endif
 
 		for (i=0; i<pixels; i++) {
-			if (img[i] > max) max = (float) img[i];
-			else if (img[i] < min) min = (float) img[i];
+			if (img[i] > max) max = img[i];
+			else if (img[i] < min) min = img[i];
 		}
 		disp->brightness = -min;
-		disp->contrast = 255.0/(max-min);
+		disp->contrast = 255.0/((float)max-min);
 		disp->autocontrast = 0;
 		logInfo(0, "Autocontrast found min: %f, max: %f, giving brightness: %d, contrast: %f", \
 			min, max, disp->brightness, disp->contrast);
 	}
 	// using the brightness and contrast values (which should
-	// scale the image in the [0,255] range), we do not scale here 
-	// because this is a byte image.
+	// scale the image in the [0,255] range)
 	glPixelTransferf(GL_RED_SCALE, (GLfloat) disp->contrast);
 	glPixelTransferf(GL_GREEN_SCALE, (GLfloat) disp->contrast);
 	glPixelTransferf(GL_BLUE_SCALE, (GLfloat) disp->contrast);
@@ -235,23 +237,18 @@ int displayImgByte(uint8_t *img, mod_display_t *disp) {
 #ifdef FOAM_MODULES_DISLAY_SHSUPPORT
 	else if (disp->dispsrc == DISPSRC_FASTCALIB) {
 		float f[4];
-		//glGetFloatv(GL_CURRENT_RASTER_POSITION, f);
-		//logDebug(0, "Drawing subapts, first at (%d, %d), rast at: (%.2f, %.2f, %.2f, %.2f)", shtrack->subc[0].x, shtrack->subc[0].y, f[0], f[1], f[2], f[3]);
 		for (i=0; i<shtrack->nsubap; i++) {
 			// we loop over all subapts, and display them one by
 			// one at coordinates subc[i].x, .y with size
 			// (track.x, .y). Rasterposition (re)sets the coor-
 			// dinates where pixels are drawn.
 			glRasterPos2i(shtrack->subc[i].x, shtrack->subc[i].y);
-			glDrawPixels((GLsizei) shtrack->track.x, (GLsizei) shtrack->track.y, GL_LUMINANCE, GL_UNSIGNED_BYTE, (const GLvoid *) img);
+			glDrawPixels((GLsizei) shtrack->track.x, (GLsizei) shtrack->track.y, GL_LUMINANCE, GL_UNSIGNED_BYTE, (const GLvoid *) (img + i*(shtrack->track.x+shtrack->track.y)));
 		}
 		// reset raster position
 		glRasterPos2i(0, 0);
-		//glGetFloatv(GL_CURRENT_RASTER_POSITION, f);
-		//logDebug(0, "Rast at: (%.2f, %.2f, %.2f, %.2f)", f[0], f[1], f[2], f[3]);
 	}
 #endif
-		pixels = shtrack->nsubap * shtrack->track.x * shtrack->track.y;
 	return EXIT_SUCCESS;
 }
 
@@ -286,6 +283,10 @@ int displayGSLImg(gsl_matrix_float *img, mod_display_t *disp, int doscale) {
 		logInfo(0, "Autocontrast found min: %f, max: %f, giving brightness: %d, contrast: %f", \
 			min, max, disp->brightness, disp->contrast);
 	}
+	// We divide the contrast we find by 255 here, because if we're displaying
+	// a float image (i.e. data stored in floats), OpenGL wants them to be 
+	// in the [0,1] range. Dividing the scale and brightness by 255.0 does this 
+	// trick.
 	glPixelTransferf(GL_RED_SCALE, (GLfloat) disp->contrast/255.0);
 	glPixelTransferf(GL_GREEN_SCALE, (GLfloat) disp->contrast/255.0);
 	glPixelTransferf(GL_BLUE_SCALE, (GLfloat) disp->contrast/255.0);
@@ -304,28 +305,29 @@ void displaySDLEvents(mod_display_t *disp) {
 	{
 		switch (event.type) 
 		{
-			case SDL_MOUSEBUTTONDOWN:
+			//case SDL_MOUSEBUTTONDOWN:
 				//fprintf(stderr, "mouse at: (%d, %d)\n", event.button.x, event.button.y);
-				break;
-			case SDL_KEYUP:
+				//break;
+			//case SDL_KEYUP:
 				// If escape is pressed, return (and thus, quit)
 				//if (event.key.keysym.sym == SDLK_ESCAPE)
 					//stopFoam();
-				break;
+				//break;
 			case SDL_VIDEORESIZE:
 				logDebug(0, "Resizing window to %d,%d\n", event.resize.w, event.resize.h);
 				
-				// update window information in the struct
+				// update window information in the struct, our window changed
+				// size
 				disp->windowres.x = event.resize.w;
 				disp->windowres.y = event.resize.h;
 				// Get new SDL video mode
 				disp->screen = SDL_SetVideoMode( event.resize.w, event.resize.h, disp->bpp, disp->flags);
-				// Do the actual (opengl) resizing)
+				// Do the actual (opengl) resizing
 				resizeWindow(disp);
 				
 				break;
-			case SDL_QUIT:
-					return;
+			//case SDL_QUIT:
+				//return;
 		}
 	}
 }
@@ -333,7 +335,7 @@ void displaySDLEvents(mod_display_t *disp) {
 
 int displaySubapts(mod_sh_track_t *shtrack, mod_display_t *disp) {
 	if (shtrack->nsubap == 0)
-		return EXIT_SUCCESS;				// if there's nothing to draw, don't draw (shouldn't happen)
+		return EXIT_SUCCESS; // if there's nothing to draw, don't draw (shouldn't happen)
     
 	int sn=0;
     
@@ -406,6 +408,8 @@ int displayDraw(wfs_t *wfsinfo, mod_display_t *disp, mod_sh_track_t *shtrack) {
 #else
 int displayDraw(wfs_t *wfsinfo, mod_display_t *disp) {
 #endif
+	// this function does all the drawing as configured in the mod_display_t
+	// by the user.
 	
 	displayBeginDraw(disp);
 	

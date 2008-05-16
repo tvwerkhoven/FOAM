@@ -276,8 +276,8 @@ int modOpenLoop(control_t *ptc) {
     if (ptc->frames % ptc->logfrac == 0) {
 		displayDraw((&ptc->wfs[0]), &disp, &shtrack);
 		displaySDLEvents(&disp);
-		logInfo(0, "Current framerate: %.2f FPS", ptc->fps);
-		snprintf(title, 64, "%s (O) %.2f FPS", disp.caption, ptc->fps);
+		//logInfo(0, "Current framerate: %.2f FPS", ptc->fps);
+		snprintf(title, 64, "%s (O) %.0f FPS", disp.caption, ptc->fps);
 		SDL_WM_SetCaption(title, 0);
     }
 #endif
@@ -323,8 +323,8 @@ int modClosedLoop(control_t *ptc) {
 #ifdef FOAM_MCMATH_DISPLAY
     if (ptc->frames % ptc->logfrac == 0) {
 		displayDraw((&ptc->wfs[0]), &disp, &shtrack);
-		logInfo(0, "Current framerate: %.2f FPS", ptc->fps);
-		snprintf(title, 64, "%s (C) %.2f FPS", disp.caption, ptc->fps);
+		//logInfo(0, "Current framerate: %.2f FPS", ptc->fps);
+		snprintf(title, 64, "%s (C) %.0f FPS", disp.caption, ptc->fps);
 		SDL_WM_SetCaption(title, 0);
     }
 #endif

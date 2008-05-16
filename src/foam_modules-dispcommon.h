@@ -30,9 +30,9 @@
     #include <GL/glx.h>
     #include <GL/glxext.h>
     //#define glXGetProcAddress(x) (*glXGetProcAddressARB)((const GLubyte*)x)
-#endif
+#endif //__APPLE__
 
-#endif
+#endif //FOAM_MODULES_DISPLAY_OPENGL
 
 
 // DATATYPES //
@@ -45,8 +45,8 @@ typedef enum {
     DISPSRC_RAW,       //!< Display the raw uncorrect image from the camera
     DISPSRC_FULLCALIB,     //!< Display the full dark/flat field corrected image
     DISPSRC_FASTCALIB,     //!< Display the fast (partially) dark/flat field corrected image
-    DISPSRC_DARK,      //!< Display the darkfield used (probably rarely used)
-    DISPSRC_FLAT       //!< Display the flatfield used (probably rarely used)
+    DISPSRC_DARK,      //!< Display the darkfield used (used during calibration)
+    DISPSRC_FLAT       //!< Display the flatfield used (used during calibration)
 } dispsrc_t;
 
 /*!
@@ -68,35 +68,39 @@ typedef struct {
 /*!
  @brief This struct stores some properties on how to handle the displaying.
  
- Basically a wrapper for thins like resolution, SDL_Surface pointer, captions etc.
+ Basically a wrapper for things like resolution, SDL_Surface pointer, captions etc.
  Also lets the user define whether or not to do brightness/contrast themselves.
- If autocontrast = 1, the drawing routines in this module make sure that the whole
- displayscale is used (i.e. pixel intensities from 0 to 255 typically). If set to
- 0, the user can control this by changing contrast and brightness. The pixel values
- will then be scaled as (<raw intensity> - brightness) * contrast.
+ 
+ If autocontrast = 1, the drawing routines in this module analyse the next image
+ to be displayed and configure the brightness and constrast in such a way it is
+ displayed over the whole dynamic range (i.e. pixel intensities from 0 to 255 typically).
+ The module will reset autocontrast to 0 and keep using the values found above.
+ The user can also manually control this by changing contrast and brightness. 
+ The pixel values will then be scaled as (<raw intensity> - brightness) * contrast.
+ 
  */
 typedef struct {
-	SDL_Surface *screen;		//!< (mod) SDL_Surface to use
-	const SDL_VideoInfo* info;	//!< (mod) VideoInfo pointer to use (OpenGL, read only)	
-	int bpp;					//!< (mod) The bpp of the display (not the source!)	
+	SDL_Surface *screen;		//!< (foam) SDL_Surface to use
+	const SDL_VideoInfo* info;	//!< (foam) VideoInfo pointer to use (OpenGL, read only)	
+	int bpp;					//!< (foam) The bpp of the display (not the source!)	
 
-	char *caption;				//!< (user) Caption for the SDL window
+	char *caption;				//!< (user) Caption prefix for the SDL window
 	coord_t res;				//!< (user) Resolution of the source image (i.e. ccd resolution)
-	coord_t windowres;			//!< (mod) Resolution for the window (might be altered at runtime)
+	coord_t windowres;			//!< (foam) Resolution for the window (might be altered at runtime)
     dispsrc_t dispsrc;          //!< (user) The display source, see possibilities at dispsrc_t
     int dispover;				//!< (user) The overlays to display, see DISPOVERLAY_* defines
     rgbcolor_t col;				//!< (user) An RGB color triplet to use for display overlays (i.e. grid, subapts etc)
-    int autocontrast;			//!< (user/runtime) 1 = foam handles contrast, 0 = user handles contrast
-    float contrast;				//!< (user) if autocontrast=0, use this to scale the pixel intensities
-    int brightness;				//!< (user) if autocontrast=0, use this to shift the pixel intensities
-	Uint32 flags;				//!< (mod) Flags to use with SDL_SetVideoMode
+    int autocontrast;			//!< (user/runtime) 1 = foam sets contrast, 0 = user handles contrast
+    float contrast;				//!< (user) Use this to scale the pixel intensities
+    int brightness;				//!< (user) Use this to shift the pixel intensities
+	Uint32 flags;				//!< (foam) Flags to use with SDL_SetVideoMode
 } mod_display_t;
 
 // ROUTINES //
 /************/
 
 /*!
- @brief This routine is used to initialize the display module (either SDL or OpenGL)
+ @brief This routine is used to initialize the display module (either SDL or SDL and OpenGL)
  
  Call this routine before calling any other routine in this module.
  
@@ -116,7 +120,8 @@ int displayFinish(mod_display_t *disp);
 /*!
  @brief Process events in the SDL loop
  
- Call this to process events that might have occurred.
+ Call this to process events that might have occurred. All this processes at
+ the moment is resize events.
  
  @param [in] *disp A pointer to a prefilled mod_display_t struct
  */
@@ -140,16 +145,17 @@ int displayImgByte(uint8_t *img, mod_display_t *disp);
 #endif
 
 /*!
- @brief This displays a GSL matrix on the screen
+ @brief This displays an image stored as GSL matrix on the screen
  
  This converts a GSL image stored in  *gslimg to a byte image ready to
- be displayed on a screen. doscale can be used to apply scaling when
- converting floats to bytes or to directly cast it.
+ be displayed on a screen. doscale can be set to 1 to scale the input floats
+ over the whole [0,255] range. You usually want this.
+ 
  Do not forget to call displayBeginDraw()/displayFinishDraw().
  
  @param [in] *gslimg pointer to the gsl float matrix to be drawn
  @param [in] *disp pre-filled mod_display_t structure
- @param [in] doscale scale floats during byte conversion (1) or not (0)
+ @param [in] doscale scale floats during conversion to bytes (1) or not (0)
  */
 int displayGSLImg(gsl_matrix_float *gslimg, mod_display_t *disp, int doscale);
 
@@ -157,7 +163,7 @@ int displayGSLImg(gsl_matrix_float *gslimg, mod_display_t *disp, int doscale);
  @brief Display data on the screen
  
  This routine draws the things that are configured in the mod_display_t
- struct *disp. This routine does not to be wrapped in displayBeginDraw()/
+ struct *disp. This routine does not need to be wrapped in displayBeginDraw()/
  displayFinishDraw().
  */
 #ifdef FOAM_MODULES_DISLAY_SHSUPPORT
