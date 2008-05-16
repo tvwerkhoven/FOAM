@@ -918,6 +918,7 @@ int parseCmd(char *msg, const int len, client_t *client) {
 		tellClients("200 OK SHUTTING DOWN NOW!");
 		stopFOAM();
 	}
+	/* This probably does not work correctly yet
 	else if (strcmp(list[0],"image") == 0) {
 		if (count > 1) {
 			tmpint = (int) strtol(list[1], NULL, 10);
@@ -933,7 +934,7 @@ int parseCmd(char *msg, const int len, client_t *client) {
 		else {
 			tellClient(client->buf_ev,"402 IMAGE REQUIRES ARG");
 		}		
-	}
+	}*/
 	else if (strcmp(list[0],"broadcast") == 0) {
 		if (count > 1) {
 			tellClients("200 OK %s", msg);
@@ -991,9 +992,6 @@ int tellClients(char *msg, ...) {
 	// format string and add newline
 	asprintf(&out2, "%s\n", out);
 
-	// logDebug(0, "message was: %s length %d and %d", msg, strlen(msg), strlen(msg));
-	// pthread_mutex_lock(&mode_mutex);
-//	logDebug(0, "Tellclients called..., telling '%s', and '%s' and '%s'", msg, out, out2);
 	for (i=0; i < MAX_CLIENTS; i++) {
 //		logDebug(LOG_NOFORMAT, "%d ", i);
 		if (clientlist.connlist[i] != NULL && clientlist.connlist[i]->fd > 0) { 
@@ -1034,10 +1032,10 @@ int showHelp(const client_t *client, const char *subhelp) {
 200 OK HELP\n\
 help [command]:         help (on a certain command, if available).\n\
 mode <mode>:            close or open the loop.\n\
-image <wfs>:            get the image from a certain WFS.\n\
 broadcast <msg>:        send a message to all connected clients.\n\
 exit or quit:           disconnect from daemon.\n\
 shutdown:               shutdown the FOAM program.");
+//image <wfs>:            get the image from a certain WFS.\n
 	}
 	else if (strcmp(subhelp, "mode") == 0) {
 		tellClient(client->buf_ev, "\

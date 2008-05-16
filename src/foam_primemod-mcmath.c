@@ -163,8 +163,8 @@ int modInitModule(control_t *ptc, config_t *cs_config) {
     // we have a CCD of WxH, with a lenslet array of WlxHl, such that
     // each lenslet occupies W/Wl x H/Hl pixels, and we use track.x x track.y
     // pixels to track the CoG or do correlation tracking.
-	shtrack.cells.x = 16;				// we're using a 16x16 lenslet array
-	shtrack.cells.y = 16;
+	shtrack.cells.x = 8;				// we're using a 16x16 lenslet array
+	shtrack.cells.y = 8;
 	shtrack.shsize.x = ptc->wfs[0].res.x/shtrack.cells.x;
 	shtrack.shsize.y = ptc->wfs[0].res.y/shtrack.cells.y;
 	shtrack.track.x = shtrack.shsize.x/2;   // tracker windows are half the size of the lenslet grid things
@@ -377,7 +377,8 @@ int modCalibrate(control_t *ptc) {
 		// set new display settings to show the darkfield
 		disp.dispsrc = DISPSRC_DARK;
 		disp.dispover = 0;
-	displayDraw(wfsinfo, &disp, &shtrack);
+		disp.autocontrast = 1;
+		displayDraw(wfsinfo, &disp, &shtrack);
 		snprintf(title, 64, "%s - Darkfield", disp.caption);
 		SDL_WM_SetCaption(title, 0);
 		// reset the display settings
@@ -410,6 +411,7 @@ int modCalibrate(control_t *ptc) {
 		// set new display settings to show the darkfield
 		disp.dispsrc = DISPSRC_FLAT;
 		disp.dispover = 0;
+		disp.autocontrast = 1;
 	displayDraw(wfsinfo, &disp, &shtrack);
 		snprintf(title, 64, "%s - Flatfield", disp.caption);
 		SDL_WM_SetCaption(title, 0);
@@ -490,12 +492,25 @@ int modCalibrate(control_t *ptc) {
 		// set new display settings to show the darkfield
 		disp.dispsrc = DISPSRC_RAW;
 		disp.dispover = DISPOVERLAY_SUBAPS | DISPOVERLAY_GRID;
+		disp.autocontrast = 1;
 		displayDraw(wfsinfo, &disp, &shtrack);
 		snprintf(title, 64, "%s - Subaps", disp.caption);
 		SDL_WM_SetCaption(title, 0);
 		// reset the display settings
 		disp.dispsrc = oldsrc;
 		disp.dispover = oldover;
+	}
+	else if (ptc->calmode == CAL_PINHOLE) {
+		// pinhole calibration to get reference coordinates
+		logInfo(0, "Starting pinhole calibration to get reference coordinates now");
+		
+		calibPinhole(ptc, 0, &shtrack);
+	}
+	else if (ptc->calmode == CAL_INFL) {
+		// influence function calibration
+		logInfo(0, "Starting influence function calibration");
+		
+		calibWFC(ptc, 0, &shtrack);
 	}
 	
 	return EXIT_SUCCESS;
@@ -560,7 +575,9 @@ calibrate <mode>:       calibrate the ao system.\n\
    dark:                take a darkfield by averaging %d frames.\n\
    flat:                take a flatfield by averaging %d frames.\n\
    gain:                calc dark/gain to do actual corrections with.\n\
-   selsubap:            select some subapertures.\
+   selsubap:            select some subapertures.\n\
+   pinhole:             get reference coordinates which define a flat WF.\n\
+   influence:           get the influence function for WFS 0 and all WFC's.\
 ", ptc->wfs[0].fieldframes, ptc->wfs[0].fieldframes);
 			}
 			else // we don't know. tell this to parseCmd by returning 0
@@ -640,7 +657,9 @@ calibrate <mode>:       calibrate the ao system (dark, flat, subapt, etc).\
 			}
 		}
 		else {
-			tellClient(client->buf_ev, "402 DISPLAY REQUIRES ARGS");
+			tellClient(client->buf_ev, "200 OK DISPLAY INFO\n\
+brightness:             %d\n\
+contrast:               %f", disp.brightness, disp.contrast);
 		}
 	}
 #endif
@@ -719,7 +738,7 @@ cell size:              %dx%d pixels\n\
 track size:             %dx%d pixels\n\
 ccd size:               %dx%d pixels\n\
 samxr:                  %d\n\
-samini:                 %.2f\n\
+samini:                 %.2f\
 ", ptc->logfrac, ptc->wfs[0].fieldframes, shtrack.cells.x, shtrack.cells.y,\
 shtrack.shsize.x, shtrack.shsize.y, shtrack.track.x, shtrack.track.y, ptc->wfs[0].res.x, ptc->wfs[0].res.y, shtrack.samxr, shtrack.samini);
 		}
@@ -737,7 +756,8 @@ shtrack.shsize.x, shtrack.shsize.y, shtrack.track.x, shtrack.track.y, ptc->wfs[0
 			}
 		}
 		else {
-			tellClient(client->buf_ev, "402 STEP REQUIRES PARAMS");
+tellClient(client->buf_ev, "200 OK STEP INFO\n\
+step (x,y):             (%+f, %+f)", shtrack.step.x, shtrack.step.y);	
 		}
 	}	
  	else if (strncmp(list[0], "vid",3) == 0) {
@@ -773,7 +793,10 @@ shtrack.shsize.x, shtrack.shsize.y, shtrack.track.x, shtrack.track.y, ptc->wfs[0
 			}
 		}
 		else {
-			tellClient(client->buf_ev, "402 VID REQUIRES ARGS");
+tellClient(client->buf_ev, "200 OK VID INFO\n\
+brightness:             %d\n\
+contrast:               %f", disp.brightness, disp.contrast);
+	
 		}
 	}
  	else if (strncmp(list[0], "cal",3) == 0) {
@@ -782,13 +805,13 @@ shtrack.shsize.x, shtrack.shsize.y, shtrack.track.x, shtrack.track.y, ptc->wfs[0
 				ptc->mode = AO_MODE_CAL;
 				ptc->calmode = CAL_DARK;
                 tellClient(client->buf_ev, "200 OK DARKFIELDING NOW");
-		pthread_cond_signal(&mode_cond);
+				pthread_cond_signal(&mode_cond);
 			}
 			else if (strncmp(list[1], "sel",3) == 0) {
 				ptc->mode = AO_MODE_CAL;
 				ptc->calmode = CAL_SUBAPSEL;
                 tellClient(client->buf_ev, "200 OK SELECTING SUBAPTS");
-		pthread_cond_signal(&mode_cond);
+				pthread_cond_signal(&mode_cond);
 			}
 			else if (strncmp(list[1], "flat",3) == 0) {
 				ptc->mode = AO_MODE_CAL;
@@ -800,6 +823,18 @@ shtrack.shsize.x, shtrack.shsize.y, shtrack.track.x, shtrack.track.y, ptc->wfs[0
 				ptc->mode = AO_MODE_CAL;
 				ptc->calmode = CAL_DARKGAIN;
 				tellClient(client->buf_ev, "200 OK CALCULATING DARK/GAIN NOW");
+				pthread_cond_signal(&mode_cond);
+			}
+			else if (strncmp(list[1], "pinhole",3) == 0) {
+				ptc->mode = AO_MODE_CAL;
+				ptc->calmode = CAL_PINHOLE;
+                tellClient(client->buf_ev, "200 OK GETTING REFERENCE COORDINATES");
+				pthread_cond_signal(&mode_cond);
+			}
+			else if (strncmp(list[1], "influence",3) == 0) {
+				ptc->mode = AO_MODE_CAL;
+				ptc->calmode = CAL_INFLUENCE;
+                tellClient(client->buf_ev, "200 OK GETTING INFLUENCE FUNCTION");
 				pthread_cond_signal(&mode_cond);
 			}
 			else {
