@@ -361,6 +361,16 @@ int main() {
 	printf("..done\n");
 	printf("\n");
 		
+	printf("(going through the whole voltage range in 20 seconds)\n");
+	for (i=0; i<=100; i++) {
+		if (i % 10 == 0) printf("%d%%", i);
+		else printf(".");
+		//drvDaqSetDACs(&board, i*65536/100);
+		drvDaqSetDAC(&board, 1, i*65536/100 );
+		usleep(200000);
+	}
+	printf("..done\n");
+	printf("\n");
 	drvCloseDaq2k(&board);	
 	printf("Closed DAQboard!\n");
 	return EXIT_SUCCESS;

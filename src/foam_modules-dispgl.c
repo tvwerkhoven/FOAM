@@ -89,6 +89,15 @@ static void drawRect(coord_t origin, coord_t size) {
 	glEnd();
 }
 
+static void displayText(char *text, coord_t pos) {
+	char* p;
+
+	glRasterPos2i((GLint) pos.x, (GLint) pos.y);
+	for(p = text; *p ; p++) 
+		glutBitmapCharacter(GLUT_BITMAP_HELVETICA_10, *p);
+	
+	glRasterPos2i((GLint) 0, (GLint) 0);
+}
 
 // PUBLIC ROUTINES //
 /*******************/
@@ -415,15 +424,6 @@ int displayGrid(coord_t gridres, mod_display_t *disp) {
 	return EXIT_SUCCESS;
 }
 
-void displayText(char *text, coord_t pos) {
-	char* p;
-
-	glRasterPos2i((GLint) pos.x, (GLint) pos.y);
-	for(p = text; *p ; p++) 
-		glutBitmapCharacter(GLUT_BITMAP_HELVETICA_10, *p);
-	
-	glRasterPos2i((GLint) 0, (GLint) 0);
-}
 
 #endif // FOAM_MODULES_DISLAY_SHSUPPORT
 

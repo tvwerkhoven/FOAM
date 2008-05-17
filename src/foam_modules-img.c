@@ -560,7 +560,7 @@ int main(int argc, char *argv[]) {
 	printf("Trying to read image '%s' to array\n", argv[0]);
 	float *img;
 	coord_t res;
-	modReadIMGArr(argv[0], &img, &res);
+	modReadIMGArrByte(argv[0], &img, &res);
 
 	printf("Trying to write image just read to 8 bit binary PGM file 'modimg-test2-8bin.pgm'\n");
 	modWritePGMArr("modimg-test2-8bin.pgm", img, 0, res, 255, 1);

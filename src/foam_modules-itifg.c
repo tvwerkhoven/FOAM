@@ -427,7 +427,7 @@ int main(int argc, char *argv[]) {
     gettimeofday(&last, NULL);
     float fps;
     
-    drvInitGrab(cam);
+    itifgInitGrab(cam);
     for (i=0; i<500; i++) {
         
         itifgGetImg(cam, buf, NULL, NULL);

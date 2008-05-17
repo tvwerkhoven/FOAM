@@ -489,7 +489,7 @@ int displayDraw(wfs_t *wfsinfo, mod_display_t *disp) {
 	else if (disp->dispsrc == DISPSRC_FLAT) {
 		displayGSLImg(wfsinfo->flatim, disp, 1);
 	}
-	else if (disp->dispsrc == DISPSRC_CALIB) {
+	else if (disp->dispsrc == DISPSRC_FULLCALIB) {
 		displayGSLImg(wfsinfo->corrim, disp, 1);
 	}
 	

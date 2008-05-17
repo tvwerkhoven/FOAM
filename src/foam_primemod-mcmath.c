@@ -143,7 +143,7 @@ int modInitModule(control_t *ptc, config_t *cs_config) {
 	daqboard.iop2conf[2] = 1;
 	daqboard.iop2conf[3] = 1;			// use digital IO ports for {out, out, in, in}
 	
-	drvInitDaq2k(&daqboard);
+	//drvInitDaq2k(&daqboard);
 	
 	// configure DM here
 	
@@ -163,8 +163,8 @@ int modInitModule(control_t *ptc, config_t *cs_config) {
     // we have a CCD of WxH, with a lenslet array of WlxHl, such that
     // each lenslet occupies W/Wl x H/Hl pixels, and we use track.x x track.y
     // pixels to track the CoG or do correlation tracking.
-	shtrack.cells.x = 8;				// we're using a 16x16 lenslet array
-	shtrack.cells.y = 8;
+	shtrack.cells.x = 16;				// we're using a 16x16 lenslet array
+	shtrack.cells.y = 16;
 	shtrack.shsize.x = ptc->wfs[0].res.x/shtrack.cells.x;
 	shtrack.shsize.y = ptc->wfs[0].res.y/shtrack.cells.y;
 	shtrack.track.x = shtrack.shsize.x/2;   // tracker windows are half the size of the lenslet grid things
@@ -244,7 +244,7 @@ void modStopModule(control_t *ptc) {
 	itifgStopBufs(&buffer, &dalsacam);
 	itifgStopBoard(&dalsacam);
 	
-	drvCloseDaq2k(&daqboard);
+	//drvCloseDaq2k(&daqboard);
 #endif
 }
 
@@ -327,6 +327,7 @@ int modClosedLoop(control_t *ptc) {
 	
 #ifdef FOAM_MCMATH_DISPLAY
     if (ptc->frames % ptc->logfrac == 0) {
+		logDebug(0, "disp0: (%.2f, %.2f)", shtrack.disp->data[0], shtrack.disp->data[1]);
 		displayDraw((&ptc->wfs[0]), &disp, &shtrack);
 		//logInfo(0, "Current framerate: %.2f FPS", ptc->fps);
 		snprintf(title, 64, "%s (C) %.0f FPS", disp.caption, ptc->fps);
@@ -721,7 +722,7 @@ source:                 %d", disp.brightness, disp.contrast, disp.dispover, disp
 			tmpfloat = strtof(list[1], NULL);
 			
 			if (tmpfloat >= daqboard.minvolt && tmpfloat <= daqboard.maxvolt) {
-				drvDaqSetDACs(&daqboard, (int) 65536*(tmpfloat-daqboard.minvolt)/(daqboard.maxvolt-daqboard.minvolt));
+				//drvDaqSetDACs(&daqboard, (int) 65536*(tmpfloat-daqboard.minvolt)/(daqboard.maxvolt-daqboard.minvolt));
 				tellClients("200 OK RESETDAQ %fV", tmpfloat);
 			}
 			else {
@@ -729,7 +730,7 @@ source:                 %d", disp.brightness, disp.contrast, disp.dispover, disp
 			}
 		}
 		else {
-			drvDaqSetDACs(&daqboard, 65536*(-daqboard.minvolt)/(daqboard.maxvolt-daqboard.minvolt));
+			//drvDaqSetDACs(&daqboard, 65536*(-daqboard.minvolt)/(daqboard.maxvolt-daqboard.minvolt));
 			tellClients("200 OK RESETDAQ 0.0V");			
 		}
 	}
