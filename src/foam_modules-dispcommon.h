@@ -22,6 +22,7 @@
 // The user wants  to use OpenGL with SDL, include appropriate libraries
 #include "SDL_opengl.h"
 #ifdef __APPLE__
+    #warning "Apple is not fully supported, SDL is not well-implemented there"
     #include <OpenGL/glu.h>
     #include <OpenGL/glext.h>
 #else
@@ -29,6 +30,7 @@
     #include <GL/glext.h>
     #include <GL/glx.h>
     #include <GL/glxext.h>
+    #include <GL/glut.h>
     //#define glXGetProcAddress(x) (*glXGetProcAddressARB)((const GLubyte*)x)
 #endif //__APPLE__
 
@@ -63,6 +65,7 @@ typedef struct {
 #define DISPOVERLAY_SUBAPS 0x1		//!< Display the subaperture tracker windows
 #define DISPOVERLAY_GRID 0x2		//!< Display a grid overlay
 #define DISPOVERLAY_VECTORS 0x4		//!< Display the displacement vectors
+#define DISPOVERLAY_SUBAPLABELS 0x8	//!< Display labels with the subapts
 #endif // FOAM_MODULES_DISLAY_SHSUPPORT
 
 /*!
@@ -192,6 +195,11 @@ int displaySubapts(mod_sh_track_t *shtrack, mod_display_t *disp);
  @param [in] *disp initialize mod_display_t struct with display information
  */
 int displayVecs(mod_sh_track_t *shtrack, mod_display_t *disp);
+
+/*!
+@brief Displays labels near the subapertures to identify them
+*/
+int displaySubaptLabels(mod_sh_track_t *shtrack, mod_display_t *disp); 
 
 /*!
  @brief This draws a grid on the screen (useful for SH sensing)

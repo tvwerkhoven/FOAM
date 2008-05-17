@@ -92,6 +92,24 @@ int modStorPNGArr(char *filename, char *post, int seq, float *img, coord_t res);
 int modStorPNGSurf(char *filename, char *post, int seq, SDL_Surface *img);
 
 /*!
+ @brief Gives information about an array (image)
+
+ This function calculates the minimum, maximum and average pixel intensity
+ in pointer to array *stats in that order. It currently accepts datatypes
+ uint8_t, uint16_t and gsl_matrix_float for *img. Be sure to denote
+ this in 'data'. For the first two datatypes you can either give the 
+ resolution, or give the number of pixels in the array. For the GSL
+ matrix you can only give a resolution. To not use the resolution, pass
+ NULL, to not use the pixelcount, pass -1 to pixels.
+
+ @param [in] *img pointer to the data
+ @param [in] data the datatype of the data
+ @param [in] *size pointer to the resolution of the data, or NULL if pixels is used
+ @param [in] pixels the number of pixels in the data, or -1 is not used
+ @param [out] *stats pointer to a 3-element float array which will hold min, max and avg.
+*/
+void imgGetStats(void *img, foam_datat_t data, coord_t *size, int pixels, float *stats);
+/*!
  @brief Get the value of a specific pixel off a SDL_Surface
  
  @param [in] *surface SDL_Surface to read from

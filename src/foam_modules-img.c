@@ -48,7 +48,7 @@ int modReadIMGSurf(char *fname, SDL_Surface **surf) {
 	
 	*surf = IMG_Load(fname);
 	if (!*surf) {
-		logWarn("Error in IMG_Load: %s\n", IMG_GetError());
+		logWarn("IMG_Load: %s", IMG_GetError());
 		return EXIT_FAILURE;
 	}
 	
@@ -459,42 +459,57 @@ int modStorPNGSurf(char *filename, char *post, int seq, SDL_Surface *img) {
 	return EXIT_SUCCESS;	
 }
 
-void imgGetStats(void *img, foam_datat_t data, coord_t size, float *stats) {
+void imgGetStats(void *img, foam_datat_t data, coord_t *size, int pixels, float *stats) {
 	int i, j;
-	float min, max, sum=0, pix=0;
+	float min=-1, max=-1, sum=0, pix=0;
+	// we can't do anything without the dimensions
+
 	if (data == DATA_UINT8) {
+		//logDebug(LOG_NOFORMAT, "getstats: uint8 | ");
 		uint8_t *imgc = (uint8_t *) img;
 		min = max = imgc[0];
-		for (i = 0; i < (size.x * size.y); i++) {
-			if (imgc[i] > min) max = imgc[i];
+		if (pixels == -1) 
+			pixels = size->x * size->y;
+
+		for (i = 0; i < pixels; i++) {
+			if (imgc[i] > max) max = imgc[i];
 			else if (imgc[i] < min) min = imgc[i];
 			sum += imgc[i];
 		}
 	}
 	else if (data == DATA_UINT16) {
+		//logDebug(LOG_NOFORMAT, "getstats: uint16 | ");
 		uint16_t *imgc = (uint16_t *) img;
 		min = max = imgc[0];
-		for (i = 0; i < (size.x * size.y); i++) {
-			if (imgc[i] > min) max = imgc[i];
+		if (pixels == -1) 
+			pixels = size->x * size->y;
+
+		for (i = 0; i < pixels; i++) {
+			if (imgc[i] > max) max = imgc[i];
 			else if (imgc[i] < min) min = imgc[i];
 			sum += imgc[i];
 		}
 	}
-	else if (data == DATA_GSL_M_F) {
+	else if ((data == DATA_GSL_M_F) && (size != NULL)) {
+		//logDebug(LOG_NOFORMAT, "getstats: gsl | ");
 		gsl_matrix_float *imgc = (gsl_matrix_float *) img;
 		min = max = gsl_matrix_float_get(imgc, 0, 0);
-		for (i = 0; i < size.y; i++) {
-			for (j = 0; j < size.x; j++) {
+		for (i = 0; i < size->y; i++) {
+			for (j = 0; j < size->x; j++) {
 				pix = gsl_matrix_float_get(imgc, i, j);
-				if (pix > min) max = pix;
+				if (pix > max) max = pix;
 				else if (pix < min) min = pix;
 				sum += pix;
 			}
 		}
 	}
+	//logDebug(LOG_NOFORMAT, "min: %f, max :%f\n", min, max);
 	stats[0] = min;
 	stats[1] = max;
-	stats[2] = sum/(size.x * size.y);
+	if (size != NULL)
+		stats[2] = sum/(size->x * size->y);
+	else 
+		stats[2] = sum/pixels;
 }
 
 	

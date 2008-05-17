@@ -165,7 +165,10 @@ int displayInit(mod_display_t *disp) {
 	glLoadIdentity();
 	gluOrtho2D(0, disp->res.x, 0, disp->res.y);
 	glMatrixMode(GL_MODELVIEW);
-    glLoadIdentity();
+	glLoadIdentity();
+
+	int zero = 0;
+	glutInit(&zero, NULL);
 	
 	return EXIT_SUCCESS;
 }
@@ -314,7 +317,7 @@ void displaySDLEvents(mod_display_t *disp) {
 					//stopFoam();
 				//break;
 			case SDL_VIDEORESIZE:
-				logDebug(0, "Resizing window to %d,%d\n", event.resize.w, event.resize.h);
+				logDebug(0, "Resizing window to %d,%d", event.resize.w, event.resize.h);
 				
 				// update window information in the struct, our window changed
 				// size
@@ -355,6 +358,17 @@ int displaySubapts(mod_sh_track_t *shtrack, mod_display_t *disp) {
 		// the rest are (track.x, track.y)
 		drawRect(shtrack->subc[sn], shtrack->track);
 	}
+	return EXIT_SUCCESS;
+}
+
+int displaySubaptLabels(mod_sh_track_t *shtrack, mod_display_t *disp) {
+	int sn;
+	char label[8];
+	for (sn=0; sn<shtrack->nsubap; sn++) {
+		snprintf(label, 8, "%d", sn);
+		displayText(label, shtrack->gridc[sn]);
+	}
+
 	return EXIT_SUCCESS;
 }
 
@@ -401,7 +415,17 @@ int displayGrid(coord_t gridres, mod_display_t *disp) {
 	return EXIT_SUCCESS;
 }
 
-#endif
+void displayText(char *text, coord_t pos) {
+	char* p;
+
+	glRasterPos2i((GLint) pos.x, (GLint) pos.y);
+	for(p = text; *p ; p++) 
+		glutBitmapCharacter(GLUT_BITMAP_HELVETICA_10, *p);
+	
+	glRasterPos2i((GLint) 0, (GLint) 0);
+}
+
+#endif // FOAM_MODULES_DISLAY_SHSUPPORT
 
 #ifdef FOAM_MODULES_DISLAY_SHSUPPORT
 int displayDraw(wfs_t *wfsinfo, mod_display_t *disp, mod_sh_track_t *shtrack) {
@@ -445,9 +469,13 @@ int displayDraw(wfs_t *wfsinfo, mod_display_t *disp) {
 		displaySubapts(shtrack, disp);
 	if (disp->dispover & DISPOVERLAY_VECTORS) 
 		displayVecs(shtrack, disp);
+	if (disp->dispover & DISPOVERLAY_SUBAPLABELS) {
+		displaySubaptLabels(shtrack, disp);
+	}
 #endif
 	
 	displayFinishDraw(disp);
 	
 	return EXIT_FAILURE;
 }
+

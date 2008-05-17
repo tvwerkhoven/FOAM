@@ -315,6 +315,13 @@ if test "$opengl" = true ; then
 				]
 			      )
 
+		AC_SEARCH_LIBS([glutGet], [glut] ,[], 
+				[AC_MSG_WARN([libglut could not be found on this system.])
+				opengl=false
+				openglmissing+=" libglut"
+				]
+			      )
+
 # fix opengl cflags / libs
 		OPENGL_CFLAGS+=""
 		OPENGL_LIBS+="$LIBS"
