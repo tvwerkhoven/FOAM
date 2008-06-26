@@ -17,7 +17,7 @@ Makefiles can be prepared using the configure command,
 
   ./configure
 
-You can then build the library by typing,
+You can then build the program by typing,
 
   make
 
@@ -94,7 +94,7 @@ directory. This will compile all programs enabled during configuration.
 
   - Run the program, ./foamcs-????
 
-The programs are built in the src/ directory, and can only be run from 
+The programs are built in the bin/ directory, and can only be run from 
 there by default, because the configuration files are expected to be in
 ../config. 
 
