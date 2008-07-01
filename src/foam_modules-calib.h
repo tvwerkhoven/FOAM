@@ -36,6 +36,8 @@ the control vectors for all WFCs for a given WFS can be calculated.
  
  This routine only makes sense for Shack-Hartmann wavefront sensors.
  
+ See notes in the preamble of foam_modules-calib.c on this function.
+ 
  @param [in] *ptc Pointer to the AO configuration
  @param [in] wfs The wfs to calibrate for
  @param [in] *shtrack Pointer to a SH tracker configuration
@@ -63,7 +65,9 @@ int calibWFCChk(control_t *ptc, int wfs, mod_sh_track_t *shtrack);
  are set to zero for a certain WFS. These coordinates are
  then stored and used as a reference coordinate when correcting
  the wavefront. Make sure you are sending a flat wavefront to the Shack
- Hartmann wavefront sensor for this, i.e. by using a pinhole.
+ Hartmann wavefront sensor for this, i.e. by using a pinhole somewhere.
+ 
+ See notes in the preamble of foam_modules-calib.c on this function.
  
  @param [in] *ptc Pointer to the AO configuration
  @param [in] wfs The wfs to calibrate for

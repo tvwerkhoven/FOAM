@@ -64,14 +64,11 @@ void logErr(const char *msg, ...) {
 	
 	fprintf(stdout, "<timestamp> - <error>: ");
 	vfprintf(stdout, msg, aq);
-//	if (errno) // TODO: this currently causes a segmentation fault
-//		vfprintf(stderr, "(error was: %s)",strerror(errno));
+
 	fprintf(stdout,"\n");
 	
 	if (ui_config.use_syslog == true) { 	// Do we want to log this to syslog?
 		syslog(LOG_ERR, msg, aq);
-//		if (errno)
-//			syslog(LOG_ERR, strerror(errno));
 	}
 	
 	va_end(ap);

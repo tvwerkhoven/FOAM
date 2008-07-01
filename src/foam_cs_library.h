@@ -469,7 +469,15 @@ void startThread();
  This function accepts a variable amount of arguments (like vfprintf) and passes
  them on to vfprintf more or less unchanged, except for the appended newline character
  and some prefix. This function returns immediately if the loglevel is too low to log
- info messages (see the level_t type for available levels). \n
+ info messages (see the level_t type for available levels).
+ 
+ The parameter 'flag' can be set to a XOR of LOG_SOMETIMES and LOG_NOFORMAT.
+ The first option makes sure that logging only happens every \a config.logfrac
+ frames, which can be useful if logging during adaptive optics operations when
+ logging too much can cause performance problems. LOG_NOFORMAT can be used to
+ specify that logging should be done without formatting anything (i.e. no prefix
+ nor a newline at the end of the log message).
+ 
  logInfo() first attempts to write to the file descriptor provided by \a cs_config.infofd
  if this is not \c NULL. After that the boolean variable \a cs_config.use_stderr
  is checked to see if the user requested output to stderr. Finally, 
@@ -519,16 +527,17 @@ void logDebug(const int flag, const char *msg, ...);
  Runs the AO system in open loop mode, which is basically a skeleton which 
  calls modOpenInit() once, then enters a loop which runs as long as ptc.mode is 
  set to \c AO_MODE_OPEN and (see aomode_t) calls modOpenLoop() each run. Additionally,
- this function increments ptc.frames each loop.
+ this function increments ptc.frames each loop. If ptc.mode is unequal to 
+ \c AO_MODE_OPEN, this function calls modOpenFinish() and returns to modeListen().
  */
 void modeOpen();
 
 /*! 
  @brief Runs the AO closed-loop mode.
  
- Runs the AO system in closed loop mode, which is basically a skeleton which 
- calls modClosedInit() once, then enters a loop which runs as long as ptc.mode is 
- set to \c AO_MODE_CLOSED (see aomode_t) and calls modClosedLoop() each run.
+ Runs the AO system in closed loop mode, which does the same as modeOpen() except
+ it calls modClosedInit() first, then modClosedLoop() and finally 
+ modClosedFinish(). See modeOpen() for details.
  */
 void modeClosed();
 
@@ -546,17 +555,18 @@ void modeListen();
 /*! 
  @brief Runs the AO calibration-loop mode.
  
- This skeleton simply calls modCalibrate() which must be defined in some module.
+ This skeleton simply calls modCalibrate() which must be defined in a 
+ prime module.
  */
 void modeCal();
 
 /*! 
  @brief Listens on a socket for connections
  
- Listen on a socket for connections by any client, for example 
- the UI also provided in this package. Uses the global \a ptc (see control_t)
+ Listen on a socket for connections by any client, for example telnet. Uses 
+ the global \a ptc (see control_t)
  struct to provide data to the connected clients or to change
- the behaviour of the CS as dictated by the client.
+ the behaviour of @name as dictated by the client.
  @return \c EXIT_SUCCESS if it ran succesfully, \c EXIT_FAILURE otherwise.
  */
 int sockListen();
@@ -590,6 +600,15 @@ int setnonblock(int fd);
  is then passed on to this function which interprets it and
  takes action if necessary. Currently this function can only
  read 1 kb in one time maximum (which should be enough).
+ 
+ If 'help' is the first and only word in 'msg', modMessage() is called such
+ that the prime module can also give help on specific commands that it offers.
+ The framework itself only provides generic help, but specific adaptive optic
+ routines are controlled through the prime module, which is why this hook is
+ provided.
+ 
+ Additionally, if parseCmd receives a command it does not recognize, modMessage
+ is also called.
  
  @param [in] *msg the char array (max length \c COMMANDLEN)
  @param [in] len the actual length of msg
@@ -643,7 +662,7 @@ int initLogFiles();
  newly allocated matrices. 
  
  If the files are not present, set the images to NULL so that we know we have 
- to calibrate lateron. 
+ to calibrate later on. 
  
  If the files are set to NULL, don't use dark/flat/sky field calibration at all.
  */

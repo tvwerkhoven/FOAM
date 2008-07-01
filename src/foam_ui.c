@@ -5,7 +5,8 @@
  
  @brief This is a client which can connect to the Control Software
  
- This client can connect to the cs software and display WFS images.
+ At the moment this is not more than a collection of lines of code, it might
+ not work (very well), use telnet instead.
  */
 
 #include <stdio.h>

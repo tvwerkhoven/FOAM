@@ -1,10 +1,15 @@
 /*! 
 	@file foam_cs_library.c
-	@brief Library file for the Control Software
+	@brief Library file for @name
 	@author @authortim
 	@date November 13 2007
 
-	This file contains things necessary to run the Control Software that are not related to adaptive optics itself. 
+	This file contains things necessary to run the @name that are 
+	not related to adaptive optics itself. This includes things like networking,
+	info/error logging, etc. 
+ 
+	Note that 'cs' originated from 'control software', which was the name of 
+	the software controlling AO before @name was thought of.
 */
 
 #include "foam_cs_library.h"
@@ -37,18 +42,22 @@ config_t cs_config = { //!< Global struct to hold system configuration. Init wit
 };
 
 conntrack_t clientlist;
-// !!!:tim:20080326 need to fix this somewhere neater:
 struct event_base *sockbase;
 
+/*!
+ @brief Internal function used to format log messages. Should not be used directly
+ */
 static int formatLog(char *output, const char *prepend, const char *msg) {
 	char timestr[9];
 	time_t curtime;
 	struct tm *loctime;
 
+	// get the current time and store it in 'timestr'
 	curtime = time (NULL);
 	loctime = localtime (&curtime);
 	strftime (timestr, 9, "%H:%M:%S", loctime);
 
+	// store the formatted log message to 'output'
 	snprintf(output, (size_t) COMMANDLEN, "%s%s%s\n", timestr, prepend, msg);
 	return EXIT_SUCCESS;
 }
@@ -121,13 +130,13 @@ void logInfo(const int flag, const char *msg, ...) {
 	
 	char logmessage[COMMANDLEN];
 	
-//	printf("0");
 	va_list ap, aq, ar; 						// We need three of these because we cannot re-use a va_list variable
 	
 	va_start(ap, msg);
 	va_copy(aq, ap);
 	va_copy(ar, ap);
-//	printf("1");	
+	
+	// add prefix and newline to the message, i.e. format it nicely
 	formatLog(logmessage, " <info>: ", msg);
 	
 	if (cs_config.infofd != NULL) {  			// Do we want to log this to a file?
@@ -136,21 +145,20 @@ void logInfo(const int flag, const char *msg, ...) {
 		else
 			vfprintf(cs_config.infofd, msg , ap);
 	}
-//	printf("2");
+
 	if (cs_config.use_stdout == true) { 			// Do we want to log this to stdout
 		if (!(flag & LOG_NOFORMAT)) 
 			vfprintf(stdout, logmessage, aq);
 		else
 			vfprintf(stdout, msg, aq);
 	}
-//	printf("3");
+
 	if (cs_config.use_syslog == true) 			// Do we want to log this to syslog?
 		syslog(LOG_INFO, msg, ar);
 	
 	va_end(ap);
 	va_end(aq);
 	va_end(ar);
-//	printf("4");
 }
 
 void logDebug(const int flag, const char *msg, ...) {
@@ -163,13 +171,11 @@ void logDebug(const int flag, const char *msg, ...) {
 	
 	char logmessage[COMMANDLEN];
 	
-//	printf("0");
 	va_list ap, aq, ar; 						// We need three of these because we cannot re-use a va_list variable
 	
 	va_start(ap, msg);
 	va_copy(aq, ap);
 	va_copy(ar, ap);
-//	printf("1");
 	
 	formatLog(logmessage, " <debug>: ", msg);
 	
@@ -179,7 +185,6 @@ void logDebug(const int flag, const char *msg, ...) {
 		else
 			vfprintf(cs_config.debugfd, msg , ap);
 	}
-//	printf("2");
 	
 	if (cs_config.use_stdout == true) { 			// Do we want to log this to stdout
 		if (!(flag & LOG_NOFORMAT)) 
@@ -187,7 +192,6 @@ void logDebug(const int flag, const char *msg, ...) {
 		else
 			vfprintf(stdout, msg, aq);
 	}
-//	printf("3");
 		
 	if (cs_config.use_syslog == true) 			// Do we want to log this to syslog?
 		syslog(LOG_DEBUG, msg, ar);
@@ -195,6 +199,5 @@ void logDebug(const int flag, const char *msg, ...) {
 	va_end(ap);
 	va_end(aq);
 	va_end(ar);
-//	printf("4");
 }
 

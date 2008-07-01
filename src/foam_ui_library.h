@@ -1,6 +1,13 @@
-/*
-	User Interface Library
-*/
+/*! 
+ @file foam_ui_library.h
+ @author @authortim
+ @date November 14 2007
+ 
+ @brief This is the header file for the connecting client
+ 
+ At the moment this is not more than a collection of lines of code, it might
+ not work (very well), use telnet instead.
+ */
 
 #ifndef FOAM_UI_LIBRARY
 #define FOAM_UI_LIBRARY

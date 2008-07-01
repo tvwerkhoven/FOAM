@@ -27,8 +27,8 @@ HAVE_DMALLOC=1
 #LDFLAGS+=-ldmalloc 
 
 # basic framework files which are always needed
-FRAME_SRC = foam_cs.c foam_library.c foam_cs_library.c
-FRAME_HDR = foam_cs_library.h foam_library.h foam_cs_config.h
+FRAME_SRC = foam_cs.c foam_cs_library.c
+FRAME_HDR = foam_cs_library.h foam_cs_config.h
 
 # dummy moduleset
 bin_PROGRAMS += foamcs-dummy
@@ -40,8 +40,8 @@ foamcs_dummy_CFLAGS = -g
 # did we enable UI support or not?
 if UI
 bin_PROGRAMS += foamui
-foamui_SOURCES = foam_ui.c foam_ui_library.c  foam_library.c 
-foamui_SOURCES += foam_ui_library.h foam_library.h
+foamui_SOURCES = foam_ui.c foam_ui_library.c
+foamui_SOURCES += foam_ui_library.h
 foamui_CFLAGS = $(UI_CFLAGS)
 foamui_LDFLAGS = $(UI_LIBS)
 endif UI

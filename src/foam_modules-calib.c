@@ -30,13 +30,26 @@
 	\section Dependencies
 	
 	This module depends on the shack-hartmann module (modules-sh), as the calibrations are SH-specific.
+ 
+	This module expects that a modOpenInit, modOpenLoop and modOpenFinish 
+	sequence does at least the following: startup any camera used as SH WFS,
+	measure the offets in all available subapertures, if any, shutdown the 
+	camera. It also assumes that these functions do not alter the hardware setup
+	or change the actuator voltages. See calibPinhole() and calibWFC() for
+	details.
 
 	\section License
 	
 	This code is licensed under the GPL, version 2.
 */
 
+// HEADERS //
+/***********/
+
 #include "foam_modules-calib.h"
+
+// ROUTINES //
+/************/
 
 int calibPinhole(control_t *ptc, int wfs, mod_sh_track_t *shtrack) {
 	int i, j;
@@ -47,8 +60,9 @@ int calibPinhole(control_t *ptc, int wfs, mod_sh_track_t *shtrack) {
 		return EXIT_FAILURE;
 	}
 	
-
-	// set filterwheel to pinhole and set voltages to 180V
+	// Set filterwheel to pinhole and set voltages to 180V. This must be done
+	// by the prime module and is provided through the function 
+	// drvSetupHardware().
 	if (drvSetupHardware(ptc, ptc->mode, ptc->calmode) != EXIT_SUCCESS) {
 		logWarn("Could not setup hardware for pinhole calibration");
 		return EXIT_FAILURE;
@@ -119,18 +133,6 @@ int calibWFC(control_t *ptc, int wfs, mod_sh_track_t *shtrack) {
 		logWarn("Cannot calibrate influence function if subapertures are not selected yet");
 		return EXIT_FAILURE;
 	}
-		
-	// run open loop initialisation once (to get subapertures etc)
-	// modOpenInit(ptc);
-	
-	/* This is not necessary
-	logDebug(0, "Checking pinhole calibration, file %s", shtrack->pinhole);
-	
-	if (calibPinholeChk(ptc, wfs, shtrack) != EXIT_SUCCESS) {
-		logWarn("WFC calibration failed, first perform pinhole calibration.");
-		return EXIT_FAILURE;
-	}
-	 */
 	
 	logInfo(0, "Starting WFC influence function calibration for WFS %d", wfs);
 	
@@ -364,8 +366,6 @@ int calibSVDGSL(control_t *ptc, int wfs, mod_sh_track_t *shtrack) {
 	gsl_vector_float *testinf, *testoutf, *testinrecf, *workf;
 	gsl_vector *testinrec, *testoutrec;
 	char *outfile;
-
-	// get total nr of subapertures for this WFS
 	
 	// allocating space for SVD:
 	mat = gsl_matrix_calloc(nsubap*2, nact);
@@ -485,16 +485,17 @@ int calibSVDGSL(control_t *ptc, int wfs, mod_sh_track_t *shtrack) {
 	double diffin=0, diffout=0;
 	float cond, min, max;
 	
+	logDebug(0, "Reconstruction test double: (should all be 1)");
 	for (j=0; j<nact; j++) {
 		diffin += gsl_vector_get(testinrec, j)/gsl_vector_get(testin, j);
-		// logInfo(LOG_NOFORMAT, "%f, %f\n", gsl_vector_get(testinrec, j), gsl_vector_get(testin, j));
+		logDebug(LOG_NOFORMAT, "%f, %f\n", gsl_vector_get(testinrec, j), gsl_vector_get(testin, j));
 	}
 	diffin /= nact;
 	
-	// logDebug(0, "and other vectors:");
+	logDebug(0, "Reconstruction test float: (should all be 1)");
 	for (j=0; j<nact; j++) {
 		diffout += gsl_vector_float_get(testinrecf, j)/gsl_vector_float_get(testinf, j);
-		// logInfo(LOG_NOFORMAT, "%f, %f\n", gsl_vector_float_get(testinrecf, j), gsl_vector_float_get(testinf, j));
+		logDebug(LOG_NOFORMAT, "%f, %f\n", gsl_vector_float_get(testinrecf, j), gsl_vector_float_get(testinf, j));
 	}
 	diffout /= nact;
 	// get max and min to calculate condition
