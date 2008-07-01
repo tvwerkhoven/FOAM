@@ -83,21 +83,21 @@ AC_ARG_ENABLE([simulation],
 
 # Test if we want to run as simulation or not
 AC_ARG_ENABLE([simstat],
-		AC_HELP_STRING([--enable-simstat], [enable static simulation mode (def: no)]),
+		AC_HELP_STRING([--enable-simstat], [enable static simulation mode (def: yes)]),
 		[case "${enableval}" in
 		yes) simstat=true ;;
 		no)  simstat=disabled ;;
 		*) AC_MSG_ERROR([bad value ${enableval} for --enable-simstat]) ;;
-	esac],[simstat=disabled])
+	esac],[simstat=true])
 		
 # Test if we want to include the UI or not
 AC_ARG_ENABLE([ui],
-		AC_HELP_STRING([--enable-ui], [enable the UI (def: yes)]),
+		AC_HELP_STRING([--enable-ui], [enable the UI (def: no)]),
 		[case "${enableval}" in
 		yes) ui=true ;;
 		no)  ui=disabled ;;
 		*) AC_MSG_ERROR([bad value ${enableval} for --enable-ui]) ;;
-	esac],[ui=true])
+	esac],[ui=disabled])
 	
 # Test if we want to do hardware debugging (stand alone modules)
 AC_ARG_ENABLE([hwdebug],
@@ -129,21 +129,21 @@ AC_ARG_ENABLE([osxopengl],
 
 # Test if we want mcmath enabled 
 AC_ARG_ENABLE([mcmath],
-		AC_HELP_STRING([--enable-mcmath], [enable mcmath mode (def: yes)]),
+		AC_HELP_STRING([--enable-mcmath], [enable mcmath mode (def: no)]),
 		[case "${enableval}" in
 		yes) mcmath=true ;;
 		no)  mcmath=disabled ;;
 		*) AC_MSG_ERROR([bad value ${enableval} for --enable-mcmath]) ;;
-	esac],[mcmath=true])
+	esac],[mcmath=disabled])
 	
 # Test if we want to simulate the hardware or not
 AC_ARG_ENABLE([simhw],
-		AC_HELP_STRING([--enable-simhw], [enable simulation of hardware (def: yes)]),
+		AC_HELP_STRING([--enable-simhw], [enable simulation of hardware (def: no)]),
 		[case "${enableval}" in
 		yes) simhw=true ;;
 		no)  simhw=disabled ;;
 		*) AC_MSG_ERROR([bad value ${enableval} for --enable-simhw]) ;;
-	esac],[simhw=true])
+	esac],[simhw=disabled])
 	
 
 ### Set some automake variables ###
