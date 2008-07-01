@@ -25,6 +25,7 @@
     #warning "Apple is not fully supported, SDL is not well-implemented there"
     #include <OpenGL/glu.h>
     #include <OpenGL/glext.h>
+    #include <GLUT/glut.h>
 #else
     #include <GL/glu.h>
     #include <GL/glext.h>

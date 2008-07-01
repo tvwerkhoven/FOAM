@@ -65,9 +65,11 @@ if test x"$PKG_CONFIG_PATH" = x ; then
 	AC_MSG_ERROR([Abort])
 fi
 
-PKG_CHECK_MODULES([SDL], [sdl]) 
-#SDL_CFLAGS = $(pkg-config SDL --cflags),
-#SDL_LIBS = $(pkg-config SDL --libs)
+# This fails on OS X
+# PKG_CHECK_MODULES(SDL, sdl) 
+# This appears to be slightly more portable
+SDL_CFLAGS=$(pkg-config sdl --cflags)
+SDL_LIBS=$(pkg-config sdl --libs)
 
 ### TEST FOR USER INPUT ###
 ###########################
@@ -292,9 +294,10 @@ if test "$opengl" = true ; then
 	AC_MSG_NOTICE([opengl enabled, checking for extra libs])
 	if test "$osxopengl" = true ; then
 		AC_MSG_NOTICE([opengl: checking for OS X libs])
-# OS X specific OpenGL config
-		OPENGL_CFLAGS+="-FOpenGL"
-		OPENGL_LIBS+="-framework OpenGL"
+# OS X specific OpenGL config, this is 'hardcoded' as I don't know how to get
+# autotools to work with frameworks used in OS X.
+		OPENGL_CFLAGS+="-FOpenGL -FGLUT"
+		OPENGL_LIBS+="-framework OpenGL -framework GLUT"
 	else
 # search for opengl libs here, generic search
 		AC_MSG_NOTICE([opengl: checking for generic libs (non OS X)])

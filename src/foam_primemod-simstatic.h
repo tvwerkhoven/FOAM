@@ -99,10 +99,9 @@ int drvGetImg(control_t *ptc, int wfs);
 #include "foam_modules-calib.h"
 
 // These are simstatic specific (for the time being)
-int MMAvgFramesByte(gsl_matrix_float *output, wfs_t *wfs, int rounds);
+int MMAvgFramesByte(control_t *ptc, gsl_matrix_float *output, wfs_t *wfs, int rounds);
 int MMDarkFlatFullByte(wfs_t *wfs, mod_sh_track_t *shtrack);
-void MMDarkFlatSubapByte(wfs_t *wfs, mod_sh_track_t *shtrack);
-
+int MMDarkFlatSubapByte(wfs_t *wfs, mod_sh_track_t *shtrack);
 
 
 #endif // #ifndef FOAM_PRIME_SIMSTATIC
