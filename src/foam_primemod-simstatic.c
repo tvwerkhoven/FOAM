@@ -200,7 +200,8 @@ int modClosedLoop(control_t *ptc) {
 	MMDarkFlatSubapByte(&(ptc->wfs[0]), &shtrack);
 
 	// try to get the center of gravity 
-	modCogTrack(ptc->wfs[0].corrim, DATA_GSL_M_F, ALIGN_RECT, &shtrack, NULL, NULL);
+	//modCogTrack(ptc->wfs[0].corrim, DATA_GSL_M_F, ALIGN_RECT, &shtrack, NULL, NULL);
+	modCogTrack(ptc->wfs[0].corr, DATA_UINT8, ALIGN_SUBAP, &shtrack, NULL, NULL);
 	
 #ifdef FOAM_SIMSTAT_DISPLAY
     if (ptc->frames % ptc->logfrac == 0) {
@@ -754,7 +755,7 @@ int MMDarkFlatSubapByte(wfs_t *wfs, mod_sh_track_t *shtrack) {
 				// TvW 2008-07-02, directly copy raw to corr for the moment, this is statsim anyway
 				// leaving the above intact will give a hint on the performance of this method though,
 				// although the results of the above statements are thrown away
-				tcorr[off+i*shtrack->track.x + j] = tsrc[i*wfs->res.x + j];
+				tcorr[off+i*shtrack->track.x + j] = tsrc[i*wfs->res.x + j];//- tdark[off+i*shtrack->track.x + j];
 			}
 		}
 	}
@@ -762,8 +763,8 @@ int MMDarkFlatSubapByte(wfs_t *wfs, mod_sh_track_t *shtrack) {
 	float corrst[3];
 	imgGetStats(wfs->corr, DATA_UINT16, NULL, shtrack->nsubap * shtrack->track.x * shtrack->track.y, corrst);
 	imgGetStats(wfs->image, DATA_UINT8, &(wfs->res), -1, srcst);
-	logDebug(LOG_SOMETIMES, "SUBCORR: corr: min: %f, max: %f, avg: %f", corrst[0], corrst[1], corrst[2]);
-	logDebug(LOG_SOMETIMES, "SUBCORR: src: min: %f, max: %f, avg: %f", srcst[0], srcst[1], srcst[2]);
+	//logDebug(LOG_SOMETIMES, "SUBCORR: corr: min: %f, max: %f, avg: %f", corrst[0], corrst[1], corrst[2]);
+	//logDebug(LOG_SOMETIMES, "SUBCORR: src: min: %f, max: %f, avg: %f", srcst[0], srcst[1], srcst[2]);
 	//sleep(1);
 	
 	return EXIT_SUCCESS;
@@ -815,8 +816,8 @@ int MMDarkFlatFullByte(wfs_t *wfs, mod_sh_track_t *shtrack) {
 	imgGetStats(imagesrc, DATA_UINT8, &(wfs->res), -1, srcstats);
 	imgGetStats(wfs->corrim, DATA_GSL_M_F, &(wfs->res), -1, corrstats);
 	
-	logDebug(LOG_SOMETIMES, "FULLCORR: src: min %f, max %f, avg %f", srcstats[0], srcstats[1], srcstats[2]);
-	logDebug(LOG_SOMETIMES, "FULLCORR: corr: min %f, max %f, avg %f", corrstats[0], corrstats[1], corrstats[2]);
+	//logDebug(LOG_SOMETIMES, "FULLCORR: src: min %f, max %f, avg %f", srcstats[0], srcstats[1], srcstats[2]);
+	//logDebug(LOG_SOMETIMES, "FULLCORR: corr: min %f, max %f, avg %f", corrstats[0], corrstats[1], corrstats[2]);
 
 	return EXIT_SUCCESS;
 }

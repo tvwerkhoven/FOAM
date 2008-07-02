@@ -399,7 +399,7 @@ int modCogTrack(void *image, foam_datat_t data, mod_sh_align_t align, mod_sh_tra
 			uint8_t *datapt = (uint8_t *) image;
 			for (iy=0; iy<shtrack->track.y; iy++) { // sum all pixels in the tracker window
 				for (ix=0; ix<shtrack->track.x; ix++) {
-					fi = datapt[(shtrack->track.y*shtrack->track.x)*sn + (shtrack->track.y+iy)+ix];
+					fi = datapt[(shtrack->track.y*shtrack->track.x)*sn + (shtrack->track.y*iy) +ix];
 					if (max != NULL && fi > *max) *max = fi;
 					
 					csum += fi;				// add this pixel's intensity to sum
