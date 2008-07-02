@@ -205,6 +205,7 @@ int modClosedLoop(control_t *ptc) {
 #ifdef FOAM_SIMSTAT_DISPLAY
     if (ptc->frames % ptc->logfrac == 0) {
 		displayDraw((&ptc->wfs[0]), &disp, &shtrack);
+		displaySDLEvents(&disp);
 		logInfo(0, "Current framerate: %.2f FPS", ptc->fps);
 		logInfo(0, "Displacements per subapt in (x, y) pairs (%d subaps):", shtrack.nsubap);
 		for (sn = 0; sn < shtrack.nsubap; sn++)
@@ -753,8 +754,7 @@ int MMDarkFlatSubapByte(wfs_t *wfs, mod_sh_track_t *shtrack) {
 				// TvW 2008-07-02, directly copy raw to corr for the moment, this is statsim anyway
 				// leaving the above intact will give a hint on the performance of this method though,
 				// although the results of the above statements are thrown away
-				tcorr[off+i*shtrack->track.x + j] = i*j;
-				//tsrc[off+i*wfs->res.x + j];
+				tcorr[off+i*shtrack->track.x + j] = tsrc[i*wfs->res.x + j];
 			}
 		}
 	}
@@ -806,7 +806,7 @@ int MMDarkFlatFullByte(wfs_t *wfs, mod_sh_track_t *shtrack) {
 				gsl_matrix_float_set(wfs->corrim, i, j, imagesrc[i*wfs->res.x +j]);
 				//gsl_matrix_float_set(wfs->corrim, i, j, \
 									 fmin(128 * pix2 / pix1, 255));
-			gsl_matrix_float_set(wfs->corrim, i, j, i*j);
+			gsl_matrix_float_set(wfs->corrim, i, j, imagesrc[i*wfs->res.x +j]);
 			
 		}
 	}
@@ -815,8 +815,8 @@ int MMDarkFlatFullByte(wfs_t *wfs, mod_sh_track_t *shtrack) {
 	imgGetStats(imagesrc, DATA_UINT8, &(wfs->res), -1, srcstats);
 	imgGetStats(wfs->corrim, DATA_GSL_M_F, &(wfs->res), -1, corrstats);
 	
-	logDebug(LOG_SOMETIMES, "FASTCORR: src: min %f, max %f, avg %f", srcstats[0], srcstats[1], srcstats[2]);
-	logDebug(LOG_SOMETIMES, "FASTCORR: corr: min %f, max %f, avg %f", corrstats[0], corrstats[1], corrstats[2]);
+	logDebug(LOG_SOMETIMES, "FULLCORR: src: min %f, max %f, avg %f", srcstats[0], srcstats[1], srcstats[2]);
+	logDebug(LOG_SOMETIMES, "FULLCORR: corr: min %f, max %f, avg %f", corrstats[0], corrstats[1], corrstats[2]);
 
 	return EXIT_SUCCESS;
 }

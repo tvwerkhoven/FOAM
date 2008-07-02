@@ -255,7 +255,7 @@ int displayImgByte(uint8_t *img, mod_display_t *disp) {
 			// (track.x, .y). Rasterposition (re)sets the coor-
 			// dinates where pixels are drawn.
 			glRasterPos2i(shtrack->subc[i].x, shtrack->subc[i].y);
-			glDrawPixels((GLsizei) shtrack->track.x, (GLsizei) shtrack->track.y, GL_LUMINANCE, GL_UNSIGNED_BYTE, (const GLvoid *) (img + i*(shtrack->track.x+shtrack->track.y)));
+			glDrawPixels((GLsizei) shtrack->track.x, (GLsizei) shtrack->track.y, GL_LUMINANCE, GL_UNSIGNED_BYTE, (const GLvoid *) (img + i*(shtrack->track.x*shtrack->track.y)));
 		}
 		// reset raster position
 		glRasterPos2i(0, 0);
