@@ -278,7 +278,6 @@ int modCalibrate(control_t *ptc) {
 		logInfo(0, "Starting flatfield calibration now");
 
 		// set flat constant so we get a gain of 1
-		// we fake a darkfield here (random pixels between 2-6)
 		gsl_matrix_float_set_all(wfsinfo->darkim, 32.0);
 		
 		// saving image for later usage
@@ -337,15 +336,7 @@ int modCalibrate(control_t *ptc) {
 	}
 	else if (ptc->calmode == CAL_SUBAPSEL) {
 		logInfo(0, "Starting subaperture selection now");
-		// init grabbing
-//		if (drvInitGrab(&dalsacam) != EXIT_SUCCESS) 
-//			return EXIT_FAILURE;
-		// get a single image
-//		drvGetImg(&dalsacam, &buffer, NULL, &(wfsinfo->image));
-		
-		// stop grabbing
-//		if (drvStopGrab(&dalsacam) != EXIT_SUCCESS)
-//			return EXIT_FAILURE;
+		// no need to get get an image, it's alway the same for static simulation
 
 		uint8_t *tmpimg = (uint8_t *) wfsinfo->image;
 		uint8_t tmpmax = tmpimg[0];
@@ -360,7 +351,6 @@ int modCalibrate(control_t *ptc) {
 
 		// run subapsel on this image
 		modSelSubapts(wfsinfo->image, DATA_UINT8, ALIGN_RECT, &shtrack, wfsinfo);
-		//modSelSubaptsByte(void *image, mod_sh_track_t *shtrack, wfs_t *shwfs, int *totnsubap, float samini, int samxr) 
 
 		logInfo(0, "Subaperture selection complete, found %d subapertures.", shtrack.nsubap);
 		// set new display settings to show the darkfield
@@ -641,12 +631,13 @@ shtrack.shsize.x, shtrack.shsize.y, shtrack.track.x, shtrack.track.y, ptc->wfs[0
 /**************************/
 
 int drvSetActuator(control_t *ptc, int wfc) {
+	// not a lot of actuating to be done for simulation
 	if (ptc->wfc[wfc].type == 0) {			// Okotech DM
 		// use okodm routines here
 	}
-	/*else if (wfc == 1) {	// Tip-tilt mirror
+	else if (ptc->wfc[wfc].type == 1) {	// Tip-tilt mirror
 		// use daq routines here
-	}*/
+	}
 	
 	return EXIT_SUCCESS;
 }
@@ -690,7 +681,6 @@ int MMAvgFramesByte(control_t *ptc, gsl_matrix_float *output, wfs_t *wfs, int ro
 		if ((k % (rounds/10)) == 0 && k > 0)
 			logDebug(0 , "Frame %d", k);
 		
-		//		drvGetImg(&dalsacam, &buffer, NULL, &(wfs->image));
 		drvGetImg(ptc, 0);
 		imgsrc = (uint8_t *) wfs->image;
 		
@@ -738,25 +728,25 @@ int MMDarkFlatSubapByte(wfs_t *wfs, mod_sh_track_t *shtrack) {
 				// we're simulating saturated calculations here
 				// with quite some effort. This goes must better
 				// in MMX/SSE2.
-				// Here we check if src - dark < 0, and we set 
-				// the result to zero
 				
 				tmp = (( ((uint16_t) tsrc[off+i*wfs->res.x + j]) << 8) - tdark[off+i*shtrack->track.x + j]); 
 				
-				//if (tsrc[off+i*wfs->res.x + j] > 0)
-				//logDebug(LOG_NOFORMAT, "s: %u, s8: %u, d: %u, g: %u, t: %u", tsrc[off+i*wfs->res.x + j], ((uint16_t) tsrc[off+i*wfs->res.x + j]) << 8, tdark[off+i*shtrack->track.x + j], tgain[off+i*shtrack->track.x + j], tmp);
-				
+				// Here we check if src - dark < 0, and we set 
+				// the pixel to zero if true
 				if (tmp > (tsrc[off+i*wfs->res.x + j] << 8))
-					tcorr[off+i*shtrack->track.x + j] = 0;
+					tmp = 0;
+					//tcorr[off+i*shtrack->track.x + j] = 0;
 				// Here we check if we overflow the pixel range
 				// after applying a gain, if so we set the pixel
 				// to 255
 				else if ((tmp = ((tmp * tgain[off+i*shtrack->track.x + j]) >> 16)) > 255)
-					tcorr[off+i*shtrack->track.x + j] = 255;
+					tmp = 255;
+					//tcorr[off+i*shtrack->track.x + j] = 255;
 				// if none of this happens, we just set the pixel
 				// to the value that it should have
 				else
-					tcorr[off+i*shtrack->track.x + j] = tmp;
+					tmp = 1;
+					//tcorr[off+i*shtrack->track.x + j] = tmp;
 				//logDebug(LOG_NOFORMAT, "c: %u\n", tcorr[off+i*shtrack->track.x + j]);
 			}
 		}
@@ -772,7 +762,7 @@ int MMDarkFlatSubapByte(wfs_t *wfs, mod_sh_track_t *shtrack) {
 	return EXIT_SUCCESS;
 }
 
-// Dark flat calibration
+// Dark flat calibration, currently only does raw-dark
 int MMDarkFlatFullByte(wfs_t *wfs, mod_sh_track_t *shtrack) {
 	logDebug(LOG_SOMETIMES, "Slow full-frame darkflat correcting now");
 	size_t i, j; // size_t because gsl wants this
@@ -805,24 +795,10 @@ int MMDarkFlatFullByte(wfs_t *wfs, mod_sh_track_t *shtrack) {
 			if (pix1 <= 0)
 				gsl_matrix_float_set(wfs->corrim, i, j, 0.0);
 			else 
-				gsl_matrix_float_set(wfs->corrim, i, j, \
+				gsl_matrix_float_set(wfs->corrim, i, j, pix2);
+				//gsl_matrix_float_set(wfs->corrim, i, j, \
 									 fmin(128 * pix2 / pix1, 255));
 			
-			//				 fmaxf((((float) imagesrc[i*wfs->res.x +j]) - \
-			gsl_matrix_float_get(wfs->darkim, i, j)), 0)/ \
-			(gsl_matrix_float_get(wfs->flatim, i, j) -\
-			gsl_matrix_float_get(wfs->darkim, i, j)));
-			//sum[0] += imagesrc[i*wfs->res.x +j];
-			//			sum[1] += gsl_matrix_float_get(wfs->darkim, i, j);
-			//sum[1] += gsl_matrix_float_get(wfs->corrim, i, j);
-			//if ( imagesrc[i*wfs->res.x +j] > max[0])
-			//max[0] = imagesrc[i*wfs->res.x +j];
-			//			if ( gsl_matrix_float_get(wfs->darkim, i, j)>max[1])
-			//				max[1] =  gsl_matrix_float_get(wfs->darkim, i, j);
-			//if ( gsl_matrix_float_get(wfs->corrim, i, j)>max[1])
-			//max[1] =  gsl_matrix_float_get(wfs->corrim, i, j);
-			//								 (gsl_matrix_float_get(wfs->flatim, i, j) - \
-			//								  gsl_matrix_float_get(wfs->darkim, i, j)));
 		}
 	}
 	float corrstats[3];
@@ -832,37 +808,7 @@ int MMDarkFlatFullByte(wfs_t *wfs, mod_sh_track_t *shtrack) {
 	
 	logDebug(LOG_SOMETIMES, "src: min %f, max %f, avg %f", srcstats[0], srcstats[1], srcstats[2]);
 	logDebug(LOG_SOMETIMES, "corr: min %f, max %f, avg %f", corrstats[0], corrstats[1], corrstats[2]);
-	//logDebug(LOG_SOMETIMES, "src: max %f, avg %f", max[0], sum[0]/(wfs->res.x * wfs->res.y));
-	//logDebug(LOG_SOMETIMES, "corr: max %f,avg %f", max[1], sum[1]/(wfs->res.x * wfs->res.y));
-	
-	// old code which only does subaperture correction (superseded by fast ASM code)
-	/*
-	 // tracker windows for dark and flat
-	 for (sn=0; sn<shtrack->nsubap; sn++) {
-	 // correcting tracker window for subapt 'sn' now
-	 // which is shtrack->track.x by track.y big
-	 // and which is located at shtrack->subc.x by subc.y
-	 
-	 for (i=0; i < shtrack->track.y; i++) {
-	 for (j=0; j < shtrack->track.x; j++) {
-	 // source pixel at:
-	 // img[subc.x + subc.y *res.x + i *res.x + j]
-	 // dst at corrim,
-	 // corrim = img-dark
-	 gsl_matrix_float_set(wfs->corrim, i + shtrack->subc[sn].y, j + shtrack->subc[sn].x, \
-	 (((float) imagesrc[shtrack->subc[sn].y * wfs->res.x + shtrack->subc[sn].x + i*wfs->res.x +j]) -\
-	 gsl_matrix_float_get(wfs->darkim, i + shtrack->subc[sn].y, j + shtrack->subc[sn].x))  \
-	 );
-	 }
-	 }
-	 }
-	 // now do raw-dark/(flat-dark), flat-dark is already stored in wfs->flatim
-	 //gsl_matrix_float_sub (wfs->corrim, wfs->darkim);
-	 //gsl_matrix_float_div_elements (wfs->corrim, wfs->flatim);
-	 
-	 */
-	
-	
+
 	return EXIT_SUCCESS;
 }
 

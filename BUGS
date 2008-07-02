@@ -9,3 +9,9 @@ When exiting from the worker thread using exit() (i.e. upon failure or error),
 this gives errors on at least OS X. This is probably due to quitting from the
 wrong thread using SDL. Proposed solution: signal main thread to stop the
 program, instead of exiting directly.
+
+Additional notes 2008-07-01 21:16: SDL is not implemented nicely on OS X which
+causes weird NSAutoReleasePool related errors. To solve this, every thread
+needs to initialize SDL with some Objective C code. Another solution is not to
+run it on OS X, as this platform will probably not be used for driving AO in 
+the first place.

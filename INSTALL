@@ -109,7 +109,7 @@ To get ITIFG running
   - Get the ITIFG drivers from sourceforge
     (8.4.0 is the newest at the time of writing).
 
-  ? Get the linux kernel headers for the running kernel
+  - Get the linux kernel headers for the running kernel
     (linux-headers-2.6.18-5, linux-support-2.6.18-5, linux-source-2.6.18
     etc).
 
@@ -133,7 +133,7 @@ To get ITIFG running
     (fixes: 'can't find macro file m')
 
   - Build the ITIFG driver
-    (see README, or make config && make depend && make && make statc)
+    (see README, or make config && make depend && make && make static)
 
   - To get the right FPGA file loaded into memory (necessary for test_itifg),
     either run 'cat fpgafiles/<file.exo> > /dev/ic0cfg' or change the DEFAULT

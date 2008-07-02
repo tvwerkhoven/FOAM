@@ -1,10 +1,14 @@
 Main Todo Items
 ===============
 
-We are looking for volunteers to do the following tasks.
-Consult the TODO files in each directory first for specific
-requirements.
-
-* Real time linux implementation of FOAM.
+We are looking for volunteers to do the following tasks :).
 
 * Correlation tracking functions for Shack Hartmann sensors.
+
+* Adding MCAO capabilities
+
+* General streamlining and optimizations
+
+* Real time linux implementation of FOAM (long term project)
+
+* Porting to C++ (long term project)
