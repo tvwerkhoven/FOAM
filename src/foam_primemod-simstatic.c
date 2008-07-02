@@ -747,7 +747,11 @@ int MMDarkFlatSubapByte(wfs_t *wfs, mod_sh_track_t *shtrack) {
 				else
 					tmp = 1;
 					//tcorr[off+i*shtrack->track.x + j] = tmp;
-				//logDebug(LOG_NOFORMAT, "c: %u\n", tcorr[off+i*shtrack->track.x + j]);
+				
+				// TvW 2008-07-02, directly copy raw to corr for the moment, this is statsim anyway
+				// leaving the above intact will give a hint on the performance of this method though,
+				// although the results of the above statements are thrown away
+				tcorr[off+i*shtrack->track.x + j] = tsrc[off+i*wfs->res.x + j];
 			}
 		}
 	}
@@ -755,8 +759,8 @@ int MMDarkFlatSubapByte(wfs_t *wfs, mod_sh_track_t *shtrack) {
 	float corrst[3];
 	imgGetStats(wfs->corr, DATA_UINT16, NULL, shtrack->nsubap * shtrack->track.x * shtrack->track.y, corrst);
 	imgGetStats(wfs->image, DATA_UINT8, &(wfs->res), -1, srcst);
-	logDebug(LOG_SOMETIMES, "corr: min: %f, max: %f, avg: %f", corrst[0], corrst[1], corrst[2]);
-	logDebug(LOG_SOMETIMES, "src: min: %f, max: %f, avg: %f", srcst[0], srcst[1], srcst[2]);
+	logDebug(LOG_SOMETIMES, "SUBCORR: corr: min: %f, max: %f, avg: %f", corrst[0], corrst[1], corrst[2]);
+	logDebug(LOG_SOMETIMES, "SUBCORR: src: min: %f, max: %f, avg: %f", srcst[0], srcst[1], srcst[2]);
 	//sleep(1);
 	
 	return EXIT_SUCCESS;
@@ -773,10 +777,10 @@ int MMDarkFlatFullByte(wfs_t *wfs, mod_sh_track_t *shtrack) {
 		return EXIT_FAILURE;
 	}
 	// copy the image to corrim, while doing dark/flat fielding at the same time
-	float max[2], sum[2];
-	sum[0] = sum[1] = 0.0;
-	max[0] = imagesrc[0];
-	max[1] = gsl_matrix_float_get( wfs->darkim, 0, 0);
+//	float max[2], sum[2];
+//	sum[0] = sum[1] = 0.0;
+//	max[0] = imagesrc[0];
+//	max[1] = gsl_matrix_float_get( wfs->darkim, 0, 0);
 	float pix1, pix2;
 	for (i=0; (int) i < wfs->res.y; i++) {
 		for (j=0; (int) j < wfs->res.x; j++) {
@@ -793,9 +797,10 @@ int MMDarkFlatFullByte(wfs_t *wfs, mod_sh_track_t *shtrack) {
 			// at all. Actually this should be average(flat-dark), but that's
 			// too expensive here, this should work fine :P
 			if (pix1 <= 0)
-				gsl_matrix_float_set(wfs->corrim, i, j, 0.0);
+				gsl_matrix_float_set(wfs->corrim, i, j, imagesrc[i*wfs->res.x +j]);
+				//gsl_matrix_float_set(wfs->corrim, i, j, 0.0);
 			else 
-				gsl_matrix_float_set(wfs->corrim, i, j, pix2);
+				gsl_matrix_float_set(wfs->corrim, i, j, imagesrc[i*wfs->res.x +j]);
 				//gsl_matrix_float_set(wfs->corrim, i, j, \
 									 fmin(128 * pix2 / pix1, 255));
 			
@@ -806,8 +811,8 @@ int MMDarkFlatFullByte(wfs_t *wfs, mod_sh_track_t *shtrack) {
 	imgGetStats(imagesrc, DATA_UINT8, &(wfs->res), -1, srcstats);
 	imgGetStats(wfs->corrim, DATA_GSL_M_F, &(wfs->res), -1, corrstats);
 	
-	logDebug(LOG_SOMETIMES, "src: min %f, max %f, avg %f", srcstats[0], srcstats[1], srcstats[2]);
-	logDebug(LOG_SOMETIMES, "corr: min %f, max %f, avg %f", corrstats[0], corrstats[1], corrstats[2]);
+	logDebug(LOG_SOMETIMES, "FASTCORR: src: min %f, max %f, avg %f", srcstats[0], srcstats[1], srcstats[2]);
+	logDebug(LOG_SOMETIMES, "FASTCORR: corr: min %f, max %f, avg %f", corrstats[0], corrstats[1], corrstats[2]);
 
 	return EXIT_SUCCESS;
 }
