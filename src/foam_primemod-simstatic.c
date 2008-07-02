@@ -149,7 +149,9 @@ void modStopModule(control_t *ptc) {
 /*********************/
 
 int modOpenInit(control_t *ptc) {
-	
+	// set disp source to full calib
+	disp.dispsrc = DISPSRC_FULLCALIB;
+
 	// nothing to init for static simulation
 	return EXIT_SUCCESS;
 }
@@ -158,7 +160,7 @@ int modOpenLoop(control_t *ptc) {
 	static char title[64];
 	
 	// dark-flat the whole frame
-	MMDarkFlatFullByte(&(ptc->wfs[0]), &shtrack);
+	//MMDarkFlatFullByte(&(ptc->wfs[0]), &shtrack);
 	
 //	modCogTrack(ptc->wfs[0].corrim, DATA_GSL_M_F, ALIGN_RECT, &shtrack, NULL, NULL);
 	
@@ -171,7 +173,7 @@ int modOpenLoop(control_t *ptc) {
 		SDL_WM_SetCaption(title, 0);
     }
 #endif
-	usleep(10000);
+	usleep(1000);
 	return EXIT_SUCCESS;
 }
 
@@ -195,7 +197,7 @@ int modClosedLoop(control_t *ptc) {
 	int sn;
 	
 	// dark-flat the whole frame
-	MMDarkFlatSubapByte(&(ptc->wfs[0]), &shtrack);
+	//MMDarkFlatSubapByte(&(ptc->wfs[0]), &shtrack);
 
 	// try to get the center of gravity 
 	modCogTrack(ptc->wfs[0].corrim, DATA_GSL_M_F, ALIGN_RECT, &shtrack, NULL, NULL);
@@ -215,7 +217,7 @@ int modClosedLoop(control_t *ptc) {
 		SDL_WM_SetCaption(title, 0);
     }
 #endif
-	usleep(10000);
+	usleep(1000);
 	return EXIT_SUCCESS;
 }
 
@@ -751,7 +753,8 @@ int MMDarkFlatSubapByte(wfs_t *wfs, mod_sh_track_t *shtrack) {
 				// TvW 2008-07-02, directly copy raw to corr for the moment, this is statsim anyway
 				// leaving the above intact will give a hint on the performance of this method though,
 				// although the results of the above statements are thrown away
-				tcorr[off+i*shtrack->track.x + j] = tsrc[off+i*wfs->res.x + j];
+				tcorr[off+i*shtrack->track.x + j] = i*j;
+				//tsrc[off+i*wfs->res.x + j];
 			}
 		}
 	}
@@ -803,6 +806,7 @@ int MMDarkFlatFullByte(wfs_t *wfs, mod_sh_track_t *shtrack) {
 				gsl_matrix_float_set(wfs->corrim, i, j, imagesrc[i*wfs->res.x +j]);
 				//gsl_matrix_float_set(wfs->corrim, i, j, \
 									 fmin(128 * pix2 / pix1, 255));
+			gsl_matrix_float_set(wfs->corrim, i, j, i*j);
 			
 		}
 	}
