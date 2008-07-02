@@ -160,7 +160,7 @@ int modOpenLoop(control_t *ptc) {
 	static char title[64];
 	
 	// dark-flat the whole frame
-	//MMDarkFlatFullByte(&(ptc->wfs[0]), &shtrack);
+	MMDarkFlatFullByte(&(ptc->wfs[0]), &shtrack);
 	
 //	modCogTrack(ptc->wfs[0].corrim, DATA_GSL_M_F, ALIGN_RECT, &shtrack, NULL, NULL);
 	
@@ -197,7 +197,7 @@ int modClosedLoop(control_t *ptc) {
 	int sn;
 	
 	// dark-flat the whole frame
-	//MMDarkFlatSubapByte(&(ptc->wfs[0]), &shtrack);
+	MMDarkFlatSubapByte(&(ptc->wfs[0]), &shtrack);
 
 	// try to get the center of gravity 
 	modCogTrack(ptc->wfs[0].corrim, DATA_GSL_M_F, ALIGN_RECT, &shtrack, NULL, NULL);
