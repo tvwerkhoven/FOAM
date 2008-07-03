@@ -76,14 +76,16 @@ int modInitModule(control_t *ptc, config_t *cs_config) {
 	simparams.wf = "../config/wavefront.png";
 	simparams.apert = "../config/apert15-256.pgm";
 	simparams.actpat = "../config/dm37-256.pgm";
-	// this is where the simulated image will be stored
-	simparams.currimg = (uint8_t *) ptc->wfs[0].image;	// Watch out! not allocated yet, pointer NULL
-	simparams.currimgres.x = 256;
-	simparams.currimgres.x = 256;
+	// resolution of the simulated image
+	simparams.currimgres.x = ptc->wfs[0].res.x;
+	simparams.currimgres.y = ptc->wfs[0].res.y;
 	simparams.wisdomfile = FOAM_CONFIG_PRE "_fftw-wisdom";
 	if(simInit(&simparams) != EXIT_SUCCESS)
 		logErr("Failed to initialize simulation module.");
-	
+
+	ptc->wfs[0].image = (void *) simparams.currimg;
+
+
 	// shtrack configuring
     // we have an image of WxH, with a lenslet array of WlxHl, such that
     // each lenslet occupies W/Wl x H/Hl pixels, and we use track.x x track.y
@@ -194,7 +196,7 @@ int modOpenLoop(control_t *ptc) {
 		SDL_WM_SetCaption(title, 0);
     }
 #endif
-	usleep(1000);
+	usleep(100000);
 	return EXIT_SUCCESS;
 }
 
@@ -216,6 +218,9 @@ int modClosedInit(control_t *ptc) {
 int modClosedLoop(control_t *ptc) {
 	static char title[64];
 	int sn;
+	
+	// Get simulated image for the first WFS
+	drvGetImg(ptc, 0);
 	
 	// dark-flat the whole frame
 	MMDarkFlatSubapByte(&(ptc->wfs[0]), &shtrack);
@@ -240,7 +245,7 @@ int modClosedLoop(control_t *ptc) {
 		SDL_WM_SetCaption(title, 0);
     }
 #endif
-	usleep(1000);
+	usleep(100000);
 	return EXIT_SUCCESS;
 }
 
@@ -837,8 +842,8 @@ int MMDarkFlatFullByte(wfs_t *wfs, mod_sh_track_t *shtrack) {
 	imgGetStats(imagesrc, DATA_UINT8, &(wfs->res), -1, srcstats);
 	imgGetStats(wfs->corrim, DATA_GSL_M_F, &(wfs->res), -1, corrstats);
 	
-	//logDebug(LOG_SOMETIMES, "FULLCORR: src: min %f, max %f, avg %f", srcstats[0], srcstats[1], srcstats[2]);
-	//logDebug(LOG_SOMETIMES, "FULLCORR: corr: min %f, max %f, avg %f", corrstats[0], corrstats[1], corrstats[2]);
+	logDebug(LOG_SOMETIMES, "FULLCORR: src: min %f, max %f, avg %f", srcstats[0], srcstats[1], srcstats[2]);
+	logDebug(LOG_SOMETIMES, "FULLCORR: corr: min %f, max %f, avg %f", corrstats[0], corrstats[1], corrstats[2]);
 
 	return EXIT_SUCCESS;
 }
@@ -849,5 +854,6 @@ int drvGetImg(control_t *ptc, int wfs) {
 		logWarn("Error getting simulated wavefront.");
 		return EXIT_FAILURE;
 	}
+	ptc->wfs[0].image = (void *) simparams.currimg;
 	return EXIT_SUCCESS;
 }

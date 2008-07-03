@@ -65,12 +65,12 @@ int simInit(mod_sim_t *simparams) {
 //	}
 	
 	// - Load the aperture into memory	
-	if (modReadIMGArrByte(simparams->apert, &(simparams->apertimg), &(simparams->apertres)) != EXIT_SUCCESS)
-		return EXIT_FAILURE;
+	//if (modReadIMGArrByte(simparams->apert, &(simparams->apertimg), &(simparams->apertres)) != EXIT_SUCCESS)
+		//return EXIT_FAILURE;
 	
 	// - Load the actuator pattern into memory
-	if (modReadIMGArrByte(simparams->actpat, &(simparams->actpatimg), &(simparams->actpatres)) != EXIT_SUCCESS)
-		return EXIT_FAILURE;
+	//if (modReadIMGArrByte(simparams->actpat, &(simparams->actpatimg), &(simparams->actpatres)) != EXIT_SUCCESS)
+		//return EXIT_FAILURE;
 	
 	// - Check sanity of values in simparams
 	if (simparams->wfres.x < simparams->currimgres.x + 2*simparams->wind.x) {
@@ -85,6 +85,11 @@ int simInit(mod_sim_t *simparams) {
 		simparams->wind.y = 0;
 	}
 
+	// - Allocate memory for (simulated) WFS output
+	simparams->currimg = (uint8_t *) malloc(simparams->currimgres.x	 * simparams->currimgres.y * sizeof(uint8_t));
+
+
+	logInfo(0, "Simulation module initialized. Currimg (%dx%d)", simparams->currimgres.x, simparams->currimgres.y);
 	return EXIT_SUCCESS;
 }
 
@@ -94,6 +99,7 @@ int simWind(mod_sim_t *simparams) {
 	if (simparams->wind.x == 0 && simparams->wind.y == 0)
 		return EXIT_SUCCESS;
 	
+	logDebug(LOG_SOMETIMES, "Simulating wind.");
 	// Apply 'wind' to the simulated wavefront (i.e. move the origin a few pixels)
 	simparams->currorig.x += simparams->wind.x;
 	simparams->currorig.y += simparams->wind.y;
@@ -129,22 +135,29 @@ int simWind(mod_sim_t *simparams) {
 // This function simulates the wind in the wavefront, mainly
 int simAtm(mod_sim_t *simparams) {
 	int i,j;
-	logDebug(0, "Simulating wind.");
+	logDebug(LOG_SOMETIMES, "Simulating atmosphere.");
+	uint8_t min, max, pix;
+	uint64_t sum;
 	
 	// Now crop the image, i.e. take a part of the big wavefront and store it in 
 	// the location of the wavefront sensor image
+	min = max = simparams->wfimg[0];
 	for (i=0; i< simparams->currimgres.y; i++) { // y coordinate
 		for (j=0; j < simparams->currimgres.x; j++) { // x coordinate 
-			simparams->currimg[i*simparams->currimgres.x + j] = \
-				simparams->wfimg[(simparams->currorig.y + i)*simparams->wfres.x + simparams->currorig.x + j];
+			pix = simparams->wfimg[(simparams->currorig.y + i)*simparams->wfres.x + simparams->currorig.x + j];
+			simparams->currimg[i*simparams->currimgres.x + j] = pix;
+//			if (pix > max) pix = max;
+//			else if (pix < min) pix = min;
+//			sum += pix;
 		}
 	}
+	//logDebug(LOG_SOMETIMES, "Atmosphere: min %f, max %f, sum: %f, avg: %f", min, max, sum, sum/( simparams->currimgres.x *  simparams->currimgres.y));
 	
 	return EXIT_SUCCESS;
 }
 
 int simSensor(mod_sim_t *simparams, control_t *ptc) {
-	logDebug(0, "Now simulating a WFS, origin is at (%d,%d).", simparams->currorig.x, simparams->currorig.y);
+	logDebug(LOG_SOMETIMES, "Now simulating a WFS, origin is at (%d,%d).", simparams->currorig.x, simparams->currorig.y);
 
 	// are we darkfielding?
 	// are we flatfielding?
@@ -152,14 +165,16 @@ int simSensor(mod_sim_t *simparams, control_t *ptc) {
 	// if not, return normal image
 
 	// Simulate wind (i.e. get the new origin to crop from)
-	simWind(simparams);
+	if (simWind(simparams) != EXIT_SUCCESS)
+		return EXIT_FAILURE;
 	
 	// Simulate atmosphere, i.e. get a crop of the wavefront
-	simAtm(simparams);
+	if (simAtm(simparams) != EXIT_SUCCESS)
+		return EXIT_FAILURE;
 	
 	// Simulate SH WFS
-	//if (modSimSH() != EXIT_SUCCESS)
-	//	return EXIT_FAILURE;
+	if (simSHWFS() != EXIT_SUCCESS)
+		return EXIT_FAILURE;
 	
 	
 //	logDebug(0, "Now simulating %d WFC(s).", ptc.wfc_count);
@@ -203,136 +218,9 @@ int simSensor(mod_sim_t *simparams, control_t *ptc) {
 	return EXIT_SUCCESS;
 }
 
-// !!!:tim:20080703 codedump below here, not used
-#if (0)
-
-void modSimError(int wfc, int method, int verbosity) {
-	gsl_vector_float *tmpctrl;
-	int nact, i;
-	int repeat=40;
-	float ctrl;
-	
-	// get the number of actuators for the WFC to simulate
-	nact = ptc.wfc[wfc].nact;
-	
-	tmpctrl = gsl_vector_float_calloc(nact);
-	// fake control vector to make error
-	if (method == 1) {
-		// regular sawtooth drift is here:
-		for (i=0; i<nact; i++) {
-			ctrl = ((ptc.frames % repeat)/(float)repeat * 2 - 1) * ( round( (ptc.frames % repeat)/(float)repeat )*2 - 1);
-			gsl_vector_float_set(tmpctrl, i, ctrl);
-			// * ( round( (ptc.frames % 40)/40.0 )*2 - 1)
-		}
-	}
-	else {
-		// random drift is here:
-		for (i=0; i<nact; i++) {
-			ctrl = gsl_vector_float_get(tmpctrl,i) + (float) drand48()*0.1;
-			gsl_vector_float_set(tmpctrl, i, ctrl);
-			// * ( round( (ptc.frames % 40)/40.0 )*2 - 1)
-		}
-	}
-	
-	// What routine do we need to call to simulate this WFC?
-	if (ptc.wfc[wfc].type == WFC_DM)
-		modSimDM(FOAM_MODSIM_APTMASK, FOAM_MODSIM_ACTPAT, ptc.wfc[0].nact, tmpctrl, ptc.wfs[0].image, ptc.wfs[0].res, -1); // last arg is for niter. -1 for autoset
-	else if (ptc.wfc[wfc].type == WFC_TT)
-		modSimTT(tmpctrl, ptc.wfs[0].image, ptc.wfs[0].res);
-	
-	if (verbosity == 1) {
-		logInfo(LOG_SOMETIMES, "Error: %d with %d acts:", wfc, nact);
-		for (i=0; i<nact; i++)
-			logInfo(LOG_SOMETIMES | LOG_NOFORMAT, "(%.2f) ", gsl_vector_float_get(tmpctrl,i));
-			
-		logInfo(LOG_SOMETIMES | LOG_NOFORMAT, "\n");
-	}
-	
-	// old stuff:
-	// WE APPLY DM OR TT ERRORS HERE, 
-	// AND TEST IF THE WFC'S CAN CORRECT IT
-	///////////////////////////////////////
-
-	// gsl_vector_float *tmpctrl;
-	// tmpctrl = gsl_vector_float_calloc(ptc.wfc[0].nact);
-	
-	// regular sawtooth drift is here:
-	// for (i=0; i<ptc.wfc[0].nact; i++) {
-	// 	gsl_vector_float_set(tmpctrl, i, ((ptc.frames % 40)/40.0 * 2 - 1) * ( round( (ptc.frames % 40)/40.0 )*2 - 1));
-	// 	// * ( round( (ptc.frames % 40)/40.0 )*2 - 1)
-	// }
-
-	// logDebug(0, "TT: faking tt with : %f, %f", gsl_vector_float_get(tmpctrl, 0), gsl_vector_float_get(tmpctrl, 1));
-	// if (ttfd == NULL) ttfd = fopen("ttdebug.dat", "w+");
-	// fprintf(ttfd, "%f, %f\n", gsl_vector_float_get(tmpctrl, 0), gsl_vector_float_get(tmpctrl, 1));
-	
-	//	modSimTT(tmpctrl, ptc.wfs[0].image, ptc.wfs[0].res);
-	// modSimDM(FOAM_MODSIM_APTMASK, FOAM_MODSIM_ACTPAT, ptc.wfc[0].nact, tmpctrl, ptc.wfs[0].image, ptc.wfs[0].res, -1); // last arg is for niter. -1 for autoset
-
-	// END OF FAKING ERRORS
-	///////////////////////
-	
-}
-
-
-
-int simWFC(control_t *ptc, int wfcid, int nact, gsl_vector_float *ctrl, float *image) {
-	// we want to simulate the tip tilt mirror here. What does it do
-	
-	logDebug(0, "WFC %d (%s) has %d actuators, simulating", wfcid, ptc->wfc[wfcid].name, ptc->wfc[wfcid].nact);
-	// logDebug(0, "TT: Control is: %f, %f", gsl_vector_float_get(ctrl,0), gsl_vector_float_get(ctrl,1));
-	// if (ttfd == NULL) ttfd = fopen("ttdebug.dat", "w+");
-	// fprintf(ttfd, "%f, %f\n", gsl_vector_float_get(ctrl,0), gsl_vector_float_get(ctrl,1));
-
-	if (ptc->wfc[wfcid].type == WFC_TT)
-		modSimTT(ctrl, image, ptc->wfs[0].res);
-	else if (ptc->wfc[wfcid].type == WFC_DM) {
-		logDebug(0, "Running modSimDM with %s and %s, nact %d", FOAM_MODSIM_APTMASK, FOAM_MODSIM_ACTPAT, nact);
-		modSimDM(FOAM_MODSIM_APTMASK, FOAM_MODSIM_ACTPAT, nact, ctrl, image, ptc->wfs[0].res, -1); // last arg is for niter. -1 for autoset
-	}
-	else {
-		logWarn("Unknown WFC (%d) encountered (not TT or DM, type: %d, name: %s)", wfcid, ptc->wfc[wfcid].type, ptc->wfc[wfcid].name);
-		return EXIT_FAILURE;
-	}
-					
-	return EXIT_SUCCESS;
-}
-
-int simTel(char *file, float *image, coord_t res) {
-	int i;
-	int aptres[2];
-	
-	// read boundary mask file 
-	// float *aperture is globally defined and initialized to NULL.
-	if (aperture == NULL) {
-		if (modReadIMGArr(file, &aperture, aptres) != EXIT_SUCCESS)
-			logErr("Cannot read telescope aperture");
-
-		if (res.x != aptres[0] || res.y != aptres[1])
-			logErr("Telescope aperture resolution incorrect! (%dx%d vs %dx%d)", res.x, res.y, aptres[0], aptres[1]);
-
-	}
-	
-	logDebug(0, "Aperture read successfully (%dx%d), processing with image.",  res.x, res.y);
-	
-	// Multiply wavefront with aperture
-	for (i=0; i < res.x*res.y; i++)
-	 	if (aperture[i] == 0) image[i] = 0;
-	
-	return EXIT_SUCCESS;
-}
-
-
-int drvSetActuator(control_t *ptc, int wfc) {
-	// this is a placeholder, since we simulate the DM, we don't need to do 
-	// anything here. 
-	return EXIT_SUCCESS;
-}
-
-// TODO: add parameters: image, img resolution, lenslet resolution
 //int modSimSH(float *img, int imgres[2], int cellres[2]) {
-int modSimSH() {
-	logDebug(0, "Simulating SH WFSs now.");
+int modSimSH(mod_sim_t &simparams) {
+	logDebug(LOG_SOMETIMES, "Simulating SH WFSs now.");
 	
 	int i;
 	int nx, ny;
@@ -364,26 +252,26 @@ int modSimSH() {
 	
 	// init FFT plan, FFTW_ESTIMATE could be replaces by MEASURE or sth, which should calculate FFT's faster
 	if (simparams.plan_forward == NULL) {
-		logDebug(0, "Setting up plan for fftw");
+		logDebug(LOG_SOMETIMES, "Setting up plan for fftw");
 		
 		fp = fopen(simparams.wisdomfile,"r");
 		if (fp == NULL)	{				// File does not exist, generate new plan
-			logInfo(0, "No FFTW plan found in %s, generating new plan, this may take a while.", simparams.wisdomfile);
+			logInfo(LOG_SOMETIMES, "No FFTW plan found in %s, generating new plan, this may take a while.", simparams.wisdomfile);
 			simparams.plan_forward = fftw_plan_dft_2d(nx, ny, simparams.shin, simparams.shout, FFTW_FORWARD, FFTW_EXHAUSTIVE);
 
 			// Open file for writing now
 			fp = fopen(simparams.wisdomfile,"w");
 			if (fp == NULL) {
-				logDebug(0, "Could not open file %s for saving FFTW wisdom.", simparams.wisdomfile);
+				logDebug(LOG_SOMETIMES, "Could not open file %s for saving FFTW wisdom.", simparams.wisdomfile);
 				return EXIT_FAILURE;
 			}
 			fftw_export_wisdom_to_file(fp);
 			fclose(fp);
 		}
 		else {
-			logInfo(0, "Importing FFTW wisdom file.");
-			logInfo(0, "If this is the first time this program runs on this machine, this is bad.");
-			logInfo(0, "In that case, please delete '%s' and rerun the program. It will generate new wisdom which is A Good Thing.", \
+			logInfo(LOG_SOMETIMES, "Importing FFTW wisdom file.");
+			logInfo(LOG_SOMETIMES, "If this is the first time this program runs on this machine, this is bad.");
+			logInfo(LOG_SOMETIMES, "In that case, please delete '%s' and rerun the program. It will generate new wisdom which is A Good Thing.", \
 				simparams.wisdomfile);
 			if (fftw_import_wisdom_from_file(fp) == 0) {
 				logWarn("Importing wisdom failed.");
@@ -405,7 +293,7 @@ int modSimSH() {
 			ptc.wfs[0].cells[0], shsize[0], ptc.wfs[0].res.x, ptc.wfs[0].cells[1], shsize[1], ptc.wfs[0].res.y);
 
 	
-	logDebug(0, "Beginning imaging simulation.");
+	logDebug(LOG_SOMETIMES, "Beginning imaging simulation.");
 
 	// now we loop over each subaperture:
 	for (yc=0; yc<ptc.wfs[0].cells[1]; yc++) {
@@ -522,6 +410,132 @@ int modSimSH() {
 	
 	return EXIT_SUCCESS;
 }
+// !!!:tim:20080703 codedump below here, not used
+#if (0)
+
+void modSimError(int wfc, int method, int verbosity) {
+	gsl_vector_float *tmpctrl;
+	int nact, i;
+	int repeat=40;
+	float ctrl;
+	
+	// get the number of actuators for the WFC to simulate
+	nact = ptc.wfc[wfc].nact;
+	
+	tmpctrl = gsl_vector_float_calloc(nact);
+	// fake control vector to make error
+	if (method == 1) {
+		// regular sawtooth drift is here:
+		for (i=0; i<nact; i++) {
+			ctrl = ((ptc.frames % repeat)/(float)repeat * 2 - 1) * ( round( (ptc.frames % repeat)/(float)repeat )*2 - 1);
+			gsl_vector_float_set(tmpctrl, i, ctrl);
+			// * ( round( (ptc.frames % 40)/40.0 )*2 - 1)
+		}
+	}
+	else {
+		// random drift is here:
+		for (i=0; i<nact; i++) {
+			ctrl = gsl_vector_float_get(tmpctrl,i) + (float) drand48()*0.1;
+			gsl_vector_float_set(tmpctrl, i, ctrl);
+			// * ( round( (ptc.frames % 40)/40.0 )*2 - 1)
+		}
+	}
+	
+	// What routine do we need to call to simulate this WFC?
+	if (ptc.wfc[wfc].type == WFC_DM)
+		modSimDM(FOAM_MODSIM_APTMASK, FOAM_MODSIM_ACTPAT, ptc.wfc[0].nact, tmpctrl, ptc.wfs[0].image, ptc.wfs[0].res, -1); // last arg is for niter. -1 for autoset
+	else if (ptc.wfc[wfc].type == WFC_TT)
+		modSimTT(tmpctrl, ptc.wfs[0].image, ptc.wfs[0].res);
+	
+	if (verbosity == 1) {
+		logInfo(LOG_SOMETIMES, "Error: %d with %d acts:", wfc, nact);
+		for (i=0; i<nact; i++)
+			logInfo(LOG_SOMETIMES | LOG_NOFORMAT, "(%.2f) ", gsl_vector_float_get(tmpctrl,i));
+			
+		logInfo(LOG_SOMETIMES | LOG_NOFORMAT, "\n");
+	}
+	
+	// old stuff:
+	// WE APPLY DM OR TT ERRORS HERE, 
+	// AND TEST IF THE WFC'S CAN CORRECT IT
+	///////////////////////////////////////
+
+	// gsl_vector_float *tmpctrl;
+	// tmpctrl = gsl_vector_float_calloc(ptc.wfc[0].nact);
+	
+	// regular sawtooth drift is here:
+	// for (i=0; i<ptc.wfc[0].nact; i++) {
+	// 	gsl_vector_float_set(tmpctrl, i, ((ptc.frames % 40)/40.0 * 2 - 1) * ( round( (ptc.frames % 40)/40.0 )*2 - 1));
+	// 	// * ( round( (ptc.frames % 40)/40.0 )*2 - 1)
+	// }
+
+	// logDebug(0, "TT: faking tt with : %f, %f", gsl_vector_float_get(tmpctrl, 0), gsl_vector_float_get(tmpctrl, 1));
+	// if (ttfd == NULL) ttfd = fopen("ttdebug.dat", "w+");
+	// fprintf(ttfd, "%f, %f\n", gsl_vector_float_get(tmpctrl, 0), gsl_vector_float_get(tmpctrl, 1));
+	
+	//	modSimTT(tmpctrl, ptc.wfs[0].image, ptc.wfs[0].res);
+	// modSimDM(FOAM_MODSIM_APTMASK, FOAM_MODSIM_ACTPAT, ptc.wfc[0].nact, tmpctrl, ptc.wfs[0].image, ptc.wfs[0].res, -1); // last arg is for niter. -1 for autoset
+
+	// END OF FAKING ERRORS
+	///////////////////////
+	
+}
+
+
+
+int simWFC(control_t *ptc, int wfcid, int nact, gsl_vector_float *ctrl, float *image) {
+	// we want to simulate the tip tilt mirror here. What does it do
+	
+	logDebug(LOG_SOMETIMES, "WFC %d (%s) has %d actuators, simulating", wfcid, ptc->wfc[wfcid].name, ptc->wfc[wfcid].nact);
+	// logDebug(0, "TT: Control is: %f, %f", gsl_vector_float_get(ctrl,0), gsl_vector_float_get(ctrl,1));
+	// if (ttfd == NULL) ttfd = fopen("ttdebug.dat", "w+");
+	// fprintf(ttfd, "%f, %f\n", gsl_vector_float_get(ctrl,0), gsl_vector_float_get(ctrl,1));
+
+	if (ptc->wfc[wfcid].type == WFC_TT)
+		modSimTT(ctrl, image, ptc->wfs[0].res);
+	else if (ptc->wfc[wfcid].type == WFC_DM) {
+		logDebug(LOG_SOMETIMES, "Running modSimDM with %s and %s, nact %d", FOAM_MODSIM_APTMASK, FOAM_MODSIM_ACTPAT, nact);
+		modSimDM(FOAM_MODSIM_APTMASK, FOAM_MODSIM_ACTPAT, nact, ctrl, image, ptc->wfs[0].res, -1); // last arg is for niter. -1 for autoset
+	}
+	else {
+		logWarn("Unknown WFC (%d) encountered (not TT or DM, type: %d, name: %s)", wfcid, ptc->wfc[wfcid].type, ptc->wfc[wfcid].name);
+		return EXIT_FAILURE;
+	}
+					
+	return EXIT_SUCCESS;
+}
+
+int simTel(char *file, float *image, coord_t res) {
+	int i;
+	int aptres[2];
+	
+	// read boundary mask file 
+	// float *aperture is globally defined and initialized to NULL.
+	if (aperture == NULL) {
+		if (modReadIMGArr(file, &aperture, aptres) != EXIT_SUCCESS)
+			logErr("Cannot read telescope aperture");
+
+		if (res.x != aptres[0] || res.y != aptres[1])
+			logErr("Telescope aperture resolution incorrect! (%dx%d vs %dx%d)", res.x, res.y, aptres[0], aptres[1]);
+
+	}
+	
+	logDebug(LOG_SOMETIMES, "Aperture read successfully (%dx%d), processing with image.",  res.x, res.y);
+	
+	// Multiply wavefront with aperture
+	for (i=0; i < res.x*res.y; i++)
+	 	if (aperture[i] == 0) image[i] = 0;
+	
+	return EXIT_SUCCESS;
+}
+
+
+int drvSetActuator(control_t *ptc, int wfc) {
+	// this is a placeholder, since we simulate the DM, we don't need to do 
+	// anything here. 
+	return EXIT_SUCCESS;
+}
+
 
 // TODO: document this
 int drvFilterWheel(control_t *ptc, fwheel_t mode) {
