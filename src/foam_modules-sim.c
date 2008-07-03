@@ -65,12 +65,12 @@ int simInit(mod_sim_t *simparams) {
 //	}
 	
 	// - Load the aperture into memory	
-	//if (modReadIMGArrByte(simparams->apert, &(simparams->apertimg), &(simparams->apertres)) != EXIT_SUCCESS)
-		//return EXIT_FAILURE;
+	if (modReadIMGArrByte(simparams->apert, &(simparams->apertimg), &(simparams->apertres)) != EXIT_SUCCESS)
+		return EXIT_FAILURE;
 	
 	// - Load the actuator pattern into memory
-	//if (modReadIMGArrByte(simparams->actpat, &(simparams->actpatimg), &(simparams->actpatres)) != EXIT_SUCCESS)
-		//return EXIT_FAILURE;
+	if (modReadIMGArrByte(simparams->actpat, &(simparams->actpatimg), &(simparams->actpatres)) != EXIT_SUCCESS)
+		return EXIT_FAILURE;
 	
 	// - Check sanity of values in simparams
 	if (simparams->wfres.x < simparams->currimgres.x + 2*simparams->wind.x) {
@@ -341,11 +341,11 @@ int simSHWFS(mod_sim_t *simparams, mod_sh_track_t *shwfs) {
 //			for (i=0; i< nx*ny; i++)
 			
 			// add markers to track copying:
-			for (i=0; i< 2*nx; i++)
-				simparams->shin[i][0] = 1;
+			//for (i=0; i< 2*nx; i++)
+				//simparams->shin[i][0] = 1;
 
-			for (i=0; i< ny; i++)
-				simparams->shin[nx/2+i*nx][0] = 1;
+			//for (i=0; i< ny; i++)
+				//simparams->shin[nx/2+i*nx][0] = 1;
 
 			// loop over all pixels in the subaperture, copy them to subapt:
 			// I'm pretty sure these index gymnastics are correct (2008-01-18)
@@ -390,7 +390,9 @@ int simSHWFS(mod_sim_t *simparams, mod_sh_track_t *shwfs) {
 					
 					// used to be:
 					simparams->shin[ip*nx + jp][1] = sin(tmp);
+					// TvW, disabling sin/cos
 					simparams->shin[ip*nx + jp][0] = cos(tmp);
+					//simparams->shin[ip*nx + jp][0] = tmp;
 				}
 			}
 

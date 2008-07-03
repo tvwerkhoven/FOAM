@@ -60,7 +60,7 @@ int modReadIMGArrByte(char *fname, uint8_t **img, coord_t *outres) {
 	int x, y;
 	//uint8_t pix;
 	//uint8_t min, max;
-	float pix, min, max, sum;
+	float pix, min, max, sum = 0.0;
 	//uint64_t sum=0;
 	
 	if (modReadIMGSurf(fname, &sdlimg) != EXIT_SUCCESS)
