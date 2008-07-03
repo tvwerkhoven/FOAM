@@ -8,70 +8,82 @@
 #ifndef FOAM_MODULES_SIM
 #define FOAM_MODULES_SIM
 
-#include <math.h>
 #include <fftw3.h> 					// we need this for modSimSH()
 #include "foam_cs_library.h"		// we link to the main program here (i.e. we use common (log) functions)
-#include "foam_modules-display.h"	// we need the display module to show debug output
 #include "foam_modules-dm.h"		// we want the DM subroutines here too
 #include "foam_modules-calib.h"		// we want the calibration
-#include "SDL_image.h"				// we need this to read PGM files
+#include "foam_modules-img.h"		// we want image IO
+
 
 // These are defined in foam_cs_library.c
 extern control_t ptc;
 //extern config_t cs_config;
 
-struct simul {
-	int wind[2]; 			//!< 'windspeed' in pixels/frame
-	int curorig[2]; 		//!< current origin in the simulated wavefront image
-	float *simimg; 			//!< pointer to the image we use to simulate stuff
-	int simimgres[2];		//!< resolution of the simulation image
-	float seeingfac;		//!< factor to worsen seeing (2--20)
-	fftw_complex *shin;		//!< input for fft algorithm
-	fftw_complex *shout;	//!< output for fft (but shin can be used if fft is inplace)
-	fftw_plan plan_forward; //!< plan, one time calculation on how to calculate ffts fastest
-	char wisdomfile[32];	//!< filename to store the FFTW wisdom
-};
+/*!
+ @brief This struct is used to characterize seeing conditions
+ */
+typedef struct {
+	coord_t wind; 			//!< (user) 'windspeed' in pixels/frame
+	float seeingfac;		//!< (user) factor to worsen seeing (2--20)
+	coord_t currorig; 		//!< (foam) current origin in the simulated wavefront image
+
+	uint8_t *currimg; 		//!< (user) pointer to a crop of the simulated wavefront
+	coord_t currimgres;		//!< (user) resolution of the crop
+
+	char *wf;				//!< (user) wavefront image to use (pgm)
+	uint8_t *wfimg;			//!< (foam) wavefront image itself
+	coord_t wfres;			//!< (foam) wavefront resolution
+	
+	char *apert;			//!< (user) telescope aperture image to use (pgm)
+	uint8_t *apertimg;		//!< (foam) aperture image itself
+	coord_t apertres;		//!< (foam) aperture image resolution
+	
+	char *actpat;			//!< (user) actuator pattern to use (pgm)
+	uint8_t *actpatimg;		//!< (foam) actuator patter image
+	coord_t actpatres;		//!< (foam) actuator patter image resolution
+
+	fftw_complex *shin;		//!< (foam) input for fft algorithm
+	fftw_complex *shout;	//!< (foam) output for fft (but shin can be used if fft is inplace)
+	fftw_plan plan_forward; //!< (foam) plan, one time calculation on how to calculate ffts fastest
+	char *wisdomfile;		//!< (user) filename to store the FFTW wisdom
+} mod_sim_t;
 
 // PROTOTYPES //
 /**************/
 
+
+int simInit(mod_sim_t *simparams);
+
 /*!
-@brief Simulates sensor(s) read-out and outputs to ptc.wfs[n].image.
+ @brief Simulates wind by chaning the origin that simAtm uses
+  // !!!:tim:20080703 add docs
+ */
+int simWind(mod_sim_t *simparams);
+
+/*!
+ @brief simAtm() crops a part of the source wavefront
+  // !!!:tim:20080703 add docs
+ */
+int simAtm(mod_sim_t *simparams);
+
+/*!
+@brief Simulates sensor(s) read-out
 
 During simulation, this function takes care of simulating the atmosphere, 
-the telescope, the tip-tilt mirror, the DM and the (SH) sensor itself, since
-these all occur in sequence. The sensor output will be stored in ptc.wfs[n].image,
-which must be globally available and allocated.
-
+the telescope, any WFCs the wavefront passes along and the (SH) sensor itself, since
+these all occur in sequence.
+ 
+ // !!!:tim:20080703 add docs
 @return EXIT_SUCCESS on success, EXIT_FAILURE otherwise.
 */
-int drvReadSensor();
+int simSensor(mod_sim_t *simparams, control_t *ptc);
 
-/*!
-@brief This sets the various actuators (WFCs).
-
-This simulates setting the actuators to the right voltages etc. 
-
-@return EXIT_SUCCESS on success, EXIT_FAILURE otherwise.
-*/
-int drvSetActuator();
-
-/*!
-@brief This drives the filterwheel.
-
-This simulates setting the filterwheel. The actual simulation is not done here,
-but in drvReadSensor() which checks which filterwheel is being used and 
-acts accordingly. With a real filterwheel, this would set some hardware address.
-
-@return EXIT_SUCCESS on success, EXIT_FAILURE otherwise.
-*/
-int drvFilterWheel(control_t *ptc, fwheel_t mode);
-
+// !!!:tim:20080703 codedump below here, not used
+#if (0)
 /*!
 @brief Simulates the SH sensor
-
-TODO: document
-This simulates the SH WFS
+ 
+ // !!!:tim:20080703 add docs
 */
 int modSimSH();
 
@@ -82,19 +94,6 @@ TODO: document
 */
 void modSimError(int wfc, int method, int verbosity);
 
-/*!
-@brief \a simAtm() reads a fits file with simulated atmospheric distortion.
-
-This fuction works in wavefront-space.
-TODO: document
-*/
-int simAtm(char *file, coord_t res, int origin[2], float *image);
-
-/*!
-@brief Simulates wind by chaning the origin that simAtm reads in
-*/
-int modSimWind();
-	
 /*!
 @brief \a simTel() simulates the effect of the telescope (aperture) on the output of \a simAtm().
 
@@ -110,5 +109,5 @@ This fuction works in wavefront-space.
 */
 int simWFC(control_t *ptc, int wfcid, int nact, gsl_vector_float *ctrl, float *image);
 
-
+#endif /* #if (0) */
 #endif /* FOAM_MODULES_SIM */

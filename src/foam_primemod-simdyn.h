@@ -1,18 +1,19 @@
 /*! 
-	@file foam_primemod-simstatic.h
+	@file foam_primemod-simdyn.h
 	@author @authortim
-	@date 2008-04-18 12:55
+	@date 2008-07-03
 
+	@brief Header file for the dynamical simulation prime module
 */
 
-#ifndef FOAM_PRIME_SIMSTATIC
-#define FOAM_PRIME_SIMSTATIC
+#ifndef FOAM_PRIME_SIMDYN
+#define FOAM_PRIME_SIMDYN
 
 // GENERAL //
 /***********/
 
 /*
- * These defines must be defined. Choose values as you like, but
+ * These must be defined. Choose values as you like, but
  * don't touch them if you don't need to.
  */
 
@@ -41,10 +42,10 @@ typedef enum { // calmode_t
 	CAL_PINHOLE,	//!< determine reference shifts after inserting a pinhole
 	CAL_INFL,		//!< determine the influence functions for each WFS-WFC pair
 	CAL_LINTEST,	//!< linearity test for WFCs
-	CAL_SUBAPSEL,		//!< For subaperture selection
+	CAL_SUBAPSEL,	//!< For subaperture selection
 	CAL_DARK,		//!< dark fielding
 	CAL_FLAT,		//!< flat fielding
-	CAL_DARKGAIN		//!< generate dark and gain only for the subapertures for fast dark/flat fielding
+	CAL_DARKGAIN	//!< generate dark and gain only for the subapertures for fast dark/flat fielding
 } calmode_t;
 
 /*!
@@ -85,7 +86,7 @@ int drvGetImg(control_t *ptc, int wfs);
 // LIBRARIES //
 /*************/
 
-#ifdef FOAM_SIMSTAT_DISPLAY
+#ifdef FOAM_SIMDYN_DISPLAY
 // for displaying stuff (SDL)
 #include "foam_modules-dispcommon.h"
 #endif
@@ -94,6 +95,11 @@ int drvGetImg(control_t *ptc, int wfs);
 #include "foam_modules-img.h"
 // for calibrating the image lateron
 #include "foam_modules-calib.h"
+// for simulation of DM, TT, wavefront propagation etc
+#include "foam_modules-sim.h"
+// for sh wfs tracking
+#include "foam_modules-sh.h"
+
 
 // These are simstatic specific (for the time being)
 int MMAvgFramesByte(control_t *ptc, gsl_matrix_float *output, wfs_t *wfs, int rounds);

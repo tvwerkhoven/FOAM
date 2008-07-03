@@ -23,7 +23,7 @@ CPPFLAGS+= -DDEBUG_ITIFG=255 -DLinux
 # (un)comment this to toggle debugging
 CFLAGS+=-g
 # (un)comment these to toggle malloc debugging
-HAVE_DMALLOC=1
+#HAVE_DMALLOC=1
 #LDFLAGS+=-ldmalloc 
 
 # basic framework files which are always needed
@@ -37,7 +37,8 @@ foamcs_dummy_SOURCES += foam_primemod-dummy.h $(FRAME_HDR)
 foamcs_dummy_CPPFLAGS = -include "foam_primemod-dummy.h"
 foamcs_dummy_CFLAGS = -g
 
-# did we enable UI support or not?
+### UI MODE ###
+###############
 if UI
 bin_PROGRAMS += foamui
 foamui_SOURCES = foam_ui.c foam_ui_library.c
@@ -45,8 +46,11 @@ foamui_SOURCES += foam_ui_library.h
 foamui_CFLAGS = $(UI_CFLAGS)
 foamui_LDFLAGS = $(UI_LIBS)
 endif UI
+### END UI MODE ###
 
-# programs depend on whether or not we want static simulation...
+### STATIC SIMULATION MODE ###
+##############################
+
 if SIMSTAT
 # Program name simstat
 bin_PROGRAMS += foamcs-simstat
@@ -82,33 +86,52 @@ foamcs_simstat_CFLAGS += $(OPENGL_CFLAGS)
 foamcs_simstat_LDFLAGS += $(OPENGL_LIBS)
 endif OPENGL
 
-# endif SIMSTAT
 endif SIMSTAT
+### END STATIC SIMULATION MODE ###
 
-# programs depend on whether or not we want simulation...
-# if SIMULATION
+### DYNAMICAL SIMULATION MODE ###
+#################################
 
-# simulate using only the TT mirror
-# bin_PROGRAMS += foamcs-simtt
-#foamcs_simtt_SOURCES = foam_primemod-sim.c
-#foamcs_simtt_SOURCES += $(FRAME_SRC) $(FRAME_HDR)
-#foamcs_simtt_SOURCES += foam_modules-dm.c foam_modules-sh.c foam_modules-sim.c foam_modules-dispgl.c foam_modules-calib.c foam_modules-img.c 
-#foamcs_simtt_SOURCES += foam_modules-dm.h foam_modules-sh.h foam_modules-sim.h foam_modules-dispcommon.h foam_modules-calib.h foam_modules-img.h foam_primemod-sim-tt.h
-#foamcs_simtt_CPPFLAGS = -include "foam_primemod-sim-tt.h"
-#foamcs_simtt_CFLAGS = $(SIMULATION_CFLAGS)
-#foamcs_simtt_LDFLAGS = $(SIMULATION_LIBS)
+if SIMDYN
+# Program name simstat
+bin_PROGRAMS += foamcs-simdyn
 
-# simulate using only the DM mirror
-#bin_PROGRAMS += foamcs-simdm
-#foamcs_simdm_SOURCES =  foam_primemod-sim.c
-#foamcs_simdm_SOURCES += $(FRAME_SRC) $(FRAME_HDR)
-#foamcs_simdm_SOURCES += foam_modules-dm.c foam_modules-sh.c foam_modules-sim.c foam_modules-dispgl.c foam_modules-calib.c foam_modules-img.c
-#foamcs_simdm_SOURCES += foam_modules-dm.h foam_modules-sh.h foam_modules-sim.h foam_modules-dispcommon.h foam_modules-calib.h foam_modules-img.h foam_primemod-sim-dm.h
-#foamcs_simdm_CPPFLAGS = -include "foam_primemod-sim-dm.h"
-#foamcs_simdm_CFLAGS = $(SIMULATION_CFLAGS)
-#foamcs_simdm_LDFLAGS = $(SIMULATION_LIBS)
-#endif
+# prime module C file
+foamcs_simdyn_SOURCES = foam_primemod-simdyn.c
+# Other C files
+foamcs_simdyn_SOURCES += $(FRAME_SRC) $(FRAME_HDR)
+foamcs_simdyn_SOURCES += foam_modules-sh.c foam_modules-calib.c foam_modules-img.c foam_modules-sim.c
 
+# Are we going to use OpenGL or not?
+if OPENGL
+foamcs_simdyn_SOURCES += foam_modules-dispgl.c
+else !OPENGL
+foamcs_simdyn_SOURCES += foam_modules-dispsdl.c
+endif !OPENGL
+
+# header files are part of the sources as well
+foamcs_simdyn_SOURCES += foam_modules-sh.h foam_modules-calib.h foam_modules-dispcommon.h foam_modules-img.h foam_modules-sim.h foam_primemod-simdyn.h
+
+# Some CPP flags (include the primemod header, and configure some options)
+foamcs_simdyn_CPPFLAGS = -include "foam_primemod-simdyn.h"
+#foamcs_mcmath_CPPFLAGS += -DDEBUG_ITIFG=255 
+foamcs_simdyn_CPPFLAGS += -DFOAM_SIMDYN_DISPLAY=1 -DFOAM_MODULES_DISLAY_SHSUPPORT=1
+
+# specific flags and libraries
+foamcs_simdyn_CFLAGS = $(SIMDYN_CFLAGS)
+foamcs_simdyn_LDFLAGS = $(SIMDYN_LIBS)
+foamcs_simdyn_CPPFLAGS += -DFOAM_MODULES_DISPLAY_OPENGL=1 
+if OPENGL
+# add some flags necessary for OpenGL
+foamcs_simdyn_CFLAGS += $(OPENGL_CFLAGS)
+foamcs_simdyn_LDFLAGS += $(OPENGL_LIBS)
+endif OPENGL
+
+endif SIMDYN
+### END DYNAMICAL SIMULATION MODE ###
+
+### MCMATH MODE ### 
+###################
 if MCMATH
 # Compile mcmath site specific prime module
 bin_PROGRAMS += foamcs-mcmath
@@ -165,6 +188,5 @@ if !SIMHW
 foamcs_mcmath_LDADD = -litifg
 endif !SIMHW
 
-# endif MCMATH
 endif MCMATH
-
+### END MCMATH MODE ### 

@@ -74,16 +74,16 @@ SDL_LIBS=$(pkg-config sdl --libs)
 ### TEST FOR USER INPUT ###
 ###########################
 
-# Test if we want to run as simulation or not
-AC_ARG_ENABLE([simulation],
-		AC_HELP_STRING([--enable-simulation], [enable simulation mode (def: no)]),
+# Test if we want to compile the dynamical simulation package or not
+AC_ARG_ENABLE([simdyn],
+		AC_HELP_STRING([--enable-simdyn], [enable dynamical simulation mode (def: no)]),
 		[case "${enableval}" in
-		yes) simul=true ;;
-		no)  simul=disabled ;;
-		*) AC_MSG_ERROR([bad value ${enableval} for --enable-simulation]) ;;
-	esac],[simul=disabled])
+		yes) simdyn=true ;;
+		no)  simdyn=disabled ;;
+		*) AC_MSG_ERROR([bad value ${enableval} for --enable-simdyn]) ;;
+	esac],[simdyn=disabled])
 
-# Test if we want to run as simulation or not
+# Test if we want to compile the statical simulation package or not
 AC_ARG_ENABLE([simstat],
 		AC_HELP_STRING([--enable-simstat], [enable static simulation mode (def: yes)]),
 		[case "${enableval}" in
@@ -101,7 +101,7 @@ AC_ARG_ENABLE([ui],
 		*) AC_MSG_ERROR([bad value ${enableval} for --enable-ui]) ;;
 	esac],[ui=disabled])
 	
-# Test if we want to do hardware debugging (stand alone modules)
+# Test if we want to do hardware debugging (i.e. compile stand alone modules)
 AC_ARG_ENABLE([hwdebug],
 		AC_HELP_STRING([--enable-hwdebug], [enable hardware debugging (def: no)]),
 		[case "${enableval}" in
@@ -110,7 +110,7 @@ AC_ARG_ENABLE([hwdebug],
 		*) AC_MSG_ERROR([bad value ${enableval} for --enable-hwdebug]) ;;
 	esac],[hwdebug=disabled])
 
-# are we using OpenGL?
+# test if we are using OpenGL
 AC_ARG_ENABLE([opengl],
 		AC_HELP_STRING([--enable-opengl], [enable usage of opengl instead of plain SDL (def: yes)]),
 		[case "${enableval}" in
@@ -154,59 +154,6 @@ AC_ARG_ENABLE([simhw],
 AM_CONDITIONAL([HWDEBUG], [test x$hwdebug = xtrue])
 AM_CONDITIONAL([SIMHW], [test x$simhw = xtrue])
 
-### SIMULATION MODE ###
-#######################
-if test "$simul" = true ; then
-	# search for simulation libraries here, exit if not found
-	AC_MSG_NOTICE([simulation enabled, checking for extra libs])
-	# this is kinda ugly
-	simulmissing=""
-	LIBS=""
-	AC_SEARCH_LIBS([fftw_execute], [fftw3] ,[], 
-		[AC_MSG_WARN([This package needs libfftw3 in simulation mode.])
-		simul=false
-		simulmissing+=" fftw3"
-		]
-	) 	
-	 
-	AC_SEARCH_LIBS([SDL_Init], [SDL] ,[], 
-		[AC_MSG_WARN([This package needs libsdl in simulation mode.])
-		simul=false
-		simulmissing+=" sdl"
-		]
-	)
-
-	AC_SEARCH_LIBS([IMG_Load], [SDL_image] ,[], 
-		[AC_MSG_WARN([This package needs sdl-image in simulation mode.])
-		simul=false
-		simulmissing+=" sdl-image"
-		]
-	)
-	
-	AC_SEARCH_LIBS([gdImageCreate], [gd] ,[], 
-		[AC_MSG_WARN([This package needs libgd in simulation mode.])
-		simul=false
-		simulmissing+=" gd"
-		]
-	)
-	
-	AC_SEARCH_LIBS([gdImagePng], [png] ,[], 
-		[AC_MSG_WARN([This package needs libpng in simulation mode.])
-		simul=false
-		simulmissing+=" png"
-		]
-	)	
-	
-	# fix simulation Cflags (mainly SDL)
-	SIMULATION_CFLAGS+="$SDL_CFLAGS"
-	SIMULATION_LIBS+="$LIBS $SDL_LIBS"
-else 
-	# search for runtime libs here (camera stuff), exit if not found
-	AC_MSG_NOTICE([simulation disabled])
-fi
-AC_SUBST(SIMULATION_CFLAGS)
-AC_SUBST(SIMULATION_LIBS)
-AM_CONDITIONAL([SIMULATION], [test x$simul = xtrue])
 
 ### STATIC SIMULATION MODE ###
 ##############################
@@ -247,6 +194,61 @@ fi
 AC_SUBST(SIMSTAT_CFLAGS)
 AC_SUBST(SIMSTAT_LIBS)
 AM_CONDITIONAL([SIMSTAT], [test x$simstat = xtrue])
+
+### DYNAMICAL SIMULATION MODE ###
+#################################
+if test "$simdyn" = true ; then
+	# search for dynamical simulation libraries here, exit if not found
+	AC_MSG_NOTICE([dynamicsl simulation enabled, checking for extra libs])
+	# this is kinda ugly
+	simdynnmissing=""
+	LIBS=""
+	AC_SEARCH_LIBS([IMG_Load], [SDL_image] ,[], 
+		[AC_MSG_WARN([This package needs sdl-image in simdyn mode.])
+		simdyn=false
+		simdynmissing+=" sdl-image"
+		]
+	)
+	
+	AC_SEARCH_LIBS([fftw_execute], [fftw3] ,[], 
+		[AC_MSG_WARN([This package needs libfftw3 in simdyn mode.])
+		simdyn=false
+		simdynmissing+=" fftw3"
+		]
+	) 	
+	 
+	AC_SEARCH_LIBS([SDL_Init], [SDL] ,[], 
+		[AC_MSG_WARN([This package needs libsdl in simdyn mode.])
+		simdyn=false
+		simdynmissing+=" sdl"
+		]
+	)
+	
+	AC_SEARCH_LIBS([gdImageCreate], [gd] ,[], 
+		[AC_MSG_WARN([This package needs libgd in simdyn mode.])
+		simdyn=false
+		simdynmissing+=" gd"
+		]
+	)
+	
+	AC_SEARCH_LIBS([gdImagePng], [png] ,[], 
+		[AC_MSG_WARN([This package needs libpng in simdyn mode.])
+		simdyn=false
+		simdynmissing+=" png"
+		]
+	)	
+
+	# fix simulation Cflags (mainly SDL)
+	SIMDYN_CFLAGS+="$SDL_CFLAGS"
+	SIMDYN_LIBS+="$LIBS $SDL_LIBS"
+else 
+	# oops, didn't work out
+	AC_MSG_NOTICE([dynamical simulation disabled])
+fi
+AC_SUBST(SIMDYN_CFLAGS)
+AC_SUBST(SIMDYN_LIBS)
+AM_CONDITIONAL([SIMDYN], [test x$simdyn = xtrue])
+
 
 ### MCMATH MODE ### 
 ###################

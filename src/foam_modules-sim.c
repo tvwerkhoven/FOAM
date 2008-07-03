@@ -45,89 +45,156 @@
 
 #include "foam_modules-sim.h"
 
-// We need the following defines, they must be provided by 
-
-// GLOBALS //
-/***********/
-
-struct simul simparams = {
-	.wind[0] = FOAM_MODSIM_WINDX,
-	.wind[1] = FOAM_MODSIM_WINDY,
-	.curorig[0] = 0,
-	.curorig[1] = 0,
-	.seeingfac = FOAM_MODSIM_SEEING,
-	.simimg = NULL,
-	.plan_forward = NULL,
-	.wisdomfile = "fftw_wisdom.dat",
-};
-
-// temporary for TT correction calibration
-FILE *ttfd;
-
-// global to hold telescope aperture
-float *aperture=NULL;
-
-// get this from somewhere else (debug)
- extern SDL_Surface *screen;
-
 // ROUTINES //
 /************/
 
-int drvReadSensor() {
-	int i;
-	logDebug(0, "Now reading %d sensors, origin is at (%d,%d).", ptc.wfs_count, simparams.curorig[0], simparams.curorig[1]);
+int simInit(mod_sim_t *simparams) {
+//	float stats[3];	
 	
-	if (ptc.wfs_count < 1) 
-		logErr("Nothing to process, no WFSs defined.");
+	// Initialize the module:
+	// - Load the wavefront into memory
+	if (modReadIMGArrByte(simparams->wf, &(simparams->wfimg), &(simparams->wfres)) != EXIT_SUCCESS)
+		return EXIT_FAILURE;
+	
+	// // !!!:tim:20080703 doesnt work for uint8_t, try 0-255 or not?
+//	// Normalize the wavefront between -1 and 1. Get min and max first 
+//	imgGetStats(simparams->wfimg, DATA_UINT8, simparams->wfres, -1, stats);	
+//	// Now apply correction to the image
+//	for (i=0; i < simparams->wfres.x * simparams->wfres.y; i++) { // loop over all pixels
+//		simparams->wfimg[i] = (2*(simparams->wfimg[i]-min)/(max-min))-1;
+//	}
+	
+	// - Load the aperture into memory	
+	if (modReadIMGArrByte(simparams->apert, &(simparams->apertimg), &(simparams->apertres)) != EXIT_SUCCESS)
+		return EXIT_FAILURE;
+	
+	// - Load the actuator pattern into memory
+	if (modReadIMGArrByte(simparams->actpat, &(simparams->actpatimg), &(simparams->actpatres)) != EXIT_SUCCESS)
+		return EXIT_FAILURE;
+	
+	// - Check sanity of values in simparams
+	if (simparams->wfres.x < simparams->currimgres.x + 2*simparams->wind.x) {
+		logWarn("Simulated wavefront too small (%d) for current x-wind (%d), setting to zero.", 
+				simparams->wfres.x, simparams->wind.x);
+		simparams->wind.x = 0;
+	}
+	
+	if (simparams->wfres.y < simparams->currimgres.y + 2*simparams->wind.y) {
+		logWarn("Simulated wavefront too small (%d) for current y-wind (%d), setting to zero.", 
+				simparams->wfres.y, simparams->wind.y);
+		simparams->wind.y = 0;
+	}
+
+	return EXIT_SUCCESS;
+}
+
+// This function moves the current origin around using 'wind'
+int simWind(mod_sim_t *simparams) {
+	// Check to see if we are using wind
+	if (simparams->wind.x == 0 && simparams->wind.y == 0)
+		return EXIT_SUCCESS;
+	
+	// Apply 'wind' to the simulated wavefront (i.e. move the origin a few pixels)
+	simparams->currorig.x += simparams->wind.x;
+	simparams->currorig.y += simparams->wind.y;
+	
+ 	// if the origin is out of bound, reverse the wind direction and move that way
+	// X ORIGIN TOO BIG:
+	if (simparams->currorig.x + simparams->currimgres.x >= simparams->wfres.x) {
+		simparams->wind.x *= -1;						// Reverse X wind speed
+		simparams->currorig.x += 2*simparams->wind.x;	// move in the new wind direction, 
+		// twice to compensate for the wind already applied above
+	}
+	// X ORIGIN TOO SMALL
+	if (simparams->currorig.x < 0) {
+		simparams->wind.x *= -1;	
+		simparams->currorig.x += 2*simparams->wind.x;
+	}
+	
+	// Y ORIGIN TOO BIG
+	if (simparams->currorig.y + simparams->currimgres.y >= simparams->wfres.y) {
+		simparams->wind.y *= -1;						// Reverse Y wind speed
+		simparams->currorig.y += 2*simparams->wind.y;	// move in the new wind direction
+	}
+	// Y ORIGIN TOO SMALL
+	if (simparams->currorig.y < 0) {
+		simparams->wind.y *= -1;
+		simparams->currorig.y += 2*simparams->wind.y;
+	}
+	
+	
+	return EXIT_SUCCESS;
+}
+
+// This function simulates the wind in the wavefront, mainly
+int simAtm(mod_sim_t *simparams) {
+	int i,j;
+	logDebug(0, "Simulating wind.");
+	
+	// Now crop the image, i.e. take a part of the big wavefront and store it in 
+	// the location of the wavefront sensor image
+	for (i=0; i< simparams->currimgres.y; i++) { // y coordinate
+		for (j=0; j < simparams->currimgres.x; j++) { // x coordinate 
+			simparams->currimg[i*simparams->currimgres.x + j] = \
+				simparams->wfimg[(simparams->currorig.y + i)*simparams->wfres.x + simparams->currorig.x + j];
+		}
+	}
+	
+	return EXIT_SUCCESS;
+}
+
+int simSensor(mod_sim_t *simparams, control_t *ptc) {
+	logDebug(0, "Now simulating a WFS, origin is at (%d,%d).", simparams->currorig.x, simparams->currorig.y);
+
+	// are we darkfielding?
+	// are we flatfielding?
+	// are we pinholing?
+	// if not, return normal image
+
+	// Simulate wind (i.e. get the new origin to crop from)
+	simWind(simparams);
+	
+	// Simulate atmosphere, i.e. get a crop of the wavefront
+	simAtm(simparams);
+	
+	// Simulate SH WFS
+	//if (modSimSH() != EXIT_SUCCESS)
+	//	return EXIT_FAILURE;
+	
+	
+//	logDebug(0, "Now simulating %d WFC(s).", ptc.wfc_count);
+//	for (i=0; i < ptc->wfc_count; i++)
+//		simWFC(&(ptc->wfc[i]), simparams->currimg); // Simulate every WFC in series
+	
 	
 	// if filterwheel is set to pinhole, simulate a coherent image
-	if (ptc.mode == AO_MODE_CAL && ptc.filter == FILT_PINHOLE) {
-		for (i=0; i<ptc.wfs[0].res.x*ptc.wfs[0].res.y; i++)
-			ptc.wfs[0].image[i] = 1;
-			
-	}
-	else {
-		// This reads in wavefront.pgm (FOAM_MODSIM_WAVEFRONT) to memory at the first call, and each consecutive call
-		// selects a subimage of that big image, defined by simparams.curorig
-		if (simAtm(FOAM_MODSIM_WAVEFRONT, ptc.wfs[0].res, simparams.curorig, ptc.wfs[0].image) != EXIT_SUCCESS) 
-			logErr("Error in simAtm().");
+//	if (ptc.mode == AO_MODE_CAL && ptc.filter == FILT_PINHOLE) {
+//		for (i=0; i<ptc.wfs[0].res.x*ptc.wfs[0].res.y; i++)
+//			ptc.wfs[0].image[i] = 1;
+//			
+//	}
 
-		modSimWind();
-		
-		logDebug(0, "simAtm() done");
-	}
-	
-//	modDrawStuff(&ptc, 0, screen);
-//	sleep(1);
 	
 	// introduce error here,
 	// first param: wfc to use for simulation (dependent on ptc.wfc[wfc])
 	// second param: 0 for regular sawtooth, 1 for random drift
 	// third param: 0 for no output, 1 for ctrl vec output
 #ifdef FOAM_MODSIM_ERR
-	modSimError(FOAM_MODSIM_ERRWFC, FOAM_MODSIM_ERRTYPE, FOAM_MODSIM_ERRVERB);
+//	modSimError(FOAM_MODSIM_ERRWFC, FOAM_MODSIM_ERRTYPE, FOAM_MODSIM_ERRVERB);
 #endif
-
-//	modDrawStuff(&ptc, 0, screen);
-//	sleep(1);
-
 	
-	// we simulate WFCs before the telescope to make sure they outer region is zero (Which is done by simTel())
-	logDebug(0, "Now simulating %d WFC(s).", ptc.wfc_count);
-	for (i=0; i < ptc.wfc_count; i++)
-		simWFC(&ptc, i, ptc.wfc[i].nact, ptc.wfc[i].ctrl, ptc.wfs[0].image); // Simulate every WFC in series
 	
-	if (simTel(FOAM_MODSIM_APERTURE, ptc.wfs[0].image, ptc.wfs[0].res) != EXIT_SUCCESS) // Simulate telescope (from aperture.fits)
-		logErr("error in simTel().");
+//	if (simTel(FOAM_MODSIM_APERTURE, ptc.wfs[0].image, ptc.wfs[0].res) != EXIT_SUCCESS) // Simulate telescope (from aperture.fits)
+//		logErr("error in simTel().");
 	
 //	modDrawStuff(&ptc, 0, screen);
 //	sleep(1);
 
 	// Simulate the WFS here.
-	if (modSimSH() != EXIT_SUCCESS) {
-		logWarn("Simulating SH WFSs failed.");
-		return EXIT_FAILURE;
-	}	
+//	if (modSimSH() != EXIT_SUCCESS) {
+//		logWarn("Simulating SH WFSs failed.");
+//		return EXIT_FAILURE;
+//	}	
 
 //	modDrawStuff(&ptc, 0, screen);
 //	sleep(1);
@@ -135,6 +202,9 @@ int drvReadSensor() {
 	
 	return EXIT_SUCCESS;
 }
+
+// !!!:tim:20080703 codedump below here, not used
+#if (0)
 
 void modSimError(int wfc, int method, int verbosity) {
 	gsl_vector_float *tmpctrl;
@@ -204,46 +274,7 @@ void modSimError(int wfc, int method, int verbosity) {
 	
 }
 
-int modSimWind() {
-	if (simparams.simimgres[0] < ptc.wfs[0].res.x + 2*simparams.wind[0]) {
-		logWarn("Simulated wavefront too small for current x-wind, setting to zero.");
-		simparams.wind[0] = 0;
-	}
-		
-	if (simparams.simimgres[1] < ptc.wfs[0].res.y + 2*simparams.wind[1]) {
-		logWarn("Simulated wavefront too small for current y-wind, setting to zero.");
-		simparams.wind[1] = 0;
-	}
-	
-	// Apply 'wind' to the simulated wavefront
-	simparams.curorig[0] += simparams.wind[0];
-	simparams.curorig[1] += simparams.wind[1];
 
- 	// if the origin is out of bound, reverse the wind direction and move that way
-	// X ORIGIN TOO BIG:
-	if (simparams.wind[0] != 0 && simparams.curorig[0] + ptc.wfs[0].res.x >= simparams.simimgres[0]) {
-		simparams.wind[0] *= -1;						// Reverse X wind speed
-		simparams.curorig[0] += 2*simparams.wind[0];	// move in the new wind direction
-	}
-	// X ORIGIN TOO SMALL
-	if (simparams.wind[0] != 0 && simparams.curorig[0] < 0) {
-		simparams.wind[0] *= -1;						// Reverse X wind speed
-		simparams.curorig[0] += 2*simparams.wind[0];	// move in the new wind direction
-	}
-	
-	// Y ORIGIN TOO BIG
-	if (simparams.wind[1] != 0 && simparams.curorig[1] + ptc.wfs[0].res.y >= simparams.simimgres[1]) {
-		simparams.wind[1] *= -1;						// Reverse Y wind speed
-		simparams.curorig[1] += 2*simparams.wind[1];	// move in the new wind direction
-	}
-	// Y ORIGIN TOO SMALL
-	if (simparams.wind[1] != 0 && simparams.curorig[1] < 0) {
-		simparams.wind[1] *= -1;						// Reverse Y wind speed
-		simparams.curorig[1] += 2*simparams.wind[1];	// move in the new wind direction
-	}
-	
-	return EXIT_SUCCESS;
-}
 
 int simWFC(control_t *ptc, int wfcid, int nact, gsl_vector_float *ctrl, float *image) {
 	// we want to simulate the tip tilt mirror here. What does it do
@@ -266,7 +297,6 @@ int simWFC(control_t *ptc, int wfcid, int nact, gsl_vector_float *ctrl, float *i
 					
 	return EXIT_SUCCESS;
 }
-
 
 int simTel(char *file, float *image, coord_t res) {
 	int i;
@@ -292,67 +322,6 @@ int simTel(char *file, float *image, coord_t res) {
 	return EXIT_SUCCESS;
 }
 
-int simAtm(char *file, coord_t res, int origin[2], float *image) {
-	// ASSUMES WFS_COUNT > 0
-	// ASSUMES ptc.wfs[0].image is initialized to float and memory is allocated
-	// ASSUMES simparams.simimg is also float
-	
-	int i,j;
-	int imgres[2];
-	float max, min, pix;
-	
-	logDebug(0, "Simulating atmosphere.");
-	
-	// If we haven't loaded the simulated wavefront yet, load it now
-	if (simparams.simimg == NULL) {
-		if (modReadIMGArr(file, &(simparams.simimg), imgres) != EXIT_SUCCESS)
-			logErr("simAtm(): Cannot read the simulated wavefront: '%s'", file);
-		
-		min = max = simparams.simimg[0];
-		
-		// normalize the wavefront between -1 and 1. 
-		// first get the min and max:
-		for (i=0; i<imgres[0]*imgres[1]; i++) { // loop over all pixels
-			pix = simparams.simimg[i];
-			if (pix > max) max=pix;
-			else if (pix < min) min=pix;
-		}
-		
-		// and then rescale the iamge
-		for (i=0; i<imgres[0]*imgres[1]; i++) { // loop over all pixels
-			simparams.simimg[i] = (2*(simparams.simimg[i]-min)/(max-min))-1;
-		}
-
-		// check if it worked
-		min = max = simparams.simimg[0];
-		for (i=0; i<imgres[0]*imgres[1]; i++) { // loop over all pixels
-			pix = simparams.simimg[i];
-			if (pix > max) max=pix;
-			else if (pix < min) min=pix;
-		}
-		logDebug(0, "Loading atmosphere finished, min: %f, max: %f (should be -1, 1)", min, max);
-		
-		simparams.simimgres[0] = imgres[0];
-		simparams.simimgres[1] = imgres[1];
-	}	
-	
-	// If we move outside the simulated wavefront, reverse the 'windspeed'
-	// TODO: this is already handled in modSimWind? should not be necessary?
-	if ((origin[0] + res.x >= simparams.simimgres[0]) || (origin[1] + res.y >= simparams.simimgres[1]) 
-		|| (origin[0] < 0) || (origin[1] < 0)) {
-		logWarn("Simulation out of bound, wind reset failed. (%f,%f) ", origin[0], origin[1]);
-		return EXIT_FAILURE;
-	}
-	
-	// take a portion from the bigger simulated wavefront.
-	for (i=0; i<res.y; i++) { // y coordinate
-		for (j=0; j<res.x; j++) { // x coordinate 
-			image[i*res.x + j] = simparams.simimg[(i+origin[1])*simparams.simimgres[0] + (j+origin[0])];
-		}
-	}	
-
-	return EXIT_SUCCESS;
-}
 
 int drvSetActuator(control_t *ptc, int wfc) {
 	// this is a placeholder, since we simulate the DM, we don't need to do 
@@ -560,3 +529,5 @@ int drvFilterWheel(control_t *ptc, fwheel_t mode) {
 	ptc->filter = mode;
 	return EXIT_SUCCESS;
 }
+
+#endif /* #if (0) */
