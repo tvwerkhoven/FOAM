@@ -371,13 +371,13 @@ LIBS=""
 
 AC_MSG_NOTICE([===========Summary============])
 
-if test "$simul" = true ; then
-	AC_MSG_NOTICE([Simulation mode: available])
-elif test "$simul" = disabled; then
-	AC_MSG_NOTICE([Simulation mode: disabled])
+if test "$simdyn" = true ; then
+	AC_MSG_NOTICE([Dyn sim mode:    available])
+elif test "$simdyn" = disabled; then
+	AC_MSG_NOTICE([Dyn sim mode:    disabled])
 else
-	AC_MSG_NOTICE([Simulation mode: not available])
-	AC_MSG_NOTICE([Simulation mode: missing: $simulmissing])
+	AC_MSG_NOTICE([Dyn sim mode:    not available])
+	AC_MSG_NOTICE([Dyn sim mode:    $dynsimmissing])
 fi
 
 if test "$simstat" = true ; then
