@@ -156,7 +156,7 @@ int simAtm(mod_sim_t *simparams) {
 	return EXIT_SUCCESS;
 }
 
-int simSensor(mod_sim_t *simparams, control_t *ptc) {
+int simSensor(mod_sim_t *simparams, mod_sh_track_t *shwfs) {
 	logDebug(LOG_SOMETIMES, "Now simulating a WFS, origin is at (%d,%d).", simparams->currorig.x, simparams->currorig.y);
 
 	// are we darkfielding?
@@ -172,8 +172,12 @@ int simSensor(mod_sim_t *simparams, control_t *ptc) {
 	if (simAtm(simparams) != EXIT_SUCCESS)
 		return EXIT_FAILURE;
 	
+	// Simulate telescope aperture
+	if (simTel(simparams) != EXIT_SUCCESS)
+		return EXIT_FAILURE;
+	
 	// Simulate SH WFS
-	if (simSHWFS() != EXIT_SUCCESS)
+	if (simSHWFS(simparams, shwfs) != EXIT_SUCCESS)
 		return EXIT_FAILURE;
 	
 	
@@ -218,51 +222,59 @@ int simSensor(mod_sim_t *simparams, control_t *ptc) {
 	return EXIT_SUCCESS;
 }
 
+int simTel(mod_sim_t *simparams) {
+	int i;
+	
+	// Multiply wavefront with aperture
+	for (i=0; i < simparams->currimgres.x * simparams->currimgres.y; i++)
+	 	if (simparams->apertimg[i] == 0) simparams->currimg[i] = 0;
+	
+	return EXIT_SUCCESS;
+}
+
+
 //int modSimSH(float *img, int imgres[2], int cellres[2]) {
-int modSimSH(mod_sim_t &simparams) {
+int simSHWFS(mod_sim_t *simparams, mod_sh_track_t *shwfs) {
 	logDebug(LOG_SOMETIMES, "Simulating SH WFSs now.");
 	
-	int i;
+	int zeropix, i;
 	int nx, ny;
 	int xc, yc;
 	int jp, ip;
 	FILE *fp;
 	
 	double tmp;
-
-	// we have ptc.wfs[0].cells[0] by ptc.wfs[0].cells[1] SH cells, so the size of each cell is:
-	int *shsize = ptc.wfs[0].shsize;
 	
-	// we take the subaperture, which is shsize big, and put it in a larger matrix
-	nx = (shsize[0] * 2);
-	ny = (shsize[1] * 2);
+	// we take the subaperture, which is shsize.x * .y big, and put it in a larger matrix
+	nx = (shwfs->shsize.x * 2);
+	ny = (shwfs->shsize.y * 2);
 
 	// init data structures for images, fill with zeroes
-	if (simparams.shin == NULL) {
-		simparams.shin = fftw_malloc ( sizeof ( fftw_complex ) * nx * ny );
+	if (simparams->shin == NULL) {
+		simparams->shin = fftw_malloc ( sizeof ( fftw_complex ) * nx * ny );
 		for (i=0; i< nx*ny; i++)
-			simparams.shin[i][0] = simparams.shin[i][1] = 0;
+			simparams->shin[i][0] = simparams->shin[i][1] = 0;
 	}
 	
-	if (simparams.shout == NULL) {
-		simparams.shout = fftw_malloc ( sizeof ( fftw_complex ) * nx * ny );
+	if (simparams->shout == NULL) {
+		simparams->shout = fftw_malloc ( sizeof ( fftw_complex ) * nx * ny );
 		for (i=0; i< nx*ny; i++)
-			simparams.shout[i][0] = simparams.shout[i][1] = 0;
+			simparams->shout[i][0] = simparams->shout[i][1] = 0;
 	}
 	
 	// init FFT plan, FFTW_ESTIMATE could be replaces by MEASURE or sth, which should calculate FFT's faster
-	if (simparams.plan_forward == NULL) {
+	if (simparams->plan_forward == NULL) {
 		logDebug(LOG_SOMETIMES, "Setting up plan for fftw");
 		
-		fp = fopen(simparams.wisdomfile,"r");
+		fp = fopen(simparams->wisdomfile,"r");
 		if (fp == NULL)	{				// File does not exist, generate new plan
-			logInfo(LOG_SOMETIMES, "No FFTW plan found in %s, generating new plan, this may take a while.", simparams.wisdomfile);
-			simparams.plan_forward = fftw_plan_dft_2d(nx, ny, simparams.shin, simparams.shout, FFTW_FORWARD, FFTW_EXHAUSTIVE);
+			logInfo(LOG_SOMETIMES, "No FFTW plan found in %s, generating new plan, this may take a while.", simparams->wisdomfile);
+			simparams->plan_forward = fftw_plan_dft_2d(nx, ny, simparams->shin, simparams->shout, FFTW_FORWARD, FFTW_EXHAUSTIVE);
 
 			// Open file for writing now
-			fp = fopen(simparams.wisdomfile,"w");
+			fp = fopen(simparams->wisdomfile,"w");
 			if (fp == NULL) {
-				logDebug(LOG_SOMETIMES, "Could not open file %s for saving FFTW wisdom.", simparams.wisdomfile);
+				logDebug(LOG_SOMETIMES, "Could not open file %s for saving FFTW wisdom.", simparams->wisdomfile);
 				return EXIT_FAILURE;
 			}
 			fftw_export_wisdom_to_file(fp);
@@ -272,85 +284,86 @@ int modSimSH(mod_sim_t &simparams) {
 			logInfo(LOG_SOMETIMES, "Importing FFTW wisdom file.");
 			logInfo(LOG_SOMETIMES, "If this is the first time this program runs on this machine, this is bad.");
 			logInfo(LOG_SOMETIMES, "In that case, please delete '%s' and rerun the program. It will generate new wisdom which is A Good Thing.", \
-				simparams.wisdomfile);
+				simparams->wisdomfile);
 			if (fftw_import_wisdom_from_file(fp) == 0) {
 				logWarn("Importing wisdom failed.");
 				return EXIT_FAILURE;
 			}
 			// regenerating plan using wisdom imported above.
-			simparams.plan_forward = fftw_plan_dft_2d(nx, ny, simparams.shin, simparams.shout, FFTW_FORWARD, FFTW_EXHAUSTIVE);
+			simparams->plan_forward = fftw_plan_dft_2d(nx, ny, simparams->shin, simparams->shout, FFTW_FORWARD, FFTW_EXHAUSTIVE);
 			fclose(fp);
 		}
 		
 	}
 		
-	if (simparams.shout == NULL || simparams.shin == NULL || simparams.plan_forward == NULL)
-		logErr("Allocation of memory for FFT failed.");
+	if (simparams->shout == NULL || simparams->shin == NULL || simparams->plan_forward == NULL)
+		logErr("Some allocation of memory for FFT failed.");
 	
-	if (ptc.wfs[0].cells[0] * shsize[0] != ptc.wfs[0].res.x || \
-		ptc.wfs[0].cells[1] * shsize[1] != ptc.wfs[0].res.y)
-		logErr("Incomplete SH cell coverage! This means that nx_subapt * width_subapt != width_img x: (%d*%d,%d) y: (%d*%d,%d)", \
-			ptc.wfs[0].cells[0], shsize[0], ptc.wfs[0].res.x, ptc.wfs[0].cells[1], shsize[1], ptc.wfs[0].res.y);
+//	if (ptc.wfs[0].cells[0] * shsize[0] != ptc.wfs[0].res.x || \
+//		ptc.wfs[0].cells[1] * shsize[1] != ptc.wfs[0].res.y)
+//		logErr("Incomplete SH cell coverage! This means that nx_subapt * width_subapt != width_img x: (%d*%d,%d) y: (%d*%d,%d)", \
+//			ptc.wfs[0].cells[0], shsize[0], ptc.wfs[0].res.x, ptc.wfs[0].cells[1], shsize[1], ptc.wfs[0].res.y);
 
 	
 	logDebug(LOG_SOMETIMES, "Beginning imaging simulation.");
 
 	// now we loop over each subaperture:
-	for (yc=0; yc<ptc.wfs[0].cells[1]; yc++) {
-		for (xc=0; xc<ptc.wfs[0].cells[0]; xc++) {
+	for (yc=0; yc< shwfs->cells.y; yc++) {
+		for (xc=0; xc< shwfs->cells.x; xc++) {
 			// we're at subapt (xc, yc) here...
-			
+
 			// possible approaches on subapt selection for simulation:
 			//  - select only central apertures (use radius)
 			//  - use absolute intensity (still partly illuminated apts)
 			//  - count pixels with intensity zero
-			i = 0;
-			for (ip=0; ip<shsize[1]; ip++)
-				for (jp=0; jp<shsize[0]; jp++)
-					 	if (ptc.wfs[0].image[yc*shsize[1]*ptc.wfs[0].res.x + xc*shsize[0] + ip*ptc.wfs[0].res.x + jp] == 0)
-							i++;
+
+			zeropix = 0;
+			for (ip=0; ip< shwfs->shsize.y; ip++)
+				for (jp=0; jp< shwfs->shsize.x; jp++)
+					 	if (simparams->currimg[yc * shwfs->shsize.y * simparams->currimgres.x + xc*shwfs->shsize.x + ip * simparams->currimgres.x + jp] == 0)
+							zeropix++;
 			
 			// allow one quarter of the pixels to be zero, otherwise set subapt to zero and continue
-			// TODO: double loop (this one and above) ugly?
-			if (i > shsize[1]*shsize[0]/4) {
-				for (ip=0; ip<shsize[1]; ip++)
-					for (jp=0; jp<shsize[0]; jp++)
-						ptc.wfs[0].image[yc*shsize[1]*ptc.wfs[0].res.x + xc*shsize[0] + ip*ptc.wfs[0].res.x + jp] = 0;
-								
+			if (zeropix > shwfs->shsize.y*shwfs->shsize.x/4) {
+				for (ip=0; ip<shwfs->shsize.y; ip++)
+					for (jp=0; jp<shwfs->shsize.x; jp++)
+						simparams->currimg[yc*shwfs->shsize.y*simparams->currimgres.x + xc*shwfs->shsize.x + ip*simparams->currimgres.x + jp] = 0;
+				
+				// skip over the rest of the for loop started ~20 lines back
 				continue;
 			}
 			
 			// We want to set the helper arrays to zero first
 			// otherwise we get trouble? TODO: check this out
 			for (i=0; i< nx*ny; i++)
-				simparams.shin[i][0] = simparams.shin[i][1] = 0;
-			for (i=0; i< nx*ny; i++)
-				simparams.shout[i][0] = simparams.shout[i][1] = 0;
+				simparams->shin[i][0] = simparams->shin[i][1] = \
+					simparams->shout[i][0] = simparams->shout[i][1] = 0;
+//			for (i=0; i< nx*ny; i++)
 			
 			// add markers to track copying:
 			for (i=0; i< 2*nx; i++)
-				simparams.shin[i][0] = 1;
+				simparams->shin[i][0] = 1;
 
 			for (i=0; i< ny; i++)
-				simparams.shin[nx/2+i*nx][0] = 1;
+				simparams->shin[nx/2+i*nx][0] = 1;
 
 			// loop over all pixels in the subaperture, copy them to subapt:
 			// I'm pretty sure these index gymnastics are correct (2008-01-18)
-			for (ip=0; ip<shsize[1]; ip++) { 
-				for (jp=0; jp<shsize[0]; jp++) {
-					// we need the ipth row PLUS the rows that we skip at the top (shsize[1]/2+1)
-					// the width is not shsize[0] but twice that plus 2, so mulyiply the row number
+			for (ip=0; ip < shwfs->shsize.y; ip++) { 
+				for (jp=0; jp < shwfs->shsize.x; jp++) {
+					// we need the ipth row PLUS the rows that we skip at the top (shwfs->shsize.y/2+1)
+					// the width is not shwfs->shsize.x but twice that plus 2, so mulyiply the row number
 					// with that. Then we need to add the column number PLUS the margin at the beginning 
-					// which is shsize[0]/2 + 1, THAT's the right subapt location.
+					// which is shwfs->shsize.x/2 + 1, THAT's the right subapt location.
 					// For the image itself, we need to skip to the (ip,jp)th subaperture,
 					// which is located at pixel yc * the height of a cell * the width of the picture
 					// and the x coordinate times the width of a cell time, that's at least the first
 					// subapt pixel. After that we add the subaperture row we want which is located at
 					// pixel ip * the width of the whole image plus the x coordinate
 
-					simparams.shin[(ip+ ny/4)*nx + (jp + nx/4)][0] = \
-						ptc.wfs[0].image[yc*shsize[1]*ptc.wfs[0].res.x + xc*shsize[0] + ip*ptc.wfs[0].res.x + jp];
-					// old: simparams.shin[(ip+ shsize[1]/2 +1)*nx + jp + shsize[0]/2 + 1][0] = 
+					simparams->shin[(ip+ ny/4)*nx + (jp + nx/4)][0] = \
+						simparams->currimg[yc*shwfs->shsize.y*simparams->currimgres.x + xc*shwfs->shsize.x + ip*simparams->currimgres.x + jp];
+					// old: simparams->shin[(ip+ shwfs->shsize.y/2 +1)*nx + jp + shwfs->shsize.x/2 + 1][0] = 
 				}
 			}
 			
@@ -359,9 +372,9 @@ int modSimSH(mod_sim_t &simparams) {
 			// we know that exp ( i * phi ) = cos(phi) + i sin(phi),
 			// so we split it up in a real and a imaginary part
 			// TODO dit kan hierboven al gedaan worden
-			for (ip=shsize[1]/2; ip<shsize[1] + shsize[1]/2; ip++) {
-				for (jp=shsize[0]/2; jp<shsize[0]+shsize[0]/2; jp++) {
-					tmp = simparams.seeingfac * simparams.shin[ip*nx + jp][0]; // multiply for worse seeing
+			for (ip=shwfs->shsize.y/2; ip<shwfs->shsize.y + shwfs->shsize.y/2; ip++) {
+				for (jp=shwfs->shsize.x/2; jp<shwfs->shsize.x+shwfs->shsize.x/2; jp++) {
+					tmp = simparams->seeingfac * simparams->shin[ip*nx + jp][0]; // multiply for worse seeing
 					//use fftw_complex datatype, i.e. [0] is real, [1] is imaginary
 					
 					// SPEED: cos and sin are SLOW, replace by taylor series
@@ -369,39 +382,38 @@ int modSimSH(mod_sim_t &simparams) {
 					// and http://lab.polygonal.de/2007/07/18/fast-and-accurate-sinecosine-approximation/
 					// wrap tmp to (-pi, pi):
 					//tmp -= ((int) ((tmp+3.14159265)/(2*3.14159265))) * (2* 3.14159265);
-					//simparams.shin[ip*nx + jp][1] = 1.27323954 * tmp -0.405284735 * tmp * fabs(tmp);
+					//simparams->shin[ip*nx + jp][1] = 1.27323954 * tmp -0.405284735 * tmp * fabs(tmp);
 					// wrap tmp + pi/2 to (-pi,pi) again, but we know tmp is already in (-pi,pi):
 					//tmp += 1.57079633;
 					//tmp -= (tmp > 3.14159265) * (2*3.14159265);
-					//simparams.shin[ip*nx + jp][0] = 1.27323954 * tmp -0.405284735 * tmp * fabs(tmp);
+					//simparams->shin[ip*nx + jp][0] = 1.27323954 * tmp -0.405284735 * tmp * fabs(tmp);
 					
 					// used to be:
-					simparams.shin[ip*nx + jp][1] = sin(tmp);
-					simparams.shin[ip*nx + jp][0] = cos(tmp);
+					simparams->shin[ip*nx + jp][1] = sin(tmp);
+					simparams->shin[ip*nx + jp][0] = cos(tmp);
 				}
 			}
 
-			// now calculate the  FFT, pts is the number of (complex) datapoints
-			fftw_execute ( simparams.plan_forward );
+			// now calculate the  FFT
+			fftw_execute ( simparams->plan_forward );
 
 			// now calculate the absolute squared value of that, store it in the subapt thing
 			for (ip=0; ip<ny; ip++)
 				for (jp=0; jp<nx; jp++)
-					simparams.shin[ip*nx + jp][0] = \
-					 fabs(pow(simparams.shout[ip*nx + jp][0],2) + pow(simparams.shout[ip*nx + jp][1],2));
+					simparams->shin[ip*nx + jp][0] = \
+					 fabs(pow(simparams->shout[ip*nx + jp][0],2) + pow(simparams->shout[ip*nx + jp][1],2));
 			
 			// copy subaparture back to main images
-			// note: we don't want the center of the image, but we want all corners
-			// because begins in the origin. Therefore we need to start at coordinates
+			// note: we don't want the center of the fourier transformed image, but we want all corners
+			// because the FT begins in the origin. Therefore we need to start at coordinates
 			//  nx-(nx_subapt/2), ny-(ny_subapt/2)
 			// e.g. for 32x32 subapts and (nx,ny) = (64,64), we start at
 			//  (48,48) -> (70,70) = (-16,-16)
 			// so we need to wrap around the matrix, which results in the following
-			// if (ip,jp) starts at (0,0)
 			for (ip=ny/4; ip<ny*3/4; ip++) { 
 				for (jp=nx/4; jp<nx*3/4; jp++) {
-					ptc.wfs[0].image[yc*shsize[1]*ptc.wfs[0].res.x + xc*shsize[0] + (ip-ny/4)*ptc.wfs[0].res.x + (jp-nx/4)] = \
-						simparams.shin[((ip+ny/2)%ny)*nx + (jp+nx/2)%nx][0];
+					simparams->currimg[yc*shwfs->shsize.y*simparams->currimgres.x + xc*shwfs->shsize.x + (ip-ny/4)*simparams->currimgres.x + (jp-nx/4)] = \
+						simparams->shin[((ip+ny/2)%ny)*nx + (jp+nx/2)%nx][0];
 				}
 			}
 			
@@ -505,29 +517,6 @@ int simWFC(control_t *ptc, int wfcid, int nact, gsl_vector_float *ctrl, float *i
 	return EXIT_SUCCESS;
 }
 
-int simTel(char *file, float *image, coord_t res) {
-	int i;
-	int aptres[2];
-	
-	// read boundary mask file 
-	// float *aperture is globally defined and initialized to NULL.
-	if (aperture == NULL) {
-		if (modReadIMGArr(file, &aperture, aptres) != EXIT_SUCCESS)
-			logErr("Cannot read telescope aperture");
-
-		if (res.x != aptres[0] || res.y != aptres[1])
-			logErr("Telescope aperture resolution incorrect! (%dx%d vs %dx%d)", res.x, res.y, aptres[0], aptres[1]);
-
-	}
-	
-	logDebug(LOG_SOMETIMES, "Aperture read successfully (%dx%d), processing with image.",  res.x, res.y);
-	
-	// Multiply wavefront with aperture
-	for (i=0; i < res.x*res.y; i++)
-	 	if (aperture[i] == 0) image[i] = 0;
-	
-	return EXIT_SUCCESS;
-}
 
 
 int drvSetActuator(control_t *ptc, int wfc) {

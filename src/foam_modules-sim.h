@@ -76,16 +76,26 @@ these all occur in sequence.
  // !!!:tim:20080703 add docs
 @return EXIT_SUCCESS on success, EXIT_FAILURE otherwise.
 */
-int simSensor(mod_sim_t *simparams, control_t *ptc);
+int simSensor(mod_sim_t *simparams, mod_sh_track_t *shwfs);
+
+/*!
+ @brief Simulates the SH WFS sensor
+ 
+ // !!!:tim:20080703 add docs
+ */
+int simSHWFS(mod_sim_t *simparams, mod_sh_track_t *shwfs);
+
+/*!
+ @brief \a simTel() simulates the effect of the telescope (aperture) on the output of \a simAtm().
+ 
+ This fuction works in wavefront-space, and basically multiplies the aperture function with
+ the wavefront from \a simAtm().
+ */
+int simTel(mod_sim_t *simparams);
 
 // !!!:tim:20080703 codedump below here, not used
 #if (0)
-/*!
-@brief Simulates the SH sensor
- 
- // !!!:tim:20080703 add docs
-*/
-int modSimSH();
+
 
 /*!
 @brief This simulates errors using a certain WFC, useful for performance testing
@@ -94,13 +104,6 @@ TODO: document
 */
 void modSimError(int wfc, int method, int verbosity);
 
-/*!
-@brief \a simTel() simulates the effect of the telescope (aperture) on the output of \a simAtm().
-
-This fuction works in wavefront-space, and basically multiplies the aperture function with
-the wavefront from \a simAtm().
-*/
-int simTel(char *file, float *image, coord_t res);
 
 /*!
 @brief \a simWFC() simulates a certain wave front corrector, like a TT or a DM.

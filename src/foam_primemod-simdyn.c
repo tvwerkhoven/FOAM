@@ -68,7 +68,7 @@ int modInitModule(control_t *ptc, config_t *cs_config) {
 	ptc->wfs[0].id = 0;
 	ptc->wfs[0].fieldframes = 1000;     // take 1000 frames for a dark or flatfield
 		
-	// simulation configuration
+	// Simulation configuration
 	simparams.wind.x = 5;
 	simparams.wind.y = 0;
 	simparams.seeingfac = 0.2;
@@ -79,6 +79,8 @@ int modInitModule(control_t *ptc, config_t *cs_config) {
 	// resolution of the simulated image
 	simparams.currimgres.x = ptc->wfs[0].res.x;
 	simparams.currimgres.y = ptc->wfs[0].res.y;
+	// These need to be init to NULL
+	simparams.shin = simparams.shout = simparams.plan_forward = NULL;
 	simparams.wisdomfile = FOAM_CONFIG_PRE "_fftw-wisdom";
 	if(simInit(&simparams) != EXIT_SUCCESS)
 		logErr("Failed to initialize simulation module.");
@@ -850,7 +852,7 @@ int MMDarkFlatFullByte(wfs_t *wfs, mod_sh_track_t *shtrack) {
 
 
 int drvGetImg(control_t *ptc, int wfs) {
-	if (simSensor(&simparams, ptc) != EXIT_SUCCESS) {
+	if (simSensor(&simparams, &shtrack) != EXIT_SUCCESS) {
 		logWarn("Error getting simulated wavefront.");
 		return EXIT_FAILURE;
 	}
