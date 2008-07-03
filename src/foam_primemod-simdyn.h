@@ -107,5 +107,5 @@ int MMDarkFlatFullByte(wfs_t *wfs, mod_sh_track_t *shtrack);
 int MMDarkFlatSubapByte(wfs_t *wfs, mod_sh_track_t *shtrack);
 
 
-#endif // #ifndef FOAM_PRIME_SIMSTATIC
+#endif // #ifndef FOAM_PRIME_SIMDYN
 

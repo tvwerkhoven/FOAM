@@ -119,7 +119,7 @@ int modInitModule(control_t *ptc, config_t *cs_config) {
 int modPostInitModule(control_t *ptc, config_t *cs_config) {
 	// we initialize OpenGL here, because it doesn't like threading
 	// a lot
-#ifdef FOAM_SIMSTAT_DISPLAY
+#ifdef FOAM_SIMDYN_DISPLAY
 	// init display
 	disp.caption = "WFS #1";
 	disp.res.x = ptc->wfs[0].res.x;
@@ -149,7 +149,7 @@ int modPostInitModule(control_t *ptc, config_t *cs_config) {
 }
 
 void modStopModule(control_t *ptc) {
-#ifdef FOAM_SIMSTAT_DISPLAY
+#ifdef FOAM_SIMDYN_DISPLAY
 	displayFinish(&disp);
 #endif
 	
@@ -185,7 +185,7 @@ int modOpenLoop(control_t *ptc) {
 	
 //	modCogTrack(ptc->wfs[0].corrim, DATA_GSL_M_F, ALIGN_RECT, &shtrack, NULL, NULL);
 	
-#ifdef FOAM_SIMSTAT_DISPLAY
+#ifdef FOAM_SIMDYN_DISPLAY
     if (ptc->frames % ptc->logfrac == 0) {
 		displayDraw((&ptc->wfs[0]), &disp, &shtrack);
 		displaySDLEvents(&disp);
@@ -224,7 +224,7 @@ int modClosedLoop(control_t *ptc) {
 	//modCogTrack(ptc->wfs[0].corrim, DATA_GSL_M_F, ALIGN_RECT, &shtrack, NULL, NULL);
 	modCogTrack(ptc->wfs[0].corr, DATA_UINT8, ALIGN_SUBAP, &shtrack, NULL, NULL);
 	
-#ifdef FOAM_SIMSTAT_DISPLAY
+#ifdef FOAM_SIMDYN_DISPLAY
     if (ptc->frames % ptc->logfrac == 0) {
 		displayDraw((&ptc->wfs[0]), &disp, &shtrack);
 		displaySDLEvents(&disp);
@@ -469,7 +469,7 @@ calibrate <mode>:       calibrate the ao system (dark, flat, subapt, etc).\
 ");
 		}
 	}
-#ifdef FOAM_SIMSTAT_DISPLAY
+#ifdef FOAM_SIMDYN_DISPLAY
  	else if (strncmp(list[0], "disp",3) == 0) {
 		if (count > 1) {
 			if (strncmp(list[1], "raw",3) == 0) {
