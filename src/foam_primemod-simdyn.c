@@ -688,7 +688,19 @@ shtrack.shsize.x, shtrack.shsize.y, shtrack.track.x, shtrack.track.y, ptc->wfs[0
 				ptc->calmode = CAL_DARKGAIN;
 				tellClient(client->buf_ev, "200 OK CALCULATING DARK/GAIN NOW");
 				pthread_cond_signal(&mode_cond);
+			}			
+			else if (strncmp(list[1], "pinhole",3) == 0) {
+				ptc->mode = AO_MODE_CAL;
+				ptc->calmode = CAL_PINHOLE;
+				tellClient(client->buf_ev, "200 OK PINHOLE CALIBRATION NOW");
+				pthread_cond_signal(&mode_cond);
 			}
+			else if (strncmp(list[1], "influence",3) == 0) {
+				ptc->mode = AO_MODE_CAL;
+				ptc->calmode = CAL_INFL;
+				tellClient(client->buf_ev, "200 OK INFLUENCE CALIBRATION NOW");
+				pthread_cond_signal(&mode_cond);
+			}			
 			else {
 				tellClient(client->buf_ev, "401 UNKNOWN CALIBRATION");
 			}
@@ -709,18 +721,25 @@ shtrack.shsize.x, shtrack.shsize.y, shtrack.track.x, shtrack.track.y, ptc->wfs[0
 /**************************/
 
 int drvSetActuator(control_t *ptc, int wfc) {
-	// not a lot of actuating to be done for simulation
-	if (ptc->wfc[wfc].type == 0) {			// Okotech DM
-		// use okodm routines here
-	}
-	else if (ptc->wfc[wfc].type == 1) {	// Tip-tilt mirror
-		// use daq routines here
-	}
+	// Not a lot of actuating to be done for simulation, since 
+	// we do not need to 'set' anything. If any control vector
+	// is set, it will be used automatically in drvGetImg
 	
+	
+//	if (ptc->wfc[wfc].type == 0) {			// Okotech DM
+//		// use okodm routines here
+//	}
+//	else if (ptc->wfc[wfc].type == 1) {	// Tip-tilt mirror
+//		// use daq routines here
+//	}
 	return EXIT_SUCCESS;
 }
 
 int drvSetupHardware(control_t *ptc, aomode_t aomode, calmode_t calmode) {
+	// This function is nothing more than displaying some info. Everything
+	// is handled in drvGetImg, which checks calibration modes and
+	// handles those settings accordingly (i.e. give dark image back
+	// during dark fielding, flat during flat, etc).
     if (aomode == AO_MODE_CAL) {
         if (calmode == CAL_DARK) {
             logInfo(0, "Configuring hardware for darkfield calibration");
@@ -898,14 +917,47 @@ int MMDarkFlatFullByte(wfs_t *wfs, mod_sh_track_t *shtrack) {
 
 
 int drvGetImg(control_t *ptc, int wfs) {
-	
-	
+	if (ptc->mode == AO_MODE_CAL) {
+		if (ptc->calmode == CAL_DARKGAIN || ptc->calmode == CAL_DARK) {
+			// give flat 0 intensity image back
+			return simFlat(&simparams, 0);
+		}
+		else if (ptc->calmode == CAL_FLAT) {
+			// give flat 32 intensity image back
+			return simFlat(&simparams, 32);
+		}
+		else if (ptc->calmode == CAL_PINHOLE) {
+			// take flat 32 intensity image, and pass through simTel, simSHWFS
+			if (simFlat(&simparams, 32) != EXIT_SUCCESS)
+				return EXIT_FAILURE;
+			
+			if (simTel(&simparams) != EXIT_SUCCESS)
+				return EXIT_FAILURE;
 
-	// are we darkfielding?
-	// are we flatfielding?
-	// are we pinholing?
-	// if not, return normal image
+			if (simSHWFS(&simparams, &shtrack) != EXIT_SUCCESS)
+				return EXIT_FAILURE;
+		}
+		else if (ptc->calmode == CAL_INFL) {
+			// take flat 32 intensity image, and pass through simTel, simWFC and simSHWFS
+			if (simFlat(&simparams, 32) != EXIT_SUCCESS)
+				return EXIT_FAILURE;
+			
+			if (simTel(&simparams) != EXIT_SUCCESS)
+				return EXIT_FAILURE;
 
+			if (simWFC(&(ptc->wfc[0]), &simparams) != EXIT_SUCCESS)
+				return EXIT_FAILURE;
+			
+			if (simSHWFS(&simparams, &shtrack) != EXIT_SUCCESS)
+				return EXIT_FAILURE;			
+		}
+		
+		// if we're calibrating, we're done by now.
+		return EXIT_SUCCESS;
+	}
+	
+	// if we're not calibrating, return a normal image:
+	
 	// Simulate wind (i.e. get the new origin to crop from)
 	if (simWind(&simparams) != EXIT_SUCCESS)
 		return EXIT_FAILURE;
@@ -926,6 +978,6 @@ int drvGetImg(control_t *ptc, int wfs) {
 	if (simSHWFS(&simparams, &shtrack) != EXIT_SUCCESS)
 		return EXIT_FAILURE;
 
-	ptc->wfs[0].image = (void *) simparams.currimg;
+	//ptc->wfs[0].image = (void *) simparams.currimg;
 	return EXIT_SUCCESS;
 }

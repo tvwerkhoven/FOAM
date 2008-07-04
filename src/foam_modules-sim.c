@@ -147,6 +147,17 @@ int simAtm(mod_sim_t *simparams) {
 	return EXIT_SUCCESS;
 }
 
+int simFlat(mod_sim_t *simparams, int intensity) {
+	int i,j;
+	logDebug(LOG_SOMETIMES, "Simulating flat field intensity %d.", intensity);
+	
+	for (i=0; i< simparams->currimgres.y; i++) // y coordinate
+		for (j=0; j < simparams->currimgres.x; j++) // x coordinate 
+			simparams->currimg[i*simparams->currimgres.x + j] = intensity;
+	
+	return EXIT_SUCCESS;
+}
+
 int simTT(mod_sim_t *simparams, gsl_vector_float *ctrl, int mode) {
 	int i,j;
 	// amplitude of the TT mirror (multiplied simulated TT output by this factor)
@@ -179,51 +190,6 @@ int simTT(mod_sim_t *simparams, gsl_vector_float *ctrl, int mode) {
 	return EXIT_SUCCESS;	
 }
 
-
-int simSensor(mod_sim_t *simparams, mod_sh_track_t *shwfs) {
-	
-	
-//	logDebug(0, "Now simulating %d WFC(s).", ptc.wfc_count);
-//	for (i=0; i < ptc->wfc_count; i++)
-//		simWFC(&(ptc->wfc[i]), simparams->currimg); // Simulate every WFC in series
-	
-	
-	// if filterwheel is set to pinhole, simulate a coherent image
-//	if (ptc.mode == AO_MODE_CAL && ptc.filter == FILT_PINHOLE) {
-//		for (i=0; i<ptc.wfs[0].res.x*ptc.wfs[0].res.y; i++)
-//			ptc.wfs[0].image[i] = 1;
-//			
-//	}
-
-	
-	// introduce error here,
-	// first param: wfc to use for simulation (dependent on ptc.wfc[wfc])
-	// second param: 0 for regular sawtooth, 1 for random drift
-	// third param: 0 for no output, 1 for ctrl vec output
-#ifdef FOAM_MODSIM_ERR
-//	modSimError(FOAM_MODSIM_ERRWFC, FOAM_MODSIM_ERRTYPE, FOAM_MODSIM_ERRVERB);
-#endif
-	
-	
-//	if (simTel(FOAM_MODSIM_APERTURE, ptc.wfs[0].image, ptc.wfs[0].res) != EXIT_SUCCESS) // Simulate telescope (from aperture.fits)
-//		logErr("error in simTel().");
-	
-//	modDrawStuff(&ptc, 0, screen);
-//	sleep(1);
-
-	// Simulate the WFS here.
-//	if (modSimSH() != EXIT_SUCCESS) {
-//		logWarn("Simulating SH WFSs failed.");
-//		return EXIT_FAILURE;
-//	}	
-
-//	modDrawStuff(&ptc, 0, screen);
-//	sleep(1);
-
-	
-	return EXIT_SUCCESS;
-}
-
 int simTel(mod_sim_t *simparams) {
 	int i;
 	
@@ -233,7 +199,6 @@ int simTel(mod_sim_t *simparams) {
 	
 	return EXIT_SUCCESS;
 }
-
 
 //int modSimSH(float *img, int imgres[2], int cellres[2]) {
 int simSHWFS(mod_sim_t *simparams, mod_sh_track_t *shwfs) {
@@ -483,45 +448,16 @@ int simWFCError(mod_sim_t *simparams, wfc_t *wfc, int method, int period) {
 	return EXIT_SUCCESS;
 }
 
+int simWFC(wfc_t *wfc, mod_sim_t *simparams) { 
+	logDebug(LOG_SOMETIMES, "Simulation WFC %d (%s) with  %d actuators", wfc->id, wfc->name, wfc->nact);
 
-// !!!:tim:20080703 codedump below here, not used
-#if (0)
-int simWFC(control_t *ptc, int wfcid, int nact, gsl_vector_float *ctrl, float *image) {
-	// we want to simulate the tip tilt mirror here. What does it do
-	
-	logDebug(LOG_SOMETIMES, "WFC %d (%s) has %d actuators, simulating", wfcid, ptc->wfc[wfcid].name, ptc->wfc[wfcid].nact);
-	// logDebug(0, "TT: Control is: %f, %f", gsl_vector_float_get(ctrl,0), gsl_vector_float_get(ctrl,1));
-	// if (ttfd == NULL) ttfd = fopen("ttdebug.dat", "w+");
-	// fprintf(ttfd, "%f, %f\n", gsl_vector_float_get(ctrl,0), gsl_vector_float_get(ctrl,1));
-
-	if (ptc->wfc[wfcid].type == WFC_TT)
-		modSimTT(ctrl, image, ptc->wfs[0].res);
-	else if (ptc->wfc[wfcid].type == WFC_DM) {
-		logDebug(LOG_SOMETIMES, "Running modSimDM with %s and %s, nact %d", FOAM_MODSIM_APTMASK, FOAM_MODSIM_ACTPAT, nact);
-		modSimDM(FOAM_MODSIM_APTMASK, FOAM_MODSIM_ACTPAT, nact, ctrl, image, ptc->wfs[0].res, -1); // last arg is for niter. -1 for autoset
+	if (wfc->type == WFC_TT) {
+		simTT(simparams, wfc->ctrl, 1);
 	}
 	else {
-		logWarn("Unknown WFC (%d) encountered (not TT or DM, type: %d, name: %s)", wfcid, ptc->wfc[wfcid].type, ptc->wfc[wfcid].name);
+		logWarn("Unknown WFC (%d) encountered (not TT or DM, type: %d, name: %s)", wfc->id, wfc->type, wfc->name);
 		return EXIT_FAILURE;
 	}
 					
 	return EXIT_SUCCESS;
 }
-
-
-
-int drvSetActuator(control_t *ptc, int wfc) {
-	// this is a placeholder, since we simulate the DM, we don't need to do 
-	// anything here. 
-	return EXIT_SUCCESS;
-}
-
-
-// TODO: document this
-int drvFilterWheel(control_t *ptc, fwheel_t mode) {
-	// in simulation this is easy, just set mode in ptc
-	ptc->filter = mode;
-	return EXIT_SUCCESS;
-}
-
-#endif /* #if (0) */
