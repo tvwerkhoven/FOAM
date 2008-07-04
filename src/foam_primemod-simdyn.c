@@ -301,18 +301,14 @@ int modCalibrate(control_t *ptc) {
 		// take dark frames, and average
 		logInfo(0, "Starting darkfield calibration now");
 
-		// we fake a darkfield here (random pixels between 2-6)
-		min = max = 4.0;
-		sum = 0.0;
-		for (i=0; i<wfsinfo->res.y; i++) {
-			 for (j=0; j<wfsinfo->res.x; j++) {
-				 pix = (drand48()*4.0)+2.0;
-				 gsl_matrix_float_set(wfsinfo->darkim, i, j, pix);
-				 if (pix > max) max = pix;
-				 else if (pix < min) min = pix;
-				 sum += pix;
-			 }
-		}
+		// simulate the image, it should take care of dark- and
+		// flat fielding as well
+		drvGetImg(ptc, 0);
+
+		// copy darkfield to darkim
+		for (i=0; i<wfsinfo->res.y; i++) 
+			 for (j=0; j<wfsinfo->res.x; j++) 
+				 gsl_matrix_float_set(wfsinfo->darkim, i, j, simparams.currimg[i*wfsinfo->res.x + j]);
 
 		// saving image for later usage
 		fieldfd = fopen(wfsinfo->darkfile, "w+");	
@@ -322,7 +318,11 @@ int modCalibrate(control_t *ptc) {
 		}
 		gsl_matrix_float_fprintf(fieldfd, wfsinfo->darkim, "%.10f");
 		fclose(fieldfd);
-		logInfo(0, "Darkfield calibration done (m: %f, m: %f, s: %f, a: %f), and stored to disk.", min, max, sum, sum/(wfsinfo->res.x * wfsinfo->res.y));
+
+		float dstats[3];
+		imgGetStats(wfsinfo->image, DATA_UINT8, wfsinfo->res, -1, dstats);
+
+		logInfo(0, "Darkfield calibration done (m: %f, m: %f, avg: %f), and stored to disk.", dstats[0], dstats[1], dstats[3]);
 		
 		// set new display settings to show the darkfield
 		disp.dispsrc = DISPSRC_DARK;
