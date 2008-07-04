@@ -71,7 +71,7 @@ int modInitModule(control_t *ptc, config_t *cs_config) {
 	// Simulation configuration
 	simparams.wind.x = 5;
 	simparams.wind.y = 0;
-	simparams.seeingfac = 0.2;
+	simparams.seeingfac = 0.9;
 	// these files are needed for AO simulation and will be read in by simInit()
 	simparams.wf = "../config/wavefront.png";
 	simparams.apert = "../config/apert15-256.pgm";
@@ -446,6 +446,9 @@ vid <mode> [val]:       configure the video output.\n\
 set [prop] [val]:       set or query property values.\n\
    lf [i]:              set the logfraction.\n\
    ff [i]:              set the number of frames to use for dark/flats.\n\
+   seeingfac [f]:       set the seeing factor (0--1).\n\
+   windx [i]:           set the wind in x direction (pixels/frame).\n\
+   windy [i]:           set the wind in y direction (pixels/frame).\n\
    samini [f]:          set the minimum intensity for subapt selection.\n\
    samxr [i]:           set maxr used for subapt selection.\n\
    -:                   if no prop is given, query the values.\
@@ -554,6 +557,18 @@ calibrate <mode>:       calibrate the ao system (dark, flat, subapt, etc).\
 				ptc->wfs[0].fieldframes = tmpint;
 				tellClient(client->buf_ev, "200 OK SET FIELDFRAMES TO %d", tmpint);
 			}
+			else if (strcmp(list[1], "windx") == 0) {
+				simparams.wind.x = tmpint;
+				tellClient(client->buf_ev, "200 OK SET WIND X TO %d", tmpint);
+			}
+			else if (strcmp(list[1], "windy") == 0) {
+				simparams.wind.y = tmpint;
+				tellClient(client->buf_ev, "200 OK SET WIND Y TO %d", tmpint);
+			}
+			else if (strcmp(list[1], "see") == 0) {
+				simparams.seeingfac = tmpfloat;
+				tellClient(client->buf_ev, "200 OK SET SEEINGFACTOR TO %f", tmpfloat);
+			}
 			else if (strcmp(list[1], "samini") == 0) {
 				shtrack.samini = tmpfloat;
 				tellClient(client->buf_ev, "200 OK SET SAMINI TO %.2f", tmpfloat);
@@ -574,10 +589,12 @@ SH array:               %dx%d cells\n\
 cell size:              %dx%d pixels\n\
 track size:             %dx%d pixels\n\
 ccd size:               %dx%d pixels\n\
+seeingfac:              %f\n\
+wind (x,y):             (%d,%d)\n\
 samxr:                  %d\n\
 samini:                 %.2f\n\
 ", ptc->logfrac, ptc->wfs[0].fieldframes, shtrack.cells.x, shtrack.cells.y,\
-shtrack.shsize.x, shtrack.shsize.y, shtrack.track.x, shtrack.track.y, ptc->wfs[0].res.x, ptc->wfs[0].res.y, shtrack.samxr, shtrack.samini);
+shtrack.shsize.x, shtrack.shsize.y, shtrack.track.x, shtrack.track.y, ptc->wfs[0].res.x, ptc->wfs[0].res.y, simparams.seeingfac, simparams.wind.x, simparams.wind.y, shtrack.samxr, shtrack.samini);
 		}
 	}
  	else if (strncmp(list[0], "vid",3) == 0) {
@@ -852,10 +869,29 @@ int MMDarkFlatFullByte(wfs_t *wfs, mod_sh_track_t *shtrack) {
 
 
 int drvGetImg(control_t *ptc, int wfs) {
-	if (simSensor(&simparams, &shtrack) != EXIT_SUCCESS) {
-		logWarn("Error getting simulated wavefront.");
+	logDebug(LOG_SOMETIMES, "Now simulating a WFS, origin is at (%d,%d).", simparams.currorig.x, simparams.currorig.y);
+
+	// are we darkfielding?
+	// are we flatfielding?
+	// are we pinholing?
+	// if not, return normal image
+
+	// Simulate wind (i.e. get the new origin to crop from)
+	if (simWind(&simparams) != EXIT_SUCCESS)
 		return EXIT_FAILURE;
-	}
+	
+	// Simulate atmosphere, i.e. get a crop of the wavefront
+	if (simAtm(&simparams) != EXIT_SUCCESS)
+		return EXIT_FAILURE;
+	
+	// Simulate telescope aperture
+	if (simTel(&simparams) != EXIT_SUCCESS)
+		return EXIT_FAILURE;
+	
+	// Simulate SH WFS
+	if (simSHWFS(&simparams, &shtrack) != EXIT_SUCCESS)
+		return EXIT_FAILURE;
+
 	ptc->wfs[0].image = (void *) simparams.currimg;
 	return EXIT_SUCCESS;
 }

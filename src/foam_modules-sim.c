@@ -157,28 +157,6 @@ int simAtm(mod_sim_t *simparams) {
 }
 
 int simSensor(mod_sim_t *simparams, mod_sh_track_t *shwfs) {
-	logDebug(LOG_SOMETIMES, "Now simulating a WFS, origin is at (%d,%d).", simparams->currorig.x, simparams->currorig.y);
-
-	// are we darkfielding?
-	// are we flatfielding?
-	// are we pinholing?
-	// if not, return normal image
-
-	// Simulate wind (i.e. get the new origin to crop from)
-	if (simWind(simparams) != EXIT_SUCCESS)
-		return EXIT_FAILURE;
-	
-	// Simulate atmosphere, i.e. get a crop of the wavefront
-	if (simAtm(simparams) != EXIT_SUCCESS)
-		return EXIT_FAILURE;
-	
-	// Simulate telescope aperture
-	if (simTel(simparams) != EXIT_SUCCESS)
-		return EXIT_FAILURE;
-	
-	// Simulate SH WFS
-	if (simSHWFS(simparams, shwfs) != EXIT_SUCCESS)
-		return EXIT_FAILURE;
 	
 	
 //	logDebug(0, "Now simulating %d WFC(s).", ptc.wfc_count);
@@ -244,6 +222,7 @@ int simSHWFS(mod_sim_t *simparams, mod_sh_track_t *shwfs) {
 	FILE *fp;
 	
 	double tmp;
+	double min = 0.0, max = 0.0;
 	
 	// we take the subaperture, which is shsize.x * .y big, and put it in a larger matrix
 	nx = (shwfs->shsize.x * 2);
@@ -400,11 +379,15 @@ int simSHWFS(mod_sim_t *simparams, mod_sh_track_t *shwfs) {
 			fftw_execute ( simparams->plan_forward );
 
 			// now calculate the absolute squared value of that, store it in the subapt thing
-			for (ip=0; ip<ny; ip++)
-				for (jp=0; jp<nx; jp++)
-					simparams->shin[ip*nx + jp][0] = \
+			// also find min and maximum here
+			for (ip=0; ip<ny; ip++) {
+				for (jp=0; jp<nx; jp++) {
+					tmp = simparams->shin[ip*nx + jp][0] = \
 					 fabs(pow(simparams->shout[ip*nx + jp][0],2) + pow(simparams->shout[ip*nx + jp][1],2));
-			
+					 if (tmp > max) max = tmp;
+					 else if (tmp < min) min = tmp;
+				}
+			}
 			// copy subaparture back to main images
 			// note: we don't want the center of the fourier transformed image, but we want all corners
 			// because the FT begins in the origin. Therefore we need to start at coordinates
@@ -412,10 +395,13 @@ int simSHWFS(mod_sim_t *simparams, mod_sh_track_t *shwfs) {
 			// e.g. for 32x32 subapts and (nx,ny) = (64,64), we start at
 			//  (48,48) -> (70,70) = (-16,-16)
 			// so we need to wrap around the matrix, which results in the following
+			float tmppixf;
+			//uint8_t tmppixb;
 			for (ip=ny/4; ip<ny*3/4; ip++) { 
 				for (jp=nx/4; jp<nx*3/4; jp++) {
-					simparams->currimg[yc*shwfs->shsize.y*simparams->currimgres.x + xc*shwfs->shsize.x + (ip-ny/4)*simparams->currimgres.x + (jp-nx/4)] = \
-						simparams->shin[((ip+ny/2)%ny)*nx + (jp+nx/2)%nx][0];
+					tmppixf = simparams->shin[((ip+ny/2)%ny)*nx + (jp+nx/2)%nx][0];
+
+					simparams->currimg[yc*shwfs->shsize.y*simparams->currimgres.x + xc*shwfs->shsize.x + (ip-ny/4)*simparams->currimgres.x + (jp-nx/4)] = 255.0*(tmppixf-min)/(max-min);
 				}
 			}
 			
