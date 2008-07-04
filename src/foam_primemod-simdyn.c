@@ -41,22 +41,51 @@ int modInitModule(control_t *ptc, config_t *cs_config) {
 	ptc->logfrac = 10;                  // log verbose messages only every 100 frames
 	ptc->wfs_count = 1;					// just 1 static 'wfs' for simulation
 	ptc->wfc_count = 1;
-	ptc->fw_count = 0;
+	ptc->fw_count = 2;
 	
 	// allocate memory for filters, wfc's and wfs's
-	// no filter, no WFS in simulation
-//	ptc->filter = (filtwheel_t *) calloc(ptc->fw_count, sizeof(filtwheel_t));
+	ptc->filter = (filtwheel_t *) calloc(ptc->fw_count, sizeof(filtwheel_t));
 	ptc->wfc = (wfc_t *) calloc(ptc->wfc_count, sizeof(wfc_t));
 	ptc->wfs = (wfs_t *) calloc(ptc->wfs_count, sizeof(wfs_t));
+
+	// CONFIGURE WAVEFRONT CORRECTORS //
+	////////////////////////////////////
 	
-	// set image to something static
-//	coord_t imgres;
-//	uint8_t *imgptr = (uint8_t *) ptc->wfs[0].image;
-//	modReadIMGArrByte("../config/simstatic-irr.pgm", &(imgptr), &imgres);
-//	ptc->wfs[0].image  = (void *) imgptr;
+	// configure WFC 0
+	ptc->wfc[0].name = "TT";
+	ptc->wfc[0].nact = 2;
+	ptc->wfc[0].gain.p = 1.0;
+	ptc->wfc[0].gain.i = 1.0;
+	ptc->wfc[0].gain.d = 1.0;
+	ptc->wfc[0].type = WFC_TT;
+    ptc->wfc[0].id = 1;
 	
+	// CONFIGURE FILTERS //
+	///////////////////////
+
+	// configure filter 0
+	ptc->filter[0].name = "Telescope FW";
+	ptc->filter[0].id = 0;
+    ptc->filter[0].delay = 2;
+	ptc->filter[0].nfilts = 4;
+	ptc->filter[0].filters[0] = FILT_PINHOLE;
+	ptc->filter[0].filters[1] = FILT_OPEN;
+    ptc->filter[0].filters[2] = FILT_TARGET;
+    ptc->filter[0].filters[3] = FILT_CLOSED;
+
+	// configure filter 1
+	ptc->filter[1].name = "WFS FW";
+	ptc->filter[1].id = 1;
+	ptc->filter[1].nfilts = 2;
+    ptc->filter[1].delay = 2;
+    ptc->filter[1].filters[0] = FILT_PINHOLE;
+	ptc->filter[1].filters[1] = FILT_OPEN;
+	
+	// CONFIGURE WAVEFRONT SENSORS //
+	/////////////////////////////////
+
 	// configure WFS 0
-	ptc->wfs[0].name = "SH WFS - static";
+	ptc->wfs[0].name = "SH WFS - dyn";
 	ptc->wfs[0].res.x = 256;
 	ptc->wfs[0].res.y = 256;
 	ptc->wfs[0].bpp = 8;
@@ -69,9 +98,9 @@ int modInitModule(control_t *ptc, config_t *cs_config) {
 	ptc->wfs[0].fieldframes = 1000;     // take 1000 frames for a dark or flatfield
 		
 	// Simulation configuration
-	simparams.wind.x = 5;
+	simparams.wind.x = 0;
 	simparams.wind.y = 0;
-	simparams.seeingfac = 0.9;
+	simparams.seeingfac = 0.3;
 	// these files are needed for AO simulation and will be read in by simInit()
 	simparams.wf = "../config/wavefront.png";
 	simparams.apert = "../config/apert15-256.pgm";
@@ -869,7 +898,8 @@ int MMDarkFlatFullByte(wfs_t *wfs, mod_sh_track_t *shtrack) {
 
 
 int drvGetImg(control_t *ptc, int wfs) {
-	logDebug(LOG_SOMETIMES, "Now simulating a WFS, origin is at (%d,%d).", simparams.currorig.x, simparams.currorig.y);
+	
+	
 
 	// are we darkfielding?
 	// are we flatfielding?
@@ -884,6 +914,10 @@ int drvGetImg(control_t *ptc, int wfs) {
 	if (simAtm(&simparams) != EXIT_SUCCESS)
 		return EXIT_FAILURE;
 	
+	// Simulate a WFC error
+	if (simWFCError(&simparams, &(ptc->wfc[0]), 1, 20) != EXIT_SUCCESS)
+		return EXIT_FAILURE;
+
 	// Simulate telescope aperture
 	if (simTel(&simparams) != EXIT_SUCCESS)
 		return EXIT_FAILURE;
