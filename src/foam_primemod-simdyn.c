@@ -618,7 +618,7 @@ SH array:               %dx%d cells\n\
 cell size:              %dx%d pixels\n\
 track size:             %dx%d pixels\n\
 ccd size:               %dx%d pixels\n\
-seeingfac:              %f\n\
+geeingfac:              %f\n\
 wind (x,y):             (%d,%d)\n\
 samxr:                  %d\n\
 samini:                 %.2f\n\

@@ -147,10 +147,11 @@ int simAtm(mod_sim_t *simparams) {
 	return EXIT_SUCCESS;
 }
 
-int simTT(mod_sim_t *simparams, gsl_vector_float *ctrl) {
+int simTT(mod_sim_t *simparams, gsl_vector_float *ctrl, int mode) {
 	int i,j;
 	// amplitude of the TT mirror (multiplied simulated TT output by this factor)
-	float amp = 1;
+	uint8_t amp = 127;
+	uint8_t off = 128;
 	coord_t res = simparams->currimgres;
 	
 	// first simulate rails (i.e. crop ctrl above abs(1))
@@ -158,11 +159,19 @@ int simTT(mod_sim_t *simparams, gsl_vector_float *ctrl) {
 	// if (ctrl[0] < -1.0) ctrl[0] = -1.0;
 	// if (ctrl[1] > 1.0) ctrl[1] = 1.0;
 	// if (ctrl[1] < -1.0) ctrl[1] = -1.0;
-	
-	for (i=0; i<res.y; i++)
-		for (j=0; j<res.x; j++)
-			simparams->currimg[i*res.x + j] += ((((float) i/(res.y-1))-0.5) * 2 * amp * gsl_vector_float_get(ctrl, 1)) + \
-			((((float) j/(res.x-1) )-0.5) * 2 * amp * gsl_vector_float_get(ctrl, 0));
+
+	if (mode == 0) { // mode == 0 SETS the wavefront with offset
+		for (i=0; i<res.y; i++)
+			for (j=0; j<res.x; j++)
+				simparams->currimg[i*res.x + j] = off + ((((float) i/(res.y-1))-0.5) * 2 * amp * gsl_vector_float_get(ctrl, 1)) + \
+								   ((((float) j/(res.x-1) )-0.5) * 2 * amp * gsl_vector_float_get(ctrl, 0));
+	}
+	else { // mode != 0 ADDS to the current wavefront w/o offset
+		for (i=0; i<res.y; i++)
+			for (j=0; j<res.x; j++)
+				simparams->currimg[i*res.x + j] += ((((float) i/(res.y-1))-0.5) * 2 * amp * gsl_vector_float_get(ctrl, 1)) + \
+								   ((((float) j/(res.x-1) )-0.5) * 2 * amp * gsl_vector_float_get(ctrl, 0));
+	}
 	
 	// this had problems with integer divisions:
 	//image[i*res.x + j] += (((i/res.y)-0.5) * 2 * amp * ctrl[1]) + (((j/res.x)-0.5) * 2 * amp * ctrl[0]);
@@ -445,26 +454,27 @@ int simWFCError(mod_sim_t *simparams, wfc_t *wfc, int method, int period) {
 	// make a fake control vector for the error
 	if (method == 1) {
 		// method 1: regular sawtooth drift here:
-		ctrl = ((count % period)/(float)period * 2 - 1) * ( round( (count % period)/(float)period )*2 - 1);
+		ctrl = ((count % period)/(float)period * 2 - 1); 
+		ctrl = fabs(ctrl)*2-1;
 		gsl_vector_float_set_all(simctrl, ctrl);
 	}
 	else {
 		// method 2: random drift:
 		for (i=0; i<wfc->nact; i++) {
-			ctrl = gsl_vector_float_get(simctrl,i) + (float) drand48()*0.1;
+			ctrl = gsl_vector_float_get(simctrl,i) + (float) drand48()*0.3;
 			gsl_vector_float_set(simctrl, i, ctrl);
 		}
 	}
 	
 	// What routine do we need to call to simulate this WFC?
 	if (wfc->type == WFC_TT)
-		if (simTT(simparams, simctrl) != EXIT_SUCCESS)
+		if (simTT(simparams, simctrl, 0) != EXIT_SUCCESS)
 			return EXIT_FAILURE;
 //	else if (wfc->type == WFC_DM)
 //		if (simDM(simparams, wfc->nact, simctrl, -1) != EXIT_SUCCESS) // last arg is for niter. -1 for autoset
 //			return EXIT_FAILURE;
 	
-	logDebug(LOG_SOMETIMES, "Error: %d with %d acts: ", wfc, wfc->nact);
+	logDebug(LOG_SOMETIMES | LOG_NOFORMAT, "Error: %d with %d acts: ", wfc->id, wfc->nact);
 	for (i=0; i<wfc->nact; i++)
 		logDebug(LOG_SOMETIMES | LOG_NOFORMAT, "%.2f, ", gsl_vector_float_get(simctrl,i));
 		
