@@ -289,10 +289,11 @@ int modClosedFinish(control_t *ptc) {
 /*****************/
 
 int modCalibrate(control_t *ptc) {
-	FILE *fieldfd;		// to open some files (dark, flat, ...)
-	char title[64]; 	// for the window title
+	float stats[3];						// to use with imgGetStats
+	FILE *fieldfd;						// to open some files (dark, flat, ...)
+	char title[64];						// for the window title
 	int i, j, sn;
-	float min, max, sum, pix;			// some fielding stats
+//	float min, max, sum, pix;			// some fielding stats
 	wfs_t *wfsinfo = &(ptc->wfs[0]);	// shortcut
 	dispsrc_t oldsrc = disp.dispsrc;	// store the old display source here since we might just have to show dark or flatfields
 	int oldover = disp.dispover;		// store the old overlay here
@@ -319,10 +320,8 @@ int modCalibrate(control_t *ptc) {
 		gsl_matrix_float_fprintf(fieldfd, wfsinfo->darkim, "%.10f");
 		fclose(fieldfd);
 
-		float dstats[3];
-		imgGetStats(wfsinfo->image, DATA_UINT8, wfsinfo->res, -1, dstats);
-
-		logInfo(0, "Darkfield calibration done (m: %f, m: %f, avg: %f), and stored to disk.", dstats[0], dstats[1], dstats[3]);
+		imgGetStats(wfsinfo->image, DATA_UINT8, &(wfsinfo->res), -1, stats);
+		logInfo(0, "Darkfield calibration done (m: %f, m: %f, avg: %f), and stored to disk.", stats[0], stats[1], stats[2]);
 		
 		// set new display settings to show the darkfield
 		disp.dispsrc = DISPSRC_DARK;
@@ -338,8 +337,9 @@ int modCalibrate(control_t *ptc) {
 	else if (ptc->calmode == CAL_FLAT) {
 		logInfo(0, "Starting flatfield calibration now");
 
-		// set flat constant so we get a gain of 1
-		gsl_matrix_float_set_all(wfsinfo->darkim, 32.0);
+		// simulate the image, it should take care of dark- and
+		// flat fielding as well
+		drvGetImg(ptc, 0);
 		
 		// saving image for later usage
 		fieldfd = fopen(wfsinfo->flatfile, "w+");	
@@ -349,7 +349,9 @@ int modCalibrate(control_t *ptc) {
 		}
 		gsl_matrix_float_fprintf(fieldfd, wfsinfo->flatim, "%.10f");
 		fclose(fieldfd);
-		logInfo(0, "Flatfield calibration done, and stored to disk.");
+
+		imgGetStats(wfsinfo->image, DATA_UINT8, &(wfsinfo->res), -1, stats);
+		logInfo(0, "Flatfield calibration done (m: %f, m: %f, avg: %f), and stored to disk.", stats[0], stats[1], stats[2]);
 		
 		// set new display settings to show the darkfield
 		disp.dispsrc = DISPSRC_FLAT;
@@ -362,10 +364,18 @@ int modCalibrate(control_t *ptc) {
 		disp.dispover = oldover;
 	}
 	else if (ptc->calmode == CAL_DARKGAIN) {
-		logInfo(0, "Taking dark and flat images to make convenient images to correct (dark/gain).");
+		// This part takes the dark and flat fields (darkim and flatim, stored 
+		// as gsl matrix in float format) and converts these into convenient 
+		// dark and gain fields that can be used later on. Darkim is the average
+		// of several darkfields and is multiplied with 256 in a uint16_t array 
+		// 'dark'. Flatim is also an average, and is used as: 256 * 
+		// mean(flat-dark) / (flat - dark) to produce the uint16_t matrix 'gain'. 
+		// Once we have 'dark' and 'gain', dark fielding is done as:
+		// (((uint16_t) raw*256)-dark)*gain/256 in that order.
 		
+		logInfo(0, "Taking dark and flat images to make convenient images to correct (dark/gain).");		
 		
-		// get the average flat-dark value for all subapertures (but not the whole image)
+		// get mean(flat-dark) value for all subapertures (but not the whole image)
 		float tmpavg;
 		for (sn=0; sn < shtrack.nsubap; sn++) {
 			for (i=0; i< shtrack.track.y; i++) {
@@ -381,11 +391,16 @@ int modCalibrate(control_t *ptc) {
 		uint16_t *darktmp = (uint16_t *) wfsinfo->dark;
 		uint16_t *gaintmp = (uint16_t *) wfsinfo->gain;
 
+		// Here we loop over the subapertures one by one, then calculate 
+		// 'dark' as: 256 * rawdark, rawdark the raw average of N darkfields, stored as float
+		// 'gain' as: 256 * tmpavg / (rawdark - rawflat), with rawflat the raw avg of N flatfields
 		for (sn=0; sn < shtrack.nsubap; sn++) {
 			for (i=0; i< shtrack.track.y; i++) {
 				for (j=0; j< shtrack.track.x; j++) {
+					// dark = 256 * rawdark
 					darktmp[sn*(shtrack.track.x*shtrack.track.y) + i*shtrack.track.x + j] = \
 						(uint16_t) (256.0 * gsl_matrix_float_get(wfsinfo->darkim, shtrack.subc[sn].y + i, shtrack.subc[sn].x + j));
+					// gain = 256 * tmpavg / (rawdark - rawflat)
 					gaintmp[sn*(shtrack.track.x*shtrack.track.y) + i*shtrack.track.x + j] = (uint16_t) (256.0 * tmpavg / \
 						(gsl_matrix_float_get(wfsinfo->flatim, shtrack.subc[sn].y + i, shtrack.subc[sn].x + j) - \
 						 gsl_matrix_float_get(wfsinfo->darkim, shtrack.subc[sn].y + i, shtrack.subc[sn].x + j)));
@@ -397,23 +412,16 @@ int modCalibrate(control_t *ptc) {
 	}
 	else if (ptc->calmode == CAL_SUBAPSEL) {
 		logInfo(0, "Starting subaperture selection now");
-		// no need to get get an image, it's alway the same for static simulation
 
+		// get a fake image, drvGetImg() knows about CAL_SUBAPSEL
+		drvGetImg(ptc, 0);
 		uint8_t *tmpimg = (uint8_t *) wfsinfo->image;
-		uint8_t tmpmax = tmpimg[0];
-		uint8_t tmpmin = tmpimg[0];
-		uint64_t tmpsum, i;
-		for (i=0; i<wfsinfo->res.x*wfsinfo->res.y; i++) {
-			tmpsum += tmpimg[i];
-			if (tmpimg[i] > tmpmax) tmpmax = tmpimg[i];
-			else if (tmpimg[i] < tmpmin) tmpmin = tmpimg[i];
-		}           
-		logInfo(0, "Image info: sum: %ld, avg: %f, range: (%d,%d)", tmpsum, (float) tmpsum / (wfsinfo->res.x*wfsinfo->res.y), tmpmin, tmpmax);
-
+		
 		// run subapsel on this image
 		modSelSubapts(wfsinfo->image, DATA_UINT8, ALIGN_RECT, &shtrack, wfsinfo);
 
 		logInfo(0, "Subaperture selection complete, found %d subapertures.", shtrack.nsubap);
+
 		// set new display settings to show the darkfield
 		disp.dispsrc = DISPSRC_RAW;
 		disp.dispover = DISPOVERLAY_SUBAPS | DISPOVERLAY_GRID;
@@ -423,6 +431,16 @@ int modCalibrate(control_t *ptc) {
 		// reset the display settings
 		disp.dispsrc = oldsrc;
 		disp.dispover = oldover;
+	}
+	else if (ptc->calmode == CAL_PINHOLE) {
+		logInfo(0, "Pinhole calibration, getting WFS reference coordinates now");
+		
+		// Get a fake image
+		drvGetImg(ptc, 0);
+		uint8_t *tmpimg = (uint8_t *) wfsinfo->image;
+		
+		// perform a pinhole calibration
+		calibPinhole(ptc, 0, &shtrack);
 	}
 	
 	return EXIT_SUCCESS;
@@ -926,7 +944,7 @@ int drvGetImg(control_t *ptc, int wfs) {
 			// give flat 32 intensity image back
 			return simFlat(&simparams, 32);
 		}
-		else if (ptc->calmode == CAL_PINHOLE) {
+		else if (ptc->calmode == CAL_PINHOLE || ptc->calmode == CAL_SUBAPSEL) {
 			// take flat 32 intensity image, and pass through simTel, simSHWFS
 			if (simFlat(&simparams, 32) != EXIT_SUCCESS)
 				return EXIT_FAILURE;
