@@ -935,6 +935,15 @@ int parseCmd(char *msg, const int len, client_t *client) {
 			tellClient(client->buf_ev,"402 IMAGE REQUIRES ARG");
 		}		
 	}*/
+	else if (strcmp(list[0],"saveimg") == 0) {
+		if (count > 1) {
+			tmpint = (int) strtol(list[1], NULL, 10);
+			tellClient(client->buf_ev, "200 OK SAVING NEXT %d IMAGES", tmpint);
+		}
+		else {
+			tellClient(client->buf_ev,"402 SAVEIMG REQUIRES ARG (# FRAMES)");
+		}		
+	}	
 	else if (strcmp(list[0],"broadcast") == 0) {
 		if (count > 1) {
 			tellClients("200 OK %s", msg);
@@ -943,7 +952,7 @@ int parseCmd(char *msg, const int len, client_t *client) {
 			tellClient(client->buf_ev,"401 BROADCAST ACCEPTS ONLY %d WORDS", Maxparams);
 		}
 		else {
-			tellClient(client->buf_ev,"402 BROADCAST REQUIRES ARG");
+			tellClient(client->buf_ev,"402 BROADCAST REQUIRES ARG (BROADCAST TEXT)");
 		}
 	}
 	else if (strcmp(list[0],"mode") == 0) {
@@ -968,7 +977,7 @@ int parseCmd(char *msg, const int len, client_t *client) {
 			}
 		}
 		else {
-			tellClient(client->buf_ev,"402 MODE REQUIRES ARG");
+			tellClient(client->buf_ev,"402 MODE REQUIRES ARG (CLOSED, OPEN, LISTEN)");
 		}
 	}
 	else {

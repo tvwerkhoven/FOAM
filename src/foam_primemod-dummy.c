@@ -117,8 +117,8 @@ int modMessage(control_t *ptc, const client_t *client, char *list[], const int c
 			tellClient(client->buf_ev, "This is the dummy module and does not provide any additional commands");
 		}
 	}
-	else { // no valid command found? return 0 so that the main thread knows this
-		return 0;
+	else { // no valid command found? tell the user this is the dummy module, there is nothing useful here
+		tellClient(client->buf_ev, "This is the dummy module and does not provide any additional commands");
 	} // strcmp stops here
 	
 	// if we end up here, we didn't return 0, so we found a valid command

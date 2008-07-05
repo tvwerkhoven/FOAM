@@ -16,7 +16,6 @@
 extern pthread_mutex_t mode_mutex;
 extern pthread_cond_t mode_cond;
 
-
 // GLOBALS //
 /***********/
 
@@ -33,15 +32,15 @@ mod_sh_track_t shtrack;
 mod_sim_t simparams;
 
 int modInitModule(control_t *ptc, config_t *cs_config) {
-	logInfo(0, "This is the simdyn prime module, enjoy.");
+	logInfo(0, "This is the dynamical simulation (simdyn) prime module, enjoy.");
 	
 	// populate ptc here
 	ptc->mode = AO_MODE_LISTEN;			// start in listen mode (safe bet, you probably want this)
 	ptc->calmode = CAL_INFL;			// this is not really relevant initialliy
 	ptc->logfrac = 10;                  // log verbose messages only every 100 frames
-	ptc->wfs_count = 1;					// just 1 static 'wfs' for simulation
-	ptc->wfc_count = 1;
-	ptc->fw_count = 2;
+	ptc->wfs_count = 1;					// just 1 'wfs' for simulation
+	ptc->wfc_count = 1;					// one TT mirror
+	ptc->fw_count = 2;					// 2 filterwheels (which we actually don't use)
 	
 	// allocate memory for filters, wfc's and wfs's
 	ptc->filter = (filtwheel_t *) calloc(ptc->fw_count, sizeof(filtwheel_t));
@@ -99,7 +98,9 @@ int modInitModule(control_t *ptc, config_t *cs_config) {
 	ptc->wfs[0].id = 0;
 	ptc->wfs[0].fieldframes = 1000;     // take 1000 frames for a dark or flatfield
 		
-	// Simulation configuration
+	// CONFIGURE SIMULATION MODULE //
+	/////////////////////////////////
+		
 	simparams.wind.x = 0;
 	simparams.wind.y = 0;
 	simparams.seeingfac = 0.3;
@@ -118,8 +119,9 @@ int modInitModule(control_t *ptc, config_t *cs_config) {
 
 	ptc->wfs[0].image = (void *) simparams.currimg;
 
-
-	// shtrack configuring
+	// CONFIGURE SHTRACK MODULE //
+	//////////////////////////////
+	
     // we have an image of WxH, with a lenslet array of WlxHl, such that
     // each lenslet occupies W/Wl x H/Hl pixels, and we use track.x x track.y
     // pixels to track the CoG or do correlation tracking.
@@ -139,7 +141,9 @@ int modInitModule(control_t *ptc, config_t *cs_config) {
 	if (modInitSH(&(ptc->wfs[0]), &shtrack) != EXIT_SUCCESS)
 		logErr("Failed to initialize shack-hartmann module.");
 	
-	// configure cs_config here
+	// CONFIGURE CS_CONFIG SETTINGS //
+	//////////////////////////////////
+	
 	cs_config->listenip = "0.0.0.0";	// listen on any IP by defaul
 	cs_config->listenport = 10000;		// listen on port 10000 by default
 	cs_config->use_syslog = false;		// don't use the syslog
@@ -157,7 +161,9 @@ int modPostInitModule(control_t *ptc, config_t *cs_config) {
 	// we initialize OpenGL here, because it doesn't like threading
 	// a lot
 #ifdef FOAM_SIMDYN_DISPLAY
-	// init display
+	// CONFIGURE DISPLAY MODULE //
+	//////////////////////////////
+		
 	disp.caption = "WFS #1";
 	disp.res.x = ptc->wfs[0].res.x;
 	disp.res.y = ptc->wfs[0].res.y;
@@ -524,7 +530,9 @@ calibrate <mode>:       calibrate the ao system.\n\
    dark:                take a darkfield by averaging %d frames.\n\
    flat:                take a flatfield by averaging %d frames.\n\
    gain:                calc dark/gain to do actual corrections with.\n\
-   selsubap:            select some subapertures.\
+   selsubap:            select some subapertures.\n\
+   pinhole:             select reference coordinates for WFS.\n\
+   influence:           calibrate the influence matrix.\n\
 ", ptc->wfs[0].fieldframes, ptc->wfs[0].fieldframes);
 			}
 			else // we don't know. tell this to parseCmd by returning 0
@@ -535,8 +543,6 @@ calibrate <mode>:       calibrate the ao system.\n\
 === prime module options ===\n\
 display <source>:       tell foam what display source to use.\n\
 vid <auto|c|v> [i]:     use autocontrast/brightness, or set manually.\n\
-resetdm [i]:            reset the DM to a certain voltage for all acts. def=0\n\
-resetdaq [i]:           reset the DAQ analog outputs to a certain voltage. def=0\n\
 set [prop]:             set or query certain properties.\n\
 calibrate <mode>:       calibrate the ao system (dark, flat, subapt, etc).\
 ");
@@ -652,7 +658,7 @@ SH array:               %dx%d cells\n\
 cell size:              %dx%d pixels\n\
 track size:             %dx%d pixels\n\
 ccd size:               %dx%d pixels\n\
-geeingfac:              %f\n\
+seeingfac:              %f\n\
 wind (x,y):             (%d,%d)\n\
 samxr:                  %d\n\
 samini:                 %.2f\n\
@@ -759,13 +765,6 @@ int drvSetActuator(control_t *ptc, int wfc) {
 	// we do not need to 'set' anything. If any control vector
 	// is set, it will be used automatically in drvGetImg
 	
-	
-//	if (ptc->wfc[wfc].type == 0) {			// Okotech DM
-//		// use okodm routines here
-//	}
-//	else if (ptc->wfc[wfc].type == 1) {	// Tip-tilt mirror
-//		// use daq routines here
-//	}
 	return EXIT_SUCCESS;
 }
 
@@ -886,13 +885,12 @@ int MMDarkFlatSubapByte(wfs_t *wfs, mod_sh_track_t *shtrack) {
 			}
 		}
 	}
-	float srcst[3];
-	float corrst[3];
-	imgGetStats(wfs->corr, DATA_UINT16, NULL, shtrack->nsubap * shtrack->track.x * shtrack->track.y, corrst);
-	imgGetStats(wfs->image, DATA_UINT8, &(wfs->res), -1, srcst);
-	//logDebug(LOG_SOMETIMES, "SUBCORR: corr: min: %f, max: %f, avg: %f", corrst[0], corrst[1], corrst[2]);
-	//logDebug(LOG_SOMETIMES, "SUBCORR: src: min: %f, max: %f, avg: %f", srcst[0], srcst[1], srcst[2]);
-	//sleep(1);
+//	float srcst[3];
+//	float corrst[3];
+//	imgGetStats(wfs->corr, DATA_UINT16, NULL, shtrack->nsubap * shtrack->track.x * shtrack->track.y, corrst);
+//	imgGetStats(wfs->image, DATA_UINT8, &(wfs->res), -1, srcst);
+//	logDebug(LOG_SOMETIMES, "SUBCORR: corr: min: %f, max: %f, avg: %f", corrst[0], corrst[1], corrst[2]);
+//	logDebug(LOG_SOMETIMES, "SUBCORR: src: min: %f, max: %f, avg: %f", srcst[0], srcst[1], srcst[2]);
 	
 	return EXIT_SUCCESS;
 }
@@ -908,10 +906,6 @@ int MMDarkFlatFullByte(wfs_t *wfs, mod_sh_track_t *shtrack) {
 		return EXIT_FAILURE;
 	}
 	// copy the image to corrim, while doing dark/flat fielding at the same time
-//	float max[2], sum[2];
-//	sum[0] = sum[1] = 0.0;
-//	max[0] = imagesrc[0];
-//	max[1] = gsl_matrix_float_get( wfs->darkim, 0, 0);
 	float pix1, pix2;
 	for (i=0; (int) i < wfs->res.y; i++) {
 		for (j=0; (int) j < wfs->res.x; j++) {
@@ -938,13 +932,12 @@ int MMDarkFlatFullByte(wfs_t *wfs, mod_sh_track_t *shtrack) {
 			
 		}
 	}
-	float corrstats[3];
-	float srcstats[3];
-	imgGetStats(imagesrc, DATA_UINT8, &(wfs->res), -1, srcstats);
-	imgGetStats(wfs->corrim, DATA_GSL_M_F, &(wfs->res), -1, corrstats);
-	
-	logDebug(LOG_SOMETIMES, "FULLCORR: src: min %f, max %f, avg %f", srcstats[0], srcstats[1], srcstats[2]);
-	logDebug(LOG_SOMETIMES, "FULLCORR: corr: min %f, max %f, avg %f", corrstats[0], corrstats[1], corrstats[2]);
+//	float corrstats[3];
+//	float srcstats[3];
+//	imgGetStats(imagesrc, DATA_UINT8, &(wfs->res), -1, srcstats);
+//	imgGetStats(wfs->corrim, DATA_GSL_M_F, &(wfs->res), -1, corrstats);	
+//	logDebug(LOG_SOMETIMES, "FULLCORR: src: min %f, max %f, avg %f", srcstats[0], srcstats[1], srcstats[2]);
+//	logDebug(LOG_SOMETIMES, "FULLCORR: corr: min %f, max %f, avg %f", corrstats[0], corrstats[1], corrstats[2]);
 
 	return EXIT_SUCCESS;
 }
@@ -1020,7 +1013,7 @@ int drvGetImg(control_t *ptc, int wfs) {
 		return EXIT_FAILURE;
 	
 	// Simulate a WFC error
-	if (simWFCError(&simparams, &(ptc->wfc[0]), 1, 20) != EXIT_SUCCESS)
+	if (simWFCError(&simparams, &(ptc->wfc[0]), 2, 20) != EXIT_SUCCESS)
 		return EXIT_FAILURE;
 
 	// Simulate the WFCs themselves

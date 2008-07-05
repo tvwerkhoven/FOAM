@@ -10,14 +10,10 @@
 
 #include <fftw3.h> 					// we need this for modSimSH()
 #include "foam_cs_library.h"		// we link to the main program here (i.e. we use common (log) functions)
-#include "foam_modules-dm.h"		// we want the DM subroutines here too
 #include "foam_modules-calib.h"		// we want the calibration
-#include "foam_modules-img.h"		// we want image IO
+#include "foam_modules-sh.h"		// we want image IO
 
-
-// These are defined in foam_cs_library.c
-extern control_t ptc;
-//extern config_t cs_config;
+#define	SOR_LIM	  (1.e-8)			// limit value for SOR iteration in simDM()
 
 /*!
  @brief This struct is used to characterize seeing conditions
@@ -41,6 +37,8 @@ typedef struct {
 	char *actpat;			//!< (user) actuator pattern to use (pgm)
 	uint8_t *actpatimg;		//!< (foam) actuator patter image
 	coord_t actpatres;		//!< (foam) actuator patter image resolution
+	
+	uint8_t *dmresp;		//!< (foam) deformable mirror response
 
 	fftw_complex *shin;		//!< (foam) input for fft algorithm
 	fftw_complex *shout;	//!< (foam) output for fft (but shin can be used if fft is inplace)
@@ -51,66 +49,87 @@ typedef struct {
 // PROTOTYPES //
 /**************/
 
-
+/*!
+ @brief Initialize the simulation module with a pre-filled mod_sim_t struct
+ */
 int simInit(mod_sim_t *simparams);
 
 /*!
  @brief Simulates wind by chaning the origin that simAtm uses
-  // !!!:tim:20080703 add docs
  */
 int simWind(mod_sim_t *simparams);
 
 /*!
- @brief simAtm() crops a part of the source wavefront
-  // !!!:tim:20080703 add docs
+ @brief Crop a part of the source wavefront and copy it to the sensor image
  */
 int simAtm(mod_sim_t *simparams);
 
 /*!
-@brief Simulates sensor(s) read-out
-
-During simulation, this function takes care of simulating the atmosphere, 
-the telescope, any WFCs the wavefront passes along and the (SH) sensor itself, since
-these all occur in sequence.
- 
- // !!!:tim:20080703 add docs
-@return EXIT_SUCCESS on success, EXIT_FAILURE otherwise.
-*/
-int simSensor(mod_sim_t *simparams, mod_sh_track_t *shwfs);
+ @brief Generate a flat wavefront with a certain intensity
+ */
+int simFlat(mod_sim_t *simparams, int intensity);
 
 /*!
- @brief Simulates the SH WFS sensor
+ @brief Add noise to an image (i.e after generating a flat wavefront)
+ */
+int simNoise(mod_sim_t *simparams, int var);
+
+/*!
+ @brief Simulate a tip-tilt mirror, i.e. generate a sloped wavefront
  
- // !!!:tim:20080703 add docs
+ ctrl should range from -1 to 1, be linear, and contain 2 elements.
+ This routine updates the image stored in simparams->currimg, which must be
+ allocated.
+ 
+ The simulationitself is done as follows: a slope is generated over the whole
+ image, which ranges from -amp to amp. After that, this slope is multiplied by
+ the values stored in *ctrl (ctrl[0] for x, ctrl[1] for y). Once this slope has
+ been calculated, it is either appended to the image (mode==1) or it is
+ overwritten (mode==0).
+ 
+ @param [in] *ctrl A 2-element array with the controls for the tip-tilt mirror
+ @param [in] *simparams The simulation parameters
+ @param [in] mode The mode of simulation to be used. 1=append tip-tilt image, 0=overwrite
+ @return EXIT_SUCCESS on success, EXIT_FAILURE otherwise.
+ */
+
+int simTT(mod_sim_t *simparams, gsl_vector_float *ctrl, int mode);
+
+/*!
+ @brief Simulate a deformable mirror and generate the associated wavefront (BROKEN)
+ 
+ This routine, based on response2.c by C.U. Keller, takes a boundarymask,
+ an actuatorpattern for the DM being simulated, the number of actuators
+ and the voltages as input. It then calculates the shape of the mirror
+ and adds or overwrites this to simparams->currimg, which must be allocated before
+ calling this function. Additionally, niter can be set to limit the amount of 
+ iterations (set to 0 if unsure).
+ 
+ @param [in] *simparams The number of actuators, must be the same as used in \a *actuatorpat
+ @param [in] nact The number of actuators, must be the same as used in \a *actuatorpat
+ @param [in] *ctrl The control commands array, \a nact long
+ @param [in] mode Add to the wavefront (mode==1) or overwrite? (mode==0)
+ @param [in] niter The number of iterations, 0 for automatic choice
+ @return EXIT_SUCCESS on success, EXIT_FAILURE otherwise.
+ */
+int simDM(mod_sim_t *simparams, int nact, gsl_vector_float *ctrl, int mode, int niter);
+
+/*!
+ @brief Simulates a SH WFS sensor, subdivide the wavefront in subapertures and image these
  */
 int simSHWFS(mod_sim_t *simparams, mod_sh_track_t *shwfs);
 
 /*!
- @brief \a simTel() simulates the effect of the telescope (aperture) on the output of \a simAtm().
+ @brief simTel() simulates the effect of a telescope aperture
  
- This fuction works in wavefront-space, and basically multiplies the aperture function with
- the wavefront from \a simAtm().
+ This fuction works in wavefront-space, and multiplies the aperture function with
+ the wavefront from simAtm().
  */
 int simTel(mod_sim_t *simparams);
 
-// !!!:tim:20080703 codedump below here, not used
-#if (0)
-
-
 /*!
-@brief This simulates errors using a certain WFC, useful for performance testing
+ @brief Simulate a WFC, a wrapper for simTT() and simDM(), can be extended in the future
+ */
+int simWFC(wfc_t *wfc, mod_sim_t *simparams);
 
-TODO: document
-*/
-void modSimError(int wfc, int method, int verbosity);
-
-
-/*!
-@brief \a simWFC() simulates a certain wave front corrector, like a TT or a DM.
-
-This fuction works in wavefront-space.
-*/
-int simWFC(control_t *ptc, int wfcid, int nact, gsl_vector_float *ctrl, float *image);
-
-#endif /* #if (0) */
 #endif /* FOAM_MODULES_SIM */
