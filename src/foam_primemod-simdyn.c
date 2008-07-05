@@ -1023,6 +1023,10 @@ int drvGetImg(control_t *ptc, int wfs) {
 	if (simWFCError(&simparams, &(ptc->wfc[0]), 1, 20) != EXIT_SUCCESS)
 		return EXIT_FAILURE;
 
+	// Simulate the WFCs themselves
+	if (simWFC(&(ptc->wfc[0]), &simparams) != EXIT_SUCCESS)
+		return EXIT_FAILURE;
+	
 	// Simulate telescope aperture
 	if (simTel(&simparams) != EXIT_SUCCESS)
 		return EXIT_FAILURE;

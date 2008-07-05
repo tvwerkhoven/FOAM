@@ -577,10 +577,10 @@ int modCalcCtrl(control_t *ptc, mod_sh_track_t *shtrack, const int wfs, int nmod
 	shtrack->disp->size = nsubap*2;
 	
 	logDebug(LOG_SOMETIMES, "Calculating control stuff for WFS %d (modes: %d)", wfs, nmodes);
-	for (i=0; i < nsubap; i++)
-		logDebug(LOG_SOMETIMES | LOG_NOFORMAT, "(%f, %f)", gsl_vector_float_get(shtrack->disp, 2*i+0), gsl_vector_float_get(shtrack->disp, 2*i+1));
-		
-	logDebug(LOG_SOMETIMES | LOG_NOFORMAT, "\n");
+//	for (i=0; i < nsubap; i++)
+//		logDebug(LOG_SOMETIMES | LOG_NOFORMAT, "(%f, %f)", gsl_vector_float_get(shtrack->disp, 2*i+0), gsl_vector_float_get(shtrack->disp, 2*i+1));
+//		
+//	logDebug(LOG_SOMETIMES | LOG_NOFORMAT, "\n");
 	
 //	gsl_linalg_SV_solve(ptc->wfs[wfs].wfsmodes, v, sing, testout, testinrec);	
 	
