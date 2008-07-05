@@ -200,6 +200,7 @@ int calibWFC(control_t *ptc, int wfs, mod_sh_track_t *shtrack) {
 					modOpenLoop(ptc);
 					logInfo(LOG_NOFORMAT, ".");
 				}
+				
 		
 				// take the shifts and store those (wrt to reference shifts)
 	    		for (i=0;i<nsubap;i++) { 	
@@ -214,7 +215,7 @@ int calibWFC(control_t *ptc, int wfs, mod_sh_track_t *shtrack) {
 					modOpenLoop(ptc);
 					logInfo(LOG_NOFORMAT, ".");
 				}
-
+				logInfo(LOG_NOFORMAT, "\n");
 		
 				// take the shifts and subtract those store those (wrt to reference shifts)
 	    		for (i=0;i<nsubap;i++) { 

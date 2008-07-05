@@ -149,8 +149,10 @@ void logInfo(const int flag, const char *msg, ...) {
 	if (cs_config.use_stdout == true) { 			// Do we want to log this to stdout
 		if (!(flag & LOG_NOFORMAT)) 
 			vfprintf(stdout, logmessage, aq);
-		else
+		else {
 			vfprintf(stdout, msg, aq);
+			fflush(stdout);
+		}
 	}
 
 	if (cs_config.use_syslog == true) 			// Do we want to log this to syslog?
@@ -189,8 +191,10 @@ void logDebug(const int flag, const char *msg, ...) {
 	if (cs_config.use_stdout == true) { 			// Do we want to log this to stdout
 		if (!(flag & LOG_NOFORMAT)) 
 			vfprintf(stdout, logmessage, aq);
-		else
+		else {
 			vfprintf(stdout, msg, aq);
+			fflush(stdout);
+		}
 	}
 		
 	if (cs_config.use_syslog == true) 			// Do we want to log this to syslog?
