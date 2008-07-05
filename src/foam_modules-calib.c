@@ -196,8 +196,10 @@ int calibWFC(control_t *ptc, int wfs, mod_sh_track_t *shtrack) {
 				// run the open loop a few times, which will approx do the following:
 				// read sensor, apply some SH WF sensing
 		
-				for (skip=0; skip< shtrack->skipframes + 1; skip++) // skip some frames here
+				for (skip=0; skip< shtrack->skipframes + 1; skip++) { // skip some frames here
 					modOpenLoop(ptc);
+					logInfo(LOG_NOFORMAT, ".");
+				}
 		
 				// take the shifts and store those (wrt to reference shifts)
 	    		for (i=0;i<nsubap;i++) { 	
@@ -208,8 +210,11 @@ int calibWFC(control_t *ptc, int wfs, mod_sh_track_t *shtrack) {
 				gsl_vector_float_set(ptc->wfc[wfc].ctrl, j, ptc->wfc[wfc].calrange[0]);				
                 drvSetActuator(ptc, wfc);
 						
-				for (skip=0; skip< shtrack->skipframes +1; skip++) // skip some frames here
+				for (skip=0; skip< shtrack->skipframes +1; skip++) { // skip some frames here
 					modOpenLoop(ptc);
+					logInfo(LOG_NOFORMAT, ".");
+				}
+
 		
 				// take the shifts and subtract those store those (wrt to reference shifts)
 	    		for (i=0;i<nsubap;i++) { 
@@ -364,7 +369,7 @@ int calibSVDGSL(control_t *ptc, int wfs, mod_sh_track_t *shtrack) {
 	for (i=0; i< ptc->wfc_count; i++)
 		nact += ptc->wfc[i].nact;
 	
-	logWarn("Doing SVD of influence function for %d subaps and %d actuators", nsubap, nact);
+	logInfo(0, "Doing SVD of influence function for %d subaps and %d actuators", nsubap, nact);
 	// temporary matrices to store stuff in
 	gsl_matrix *mat, *v;
 	gsl_vector *sing, *work, *testin, *testout;
@@ -491,14 +496,14 @@ int calibSVDGSL(control_t *ptc, int wfs, mod_sh_track_t *shtrack) {
 	double diffin=0, diffout=0;
 	float cond, min, max;
 	
-	logDebug(0, "Reconstruction test double: (should all be 1)");
+	logDebug(0, "Reconstruction test double: (values per line should be equal)");
 	for (j=0; j<nact; j++) {
 		diffin += gsl_vector_get(testinrec, j)/gsl_vector_get(testin, j);
 		logDebug(LOG_NOFORMAT, "%f, %f\n", gsl_vector_get(testinrec, j), gsl_vector_get(testin, j));
 	}
 	diffin /= nact;
 	
-	logDebug(0, "Reconstruction test float: (should all be 1)");
+	logDebug(0, "Reconstruction test float: (values per line should be equal)");
 	for (j=0; j<nact; j++) {
 		diffout += gsl_vector_float_get(testinrecf, j)/gsl_vector_float_get(testinf, j);
 		logDebug(LOG_NOFORMAT, "%f, %f\n", gsl_vector_float_get(testinrecf, j), gsl_vector_float_get(testinf, j));

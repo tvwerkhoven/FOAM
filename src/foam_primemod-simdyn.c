@@ -264,6 +264,8 @@ int modClosedLoop(control_t *ptc) {
 	//modCogTrack(ptc->wfs[0].corrim, DATA_GSL_M_F, ALIGN_RECT, &shtrack, NULL, NULL);
 	modCogTrack(ptc->wfs[0].corr, DATA_UINT8, ALIGN_SUBAP, &shtrack, NULL, NULL);
 	
+	modCalcCtrl(ptc, &shtrack, 0, -1);
+	
 #ifdef FOAM_SIMDYN_DISPLAY
     if (ptc->frames % ptc->logfrac == 0) {
 		displayDraw((&ptc->wfs[0]), &disp, &shtrack);
