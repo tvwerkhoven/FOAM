@@ -197,11 +197,12 @@ int modWritePGMArr(char *fname, void *img, foam_datat_t datatype, coord_t res, i
 	if (datatype == DATA_UINT8) { // uint8_t ONLY
  		uint8_t *imgc = (uint8_t *) img;
 		max = min = (float) imgc[0];
-		// check maximum & min
-		for (x=0; x< res.x * res.y; x++) {
-			pix = (float) imgc[x];
-			if (pix > max) max = pix;
-			else if (pix < min) min = pix;
+		if (maxval != 0) { // check maximum & min, only if we're scaling the image
+			for (x=0; x< res.x * res.y; x++) {
+				pix = (float) imgc[x];
+				if (pix > max) max = pix;
+				else if (pix < min) min = pix;
+			}
 		}
 	}
 	else
@@ -223,15 +224,16 @@ int modWritePGMArr(char *fname, void *img, foam_datat_t datatype, coord_t res, i
 		fprintf(fd, "P5\n");
 	
 	fprintf(fd, "%d %d\n", res.x, res.y);
-	fprintf(fd, "%d\n", maxval);
+	fprintf(fd, "%d\n", max);
 
 	// Write image body //
 	//////////////////////
-	if (datatype == 0) { // float!
-		float *imgc = (float *) img;
+	if (datatype == DATA_UINT8) { // float!
+ 		uint8_t *imgc = (uint8_t *) img;
 		for (x=0; x < res.x * res.y; x++) {
 			linew = 0;
-			val = (int) (maxval * (imgc[x]-min) / (max-min));
+			if (maxval == 0) val = imgc[x];
+			else val = (uint8_t) (maxval * (imgc[x]-min) / (max-min));
 			
 			if (pgmtype == 0) { // ASCII
 				fprintf(fd, "%d ", val);
@@ -247,32 +249,6 @@ int modWritePGMArr(char *fname, void *img, foam_datat_t datatype, coord_t res, i
 				else // 1 byte pixels
 					fwrite(&val, 1, 1, fd);
 				
-			} // end ascii / binary if-else
-		} // end loop over all pixels
-	}
-
-	if (datatype == 0) { // char!
-		char *imgc = (char *) img;
-		for (x=0; x < res.x * res.y; x++) {
-			linew = 0;
-			chars = 1 + (int) ceilf(log10f((float) maxval));
-			val = (int) (maxval * (imgc[x]-min) / (max-min));
-			
-			if (pgmtype == 0) {
-				// ASCII
-				fprintf(fd, "%d ", val);
-				linew += chars;
-				// ASCII PGM lines cannot be longer than 70 characters :P
-				if (linew + chars > 70) fprintf(fd, "\n");
-				// print a newline every row of the image
-				if (x % res.x == 0) fprintf(fd, "\n");
-			}
-			else {
-				// binary
-				if (maxval > 255) // 2 byte
-					fwrite(&val, 2, 1, fd);
-				else // 1 byte
-					fwrite(&val, 1, 1, fd);
 			} // end ascii / binary if-else
 		} // end loop over all pixels
 	}	
