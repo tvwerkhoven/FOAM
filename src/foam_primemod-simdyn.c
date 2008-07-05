@@ -987,13 +987,12 @@ int drvGetImg(control_t *ptc, int wfs) {
 			// add some noise
 			if (simNoise(&simparams, 5) != EXIT_SUCCESS)
 				return EXIT_FAILURE;						
+			if (simWFC(&(ptc->wfc[0]), &simparams) != EXIT_SUCCESS)
+				return EXIT_FAILURE;
 			
 			if (simTel(&simparams) != EXIT_SUCCESS)
 				return EXIT_FAILURE;
 
-			if (simWFC(&(ptc->wfc[0]), &simparams) != EXIT_SUCCESS)
-				return EXIT_FAILURE;
-			
 			if (simSHWFS(&simparams, &shtrack) != EXIT_SUCCESS)
 				return EXIT_FAILURE;			
 		}

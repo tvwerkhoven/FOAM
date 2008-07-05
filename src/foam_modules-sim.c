@@ -437,7 +437,11 @@ int simWFCError(mod_sim_t *simparams, wfc_t *wfc, int method, int period) {
 	else {
 		// method 2: random drift:
 		for (i=0; i<wfc->nact; i++) {
-			ctrl = gsl_vector_float_get(simctrl,i) + drand48()*0.05;
+			// let the error drift around
+			ctrl = gsl_vector_float_get(simctrl,i) + (drand48()-0.5)*0.05;
+			// put bounds on the error range
+			if (ctrl > 1) ctrl = 1.0;
+			else if (ctrl < -1) ctrl = -1.0;
 			gsl_vector_float_set(simctrl, i, ctrl);
 		}
 	}
