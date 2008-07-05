@@ -442,6 +442,16 @@ int modCalibrate(control_t *ptc) {
 		// perform a pinhole calibration
 		calibPinhole(ptc, 0, &shtrack);
 	}
+	else if (ptc->calmode == CAL_INFL) {
+		logInfo(0, "Influence matrix calibration.");
+		
+		// Get a fake image
+		drvGetImg(ptc, 0);
+		uint8_t *tmpimg = (uint8_t *) wfsinfo->image;
+		
+		// perform an influence matrix calibration
+		calibWFC(ptc, 0, &shtrack);
+	}
 	
 	return EXIT_SUCCESS;
 }
@@ -938,17 +948,32 @@ int drvGetImg(control_t *ptc, int wfs) {
 	if (ptc->mode == AO_MODE_CAL) {
 		if (ptc->calmode == CAL_DARKGAIN || ptc->calmode == CAL_DARK) {
 			// give flat 0 intensity image back
-			return simFlat(&simparams, 0);
+			if (simFlat(&simparams, 0) != EXIT_SUCCESS)
+				return EXIT_FAILURE;
+
+			// add some noise with variation 5. This means the image will
+			// range from 0--5
+			if (simNoise(&simparams, 5) != EXIT_SUCCESS)
+				return EXIT_FAILURE;
 		}
 		else if (ptc->calmode == CAL_FLAT) {
 			// give flat 32 intensity image back
-			return simFlat(&simparams, 32);
+			if (simFlat(&simparams, 32) != EXIT_SUCCESS)
+				return EXIT_FAILURE;
+			
+			// add some noise
+			if (simNoise(&simparams, 5) != EXIT_SUCCESS)
+				return EXIT_FAILURE;			
 		}
 		else if (ptc->calmode == CAL_PINHOLE || ptc->calmode == CAL_SUBAPSEL) {
 			// take flat 32 intensity image, and pass through simTel, simSHWFS
 			if (simFlat(&simparams, 32) != EXIT_SUCCESS)
 				return EXIT_FAILURE;
-			
+
+			// add some noise
+			if (simNoise(&simparams, 5) != EXIT_SUCCESS)
+				return EXIT_FAILURE;			
+
 			if (simTel(&simparams) != EXIT_SUCCESS)
 				return EXIT_FAILURE;
 
@@ -959,6 +984,10 @@ int drvGetImg(control_t *ptc, int wfs) {
 			// take flat 32 intensity image, and pass through simTel, simWFC and simSHWFS
 			if (simFlat(&simparams, 32) != EXIT_SUCCESS)
 				return EXIT_FAILURE;
+			
+			// add some noise
+			if (simNoise(&simparams, 5) != EXIT_SUCCESS)
+				return EXIT_FAILURE;						
 			
 			if (simTel(&simparams) != EXIT_SUCCESS)
 				return EXIT_FAILURE;

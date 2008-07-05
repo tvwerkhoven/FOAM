@@ -158,6 +158,17 @@ int simFlat(mod_sim_t *simparams, int intensity) {
 	return EXIT_SUCCESS;
 }
 
+int simNoise(mod_sim_t *simparams, int var) {
+	int i,j;
+	logDebug(LOG_SOMETIMES, "Simulation noise, variation %d.", var);
+	
+	for (i=0; i< simparams->currimgres.y; i++) // y coordinate
+		for (j=0; j < simparams->currimgres.x; j++) // x coordinate 
+			simparams->currimg[i*simparams->currimgres.x + j] += drand48() * var;
+	
+	return EXIT_SUCCESS;
+}
+
 int simTT(mod_sim_t *simparams, gsl_vector_float *ctrl, int mode) {
 	int i,j;
 	// amplitude of the TT mirror (multiplied simulated TT output by this factor)
