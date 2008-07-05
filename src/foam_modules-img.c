@@ -174,7 +174,7 @@ int modWritePGMSurf(char *fname, SDL_Surface *img, int maxval, int pgmtype) {
 	return EXIT_SUCCESS;
 }
 
-int modWritePGMArr(char *fname, void *img, int datatype, coord_t res, int maxval, int pgmtype) {
+int modWritePGMArr(char *fname, void *img, foam_datat_t datatype, coord_t res, int maxval, int pgmtype) {
 	FILE *fd;
 	int x, y;
 	int linew, chars;
@@ -194,18 +194,8 @@ int modWritePGMArr(char *fname, void *img, int datatype, coord_t res, int maxval
 
 	// Find maximum minimum //
 	//////////////////////////
-	if (datatype == 0) { // float!
-		float *imgc = (float*) img;
-		max = min = (float) imgc[0];
-		// check maximum & min
-		for (x=0; x< res.x * res.y; x++) {
-			pix = (float) imgc[x];
-			if (pix > max) max = pix;
-			else if (pix < min) min = pix;
-		}
-	}
-	else if (datatype == 1) { // char!
- 		char *imgc = (char*) img;
+	if (datatype == DATA_UINT8) { // uint8_t ONLY
+ 		uint8_t *imgc = (uint8_t *) img;
 		max = min = (float) imgc[0];
 		// check maximum & min
 		for (x=0; x< res.x * res.y; x++) {

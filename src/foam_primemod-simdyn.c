@@ -477,6 +477,7 @@ int modMessage(control_t *ptc, const client_t *client, char *list[], const int c
 	// 300 ERROR
 	// 200 OK 
 	int tmpint;
+	long tmplong;
 	float tmpfloat;
 	
  	if (strncmp(list[0],"help",3) == 0) {
@@ -544,7 +545,8 @@ calibrate <mode>:       calibrate the ao system.\n\
 display <source>:       tell foam what display source to use.\n\
 vid <auto|c|v> [i]:     use autocontrast/brightness, or set manually.\n\
 set [prop]:             set or query certain properties.\n\
-calibrate <mode>:       calibrate the ao system (dark, flat, subapt, etc).\
+calibrate <mode>:       calibrate the ao system (dark, flat, subapt, etc).\n\
+saveimg [i]:            save the next i frames to disk.\
 ");
 		}
 	}
@@ -614,6 +616,16 @@ calibrate <mode>:       calibrate the ao system (dark, flat, subapt, etc).\
 		}
 	}
 #endif
+	else if (strcmp(list[0],"saveimg") == 0) {
+		if (count > 1) {
+			tmplong = strtol(list[1], NULL, 10);
+			ptc->saveimg = tmplong;
+			tellClient(client->buf_ev, "200 OK SAVING NEXT %ld IMAGES", tmpint);
+		}
+		else {
+			tellClient(client->buf_ev,"402 SAVEIMG REQUIRES ARG (# FRAMES)");
+		}		
+	}		
  	else if (strncmp(list[0], "set",3) == 0) {
 		if (count > 2) {
 			tmpint = strtol(list[2], NULL, 10);
@@ -996,37 +1008,41 @@ int drvGetImg(control_t *ptc, int wfs) {
 			if (simSHWFS(&simparams, &shtrack) != EXIT_SUCCESS)
 				return EXIT_FAILURE;			
 		}
+	}
+	else { // if we're not calibrating, return a normal image:
+		// Simulate wind (i.e. get the new origin to crop from)
+		if (simWind(&simparams) != EXIT_SUCCESS)
+			return EXIT_FAILURE;
 		
-		// if we're calibrating, we're done by now.
-		return EXIT_SUCCESS;
+		// Simulate atmosphere, i.e. get a crop of the wavefront
+		if (simAtm(&simparams) != EXIT_SUCCESS)
+			return EXIT_FAILURE;
+		
+		// Simulate a WFC error
+		if (simWFCError(&simparams, &(ptc->wfc[0]), 2, 20) != EXIT_SUCCESS)
+			return EXIT_FAILURE;
+
+		// Simulate the WFCs themselves
+		if (simWFC(&(ptc->wfc[0]), &simparams) != EXIT_SUCCESS)
+			return EXIT_FAILURE;
+		
+		// Simulate telescope aperture
+		if (simTel(&simparams) != EXIT_SUCCESS)
+			return EXIT_FAILURE;
+		
+		// Simulate SH WFS
+		if (simSHWFS(&simparams, &shtrack) != EXIT_SUCCESS)
+			return EXIT_FAILURE;
+
 	}
 	
-	// if we're not calibrating, return a normal image:
-	
-	// Simulate wind (i.e. get the new origin to crop from)
-	if (simWind(&simparams) != EXIT_SUCCESS)
-		return EXIT_FAILURE;
-	
-	// Simulate atmosphere, i.e. get a crop of the wavefront
-	if (simAtm(&simparams) != EXIT_SUCCESS)
-		return EXIT_FAILURE;
-	
-	// Simulate a WFC error
-	if (simWFCError(&simparams, &(ptc->wfc[0]), 2, 20) != EXIT_SUCCESS)
-		return EXIT_FAILURE;
-
-	// Simulate the WFCs themselves
-	if (simWFC(&(ptc->wfc[0]), &simparams) != EXIT_SUCCESS)
-		return EXIT_FAILURE;
-	
-	// Simulate telescope aperture
-	if (simTel(&simparams) != EXIT_SUCCESS)
-		return EXIT_FAILURE;
-	
-	// Simulate SH WFS
-	if (simSHWFS(&simparams, &shtrack) != EXIT_SUCCESS)
-		return EXIT_FAILURE;
-
+	if (ptc->saveimg > 0) { // user wants to save images, do so now!
+		char *fname;
+		asprintf(&fname, "foam-" FOAM_CONFIG_PRE "-cap-%d.pgm", ptc->capped);
+		modWritePGMArr(fname, simparams.currimg, DATA_UINT8, simparams.currimgres, 0, 1);
+		ptc->capped++;
+	}
+		
 	//ptc->wfs[0].image = (void *) simparams.currimg;
 	return EXIT_SUCCESS;
 }

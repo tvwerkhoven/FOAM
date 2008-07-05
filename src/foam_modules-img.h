@@ -37,9 +37,13 @@ int modReadIMGArrByte(char *fname, uint8_t **img, coord_t *outres);
  @brief Writes a 8-bit ASCII PGM file from memory to disk
  
  @param [in] *fname the filename to write
- @param [in] *img the SDL_Surface that will be written to disk
+ @param [in] *img the image that will be written to disk
+ @param [in] datatype the datatype of the image
+ @param [in] res the image resolution
+ @param [in] maxval the maximum value to scale the image with (0--65536), 0 for no scaling
+ @param [in] pgmtype 0 for ascii pgm file, or 1 for binary pgm file 
  */
-int modWritePGM(char *fname, SDL_Surface *img);
+int modWritePGMArr(char *fname, void *img, foam_datat_t datatype, coord_t res, int maxval, int pgmtype);
 
 /*!
  @brief Writes a PNG file from an SDL_Surface to disk

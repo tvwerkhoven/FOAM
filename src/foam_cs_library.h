@@ -258,6 +258,7 @@ typedef struct { // control_t
     
 	long frames;		//!< (foam) store the number of frames parsed
 	long capped;			//!< (foam) stores the number of frames captured earlier (i.e. what files already exist)
+	unsigned long saveimg; //!< (user) if this var is set to non-zero, the next 'saveimg' frames are stored to disk
 	float fps;		//!< (foam) stores the currect FPS
     
 	int logfrac;        //!< (user) fraction to log for certain info and debug (1 is always, 50 is 1/50 times), default 1000
