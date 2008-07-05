@@ -59,6 +59,8 @@ int modInitModule(control_t *ptc, config_t *cs_config) {
 	ptc->wfc[0].gain.d = 1.0;
 	ptc->wfc[0].type = WFC_TT;
     ptc->wfc[0].id = 1;
+	ptc->wfc[0].calrange[0] = -1.0;
+	ptc->wfc[0].calrange[1] = 1.0;
 	
 	// CONFIGURE FILTERS //
 	///////////////////////
@@ -129,6 +131,8 @@ int modInitModule(control_t *ptc, config_t *cs_config) {
 	shtrack.track.y = shtrack.shsize.y/2;
 	shtrack.pinhole = FOAM_CONFIG_PRE "_pinhole.gsldump";
 	shtrack.influence = FOAM_CONFIG_PRE "_influence.gsldump";
+	shtrack.measurecount = 5;
+	shtrack.skipframes = 10;
 	shtrack.samxr = -1;			// 1 row edge erosion
 	shtrack.samini = 30;			// minimum intensity for subaptselection 10
 	// init the shtrack module now
@@ -216,7 +220,7 @@ int modOpenLoop(control_t *ptc) {
 	// dark-flat the whole frame
 	MMDarkFlatFullByte(&(ptc->wfs[0]), &shtrack);
 	
-//	modCogTrack(ptc->wfs[0].corrim, DATA_GSL_M_F, ALIGN_RECT, &shtrack, NULL, NULL);
+	modCogTrack(ptc->wfs[0].corrim, DATA_GSL_M_F, ALIGN_RECT, &shtrack, NULL, NULL);
 	
 #ifdef FOAM_SIMDYN_DISPLAY
     if (ptc->frames % ptc->logfrac == 0) {

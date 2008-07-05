@@ -161,15 +161,21 @@ int calibWFC(control_t *ptc, int wfs, mod_sh_track_t *shtrack) {
 	nsubap = shtrack->nsubap;
 	float q0x[nsubap], q0y[nsubap];
 
-	logDebug(0, "Allocating temporary matrix to store influence function (%d x %d)", nsubap*2, nact);
+	logDebug(0, "Allocating temporary matrix to store influence function (%d x %d)", nsubap*2, nacttot);
 	// this will store the influence matrix (which calculates displacements given actuator signals)
 	infl = gsl_matrix_float_calloc(nsubap*2, nacttot);
 				
-	logInfo(0, "Calibrating WFC's using %d actuators and WFS %d with %d subapts, storing in %s.", \
+	logInfo(0, "Calibrating WFCs using %d actuators and WFS %d with %d subapts, storing in %s.", \
 		nacttot, wfs, nsubap, shtrack->influence);
-	
+	logInfo(0, "Measuring each act %d times, skipping %d frames each time.", \
+			shtrack->measurecount, shtrack->skipframes);
+			
 	for (wfc=0; wfc < ptc->wfc_count; wfc++) { // loop over all wave front correctors 
 		nact = ptc->wfc[wfc].nact;
+		
+		logInfo(0, "Startin WFC %d calibration with calibration range: (%.2f, %.2f)", \
+				wfc, ptc->wfc[wfc].calrange[0], ptc->wfc[wfc].calrange[1]);
+		
 		for (j=0; j<nact; j++) { // loop over all actuators  and all subapts for (wfc,wfs)
 	
 			for (i=0; i<nsubap; i++) { // set averaging buffer to zero
@@ -214,12 +220,12 @@ int calibWFC(control_t *ptc, int wfs, mod_sh_track_t *shtrack) {
 
 			// store the measurements for actuator j (for all subapts) 
 			
-			
 			for (i=0; i<nsubap; i++) {				
 				gsl_matrix_float_set(infl, 2*i+0, j, (float) q0x[i]/(ptc->wfc[wfc].calrange[1] - ptc->wfc[wfc].calrange[0]));
 				gsl_matrix_float_set(infl, 2*i+1, j, (float) q0y[i]/(ptc->wfc[wfc].calrange[1] - ptc->wfc[wfc].calrange[0]));
 			}
 	
+			// restore original actuator voltage
 			gsl_vector_float_set(ptc->wfc[wfc].ctrl, j, origvolt);
 		} // end loop over actuators
 	} // end loop over wfcs
