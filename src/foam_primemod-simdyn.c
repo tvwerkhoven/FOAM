@@ -133,8 +133,8 @@ int modInitModule(control_t *ptc, config_t *cs_config) {
 	shtrack.track.y = shtrack.shsize.y/2;
 	shtrack.pinhole = FOAM_CONFIG_PRE "_pinhole.gsldump";
 	shtrack.influence = FOAM_CONFIG_PRE "_influence.gsldump";
-	shtrack.measurecount = 5;
-	shtrack.skipframes = 10;
+	shtrack.measurecount = 2;
+	shtrack.skipframes = 2;
 	shtrack.samxr = -1;			// 1 row edge erosion
 	shtrack.samini = 30;			// minimum intensity for subaptselection 10
 	// init the shtrack module now
