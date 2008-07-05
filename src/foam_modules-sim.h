@@ -95,6 +95,7 @@ int simNoise(mod_sim_t *simparams, int var);
 
 int simTT(mod_sim_t *simparams, gsl_vector_float *ctrl, int mode);
 
+#if (0) // simDM is broken, ignore for the time being
 /*!
  @brief Simulate a deformable mirror and generate the associated wavefront (BROKEN)
  
@@ -113,6 +114,7 @@ int simTT(mod_sim_t *simparams, gsl_vector_float *ctrl, int mode);
  @return EXIT_SUCCESS on success, EXIT_FAILURE otherwise.
  */
 int simDM(mod_sim_t *simparams, int nact, gsl_vector_float *ctrl, int mode, int niter);
+#endif
 
 /*!
  @brief Simulates a SH WFS sensor, subdivide the wavefront in subapertures and image these
