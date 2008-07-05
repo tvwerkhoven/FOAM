@@ -400,15 +400,27 @@ int simSHWFS(mod_sim_t *simparams, mod_sh_track_t *shwfs) {
 }
 
 int simWFCError(mod_sim_t *simparams, wfc_t *wfc, int method, int period) {
-	gsl_vector_float *simctrl = NULL;
+	// static ctrl vector so we don't lose it every time this function is called
+	static gsl_vector_float *simctrl = NULL;
 	int nact, i;
 	static int count=0;
 	float ctrl;
 
 	// allocate memory for the simulation controls
-	simctrl = gsl_vector_float_alloc(wfc->nact);
+	if (simctrl == NULL) {
+		simctrl = gsl_vector_float_alloc(wfc->nact);
+	}
+	// if nact > size, we previously allocated memory for a smaller WFC,
+	// if so, reallocate some memory and continue
+	else if (wfc->nact > simctrl->size) {
+		gsl_vector_float_free(simctrl);
+		simctrl = gsl_vector_float_alloc(wfc->nact);
+	}
+	// if simctrl is NULL by now, something went wrong with allocation, stop
 	if (!simctrl)
 		logErr("Failed to allocate memory for simulation control vector.");
+	
+	
 
 	// we use this counter to make periodic signals
 	// because count is declared statically, it will retain its
@@ -425,7 +437,7 @@ int simWFCError(mod_sim_t *simparams, wfc_t *wfc, int method, int period) {
 	else {
 		// method 2: random drift:
 		for (i=0; i<wfc->nact; i++) {
-			ctrl = gsl_vector_float_get(simctrl,i) + (float) drand48()*0.3;
+			ctrl = gsl_vector_float_get(simctrl,i) + drand48()*0.05;
 			gsl_vector_float_set(simctrl, i, ctrl);
 		}
 	}
@@ -440,7 +452,7 @@ int simWFCError(mod_sim_t *simparams, wfc_t *wfc, int method, int period) {
 	
 	logDebug(LOG_SOMETIMES | LOG_NOFORMAT, "Error: %d with %d acts: ", wfc->id, wfc->nact);
 	for (i=0; i<wfc->nact; i++)
-		logDebug(LOG_SOMETIMES | LOG_NOFORMAT, "%.2f, ", gsl_vector_float_get(simctrl,i));
+		logDebug(LOG_SOMETIMES | LOG_NOFORMAT, "%f, ", gsl_vector_float_get(simctrl,i));
 		
 	logDebug(LOG_SOMETIMES | LOG_NOFORMAT, "\n");
 	
