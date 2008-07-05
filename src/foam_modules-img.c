@@ -187,7 +187,7 @@ int modWritePGMArr(char *fname, void *img, foam_datat_t datatype, coord_t res, i
 		return EXIT_FAILURE;
 	}
 	
-	if (maxval > 65535 || maxval < 1) {
+	if (maxval > 65535 || maxval < 0) {
 		logWarn("Cannot write PGM file with maximum value %d (must be 0--65536)", maxval);
 		return EXIT_FAILURE;
 	}

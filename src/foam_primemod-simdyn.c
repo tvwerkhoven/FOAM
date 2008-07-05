@@ -620,7 +620,7 @@ saveimg [i]:            save the next i frames to disk.\
 		if (count > 1) {
 			tmplong = strtol(list[1], NULL, 10);
 			ptc->saveimg = tmplong;
-			tellClient(client->buf_ev, "200 OK SAVING NEXT %ld IMAGES", tmpint);
+			tellClient(client->buf_ev, "200 OK SAVING NEXT %ld IMAGES", tmplong);
 		}
 		else {
 			tellClient(client->buf_ev,"402 SAVEIMG REQUIRES ARG (# FRAMES)");
@@ -1019,7 +1019,7 @@ int drvGetImg(control_t *ptc, int wfs) {
 			return EXIT_FAILURE;
 		
 		// Simulate a WFC error
-		if (simWFCError(&simparams, &(ptc->wfc[0]), 2, 20) != EXIT_SUCCESS)
+		if (simWFCError(&simparams, &(ptc->wfc[0]), 1, 40) != EXIT_SUCCESS)
 			return EXIT_FAILURE;
 
 		// Simulate the WFCs themselves
@@ -1041,6 +1041,7 @@ int drvGetImg(control_t *ptc, int wfs) {
 		asprintf(&fname, "foam-" FOAM_CONFIG_PRE "-cap-%d.pgm", ptc->capped);
 		modWritePGMArr(fname, simparams.currimg, DATA_UINT8, simparams.currimgres, 0, 1);
 		ptc->capped++;
+		ptc->saveimg--;
 	}
 		
 	//ptc->wfs[0].image = (void *) simparams.currimg;
