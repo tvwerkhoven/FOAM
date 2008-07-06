@@ -101,8 +101,8 @@ int modInitModule(control_t *ptc, config_t *cs_config) {
 	// CONFIGURE SIMULATION MODULE //
 	/////////////////////////////////
 		
-	simparams.wind.x = 0;
-	simparams.wind.y = 0;
+	simparams.wind.x = 5;
+	simparams.wind.y = 5;
 	simparams.seeingfac = 0.3;
 	// these files are needed for AO simulation and will be read in by simInit()
 	simparams.wf = "../config/wavefront.png";
@@ -1019,8 +1019,8 @@ int drvGetImg(control_t *ptc, int wfs) {
 			return EXIT_FAILURE;
 		
 		// Simulate a WFC error
-		if (simWFCError(&simparams, &(ptc->wfc[0]), 1, 40) != EXIT_SUCCESS)
-			return EXIT_FAILURE;
+		//if (simWFCError(&simparams, &(ptc->wfc[0]), 2, 40) != EXIT_SUCCESS)
+			//return EXIT_FAILURE;
 
 		// Simulate the WFCs themselves
 		if (simWFC(&(ptc->wfc[0]), &simparams) != EXIT_SUCCESS)
@@ -1038,7 +1038,7 @@ int drvGetImg(control_t *ptc, int wfs) {
 	
 	if (ptc->saveimg > 0) { // user wants to save images, do so now!
 		char *fname;
-		asprintf(&fname, "foam-" FOAM_CONFIG_PRE "-cap-%d.pgm", ptc->capped);
+		asprintf(&fname, "foam-" FOAM_CONFIG_PRE "-cap-%05d.pgm", ptc->capped);
 		modWritePGMArr(fname, simparams.currimg, DATA_UINT8, simparams.currimgres, 0, 1);
 		ptc->capped++;
 		ptc->saveimg--;
