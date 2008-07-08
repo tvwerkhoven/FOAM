@@ -27,6 +27,7 @@
 	This module depends on:
 	\li foam_modules-calib.c - to calibrate the simulated WFC and TT mirror
 	\li foam_modules-sh.c - to work with Shack-Hartmann trackers.
+	\li foam_modules-img.c - to read and write images.
 */
 
 // HEADERS //

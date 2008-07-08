@@ -12,7 +12,6 @@
 	
 	The functions provided to the outside world are:
 	\li modSelSubapts() - Selects subapertures suitable for tracking
-	\li modParseSH() - Tracks targets in previously selected subapertures
 	\li modCogTrack() - Center of Gravity tracking module
 	\li modCogFind() - Find target using a larger area, used for recovery 
 	\li modCalcCtrl() - Calculate WFC control vectors given target displacements
@@ -477,63 +476,7 @@ void modCogFind(wfs_t *wfsinfo, int xc, int yc, int width, int height, float sam
 	cog[1] = cs[1]/csum;
 }
 
-int modParseSH(gsl_matrix_float *image, int (*subc)[2], int (*gridc)[2], int nsubap, coord_t track, gsl_vector_float *disp, gsl_vector_float *refc) {
-	float aver=0.0, max=0.0;
-	float rmsx=0.0, rmsy=0.0;
-	float maxx=0, maxy=0;
-	float coords[nsubap][2];
-	int i;
 
-	// track the maxima using CoG
-	printf("modcogtrack turned off\n");
-	//modCogTrack(image, subc, nsubap, track, &aver, &max, coords);
-	
-	// logDebug(0 | LOG_SOMETIMES, "Coords: ");	
-	for (i=0; i<nsubap; i++) {
-		// store the displacement vectors (wrt center of subaperture grid):
-		// we get subc which is the coordinate of the tracker window wrt the complete sensor image
-		// subtracting the grid coordinat that this subaperture belongs to gives us the vector wrt to
-		// the grid coordinate. After this, we subtract a quarter of the size of the subaperture
-		// grid. If the tracker window would be centered in the grid, subc-gridc-track.x|y/4 would be zero.
-		// Last, we add the coordinate to get the displacement wrt to the center of the grid,
-		// instead of wrt to the center of the tracker window.
-
-		gsl_vector_float_set(disp, 2*i+0, subc[i][0] - gridc[i][0] - track.x/2 + (coords[i][0]) - gsl_vector_float_get(refc, 2*i+0));
-		gsl_vector_float_set(disp, 2*i+1, subc[i][1] - gridc[i][1] - track.y/2 + (coords[i][1]) - gsl_vector_float_get(refc, 2*i+1));
-		// logDebug(LOG_NOFORMAT| LOG_SOMETIMES, "(%.3f,%.3f) ", gsl_vector_float_get(disp, 2*i+0), gsl_vector_float_get(disp, 2*i+0));
-		// logDebug(LOG_NOFORMAT| LOG_SOMETIMES, "(%.3f,%.3f) ", coords[i][0], coords[i][1]);
-
-		// Track maximum displacement within the tracker window. This should not be above 1 for long,
-		// otherwise the seeing is too bad for the AO system to compensate: if this value is above 1,
-		// the tracker window should follow the SH spot, and thus the next frame it should again
-		// be below one. If this is not the case the seeing changes too fast.
-		if (fabs(coords[i][0]) > maxx) maxx = fabs(coords[i][0]);
-		if (fabs(coords[i][1]) > maxy) maxy = fabs(coords[i][1]);
-
-		rmsx += gsl_pow_2((double) gsl_vector_float_get(disp, 2*i+0));
-		rmsy += gsl_pow_2((double) gsl_vector_float_get(disp, 2*i+1));
-		
-		// check for runaway subapts and recover them:
-		if (gsl_vector_float_get(disp, 2*i+0) > track.x || 
-			gsl_vector_float_get(disp, 2*i+0) < -track.x ||
-			gsl_vector_float_get(disp, 2*i+1) > track.y || 
-			gsl_vector_float_get(disp, 2*i+1) < -track.y) {
-			//logDebug(LOG_NOFORMAT| LOG_SOMETIMES, "Runaway subapt (%d) at: (%.3f,%.3f) ", 2*i, gsl_vector_float_get(disp, 2*i+0), gsl_vector_float_get(disp, 2*i+0));
-		}
-		// note: coords is relative to the center of the tracker window
-		// therefore we can simply update the lower left coord by subtracting the coordinates.
-		subc[i][0] += round(coords[i][0]);
-		subc[i][1] += round(coords[i][1]);
-	}
-	// logDebug(LOG_NOFORMAT| LOG_SOMETIMES, "\n");
-
-	rmsx = sqrt(rmsx/nsubap);
-	rmsy = sqrt(rmsy/nsubap);
-	logInfo(LOG_SOMETIMES, "RMS displacement wrt reference: x: %.3f, y: %.3f", rmsx, rmsy);
-	logInfo(LOG_SOMETIMES, "Max abs disp in tracker window (<(.5, .5)): (%.3f, %.3f)", maxx, maxy);
-	
-	return EXIT_SUCCESS;
-}
 
 int modCalcCtrl(control_t *ptc, mod_sh_track_t *shtrack, const int wfs, int nmodes) {
 	logDebug(LOG_SOMETIMES, "Calculating WFC ctrls");
@@ -572,7 +515,6 @@ int modCalcCtrl(control_t *ptc, mod_sh_track_t *shtrack, const int wfs, int nmod
 	// allocated more space than used, but at allocation time,
 	// this is unknown we now tell gsl that the vector is 
 	// only as long as we're using, while the actual allocated space is more)
-//	oldsize = ptc->wfs[wfs].disp->size;
 	oldsize = shtrack->disp->size;
 	shtrack->disp->size = nsubap*2;
 	
@@ -582,7 +524,10 @@ int modCalcCtrl(control_t *ptc, mod_sh_track_t *shtrack, const int wfs, int nmod
 //		
 //	logDebug(LOG_SOMETIMES | LOG_NOFORMAT, "\n");
 	
-//	gsl_linalg_SV_solve(ptc->wfs[wfs].wfsmodes, v, sing, testout, testinrec);	
+	// this GSL call does the SVD calculation directly, and can be used as a check
+	// to see that the longer version works. This routine is much slower though,
+	// because it has to do the whole SVD every time.
+	// gsl_linalg_SV_solve(ptc->wfs[wfs].wfsmodes, v, sing, testout, testinrec);	
 	
 	// Below we calculate the control vector to the actuators using
 	// the measured displacements in the subapertures. We use the
@@ -646,3 +591,83 @@ int modCalcCtrl(control_t *ptc, mod_sh_track_t *shtrack, const int wfs, int nmod
 	return EXIT_SUCCESS;
 }
 
+
+#if (0)
+// Code dump below this line, functions not compatible with current version, and not used anymore.
+
+/*!
+ @brief Parses output from Shack-Hartmann WFSs.
+ 
+ This function takes the output from the drvReadSensor() routine (if the sensor is a
+ SH WFS) and preprocesses this sensor output (typically from a CCD) to be further
+ analysed by modCalcDMVolt(), which calculates the actual driving voltages for the
+ DM. 
+ 
+ @return EXIT_SUCCESS on success, EXIT_FAILURE otherwise.
+ @param [in] *image The image to parse through either CoG or correlation tracking
+ @param [in] *subc The starting coordinates of the tracker windows
+ @param [in] *gridc The starting coordinates of the grid cells
+ @param [in] nsubap The number of subapertures (i.e. the length of the subc[] array)
+ @param [in] track The size of the tracker windows
+ @param [out] *disp The displacement vector wrt the reference displacements
+ @param [in] *refc The reference displacements (i.e. after pinhole calibration)
+ */
+int modParseSH(gsl_matrix_float *image, int (*subc)[2], int (*gridc)[2], int nsubap, coord_t track, gsl_vector_float *disp, gsl_vector_float *refc) {
+	float aver=0.0, max=0.0;
+	float rmsx=0.0, rmsy=0.0;
+	float maxx=0, maxy=0;
+	float coords[nsubap][2];
+	int i;
+	
+	// track the maxima using CoG
+	printf("modcogtrack turned off\n");
+	//modCogTrack(image, subc, nsubap, track, &aver, &max, coords);
+	
+	// logDebug(0 | LOG_SOMETIMES, "Coords: ");	
+	for (i=0; i<nsubap; i++) {
+		// store the displacement vectors (wrt center of subaperture grid):
+		// we get subc which is the coordinate of the tracker window wrt the complete sensor image
+		// subtracting the grid coordinat that this subaperture belongs to gives us the vector wrt to
+		// the grid coordinate. After this, we subtract a quarter of the size of the subaperture
+		// grid. If the tracker window would be centered in the grid, subc-gridc-track.x|y/4 would be zero.
+		// Last, we add the coordinate to get the displacement wrt to the center of the grid,
+		// instead of wrt to the center of the tracker window.
+		
+		gsl_vector_float_set(disp, 2*i+0, subc[i][0] - gridc[i][0] - track.x/2 + (coords[i][0]) - gsl_vector_float_get(refc, 2*i+0));
+		gsl_vector_float_set(disp, 2*i+1, subc[i][1] - gridc[i][1] - track.y/2 + (coords[i][1]) - gsl_vector_float_get(refc, 2*i+1));
+		// logDebug(LOG_NOFORMAT| LOG_SOMETIMES, "(%.3f,%.3f) ", gsl_vector_float_get(disp, 2*i+0), gsl_vector_float_get(disp, 2*i+0));
+		// logDebug(LOG_NOFORMAT| LOG_SOMETIMES, "(%.3f,%.3f) ", coords[i][0], coords[i][1]);
+		
+		// Track maximum displacement within the tracker window. This should not be above 1 for long,
+		// otherwise the seeing is too bad for the AO system to compensate: if this value is above 1,
+		// the tracker window should follow the SH spot, and thus the next frame it should again
+		// be below one. If this is not the case the seeing changes too fast.
+		if (fabs(coords[i][0]) > maxx) maxx = fabs(coords[i][0]);
+		if (fabs(coords[i][1]) > maxy) maxy = fabs(coords[i][1]);
+		
+		rmsx += gsl_pow_2((double) gsl_vector_float_get(disp, 2*i+0));
+		rmsy += gsl_pow_2((double) gsl_vector_float_get(disp, 2*i+1));
+		
+		// check for runaway subapts and recover them:
+		if (gsl_vector_float_get(disp, 2*i+0) > track.x || 
+			gsl_vector_float_get(disp, 2*i+0) < -track.x ||
+			gsl_vector_float_get(disp, 2*i+1) > track.y || 
+			gsl_vector_float_get(disp, 2*i+1) < -track.y) {
+			//logDebug(LOG_NOFORMAT| LOG_SOMETIMES, "Runaway subapt (%d) at: (%.3f,%.3f) ", 2*i, gsl_vector_float_get(disp, 2*i+0), gsl_vector_float_get(disp, 2*i+0));
+		}
+		// note: coords is relative to the center of the tracker window
+		// therefore we can simply update the lower left coord by subtracting the coordinates.
+		subc[i][0] += round(coords[i][0]);
+		subc[i][1] += round(coords[i][1]);
+	}
+	// logDebug(LOG_NOFORMAT| LOG_SOMETIMES, "\n");
+	
+	rmsx = sqrt(rmsx/nsubap);
+	rmsy = sqrt(rmsy/nsubap);
+	logInfo(LOG_SOMETIMES, "RMS displacement wrt reference: x: %.3f, y: %.3f", rmsx, rmsy);
+	logInfo(LOG_SOMETIMES, "Max abs disp in tracker window (<(.5, .5)): (%.3f, %.3f)", maxx, maxy);
+	
+	return EXIT_SUCCESS;
+}
+
+#endif
