@@ -470,6 +470,9 @@ int simWFC(wfc_t *wfc, mod_sim_t *simparams) {
 	if (wfc->type == WFC_TT) {
 		simTT(simparams, wfc->ctrl, 1);
 	}
+	else if (wfc->type == WFC_DM) {
+		simDM(simparams, wfc->ctrl, wfc->nact, 1, -1);
+	}	
 	else {
 		logWarn("Unknown WFC (%d) encountered (not TT or DM, type: %d, name: %s)", wfc->id, wfc->type, wfc->name);
 		return EXIT_FAILURE;
@@ -478,67 +481,71 @@ int simWFC(wfc_t *wfc, mod_sim_t *simparams) {
 	return EXIT_SUCCESS;
 }
 
-#if (0) // simDM() is broken, ignore for the time being
-
-int simDM(mod_sim_t *simparams, int nact, gsl_vector_float *ctrl, int mode, int niter) {
-	// This function still needs some attention, fail immediately if called
-	return EXIT_FAILURE;
-
-	float pi = 4.0*atan(1), rho, omega = 1.0, sum, sdif, update;
-	int ik;
-	int i, x, y;							// random counters
-	int ii; 								// iteration counter
-	int voltage[nact]; 						// voltage settings for electrodes (in digital units)
-	float amp=5.0;							// amplitude of the DM response (used for calibration)
-	coord_t res = simparams->currimgres;
+int simDM(mod_sim_t *simparams, gsl_vector_float *ctrl, int nact, int mode, int niter) {
+	float pi = 4.0*atan(1), rho, omega, sum, sdif, update;
+	int i, iter;							// some counters
 	
-	static float *actvolt=NULL;				// this must hold the actuator voltage thing
-	static float *resp=NULL;				// this must hold the dm response
-	static float *boundary=NULL;			// this must hold some aperture
-	static float *act=NULL;					// this must hold the actuator pattern
+	float amp = 5.0;						// amplitude of the DM response (used to scale the output)
+	float limit = (1.E-8);					// limit value for SOR iteration
 	
+	int voltage[nact]; 						// voltages for electrodes
+	int volt;								// temporary storage for voltage
+	coord_t res = simparams->currimgres;	// simulated wavefront resolution
+	
+	static uint8_t *actvolt=NULL;			// this must hold the actuator pattern with
+											// the voltages per actuator
+	static float *resp=NULL;				// store the mirror response here temporarily
 	
 	// allocate memory for actuator pattern with voltages
 	if (actvolt == NULL) {
-		actvolt = calloc((res.x) * (res.y), sizeof(*actvolt));
+		actvolt = malloc((res.x) * (res.y) * sizeof(*actvolt));
 		if (actvolt == NULL)
 			logErr("Error allocating memory for actuator voltage image");
 		
 	}
 	
-	// input linear and c=[-1,1], 'output' must be v=[0,255] and linear in v^2
-	logDebug(0, "Simulating DM with voltages:");
-	for (ik = 0; ik < nact; ik++) {
-		// first simulate rails (i.e. crop ctrl above abs(1))
-		if (gsl_vector_float_get(ctrl, ik) > 1.0) gsl_vector_float_set(ctrl, ik, 1.0);
-		else if (gsl_vector_float_get(ctrl, ik) < -1.0) gsl_vector_float_set(ctrl, ik, -1.0);
-		// we do Sqrt(255^2 (i+1) * 0.5) here to convert from [-1,1] (linear) to [0,255] (quadratic)
-		voltage[ik] = (int) round( sqrt(65025*(gsl_vector_float_get(ctrl, ik)+1)*0.5 ) ); //65025 = 255^2
-		logDebug(LOG_NOFORMAT, "%d ", voltage[ik]);
+	// allocate memory for the mirror response
+	if (resp == NULL) {
+		resp = malloc((res.x) * (res.y) * sizeof(*resp));
+		if (resp == NULL)
+			logErr("Error allocating memory for mirror response");
+		
 	}
-	logDebug(LOG_NOFORMAT, "\n");
+	
+	// input is linear and [-1,1], 'output' v must be [0,255] and linear in v^2
+	logDebug(LOG_SOMETIMES, "Simulating DM with voltages:");
+	for (i = 0; i < nact; i++) {
+		// first simulate rails (i.e. crop ctrl above abs(1))
+		if (gsl_vector_float_get(ctrl, i) > 1.0) gsl_vector_float_set(ctrl, i, 1.0);
+		else if (gsl_vector_float_get(ctrl, i) < -1.0) gsl_vector_float_set(ctrl, i, -1.0);
+
+		// we do Sqrt(255^2 (i+1) * 0.5) here to convert from [-1,1] (linear) to [0,255] (quadratic)
+		voltage[i] = (uint8_t) round( sqrt(65025.0*(gsl_vector_float_get(ctrl, i)+1)*0.5 ) ); 
+		logDebug(LOG_NOFORMAT | LOG_SOMETIMES, "%d ", voltage[i]);
+	}
+	logDebug(LOG_NOFORMAT | LOG_SOMETIMES, "\n");
 	
 	// set actuator voltages on electrodes *act is the actuator pattern,
 	// where the value of the pixel associates that pixel with an actuator
 	// *actvolt will hold this same pattern, but then with voltage
 	// related values which serve as input for solving the mirror function
-	for (ik = 0; ik < res.x*res.y; ik++){
-		i = (int) act[ik];
-		if(i > 0)
-			actvolt[ik] = pow(voltage[i-1] / 255.0, 2.0) / 75.7856;
+	for (i = 0; i < res.x*res.y; i++){
+		volt = simparams->actpatimg[i];
+		if (volt > 0)
+			actvolt[i] = pow(voltage[volt-1] / 255.0, 2.0) / 75.7856;
 		// 75.7856*2 gets 3 um deflection when all voltages 
 		// are set to 180; however, since the reflected wavefront sees twice
 		// the surface deformation, we simply put a factor of two here
 	}
 	
-	// compute spectral radius rho and SOR omega factor. These are appro-
-	// ximate values. Get the number of iterations.
+	// compute spectral radius rho and SOR omega factor. These are 
+	// approximate values. Get the number of iterations.
 	
 	rho = (cos(pi/((double)res.x)) + cos(pi/((double)res.y)))/2.0;
 	omega = 2.0/(1.0 + sqrt(1.0 - rho*rho));
 	
 	if (niter <= 0) // Set the number of iterations if the argument was <= 0
-		niter = (int)(2.0*sqrt((double) res.x*res.y));
+		niter = (int) (2.0*sqrt((double) res.x*res.y));
 	
 	// Calculation of the response. This is a Poisson PDE problem
 	// where the actuator pattern represents the source term and and
@@ -546,24 +553,16 @@ int simDM(mod_sim_t *simparams, int nact, gsl_vector_float *ctrl, int mode, int 
 	// arbitrary nature of the latter we use a relaxation algorithm.
 	// This is a Simultaneous Over-Relaxation (SOR) algorithm described
 	// in Press et al., "Numerical Recipes", Section 17.
-	
-	if (resp == NULL) {
-		logDebug(0, "Allocating memory for resp: %dx%d.", res.x, res.y);
-		resp = calloc(res.x*res.y, sizeof(*resp));
-		if (resp == NULL)
-			logErr("Allocation error, exiting");
-		
-	}
-	
+
 	// loop over all iterations
-	for (ii = 1; ii <= niter; ii++) {
+	for (iter = 1; iter <= niter; iter++) {
 		
 		sum = 0.0;
 		sdif = 0.0;
-		// new loop, hopefully a little smarter. start at 1+res.x because this pixel has four neighbours,
+		// start at 1+res.x because this pixel has four neighbours,
 		// stop at the last but (1+res.x) pixel but again this has four neighbours.
 		for (i=1+res.x; i<(res.x*res.y)-1-res.x; i++) {
-			if (*(boundary + i) > 0) { 		// pixel is in the boundary?
+			if (simparams->apertimg[i] > 0) { // is this pixel within the telescope aperture?
 				update = -resp[i] - (actvolt[i] - resp[i-res.x] - resp[i+res.x] - resp[i+1] - resp[i-1])/4.;
 				resp[i] = resp[i] + omega*update;
 				sum += resp[i];
@@ -576,15 +575,19 @@ int simDM(mod_sim_t *simparams, int nact, gsl_vector_float *ctrl, int mode, int 
 		
 		sdif = sqrt(sdif/(sum*sum));
 		
-		if (sdif < SOR_LIM) // Stop iterating if changes are small engouh
+		if (sdif < limit) // Stop iterating if changes are small snough
 			break;
 		
 	} // end iteration loop
 	
-	// *update* the image, so there should already be an image
-	for (i = 0; i < res.x*res.y; i++)
-		simparams->currimg[i] += amp*resp[i];
+	if (mode == 1) { // *update* the image, so there should already be an image
+		for (i = 0; i < res.x*res.y; i++)
+			simparams->currimg[i] += amp*resp[i];
+	}
+	else if (mode == 0) { // *set* the image, so the previous image will be overwritten
+		for (i = 0; i < res.x*res.y; i++)
+			simparams->currimg[i] = amp*resp[i];
+	}
 	
 	return EXIT_SUCCESS; // successful completion
 }
-#endif

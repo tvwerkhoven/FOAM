@@ -1,7 +1,7 @@
 /*! 
 	@file foam_modules-img.c
 	@author @authortim
-	@date 2008-02-25 
+	@date 2008-07-09
 
 	@brief This file contains functions to read and write image files.
 	
@@ -14,7 +14,8 @@
 	\li modReadIMGSurf() - Read an img (png, pgm, jpg, etc.) to an SDL_Surface.
 	\li modReadIMGArr() - Read an img (png, pgm, jpg, etc.) to an array.
 	\li modWritePGMSurf() - Write an 8-bit ASCII PGM file from an SDL_Surface.
-	\li modWritePNGArr() - Write an 8-bit ASCII PGM file from a float image.
+	\li imgGetStats() - Get statistics on an image, min, max, mean etc.
+	\li modWritePGMArr() - Write an 8-bit ASCII PGM file from an array.
 	\li modWritePNGSurf() - Write an 8-bit grayscale PNG file from an SDL_Surface.
 
 	\section Dependencies
@@ -117,8 +118,6 @@ int modWritePGMSurf(char *fname, SDL_Surface *img, int maxval, int pgmtype) {
 	// check maximum & min
 	for (x=0; x<img->w; x++) {
 		for (y=0; y<img->h; y++) {
-			// ???:tim:20080325 does this work? uint32 -> float conversion?
-			// !!!:tim:20080326 yes, this works (tested in pngtest.c)
 			pix = (float) getPixel(img, x, y);
 			if (pix > max) max = pix;
 			else if (pix < min) min = pix;
@@ -428,7 +427,6 @@ int modStorPNGSurf(char *filename, char *post, int seq, SDL_Surface *img) {
 void imgGetStats(void *img, foam_datat_t data, coord_t *size, int pixels, float *stats) {
 	int i, j;
 	float min=-1, max=-1, sum=0, pix=0;
-	// we can't do anything without the dimensions
 
 	if (data == DATA_UINT8) {
 		//logDebug(LOG_NOFORMAT, "getstats: uint8 | ");

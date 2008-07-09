@@ -51,12 +51,12 @@ int modInitModule(control_t *ptc, config_t *cs_config) {
 	////////////////////////////////////
 	
 	// configure WFC 0
-	ptc->wfc[0].name = "TT";
-	ptc->wfc[0].nact = 2;
+	ptc->wfc[0].name = "DM";
+	ptc->wfc[0].nact = 37;
 	ptc->wfc[0].gain.p = 1.0;
 	ptc->wfc[0].gain.i = 1.0;
 	ptc->wfc[0].gain.d = 1.0;
-	ptc->wfc[0].type = WFC_TT;
+	ptc->wfc[0].type = WFC_DM;
     ptc->wfc[0].id = 1;
 	ptc->wfc[0].calrange[0] = -1.0;
 	ptc->wfc[0].calrange[1] = 1.0;
@@ -998,7 +998,8 @@ int drvGetImg(control_t *ptc, int wfs) {
 			
 			// add some noise
 			if (simNoise(&simparams, 5) != EXIT_SUCCESS)
-				return EXIT_FAILURE;						
+				return EXIT_FAILURE;
+			
 			if (simWFC(&(ptc->wfc[0]), &simparams) != EXIT_SUCCESS)
 				return EXIT_FAILURE;
 			
