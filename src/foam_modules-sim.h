@@ -14,13 +14,27 @@
 #include "foam_modules-sh.h"		// we want image IO
 
 /*!
+ @brief Helper enum to indicate the error used in the simulation
+ */
+typedef enum {
+	ERR_NONE,
+	ERR_SEEING,
+	ERR_WFC
+} sim_err_t;
+
+/*!
  @brief This struct is used to characterize seeing conditions
  */
 typedef struct {
 	coord_t wind; 			//!< (user) 'windspeed' in pixels/frame
-	float seeingfac;		//!< (user) factor to worsen seeing (2--20)
+	float seeingfac;		//!< (user) factor to worsen seeing (0--1)
 	coord_t currorig; 		//!< (foam) current origin in the simulated wavefront image
 
+	sim_err_t error;		//!< (user) what is the error source?
+	wfc_t *errwfc;			//!< (user) if the error source is a WFC, which WFC?
+	wfc_t *corr;			//!< (user) what is the correction WFC? (or NULL)
+	int noise;				//!< (user) the noise amplitude to simulate (0 for no noise)
+	
 	uint8_t *currimg; 		//!< (user) pointer to a crop of the simulated wavefront
 	coord_t currimgres;		//!< (user) resolution of the crop
 

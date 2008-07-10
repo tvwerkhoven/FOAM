@@ -1,10 +1,10 @@
 # dynamic versioning does not work :<
 #MAJOR=alpha
 #MINOR=$(shell svn log -r HEAD | head -n 2 | tail -n 1 | awk '{print$1"-"$5}')
-AC_INIT([FOAM], [alpha-2008-05-13], [T.I.M.vanWerkhoven@phys.uu.nl])
+AC_INIT([FOAM], [alpha-2008-07], [T.I.M.vanWerkhoven@phys.uu.nl])
 AC_COPYRIGHT([Copyright 2007-2008 Tim van Werkhoven <T.I.M.vanWerkhoven@phys.uu.nl>])
 
-AC_REVISION($Revision: 399 $)
+AC_REVISION($Revision: 447 $)
 
 #AC_CANONICAL_SYSTEM
 
@@ -20,7 +20,6 @@ testing/Makefile
 
 AM_INIT_AUTOMAKE([-Wall -Werror foreign])
 
-
 AC_PROG_CC
 AC_PROG_CPP
 AC_PROG_MAKE_SET
@@ -32,6 +31,11 @@ AC_PROG_RANLIB
 #AC_PROG_CC_C99
 # We'd like const to work
 AC_C_CONST
+
+# Define where we can find the configuration files
+AC_DEFINE(CONFIGFILE, $datadir, [test])
+
+AC_DEFINE_UNQUOTED(CONFIGFILE2, $datadir, [test2])
 
 # We always need these libs
 AC_SEARCH_LIBS([sin], [m] ,[], AC_MSG_ERROR([This package needs libm.]) ) 

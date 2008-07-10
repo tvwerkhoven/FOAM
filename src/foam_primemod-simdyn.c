@@ -49,7 +49,7 @@ int modInitModule(control_t *ptc, config_t *cs_config) {
 
 	// CONFIGURE WAVEFRONT CORRECTORS //
 	////////////////////////////////////
-	
+
 	// configure WFC 0
 	ptc->wfc[0].name = "DM";
 	ptc->wfc[0].nact = 37;
@@ -60,6 +60,18 @@ int modInitModule(control_t *ptc, config_t *cs_config) {
     ptc->wfc[0].id = 1;
 	ptc->wfc[0].calrange[0] = -1.0;
 	ptc->wfc[0].calrange[1] = 1.0;
+	
+	// configure WFC 1
+	ptc->wfc[0].name = "TT";
+	ptc->wfc[0].nact = 2;
+	ptc->wfc[0].gain.p = 1.0;
+	ptc->wfc[0].gain.i = 1.0;
+	ptc->wfc[0].gain.d = 1.0;
+	ptc->wfc[0].type = WFC_TT;
+    ptc->wfc[0].id = 2;
+	ptc->wfc[0].calrange[0] = -1.0;
+	ptc->wfc[0].calrange[1] = 1.0;
+	
 	
 	// CONFIGURE FILTERS //
 	///////////////////////
@@ -103,6 +115,10 @@ int modInitModule(control_t *ptc, config_t *cs_config) {
 		
 	simparams.wind.x = 5;
 	simparams.wind.y = 5;
+	simparams.error = ERR_SEEING;
+	simparams.errwfc= NULL;
+	simparams.corr = NULL;
+	simparams.noise = 0;
 	simparams.seeingfac = 0.3;
 	// these files are needed for AO simulation and will be read in by simInit()
 	simparams.wf = "../config/wavefront.png";
@@ -962,29 +978,31 @@ int drvGetImg(control_t *ptc, int wfs) {
 			if (simFlat(&simparams, 0) != EXIT_SUCCESS)
 				return EXIT_FAILURE;
 
-			// add some noise with variation 5. This means the image will
-			// range from 0--5
-			if (simNoise(&simparams, 5) != EXIT_SUCCESS)
-				return EXIT_FAILURE;
+			// add some noise, if requested
+			if (simparams.noise != 0)
+				if (simNoise(&simparams, simparams.noise) != EXIT_SUCCESS)
+					return EXIT_FAILURE;
 		}
 		else if (ptc->calmode == CAL_FLAT) {
 			// give flat 32 intensity image back
 			if (simFlat(&simparams, 32) != EXIT_SUCCESS)
 				return EXIT_FAILURE;
 			
-			// add some noise
-			if (simNoise(&simparams, 5) != EXIT_SUCCESS)
-				return EXIT_FAILURE;			
+			// add some noise, if requested
+			if (simparams.noise != 0)
+				if (simNoise(&simparams, simparams.noise) != EXIT_SUCCESS)
+					return EXIT_FAILURE;
 		}
 		else if (ptc->calmode == CAL_PINHOLE || ptc->calmode == CAL_SUBAPSEL) {
 			// take flat 32 intensity image, and pass through simTel, simSHWFS
 			if (simFlat(&simparams, 32) != EXIT_SUCCESS)
 				return EXIT_FAILURE;
 
-			// add some noise
-			if (simNoise(&simparams, 5) != EXIT_SUCCESS)
-				return EXIT_FAILURE;			
-
+			// add some noise, if requested
+			if (simparams.noise != 0)
+				if (simNoise(&simparams, simparams.noise) != EXIT_SUCCESS)
+					return EXIT_FAILURE;
+			
 			if (simTel(&simparams) != EXIT_SUCCESS)
 				return EXIT_FAILURE;
 
@@ -996,9 +1014,10 @@ int drvGetImg(control_t *ptc, int wfs) {
 			if (simFlat(&simparams, 32) != EXIT_SUCCESS)
 				return EXIT_FAILURE;
 			
-			// add some noise
-			if (simNoise(&simparams, 5) != EXIT_SUCCESS)
-				return EXIT_FAILURE;
+			// add some noise, if requested
+			if (simparams.noise != 0)
+				if (simNoise(&simparams, simparams.noise) != EXIT_SUCCESS)
+					return EXIT_FAILURE;
 			
 			if (simWFC(&(ptc->wfc[0]), &simparams) != EXIT_SUCCESS)
 				return EXIT_FAILURE;
@@ -1011,21 +1030,27 @@ int drvGetImg(control_t *ptc, int wfs) {
 		}
 	}
 	else { // if we're not calibrating, return a normal image:
-		// Simulate wind (i.e. get the new origin to crop from)
-		if (simWind(&simparams) != EXIT_SUCCESS)
-			return EXIT_FAILURE;
 		
-		// Simulate atmosphere, i.e. get a crop of the wavefront
-		if (simAtm(&simparams) != EXIT_SUCCESS)
-			return EXIT_FAILURE;
-		
-		// Simulate a WFC error
-		//if (simWFCError(&simparams, &(ptc->wfc[0]), 2, 40) != EXIT_SUCCESS)
-			//return EXIT_FAILURE;
+		if (simparams.error == ERR_SEEING) {
+			// Simulate wind (i.e. get the new origin to crop from)
+			if (simWind(&simparams) != EXIT_SUCCESS)
+				return EXIT_FAILURE;
+			
+			// Simulate atmosphere, i.e. get a crop of the wavefront
+			if (simAtm(&simparams) != EXIT_SUCCESS)
+				return EXIT_FAILURE;
+		}
+		else if (simparams.error == ERR_WFC && simparams.errwfc != NULL) {
+			// Simulate a WFC error
+			if (simWFCError(&simparams, simparams.errwfc, 2, 40) != EXIT_SUCCESS)
+				return EXIT_FAILURE;
+		}
 
-		// Simulate the WFCs themselves
-		if (simWFC(&(ptc->wfc[0]), &simparams) != EXIT_SUCCESS)
-			return EXIT_FAILURE;
+		if (simparams.corr != NULL) {
+			// Simulate the WFCs themselves
+			if (simWFC(simparams.corr, &simparams) != EXIT_SUCCESS)
+				return EXIT_FAILURE;
+		}
 		
 		// Simulate telescope aperture
 		if (simTel(&simparams) != EXIT_SUCCESS)

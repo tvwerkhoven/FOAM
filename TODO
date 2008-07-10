@@ -3,6 +3,25 @@ Main Todo Items
 
 We are looking for volunteers to do the following tasks :).
 
+Minor fixes & tweaks
+
+* modsubapsel() / modcogtrack() -> same functions, make more general or wrap 
+  around
+
+* dispsdl -> needs autocontrast to run only once and set bright/contrast, not 
+  each time (see dispgl)
+
+* rename functions in modules to include the modulename, i.e. instead of 
+  modSubapSel -> shSubapSel
+
+* Improve configuration file inclusion by pointing to a directory defined in 
+  config.h that points to the installdir of datafiles? (how?)
+
+* Improve dark/flat algorithm, raw-dark/(flat-dark) must be multiplied by
+  some factor when working with 8 bit bytes (as we are), but which factor?
+
+Major feature upgrades
+
 * Correlation tracking functions for Shack Hartmann sensors.
 
 * Adding MCAO capabilities
