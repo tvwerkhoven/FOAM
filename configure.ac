@@ -32,10 +32,9 @@ AC_PROG_RANLIB
 # We'd like const to work
 AC_C_CONST
 
-# Define where we can find the configuration files
-AC_DEFINE(CONFIGFILE, $datadir, [test])
-
-AC_DEFINE_UNQUOTED(CONFIGFILE2, $datadir, [test2])
+# Define where we can find the configuration files (doesn't work :<)
+#AC_DEFINE(CONFIGFILE, ${datarootdir}, [test])
+#AC_DEFINE_UNQUOTED(CONFIGFILE2, ${datarootdir}, [test2])
 
 # We always need these libs
 AC_SEARCH_LIBS([sin], [m] ,[], AC_MSG_ERROR([This package needs libm.]) ) 
