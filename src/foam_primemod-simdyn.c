@@ -269,9 +269,9 @@ int modOpenLoop(control_t *ptc) {
 	
 	// log offsets measured
 	if (ptc->domisclog && shtrack.nsubap > 0) {
-		fprintf(ptc->misclog, "O, %ld, %d, ", ptc->frames, shtrack.nsubap);
+		fprintf(ptc->misclog, "O, %ld, %d", ptc->frames, shtrack.nsubap);
 		for (sn = 0; sn < shtrack.nsubap; sn++)
-			fprintf(ptc->misclog, "%f,%f ", \
+			fprintf(ptc->misclog, ", %f, %f", \
 					gsl_vector_float_get(shtrack.disp, 2*sn + 0), \
 					gsl_vector_float_get(shtrack.disp, 2*sn + 1));
 		fprintf(ptc->misclog, "\n");
@@ -323,9 +323,9 @@ int modClosedLoop(control_t *ptc) {
 	
 	// log offsets measured
 	if (ptc->domisclog && shtrack.nsubap > 0) {
-		fprintf(ptc->misclog, "C, %ld, %d, ", ptc->frames, shtrack.nsubap);
+		fprintf(ptc->misclog, "C, %ld, %d", ptc->frames, shtrack.nsubap);
 		for (sn = 0; sn < shtrack.nsubap; sn++)
-			fprintf(ptc->misclog, "%f,%f ", \
+			fprintf(ptc->misclog, ", %f, %f", \
 					gsl_vector_float_get(shtrack.disp, 2*sn + 0), \
 					gsl_vector_float_get(shtrack.disp, 2*sn + 1));
 		fprintf(ptc->misclog, "\n");
