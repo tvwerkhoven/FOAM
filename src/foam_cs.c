@@ -935,6 +935,28 @@ int parseCmd(char *msg, const int len, client_t *client) {
 			tellClient(client->buf_ev,"402 IMAGE REQUIRES ARG");
 		}		
 	}*/
+	else if (strcmp(list[0],"logmisc") == 0) {
+		if (count > 1) {
+			if (strcmp(list[1],"1")) {
+				if (ptc.misclog) {
+					fprintf(ptc.misclog, "% LOG START");
+					ptc.domisclog = true;
+					tellClients("200 OK TOGGLED MISC LOGGING ON");
+				}
+				else {
+					ptc.domisclog = false;
+					tellClients("403 ERROR, MISCLOG FD INVALID");
+				}
+			}
+			else {
+				ptc.domisclog = false;
+				tellClients("200 OK TOGGLED MISC LOGGING OFF");
+			}
+		}	
+		else {
+			tellClient(client->buf_ev,"402 MISCLOG REQUIRES ARG (1 or 0)");
+		}
+	}
 	else if (strcmp(list[0],"broadcast") == 0) {
 		if (count > 1) {
 			tellClients("200 OK %s", msg);
@@ -1076,7 +1098,7 @@ help [topic]\n\
 /* Doxygen needs the following aliases in the configuration file!
 
 ALIASES += authortim="Tim van Werkhoven (T.I.M.vanWerkhoven@phys.uu.nl)"
-ALIASES += license="GPL"
+ALIASES += license="GPLv2"
 ALIASES += wisdomfile="fftw_wisdom.dat"
 ALIASES += name="FOAM"
 ALIASES += longname="Modular Adaptive Optics Framework"

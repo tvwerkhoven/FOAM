@@ -440,7 +440,11 @@ int displayDraw(wfs_t *wfsinfo, mod_display_t *disp) {
     if (disp->dispsrc == DISPSRC_RAW) {
 		if (wfsinfo->bpp == 8) {
 			uint8_t *imgc = (uint8_t *) wfsinfo->image;
+#ifdef FOAM_MODULES_DISLAY_SHSUPPORT
 			displayImgByte(imgc, disp, shtrack);
+#else
+			displayImgByte(imgc, disp);
+#endif
 		}
 		else {
 			displayFinishDraw(disp);
@@ -456,12 +460,13 @@ int displayDraw(wfs_t *wfsinfo, mod_display_t *disp) {
 	else if (disp->dispsrc == DISPSRC_FULLCALIB) {
 		displayGSLImg(wfsinfo->corrim, disp, 1);
 	}
+#ifdef FOAM_MODULES_DISLAY_SHSUPPORT
+	// this source is only available with SH tracking
 	else if (disp->dispsrc == DISPSRC_FASTCALIB) {
 		uint8_t *imgc = (uint8_t *) wfsinfo->corr;
 		displayImgByte(imgc, disp, shtrack);
 	}
-	
-#ifdef FOAM_MODULES_DISLAY_SHSUPPORT
+
 	// display overlays (grid, subapts, vectors)
 	if (disp->dispover & DISPOVERLAY_GRID) 
 		displayGrid(shtrack->cells, disp);

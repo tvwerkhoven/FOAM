@@ -334,7 +334,11 @@ int displayImgFloat(float *img, mod_display_t *disp) {
 }
 #endif
 
+#ifdef FOAM_MODULES_DISLAY_SHSUPPORT
+int displayImgByte(uint8_t *img, mod_display_t *disp, mod_sh_track_t *shtrack) {
+#else
 int displayImgByte(uint8_t *img, mod_display_t *disp) {
+#endif
 	int x, y;
     Uint8 i;					// SDL type
 	uint8_t max=img[0];			// stdint type
@@ -455,7 +459,11 @@ int displayGSLImg(gsl_matrix_float *gslimg, mod_display_t *disp, int doscale) {
 	}
 	
 	// and finally display the copied image using displayImgByte()
+#ifdef FOAM_MODULES_DISLAY_SHSUPPORT
+	return displayImgByte(tmpimg_b, disp, NULL);
+#else
 	return displayImgByte(tmpimg_b, disp);
+#endif
 }
 
 #ifdef FOAM_MODULES_DISLAY_SHSUPPORT
@@ -470,8 +478,12 @@ int displayDraw(wfs_t *wfsinfo, mod_display_t *disp) {
     // databpp == 8 char (uint8_t)
 	if (disp->dispsrc == DISPSRC_RAW) {
 		if (wfsinfo->bpp == 8) {
-//			uint8_t *imgc = 
-			displayImgByte((uint8_t *) wfsinfo->image, disp);
+			uint8_t *imgc = (uint8_t *) wfsinfo->image;
+#ifdef FOAM_MODULES_DISLAY_SHSUPPORT
+			displayImgByte(imgc, disp, shtrack);
+#else
+			displayImgByte(imgc, disp);
+#endif
 		}
 		else {
 			displayFinishDraw(disp);
@@ -495,11 +507,11 @@ int displayDraw(wfs_t *wfsinfo, mod_display_t *disp) {
 	
 #ifdef FOAM_MODULES_DISLAY_SHSUPPORT
 	// display overlays (grid, subapts, vectors)
-	if (display->dispover & DISPOVERLAY_GRID) 
+	if (disp->dispover & DISPOVERLAY_GRID) 
 		displayGrid(shtrack->cells, disp);
-	if (display->dispover & DISPOVERLAY_SUBAPS)
+	if (disp->dispover & DISPOVERLAY_SUBAPS)
 		displaySubapts(shtrack, disp);
-	if (display->dispover & DISPOVERLAY_VECTORS) 
+	if (disp->dispover & DISPOVERLAY_VECTORS) 
 		displayVecs(shtrack, disp);
 #endif
 	

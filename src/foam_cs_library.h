@@ -264,8 +264,8 @@ typedef struct { // control_t
 	int logfrac;        //!< (user) fraction to log for certain info and debug (1 is always, 50 is 1/50 times), default 1000
 
 	FILE *misclog;		//!< (user) logfile to log miscellaneous AO information to
-	int domisclog;		//!< (user) toggle for misc logging
 	char *misclogfile;	//!< (user) filename for the above
+	bool domisclog;		//!< (user) toggle for misc logging	
 	
     // WFS variables
 	int wfs_count;		//!< (user) number of WFSs in the system, default 0

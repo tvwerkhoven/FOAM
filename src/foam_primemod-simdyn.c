@@ -54,6 +54,8 @@ int modInitModule(control_t *ptc, config_t *cs_config) {
 	ptc->misclog = fopen(ptc->misclogfile, "w+");		// open the logfile
 	if (!ptc->misclog) 
 		logErr("Could not open misc logfile '%s'!", ptc->misclogfile);
+	
+	ptc->domisclog = false;								// start with logging turned off
 
 	// CONFIGURE WAVEFRONT CORRECTORS //
 	////////////////////////////////////
@@ -79,7 +81,7 @@ int modInitModule(control_t *ptc, config_t *cs_config) {
 	ptc->wfc[0].gain.i = 1.0;
 	ptc->wfc[0].gain.d = 1.0;
 	ptc->wfc[0].type = WFC_TT;
-    	ptc->wfc[0].id = 2;
+	ptc->wfc[0].id = 2;
 	ptc->wfc[0].calrange[0] = -1.0;
 	ptc->wfc[0].calrange[1] = 1.0;
 	
@@ -266,7 +268,7 @@ int modOpenLoop(control_t *ptc) {
 	modCogTrack(ptc->wfs[0].corrim, DATA_GSL_M_F, ALIGN_RECT, &shtrack, NULL, NULL);
 	
 	// log offsets measured
-	if (shtrack.nsubap > 0) {
+	if (ptc->domisclog && shtrack.nsubap > 0) {
 		fprintf(ptc->misclog, "O, %d, ", shtrack.nsubap);
 		for (sn = 0; sn < shtrack.nsubap; sn++)
 			fprintf(ptc->misclog, "%f,%f ", \
@@ -320,7 +322,7 @@ int modClosedLoop(control_t *ptc) {
 	modCalcCtrl(ptc, &shtrack, 0, -1);
 	
 	// log offsets measured
-	if (shtrack.nsubap > 0) {
+	if (ptc->domisclog && shtrack.nsubap > 0) {
 		fprintf(ptc->misclog, "C, %d, ", shtrack.nsubap);
 		for (sn = 0; sn < shtrack.nsubap; sn++)
 			fprintf(ptc->misclog, "%f,%f ", \
