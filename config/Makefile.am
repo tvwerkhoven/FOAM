@@ -7,7 +7,7 @@ dist_foamconf_DATA =
 ##############################
 if SIMSTAT
 
-dist_foamconf_DATA += simstatic-irr.pgm simstatic-irr.png
+dist_foamconf_DATA += simstatic-irr.pgm 
 
 endif SIMSTAT
 ### END STATIC SIMULATION MODE ###

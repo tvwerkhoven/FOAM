@@ -269,7 +269,7 @@ int modOpenLoop(control_t *ptc) {
 	
 	// log offsets measured
 	if (ptc->domisclog && shtrack.nsubap > 0) {
-		fprintf(ptc->misclog, "O, %d, ", shtrack.nsubap);
+		fprintf(ptc->misclog, "O, %ld, %d, ", ptc->frames, shtrack.nsubap);
 		for (sn = 0; sn < shtrack.nsubap; sn++)
 			fprintf(ptc->misclog, "%f,%f ", \
 					gsl_vector_float_get(shtrack.disp, 2*sn + 0), \
@@ -323,7 +323,7 @@ int modClosedLoop(control_t *ptc) {
 	
 	// log offsets measured
 	if (ptc->domisclog && shtrack.nsubap > 0) {
-		fprintf(ptc->misclog, "C, %d, ", shtrack.nsubap);
+		fprintf(ptc->misclog, "C, %ld, %d, ", ptc->frames, shtrack.nsubap);
 		for (sn = 0; sn < shtrack.nsubap; sn++)
 			fprintf(ptc->misclog, "%f,%f ", \
 					gsl_vector_float_get(shtrack.disp, 2*sn + 0), \
@@ -788,11 +788,11 @@ ccd size:               %dx%d pixels\n\
 error source:           %d\n\
 error WFC:              %d\n\
 noise:                  %d\n\
-correcting WFC:         %d\n
+correcting WFC:         %d\n\
 seeingfac:              %f\n\
 wind (x,y):             (%d,%d)\n\
 samxr:                  %d\n\
-samini:                 %.2f", 
+samini:                 %.2f",\
 ptc->logfrac, \
 ptc->domisclog, \
 ptc->wfs[0].fieldframes, \
@@ -801,9 +801,9 @@ shtrack.shsize.x, shtrack.shsize.y, \
 shtrack.track.x, shtrack.track.y, \
 ptc->wfs[0].res.x, ptc->wfs[0].res.y, \
 simparams.error, \
-simparams.errwfc->wfcid, \
+simparams.errwfc->id, \
 simparams.noise, \
-simparams.corr->wfcid, \
+simparams.corr->id, \
 simparams.seeingfac, \
 simparams.wind.x, simparams.wind.y, \
 shtrack.samxr, \
