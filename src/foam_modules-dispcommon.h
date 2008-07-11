@@ -139,7 +139,7 @@ void displaySDLEvents(mod_display_t *disp);
  this must not be bigger than the resolution of the SDL_Surface. Do not forget
  to call displayBeginDraw()/displayFinishDraw().
  
- @param [in] *wfsinfo pointer to the wfs to show the image for
+ @param [in] *img pointer to the image to display
  @param [in] *disp pre-filled mod_display_t structure
  */
 #ifdef FOAM_MODULES_DISLAY_SHSUPPORT

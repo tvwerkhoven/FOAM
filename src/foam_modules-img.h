@@ -25,7 +25,7 @@
  at http://www.libsdl.org/projects/docs/SDL_image/
  
  @param [in] *fname the filename to read
- @param [out] **img the SDL_Surface that will hold the image
+ @param [out] **surf the SDL_Surface that will hold the image
  */
 int modReadIMGSurf(char *fname, SDL_Surface **surf);
 

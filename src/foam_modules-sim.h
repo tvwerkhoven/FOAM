@@ -113,6 +113,7 @@ int simAtm(mod_sim_t *simparams);
  a pinhole somewhere, e.g. for calibration.
 
  @param [in] *simparams A mod_sim_t struct passed through simInit()
+ @param [in] intensity The intensity of the flat image
  @return EXIT_SUCCESS on success, EXIT_FAILURE otherwise.
  */
 int simFlat(mod_sim_t *simparams, int intensity);
@@ -124,6 +125,7 @@ int simFlat(mod_sim_t *simparams, int intensity);
  simulated image. Can be used to simulate sensornoise or something.
  
  @param [in] *simparams A mod_sim_t struct passed through simInit()
+ @param [in] var The amplitude of the noise (i.e. drand48()*var is used).
  @return EXIT_SUCCESS on success, EXIT_FAILURE otherwise.
  */
 int simNoise(mod_sim_t *simparams, int var);

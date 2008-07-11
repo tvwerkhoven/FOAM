@@ -108,9 +108,9 @@ int modSelSubapts(void *image, foam_datat_t data, mod_sh_align_t align, mod_sh_t
  @param [in] *image The WFS image to do the tracking on
  @param [in] data The datatype of 'image'
  @param [in] align The alignment of 'image'
- @param [in] *shtrack An initialized mod_sh_track_t struct.
- @param [out] *aver The average pixel intensity in all tracked subapertures.
- @param [out] *max The maximum pixel intensity in all tracked subapertures.
+ @param [in] *shtrack An initialized mod_sh_track_t struct
+ @param [out] *aver The average pixel intensity in all tracked subapertures
+ @param [out] *max The maximum pixel intensity in all tracked subapertures
  */
 int modCogTrack(void *image, foam_datat_t data, mod_sh_align_t align, mod_sh_track_t *shtrack, float *aver, float *max);
 
@@ -123,8 +123,9 @@ int modCogTrack(void *image, foam_datat_t data, mod_sh_align_t align, mod_sh_tra
  vectors shtrack->dmmodes, shtrack->singular and shtrack->wfsmodes to be calculated.
 
  @param [in] *ptc The global configuration struct
+ @param [in] *shtrack An initialized mod_sh_track_t struct
  @param [in] wfs The WFS to use as input for voltage calculation
- @param [in] modes The number of WFC modes to take into account, should be less than the total nr of actuators in the system
+ @param [in] nmodes The number of WFC modes to take into account, should be less than the total nr of actuators in the system
  */
 int modCalcCtrl(control_t *ptc, mod_sh_track_t *shtrack, const int wfs, int nmodes);
 
