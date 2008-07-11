@@ -38,6 +38,7 @@ int modInitModule(control_t *ptc, config_t *cs_config) {
 	ptc->mode = AO_MODE_LISTEN;			// start in listen mode (safe bet, you probably want this)
 	ptc->calmode = CAL_INFL;			// this is not really relevant initialliy
 	ptc->logfrac = 10;                  // log verbose messages only every 100 frames
+	ptc->misclogfile = FOAM_CONFIG_PRE "-datalog.dat"; 	// name the logfile
 	ptc->wfs_count = 1;					// just 1 'wfs' for simulation
 	ptc->wfc_count = 1;					// one TT mirror
 	ptc->fw_count = 2;					// 2 filterwheels (which we actually don't use)
@@ -47,28 +48,38 @@ int modInitModule(control_t *ptc, config_t *cs_config) {
 	ptc->wfc = (wfc_t *) calloc(ptc->wfc_count, sizeof(wfc_t));
 	ptc->wfs = (wfs_t *) calloc(ptc->wfs_count, sizeof(wfs_t));
 
+	// OPENING LOGFILE //
+	/////////////////////
+
+	ptc->misclog = fopen(ptc->misclogfile, "w+");		// open the logfile
+	if (!ptc->misclog) 
+		logErr("Could not open misc logfile '%s'!", ptc->misclogfile);
+
 	// CONFIGURE WAVEFRONT CORRECTORS //
 	////////////////////////////////////
 
 	// configure WFC 0
-	ptc->wfc[0].name = "DM";
-	ptc->wfc[0].nact = 37;
-	ptc->wfc[0].gain.p = 1.0;
-	ptc->wfc[0].gain.i = 1.0;
-	ptc->wfc[0].gain.d = 1.0;
-	ptc->wfc[0].type = WFC_DM;
+	/*
+	ptc->wfc[1].name = "DM";
+	ptc->wfc[1].nact = 37;
+	ptc->wfc[1].gain.p = 1.0;
+	ptc->wfc[1].gain.i = 1.0;
+	ptc->wfc[1].gain.d = 1.0;
+	ptc->wfc[1].type = WFC_DM;
     ptc->wfc[0].id = 1;
-	ptc->wfc[0].calrange[0] = -1.0;
-	ptc->wfc[0].calrange[1] = 1.0;
+	ptc->wfc[1].calrange[0] = -1.0;
+	ptc->wfc[1].calrange[1] = 1.0;
+	*/
 	
-	// configure WFC 1
+	// configure TT WFC
+	
 	ptc->wfc[0].name = "TT";
 	ptc->wfc[0].nact = 2;
 	ptc->wfc[0].gain.p = 1.0;
 	ptc->wfc[0].gain.i = 1.0;
 	ptc->wfc[0].gain.d = 1.0;
 	ptc->wfc[0].type = WFC_TT;
-    ptc->wfc[0].id = 2;
+    	ptc->wfc[0].id = 2;
 	ptc->wfc[0].calrange[0] = -1.0;
 	ptc->wfc[0].calrange[1] = 1.0;
 	
@@ -116,8 +127,8 @@ int modInitModule(control_t *ptc, config_t *cs_config) {
 	simparams.wind.x = 5;
 	simparams.wind.y = 5;
 	simparams.error = ERR_SEEING;
-	simparams.errwfc= NULL;
-	simparams.corr = NULL;
+	simparams.errwfc= &(ptc->wfc[0]);
+	simparams.corr = &(ptc->wfc[0]);
 	simparams.noise = 0;
 	simparams.seeingfac = 0.3;
 	// these files are needed for AO simulation and will be read in by simInit()
@@ -211,6 +222,8 @@ void modStopModule(control_t *ptc) {
 #ifdef FOAM_SIMDYN_DISPLAY
 	displayFinish(&disp);
 #endif
+	// close log file
+	fclose(ptc->misclog);
 	
 #ifdef __APPLE__
 	// need to call this before the thread dies:
@@ -226,8 +239,15 @@ void modStopModule(control_t *ptc) {
 /*********************/
 
 int modOpenInit(control_t *ptc) {
+	int i;
 	// set disp source to full calib
 	disp.dispsrc = DISPSRC_FULLCALIB;
+
+	// set actuators to center
+	for (i=0; i < ptc->wfc_count; i++) {
+		gsl_vector_float_set_zero(ptc->wfc[i].ctrl);
+		drvSetActuator(ptc, i);
+	}
 
 	// nothing to init for static simulation
 	return EXIT_SUCCESS;
@@ -235,6 +255,7 @@ int modOpenInit(control_t *ptc) {
 
 int modOpenLoop(control_t *ptc) {
 	static char title[64];
+	int sn;
 	
 	// Get simulated image for the first WFS
 	drvGetImg(ptc, 0);
@@ -244,6 +265,16 @@ int modOpenLoop(control_t *ptc) {
 	
 	modCogTrack(ptc->wfs[0].corrim, DATA_GSL_M_F, ALIGN_RECT, &shtrack, NULL, NULL);
 	
+	// log offsets measured
+	if (shtrack.nsubap > 0) {
+		fprintf(ptc->misclog, "O, %d, ", shtrack.nsubap);
+		for (sn = 0; sn < shtrack.nsubap; sn++)
+			fprintf(ptc->misclog, "%f,%f ", \
+					gsl_vector_float_get(shtrack.disp, 2*sn + 0), \
+					gsl_vector_float_get(shtrack.disp, 2*sn + 1));
+		fprintf(ptc->misclog, "\n");
+	}
+
 #ifdef FOAM_SIMDYN_DISPLAY
     if (ptc->frames % ptc->logfrac == 0) {
 		displayDraw((&ptc->wfs[0]), &disp, &shtrack);
@@ -288,6 +319,16 @@ int modClosedLoop(control_t *ptc) {
 	
 	modCalcCtrl(ptc, &shtrack, 0, -1);
 	
+	// log offsets measured
+	if (shtrack.nsubap > 0) {
+		fprintf(ptc->misclog, "C, %d, ", shtrack.nsubap);
+		for (sn = 0; sn < shtrack.nsubap; sn++)
+			fprintf(ptc->misclog, "%f,%f ", \
+					gsl_vector_float_get(shtrack.disp, 2*sn + 0), \
+					gsl_vector_float_get(shtrack.disp, 2*sn + 1));
+		fprintf(ptc->misclog, "\n");
+	}
+
 #ifdef FOAM_SIMDYN_DISPLAY
     if (ptc->frames % ptc->logfrac == 0) {
 		displayDraw((&ptc->wfs[0]), &disp, &shtrack);
@@ -498,7 +539,17 @@ int modMessage(control_t *ptc, const client_t *client, char *list[], const int c
 	
  	if (strncmp(list[0],"help",3) == 0) {
 		// give module specific help here
-		if (count > 1) { 
+		if (count > 2) { 
+			if (strncmp(list[1], "set",3) == 0 && strncmp(list[2], "err",3) == 0) {
+				tellClient(client->buf_ev, "\
+						200 OK HELP SET ERR\n\
+						set error:\n\
+						source [src]:        error source, can be 'seeing', 'wfc', or 'off'.\n\
+						-:                   if no prop is given, query the values.\
+						");
+			}
+		}
+		else if (count > 1) { 
 			
 			if (strncmp(list[1], "disp",3) == 0) {
 				tellClient(client->buf_ev, "\
@@ -533,6 +584,7 @@ set [prop] [val]:       set or query property values.\n\
    lf [i]:              set the logfraction.\n\
    ff [i]:              set the number of frames to use for dark/flats.\n\
    seeingfac [f]:       set the seeing factor (0--1).\n\
+   err:                 set simulated error related settings.\n\
    windx [i]:           set the wind in x direction (pixels/frame).\n\
    windy [i]:           set the wind in y direction (pixels/frame).\n\
    samini [f]:          set the minimum intensity for subapt selection.\n\
@@ -666,6 +718,50 @@ saveimg [i]:            save the next i frames to disk.\
 				simparams.seeingfac = tmpfloat;
 				tellClient(client->buf_ev, "200 OK SET SEEINGFACTOR TO %f", tmpfloat);
 			}
+			else if (strcmp(list[1], "noise") == 0) {
+				simparams.noise = tmpint;
+				tellClient(client->buf_ev, "200 OK SET NOISE TO %d", tmpint);
+			}
+			else if (strcmp(list[1], "corr") == 0) {
+				if (tmpint >= ptc->wfc_count) {
+					tellClient(client->buf_ev, "400 WFC %d INVALID", tmpint);
+				}
+				else {
+					simparams.corr = &(ptc->wfc[tmpint]);
+					tellClient(client->buf_ev, "200 OK USING WFC %d FOR CORRECTION", tmpint);
+				}
+			}
+			else if (strcmp(list[1], "err") == 0) {
+				if (strcmp(list[2], "see") == 0) {
+					simparams.error = ERR_SEEING;
+					tellClient(client->buf_ev, "200 OK SET ERROR TO SEEING");
+				}
+				else if (strcmp(list[2], "wfc") == 0) {
+					simparams.error = ERR_WFC;
+					if (count > 3) {
+						tmpint = strtol(list[3], NULL, 10);
+						if (tmpint >= 0 && tmpint < ptc->wfc_count)  {
+							simparams.errwfc = &(ptc->wfc[tmpint]);
+							tellClient(client->buf_ev, "200 OK SET ERROR TO WFC %d", tmpint);
+						}
+						else {
+							simparams.errwfc = &(ptc->wfc[0]);
+							tellClient(client->buf_ev, "400 WFC %d INVALID, DEFAULTING TO 0", tmpint);
+						}
+
+					}
+					else if (simparams.errwfc == NULL) {
+						simparams.errwfc = &(ptc->wfc[0]);
+						tellClient(client->buf_ev, "200 OK SET ERROR TO WFC 0");
+					}
+				}
+				else if (strcmp(list[2], "off") == 0) {
+					simparams.error = ERR_NONE;
+					tellClient(client->buf_ev, "200 OK DISABLED ERROR");
+				}
+				else
+					tellClient(client->buf_ev, "400 UNKNOWN ERROR SOURCE");
+			}
 			else if (strcmp(list[1], "samini") == 0) {
 				shtrack.samini = tmpfloat;
 				tellClient(client->buf_ev, "200 OK SET SAMINI TO %.2f", tmpfloat);
@@ -681,17 +777,35 @@ saveimg [i]:            save the next i frames to disk.\
 		else {
 			tellClient(client->buf_ev, "200 OK VALUES AS FOLLOWS:\n\
 logfrac (lf):           %d\n\
+datalogging (data):     %d\n\
 fieldframes (ff):       %d\n\
 SH array:               %dx%d cells\n\
 cell size:              %dx%d pixels\n\
 track size:             %dx%d pixels\n\
 ccd size:               %dx%d pixels\n\
+error source:           %d\n\
+error WFC:              %d\n\
+noise:                  %d\n\
+correcting WFC:         %d\n
 seeingfac:              %f\n\
 wind (x,y):             (%d,%d)\n\
 samxr:                  %d\n\
-samini:                 %.2f\n\
-", ptc->logfrac, ptc->wfs[0].fieldframes, shtrack.cells.x, shtrack.cells.y,\
-shtrack.shsize.x, shtrack.shsize.y, shtrack.track.x, shtrack.track.y, ptc->wfs[0].res.x, ptc->wfs[0].res.y, simparams.seeingfac, simparams.wind.x, simparams.wind.y, shtrack.samxr, shtrack.samini);
+samini:                 %.2f", 
+ptc->logfrac, \
+ptc->domisclog, \
+ptc->wfs[0].fieldframes, \
+shtrack.cells.x, shtrack.cells.y,\
+shtrack.shsize.x, shtrack.shsize.y, \
+shtrack.track.x, shtrack.track.y, \
+ptc->wfs[0].res.x, ptc->wfs[0].res.y, \
+simparams.error, \
+simparams.errwfc->wfcid, \
+simparams.noise, \
+simparams.corr->wfcid, \
+simparams.seeingfac, \
+simparams.wind.x, simparams.wind.y, \
+shtrack.samxr, \
+shtrack.samini);
 		}
 	}
  	else if (strncmp(list[0], "vid",3) == 0) {
@@ -998,28 +1112,25 @@ int drvGetImg(control_t *ptc, int wfs) {
 			if (simFlat(&simparams, 32) != EXIT_SUCCESS)
 				return EXIT_FAILURE;
 
-			// add some noise, if requested
-			if (simparams.noise != 0)
-				if (simNoise(&simparams, simparams.noise) != EXIT_SUCCESS)
-					return EXIT_FAILURE;
 			
 			if (simTel(&simparams) != EXIT_SUCCESS)
 				return EXIT_FAILURE;
 
 			if (simSHWFS(&simparams, &shtrack) != EXIT_SUCCESS)
 				return EXIT_FAILURE;
+			
+			// add some noise, if requested
+			if (simparams.noise != 0)
+				if (simNoise(&simparams, simparams.noise) != EXIT_SUCCESS)
+					return EXIT_FAILURE;
 		}
 		else if (ptc->calmode == CAL_INFL) {
 			// take flat 32 intensity image, and pass through simTel, simWFC and simSHWFS
 			if (simFlat(&simparams, 32) != EXIT_SUCCESS)
 				return EXIT_FAILURE;
 			
-			// add some noise, if requested
-			if (simparams.noise != 0)
-				if (simNoise(&simparams, simparams.noise) != EXIT_SUCCESS)
-					return EXIT_FAILURE;
 			
-			if (simWFC(&(ptc->wfc[0]), &simparams) != EXIT_SUCCESS)
+			if (simWFC(simparams.corr, &simparams) != EXIT_SUCCESS)
 				return EXIT_FAILURE;
 			
 			if (simTel(&simparams) != EXIT_SUCCESS)
@@ -1027,10 +1138,14 @@ int drvGetImg(control_t *ptc, int wfs) {
 
 			if (simSHWFS(&simparams, &shtrack) != EXIT_SUCCESS)
 				return EXIT_FAILURE;			
+			
+			// add some noise, if requested
+			if (simparams.noise != 0)
+				if (simNoise(&simparams, simparams.noise) != EXIT_SUCCESS)
+					return EXIT_FAILURE;
 		}
 	}
 	else { // if we're not calibrating, return a normal image:
-		
 		if (simparams.error == ERR_SEEING) {
 			// Simulate wind (i.e. get the new origin to crop from)
 			if (simWind(&simparams) != EXIT_SUCCESS)
@@ -1039,11 +1154,21 @@ int drvGetImg(control_t *ptc, int wfs) {
 			// Simulate atmosphere, i.e. get a crop of the wavefront
 			if (simAtm(&simparams) != EXIT_SUCCESS)
 				return EXIT_FAILURE;
+			logDebug(LOG_SOMETIMES, "Simulate seeing as error");
 		}
 		else if (simparams.error == ERR_WFC && simparams.errwfc != NULL) {
 			// Simulate a WFC error
-			if (simWFCError(&simparams, simparams.errwfc, 2, 40) != EXIT_SUCCESS)
+			if (simWFCError(&simparams, simparams.errwfc, 1, 40) != EXIT_SUCCESS)
 				return EXIT_FAILURE;
+
+			logDebug(LOG_SOMETIMES, "Use a WFC (%s) as error", simparams.errwfc->name);
+		}
+		else if (simparams.error == ERR_NONE) {
+
+			if (simFlat(&simparams, 32) != EXIT_SUCCESS)
+				return EXIT_FAILURE;
+
+			logDebug(LOG_SOMETIMES, "No error, flat WF");
 		}
 
 		if (simparams.corr != NULL) {
@@ -1060,11 +1185,18 @@ int drvGetImg(control_t *ptc, int wfs) {
 		if (simSHWFS(&simparams, &shtrack) != EXIT_SUCCESS)
 			return EXIT_FAILURE;
 
+		if (simparams.noise != 0) {
+			logDebug(LOG_SOMETIMES, "Noise with amp %d", simparams.noise);
+			if (simNoise(&simparams, simparams.noise) != EXIT_SUCCESS)
+				return EXIT_FAILURE;
+		}
+
+
 	}
 	
 	if (ptc->saveimg > 0) { // user wants to save images, do so now!
 		char *fname;
-		asprintf(&fname, "foam-" FOAM_CONFIG_PRE "-cap-%05d.pgm", ptc->capped);
+		asprintf(&fname, "foam-" FOAM_CONFIG_PRE "-cap-%05ld.pgm", ptc->capped);
 		modWritePGMArr(fname, simparams.currimg, DATA_UINT8, simparams.currimgres, 0, 1);
 		ptc->capped++;
 		ptc->saveimg--;

@@ -149,12 +149,17 @@ int simFlat(mod_sim_t *simparams, int intensity) {
 }
 
 int simNoise(mod_sim_t *simparams, int var) {
-	int i,j;
+	long i;
+	uint32_t old;
+	double n;
 	logDebug(LOG_SOMETIMES, "Simulation noise, variation %d.", var);
 	
-	for (i=0; i< simparams->currimgres.y; i++) // y coordinate
-		for (j=0; j < simparams->currimgres.x; j++) // x coordinate 
-			simparams->currimg[i*simparams->currimgres.x + j] += drand48() * var;
+	for (i=0; i< simparams->currimgres.y * simparams->currimgres.x; i++) { // loop over all pixels
+		old = simparams->currimg[i];
+
+		if ((simparams->currimg[i] += drand48() * var) < old)
+			simparams->currimg[i] = old;
+	}
 	
 	return EXIT_SUCCESS;
 }
@@ -451,9 +456,9 @@ int simWFCError(mod_sim_t *simparams, wfc_t *wfc, int method, int period) {
 	if (wfc->type == WFC_TT)
 		if (simTT(simparams, simctrl, 0) != EXIT_SUCCESS)
 			return EXIT_FAILURE;
-//	else if (wfc->type == WFC_DM)
-//		if (simDM(simparams, wfc->nact, simctrl, -1) != EXIT_SUCCESS) // last arg is for niter. -1 for autoset
-//			return EXIT_FAILURE;
+	else if (wfc->type == WFC_DM)
+		if (simDM(simparams, wfc->ctrl, wfc->nact, 0, -1) != EXIT_SUCCESS) // last arg is for niter. -1 for autoset
+			return EXIT_FAILURE;
 	
 	logDebug(LOG_SOMETIMES | LOG_NOFORMAT, "Error: %d with %d acts: ", wfc->id, wfc->nact);
 	for (i=0; i<wfc->nact; i++)
