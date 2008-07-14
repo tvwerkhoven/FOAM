@@ -1088,6 +1088,7 @@ int MMDarkFlatFullByte(wfs_t *wfs, mod_sh_track_t *shtrack) {
 
 
 int drvGetImg(control_t *ptc, int wfs) {
+	int i;
 	if (ptc->mode == AO_MODE_CAL) {
 		if (ptc->calmode == CAL_DARKGAIN || ptc->calmode == CAL_DARK) {
 			// give flat 0 intensity image back
@@ -1159,6 +1160,17 @@ int drvGetImg(control_t *ptc, int wfs) {
 			logDebug(LOG_SOMETIMES, "Simulate seeing as error");
 		}
 		else if (simparams.error == ERR_WFC && simparams.errwfc != NULL) {
+			// log simulated error
+			/*
+			if (ptc->domisclog) {
+				fprintf(ptc->misclog, "WFC ERR, %d, %d", simparams.errwfc->id, simparams.errwfc->nact);
+				for (i=0; i<simparams.errwfc->nact; i++)
+					fprintf(ptc->misclog, ", %f", \
+							gsl_vector_float_get(simctrl,i));
+
+				fprintf(ptc->misclog, "\n");
+			}
+			*/
 			// Simulate a WFC error
 			if (simWFCError(&simparams, simparams.errwfc, 1, 40) != EXIT_SUCCESS)
 				return EXIT_FAILURE;
@@ -1174,6 +1186,15 @@ int drvGetImg(control_t *ptc, int wfs) {
 		}
 
 		if (simparams.corr != NULL) {
+			// log WFC signal
+			if (ptc->domisclog) {
+				fprintf(ptc->misclog, "WFC CORR, %d, %d", simparams.corr->id, simparams.corr->nact);
+				for (i=0; i<simparams.corr->nact; i++)
+					fprintf(ptc->misclog, ", %f", \
+							gsl_vector_float_get(simparams.corr->ctrl,i));
+
+				fprintf(ptc->misclog, "\n");
+			}
 			// Simulate the WFCs themselves
 			if (simWFC(simparams.corr, &simparams) != EXIT_SUCCESS)
 				return EXIT_FAILURE;

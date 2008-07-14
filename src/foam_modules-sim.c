@@ -453,6 +453,7 @@ int simWFCError(mod_sim_t *simparams, wfc_t *wfc, int method, int period) {
 	}
 	
 	// log simulated error
+	/*
 	if (ptc->domisclog) {
 		fprintf(ptc->misclog, "WFC ERR, %d, %d", wfc->id, wfc->nact);
 		for (i=0; i<wfc->nact; i++)
@@ -461,6 +462,7 @@ int simWFCError(mod_sim_t *simparams, wfc_t *wfc, int method, int period) {
 
 		fprintf(ptc->misclog, "\n");
 	}
+	*/
 	
 	// What routine do we need to call to simulate this WFC?
 	if (wfc->type == WFC_TT)
@@ -484,6 +486,7 @@ int simWFC(wfc_t *wfc, mod_sim_t *simparams) {
 	logDebug(LOG_SOMETIMES, "Simulation WFC %d (%s) with  %d actuators", wfc->id, wfc->name, wfc->nact);
 
 	// log simulated correction
+	/*
 	if (ptc->domisclog) {
 		fprintf(ptc->misclog, "WFC CORR, %d, %d", wfc->id, wfc->nact);
 		for (i=0; i<wfc->nact; i++)
@@ -492,6 +495,7 @@ int simWFC(wfc_t *wfc, mod_sim_t *simparams) {
 
 		fprintf(ptc->misclog, "\n");
 	}
+	*/
 
 	if (wfc->type == WFC_TT) {
 		simTT(simparams, wfc->ctrl, 1);
