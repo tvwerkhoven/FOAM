@@ -1,7 +1,25 @@
+/*
+ Copyright (C) 2008 Tim van Werkhoven
+ 
+ This file is part of FOAM.
+ 
+ FOAM is free software: you can redistribute it and/or modify
+ it under the terms of the GNU General Public License as published by
+ the Free Software Foundation, either version 3 of the License, or
+ (at your option) any later version.
+ 
+ FOAM is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ GNU General Public License for more details.
+ 
+ You should have received a copy of the GNU General Public License
+ along with FOAM.  If not, see <http://www.gnu.org/licenses/>.
+ */
 /*! 
 	@file foam_modules-sh.c
 	@author @authortim
-	@date January 28, 2008
+	@date 2008-07-15
 
 	@brief This file contains modules and functions related to Shack-Hartmann wavefront sensing.
 	
@@ -19,20 +37,12 @@
 	\section Dependencies
 	
 	This module does not depend on other modules.
-
-	\section License
-	This code is licensed under the GPL, version 2 or later
 */
 
 // HEADERS //
 /***********/
 
 #include "foam_modules-sh.h"
-
-// GLOBALS //
-/***********/
-
-// FILE *rmsfp;
 
 // ROUTINES //
 /************/

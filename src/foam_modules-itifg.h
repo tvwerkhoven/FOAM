@@ -1,61 +1,39 @@
+/*
+ Copyright (C) 2008 Tim van Werkhoven
+ 
+ This file is part of FOAM.
+ 
+ FOAM is free software: you can redistribute it and/or modify
+ it under the terms of the GNU General Public License as published by
+ the Free Software Foundation, either version 3 of the License, or
+ (at your option) any later version.
+ 
+ FOAM is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ GNU General Public License for more details.
+ 
+ You should have received a copy of the GNU General Public License
+ along with FOAM.  If not, see <http://www.gnu.org/licenses/>.
+ */
 /*! 
 	@file foam_modules-itifg.h
 	@author @authortim
-	@date May 05, 2008
+	@date 2008-07-15
 
 	@brief This file contains prototypes to read out a PCDIG framegrabber using the ITIFG driver.
-
-	\section Info
- 
-	More documentation at the end of the source file (Hints for getting itifg running by Matthias Stein)
- 
-	This module compiles on its own, but needs some dependencies\n
-	<tt>
-	gcc -pipe -Wall -Wextra -g -DDEBUG_ITIFG=255    \
-	-Iitifg/include  \
-	-Litifg/lib  \
-	-Ifoam/trunk/code/src/ \
-	-o itifg-test foam/trunk/code/src/foam_cs_library.c foam/trunk/code/src/foam_modules-img.c foam/trunk/code/src/foam_modules-itifg.c \
-	-litifg -lm -lc -g \
-	-lgd -lpng -lSDL_image `sdl-config --libs --cflags`
-	</tt>
-	
-	\section Functions
-	
-	Functions provided by this module are listed below. Typical usage would be to use the functions from top
-	to bottom consecutively.
- 
-	\li itifgInitBoard() - (1) Initialize a framegrabber board
-	\li itifgInitBufs() - (2) Initialize buffers and memory for use with a framegrabber board
-	\li itifgInitGrab() - (i>2) Start grabbing frames
-	\li itifgGetImg() - (s>g>i) Grab the next available image
-	\li itifgStopGrab() - (n-1>s>g) Stop grabbing frames
-	\li itifgStopBufs() - (n-1) Release the memory used by the buffers
-	\li itifgStopBoard() - (n) Stop the board and cleanup
- 
-	\section Dependencies
- 
-	This module depends on the itifg module version 8.4.0-0 or higher. This open source driver is used
-	to access a variety of framegrabbers, including the PC-DIG board used here.
-
-	\section History
- 
-    \li 2008-04-25 Code improved after discussing some things with the author of itifg, Matthias Stein 
- (see http://sourceforge.net/mailarchive/forum.php?forum_name=itifg-tech for details)
- 
-	\li 2008-04-14 api improved, now works with variables instead of defines
-	This file is partially based on itifg.cc, part of filter_control by Guus Sliepen <guus@sliepen.eu.org>
-	which was released under the GPL version 2.
- 
-	\section Todo
- 
-	\li Automatically read the module number during initialization using iti_parse_info
 */
 
 #ifndef FOAM_MODULES_ITIFG
 #define FOAM_MODULES_ITIFG
 
+// DEFINES //
+/***********/
+
 #define FOAM_MODITIFG_MAXFD 1024	//!< Maximum FD that select() polls
+
+// LIBRARIES //
+/*************/
 
 //#include "foam_modules-itifg.h"
 
@@ -117,29 +95,32 @@
 #include "pcdigReg.h"
 #include "libitifg.h"
 
+// DATATYPES //
+/*************/
+
 /*! @brief Struct which holds some data to initialize ITIFG cameras with
  
  To initialize a framegrabber board using itifg, some info is needed. 
  Additional info given by the driver will again be stored in the struct.
  To initialize a board, the fields prefixed with '(user)' should already be
- filled in. After initialization, the '(mod)' fields will also be filled.
+ filled in. After initialization, the '(foam)' fields will also be filled.
  */
 typedef struct {
-	short width;			//!< (mod) CCD width
-	short height;			//!< (mod) CCD height
-	int depth;				//!< (mod) CCD depth (i.e. 8bit)
-	int fd;					//!< (mod) FD to the framegrabber
+	short width;			//!< (foam) CCD width
+	short height;			//!< (foam) CCD height
+	int depth;				//!< (foam) CCD depth (i.e. 8bit)
+	int fd;					//!< (foam) FD to the framegrabber
     
-	size_t pagedsize;		//!< (mod) size of the complete frame + some metadata
-	size_t rawsize;			//!< (mod) size of the raw frame (width*height*depth)
+	size_t pagedsize;		//!< (foam) size of the complete frame + some metadata
+	size_t rawsize;			//!< (foam) size of the raw frame (width*height*depth)
     
-	union iti_cam_t itcam;	//!< (mod) see iti_cam_t (itifg driver)
+	union iti_cam_t itcam;	//!< (foam) see iti_cam_t (itifg driver)
 	int module;				//!< (user) module used, 48 in mcmath setup
     
 	char *device_name;		//!< (user) something like '/dev/ic0dma'
 	char *config_file;		//!< (user) something like '../conffiles/dalsa-cad6.cam'
-	char camera_name[128];		//!< (mod) camera name, as stored in the configuration file
-	char exo_name[128];			//!< (mod) exo filename, as stored in the configuration file
+	char camera_name[128];		//!< (foam) camera name, as stored in the configuration file
+	char exo_name[128];			//!< (foam) exo filename, as stored in the configuration file
 } mod_itifg_cam_t;
 
 /*!
@@ -148,17 +129,20 @@ typedef struct {
  This struct stores some variables which makes it easier to
  work with the buffer used by the itifg driver. It should be initialized
  with only 'frames' holding a value, this will be the length of the buffer.
- Again, '(user)' is to be given by the user, '(mod)' will be filled in automatically.
+ Again, '(user)' is to be given by the user, '(foam)' will be filled in automatically.
  */
 typedef struct {
 	int frames;				//!< (user) how many frames should the buffer hold?
-	iti_info_t *info;		//!< (mod) information on the current frame (not available in itifg-8.4.0)
-	void *data;				//!< (mod) location of the current frame
-	void *map;				//!< (mod) location of the mmap()'ed memory
+	iti_info_t *info;		//!< (foam) information on the current frame (not available in itifg-8.4.0)
+	void *data;				//!< (foam) location of the current frame
+	void *map;				//!< (foam) location of the mmap()'ed memory
 } mod_itifg_buf_t;
 
+// PROTOTYPES //
+/**************/
+
 /*!
- @brief Initialize a framegrabber board
+ @brief Initialize a framegrabber board supported by ITIFG.
  
  This function requires a mod_itifg_cam_t struct which holds at least 
  device_name, config_file and module. The rest will be filled in by this
@@ -170,7 +154,7 @@ typedef struct {
 int itifgInitBoard(mod_itifg_cam_t *cam);
 
 /*!
- @brief Initialize buffers for a framegrabber board
+ @brief Initialize buffers for a framegrabber board which will hold the image data.
  
  This function requires a previously initialized mod_itifg_cam_t struct filled
  by itifgInitBoard(), and a mod_itifg_buf_t struct which holds only 'frames'. The 
@@ -201,7 +185,7 @@ int itifgInitGrab(mod_itifg_cam_t *cam);
   
  This function stops the framegrabbing for *cam.
  
- See also itifgInitGrab()
+ Also see: itifgInitGrab()
  
  @param [in] *cam Struct previously filled by a itifgInitBoard() call.
  @return EXIT_SUCCESS on success, EXIT_FAILURE otherwise. 

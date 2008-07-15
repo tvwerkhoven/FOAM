@@ -1,3 +1,21 @@
+/*
+ Copyright (C) 2008 Tim van Werkhoven
+ 
+ This file is part of FOAM.
+ 
+ FOAM is free software: you can redistribute it and/or modify
+ it under the terms of the GNU General Public License as published by
+ the Free Software Foundation, either version 3 of the License, or
+ (at your option) any later version.
+ 
+ FOAM is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ GNU General Public License for more details.
+ 
+ You should have received a copy of the GNU General Public License
+ along with FOAM.  If not, see <http://www.gnu.org/licenses/>.
+ */
 /*! 
 	@file foam_modules-img.c
 	@author @authortim
@@ -14,8 +32,8 @@
 	\li modReadIMGSurf() - Read an img (png, pgm, jpg, etc.) to an SDL_Surface.
 	\li modReadIMGArr() - Read an img (png, pgm, jpg, etc.) to an array.
 	\li modWritePGMSurf() - Write an 8-bit ASCII PGM file from an SDL_Surface.
-	\li imgGetStats() - Get statistics on an image, min, max, mean etc.
 	\li modWritePGMArr() - Write an 8-bit ASCII PGM file from an array.
+ 	\li imgGetStats() - Get statistics on an image, min, max, mean etc.
 	\li modWritePNGSurf() - Write an 8-bit grayscale PNG file from an SDL_Surface.
 
 	\section Dependencies
@@ -31,9 +49,6 @@
 	\section History
  
 	\li 2008-04-14 updated documentation
-
-	\section License
-	This code is licensed under the GPL, version 2 or higher
 */
 
 // HEADERS //

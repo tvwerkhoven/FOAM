@@ -1,22 +1,41 @@
+/*
+ Copyright (C) 2008 Tim van Werkhoven
+ 
+ This file is part of FOAM.
+ 
+ FOAM is free software: you can redistribute it and/or modify
+ it under the terms of the GNU General Public License as published by
+ the Free Software Foundation, either version 3 of the License, or
+ (at your option) any later version.
+ 
+ FOAM is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ GNU General Public License for more details.
+ 
+ You should have received a copy of the GNU General Public License
+ along with FOAM.  If not, see <http://www.gnu.org/licenses/>.
+ */
 /*! 
  @file foam_modules-dispgl.c
  @author @authortim
- @date 2008-05-09
+ @date 2008-07-15
  
- @brief This file contains functions to display stuff using SDL & OpenGL
+ @brief This file contains functions to display stuff using SDL with OpenGL
  
  \section Info
+ 
  This module can be used to display data on a screen which is rather useful when 
  doing AO. Typical usage would start by initializing a mod_display_t 
  struct, and then pass this to displayInit(). This will give a blank 
  screen which can be used later on.
  
- Fortunately, even northbridge-integrated video chips have hardware accelartion nowadays so 
- this constraint shouldn't be too bad. If OpenGL is not an option, use the dissdl module instead.
+ Fortunately, even northbridge-integrated video chips have hardware acceleration nowadays so 
+ even these machines can use OpenGL. If OpenGL is not an option, use the dissdl module instead.
  
- To actually display stuff, call displayDraw() whenever you want. This function
- takes the configuration from the mod_display_t struct and displays the relevant
- things.
+ To actually display stuff, call displayDraw() whenever you want from the same thread
+ as displayInit() was called from. This function takes the configuration from 
+ the mod_display_t struct and displays the relevant things.
  
  Cleaning up should be done by calling displayFinish() at the end. Furthermore, 
  some lower level routines are also available, but are probably not necessary 
@@ -47,10 +66,6 @@
  
  This module might depend on the Shack Hartmann module if you want define 
  FOAM_MODULES_DISLAY_SHSUPPORT
- 
- \section License
- 
- This code is licensed under the GPL, version 2.
  */
 
 // HEADERS //

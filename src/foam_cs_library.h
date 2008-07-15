@@ -1,14 +1,31 @@
+/*
+ Copyright (C) 2008 Tim van Werkhoven
+ 
+ This file is part of FOAM.
+ 
+ FOAM is free software: you can redistribute it and/or modify
+ it under the terms of the GNU General Public License as published by
+ the Free Software Foundation, either version 3 of the License, or
+ (at your option) any later version.
+ 
+ FOAM is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ GNU General Public License for more details.
+ 
+ You should have received a copy of the GNU General Public License
+ along with FOAM.  If not, see <http://www.gnu.org/licenses/>.
+ */
 /*! 
  @file foam_cs_library.h
- @brief This file is the main library for the CS component of @name
+ @brief This file is the main library for @name
  @author @authortim
+ @date 2008-07-15 18:06
  
- This header file contains allmost all functions used by the CS component of @name.
- In addition to that, it contains specific libraries only used by CS and not by the UI
- as well as a lot of structs to hold data used in the CS. These include things like the 
- state of the AO system (\c control_t), as well as some structs to track network connections
- to the CS. For UI headers, see @uilib.\n
- Last: 2008-01-21
+ This header file contains all functions used by the framework of @name.
+ In addition to that, it contains a lot of structs to hold data used in 
+ @name. These include things like the state of the AO system (\c control_t), 
+ as well as some structs to track network connections to the CS.
  */
 
 #ifndef FOAM_CS_LIBRARY
@@ -52,10 +69,7 @@ typedef unsigned char u_char;
 #include <gsl/gsl_linalg.h> 		// this is for SVD / matrix datatype
 #include <gsl/gsl_blas.h> 			// this is for SVD
 
-// !!!:tim:20080415 deprecated, basic configuration now done in foam_cs_librabry.c
-// !!!:tim:20080415 and the rest is done in the primemodule header- & c-file
-//#include "foam_cs_config.h"
-
+// these were used in ITIFG
 //#include <sys/select.h> //?
 //#include <limits.h> 				// LINE_MAX
 //#include <sys/uio.h> //?
@@ -138,6 +152,12 @@ typedef enum { // aomode_t
  Instead of using bpp or something else, this more general datatype identification
  also allows identification of foreign datatypes like a GSL matrix or non-integer
  datatypes (which is hard to distinguish between if only using bpp) like floats.
+ 
+ It is used by functions that accept multiple datatypes, or will be accepting this
+ in later versions. This way, routines can work on uint8_t data as well as on
+ uint16_t data. The problem arises from the fact that cameras give different
+ bitdepth outputs, meaning that routines working on this output need to be able
+ to cope with different datatypes.
 */
 typedef enum {
 	DATA_UINT8,			//!< ID for uint8_t
@@ -149,6 +169,12 @@ typedef enum {
 
 /*!
  @brief Helper enum for ao scanning mode
+ 
+ This is used to distinguish between different AO modes. Typically, AO
+ corrects both in X and Y direction, but in certain cases it might be
+ useful to work only in one of the two, where only contrast in one
+ direction is available (i.e. solar limb) as opposed to both directions
+ (i.e. sunspot or planet).
  */
 typedef enum { // axes_t
 	AO_AXES_XY,		//!< Scan in X and Y direction
@@ -162,8 +188,6 @@ typedef enum { // axes_t
  This datatype must be used by the user to configure the AO system.
  To do anything useful, FOAM must know what filterwheels you are using,
  and therefore you must fill in the (user) fields at the beginning.
- 
- See dummy prime module for details.
  */
 typedef struct {
 	char *name;			//!< (user) Filterwheel name
@@ -189,6 +213,8 @@ typedef struct {
  if you have a tip-tilt mirror which can correct more than the size of the image,
  calibration will not work if jolting it from -1 to 1. Instead, calrange[0] and
  calrange[1] are used to move the actuators.
+ 
+ See dummy prime module for details. 
  */
 typedef struct { // wfc_t
 	char *name;					//!< (user) name for the specific WFC
@@ -201,11 +227,32 @@ typedef struct { // wfc_t
 } wfc_t;
 
 /*!
- @brief Helper struct to store the WFS image(s). Used by type \c control_t.
+ @brief Helper struct to store the WFS information. Used by type \c control_t.
  
  This datatype must be used by the user to configure the AO system.
  To do anything useful, FOAM must know what WFSs and WFCs you are using,
  and therefore you must fill in the (user) fields at the beginning.
+ 
+ This datatype provides information on the WFSs used. It provides memory
+ for some general information (name, resolution, bpp), as well as
+ calibration images (dark, flat, sky, etc) and the scanning direction.
+ 
+ The calibration files are used as follows: the sky-, dark- and flatfields
+ are stored in formats on disk that provide higher precision than the sensor
+ itself. This is logical as the darkfield is an average of many frames, and
+ if the sensor is 8 bit, the darkfield can be determined much more accurately
+ than this 8 bit. Therefore the fields are stored in float format.
+ 
+ Once the fields are taken and stored to disk, for actual AO performance,
+ these are stored in the *dark, *gain and *corr frames. The datatype of these
+ is chosen such that dark/flat-fielding can be done quickly, which generally
+ means not combining floats and integer datatypes.
+ 
+ To further speed up the dark/flat-fielding process, some pre-calculation can be
+ done. When doing a typical (raw-dark)/(flat-dark) calculation, flat-dark is
+ always the same. Therefore, gain can hold 1/(flat-dark) such that this 
+ is already precalculated.
+
  See dummy prime module for details.
  */
 typedef struct { // wfs_t
@@ -236,13 +283,13 @@ typedef struct { // wfs_t
  @brief Stores the state of the AO system
  
  This struct is used to store several variables indicating the state of the AO system 
- which are shared between the different CS threads. The thread interfacing with user(s)
+ which are shared between the different threads. The thread interfacing with user(s)
  can then read these variables and report them to the user, or change them to influence
- the CS behaviour.
+ the behaviour.
  
- The struct is initialized with some default values at runtime (hardcoded), but
- should be configured by the user in the prime module c-file for useful operation.
- (user) fields can be configured by the user, (foam) fields should be left untouched
+ The struct should be configured by the user in the prime module c-file for useful operation.
+ (user) fields must be configured by the user, (foam) fields should be left untouched,
+ although it is generally safe to read these fields.
  
  The logfrac field is used to stop superfluous logging. See logInfo() and logDebug()
  documentation for details. Errors and warnings are always logged/displayed, as these
@@ -283,7 +330,11 @@ typedef struct { // control_t
 
 
 /*!
- @brief Helper enum for loglevel. Can be LOGNONE, LOGERR, LOGINFO or LOGDEBUG.
+ @brief Helper enum for loglevel. Can be LOGNONE, LOGERR, LOGINFO or LOGDEBUG
+ 
+ This specifies the verbosity of logging, going from LOGNONE, LOGERR, LOGINFO
+ and to LOGDEBUG in increasing amount of logging details. For production systems,
+ LOGINFO should suffice, while developers might want to use LOGDEBUG.
  */
 typedef enum { // level_t
 	LOGNONE, 	//!< Log nothing
@@ -324,7 +375,7 @@ typedef struct { // config_t
 } config_t;
 
 /* 
- @brief This holds information on one particular connection to the CS. Used by \c conntrack_t
+ @brief This holds information on one particular client connection . Used by \c conntrack_t
  */
 typedef struct {
 	int fd; 						//!< FD for the client 
@@ -333,9 +384,10 @@ typedef struct {
 } client_t;
 
 /* 
- @brief This keeps track of connections to the CS. 
+ @brief This keeps track of clients connected.
  
- Maximum amount of connections is defined by \c MAX_CLIENTS, in foam_cs_config.h
+ Maximum amount of connections is defined by \c MAX_CLIENTS, in foam_cs_config.h, 
+ which can be changed if necessary.
  */
 typedef struct {
 	int nconn;							//!< Amount of connections used
@@ -346,24 +398,31 @@ typedef struct {
 // PROTOTYPES //
 /**************/
 
-// THESE MUST BE DEFINED IN SOME MODULE!!!!
+// THESE MUST BE DEFINED IN SOME PRIME MODULE!!!!
 
 /*!
  @brief This routine is run at the very beginning of the @name program, after configuration has been read.
  
  modInitModule() is one of the cornerstones of the modular design of @name. This routine is not defined in
- the framework itself, but must be provided by the modules compiled with @name (i.e. in simulation). This `hook' provides
+ the framework itself, but must be provided by the prime modules compiled with @name. This `hook' provides
  a standardized means to initialize the module before anything has been done, like allocate memory, read in 
- some configuration files, start cameras or anything else. It is called without arguments and should return
- EXIT_SUCCESS or EXIT_FAILURE depening on success or not.
+ some configuration files, start cameras or anything else.
+ 
+ @param [in] *ptc A control_t struct that has been configured in a prime module
+ @param [in] *cs_config A config_t struct that has been configured in a prime module
+ @return EXIT_SUCCESS or EXIT_FAILURE depening on success or not.
  */
 int modInitModule(control_t *ptc, config_t *cs_config);
 
 /*!
- @brief This routine is run right after threading from the thread that will call all mod* routines.
+ @brief This routine is run right after the program has split into two threads.
  
  This routine can be used to initialize things that are not thread safe,
  such as OpenGL. See modInitModule for more details.
+ 
+ @param [in] *ptc A control_t struct that has been configured in a prime module
+ @param [in] *cs_config A config_t struct that has been configured in a prime module
+ @return EXIT_SUCCESS or EXIT_FAILURE depening on success or not. 
  */
 int modPostInitModule(control_t *ptc, config_t *cs_config);
 
@@ -372,6 +431,8 @@ int modPostInitModule(control_t *ptc, config_t *cs_config);
  
  modStopModule() can be used to wrap up things related to the module, like stop cameras, set
  filterwheels back or anything else. If this module fails, @name *will* exit anyway.
+ 
+ @param [in] *ptc A control_t struct that has been configured in a prime module
  */
 void modStopModule(control_t *ptc);
 
@@ -381,6 +442,9 @@ void modStopModule(control_t *ptc);
  modClosedLoop() should be provided by a module which does the necessary things in closed loop. Before this
  routine is called in a loop, modClosedInit() is first called once to initialize things related to closed loop
  operation.
+ 
+ @param [in] *ptc A control_t struct that has been configured in a prime module
+ @return EXIT_SUCCESS or EXIT_FAILURE depening on success or not. 
  */
 int modClosedLoop(control_t *ptc);
 
@@ -388,6 +452,8 @@ int modClosedLoop(control_t *ptc);
  @brief This routine is run once before entering closed loop.
  
  modClosedInit() should be provided by a module which does the necessary things just before closed loop.
+ @param [in] *ptc A control_t struct that has been configured in a prime module 
+ @return EXIT_SUCCESS or EXIT_FAILURE depening on success or not. 
  */
 int modClosedInit(control_t *ptc);
 
@@ -396,6 +462,8 @@ int modClosedInit(control_t *ptc);
  
  modClosedFinish() can be used to shut down camera's temporarily, i.e.
  to stop grabbing frames or something similar.
+ @param [in] *ptc A control_t struct that has been configured in a prime module 
+ @return EXIT_SUCCESS or EXIT_FAILURE depening on success or not. 
  */
 int modClosedFinish(control_t *ptc);
 
@@ -403,6 +471,8 @@ int modClosedFinish(control_t *ptc);
  @brief This routine is run during open loop.
  
  modOpenLoop() should be provided by a module which does the necessary things in open loop.
+ @param [in] *ptc A control_t struct that has been configured in a prime module 
+ @return EXIT_SUCCESS or EXIT_FAILURE depening on success or not. 
  */
 int modOpenLoop(control_t *ptc);
 
@@ -410,6 +480,8 @@ int modOpenLoop(control_t *ptc);
  @brief This routine is run once before entering open loop.
  
  modOpenInit() should be provided by a module which does the necessary things just before open loop.
+ @param [in] *ptc A control_t struct that has been configured in a prime module 
+ @return EXIT_SUCCESS or EXIT_FAILURE depening on success or not.  
  */
 int modOpenInit(control_t *ptc);
 
@@ -418,6 +490,9 @@ int modOpenInit(control_t *ptc);
  
  modOpenFinish() can be used to shut down camera's temporarily, i.e.
  to stop grabbing frames or something similar.
+ 
+ @param [in] *ptc A control_t struct that has been configured in a prime module 
+ @return EXIT_SUCCESS or EXIT_FAILURE depening on success or not. 
  */
 int modOpenFinish(control_t *ptc);
 
@@ -427,6 +502,9 @@ int modOpenFinish(control_t *ptc);
  Slightly different from open and closed mode is the calibration mode. This mode does not have
  a loop which runs forever, but only calls modCalibrate once. It is left to the programmer to decide 
  what to do in this mode. control_t provides a flag (.calmode) to distinguish between different calibration modes.
+ 
+ @param [in] *ptc A control_t struct that has been configured in a prime module 
+ @return EXIT_SUCCESS or EXIT_FAILURE depening on success or not.  
  */
 int modCalibrate(control_t *ptc);
 
@@ -452,7 +530,7 @@ int modCalibrate(control_t *ptc);
  'know' that topic.\n
  \n
  For an example of modMessage(), see foam_primemod-dummy.c.
- @param [in] *ptc The global control struct
+ @param [in] *ptc A control_t struct that has been configured in a prime module 
  @param [in] *client Information on the client that sent data
  @param [in] *list The list of words received over the network
  @param [in] count The amount of words received over the network
@@ -463,7 +541,7 @@ int modMessage(control_t *ptc, const client_t *client, char *list[], const int c
 /**************************************/
 
 /*!
- @brief This is the routine that is run after threading, and should run modeListen after some init.
+ @brief This is the routine that is run immediately after threading, and should run modeListen after initializing the prime module.
 
  */
 void startThread();
@@ -527,7 +605,7 @@ void logWarn(const char *msg, ...);
 void logDebug(const int flag, const char *msg, ...);
 
 /*! 
- @brief Runs the AO open-loop mode.
+ @brief Runs @name in open-loop mode.
  
  Runs the AO system in open loop mode, which is basically a skeleton which 
  calls modOpenInit() once, then enters a loop which runs as long as ptc.mode is 
@@ -569,9 +647,13 @@ void modeCal();
  @brief Listens on a socket for connections
  
  Listen on a socket for connections by any client, for example telnet. Uses 
- the global \a ptc (see control_t)
- struct to provide data to the connected clients or to change
- the behaviour of @name as dictated by the client.
+ the global \a ptc (see control_t) struct to provide data to the connected 
+ clients or to change the behaviour of @name as dictated by the client.
+ 
+ This function initializes the listening socket, and calls sockAccept() when
+ a client connects to it. This event handling is done by libevent, which also
+ multiplexes the other socket interactions.
+ 
  @return \c EXIT_SUCCESS if it ran succesfully, \c EXIT_FAILURE otherwise.
  */
 int sockListen();
@@ -583,7 +665,10 @@ int sockListen();
  socket to the set of active sockets (see conntrack_t and client_t).
  This function is called if there is an event on the main socket, which means 
  someone wants to connect. It spawns a new bufferent event which keeps an eye 
- on activity on the new socket, in which case there is data to be read.
+ on activity on the new socket, in which case there is data to be read. 
+ 
+ The event handling for this socket (such as processing incoming user data or
+ sending data back to the client) is handled by libevent.
  
  @param [in] sock Socket with pending connection
  @param [in] event The way this function was called
@@ -595,26 +680,37 @@ void sockAccept(int sock, short event, void *arg);
  @brief Sets a socket to non-blocking mode.
  
  Taken from \c http://unx.ca/log/libevent_echosrv_bufferedc/
+ 
+ @return \c EXIT_SUCCESS if it ran succesfully, \c EXIT_FAILURE otherwise. 
  */
-int setnonblock(int fd);
+int setNonBlock(int fd);
 
 /*! 
  @brief Process the command given by the user.
  
- This function is called if there is data on a socket. The data
+ This function is called by sockOnRead if there is data on a socket. The data
  is then passed on to this function which interprets it and
  takes action if necessary. Currently this function can only
  read 1 kb in one time maximum (which should be enough).
  
- If 'help' is the first and only word in 'msg', modMessage() is called such
- that the prime module can also give help on specific commands that it offers.
- The framework itself only provides generic help, but specific adaptive optic
- routines are controlled through the prime module, which is why this hook is
- provided.
+ 'msg' contains the string received from the client, which is passed to
+ explode() which chops it up in several words.
  
- Additionally, if parseCmd receives a command it does not recognize, modMessage
- is also called.
+ The first word in 'msg' is compared against a few commands known by parseCmd()
+ and if one is found, apropriate actions are taken if necessary. If the command
+ is unknown, it is passed to modMessage(), which should be provided by the prime
+ module. This way, the commands @name accepts can be expanded by the user.
  
+ One special case is the 'help' command. If simply 'help' is given with nothing
+ after that, parseCmd() calls showHelp() to display general usage information
+ for the @name framework. After showing this information, modMessage() is also
+ called, such that specific usage information for the prime module can also 
+ be dispalyed.
+ 
+ If 'help' is followed by another word which is the topic a user requests
+ help on, it is passed to showHelp() and modMessage() as well. If these routines
+ both return 0, the topic is unknown and an error is given to the user.
+  
  @param [in] *msg the char array (max length \c COMMANDLEN)
  @param [in] len the actual length of msg
  @param [in] *client the client_t struct of the client we want to parse a command from
@@ -636,12 +732,13 @@ void sockOnErr(struct bufferevent *bev, short event, void *arg);
  @brief This function is called if there is data to be read on the socket.
  
  Data waiting to be read usually means there is a command coming from one of the connected
- clients.
+ clients. This routine reads the data, checking if it does not exceed \c COMMANDLEN,
+ and then passes the result on to parseCmd().
  */
 void sockOnRead(struct bufferevent *bev, void *arg);
 
 /*!
- @brief This function is called if the socket is ready for writing (placeholder).
+ @brief This function is called if the socket is ready for writing.
  
  This function is necessary because passing a NULL pointer to bufferevent_new for the write
  function causes it to crash. Therefore this placeholder is used, which does exactly nothing.
@@ -651,7 +748,7 @@ void sockOnWrite(struct bufferevent *bev, void *arg);
 /*!
  @brief Open a stream to the appropriate logfiles, as defined in the configuration file.
  
- This function opens the error-, info- and debug-log files IF they
+ This function opens the error-, info- and debug-log files *if* they
  are defined in the global struct cs_config (see config_t). If some filenames are equal, the
  logging is linked. This can be useful if users want to log everything to the same
  file. No filename means that no stream will be opened.
@@ -666,8 +763,8 @@ int initLogFiles();
  allocate memory for the various images in memory and load them into the
  newly allocated matrices. 
  
- If the files are not present, set the images to NULL so that we know we have 
- to calibrate later on. 
+ If the files are not present, the FD's will be NULL. Allocate memory anyway in that
+ case so we can directly store the frames in the specific memory later on.
  
  If the files are set to NULL, don't use dark/flat/sky field calibration at all.
  */
@@ -692,13 +789,14 @@ void checkAOConfig(control_t *ptc);
 void checkFOAMConfig(config_t *conf);
 
 /*!
- @brief Give information on @name CS over the socket.
+ @brief Give usage information on @name to a client.
  
  This function gives help to the cliet which sent a HELP command over the socket.
+ Also look at parseCmd() function.
  
  @param [in] *client the client that requested help
  @param [in] *subhelp the helpcode requested by the client (i.e. what topic)
- @return EXIT_SUCCESS on success, EXIT_FAILURE otherwise.
+ @return 1 everything went ok, or 0 if the user requested an unknown topic.
  */
 int showHelp(const client_t *client, const char *subhelp);
 

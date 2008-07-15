@@ -1,9 +1,75 @@
+/*
+ Copyright (C) 2008 Tim van Werkhoven
+ 
+ This file is part of FOAM.
+ 
+ FOAM is free software: you can redistribute it and/or modify
+ it under the terms of the GNU General Public License as published by
+ the Free Software Foundation, either version 3 of the License, or
+ (at your option) any later version.
+ 
+ FOAM is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ GNU General Public License for more details.
+ 
+ You should have received a copy of the GNU General Public License
+ along with FOAM.  If not, see <http://www.gnu.org/licenses/>.
+ */
 /*! 
  @file foam_modules-itifg.c
  @author @authortim
- @date 2008-03-03 16:49
+ @date 2008-07-15
  
- @brief This file contains routines to read out a PCDIG framegrabber using the ITIFG driver.
+ \section Info
+ 
+ This module provides routines to interface with the ITIFG framegrabber driver, and was tested
+ with version 8.4.0-0. It might work slightly older versions, but will very probably not work 
+ with the previous 0.7 branch of ITIFG. Note that ITIFG has some shortcomings. For more information,
+ see the mailing lists of ITIFG at http://sourceforge.net/mailarchive/forum.php?forum_name=itifg-tech
+ 
+ This module compiles on its own, but has some dependencies\n
+ <tt>
+ gcc -pipe -Wall -Wextra -g -DDEBUG_ITIFG=255    \
+ -Iitifg/include  \
+ -Litifg/lib  \
+ -Ifoam/trunk/code/src/ \
+ -o itifg-test foam/trunk/code/src/foam_cs_library.c foam/trunk/code/src/foam_modules-img.c foam/trunk/code/src/foam_modules-itifg.c \
+ -litifg -lm -lc -g \
+ -lgd -lpng -lSDL_image `sdl-config --libs --cflags`
+ </tt>
+ 
+ \section Functions
+ 
+ Functions provided by this module are listed below. Typical usage would be to use the functions from top
+ to bottom consecutively. Note that the frame grabber can be started and stopped as one wishes.
+ 
+ \li itifgInitBoard() - Initialize a framegrabber board
+ \li itifgInitBufs() - Initialize buffers and memory for use with a framegrabber board
+ \li itifgInitGrab() - Start grabbing frames
+ \li itifgGetImg() - Grab the next available image
+ \li itifgStopGrab() - Stop grabbing frames
+ \li itifgStopBufs() - Release the memory used by the buffers
+ \li itifgStopBoard() - Stop the board and cleanup
+ 
+ \section Dependencies
+ 
+ This module depends on the itifg module version 8.4.0-0 or higher. This open source driver is used
+ to access a variety of framegrabbers, including the PC-DIG board used here.
+ 
+ \section History
+ 
+ \li 2008-04-25 Code improved after discussing some things with the author of itifg, Matthias Stein 
+ (see http://sourceforge.net/mailarchive/forum.php?forum_name=itifg-tech for details)
+ 
+ \li 2008-04-14 api improved, now works with variables instead of defines
+ This file is partially based on itifg.cc, part of filter_control by Guus Sliepen <guus@sliepen.eu.org>
+ which was released under the GPL version 2.
+ 
+ \section Todo
+ 
+ \li Automatically read the module number during initialization using iti_parse_info
+ 
  */
 
 #include "foam_modules-itifg.h"

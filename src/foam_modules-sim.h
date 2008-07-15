@@ -1,17 +1,41 @@
+/*
+ Copyright (C) 2008 Tim van Werkhoven
+ 
+ This file is part of FOAM.
+ 
+ FOAM is free software: you can redistribute it and/or modify
+ it under the terms of the GNU General Public License as published by
+ the Free Software Foundation, either version 3 of the License, or
+ (at your option) any later version.
+ 
+ FOAM is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ GNU General Public License for more details.
+ 
+ You should have received a copy of the GNU General Public License
+ along with FOAM.  If not, see <http://www.gnu.org/licenses/>.
+ */
 /*! 
 	@file foam_modules-sim.h
 	@author @authortim
-	@date November 30 2007
+	@date 2008-07-15
 
 	@brief This header file prototypes simulation functions.
 */
 #ifndef FOAM_MODULES_SIM
 #define FOAM_MODULES_SIM
 
+// LIBRARIES //
+/*************/
+
 #include <fftw3.h> 					// we need this for modSimSH()
 #include "foam_cs_library.h"		// we link to the main program here (i.e. we use common (log) functions)
 #include "foam_modules-calib.h"		// we want the calibration
 #include "foam_modules-sh.h"		// we want image IO
+
+// DATATYPES //
+/*************/
 
 /*!
  @brief Helper enum to indicate the error used in the simulation

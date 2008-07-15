@@ -1,11 +1,30 @@
+/*
+ Copyright (C) 2008 Tim van Werkhoven
+ 
+ This file is part of FOAM.
+ 
+ FOAM is free software: you can redistribute it and/or modify
+ it under the terms of the GNU General Public License as published by
+ the Free Software Foundation, either version 3 of the License, or
+ (at your option) any later version.
+ 
+ FOAM is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ GNU General Public License for more details.
+ 
+ You should have received a copy of the GNU General Public License
+ along with FOAM.  If not, see <http://www.gnu.org/licenses/>.
+ */
 /*! 
  @file foam_modules-dispsdl.c
  @author @authortim
- @date 2008-02-06 
+ @date 2008-07-15
  
  @brief This file contains display functions using only SDL.
  
  \section Info
+ 
  This module can be used to display data on a screen which is rather useful when 
  doing AO. Typical usage would start by initializing one or more mod_display_t 
  structs, and then pass each of these to displayInit(). This will give a blank 
@@ -18,6 +37,9 @@
  some lower level routines are also available, but are probably not necessary 
  with typical usage. If you think you know what you're doing, you might get away 
  with using them.
+ 
+ Note that the use of the OpenGL display routines are recommended, as these are faster
+ and also more up to date.
  
  \section Functions
  
@@ -44,10 +66,6 @@
  
  This module might depend on the Shack Hartmann module if you want define 
  FOAM_MODULES_DISLAY_SHSUPPORT
- 
- \section License
- 
- This code is licensed under the GPL, version 2.
  
  */
 

@@ -1,12 +1,34 @@
+/*
+ Copyright (C) 2008 Tim van Werkhoven
+ 
+ This file is part of FOAM.
+ 
+ FOAM is free software: you can redistribute it and/or modify
+ it under the terms of the GNU General Public License as published by
+ the Free Software Foundation, either version 3 of the License, or
+ (at your option) any later version.
+ 
+ FOAM is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ GNU General Public License for more details.
+ 
+ You should have received a copy of the GNU General Public License
+ along with FOAM.  If not, see <http://www.gnu.org/licenses/>.
+*/
 /*! 
 	@file foam_cs.c
 	@author @authortim
-	@date November 14 2007
+	@date 2008-07-15 16:35
 
-	@brief This is the main file for the @name Control Software.
+	@brief This is the main file for @name.
 
-	Partially functional alpha version of the @name Control Software\n\n
-	TODO tags are used for work in progress or things that are unclear.
+	This is the framework for @name, it provides basic functionality and can be 
+	customized through the use of certains `hooks'. These hooks are functions that
+	are called at crucial moments during the adaptive optics controlling such 
+	that the person implementing @name on a specific AO setup can customize
+	what @name does.
+ 
 */
 
 // HEADERS //
@@ -14,10 +36,10 @@
 
 #include "foam_cs_library.h"
 
-int Maxparams=32;
-
 // GLOBAL VARIABLES //
 /********************/	
+
+int Maxparams=32;
 
 // These are defined in foam_cs_library.c, and declared in
 // foam_cs_library.h
@@ -40,7 +62,7 @@ static pthread_attr_t attr;
 // PROTOTYPES //
 /**************/	
 
-// These come from modules, these MUST be defined there
+// These come from prime modules, these MUST be defined there
 extern void modStopModule(control_t *ptc);
 extern int modInitModule(control_t *ptc, config_t *cs_config);
 extern int modPostInitModule(control_t *ptc, config_t *cs_config);
@@ -66,10 +88,10 @@ extern int modMessage(control_t *ptc, const client_t *client, char *list[], cons
 	The order in which the program is initialized is as follows:
 	\li Setup thread mutexes
 	\li Setup signal handlers for SIGINT and SIGPIPE
-	\li Load configuration using loadConfig() from \c FOAM_CONFIG_FILE
-	\li Run modInitModule() such that the modules can initialize themselves
-	\li Start a thread which runs sockListen()
-	\li Let the other thread start modeListen()
+	\li Run modInitModule() such that the prime modules can initialize
+	\li Start a thread which runs startThread()
+	\li Run modPostInitModule() such that the prime modules can initialize after threading (useful for SDL)
+	\li Let the other thread start sockListen()
 	
 	@return \c EXIT_FAILURE on failure, \c EXIT_SUCESS on successful completion.
 	*/
@@ -189,7 +211,11 @@ void startThread() {
 }
 
 void catchSIGINT() {
-	// reset signal handler, as noted on http://www.cs.cf.ac.uk/Dave/C/node24.html
+	// it could be a good idea to reset signal handler, as noted 
+	// on http://www.cs.cf.ac.uk/Dave/C/node24.html , but it is
+	// currently disabled. This means that after a failed ^C,
+	// this signal goes back to its default action.
+	
 	// signal(SIGINT, catchSIGINT);
 	
 	// stop the framework
@@ -227,7 +253,7 @@ void stopFOAM() {
 	// signal the change to the other thread(s)
 	pthread_cond_signal(&mode_cond);
 	
-	// sleep a while to give the modules time to stop
+	// sleep a short while to give the modules time to stop
 	usleep(100000); // 0.1 sec
 
 	// get the time to see how long we've run
@@ -235,9 +261,11 @@ void stopFOAM() {
 	loctime = localtime (&end);
 	strftime (date, 64, "%A, %B %d %H:%M:%S, %Y (%Z).", loctime);	
 	
+	// stop prime prime module if it hasn't already
 	logInfo(0, "Trying to stop modules...");
 	modStopModule(&ptc);
 	
+	// and join with all threads
 	logInfo(0, "Waiting for threads to stop...");
 	for (i=0; i<cs_config.nthreads; i++) {
 		rc = pthread_join(cs_config.threads[i], &status);
@@ -250,18 +278,23 @@ void stopFOAM() {
 
 	}
 	
+	// finally, destroy the pthread variables
 	logDebug(0, "Destroying thread configuration (mutex, cond, attr)...");
 	pthread_mutex_destroy(&mode_mutex);
 	pthread_cond_destroy(&mode_cond);
 	pthread_attr_destroy(&attr);
 	
+	// last log message just before closing the logfiles
 	logInfo(0, "Stopping FOAM at %s", date);
 	logInfo(0, "Ran for %ld seconds, parsed %ld frames (%.1f FPS).", \
 		end-ptc.starttime, ptc.frames, ptc.frames/(float) (end-ptc.starttime));
 
+	// close the logfiles
 	if (cs_config.infofd) fclose(cs_config.infofd);
 	if (cs_config.errfd) fclose(cs_config.errfd);
 	if (cs_config.debugfd) fclose(cs_config.debugfd);
+	
+	// and exit with success
 	exit(EXIT_SUCCESS);
 }
 
@@ -277,8 +310,7 @@ void checkFieldFiles(wfs_t *wfsinfo) {
 		if (fieldfd == NULL) {
 			// if we cannot open the file, we need to darkcalibrate at some
 			// point and store the calibration in wfsinfo->darkfile.
-			// to indicate we need to do darkfield calibration, set .darkim
-			// to NULL
+			// Allocate the memory anyway so the image can be stored here later on
 			logInfo(0, "Darkfield file (%s) could not be opened, will create darkfield calibration later (%s).", wfsinfo->darkfile, strerror(errno));
 			wfsinfo->darkim = gsl_matrix_float_calloc(wfsinfo->res.x, wfsinfo->res.y);
 		}
@@ -286,10 +318,10 @@ void checkFieldFiles(wfs_t *wfsinfo) {
 			// if we can open the file, there is already darkfield calibration
 			// present. allocate memory for the image, and try to import it
 			logInfo(0, "Darkfield file found and, trying to import into memory.");
-			// checking alloc is not necessary because we use gsl's own checking
+			// checking alloc success is not necessary because we use gsl's own checking
 			wfsinfo->darkim = gsl_matrix_float_calloc(wfsinfo->res.x, wfsinfo->res.y);
 			gsl_matrix_float_fscanf(fieldfd, wfsinfo->darkim);
-			// close the file
+			// close the file again
 			fclose(fieldfd);
 		}
 	}
@@ -308,7 +340,6 @@ void checkFieldFiles(wfs_t *wfsinfo) {
 			logInfo(0, "Flatfield file found and, trying to import into memory.");
 			wfsinfo->flatim = gsl_matrix_float_calloc(wfsinfo->res.x, wfsinfo->res.y);
 			gsl_matrix_float_fscanf(fieldfd, wfsinfo->flatim);
-			// close the file
 			fclose(fieldfd);
 		}
 	}
@@ -327,7 +358,6 @@ void checkFieldFiles(wfs_t *wfsinfo) {
 			logInfo(0, "Skyfield file found and, trying to import into memory.");
 			wfsinfo->skyim = gsl_matrix_float_calloc(wfsinfo->res.x, wfsinfo->res.y);
 			gsl_matrix_float_fscanf(fieldfd, wfsinfo->skyim);
-			// close the file
 			fclose(fieldfd);
 		}
 	}
@@ -338,7 +368,7 @@ void checkAOConfig(control_t *ptc) {
 	// Check WFS configuration here //
 	//////////////////////////////////
 	
-	// first check the amount of WFSs
+	// first check the amount of WFSs, less than 0 is weird, as is more than 4 (in simple systems at least)
 	if (ptc->wfs_count < 0 || ptc->wfs_count > 3) {
 		logWarn("Total of %d WFS, seems unsane?", ptc->wfs_count);
 	}
@@ -379,7 +409,7 @@ void checkAOConfig(control_t *ptc) {
 		for (i=0; i< ptc->wfc_count; i++) {
 			if (ptc->wfc[i].nact < 1) {
 				logWarn("%d actuators for WFC %d? This is hard to believe, disabling WFC %d.", ptc->wfc[i].nact, i, i);
-				// !!!:tim:20080416 how to disable a WFC?
+				// 0 acts effectively disables a WFC
 				ptc->wfc[i].nact = 0;
 				ptc->wfc[i].ctrl = NULL;
 			}
@@ -430,6 +460,7 @@ void checkAOConfig(control_t *ptc) {
 }
 
 void checkFOAMConfig(config_t *conf) {
+	// check port to listen on, must be sane (1 -- 2^16-1), or default to 10000
 	if (conf->listenport < 1 || conf->listenport > 65535) {
 		logWarn("Warning, port invalid, choose between 1 and 65535. Defaulting to 10000.");
 		conf->listenport = 10000;
@@ -686,7 +717,7 @@ int sockListen() {
 		logErr("Listen failed: %s", strerror(errno));
 		
 	// Set socket to non-blocking mode, nice for events
-	if (setnonblock(sock) != EXIT_SUCCESS) 
+	if (setNonBlock(sock) != EXIT_SUCCESS) 
 		logWarn("Coult not set socket to non-blocking mode, might cause undesired side-effects.");
 		
 	logInfo(0, "Successfully initialized socket on %s:%d, setting up event schedulers.", cs_config.listenip, cs_config.listenport);
@@ -704,7 +735,7 @@ int sockListen() {
 	return EXIT_SUCCESS;
 }
 
-int setnonblock(int fd) {
+int setNonBlock(int fd) {
 	int flags;
 
     flags = fcntl(fd, F_GETFL);
@@ -730,7 +761,7 @@ void sockAccept(const int sock, const short event, void *arg) {
 	if (newsock < 0) 
 		logWarn("Accepting socket failed: %s!", strerror(errno));
 	
-	if (setnonblock(newsock) != EXIT_SUCCESS)
+	if (setNonBlock(newsock) != EXIT_SUCCESS)
 		logWarn("Unable to set new client socket to non-blocking.");
 
 	// Check if we do not exceed the maximum number of connections:
@@ -1016,17 +1047,13 @@ int tellClients(char *msg, ...) {
 	asprintf(&out2, "%s\n", out);
 
 	for (i=0; i < MAX_CLIENTS; i++) {
-//		logDebug(LOG_NOFORMAT, "%d ", i);
 		if (clientlist.connlist[i] != NULL && clientlist.connlist[i]->fd > 0) { 
-//			logDebug(LOG_NOFORMAT, "told! (%s) ", out2);
 			if (bufferevent_write(clientlist.connlist[i]->buf_ev, out2, strlen(out2)+1) != 0) {
 				logWarn("Error telling client %d", i);
 				return EXIT_FAILURE; 
 			}
 		}
 	}
-	// pthread_mutex_unlock(&mode_mutex);
-//	logDebug(LOG_NOFORMAT, "\n");
 	return EXIT_SUCCESS;
 }
 
@@ -1123,164 +1150,313 @@ ALIASES += cslib="foam_cs_library.*"
 	flexibility that the framework can be implemented on any AO system.
 	
 	A short list of the features of @name follows:
-	\li Portable - It will run on many (Unix) systems and is hardware independent
-	\li Scalable - It  will scale easily and handle multiple cores/CPU's
-	\li Usable - It will be controllable over a network by multiple clients simultaneously
-	\li Simulation - It will be able to simulate the whole AO system
-	\li MCAO - It will support multiple correctors and sensors simultaneously
-	\li Offloading - It will be able to offload/distribute wavefront correction over several correctors
-	\li Stepping - It will allow for stepping over an image
-
+ 
+	\li Portable - It runs on many (Unix) systems and is hardware independent
+	\li Scalable - It scales easily and handle multiple cores/CPU's
+	\li Extensible - It can be extended with new features or algorithms relatively easily
+	\li Usable - It is controllable over a network by multiple clients simultaneously
+	\li Free - It licensed under the GPL and therefore can be used by anyone.
 	
 	For more information, see the FOAM wiki at http://www.astro.uu.nl/~astrowik/astrowiki/index.php/FOAM or the documentation
 	on http://www.phys.uu.nl/~0315133/foam/docs/ .
 	
 	\section struct @name structure
 	
-	In this section, the structure of @name will be clarified. First, some key concepts are explained which are used within @name.
+	In this section, the structure of @name will be clarified. First, some key 
+	concepts are explained which are used within @name.
 	
-	@name uses several concepts, for which it is useful to have names. First of all, the complete set of files downloadable
-	from for example http://www.phys.uu.nl/~0315133/foam/tags/ is simply called a \e `distribution', or \e `version' or just \e @name.
+	@name uses several concepts, for which it is useful to have names. First of 
+	all, the complete set of files (downloadable from for example http://www.phys.uu.nl/~0315133/foam/tags/) 
+	is simply called a \e `distribution', or \e `version' or just \e @name.
 	
-	Within the distribution itself, there are two parts of @name worth mentioning. These are the Control Software (CS) and the
-	User Interface (UI). Currently, the UI is not being developed actively, as telnet works just as well (for now). This explains
-	the \c `_cs' and \c `_ui' prefix in some filenames.
+	Historically, there was a @name Control Software (CS) and a User Interface 
+	(UI), although the latter is not actively being developed as telnet suffices
+	for the moment. This explains the \c `_cs' and \c `_ui' prefix in some filenames.
 	
-	The Control Software consists of three parts:
+	Within the distribution itself (which consists mainly of the Control Software
+	at the moment), there are several different components:
+ 
 	\li The \e framework itself, in \c foam_cs.c
 	\li \e Prime \e modules, in \c foam_primemod-*
 	\li \e Modules, in \c foam_modules-*
 	
-	To get a running program, the framework, a prime module and zero or more modules are combined into one executable. This
-	program is called a \e `package' for obvious reasons. 
+	To get a running program, the framework, a prime module and zero or more 
+	modules are combined into one executable. This program is called a 
+	\e `package' and is what performs AO operations.
 	
 	By default a dummy package is supplied, which take the framework
-	and the dummy prime module (which does nothing) which results in the most basic package possible. A more interesting
-	package, the simulation package, is also provided. This package simulates a complete AO system and can be used to test 
-	new routines (center-of-gravity tracking, correlation tracking, load distribution) in a reproducible fashion.
+	and the dummy prime module (which does nothing) which results in the 
+	most basic package possible. A more interesting package, the simulation 
+	package, is also provided. This package simulates a complete AO system 
+	and can be used to test new routines (center-of-gravity tracking, 
+	correlation tracking, load distribution) in a reproducible fashion. 
+
+	There are two simulation prime modules, one is `simdyn', which performs
+	dynamical simulation, meaning the atmosphere, WFCs, WFSs etc are all simulated
+	dynamically, and `simstat', which uses a static WFS image and performs
+	the calculations that a normal AO system would do. The first can be useful
+	to see if the system works at all, and to improve algorithms qualitatively,
+	while the second can be used to benchmark the performance of the system without
+	the need of AO hardware.
 	
 	\subsection struct-frame The Framework
 	
-	The framework itself does very little. It reads the configuration into memory and if necessary allocates memory for
-	control vectors, images and what not. After that it provides a hook for prime modules to initialize themselves. Immediately
-	after that, it splits in a worker thread which does the actual AO calculations, and in a networking thread which
-	listens for connections on a TCP socket. The worker thread starts by running in listening mode, where it waits for 
-	commands coming from clients connected over the network. Communication between the two threads is done with mutexes.
+	The framework itself does very little. It performs some initialization, allocating 
+	memory for control vectors, images and what not. After that it provides a hook for 
+	prime modules to initialize themselves. Immediately after that, it splits in a worker 
+	thread which does the AO calculations, and in a networking thread which listens for 
+	connections on a (TCP) socket. The worker thread starts startThread(), while the
+	other thread starts with sockListen(). Communication between the two threads is done 
+	with the mutexes `mode_mutex' and `mode_cond'.
 	
-	The framework provides the following hooks to prime modules:	
-	\li int modInitModule(control_t *ptc);
+	The framework provides the following hooks to prime modules: 
 	\li void modStopModule(control_t *ptc);
+	\li int modInitModule(control_t *ptc, config_t *cs_config);
+	\li int modPostInitModule(control_t *ptc, config_t *cs_config);
 	\li int modOpenInit(control_t *ptc);
 	\li int modOpenLoop(control_t *ptc);
+	\li int modOpenFinish(control_t *ptc);
 	\li int modClosedInit(control_t *ptc);
 	\li int modClosedLoop(control_t *ptc);
+	\li int modClosedFinish(control_t *ptc);
 	\li int modCalibrate(control_t *ptc);
-	\li int modMessage(control_t *ptc, client_t *client, char *list[], int count);
+	\li int modMessage(control_t *ptc, const client_t *client, char *list[], const int count); 
 	
-	See the documentation on the specific functions for more information.
+	See the documentation on the specific functions for more details on what these functions
+	can be used for.
 
 	\subsection struct-prime The Prime Modules
 	
-	Prime modules must define the functions defined in the above list. The prime module should tell what these hooks do,
-	e.g. what happens during open loop, closed loop and during calibration. These functions can be just placeholders,
-	which can be seen in \c foam_primemod-dummy.c , or more complex functions which actually do something.
+	Prime modules must define the functions defined in the above list. The prime 
+	module should tell what these hooks do, e.g. what happens during open loop, 
+	closed loop and during calibration. These functions can be just placeholders,
+	which can be seen in \c foam_primemod-dummy.c , or more complex functions 
+	which actually do something.
 	
-	Almost always, prime modules link to modules in turn, by simply including their header files and compiling
-	the source files along with the prime module. The modules contain the functions which do the hard work,
-	and are divided into seperate files depending on the functionality of the routines.
+	Almost always, prime modules link to modules in turn, by simply including 
+	their header files and compiling the source files along with the prime module. 
+	The modules contain the functions which do the hard work, and are divided into 
+	separate files depending on the functionality of the routines. The prime module
+	can thus be seen as a sort of hub connecting the framework with the modules.
 	
 	\subsection struct-mod The Modules
 	
-	Modules provide functions which can be used by other modules or by prime modules. If a module uses routines from
-	another module, this module depends on the other module. This is for example the case between the `sim' module
-	which needs to read in PGM files and therefore depends on the `pgm' module.
+	Modules provide functions which can be used by other modules or by prime 
+	modules. If a module uses routines from another module, this module depends 
+	on the other module. This is for example the case between the `simdyn' module
+	which needs to read in PGM files and therefore depends on the `img' module.
 	
-	A few default modules are provided with the distribution, and their use can be can be read at the top of the files.
+	A few default modules are provided with the distribution, and their function
+	can be can be read at the top of the header file associated with the module.
 
+	\subsection threading Threading model
+ 
+	As noted before, the framework uses two threads. The main thread is used for
+	networking with the clients, while the AO routines are performed in a different
+	thread which separates from the main thread at the beginning. 
+ 
+	These threads are not equal, as the first thread is created at program startup while the
+	second one splits off this thread. This can be important for example when 
+	using SDL on OS X, which requires some initialization code that *is* 
+	automatically run when starting SDL from the main thread, but that is not
+	run when starting SDL from any other thread. Another issue can be OpenGL,
+	which can only be called from one thread, and thus must be initialized in
+	the thread it will be called from.
+ 
+	To circumvent possible problems, @name provides two initialization routines,
+	one is run at the beginning before any threading, modInitModule(), while
+	the other is run in the thread that will be controlling the AO, 
+	modPostInitModule(). Most configuration consists of things like allocating 
+	memory, setting variables, reading files etc which are thread-safe. Other 
+	things such as OpenGL initialization might not be thread-safe and might 
+	have to be initialized after threading.
+ 
+	Another thing to keep in mind is that all functions are called from the AO
+	worker thread, except for the modMessage() function, which is called from
+	the networking thread. This gives some problems when using libevent to
+	send information to clients as libevent is not entirely thread safe
+	(and its thread-safety is unclear as well). Currently, only the networking
+	thread does interaction with the user.
+ 
+	\subsection codeskel Code skeleton
+ 
+	To provide some insight in the way @name functions, consider this code skeleton:
+
+	\code
+main() {
+	modInitModule()				// Initialize modules,
+								// memory, cameras etc.
+	
+	pthread (startThread())		// Branch into two threads,
+								// one for AO, one for user
+								// I/O
+	
+	sockListen()				// Read & process user I/O.
+	exit
+}
+
+sockListen() {
+	while (true) {				// In a continuous loop,
+		parseCmd()				// read the user input and
+		modMessage()			// process it.
+	}
+}
+
+startThread() {
+	modPostInitModule()			// After threading, provide
+								// an additional init hook.
+}
+
+listenLoop() {
+	while (ptc.mode != shutdown) { // Run continuously until
+								// shutdown.
+		switch (ptc.mode) {		// Read the mode requested
+								// and switch to that mode.
+			case 'open': modeOpen()
+			case 'closed': modeClosed()
+			case 'calibration': modeCal()
+		}
+	}
+	modStopModule()				// Shutdown the modules.
+}
+
+modeOpen() {
+	modOpenInit()				// Open loop init hook.
+	
+	while (ptc.mode == AO_MODE_OPEN) { 
+								// Loop until mode changes.
+		modOpenLoop()			// Actual work is done here.
+	}
+	
+	modOpenFinish()				// Clean up after open loop.
+}
+
+modeClosed() {
+	modClosedInit()				// Closed loop works the
+								// same as open loop.
+	
+	while (ptc.mode == AO_MODE_CLOSED) {
+		modClosedLoop()
+	}
+	
+	modClosedFinish()
+}
+
+modeCal() {
+	modCalibrate()				// Calibration mode provides
+								// simply one hook.
+}
+	\endcode
+ 
+	Note that all hooks (starting with mod*) are run from the AO thread, except for
+	modMessage(), which is ran from the networking thread.
+ 
 	\section install_sec Installation
 	
 	@name currently depends on the following libraries to be present on the system:
 	\li \c libevent used to handle networking with several simultaneous connections,
-	\li \c libsdl which is used to display the sensor output,
-	\li \c libpthread used to seperate functions over thread and distribute load,
+	\li \c SDL which is used to display the sensor output,
+	\li \c pthread used to seperate functions over thread and distribute load,
 	\li \c libgsl used to do singular value decomposition, link to BLAS and various other matrix/vector operation.
 	
-	For simulation mode, the following is also required:
+	For other prime modules, additional libraries may be required. For example,
+	the simdyn prime module also requires:
 	\li \c fftw3 which is used to compute FFT's to simulate the SH lenslet array,
-	\li \c SDL_Image used to read PGM files.
+	\li \c SDL_Image used to read image files files.
 	
-	Furthermore @name requires basic things like a hosted compilation environment, a compiler etc. For a full list of dependencies,
-	see the header files. @name is however supplied with an (auto-)configure script which checks these
-	basic things and tells you what the capabilities of @name on your system will be.
+	Furthermore @name requires basic things like a hosted compilation environment, 
+	a compiler etc. For a full list of dependencies, see the header files. @name 
+	is however supplied with an (auto-)configure script which checks these
+	things and tells you what the capabilities of @name on your system will be. If
+	libraries are missing, the configure script will tell you so.
 	
 	To install @name, follow these simple steps:
 	\li Download a @name release from http://www.phys.uu.nl/~0315133/foam/tags/
 	\li Extract the tarball
 	\li Run `autoreconf -s -i` which generates the configure script
-	\li Run `./configure` to check if your system will support @name. If not, configure will tell you so
+	\li Run `./configure --help` to check what options you would like to use
+	\li Run `./configure` (with specific options) to check if your system will support @name. If not, configure will tell you so
 	\li Run `make` which makes the various @name packages
-	\li Optionally edit config/ao_config.cfg and src/foam_cs_config.h to match your needs
 	\li cd into src/, run any of the executables
 	\li Connect to localhost:10000 (default) with a telnet client
 	\li Type `help' to get a list of @name commands
 	
 	\subsection config Configure @name
 	
-	Configure @name, especially \c ao_config.cfg. Make sure you do \b not copy the FFTW wisdom file \c 'fftw_wisdom.dat' to new machines,
-	this file contains some simple benchmarking results done by FFTW and are very machine dependent. @name will regenerate the file
-	if necessary, but it cannot detect `wrong' wisdom files. Copying bad files is worse than deleting.
+	With simulation, make sure you do \b not copy the FFTW wisdom file 
+	\c 'fftw_wisdom.dat' to new machines, this file contains some 
+	simple benchmarking results done by FFTW and are very machine dependent. 
+	@name will regenerate the file if necessary, but it cannot detect 
+	`wrong' wisdom files. Copying bad files is worse than deleting, thus
+	if unsure: delete the wisdom file.
 	
 	\section drivers Developing Packages
 
-	@name itself does not do a lot (run ./foamcs-dummy to verify), it basically provides a framework to which
-	modules can be attached. Fortunately, this approach allows for complex bundles of modules, or `packages', as explained
-	previously in \ref struct.
+	As said before, @name itself does not do a lot (compile & run 
+	./foamcs-dummy to verify), it provides a framework to which modules can be 
+	attached. Fortunately, this approach allows for complex bundles of 
+	modules, or `packages', as explained previously in \ref struct.
 	
-	If you want to use @name in a specific setup, you'll probably have to program some modules yourself. To do this,
-	start with a `prime module' which \b must contain the functions listed in \ref struct-frame 
-	(see foam_primemod-dummy.c for example).
+	If you want to use @name in a specific setup, you'll probably have to 
+	program some modules yourself. To do this, start with a `prime module' 
+	which \b must contain the functions listed in \ref struct-frame (see 
+	foam_primemod-dummy.c for example). 
 		
-	These functions provide hooks for the package to work with, and if their meaning is not immediately clear, the documentation
-	provides some more details on what these functions do. It is also wise to look at the control_t struct which is used 
-	throughout @name to store data, settings and other information.
+	These functions provide hooks for the package to work with, and if 
+	their meaning is not immediately clear, the documentation provides some 
+	more details on what these functions do. It is also wise to look at the 
+	control_t struct which is used throughout @name to store data, settings 
+	and other information.
 	
-	Once these functions are defined, you can link the prime module to modules already supplied with @name. Simply do this
-	by including the header files of the specific modules you want to add. For information on what certain modules do, look
-	at the documentation of the files. This documentation tells you what the module does, what functions are available, and
-	what other modules this module possibly depends on.
+	Once these functions are defined, you can link the prime module to modules 
+	already supplied with @name. Simply do this by including the header files 
+	of the specific modules you want to add. For information on what certain 
+	modules do, look at the documentation of the files. This documentation 
+	tells you what the module does, what functions are available, and what 
+	other modules this module possibly depends on.
 	
-	If the default set of modules is insufficient to build a package in your situation, you will have to write your own. This
-	scenario is (unfortunately) very likely, because @name does not provide modules to read out all possible framegrabbers/
-	cameras and cannot drive all possible filter wheels, tip-tilt mirrors, deformable mirrors etc. If you have written your
-	own module, please e-mail it to me (@authortim) so I can add it to the complete distribution.
+	If the default set of modules is insufficient to build a package in your 
+	situation, you will have to write your own. This scenario is (unfortunately) 
+	very likely, because @name does not provide modules to read out all possible 
+	framegrabbers/cameras and cannot drive all possible filter wheels, tip-tilt 
+	mirrors, deformable mirrors etc. If you have written your own module, please 
+	e-mail it to me (@authortim) so I can add it to the complete distribution.
 	
 	\subsection ownmodule Write your own modules
 	
-	A module in @name can take any form, but to keep things at least slightly organised, some conventions apply. These guidelines
-	include:
+	A module in @name can take any form, but to keep things at least slightly 
+	organised, some conventions apply. These guidelines include:
 	
 	\li Seperate functionally different routines in different modules,
 	\li Name your modules `foam_modules-\<modulename\>.c' and supply a header file,
-	\li Include doxygen compatible information on the module in the C file (see foam_modules-sh.c),
-	\li Include doxygen compatible information on the routines in the header file (see foam_modules-sh.h),
-	\li Prefix functions that are used elsewhere with `mod', and hardware related functions with `drv'.
+	\li Include doxygen compatible information on the module in general in the C file
+	\li Include doxygen compatible information on the routines in the header file
+	\li Prefix functions that you write with \<modulename\>.
+	\li If necessary, provide a datatype to hold module-specific configuration
+ 
 	
-	These guidelines are also used in the existing modules so you can easily see what a module does and what functions you have
-	to call to get the module working.
+	These guidelines are also used in the existing modules so you can easily 
+	see what a module does and what functions you have to call to get the module working.
+	For examples, see foam_modules-sh.c and foam_modules-sh.h.
 	
 	\subsection ownmake Adapt the Makefile
 	
-	Once you have a package, you will need to edit Makefile.am in the src/ directory. But before that, you will need to edit
-	the configure.ac script in the root directory. This is necessary so that at configure time, users can decide what packages
-	to build or not to build, using --enable-\<package\>. In the configure.ac file, you will need to add two parts:
+	Once you have a package, you will need to edit Makefile.am in the src/ 
+	directory. But before that, you will need to edit the configure.ac script 
+	in the root directory. This is necessary so that at configure time, users 
+	can decide what packages to build or not to build, using 
+	--enable-\<package\>. In the configure.ac file, you will need to add two 
+	parts:
+ 
 	\li Add a check to see if the user wants to build the package or not (see 'TEST FOR USER INPUT')
-	\li Add a few lines to check if extra libraries necessary for the package are present (see 'ITIFG MODE')
-
-	(TODO: simplify configuration, seperate packages in different files)
+	\li Add a few lines to check if extra libraries necessary for the package are present (see 'STATIC SIMULATION MODE')
 	
-	After editing the configure.ac script, the Makefile.am needs to know that we want to build a new package/executable. For an
-	example on how to do this, see the few lines following '# did we enable UI support or not?'. Basically: check if the package 
-	must be built, if yes, add package to bin_PROGRAMS, and setup various \c _SOURCES, \c _CFLAGS and \c _LDFLAGS variables.
+	After editing the configure.ac script, the Makefile.am needs to know 
+	that we want to build a new package/executable. For an example on how 
+	to do this, see the few lines following 'STATIC SIMULATION MODE'. 
+	In short: check if the package must be built, if yes, add package to 
+	bin_PROGRAMS, and setup various \c _SOURCES, \c _CFLAGS and \c _LDFLAGS 
+	variables.
 	
 	\section network Networking
 
@@ -1303,14 +1479,12 @@ ALIASES += cslib="foam_cs_library.*"
 	
 	There are some limitations to @name which are discussed in this section. The list includes:
 
-	\li The subaperture resolution must be a multiple of 4,
-	\li The configuration file linelength is at max 1024 characters,
+	\li The subaperture resolution must be a multiple of 4, because of tracking windows
 	\li Commands given to @name over the socket/network can be at most 1024 characters,
-	\li At the moment, most modules work with floats to process data (no chars or doubles)
-	\li Bug: Feedback to clients connected seems to fail sometimes
-	\li Bug: On OS X, SDL does not appear to behave nicely, especially during shutdown
+	\li At the moment, most modules work with bytes to process data
+	\li On OS X, SDL does not appear to behave nicely, especially during shutdown (this is a problem of the OS X SDL implementation and cannot easily be fixed without using Objective C code)
 	
-	Points with the `at the moment' prefix will hopefully be resolved in the future, other constraints will not be `fixed' because
-	these pose no big problems for most to all working setups.
-
+	There might be other limitations or bugs, but these are not listed here 
+	because I am not aware of them. If you find some, please let me know.
+ 
 */

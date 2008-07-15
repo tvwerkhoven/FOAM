@@ -1,47 +1,27 @@
+/*
+ Copyright (C) 2008 Tim van Werkhoven
+ 
+ This file is part of FOAM.
+ 
+ FOAM is free software: you can redistribute it and/or modify
+ it under the terms of the GNU General Public License as published by
+ the Free Software Foundation, either version 3 of the License, or
+ (at your option) any later version.
+ 
+ FOAM is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ GNU General Public License for more details.
+ 
+ You should have received a copy of the GNU General Public License
+ along with FOAM.  If not, see <http://www.gnu.org/licenses/>.
+ */
 /*! 
  @file foam_modules-okodm.h
  @author @authortim
- @date 2008-03-20 10:07
+ @date 2008-07-15
  
  @brief This file contains prototypes for routines to drive a 37 actuator Okotech DM using PCI interface
- 
- \section Info
- 
- The Okotech 37ch DM has 38 actuators (one being the substrate) leaving 37 for AO. The mirror
- is controlled through a PCI board. This requires setting some hardware addresses, but not much
- more. See mirror.h and rotate.c supplied on CD with the Okotech mirror for examples.
- 
- Manufacturers website:
- <tt>http://www.okotech.com/content/oko/pics/gallery/Typical%20PDM%2037%20passport_.pdf</tt>
- 
- This module also compiles on its own like:\n
- <tt>gcc foam_modules-okodm.c -lm -lc -lgslcblas -lgsl -Wall -DFOAM_MODOKODM_ALONE=1 -std=c99</tt>
- 
- \section Functions
- 
- \li drvInitOkoDM() - Initialize the Okotech DM (call this first!)
- \li drvSetOkoDM() - Sets the Okotech 37ch DM to a certain voltage set.
- \li drvRstOkoDM() - Resets the Okotech DM to FOAM_MODOKODM_RSTVOLT
- \li drvCloseOkoDM() - Calls drvRstOkoDM, then closes the Okotech DM (call this at the end!)
- 
- \section Configuration
- 
- There are several things that can be configured about this module. The following defines are used:
- \li \b FOAM_MODOKODM_MAXVOLT (255), the maximum voltage allowed (all voltages are logically AND'd with this value)
- \li \b FOAM_MODOKODM_ALONE (*undef*), ifdef, this module will compile on it's own, imlies FOAM_DEBUG
- \li \b FOAM_DEBUG (*undef*), ifdef, this module will give lowlevel debugs through printf
- 
- \section Dependencies
- 
- This module depends on GSL because it uses the gsl_vector* datatypes to store DM commands in. 
- This is done because this this format is suitable for doing fast calculations, and
- the control vector is usually the output of some matrix multiplication.
- 
- \section History
- 
- \li 2008-04-14: api update, defines deprecated, replaced by struct
- \li 2008-04-02: init
- 
  */
 
 #ifndef FOAM_MODULES_OKODM

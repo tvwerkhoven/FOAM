@@ -1,54 +1,27 @@
+/*
+ Copyright (C) 2008 Tim van Werkhoven
+ 
+ This file is part of FOAM.
+ 
+ FOAM is free software: you can redistribute it and/or modify
+ it under the terms of the GNU General Public License as published by
+ the Free Software Foundation, either version 3 of the License, or
+ (at your option) any later version.
+ 
+ FOAM is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ GNU General Public License for more details.
+ 
+ You should have received a copy of the GNU General Public License
+ along with FOAM.  If not, see <http://www.gnu.org/licenses/>.
+ */
 /*! 
 	@file foam_modules-daq2k.h
 	@author @authortim
-	@date May 05, 2008
-
+	@date 2008-07-15
+ 
 	@brief This file contains prototypes to drive a DaqBoard 2000 PCI board
-
-	\section Info
-
-	The IOtech DaqBoard/2000 series are PCI cards which have several digital and analog I/O ports, which 
-	can be used to aqcuire data from various sources. This board can also be used to drive tip-tilt
-	mirrors, telescope (using analog outputs) and filterwheels (using several digital output ports)
-	though, making it a good choice for a general purpose IO board in AO setups.
- 
-	This module supports multiple daqboards with various DAC channels, and supports the 8225 digital IO chips 
-	providing a total of 3 8-bit ports, of which the last port is split into two 4 bit ports.
- 
-	It does not support 'banks'.
- 
-	More information can be found at the manufacturers website:\n
-	<tt>http://www.iotech.com/catalog/daq/dbseries2.html</tt>
- 
-	Especially take a look at the programmer's manual which has a useful function reference at the end.
- 
-	This module can compile on its own:\n
-	<tt>gcc foam_modules-daq2k.c -lc -lm -ldaqx -Wall -DFOAM_MODDAQ2K_ALONE=1 -I../../../../misc/daqboard_iotech220_portedto26/include/ -L../../../../misc/daqboard_iotech220_portedto26/lib</tt>
-
-	\section Functions
-	
-	\li drvInitDaq2k() - Initialize the Daqboard 2000 (call this first!)
-	\li drvCloseDaq2k() - Close the Daqboard 2000 (call this at the end!)
-	\li drvDaqSetDAC() - Write analog output to specific ports (ranges from 0 to 65535 (16bit))
-	\li drvDaqSetDACs() - Write analog output to all (ranges from 0 to 65535 (16bit))
-	\li drvDaqSetP2() - Write digital output to specific ports
-	
-	\section Configuration
-	
-	Configuration for this modules goes through define statements:
-	
-	\li	\b FOAM_MODDAQ2K_ALONE (*undef*), ifdef, compiles on its own (implies FOAM_DEBUG)
-	\li \b FOAM_DEBUG (*undef*), ifdef, gives lowlevel prinft debug statements
-
-	\section Dependencies
- 
-	This module depends on the daqx library used to access daqboards.
-
-	\section History
- 
-	\li 2008-04-14: api change, configuration done with datatypes instead of defines
-	\li 2008-04-02: init
-
 */
 
 #ifndef FOAM_MODULES_DAQ2k
@@ -132,6 +105,11 @@ int drvDaqSetP2(mod_daq2k_board_t *board, int port, int bitpat);
  voltage on that port. The value 'val' is first bitwase AND'd with 0xffff
  so that the value written to the channel is never too high (safety check, the daqboard
  only accepts 16 bit values, such that 0xffff is the highest possible value).
+ 
+ Note that the voltage range for the DaqBoard/2000 series boards is -10 to 10 
+ volt, such that the precision is 0.305mV (20 volt/2^16). It is possible
+ however, that not the whole voltage range is used, but that only the positive
+ voltages are used.
  
  If the board->fd is -1, this function returns with EXIT_SUCCESS immmediately
  

@@ -1,3 +1,21 @@
+/*
+ Copyright (C) 2008 Tim van Werkhoven
+ 
+ This file is part of FOAM.
+ 
+ FOAM is free software: you can redistribute it and/or modify
+ it under the terms of the GNU General Public License as published by
+ the Free Software Foundation, either version 3 of the License, or
+ (at your option) any later version.
+ 
+ FOAM is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ GNU General Public License for more details.
+ 
+ You should have received a copy of the GNU General Public License
+ along with FOAM.  If not, see <http://www.gnu.org/licenses/>.
+ */
 /*! 
  @file foam_modules-display.h
  @author @authortim
@@ -8,6 +26,9 @@
 
 #ifndef FOAM_MODULES_DISPLAY
 #define FOAM_MODULES_DISPLAY
+
+// LIBRARIES //
+/*************/
 
 #include "foam_cs_library.h"
 #include "SDL.h" 	// most portable way according to 
@@ -42,7 +63,7 @@
 /*************/
 
 /*!
- @brief This enum lists the available display sources
+ @brief This enum lists the available display sources used by displayDraw to decide what to display.
  */
 typedef enum {
     DISPSRC_RAW,       //!< Display the raw uncorrect image from the camera
@@ -72,7 +93,7 @@ typedef struct {
 /*!
  @brief This struct stores some properties on how to handle the displaying.
  
- Basically a wrapper for things like resolution, SDL_Surface pointer, captions etc.
+ Mostly a wrapper for things like resolution, SDL_Surface pointer, captions etc.
  Also lets the user define whether or not to do brightness/contrast themselves.
  
  If autocontrast = 1, the drawing routines in this module analyse the next image
@@ -215,16 +236,16 @@ int displayGrid(coord_t gridres, mod_display_t *disp);
 #endif
 
 /*!
- @brief Finish drawing, if necessary
+ @brief Init stuff before drawing, if necessary.
  
  This routine must be used before drawing a frame yourself when not using
  the displayDraw routine. If so, wrap the drawing routines you are using between
- displayBeginDraw and displayFinishDraw.
+ displayBeginDraw() and displayFinishDraw().
  */
 void displayBeginDraw(mod_display_t *disp);
 
 /*!
- @brief Init stuff before drawing, if necessary
+ @brief Finish up some things after drawing, if necessary.
  
  This routine must be used after drawing a frame yourself when not using
  the displayDraw routine. If so, wrap the drawing routines you are using between

@@ -1,10 +1,27 @@
+/*
+ Copyright (C) 2008 Tim van Werkhoven
+ 
+ This file is part of FOAM.
+ 
+ FOAM is free software: you can redistribute it and/or modify
+ it under the terms of the GNU General Public License as published by
+ the Free Software Foundation, either version 3 of the License, or
+ (at your option) any later version.
+ 
+ FOAM is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ GNU General Public License for more details.
+ 
+ You should have received a copy of the GNU General Public License
+ along with FOAM.  If not, see <http://www.gnu.org/licenses/>.
+ */
 /*! 
  @file foam_modules-alone.h
  @author @authortim
- @date 2008-07-01 22:38
+ @date 2008-07-15 19:12
  
- @brief This header file includes some definitions necessary to run modules on 
- their own.
+ @brief This header file includes some definitions necessary to run modules on their own.
  
  This header file declares some simple things that are necessary to compile
  modules on their own. Usually modules are used from a prime module, and in that

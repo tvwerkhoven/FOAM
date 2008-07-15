@@ -1,10 +1,66 @@
+/*
+ Copyright (C) 2008 Tim van Werkhoven
+ 
+ This file is part of FOAM.
+ 
+ FOAM is free software: you can redistribute it and/or modify
+ it under the terms of the GNU General Public License as published by
+ the Free Software Foundation, either version 3 of the License, or
+ (at your option) any later version.
+ 
+ FOAM is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ GNU General Public License for more details.
+ 
+ You should have received a copy of the GNU General Public License
+ along with FOAM.  If not, see <http://www.gnu.org/licenses/>.
+ */
 /*! 
 	@file foam_modules-okodm.c
 	@author @authortim
 	@date 2008-03-20 10:07
 
 	@brief This file contains routines to drive a 37 actuator Okotech DM using PCI interface
-
+ 
+ \section Info
+ 
+ The Okotech 37ch DM has 38 actuators (one being the substrate) leaving 37 for AO. The mirror
+ is controlled through a PCI board. This requires setting some hardware addresses, but not much
+ more. See mirror.h and rotate.c supplied on CD with the Okotech mirror for examples.
+ 
+ Manufacturers website:
+ <tt>http://www.okotech.com/content/oko/pics/gallery/Typical%20PDM%2037%20passport_.pdf</tt>
+ 
+ This module also compiles on its own like:\n
+ <tt>gcc foam_modules-okodm.c -lm -lc -lgslcblas -lgsl -Wall -DFOAM_MODOKODM_ALONE=1 -std=c99</tt>
+ 
+ \section Functions
+ 
+ \li drvInitOkoDM() - Initialize the Okotech DM
+ \li drvSetOkoDM() - Sets the Okotech 37ch DM to a certain voltage set.
+ \li drvRstOkoDM() - Resets the Okotech DM to FOAM_MODOKODM_RSTVOLT
+ \li drvCloseOkoDM() - Calls drvRstOkoDM, then closes the Okotech DM (call this at the end!)
+ 
+ \section Configuration
+ 
+ There are several things that can be configured about this module. The following defines are used:
+ \li \b FOAM_MODOKODM_MAXVOLT (255), the maximum voltage allowed (all voltages are logically AND'd with this value)
+ \li \b FOAM_MODOKODM_ALONE (*undef*), ifdef, this module will compile on it's own, imlies FOAM_DEBUG
+ \li \b FOAM_DEBUG (*undef*), ifdef, this module will give lowlevel debugs through printf
+ 
+ \section Dependencies
+ 
+ This module depends on GSL because it uses the gsl_vector* datatypes to store DM commands in. 
+ This is done because this this format is suitable for doing fast calculations, and
+ the control vector is usually the output of some matrix multiplication.
+ 
+ \section History
+ 
+ \li 2008-04-14: api update, defines deprecated, replaced by struct
+ \li 2008-04-02: init
+ 
+ 
 */
 
 // HEADERS //
@@ -304,32 +360,6 @@ int main () {
 		return EXIT_FAILURE;
 	}
 
-//	reading back from a PCI card is not always possible,
-//	and apparantly it does not work here :P
-//
-//	// now manually read stuff:
-//    off_t offset;
-//    int w_out;
-//    int dat=0;
-//	
-//	printf("Data set on %s, now reading back to see if it worked:\n",FOAM_MODOKODM_PORT);
-//	
-//	for (i=1; i<FOAM_MODOKODM_NCHAN; i++) {
-//		if ((offset=lseek(Okofd, dm->addr[i], SEEK_SET)) < 0) {
-//			fprintf(stderr,"Can not lseek %s\n", FOAM_MODOKODM_PORT);
-//			return EXIT_FAILURE;
-//		}
-//		printf("(s: %d), ", (int) offset);
-//
-//		if ((w_out=read(Okofd, &dat,1)) != 1) {
-//			fprintf(stderr,"Can not read %s\n", FOAM_MODOKODM_PORT);   
-//			return EXIT_FAILURE;
-//		}
-//		printf("(%d, %#x) ", i, dat);
-////		sleeping between read calls is not really necessary, pci is fast enough
-////		usleep(1000000);
-//	}
-//	printf("\n");
 
 	printf("Mirror does not give errors (good), now setting actuators one by one\n(skipping 0 because it is the substrate)\n");
 	printf("Settings acts with 0.25 second delay:...\n");

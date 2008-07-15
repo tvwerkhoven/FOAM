@@ -20,9 +20,18 @@ Minor fixes & tweaks
 * Improve dark/flat algorithm, raw-dark/(flat-dark) must be multiplied by
   some factor when working with 8 bit bytes (as we are), but which factor?
 
+* 2008-07-15 
+  System header files included are not organised very neatly. These need to
+  be moved to the specific modules actually using them, instead of dumping
+  them in the library header file.
+
 Major feature upgrades
 
 * Correlation tracking functions for Shack Hartmann sensors.
+
+* 2008-07-15
+  Fix libevent thread-unsafety such that both threads can communicate with 
+  the clients
 
 * Adding MCAO capabilities
 

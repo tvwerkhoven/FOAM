@@ -1,20 +1,47 @@
+/*
+ Copyright (C) 2008 Tim van Werkhoven
+ 
+ This file is part of FOAM.
+ 
+ FOAM is free software: you can redistribute it and/or modify
+ it under the terms of the GNU General Public License as published by
+ the Free Software Foundation, either version 3 of the License, or
+ (at your option) any later version.
+ 
+ FOAM is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ GNU General Public License for more details.
+ 
+ You should have received a copy of the GNU General Public License
+ along with FOAM.  If not, see <http://www.gnu.org/licenses/>.
+ */
 /*! 
  @file foam_modules-img.h
  @author @authortim
- @date 2008-02-25
+ @date 2008-07-15
  
  @brief This header file prototypes the image functions.
  */
 #ifndef FOAM_MODULES_IMG
 #define FOAM_MODULES_IMG
 
+// DEFINES //
+/***********/
+
 #ifdef FOAM_MODIMG_ALONE
 #define FOAM_DEBUG 1
 #endif
 
+// LIBRARIES //
+/*************/
+
 #include "foam_cs_library.h"		// we link to the main program here (i.e. we use common (log) functions)
 #include "SDL_image.h"				// we need this to read image files
 #include <gd.h>						// we need this to write png/jpg files
+
+// PROTOTYPES //
+/**************/
 
 /*!
  @brief Reads image files from disk into an SDL_Surface

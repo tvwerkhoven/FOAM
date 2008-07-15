@@ -12,7 +12,7 @@ In this document:
 ============================
 
 FOAM follows the standard GNU installation procedure. To compile FOAM you
-will need an ANSI C-compiler. After unpacking the distribution the
+will need an ANSI C-compiler. After unpacking the distribution, the
 Makefiles can be prepared using the configure command,
 
   ./configure
@@ -47,10 +47,10 @@ explanation on certain aspects of FOAM.
   - Install Debian as you like
 
 FOAM runs on any system providing a nice compiler (like GCC) and the
-libraries it depends on (which include libevent, libgsl, ATLAS, lidgd,
-libpng and some others). FOAM should even run on OS X, although the
-hardware drivers necessary might not. Even if the hardware drivers are not
-available for OS X, you can still run simulation mode on OS X, if you want
+libraries it depends on (which include libevent, libgsl, and possibly 
+some others). FOAM does compile on OS X, but there are some SDL/OpenGL
+problems with that specific implementation. Even if the hardware drivers are not
+available for a certain system, you can still run simulation mode, if you want
 to test new tracking or correction mechanisms.
 
   - Set up AO user, or use another account 

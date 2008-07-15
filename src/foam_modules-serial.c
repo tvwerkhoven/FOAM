@@ -1,10 +1,42 @@
+/*
+ Copyright (C) 2008 Tim van Werkhoven
+ 
+ This file is part of FOAM.
+ 
+ FOAM is free software: you can redistribute it and/or modify
+ it under the terms of the GNU General Public License as published by
+ the Free Software Foundation, either version 3 of the License, or
+ (at your option) any later version.
+ 
+ FOAM is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ GNU General Public License for more details.
+ 
+ You should have received a copy of the GNU General Public License
+ along with FOAM.  If not, see <http://www.gnu.org/licenses/>.
+ */
 /*! 
  @file foam_modules-serial.c
  @author @authortim
- @date 2008-03-31 16:51
+ @date 2008-07-15
  
- @brief This file contains routines to drive the serial port (i.e. for filterwheels)
+ \section Info
  
+ For info, look at the source, it isn't that complicated (really)
+ 
+ This module can compile on its own\n
+ <tt>gcc foam_modules-serial.c -Wall -std=c99 -DFOAM_MODSERIAL_ALONE=1</tt>
+ 
+ \section Functions
+ 
+ \li drvSetSerial() - Sets a value on a serial port
+ 
+ \section Configuration
+ 
+ This module only supports these configurations:
+ \li \b FOAM_MODSERIAL_ALONE (*undef*), ifdef, this module compiles on its own
+ \li \b FOAM_DEBUG (*undef*), ifdef, gives lowlevel debug information
  */
 
 #include "foam_modules-serial.h"

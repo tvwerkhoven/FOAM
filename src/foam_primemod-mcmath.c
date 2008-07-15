@@ -19,19 +19,13 @@ extern pthread_cond_t mode_cond;
 // GLOBALS //
 /***********/
 
-#ifdef FOAM_SIMHW
-#define FOAM_CONFIG_PRE "mcmath-sim"
-#else
 #define FOAM_CONFIG_PRE "mcmath"
-#endif
-
 
 // Displaying
 #ifdef FOAM_MCMATH_DISPLAY
 mod_display_t disp;
 #endif
 
-#ifndef FOAM_SIMHW
 // ITIFG camera & buffer
 mod_itifg_cam_t dalsacam;
 mod_itifg_buf_t buffer;
@@ -40,20 +34,11 @@ mod_itifg_buf_t buffer;
 mod_daq2k_board_t daqboard;
 
 // Okotech DM type
-mod_okodm_t okodm;
-#else
-// we need this to simular raw, dark and flat images
-uint8_t *rawsrc;
-uint8_t *darksrc;
-uint8_t *flatsrc;
-#endif
+//mod_okodm_t okodm;
 
 // Shack Hartmann tracking info
 mod_sh_track_t shtrack;
 
-// field images here. 
-// We store darkfield * 256 in dark, 256 * (1/(flatfield-darkfield)) in
-// gain, and then calculate corrim = (raw*256 - dark) * gain / 256
 
 int modInitModule(control_t *ptc, config_t *cs_config) {
 	logInfo(0, "This is the McMath-Pierce prime module, enjoy.");
@@ -85,23 +70,27 @@ int modInitModule(control_t *ptc, config_t *cs_config) {
 	ptc->wfs[0].id = 0;
 	ptc->wfs[0].fieldframes = 1000;     // take 1000 frames for a dark or flatfield
 	
-	// configure WFC 0
-	ptc->wfc[0].name = "Okotech DM";
-	ptc->wfc[0].nact = 37;
+//	// configure WFC 0
+//	ptc->wfc[0].name = "Okotech DM";
+//	ptc->wfc[0].nact = 37;
+//	ptc->wfc[0].gain.p = 1.0;
+//	ptc->wfc[0].gain.i = 1.0;
+//	ptc->wfc[0].gain.d = 1.0;
+//	ptc->wfc[0].type = WFC_DM;
+//    ptc->wfc[0].id = 0;
+//	ptc->wfc[0].calrange[0] = -1.0;
+//	ptc->wfc[0].calrange[1] = 1.0;	
+	
+	// configure WFC 0 (or 1), the TT
+	ptc->wfc[0].name = "TT";
+	ptc->wfc[0].nact = 2;
 	ptc->wfc[0].gain.p = 1.0;
 	ptc->wfc[0].gain.i = 1.0;
 	ptc->wfc[0].gain.d = 1.0;
-	ptc->wfc[0].type = WFC_DM;
-    ptc->wfc[0].id = 0;
-	
-	// configure WFC 1
-	ptc->wfc[1].name = "TT";
-	ptc->wfc[1].nact = 2;
-	ptc->wfc[1].gain.p = 1.0;
-	ptc->wfc[1].gain.i = 1.0;
-	ptc->wfc[1].gain.d = 1.0;
-	ptc->wfc[1].type = WFC_TT;
-    ptc->wfc[1].id = 1;
+	ptc->wfc[0].type = WFC_TT;
+    ptc->wfc[0].id = 1;
+	ptc->wfc[0].calrange[0] = -1.0;
+	ptc->wfc[0].calrange[1] = 1.0;	
 	
 	// configure filter 0
 	ptc->filter[0].name = "Telescope FW";
@@ -120,7 +109,6 @@ int modInitModule(control_t *ptc, config_t *cs_config) {
     ptc->filter[1].filters[0] = FILT_PINHOLE;
 	ptc->filter[1].filters[1] = FILT_OPEN;
 	
-#ifndef FOAM_SIMHW
 	// configure ITIFG camera & buffer
 	dalsacam.module = 48;
 	dalsacam.device_name = "/dev/ic0dma";
@@ -143,22 +131,21 @@ int modInitModule(control_t *ptc, config_t *cs_config) {
 	daqboard.iop2conf[2] = 1;
 	daqboard.iop2conf[3] = 1;			// use digital IO ports for {out, out, in, in}
 	
-	//drvInitDaq2k(&daqboard);
+	drvInitDaq2k(&daqboard);
 	
 	// configure DM here
 	
-	okodm.minvolt = 0;					// nice voltage range is 0--255, middle is 180
-	okodm.midvolt = 180;
-	okodm.maxvolt = 255;
-	okodm.nchan = 38;					// 37 acts + substrate = 38 channels
-	okodm.port = "/dev/port";			// access pci board here
-	okodm.pcioffset = 4;				// offset is 4 (sizeof(int)?)
-	okodm.pcibase[0] = 0xc000;			// base addresses from lspci -v
-	okodm.pcibase[1] = 0xc400;
-	okodm.pcibase[2] = 0xffff;
-	okodm.pcibase[3] = 0xffff;
+//	okodm.minvolt = 0;					// nice voltage range is 0--255, middle is 180
+//	okodm.midvolt = 180;
+//	okodm.maxvolt = 255;
+//	okodm.nchan = 38;					// 37 acts + substrate = 38 channels
+//	okodm.port = "/dev/port";			// access pci board here
+//	okodm.pcioffset = 4;				// offset is 4 (sizeof(int)?)
+//	okodm.pcibase[0] = 0xc000;			// base addresses from lspci -v
+//	okodm.pcibase[1] = 0xc400;
+//	okodm.pcibase[2] = 0xffff;
+//	okodm.pcibase[3] = 0xffff;
 	
-#endif //FOAM_SIMHW
 	// shtrack configuring
     // we have a CCD of WxH, with a lenslet array of WlxHl, such that
     // each lenslet occupies W/Wl x H/Hl pixels, and we use track.x x track.y
@@ -187,27 +174,6 @@ int modInitModule(control_t *ptc, config_t *cs_config) {
 	cs_config->errfile = NULL;
 	cs_config->debugfile = NULL;
 
-#ifdef FOAM_SIMHW
-	// If we're simulating, we want to load static dark, flat and sensor images
-	coord_t imgres;
-	if (modReadIMGArrByte("../config/simstatic-irr.pgm", &(rawsrc), &imgres) == EXIT_FAILURE || \
-	modReadIMGArrByte("../config/simstatic-dark.pgm", &(darksrc), &imgres) == EXIT_FAILURE || \
-	modReadIMGArrByte("../config/simstatic-flat.pgm", &(flatsrc), &imgres) == EXIT_FAILURE) {
-		logErr("Cannot continue, static images not available");
-		return EXIT_FAILURE;
-	}
-
-/*	uint16_t *darksumsrc = malloc(imgres.x * imgres.y * sizeof(uint16_t));
-	uint16_t *flatsumsrc = malloc(imgres.x * imgres.y * sizeof(uint16_t));
-	// calculate flat*256 and dark*256
-	for (ii=0; ii<(imgres.x * imgres.y); ii++) {
-		darksumsrc[i] = darksrc[i]*256;
-		flatsumsrc[i] = flatsrc[i]*256;
-	}*/
-	
-	// init pointer to the fake src
-	ptc->wfs[0].image  = (void *) rawsrc;
-#endif
 	
 	return EXIT_SUCCESS;
 }
@@ -239,13 +205,11 @@ void modStopModule(control_t *ptc) {
 	displayFinish(&disp);
 #endif
 	
-#ifndef FOAM_SIMHW
 	itifgStopGrab(&dalsacam);
 	itifgStopBufs(&buffer, &dalsacam);
 	itifgStopBoard(&dalsacam);
 	
-	//drvCloseDaq2k(&daqboard);
-#endif
+	drvCloseDaq2k(&daqboard);
 }
 
 
@@ -256,11 +220,7 @@ void modStopModule(control_t *ptc) {
 int modOpenInit(control_t *ptc) {
 	
 	// start grabbing frames
-#ifndef FOAM_SIMHW
 	return itifgInitGrab(&dalsacam);
-#else
-	return EXIT_SUCCESS;
-#endif
 }
 
 int modOpenLoop(control_t *ptc) {
@@ -289,11 +249,8 @@ int modOpenLoop(control_t *ptc) {
 
 int modOpenFinish(control_t *ptc) {
 	// stop grabbing frames
-#ifndef FOAM_SIMHW
+
 	return itifgStopGrab(&dalsacam);
-#else
-	return EXIT_SUCCESS;
-#endif
 }
 
 // CLOSED LOOP ROUTINES //
@@ -303,11 +260,7 @@ int modClosedInit(control_t *ptc) {
 	// set disp source to calib
 	disp.dispsrc = DISPSRC_FASTCALIB;		
 	// start grabbing frames
-#ifndef FOAM_SIMHW
 	return itifgInitGrab(&dalsacam);
-#else
-	return EXIT_SUCCESS;
-#endif
 }
 
 int modClosedLoop(control_t *ptc) {
@@ -339,11 +292,7 @@ int modClosedLoop(control_t *ptc) {
 
 int modClosedFinish(control_t *ptc) {
 	// stop grabbing frames
-#ifndef FOAM_SIMHW
 	return itifgStopGrab(&dalsacam);
-#else
-	return EXIT_SUCCESS;
-#endif
 }
 
 // MISC ROUTINES //
@@ -361,16 +310,15 @@ int modCalibrate(control_t *ptc) {
 	if (ptc->calmode == CAL_DARK) {
 		// take dark frames, and average
 		logInfo(0, "Starting darkfield calibration now");
-#ifndef FOAM_SIMHW
+
 		if (itifgInitGrab(&dalsacam) != EXIT_SUCCESS)
 			return EXIT_FAILURE;
-#endif
 
 		MMAvgFramesByte(ptc, wfsinfo->darkim, &(ptc->wfs[0]), wfsinfo->fieldframes);
-#ifndef FOAM_SIMHW
+
 		if (itifgStopGrab(&dalsacam) != EXIT_SUCCESS)
 			return EXIT_FAILURE;
-#endif
+
 		// saving image for later usage
 		fieldfd = fopen(wfsinfo->darkfile, "w+");	
 		if (!fieldfd)  {
@@ -394,17 +342,17 @@ int modCalibrate(control_t *ptc) {
 	else if (ptc->calmode == CAL_FLAT) {
 		logInfo(0, "Starting flatfield calibration now");
 		// take flat frames, and average
-#ifndef FOAM_SIMHW
+
 		if (itifgInitGrab(&dalsacam) != EXIT_SUCCESS) 
 			return EXIT_FAILURE;
-#endif
+
 
 		MMAvgFramesByte(ptc, wfsinfo->flatim, &(ptc->wfs[0]), wfsinfo->fieldframes);
 		
-#ifndef FOAM_SIMHW
+
 		if (itifgStopGrab(&dalsacam) != EXIT_SUCCESS)
 			return EXIT_FAILURE;
-#endif
+
 		// saving image for later usage
 		fieldfd = fopen(wfsinfo->flatfile, "w+");	
 		if (!fieldfd)  {
@@ -480,16 +428,16 @@ int modCalibrate(control_t *ptc) {
 	else if (ptc->calmode == CAL_SUBAPSEL) {
 		logInfo(0, "Starting subaperture selection now");
 		// init grabbing
-#ifndef FOAM_SIMHW
+
 		if (itifgInitGrab(&dalsacam) != EXIT_SUCCESS) 
 			return EXIT_FAILURE;
-#endif
+
 		// get a single image
 //		drvGetImg(&dalsacam, &buffer, NULL, &(wfsinfo->image));
 		drvGetImg(ptc, 0);
 		
 		// stop grabbing
-#ifndef FOAM_SIMHW
+
 		if (itifgStopGrab(&dalsacam) != EXIT_SUCCESS)
 			return EXIT_FAILURE;
 #endif
@@ -693,7 +641,7 @@ source:                 %d", disp.brightness, disp.contrast, disp.dispover, disp
 		}
 	}
 #endif
-#ifndef FOAM_SIMHW
+
  	else if (strcmp(list[0], "resetdm") == 0) {
 		if (count > 1) {
 			tmpint = strtol(list[1], NULL, 10);
@@ -734,7 +682,7 @@ source:                 %d", disp.brightness, disp.contrast, disp.dispover, disp
 			tellClients("200 OK RESETDAQ 0.0V");			
 		}
 	}
-#endif
+
  	else if (strncmp(list[0], "set",3) == 0) {
 		if (count > 2) {
 			tmpint = strtol(list[2], NULL, 10);
@@ -887,34 +835,17 @@ contrast:               %f", disp.brightness, disp.contrast);
 /**************************/
 
 int drvGetImg(control_t *ptc, int wfs) {
-#ifndef FOAM_SIMHW
+
 	// we're using an itifg driver, fetch an image to wfs 0
 	if (wfs == 0)
 		return itifgGetImg(&dalsacam, &buffer, NULL, &(ptc->wfs[0].image));
-#else
-	if (wfs == 0) {
-		if (ptc->mode != AO_MODE_CAL) {
-			ptc->wfs[0].image = rawsrc;
-		}
-		else {
-			if (ptc->calmode == CAL_DARK) {
-				ptc->wfs[0].image = darksrc;
-			}
-			else if (ptc->calmode == CAL_FLAT) {
-				ptc->wfs[0].image = flatsrc;
-			}
-			
-		}
-		return EXIT_SUCCESS;
-	}
-#endif // FOAM_SIMHW
 	
 	// if we get here, the WFS is unknown
 	return EXIT_FAILURE;
 }
 
 int drvSetActuator(control_t *ptc, int wfc) {
-#ifndef FOAM_SIMHW
+
 	if (ptc->wfc[wfc].type == WFC_TT) {			// Tip-tilt
 		// use daq, scale [-1, 1] to 2^15--2^16 (which gives 0 to 10 volts
 		// as output). TT is on ports 0 and 1
@@ -930,15 +861,10 @@ int drvSetActuator(control_t *ptc, int wfc) {
 		 */
 		return EXIT_SUCCESS;
 	}
-	return EXIT_FAILURE;
-#else
-	return EXIT_SUCCESS;
-#endif
-	
+	return EXIT_FAILURE;	
 }
 
 int drvSetupHardware(control_t *ptc, aomode_t aomode, calmode_t calmode) {
-#ifndef FOAM_SIMHW
     if (aomode == AO_MODE_CAL) {
         if (calmode == CAL_DARK) {
             logInfo(0, "Configuring hardware for darkfield calibration");
@@ -963,11 +889,7 @@ int drvSetupHardware(control_t *ptc, aomode_t aomode, calmode_t calmode) {
         logWarn("No special setup needed for this aomode, ignored");
     }        
     
-    return EXIT_SUCCESS;
-#else
-	return EXIT_SUCCESS;
-#endif //#ifndef FOAM_SIMHW
-	
+    return EXIT_SUCCESS;	
 }
 
 int MMAvgFramesByte(control_t *ptc, gsl_matrix_float *output, wfs_t *wfs, int rounds) {
@@ -1125,34 +1047,6 @@ int MMDarkFlatFullByte(wfs_t *wfs, mod_sh_track_t *shtrack) {
 	logDebug(LOG_SOMETIMES, "corr: min %f, max %f, avg %f", corrstats[0], corrstats[1], corrstats[2]);
 	//logDebug(LOG_SOMETIMES, "src: max %f, avg %f", max[0], sum[0]/(wfs->res.x * wfs->res.y));
 	//logDebug(LOG_SOMETIMES, "corr: max %f,avg %f", max[1], sum[1]/(wfs->res.x * wfs->res.y));
-	
-	// old code which only does subaperture correction (superseded by fast ASM code)
-	/*
-	 // tracker windows for dark and flat
-	 for (sn=0; sn<shtrack->nsubap; sn++) {
-	 // correcting tracker window for subapt 'sn' now
-	 // which is shtrack->track.x by track.y big
-	 // and which is located at shtrack->subc.x by subc.y
-	 
-	 for (i=0; i < shtrack->track.y; i++) {
-	 for (j=0; j < shtrack->track.x; j++) {
-	 // source pixel at:
-	 // img[subc.x + subc.y *res.x + i *res.x + j]
-	 // dst at corrim,
-	 // corrim = img-dark
-	 gsl_matrix_float_set(wfs->corrim, i + shtrack->subc[sn].y, j + shtrack->subc[sn].x, \
-	 (((float) imagesrc[shtrack->subc[sn].y * wfs->res.x + shtrack->subc[sn].x + i*wfs->res.x +j]) -\
-	 gsl_matrix_float_get(wfs->darkim, i + shtrack->subc[sn].y, j + shtrack->subc[sn].x))  \
-	 );
-	 }
-	 }
-	 }
-	 // now do raw-dark/(flat-dark), flat-dark is already stored in wfs->flatim
-	 //gsl_matrix_float_sub (wfs->corrim, wfs->darkim);
-	 //gsl_matrix_float_div_elements (wfs->corrim, wfs->flatim);
-	 
-	 */
-	
-	
+		
 	return EXIT_SUCCESS;
 }
