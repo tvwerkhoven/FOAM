@@ -242,6 +242,7 @@ int modOpenInit(control_t *ptc) {
 }
 
 int modOpenLoop(control_t *ptc) {
+
 	static char title[64];
 	// get an image, without using a timeout
 	if (drvGetImg(ptc, 0) != EXIT_SUCCESS)
@@ -253,6 +254,16 @@ int modOpenLoop(control_t *ptc) {
 	// Track the CoG using the full-frame corrected image
 	modCogTrack(ptc->wfs[0].corrim, DATA_GSL_M_F, ALIGN_RECT, &shtrack, NULL, NULL);
 	
+	// Move the tip-tilt mirror around
+//	ptc->frames % ptc->logfrac
+
+	gsl_vector_float_set(ptc->wfc[wfc].ctrl, 0, (ptc->frames % 50)/50.0 * 2.0 - 1.0);
+	gsl_vector_float_set(ptc->wfc[wfc].ctrl, 0, (ptc->frames % 100)/100.0 * 2.0 - 1.0);
+	logDebug("Setting TT tot (%.2f, %.2f)", gsl_vector_float_get(ptc->wfc[wfc].ctrl, 0), gsl_vector_float_get(ptc->wfc[wfc].ctrl, 1));
+//	drvDaqSetDAC(&daqboard, 0, (int) 32768 + (gsl_vector_float_get(ptc->wfc[wfc].ctrl, 0)+1) * 16384);
+//	drvDaqSetDAC(&daqboard, 1, (int) 32768 + (gsl_vector_float_get(ptc->wfc[wfc].ctrl, 1)+1) * 16384);
+						 
+		
 #ifdef FOAM_MCMATH_DISPLAY
     if (ptc->frames % ptc->logfrac == 0) {
 		displayDraw((&ptc->wfs[0]), &disp, &shtrack);

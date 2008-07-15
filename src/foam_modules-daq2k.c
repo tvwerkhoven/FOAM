@@ -115,9 +115,10 @@ static int initDaqDac(mod_daq2k_board_t *board) {
 	int chan;
 	DaqError err;	
 	CHAR errmsg[512];
-
 #ifdef FOAM_DEBUG
 	printf("Opening %d DAC channels on board %s, channel...", board->nchans, board->device);
+#else
+	logDebug(0,"Opening %d DAC channels on board %s, channel...", board->nchans, board->device);
 #endif
 	
 	for (chan=0; chan < board->nchans; chan++) {
@@ -138,12 +139,16 @@ static int initDaqDac(mod_daq2k_board_t *board) {
 		}
 #ifdef FOAM_DEBUG
 		printf("%d...", chan);
-#endif		
+#else
+		logDebug(LOG_NOFORMAT ,"%d...", chan);
+#endif
 		
 	}
 	
 #ifdef FOAM_DEBUG
 	printf("done!\n");
+#else
+	logDebug(LOG_NOFORMAT ,"done!\n");
 #endif
 	
 	return EXIT_SUCCESS;
