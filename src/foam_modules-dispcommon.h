@@ -1,5 +1,5 @@
 /*
- Copyright (C) 2008 Tim van Werkhoven
+ Copyright (C) 2008 Tim van Werkhoven (tvwerkhoven@xs4all.nl)
  
  This file is part of FOAM.
  
@@ -17,7 +17,7 @@
  along with FOAM.  If not, see <http://www.gnu.org/licenses/>.
  */
 /*! 
- @file foam_modules-display.h
+ @file foam_modules-dispcommon.h
  @author @authortim
  @date 2008-03-12
  
@@ -162,6 +162,7 @@ void displaySDLEvents(mod_display_t *disp);
  
  @param [in] *img pointer to the image to display
  @param [in] *disp pre-filled mod_display_t structure
+ @param [in] *shtrack pre-filled mod_sh_track_t structure, if using SH WFS support
  */
 #ifdef FOAM_MODULES_DISLAY_SHSUPPORT
 int displayImgByte(uint8_t *img, mod_display_t *disp, mod_sh_track_t *shtrack);
@@ -204,7 +205,7 @@ int displayDraw(wfs_t *wfsinfo, mod_display_t *disp);
  Do not forget to call displayBeginDraw()/displayFinishDraw().
  
  @param [in] *shtrack mod_sh_track_t struct with info on the SH configuration
- @param [in] *disp initialize mod_display_t struct with display information
+ @param [in] *disp initialized mod_display_t struct with display information
  */
 int displaySubapts(mod_sh_track_t *shtrack, mod_display_t *disp);
 
@@ -214,7 +215,7 @@ int displaySubapts(mod_sh_track_t *shtrack, mod_display_t *disp);
  Do not forget to call displayBeginDraw()/displayFinishDraw().
  
  @param [in] *shtrack mod_sh_track_t struct with info on the SH configuration
- @param [in] *disp initialize mod_display_t struct with display information
+ @param [in] *disp initialized mod_display_t struct with display information
  */
 int displayVecs(mod_sh_track_t *shtrack, mod_display_t *disp);
 
@@ -229,7 +230,7 @@ int displaySubaptLabels(mod_sh_track_t *shtrack, mod_display_t *disp);
  Do not forget to call displayBeginDraw()/displayFinishDraw().
  
  @param [in] gridres The grid resolution to draw on the screen (i.e. 8x8)
- @param [in] *screen SDL_Surface to draw on
+ @param [in] *disp initialized mod_display_t struct with display information 
  */
 int displayGrid(coord_t gridres, mod_display_t *disp);
 

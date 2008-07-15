@@ -1,5 +1,5 @@
 /*
- Copyright (C) 2008 Tim van Werkhoven
+ Copyright (C) 2008 Tim van Werkhoven (tvwerkhoven@xs4all.nl)
  
  This file is part of FOAM.
  
@@ -46,7 +46,7 @@
  @brief This function writes a string to a port and returns the bytes written
  
  @param [in] *port The port to write to, like '/dev/ttyS0'
- @param [in] *cmd The string to write to the port, such as 'XR0\r'
+ @param [in] *cmd The string to write to the port, such as 'XR0\\r'
  @return Number of bytes written on success, EXIT_FAILURE otherwise.
  */
 int drvSetSerial(const char *port, const char *cmd);

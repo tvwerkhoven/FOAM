@@ -1,5 +1,5 @@
 /*
- Copyright (C) 2008 Tim van Werkhoven
+ Copyright (C) 2008 Tim van Werkhoven (tvwerkhoven@xs4all.nl)
  
  This file is part of FOAM.
  

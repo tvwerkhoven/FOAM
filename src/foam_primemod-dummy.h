@@ -1,3 +1,21 @@
+/*
+ Copyright (C) 2008 Tim van Werkhoven (tvwerkhoven@xs4all.nl)
+ 
+ This file is part of FOAM.
+ 
+ FOAM is free software: you can redistribute it and/or modify
+ it under the terms of the GNU General Public License as published by
+ the Free Software Foundation, either version 3 of the License, or
+ (at your option) any later version.
+ 
+ FOAM is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ GNU General Public License for more details.
+ 
+ You should have received a copy of the GNU General Public License
+ along with FOAM.  If not, see <http://www.gnu.org/licenses/>.
+ */
 /*! 
 	@file foam_primemod-dummy.h
 	@author @authortim
@@ -6,7 +24,7 @@
 	@brief This is the prime mod header file for 'dummy', which holds the basic defines necessary
 */
 
-// GENERAL //
+// DEFINES //
 /***********/
 
 /*
@@ -67,27 +85,3 @@ typedef enum { // filter_t
 #include "config.h"
 #include "foam_cs_library.h"
 
-	// !!!:tim:20080414 datatype initialized in sh module, porting can begin
-
-//float *refim;					//!< reference image for correlation tracking (unused now)
-//
-//gsl_vector_float *singular;		//!< stores singular values from SVD (nact big)
-//gsl_matrix_float *dmmodes;		//!< stores dmmodes from SVD (nact*nact big)
-//gsl_matrix_float *wfsmodes;		//!< stores wfsmodes from SVD (nact*nsubap*2 big)
-//
-//int cells[2];					//!< number of cells in this WFS (SH only)
-//int shsize[2];					//!< cells/res, resolution per cell (redundant, but easy -> phase this out)
-//coord_t track;					//!< tracker window resolution in pixels (i.e. 1/2 of shsize)
-//
-//int (*subc)[2];					//!< this will hold the coordinates of each subapt
-//int (*gridc)[2];				//!< this will hold the grid origina for a certain subaperture
-////	float (*refc)[2];				//!< reference displacements
-////	float (*disp)[2];				//!< measured displacements (compare with refence for actual shift)
-//gsl_vector_float *refc;			//!< reference displacements
-//gsl_vector_float *disp;			//!< measured displacements (compare with refence for actual shift)
-//fcoord_t stepc;					//!< add this to the reference displacement during correction
-//
-//char pinhole[FILENAMELEN];		//!< filename to store the pinhole calibration (in *(refc))
-//char influence[FILENAMELEN];	//!< filename to store the influence matrix
-//
-//int nsubap;						//!< amount of subapertures used (coordinates stored in subc)
