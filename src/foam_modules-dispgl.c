@@ -244,11 +244,16 @@ int displayImgByte(uint8_t *img, mod_display_t *disp) {
 			if (img[i] > max) max = img[i];
 			else if (img[i] < min) min = img[i];
 		}
-		disp->brightness = -min;
-		disp->contrast = 255.0/((float)max-min);
+		// !!!:tim:20080716 -min might not work as these statistics only hold for
+		// *this* frame, so next frame might have lower pixel values, which using
+		// this brightness will be negative. Not good, so never go lower than 0
+		// (and since the minimum intensity is never negative, set bias to 0)
+		//disp->brightness = -min;
+		disp->brightness = 0;
+		disp->contrast = 255.0/((float)max-0);
 		disp->autocontrast = 0;
-		logInfo(0, "Autocontrast found min: %d, max: %d, giving brightness: %d, contrast: %f", \
-			min, max, disp->brightness, disp->contrast);
+		logInfo(0, "Autocontrast found min: %d, max: %d, using contrast: %f", \
+			min, max, disp->contrast);
 	}
 	// using the brightness and contrast values (which should
 	// scale the image in the [0,255] range)
@@ -318,11 +323,15 @@ int displayGSLImg(gsl_matrix_float *img, mod_display_t *disp, int doscale) {
 				else if (gsltmp[i * disp->res.x + j] < min) min = gsltmp[i * disp->res.x + j];
 			}
 		}
-		disp->brightness = -min;
-		disp->contrast = 255.0/(max-min);
+		// !!!:tim:20080716 -min might not work as these statistics only hold for
+		// *this* frame, so next frame might have lower pixel values, which using
+		// this brightness will be negative. Not good, so never go lower than 0
+		// (and since the minimum intensity is never negative, set bias to 0)
+		//disp->brightness = -min;
+		disp->contrast = 255.0/(max-0);
 		disp->autocontrast = 0;
-		logInfo(0, "Autocontrast found min: %f, max: %f, giving brightness: %d, contrast: %f", \
-			min, max, disp->brightness, disp->contrast);
+		logInfo(0, "Autocontrast found min: %f, max: %f, using contrast: %f", \
+			min, max, disp->contrast);
 	}
 	// We divide the contrast we find by 255 here, because if we're displaying
 	// a float image (i.e. data stored in floats), OpenGL wants them to be 
