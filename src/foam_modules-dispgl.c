@@ -289,6 +289,20 @@ int displayGSLImg(gsl_matrix_float *img, mod_display_t *disp, int doscale) {
     if (gsltmp == NULL) {
 	    gsltmp = malloc(disp->res.x * disp->res.y * sizeof(float));
     }
+	
+	if (doscale == 1) {
+		// although this calls seem to be fast code (asm optimized or something)
+		// this is absolutely not the case. The following is dog slow.
+		gsl_matrix_float_minmax(gslimg, &min, &max);
+		gsl_matrix_float_add_constant(gslimg, -min);
+		gsl_matrix_float_scale(gslimg, 255/(max-min));
+
+		if (disp->autocontrast == 1) {
+			disp->autocontrast = 0;
+			disp->brightness = 0;
+			disp->contrast = 1;
+		}
+	}	
 
     for (i=0; i< disp->res.y; i++) {
 	    for (j=0; j<disp->res.x; j++) {
@@ -296,7 +310,7 @@ int displayGSLImg(gsl_matrix_float *img, mod_display_t *disp, int doscale) {
 	    }
     }
 	// see contrast hints above in displayImgByte()
-	if (disp->autocontrast == 1) {
+	if (disp->autocontrast == 1 && doscale != 1) {
 		min = max = gsltmp[0];
 		for (i=0; i<disp->res.y; i++) {
 			for (j=0; j<disp->res.x; j++) {
