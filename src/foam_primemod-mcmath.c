@@ -52,7 +52,7 @@ mod_itifg_buf_t buffer;
 mod_daq2k_board_t daqboard;
 
 // Okotech DM type
-//mod_okodm_t okodm;
+mod_okodm_t okodm;
 
 // Shack Hartmann tracking info
 mod_sh_track_t shtrack;
@@ -66,7 +66,7 @@ int modInitModule(control_t *ptc, config_t *cs_config) {
 	ptc->calmode = CAL_INFL;			// this is not really relevant initialliy
 	ptc->logfrac = 100;                 // log verbose messages only every 100 frames
 	ptc->wfs_count = 1;					// 2 FW, 1 WFS and 2 WFC
-	ptc->wfc_count = 2;
+	ptc->wfc_count = 1;
 	ptc->fw_count = 2;
 	
 	// allocate memory for filters, wfcs and wfss
@@ -153,16 +153,16 @@ int modInitModule(control_t *ptc, config_t *cs_config) {
 	
 	// configure DM here
 	
-//	okodm.minvolt = 0;					// nice voltage range is 0--255, middle is 180
-//	okodm.midvolt = 180;
-//	okodm.maxvolt = 255;
-//	okodm.nchan = 38;					// 37 acts + substrate = 38 channels
-//	okodm.port = "/dev/port";			// access pci board here
-//	okodm.pcioffset = 4;				// offset is 4 (sizeof(int)?)
-//	okodm.pcibase[0] = 0xc000;			// base addresses from lspci -v
-//	okodm.pcibase[1] = 0xc400;
-//	okodm.pcibase[2] = 0xffff;
-//	okodm.pcibase[3] = 0xffff;
+	okodm.minvolt = 0;					// nice voltage range is 0--255, middle is 180
+	okodm.midvolt = 180;
+	okodm.maxvolt = 255;
+	okodm.nchan = 38;					// 37 acts + substrate = 38 channels
+	okodm.port = "/dev/port";			// access pci board here
+	okodm.pcioffset = 4;				// offset is 4 (sizeof(int)?)
+	okodm.pcibase[0] = 0xc000;			// base addresses from lspci -v
+	okodm.pcibase[1] = 0xc400;
+	okodm.pcibase[2] = 0xffff;
+	okodm.pcibase[3] = 0xffff;
 	
 	// shtrack configuring
     // we have a CCD of WxH, with a lenslet array of WlxHl, such that
@@ -257,9 +257,9 @@ int modOpenLoop(control_t *ptc) {
 	// Move the tip-tilt mirror around
 //	ptc->frames % ptc->logfrac
 
-	gsl_vector_float_set(ptc->wfc[wfc].ctrl, 0, (ptc->frames % 50)/50.0 * 2.0 - 1.0);
-	gsl_vector_float_set(ptc->wfc[wfc].ctrl, 0, (ptc->frames % 100)/100.0 * 2.0 - 1.0);
-	logDebug("Setting TT tot (%.2f, %.2f)", gsl_vector_float_get(ptc->wfc[wfc].ctrl, 0), gsl_vector_float_get(ptc->wfc[wfc].ctrl, 1));
+	gsl_vector_float_set(ptc->wfc[0].ctrl, 0, (ptc->frames % 50)/50.0 * 2.0 - 1.0);
+	gsl_vector_float_set(ptc->wfc[0].ctrl, 0, (ptc->frames % 100)/100.0 * 2.0 - 1.0);
+	logDebug(LOG_SOMETIMES, "Setting TT tot (%.2f, %.2f)", gsl_vector_float_get(ptc->wfc[0].ctrl, 0), gsl_vector_float_get(ptc->wfc[0].ctrl, 1));
 //	drvDaqSetDAC(&daqboard, 0, (int) 32768 + (gsl_vector_float_get(ptc->wfc[wfc].ctrl, 0)+1) * 16384);
 //	drvDaqSetDAC(&daqboard, 1, (int) 32768 + (gsl_vector_float_get(ptc->wfc[wfc].ctrl, 1)+1) * 16384);
 						 
