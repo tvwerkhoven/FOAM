@@ -1021,11 +1021,11 @@ int MMDarkFlatSubapByte(wfs_t *wfs, mod_sh_track_t *shtrack) {
 				// with quite some effort. This goes must better
 				// in MMX/SSE2.
 				
-				tmp = (( ((uint16_t) tsrc[off+i*wfs->res.x + j]) << 8) - tdark[off+i*shtrack->track.x + j]); 
+				tmp = (( ((uint16_t) tsrc[i*wfs->res.x + j]) << 8) - tdark[off+i*shtrack->track.x + j]); 
 				
 				// Here we check if src - dark < 0, and we set 
 				// the pixel to zero if true
-				if (tmp > (tsrc[off+i*wfs->res.x + j] << 8))
+				if (tmp > (tsrc[i*wfs->res.x + j] << 8))
 					tmp = 0;
 					//tcorr[off+i*shtrack->track.x + j] = 0;
 				// Here we check if we overflow the pixel range
