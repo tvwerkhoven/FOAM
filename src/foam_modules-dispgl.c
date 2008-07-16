@@ -293,9 +293,9 @@ int displayGSLImg(gsl_matrix_float *img, mod_display_t *disp, int doscale) {
 	if (doscale == 1) {
 		// although this calls seem to be fast code (asm optimized or something)
 		// this is absolutely not the case. The following is dog slow.
-		gsl_matrix_float_minmax(gslimg, &min, &max);
-		gsl_matrix_float_add_constant(gslimg, -min);
-		gsl_matrix_float_scale(gslimg, 255/(max-min));
+		gsl_matrix_float_minmax(img, &min, &max);
+		gsl_matrix_float_add_constant(img, -min);
+		gsl_matrix_float_scale(img, 255/(max-min));
 
 		if (disp->autocontrast == 1) {
 			disp->autocontrast = 0;

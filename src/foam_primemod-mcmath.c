@@ -260,8 +260,8 @@ int modOpenLoop(control_t *ptc) {
 	gsl_vector_float_set(ptc->wfc[0].ctrl, 0, (ptc->frames % 50)/50.0 * 2.0 - 1.0);
 	gsl_vector_float_set(ptc->wfc[0].ctrl, 0, (ptc->frames % 100)/100.0 * 2.0 - 1.0);
 	logDebug(LOG_SOMETIMES, "Setting TT tot (%.2f, %.2f)", gsl_vector_float_get(ptc->wfc[0].ctrl, 0), gsl_vector_float_get(ptc->wfc[0].ctrl, 1));
-//	drvDaqSetDAC(&daqboard, 0, (int) 32768 + (gsl_vector_float_get(ptc->wfc[wfc].ctrl, 0)+1) * 16384);
-//	drvDaqSetDAC(&daqboard, 1, (int) 32768 + (gsl_vector_float_get(ptc->wfc[wfc].ctrl, 1)+1) * 16384);
+	drvDaqSetDAC(&daqboard, 0, (int) 32768 + (gsl_vector_float_get(ptc->wfc[0].ctrl, 0)+1) * 16384);
+	drvDaqSetDAC(&daqboard, 1, (int) 32768 + (gsl_vector_float_get(ptc->wfc[0].ctrl, 1)+1) * 16384);
 						 
 		
 #ifdef FOAM_MCMATH_DISPLAY
