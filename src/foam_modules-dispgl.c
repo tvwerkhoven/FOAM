@@ -295,7 +295,7 @@ int displayGSLImg(gsl_matrix_float *img, mod_display_t *disp, int doscale) {
 		    gsltmp[i*disp->res.y + j] = gsl_matrix_float_get(img, i, j);
 	    }
     }
-	// see contrast hints above
+	// see contrast hints above in displayImgByte()
 	if (disp->autocontrast == 1) {
 		min = max = gsltmp[0];
 		for (i=0; i<disp->res.y; i++) {

@@ -698,16 +698,16 @@ source:                 %d", disp.brightness, disp.contrast, disp.dispover, disp
 			tmpfloat = strtof(list[1], NULL);
 			
 			if (tmpfloat >= daqboard.minvolt && tmpfloat <= daqboard.maxvolt) {
-				//drvDaqSetDACs(&daqboard, (int) 65536*(tmpfloat-daqboard.minvolt)/(daqboard.maxvolt-daqboard.minvolt));
-				tellClients("200 OK RESETDAQ %fV", tmpfloat);
+				drvDaqSetDACs(&daqboard, (int) 65536*(tmpfloat-daqboard.minvolt)/(daqboard.maxvolt-daqboard.minvolt));
+				tellClients("200 OK RESETDAQ %.2fV", tmpfloat);
 			}
 			else {
 				tellClient(client->buf_ev, "403 INCORRECT VOLTAGE!");
 			}
 		}
 		else {
-			//drvDaqSetDACs(&daqboard, 65536*(-daqboard.minvolt)/(daqboard.maxvolt-daqboard.minvolt));
-			tellClients("200 OK RESETDAQ 0.0V");			
+			drvDaqSetDACs(&daqboard, 65536*(0.0-daqboard.minvolt)/(daqboard.maxvolt-daqboard.minvolt));
+			tellClients("200 OK RESETDAQ %.2fV", 0.0);			
 		}
 	}
 

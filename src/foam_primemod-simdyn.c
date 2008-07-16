@@ -619,7 +619,7 @@ calibrate <mode>:       calibrate the ao system.\n\
    dark:                take a darkfield by averaging %d frames.\n\
    flat:                take a flatfield by averaging %d frames.\n\
    gain:                calc dark/gain to do actual corrections with.\n\
-   selsubap:            select some subapertures.\n\
+   subap:               select some subapertures.\n\
    pinhole:             select reference coordinates for WFS.\n\
    influence:           calibrate the influence matrix.\n\
 ", ptc->wfs[0].fieldframes, ptc->wfs[0].fieldframes);
@@ -873,7 +873,7 @@ shtrack.samini);
 				pthread_cond_signal(&mode_cond);
 				// add message to the users
 			}
-			else if (strncmp(list[1], "sel",3) == 0) {
+			else if (strncmp(list[1], "subap",3) == 0) {
 				ptc->mode = AO_MODE_CAL;
 				ptc->calmode = CAL_SUBAPSEL;
                 tellClient(client->buf_ev, "200 OK SELECTING SUBAPTS");
