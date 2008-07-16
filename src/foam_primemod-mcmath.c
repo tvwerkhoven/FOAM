@@ -294,6 +294,7 @@ int modClosedInit(control_t *ptc) {
 
 int modClosedLoop(control_t *ptc) {
 	static char title[64];
+	int sn;
 	// get an image, without using a timeout
 	if (drvGetImg(ptc, 0) != EXIT_SUCCESS)
 		return EXIT_FAILURE;
@@ -305,11 +306,26 @@ int modClosedLoop(control_t *ptc) {
 	modCogTrack(ptc->wfs[0].corr, DATA_UINT8, ALIGN_SUBAP, &shtrack, NULL, NULL);
 	
 	// calculate the control signals
-	//modCalcCtrl(ptc, &shtrack, 0, -1);
+	modCalcCtrl(ptc, &shtrack, 0, -1);
+	
+	// set actuator
+	drvSetActuator(ptc, 0);
 	
 #ifdef FOAM_MCMATH_DISPLAY
     if (ptc->frames % ptc->logfrac == 0) {
-		logDebug(0, "disp0: (%.2f, %.2f)", shtrack.disp->data[0], shtrack.disp->data[1]);
+
+		logInfo(0, "Subapt displacements:");
+		for (sn = 0; sn < shtrack.nsubap; sn++)
+			logInfo(LOG_NOFORMAT, "(%.2f, %.2f) ", \
+					gsl_vector_float_get(shtrack.disp, 2*sn + 0), \
+					gsl_vector_float_get(shtrack.disp, 2*sn + 1));
+		logInfo(LOG_NOFORMAT, "\n");
+		
+		logInfo(0, "Actuator signal for TT: (%.2f, %.2f)", \
+				gsl_vector_float_get(ptc->wfc[0].ctrl, 0), \
+				gsl_vector_float_get(ptc->wfc[0].ctrl, 1));
+		
+
 		displayDraw((&ptc->wfs[0]), &disp, &shtrack);
 		//logInfo(0, "Current framerate: %.2f FPS", ptc->fps);
 		snprintf(title, 64, "%s (C) %.0f FPS", disp.caption, ptc->fps);
