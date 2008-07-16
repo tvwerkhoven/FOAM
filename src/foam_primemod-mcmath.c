@@ -473,7 +473,7 @@ int modCalibrate(control_t *ptc) {
 		uint8_t *tmpimg = (uint8_t *) wfsinfo->image;
 		int tmpmax = tmpimg[0];
 		int tmpmin = tmpimg[0];
-		int tmpsum, i;
+		int tmpsum=0, i;
 		for (i=0; i<wfsinfo->res.x*wfsinfo->res.y; i++) {
 			tmpsum += tmpimg[i];
 			if (tmpimg[i] > tmpmax) tmpmax = tmpimg[i];

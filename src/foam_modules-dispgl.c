@@ -247,7 +247,7 @@ int displayImgByte(uint8_t *img, mod_display_t *disp) {
 		disp->brightness = -min;
 		disp->contrast = 255.0/((float)max-min);
 		disp->autocontrast = 0;
-		logInfo(0, "Autocontrast found min: %f, max: %f, giving brightness: %d, contrast: %f", \
+		logInfo(0, "Autocontrast found min: %d, max: %d, giving brightness: %d, contrast: %f", \
 			min, max, disp->brightness, disp->contrast);
 	}
 	// using the brightness and contrast values (which should
