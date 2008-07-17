@@ -25,6 +25,10 @@ Minor fixes & tweaks
   be moved to the specific modules actually using them, instead of dumping
   them in the library header file.
 
+* 2008-07-16
+  Dark- and flat-fielding routines should have their own separate module,
+  this needs to be written
+
 Major feature upgrades
 
 * Correlation tracking functions for Shack Hartmann sensors.
