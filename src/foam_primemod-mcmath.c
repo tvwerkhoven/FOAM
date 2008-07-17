@@ -722,7 +722,7 @@ source:                 %d", disp.brightness, disp.contrast, disp.dispover, disp
 			tmpfloat = strtof(list[1], NULL);
 			
 			if (tmpfloat >= daqboard.minvolt && tmpfloat <= daqboard.maxvolt) {
-				drvDaqSetDACs(&daqboard, (int) 65536*(tmpfloat-daqboard.minvolt)/(daqboard.maxvolt-daqboard.minvolt));
+				drvDaqSetDACs(&daqboard, (int) 65536*(tmpfloat-daqboard.minvolt)/(daqboard.maxvolt-daqboard.minvolt) -1);
 				tellClients("200 OK RESETDAQ %.2fV", tmpfloat);
 			}
 			else {
@@ -902,8 +902,9 @@ int drvSetActuator(control_t *ptc, int wfc) {
 		// use daq, scale [-1, 1] to 2^15--2^16 (which gives 0 to 10 volts
 		// as output). TT is on ports 0 and 1
 		// 32768 = 2^15, 16384 = 2^14, ([-1,1] + 1) * 16384 = [0,32768]
-		drvDaqSetDAC(&daqboard, 0, (int) 32768 + (gsl_vector_float_get(ptc->wfc[wfc].ctrl, 0)+1) * 16384);
-		drvDaqSetDAC(&daqboard, 1, (int) 32768 + (gsl_vector_float_get(ptc->wfc[wfc].ctrl, 1)+1) * 16384);
+		// -1 to prevent overflow for ctrl = 1
+		drvDaqSetDAC(&daqboard, 0, (int) 32768 + (gsl_vector_float_get(ptc->wfc[wfc].ctrl, 0)+1) * 16384 - 1);
+		drvDaqSetDAC(&daqboard, 1, (int) 32768 + (gsl_vector_float_get(ptc->wfc[wfc].ctrl, 1)+1) * 16384 - 1);
 		return EXIT_SUCCESS;
 	}
 	else if (ptc->wfc[wfc].type == WFC_DM) {

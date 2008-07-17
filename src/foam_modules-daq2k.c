@@ -326,7 +326,7 @@ int drvDaqSetP2(mod_daq2k_board_t *board, int port, int bitpat) {
 void drvDaqSetDAC(mod_daq2k_board_t *board, int chan, int val) {
 	if (board->fd == -1)
 		return;
-	
+
 	daqDacWt(board->fd, DddtLocal, (DWORD) chan, (WORD) (val & 0xffff));
 }
 
