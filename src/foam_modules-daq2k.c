@@ -125,7 +125,7 @@ static int initDaqDac(mod_daq2k_board_t *board) {
 		// configure output mode on this channel to be DdomVoltage (i.e. a constant DC)
 		daqDacSetOutputMode(board->fd, DddtLocal, chan, DdomVoltage);
 		// set the initial voltage to 0, does the least harm in any situation ;)
-		err = daqDacWt(board->fd, DddtLocal, chan, (WORD) 0);
+		err = daqDacWt(board->fd, DddtLocal, chan, (WORD) 65536/2);
 		// oops, we got an error! return immediately, and do not use Daqboard DAC routines anymore
 		if (err != DerrNoError) {
 			daqFormatError(err, (PCHAR) errmsg);

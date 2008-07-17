@@ -40,6 +40,14 @@
 #endif
 
 /*!
+ @brief Defines input and output
+ */
+typedef enum {
+	DAQ_OUTPUT = 0,
+	DAQ_INPUT = 1
+} io_t;
+
+/*!
  @brief Datatype to hold metadata on daqboard operations.
  
  (user) fields must be supplied by the user, (foam) fields will be
@@ -51,7 +59,7 @@ typedef struct {
 	int nchans;			//!< (user) number of DAC channels (used) on the board
 	float minvolt;		//!< (user) minimum voltage for the DAC ports
 	float maxvolt;		//!< (user) maximum voltage for the DAC ports
-	int iop2conf[4];	//!< (user) port configuration for 8225 chip, {portA, portB, high portC, low portC} 0 is output, 1 is input
+	io_t iop2conf[4];	//!< (user) port configuration for 8225 chip, {portA, portB, high portC, low portC} DAQ_OUTUT is output, DAQ_INPUT is input
 	int dacinit;		//!< (foam) switch to see if DAC is initialized successfully or not
 	int iop2init;		//!< (foam) switch to see if IO P2 is initialized successfully or not
 } mod_daq2k_board_t;

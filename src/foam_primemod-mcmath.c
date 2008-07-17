@@ -144,12 +144,17 @@ int modInitModule(control_t *ptc, config_t *cs_config) {
 	daqboard.nchans = 4;				// we use 4 analog chans [-10, 10] V
 	daqboard.minvolt = -10.0;
 	daqboard.maxvolt = 10.0;
-	daqboard.iop2conf[0] = 0;
-	daqboard.iop2conf[1] = 0;
-	daqboard.iop2conf[2] = 1;
-	daqboard.iop2conf[3] = 1;			// use digital IO ports for {out, out, in, in}
+	daqboard.iop2conf[0] = DAQ_OUTPUT;
+	daqboard.iop2conf[1] = DAQ_OUTPUT;
+	daqboard.iop2conf[2] = DAQ_INPUT;
+	daqboard.iop2conf[3] = DAQ_INPUT;			// use digital IO ports for {out, out, in, in}
 	
+	// init Daq2k board, sets voltage to 0
+	// The Daq2k board ranges from -10 to 10 volts, with 16 bit precision.
+	// 0 results in -10V, 65535 in 10V, so that 32768 is 0V. 5V is thus 65535*3/4 = 49152
 	drvInitDaq2k(&daqboard);
+	// since the TT works from 0V to 10V, set the Daq2k output to 5V for center
+	drvDaqSetDACs(&daqboard, (int) 32768 + 16384);
 	
 	// configure DM here
 	
@@ -725,8 +730,8 @@ source:                 %d", disp.brightness, disp.contrast, disp.dispover, disp
 			}
 		}
 		else {
-			drvDaqSetDACs(&daqboard, 65536*(0.0-daqboard.minvolt)/(daqboard.maxvolt-daqboard.minvolt));
-			tellClients("200 OK RESETDAQ %.2fV", 0.0);			
+			drvDaqSetDACs(&daqboard, 65536*3/4);
+			tellClients("200 OK RESETDAQ %.2fV", 5.0);			
 		}
 	}
 
@@ -924,6 +929,8 @@ int drvSetupHardware(control_t *ptc, aomode_t aomode, calmode_t calmode) {
         }
         else if (calmode == CAL_PINHOLE) {
             logInfo(0, "Configuring hardware for subaperture reference calibration");
+			// set TT to 5V = middle
+			drvDaqSetDACs(&daqboard, (int) 32768 + 16384);
         }
         else {
             logWarn("No special setup needed for this calibration mode, ignored");
