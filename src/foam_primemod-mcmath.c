@@ -176,6 +176,8 @@ int modInitModule(control_t *ptc, config_t *cs_config) {
 	shtrack.track.y = shtrack.shsize.y/2;
 	shtrack.pinhole = FOAM_CONFIG_PRE "_pinhole.gsldump";
 	shtrack.influence = FOAM_CONFIG_PRE "_influence.gsldump";
+	shtrack.skipframes = 10;		// skip 10 frames before measureing
+	shtrack.measurecount = 3;		// measure 10 times per actuator voltage
 	shtrack.samxr = -1;			// 1 row edge erosion
 	shtrack.samini = 10;			// minimum intensity for subaptselection 10
 	// init the shtrack module for wfs 0 here
@@ -257,11 +259,11 @@ int modOpenLoop(control_t *ptc) {
 	// Move the tip-tilt mirror around
 //	ptc->frames % ptc->logfrac
 
-	gsl_vector_float_set(ptc->wfc[0].ctrl, 0, (ptc->frames % 50)/50.0 * 1.0 - 0.5);
-	gsl_vector_float_set(ptc->wfc[0].ctrl, 1, (ptc->frames % 100)/100.0 * 1.0 - 0.5);
-	logDebug(LOG_SOMETIMES, "Setting TT tot (%.2f, %.2f)", gsl_vector_float_get(ptc->wfc[0].ctrl, 0), gsl_vector_float_get(ptc->wfc[0].ctrl, 1));
-	drvDaqSetDAC(&daqboard, 0, (int) 32768 + (gsl_vector_float_get(ptc->wfc[0].ctrl, 0)+1) * 16384);
-	drvDaqSetDAC(&daqboard, 1, (int) 32768 + (gsl_vector_float_get(ptc->wfc[0].ctrl, 1)+1) * 16384);
+	//gsl_vector_float_set(ptc->wfc[0].ctrl, 0, (ptc->frames % 50)/50.0 * 2.0 - 1.0);
+	//gsl_vector_float_set(ptc->wfc[0].ctrl, 1, (ptc->frames % 100)/100.0 * 1.0 - 0.5);
+	//logDebug(LOG_SOMETIMES, "Setting TT tot (%.2f, %.2f)", gsl_vector_float_get(ptc->wfc[0].ctrl, 0), gsl_vector_float_get(ptc->wfc[0].ctrl, 1));
+	//drvDaqSetDAC(&daqboard, 0, (int) 32768 + (gsl_vector_float_get(ptc->wfc[0].ctrl, 0)+1) * 16384);
+	//drvDaqSetDAC(&daqboard, 1, (int) 32768 + (gsl_vector_float_get(ptc->wfc[0].ctrl, 1)+1) * 16384);
 						 
 		
 #ifdef FOAM_MCMATH_DISPLAY
@@ -273,6 +275,7 @@ int modOpenLoop(control_t *ptc) {
 		SDL_WM_SetCaption(title, 0);
     }
 #endif
+	usleep(10000);
 	return EXIT_SUCCESS;
 }
 
@@ -1034,7 +1037,7 @@ int MMDarkFlatSubapByte(wfs_t *wfs, mod_sh_track_t *shtrack) {
 
 // Dark flat calibration
 int MMDarkFlatFullByte(wfs_t *wfs, mod_sh_track_t *shtrack) {
-	logDebug(LOG_SOMETIMES, "Slow full-frame darkflat correcting now");
+	//logDebug(LOG_SOMETIMES, "Slow full-frame darkflat correcting now");
 	size_t i, j; // size_t because gsl wants this
 	uint8_t* imagesrc = (uint8_t*) wfs->image;
 	
