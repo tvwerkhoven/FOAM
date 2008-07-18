@@ -483,12 +483,14 @@ int simWFCError(mod_sim_t *simparams, wfc_t *wfc, int method, int period) {
 	*/
 	
 	// What routine do we need to call to simulate this WFC?
-	if (wfc->type == WFC_TT)
+	if (wfc->type == WFC_TT) {
 		if (simTT(simparams, simctrl, 0) != EXIT_SUCCESS)
 			return EXIT_FAILURE;
-	else if (wfc->type == WFC_DM)
+	}
+	else if (wfc->type == WFC_DM) {
 		if (simDM(simparams, wfc->ctrl, wfc->nact, 0, -1) != EXIT_SUCCESS) // last arg is for niter. -1 for autoset
 			return EXIT_FAILURE;
+	}
 	
 	logDebug(LOG_SOMETIMES | LOG_NOFORMAT, "Error: %d with %d acts: ", wfc->id, wfc->nact);
 	for (i=0; i<wfc->nact; i++)

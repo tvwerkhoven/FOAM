@@ -257,9 +257,8 @@ int simWFC(wfc_t *wfc, mod_sim_t *simparams);
  */
 int simWFCError(mod_sim_t *simparams, wfc_t *wfc, int method, int period);
 
-#if (0) // simDM is broken, ignore for the time being
 /*!
- @brief Simulate a deformable mirror and generate the associated wavefront (BROKEN)
+ @brief Simulate a deformable mirror and generate the associated wavefront 
  
  This routine, based on response2.c by C.U. Keller, takes a boundarymask,
  an actuatorpattern for the DM being simulated, the number of actuators
@@ -269,13 +268,12 @@ int simWFCError(mod_sim_t *simparams, wfc_t *wfc, int method, int period);
  iterations (set to 0 if unsure).
  
  @param [in] *simparams The number of actuators, must be the same as used in \a *actuatorpat
- @param [in] nact The number of actuators, must be the same as used in \a *actuatorpat
  @param [in] *ctrl The control commands array, \a nact long
+ @param [in] nact The number of actuators, must be the same as used in \a *actuatorpat
  @param [in] mode Add to the wavefront (mode==1) or overwrite? (mode==0)
  @param [in] niter The number of iterations, 0 for automatic choice
  @return EXIT_SUCCESS on success, EXIT_FAILURE otherwise.
  */
-int simDM(mod_sim_t *simparams, int nact, gsl_vector_float *ctrl, int mode, int niter);
-#endif
+int simDM(mod_sim_t *simparams, gsl_vector_float *ctrl, int nact, int mode, int niter);
 
 #endif /* FOAM_MODULES_SIM */

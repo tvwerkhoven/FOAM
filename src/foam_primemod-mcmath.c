@@ -54,7 +54,7 @@ mod_daq2k_board_t daqboard;
 // Okotech DM type
 mod_okodm_t okodm;
 // get some memory for fake DM actuator control
-gsl_vector_float *dmctrl = gsl_vector_float_alloc(37);
+gsl_vector_float *dmctrl;
 // actuators on the left and right
 int okoleft[19] = {1, 2, 3, 7, 8, 9, 10, 11, 18, 19, 20, 21, 22, 23, 24, 34, 35, 36, 37};
 int okoright[19] = {4, 5, 6, 12, 13, 14, 15, 16, 17, 25, 26, 27, 28, 29, 30, 31, 32, 33, 33};
@@ -176,6 +176,8 @@ int modInitModule(control_t *ptc, config_t *cs_config) {
 	
 	// init the mirror
 	drvInitOkoDM(&okodm);
+	// allocate memory for fake ctrl
+	dmctrl = gsl_vector_float_alloc(37);
 	
 	// shtrack configuring
     // we have a CCD of WxH, with a lenslet array of WlxHl, such that
@@ -307,7 +309,7 @@ int modClosedInit(control_t *ptc) {
 
 int modClosedLoop(control_t *ptc) {
 	static char title[64];
-	int sn;
+	int i;
 	// get an image, without using a timeout
 	if (drvGetImg(ptc, 0) != EXIT_SUCCESS)
 		return EXIT_FAILURE;
@@ -334,10 +336,10 @@ int modClosedLoop(control_t *ptc) {
     if (ptc->frames % ptc->logfrac == 0) {
 
 		logInfo(0, "Subapt displacements:");
-		for (sn = 0; sn < shtrack.nsubap; sn++)
+		for (i = 0; i < shtrack.nsubap; i++)
 			logInfo(LOG_NOFORMAT, "(%.2f, %.2f) ", \
-					gsl_vector_float_get(shtrack.disp, 2*sn + 0), \
-					gsl_vector_float_get(shtrack.disp, 2*sn + 1));
+					gsl_vector_float_get(shtrack.disp, 2*i + 0), \
+					gsl_vector_float_get(shtrack.disp, 2*i + 1));
 		logInfo(LOG_NOFORMAT, "\n");
 		
 		logInfo(0, "Actuator signal for TT: (%.2f, %.2f)", \

@@ -972,7 +972,7 @@ int parseCmd(char *msg, const int len, client_t *client) {
 			tmpint = strtol(list[1], NULL, 10);
 			if (tmpint == 1) {
 				if (ptc.misclog) {
-					fprintf(ptc.misclog, "\% LOG START\n");
+					fprintf(ptc.misclog, "%% LOG START\n");
 					ptc.domisclog = true;
 					tellClients("200 OK TOGGLED MISC LOGGING ON");
 				}
