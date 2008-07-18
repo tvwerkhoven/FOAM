@@ -758,20 +758,19 @@ source:                 %d", disp.brightness, disp.contrast, disp.dispover, disp
 		}
 	}
  	else if (strncmp(list[0], "gain",3) == 0) {
-		if (count > 4) {
-			tmpint = strtol(list[3], NULL, 10);
-			tmpfloat = strtof(list[4], NULL);
+		if (count > 3) {
+			tmpint = strtol(list[2], NULL, 10);
+			tmpfloat = strtof(list[3], NULL);
 			if (tmpint >= 0 && tmpint < ptc->wfc_count && tmpfloat >= -1.0 && tmpfloat <= 1.0) {
-				ptc->wfc[tmpint].gain.
-				if (strncmp(list[1], "prop",3)) {
+				if (strncmp(list[1], "prop",3) == 0) {
 					ptc->wfc[tmpint].gain.p = tmpfloat;
 					tellClient(client->buf_ev, "200 OK SET PROP GAIN FOR WFC %d TO %.2f", tmpint, tmpfloat);
 				}
-				else if (strncmp(list[1], "diff",3)) {
+				else if (strncmp(list[1], "diff",3) == 0) {
 					ptc->wfc[tmpint].gain.d = tmpfloat;
 					tellClient(client->buf_ev, "200 OK SET DIFF GAIN FOR WFC %d TO %.2f", tmpint, tmpfloat);
 				}
-				else if (strncmp(list[1], "int",3)) {
+				else if (strncmp(list[1], "int",3) == 0) {
 					ptc->wfc[tmpint].gain.i = tmpfloat;
 					tellClient(client->buf_ev, "200 OK SET INT GAIN FOR WFC %d TO %.2f", tmpint, tmpfloat);
 				}
