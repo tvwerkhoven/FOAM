@@ -53,6 +53,11 @@ mod_daq2k_board_t daqboard;
 
 // Okotech DM type
 mod_okodm_t okodm;
+// get some memory for fake DM actuator control
+gsl_vector_float *dmctrl = gsl_vector_float_alloc(37);
+// actuators on the left and right
+int okoleft[19] = {1, 2, 3, 7, 8, 9, 10, 11, 18, 19, 20, 21, 22, 23, 24, 34, 35, 36, 37};
+int okoright[19] = {4, 5, 6, 12, 13, 14, 15, 16, 17, 25, 26, 27, 28, 29, 30, 31, 32, 33, 33};
 
 // Shack Hartmann tracking info
 mod_sh_track_t shtrack;
@@ -169,6 +174,9 @@ int modInitModule(control_t *ptc, config_t *cs_config) {
 	okodm.pcibase[2] = 0xffff;
 	okodm.pcibase[3] = 0xffff;
 	
+	// init the mirror
+	drvInitOkoDM(&okodm);
+	
 	// shtrack configuring
     // we have a CCD of WxH, with a lenslet array of WlxHl, such that
     // each lenslet occupies W/Wl x H/Hl pixels, and we use track.x x track.y
@@ -249,7 +257,7 @@ int modOpenInit(control_t *ptc) {
 }
 
 int modOpenLoop(control_t *ptc) {
-
+	int i;
 	static char title[64];
 	// get an image, without using a timeout
 	if (drvGetImg(ptc, 0) != EXIT_SUCCESS)
@@ -261,15 +269,12 @@ int modOpenLoop(control_t *ptc) {
 	// Track the CoG using the full-frame corrected image
 	modCogTrack(ptc->wfs[0].corrim, DATA_GSL_M_F, ALIGN_RECT, &shtrack, NULL, NULL);
 	
-	// Move the tip-tilt mirror around
-//	ptc->frames % ptc->logfrac
-
-	//gsl_vector_float_set(ptc->wfc[0].ctrl, 0, (ptc->frames % 50)/50.0 * 2.0 - 1.0);
-	//gsl_vector_float_set(ptc->wfc[0].ctrl, 1, (ptc->frames % 100)/100.0 * 1.0 - 0.5);
-	//logDebug(LOG_SOMETIMES, "Setting TT tot (%.2f, %.2f)", gsl_vector_float_get(ptc->wfc[0].ctrl, 0), gsl_vector_float_get(ptc->wfc[0].ctrl, 1));
-	//drvDaqSetDAC(&daqboard, 0, (int) 32768 + (gsl_vector_float_get(ptc->wfc[0].ctrl, 0)+1) * 16384);
-	//drvDaqSetDAC(&daqboard, 1, (int) 32768 + (gsl_vector_float_get(ptc->wfc[0].ctrl, 1)+1) * 16384);
-						 
+	// Move the DM mirror around, generate some noise TT signal
+	for (i = 0; i<18; i++) {
+		gsl_vector_float_set(dmctrl, okoleft[i], (ptc->frames % 50)/50.0 * 2.0 - 1.0);
+		gsl_vector_float_set(dmctrl, okoright[i], (ptc->frames % 50)/50.0 * -2.0 + 1.0);
+	}
+	drvSetOkoDM(dmctrl, &okodm);
 		
 #ifdef FOAM_MCMATH_DISPLAY
     if (ptc->frames % ptc->logfrac == 0) {
@@ -306,7 +311,14 @@ int modClosedLoop(control_t *ptc) {
 	// get an image, without using a timeout
 	if (drvGetImg(ptc, 0) != EXIT_SUCCESS)
 		return EXIT_FAILURE;
-		
+
+	// Move the DM mirror around, generate some noise TT signal
+	for (i = 0; i<18; i++) {
+		gsl_vector_float_set(dmctrl, okoleft[i], (ptc->frames % 50)/50.0 * 2.0 - 1.0);
+		gsl_vector_float_set(dmctrl, okoright[i], (ptc->frames % 50)/50.0 * -2.0 + 1.0);
+	}
+	drvSetOkoDM(dmctrl, &okodm);
+			
 	// partial dark-flat correction
 	MMDarkFlatSubapByte(&(ptc->wfs[0]), &shtrack);
 	
@@ -319,7 +331,6 @@ int modClosedLoop(control_t *ptc) {
 	// set actuator
 	drvSetActuator(ptc, 0);
 	
-#ifdef FOAM_MCMATH_DISPLAY
     if (ptc->frames % ptc->logfrac == 0) {
 
 		logInfo(0, "Subapt displacements:");
@@ -333,13 +344,14 @@ int modClosedLoop(control_t *ptc) {
 				gsl_vector_float_get(ptc->wfc[0].ctrl, 0), \
 				gsl_vector_float_get(ptc->wfc[0].ctrl, 1));
 		
-
+#ifdef FOAM_MCMATH_DISPLAY
 		displayDraw((&ptc->wfs[0]), &disp, &shtrack);
 		//logInfo(0, "Current framerate: %.2f FPS", ptc->fps);
 		snprintf(title, 64, "%s (C) %.0f FPS", disp.caption, ptc->fps);
 		SDL_WM_SetCaption(title, 0);
-    }
 #endif
+    }
+
 	return EXIT_SUCCESS;
 }
 
