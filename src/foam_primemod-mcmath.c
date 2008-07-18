@@ -271,10 +271,11 @@ int modOpenLoop(control_t *ptc) {
 	// Track the CoG using the full-frame corrected image
 	modCogTrack(ptc->wfs[0].corrim, DATA_GSL_M_F, ALIGN_RECT, &shtrack, NULL, NULL);
 	
-	// Move the DM mirror around, generate some noise TT signal
+	// Move the DM mirror around, generate some noise TT signal with 50-frame
+	// periodicty. Use sin and -sin to get nice signals
 	for (i = 0; i<18; i++) {
-		gsl_vector_float_set(dmctrl, okoleft[i], (ptc->frames % 50)/50.0 * 2.0 - 1.0);
-		gsl_vector_float_set(dmctrl, okoright[i], (ptc->frames % 50)/50.0 * -2.0 + 1.0);
+		gsl_vector_float_set(dmctrl, okoleft[i], sin(ptc->frames *6.283 /50));
+		gsl_vector_float_set(dmctrl, okoright[i], -sin(ptc->frames *6.283 /50));
 	}
 	drvSetOkoDM(dmctrl, &okodm);
 		
@@ -287,7 +288,6 @@ int modOpenLoop(control_t *ptc) {
 		SDL_WM_SetCaption(title, 0);
     }
 #endif
-	usleep(10000);
 	return EXIT_SUCCESS;
 }
 
@@ -314,10 +314,11 @@ int modClosedLoop(control_t *ptc) {
 	if (drvGetImg(ptc, 0) != EXIT_SUCCESS)
 		return EXIT_FAILURE;
 
-	// Move the DM mirror around, generate some noise TT signal
+	// Move the DM mirror around, generate some noise TT signal with 50-frame
+	// periodicty. Use sin and -sin to get nice signals
 	for (i = 0; i<18; i++) {
-		gsl_vector_float_set(dmctrl, okoleft[i], (ptc->frames % 50)/50.0 * 2.0 - 1.0);
-		gsl_vector_float_set(dmctrl, okoright[i], (ptc->frames % 50)/50.0 * -2.0 + 1.0);
+		gsl_vector_float_set(dmctrl, okoleft[i], sin(ptc->frames *6.283 /50));
+		gsl_vector_float_set(dmctrl, okoright[i], -sin(ptc->frames *6.283 /50));
 	}
 	drvSetOkoDM(dmctrl, &okodm);
 			
