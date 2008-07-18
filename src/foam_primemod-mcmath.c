@@ -273,12 +273,13 @@ int modOpenLoop(control_t *ptc) {
 	
 	// Move the DM mirror around, generate some noise TT signal with 50-frame
 	// periodicty. Use sin and -sin to get nice signals
-	for (i = 0; i<18; i++) {
+/*	for (i = 0; i<18; i++) {
 		gsl_vector_float_set(dmctrl, okoleft[i], sin(ptc->frames *6.283 /50));
 		gsl_vector_float_set(dmctrl, okoright[i], -sin(ptc->frames *6.283 /50));
 	}
 	drvSetOkoDM(dmctrl, &okodm);
-		
+*/
+	
 #ifdef FOAM_MCMATH_DISPLAY
     if (ptc->frames % ptc->logfrac == 0) {
 		displayDraw((&ptc->wfs[0]), &disp, &shtrack);
@@ -607,6 +608,13 @@ set [prop] [val]:       set or query property values.\n\
    -:                   if no prop is given, query the values.\
 ");
 			}
+			else if (strncmp(list[1], "gain",3) == 0) {
+tellClient(client->buf_ev, "\
+200 OK HELP GAIN\n\
+   prop [wfc] [f]       set proportional gain for [wfc].\n\
+   int [wfc] [f]        set integral gain for [wfc].\n\ 
+   diff [wfc] [f]       set differential gain for [wfc].");
+			}			
 			else if (strncmp(list[1], "cal",3) == 0) {
 				tellClient(client->buf_ev, "\
 200 OK HELP CALIBRATE\n\
@@ -749,7 +757,36 @@ source:                 %d", disp.brightness, disp.contrast, disp.dispover, disp
 			tellClients("200 OK RESETDAQ %.2fV", 5.0);			
 		}
 	}
-
+ 	else if (strncmp(list[0], "gain",3) == 0) {
+		if (count > 4) {
+			tmpint = strtol(list[3], NULL, 10);
+			tmpfloat = strtof(list[4], NULL);
+			if (tmpint >= 0 && tmpint < ptc->wfc_count && tmpfloat >= -1.0 && tmpfloat <= 1.0) {
+				ptc->wfc[tmpint].gain.
+				if (strncmp(list[1], "prop",3)) {
+					ptc->wfc[tmpint].gain.p = tmpfloat;
+					tellClient(client->buf_ev, "200 OK SET PROP GAIN FOR WFC %d TO %.2f", tmpint, tmpfloat);
+				}
+				else if (strncmp(list[1], "diff",3)) {
+					ptc->wfc[tmpint].gain.d = tmpfloat;
+					tellClient(client->buf_ev, "200 OK SET DIFF GAIN FOR WFC %d TO %.2f", tmpint, tmpfloat);
+				}
+				else if (strncmp(list[1], "int",3)) {
+					ptc->wfc[tmpint].gain.i = tmpfloat;
+					tellClient(client->buf_ev, "200 OK SET INT GAIN FOR WFC %d TO %.2f", tmpint, tmpfloat);
+				}
+				else {
+					tellClient(client->buf_ev, "401 UNKNOWN GAINTYPE");
+				}
+			}
+			else {
+				tellClient(client->buf_ev, "403 INCORRECT WFC OR GAIN VALUE");
+			}
+		}
+		else {
+			tellClient(client->buf_ev, "402 GAIN REQUIRES ARGS");
+		}
+	}		
  	else if (strncmp(list[0], "set",3) == 0) {
 		if (count > 2) {
 			tmpint = strtol(list[2], NULL, 10);
