@@ -1021,8 +1021,11 @@ int tellClients(char *msg, ...) {
 	// format string and add newline
 	asprintf(&out2, "%s\n", out);
 
+	logDebug(0, "Telling all clients");
 	for (i=0; i < MAX_CLIENTS; i++) {
+		logDebug(LOG_NOFORMAT, "%d ", i);
 		if (clientlist.connlist[i] != NULL && clientlist.connlist[i]->fd > 0) { 
+			logDebug(LOG_NOFORMAT, "Telling! ");	
 			if (bufferevent_write(clientlist.connlist[i]->buf_ev, out2, strlen(out2)+1) != 0) {
 				logWarn("Error telling client %d", i);
 				return EXIT_FAILURE; 

@@ -205,13 +205,13 @@ int modInitModule(control_t *ptc, config_t *cs_config) {
 	shlog.mode = "a";				// open with append mode (don't delete existing files)
 	shlog.sep = " ";				// use space as a separator
 	shlog.comm = "#";				// use a hash as comment char
-	shlog.use = true;				// use the logfile immediately
+	shlog.use = false;				// don't use the logfile immediately
 	// Configure log for WFC signals ('voltages')
 	wfclog.fname = "wfc-signals";
 	wfclog.mode = "a";
 	wfclog.sep = " ";
 	wfclog.comm = "#";	
-	wfclog.use = true;
+	wfclog.use = false;
 	
 	// Init logging
 	logInit(&shlog, ptc);
@@ -355,9 +355,9 @@ int modClosedLoop(control_t *ptc) {
 	drvSetActuator(ptc, 0);
 	
 	// log some data, prepend 'C' for closed loop
-	logGSLVecFloat(&shlog, shtrack.disp, "C", 1);
-	logGSLVecFloat(&wfclog, ptc->wfc[0].ctrl, "C-TT", 1);
-	logGSLVecFloat(&wfclog, dmctrl, "C-DM", 1);
+	logGSLVecFloat(&shlog, shtrack.disp, "C", "\n");
+	logGSLVecFloat(&wfclog, ptc->wfc[0].ctrl, "C-TT", " ");
+	logGSLVecFloat(&wfclog, dmctrl, "C-DM", "\n");
 	
     if (ptc->frames % ptc->logfrac == 0) {
 
@@ -659,6 +659,7 @@ calibrate <mode>:       calibrate the ao system.\n\
 === prime module options ===\n\
 display <source>:       tell foam what display source to use.\n\
 vid <auto|c|v> [i]:     use autocontrast/brightness, or set manually.\n\
+log [on|off]:           toggle data logging on or off.\n\
 resetdm [i]:            reset the DM to a certain voltage for all acts. def=0\n\
 resetdaq [i]:           reset the DAQ analog outputs to a certain voltage. def=0\n\
 set [prop]:             set or query certain properties.\n\
@@ -740,7 +741,23 @@ source:                 %d", disp.brightness, disp.contrast, disp.dispover, disp
 		}
 	}
 #endif
-
+	else if (strcmp(list[0], "log") == 0) {
+		if (count > 1) {
+			if (strcmp(list[1], "on") == 0) {
+				shlog.use = true;
+				wfclog.use = true;
+				tellClients("200 OK ENABLED DATA LOGGING");
+			}
+			else {
+				shlog.use = false;
+				wfclog.use = false;
+				tellClients("200 OK DISBLED DATA LOGGING");				
+			}
+		}	
+		else {
+			tellClient(client->buf_ev,"402 LOG REQUIRES ARG (ON OR OFF)");
+		}
+	}
  	else if (strcmp(list[0], "resetdm") == 0) {
 		if (count > 1) {
 			tmpint = strtol(list[1], NULL, 10);

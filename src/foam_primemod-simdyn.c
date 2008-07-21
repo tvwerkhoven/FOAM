@@ -740,7 +740,6 @@ saveimg [i]:            save the next i frames to disk.\
 			tellClient(client->buf_ev,"402 LOG REQUIRES ARG (ON OR OFF)");
 		}
 	}
-	
 	else if (strcmp(list[0],"saveimg") == 0) {
 		if (count > 1) {
 			tmplong = strtol(list[1], NULL, 10);
