@@ -100,16 +100,19 @@ int logInit(mod_log_t *log, control_t *ptc) {
 	return EXIT_FAILURE;
 }
 
-void logMsg(mod_log_t *log, char *prep, char *msg, int newline) {
+void logMsg(mod_log_t *log, char *prep, char *msg, char *app) {
 	if (!log->use || msg == NULL) // return immediately if we're not using this log session, or if there is nothing to log (shouldn't happen here :P)
 		return;
 	
 	if (prep != NULL) fprintf(log->fd, "%s ", prep);
 	
 	fprintf(log->fd, "%s", msg);
-	// Append a newline if requested
-	if (newline == 1)
+	// Append trailing char if present, otherwise default to "\n"
+	if (*app != NULL)
+		fprintf(log->fd, "%s", app);
+	else 
 		fprintf(log->fd, "\n");
+	
 }
 
 void logPTC(mod_log_t *log, control_t *ptc, char *prep) {
@@ -140,7 +143,7 @@ void logPTC(mod_log_t *log, control_t *ptc, char *prep) {
 				ptc->wfc[i].id, ptc->wfc[i].name, ptc->wfc[i].nact, \
 				ptc->wfc[i].gain.p, ptc->wfc[i].gain.i, ptc->wfc[i].gain.d);
 		
-		logGSLVecFloat(log, ptc->wfc[i].ctrl, NULL, 1);
+		logGSLVecFloat(log, ptc->wfc[i].ctrl, NULL, "\n");
 	}
 	
 	// Log FW data
@@ -154,7 +157,7 @@ void logPTC(mod_log_t *log, control_t *ptc, char *prep) {
 	// Done
 }
 
-void logVecFloat(mod_log_t *log, float *vec, int nelem, char *prep, int newline) {
+void logVecFloat(mod_log_t *log, float *vec, int nelem, char *prep, char *app) {
 	if (!log->use || vec == NULL) // return immediately if we're not using this log session, or if there is nothing to log
 		return;
 	
@@ -170,12 +173,15 @@ void logVecFloat(mod_log_t *log, float *vec, int nelem, char *prep, int newline)
 	// Log last element without separator
 	fprintf(log->fd, FOAM_MODULES_LOG_FLT, vec[i]);
 
-	// Append a newline if requested
-	if (newline == 1)
+	// Append trailing char if present, otherwise default to "\n"
+	if (*app != NULL)
+		fprintf(log->fd, "%s", app);
+	else 
 		fprintf(log->fd, "\n");
+	
 }
 
-void logGSLVecFloat(mod_log_t *log, gsl_vector_float *vec, char *prep, int newline) {
+void logGSLVecFloat(mod_log_t *log, gsl_vector_float *vec, char *prep, char *app) {
 	if (!log->use || vec == NULL) // return immediately if we're not using this log session, or if vec is not allocated yet
 		return;
 
@@ -191,10 +197,11 @@ void logGSLVecFloat(mod_log_t *log, gsl_vector_float *vec, char *prep, int newli
 	// Log last element without separator
 	fprintf(log->fd, FOAM_MODULES_LOG_FLT, gsl_vector_float_get(vec, i));
 	
-	// Append a newline if requested
-	if (newline == 1)
+	// Append trailing char if present, otherwise default to "\n"
+	if (*app != NULL)
+		fprintf(log->fd, "%s", app);
+	else 
 		fprintf(log->fd, "\n");
-	
 }
 			
 

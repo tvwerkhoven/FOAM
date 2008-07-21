@@ -85,9 +85,9 @@ int logInit(mod_log_t *log, control_t *ptc);
  @param [in] *log A mod_log_t struct filled with some configuration values
  @param [in] *prep A prefix used for logging, can 'ptc:' or '#' or even log->comm
  @param [in] *msg A literal string to log to the file
- @param [in] newline Set to 1 to append a newline, or unequal to 1 otherwise
+ @param [in] *app An appendix used after logging. Can be "\n" or " " etc. Default "\n" if NULL
 */ 
-void logMsg(mod_log_t *log, char *prep, char *msg, int newline);
+void logMsg(mod_log_t *log, char *prep, char *msg, char *app);
 
 /*! @brief Log the state of the AO system as stored in the control_t struct
  
@@ -112,9 +112,9 @@ void logPTC(mod_log_t *log, control_t *ptc, char *prep);
  @param [in] *vec The vector of type float
  @param [in] nelem The number of elements in *vec
  @param [in] *prep A prefix used for logging, can 'ptc:' or '#' or even log->comm
- @param [in] newline Set to 1 to append a newline, or unequal to 1 otherwise
+ @param [in] *app An appendix used after logging. Can be "\n" or " " etc. Default "\n" if NULL
  */
-void logVecFloat(mod_log_t *log, float *vec, int nelem, char *prep, int newline);
+void logVecFloat(mod_log_t *log, float *vec, int nelem, char *prep, char *app);
 
 /*! @brief Log a GSL vector stored in float format
  Log the values stored in a GSL float vector to file, prepending the line with *prep.
@@ -123,9 +123,9 @@ void logVecFloat(mod_log_t *log, float *vec, int nelem, char *prep, int newline)
  @param [in] *log A mod_log_t struct filled with some configuration values
  @param [in] *vec The vector of type gsl_vector_float
  @param [in] *prep A prefix used for logging, can 'ptc:' or '#' or even log->comm
- @param [in] newline Set to 1 to append a newline, or unequal to 1 otherwise
+ @param [in] *app An appendix used after logging. Can be "\n" or " " etc. Default "\n" if NULL
  */
-void logGSLVecFloat(mod_log_t *log, gsl_vector_float *vec, char *prep, int newline);
+void logGSLVecFloat(mod_log_t *log, gsl_vector_float *vec, char *prep, char *app);
 
 /*! @brief Finish logging, close the logfile
  

@@ -355,11 +355,11 @@ int modClosedLoop(control_t *ptc) {
 	
 	// log offsets measured
 	// log offsets measured and TT signal
-	logGSLVecFloat(&shlog, shtrack.disp, "C", 1);
+	logGSLVecFloat(&shlog, shtrack.disp, "C", "\n");
 	
 	// Log WFC correction- and error signal
-	logGSLVecFloat(&wfclog, simparams.errctrl, "C: TT-Err", 0);
-	logGSLVecFloat(&wfclog, ptc->wfc[0].ctrl, "TT-Corr", 1);
+	logGSLVecFloat(&wfclog, simparams.errctrl, "C: TT-Err", " ");
+	logGSLVecFloat(&wfclog, ptc->wfc[0].ctrl, "TT-Corr", "\n");
 
 
     if (ptc->frames % ptc->logfrac == 0) {
