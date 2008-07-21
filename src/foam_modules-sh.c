@@ -578,21 +578,18 @@ int modCalcCtrl(control_t *ptc, mod_sh_track_t *shtrack, const int wfs, int nmod
 	// to each WFC. In doing so we apply the gain at the same time, 
 	// as the calculated controls are actually *corrections* to the
 	// control commands already being used
-	logDebug(LOG_SOMETIMES, "Storing reconstructed actuator command to seperate vectors:");
+	logDebug(LOG_SOMETIMES, "Storing reconstructed actuator command to seperate vectors");
 	j=0;
 	float old, ctrl;
 	for (wfc=0; wfc< ptc->wfc_count; wfc++) {
-		logDebug(LOG_SOMETIMES | LOG_NOFORMAT, "Corr WFC %d:", wfc);
 		for (i=0; i<ptc->wfc[wfc].nact; i++) {
 			ctrl = gsl_vector_float_get(total, j);
 			old = gsl_vector_float_get(ptc->wfc[wfc].ctrl, i);
 			
 			gsl_vector_float_set(ptc->wfc[wfc].ctrl, i, old- (ctrl*ptc->wfc[wfc].gain.d)); 
-			logDebug(LOG_SOMETIMES | LOG_NOFORMAT, " %f,", gsl_vector_float_get(ptc->wfc[wfc].ctrl, i));
 			j++;
 //			if (j >= nmodes) break;
 		}
-		logDebug(LOG_SOMETIMES | LOG_NOFORMAT, "\n");
 	}
 	
 	// unhack the disp vector (see above)

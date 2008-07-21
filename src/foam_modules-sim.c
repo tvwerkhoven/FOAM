@@ -426,25 +426,25 @@ int simSHWFS(mod_sim_t *simparams, mod_sh_track_t *shwfs) {
 }
 
 int simWFCError(mod_sim_t *simparams, wfc_t *wfc, int method, int period) {
-	gsl_vector_float *simctrl = simparams->errctrl;
+	//gsl_vector_float *simctrl = simparams->errctrl;
 	int i;
 	static int count=0;
 	float ctrl;
 
 	// allocate memory for the simulation controls, if necessary
-	if (simctrl == NULL) {
-		simctrl = gsl_vector_float_alloc(wfc->nact);
+	if (simparams->errctrl == NULL) {
+		simparams->errctrl = gsl_vector_float_alloc(wfc->nact);
 	}
 	// if nact != size, somebody switched *errwfc, and we need to
 	// reallocate memory and continue. This can happen if first
 	// we're using a simulated TT mirror to get errors and switch to
 	// DM after that, which typically has more actuators (very typically ;))
-	else if (wfc->ctrl->size !=  simctrl->size) {
-		gsl_vector_float_free(simctrl);
-		simctrl = gsl_vector_float_alloc(wfc->ctrl->size);
+	else if (wfc->ctrl->size !=  simparams->errctrl->size) {
+		gsl_vector_float_free(simparams->errctrl);
+		simparams->errctrl = gsl_vector_float_alloc(wfc->ctrl->size);
 	}
-	// if simctrl is NULL by now, something went wrong with allocation, stop
-	if (!simctrl)
+	// if simparams->errctrl is NULL by now, something went wrong with allocation, stop
+	if (!simparams->errctrl)
 		logErr("Failed to allocate memory for simulation control vector.");
 	
 
@@ -458,40 +458,34 @@ int simWFCError(mod_sim_t *simparams, wfc_t *wfc, int method, int period) {
 		// method 1: regular sawtooth drift here:
 		ctrl = ((count % period)/(float)period * 2 - 1); 
 		ctrl = fabs(ctrl)*2-1;
-		gsl_vector_float_set_all(simctrl, ctrl);
+		gsl_vector_float_set_all(simparams->errctrl, ctrl);
 	}
 	else if (method == 2) {
 		// method 2: regular sine wave on all actuators:
 		ctrl = sin((float) count/period);
-		gsl_vector_float_set_all(simctrl, ctrl);
+		gsl_vector_float_set_all(simparams->errctrl, ctrl);
 	}
 	else {
 		// method 2: random drift:
 		for (i=0; i<wfc->nact; i++) {
 			// let the error drift around
-			ctrl = gsl_vector_float_get(simctrl,i) + (drand48()-0.5)*0.05;
+			ctrl = gsl_vector_float_get(simparams->errctrl,i) + (drand48()-0.5)*0.05;
 			// put bounds on the error range
 			if (ctrl > 1) ctrl = 1.0;
 			else if (ctrl < -1) ctrl = -1.0;
-			gsl_vector_float_set(simctrl, i, ctrl);
+			gsl_vector_float_set(simparams->errctrl, i, ctrl);
 		}
 	}
 	
 	// What routine do we need to call to simulate this WFC?
 	if (wfc->type == WFC_TT) {
-		if (simTT(simparams, simctrl, 0) != EXIT_SUCCESS)
+		if (simTT(simparams, simparams->errctrl, 0) != EXIT_SUCCESS)
 			return EXIT_FAILURE;
 	}
 	else if (wfc->type == WFC_DM) {
-		if (simDM(simparams, wfc->ctrl, wfc->nact, 0, -1) != EXIT_SUCCESS) // last arg is for niter. -1 for autoset
+		if (simDM(simparams, simparams->errctrl, wfc->nact, 0, -1) != EXIT_SUCCESS) // last arg is for niter. -1 for autoset
 			return EXIT_FAILURE;
 	}
-	
-	logDebug(LOG_SOMETIMES | LOG_NOFORMAT, "Error: %d with %d acts: ", wfc->id, wfc->nact);
-	for (i=0; i<wfc->nact; i++)
-		logDebug(LOG_SOMETIMES | LOG_NOFORMAT, "%f, ", gsl_vector_float_get(simctrl,i));
-		
-	logDebug(LOG_SOMETIMES | LOG_NOFORMAT, "\n");
 	
 	return EXIT_SUCCESS;
 }

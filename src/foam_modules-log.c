@@ -101,7 +101,7 @@ int logInit(mod_log_t *log, control_t *ptc) {
 }
 
 void logMsg(mod_log_t *log, char *prep, char *msg, int newline) {
-	if (!log->use) // return immediately if we're not using this log session
+	if (!log->use || msg == NULL) // return immediately if we're not using this log session, or if there is nothing to log (shouldn't happen here :P)
 		return;
 	
 	if (prep != NULL) fprintf(log->fd, "%s ", prep);
@@ -155,7 +155,7 @@ void logPTC(mod_log_t *log, control_t *ptc, char *prep) {
 }
 
 void logVecFloat(mod_log_t *log, float *vec, int nelem, char *prep, int newline) {
-	if (!log->use) // return immediately if we're not using this log session
+	if (!log->use || vec == NULL) // return immediately if we're not using this log session, or if there is nothing to log
 		return;
 	
 	int i;
@@ -176,7 +176,7 @@ void logVecFloat(mod_log_t *log, float *vec, int nelem, char *prep, int newline)
 }
 
 void logGSLVecFloat(mod_log_t *log, gsl_vector_float *vec, char *prep, int newline) {
-	if (!log->use) // return immediately if we're not using this log session
+	if (!log->use || vec == NULL) // return immediately if we're not using this log session, or if vec is not allocated yet
 		return;
 
 	int i;

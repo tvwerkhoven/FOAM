@@ -182,14 +182,14 @@ int modInitModule(control_t *ptc, config_t *cs_config) {
 		logErr("Failed to initialize shack-hartmann module.");
 	
 	// Configure datalogging for SH offset measurements
-	shlog.fname = "sh-offsets";		// logfile name
-	shlog.mode = "a";				// open with append mode (don't delete existing files)
+	shlog.fname = "sh-offsets.dat";		// logfile name
+	shlog.mode = "w";				// open with append mode (don't delete existing files)
 	shlog.sep = " ";				// use space as a separator
 	shlog.comm = "#";				// use a hash as comment char
 	shlog.use = true;				// use the logfile immediately
 	// Configure log for WFC signals ('voltages')
-	wfclog.fname = "wfc-signals";
-	wfclog.mode = "a";
+	wfclog.fname = "wfc-signals.dat";
+	wfclog.mode = "w";
 	wfclog.sep = " ";
 	wfclog.comm = "#";	
 	wfclog.use = true;
@@ -279,10 +279,10 @@ int modOpenInit(control_t *ptc) {
 	}
 	
 	// log mode change
-	logPTC(&shlog, ptc, shlog.comm);
-	logPTC(&wfclog, ptc, shlog.comm);
 	logMsg(&shlog, shlog.comm, "Init open loop", 1);
 	logMsg(&wfclog, shlog.comm, "Init open loop", 1);
+	logPTC(&shlog, ptc, shlog.comm);
+	logPTC(&wfclog, ptc, shlog.comm);
 
 	// nothing to init for static simulation
 	return EXIT_SUCCESS;
@@ -329,10 +329,10 @@ int modClosedInit(control_t *ptc) {
 	disp.dispsrc = DISPSRC_FASTCALIB;		
 
 	// log mode change
-	logPTC(&shlog, ptc, shlog.comm);
-	logPTC(&wfclog, ptc, shlog.comm);
 	logMsg(&shlog, shlog.comm, "Init closed loop", 1);
 	logMsg(&wfclog, shlog.comm, "Init closed loop", 1);
+	logPTC(&shlog, ptc, shlog.comm);
+	logPTC(&wfclog, ptc, shlog.comm);
 	
 	return EXIT_SUCCESS;
 }
@@ -580,11 +580,11 @@ int modMessage(control_t *ptc, const client_t *client, char *list[], const int c
 		if (count > 2) { 
 			if (strncmp(list[1], "set",3) == 0 && strncmp(list[2], "err",3) == 0) {
 				tellClient(client->buf_ev, "\
-						200 OK HELP SET ERR\n\
-						set error:\n\
-						source [src]:        error source, can be 'seeing', 'wfc', or 'off'.\n\
-						-:                   if no prop is given, query the values.\
-						");
+200 OK HELP SET ERR\n\
+set error:\n\
+source [src]:        error source, can be 'seeing', 'wfc', or 'off'.\n\
+-:                   if no prop is given, query the values.\
+");
 			}
 		}
 		else if (count > 1) { 
@@ -1253,7 +1253,7 @@ int drvGetImg(control_t *ptc, int wfs) {
 	
 	if (ptc->saveimg > 0) { // user wants to save images, do so now!
 		char *fname;
-		asprintf(&fname, FOAM_DATADIR "foam-" FOAM_CONFIG_PRE "-cap-%05ld.pgm", ptc->capped);
+		asprintf(&fname, FOAM_DATADIR FOAM_CONFIG_PRE "-cap-%05ld.pgm", ptc->capped);
 		modWritePGMArr(fname, simparams.currimg, DATA_UINT8, simparams.currimgres, 0, 1);
 		ptc->capped++;
 		ptc->saveimg--;
