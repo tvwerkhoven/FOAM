@@ -1032,6 +1032,7 @@ int tellClients(char *msg, ...) {
 			}
 		}
 	}
+	logDebug(LOG_NOFORMAT, "\n");
 	return EXIT_SUCCESS;
 }
 

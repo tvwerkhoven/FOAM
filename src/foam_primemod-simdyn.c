@@ -279,8 +279,8 @@ int modOpenInit(control_t *ptc) {
 	}
 	
 	// log mode change
-	logMsg(&shlog, shlog.comm, "Init open loop", 1);
-	logMsg(&wfclog, shlog.comm, "Init open loop", 1);
+	logMsg(&shlog, shlog.comm, "Init open loop", "\n");
+	logMsg(&wfclog, shlog.comm, "Init open loop", "\n");
 	logPTC(&shlog, ptc, shlog.comm);
 	logPTC(&wfclog, ptc, shlog.comm);
 
@@ -300,7 +300,7 @@ int modOpenLoop(control_t *ptc) {
 	modCogTrack(ptc->wfs[0].corrim, DATA_GSL_M_F, ALIGN_RECT, &shtrack, NULL, NULL);
 	
 	// log offsets measured and TT signal
-	logGSLVecFloat(&shlog, shtrack.disp, "O", 1);
+	logGSLVecFloat(&shlog, shtrack.disp, "O", "\n");
 
     if (ptc->frames % ptc->logfrac == 0) {
 		logInfo(0, "Current framerate: %.2f FPS", ptc->fps);
@@ -329,8 +329,8 @@ int modClosedInit(control_t *ptc) {
 	disp.dispsrc = DISPSRC_FASTCALIB;		
 
 	// log mode change
-	logMsg(&shlog, shlog.comm, "Init closed loop", 1);
-	logMsg(&wfclog, shlog.comm, "Init closed loop", 1);
+	logMsg(&shlog, shlog.comm, "Init closed loop", "\n");
+	logMsg(&wfclog, shlog.comm, "Init closed loop", "\n");
 	logPTC(&shlog, ptc, shlog.comm);
 	logPTC(&wfclog, ptc, shlog.comm);
 	

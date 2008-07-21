@@ -272,6 +272,11 @@ void modStopModule(control_t *ptc) {
 /*********************/
 
 int modOpenInit(control_t *ptc) {
+	// log mode change
+	logMsg(&shlog, shlog.comm, "Init open loop", "\n");
+	logMsg(&wfclog, shlog.comm, "Init open loop", "\n");
+	logPTC(&shlog, ptc, shlog.comm);
+	logPTC(&wfclog, ptc, shlog.comm);
 	
 	// start grabbing frames
 	return itifgInitGrab(&dalsacam);
@@ -321,6 +326,12 @@ int modOpenFinish(control_t *ptc) {
 /************************/
 
 int modClosedInit(control_t *ptc) {
+	// log mode change
+	logMsg(&shlog, shlog.comm, "Init closed loop", "\n");
+	logMsg(&wfclog, shlog.comm, "Init closed loop", "\n");
+	logPTC(&shlog, ptc, shlog.comm);
+	logPTC(&wfclog, ptc, shlog.comm);
+	
 	// set disp source to calib
 	disp.dispsrc = DISPSRC_FASTCALIB;		
 	// start grabbing frames

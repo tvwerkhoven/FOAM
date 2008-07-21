@@ -108,7 +108,7 @@ void logMsg(mod_log_t *log, char *prep, char *msg, char *app) {
 	
 	fprintf(log->fd, "%s", msg);
 	// Append trailing char if present, otherwise default to "\n"
-	if (*app != NULL)
+	if (app != NULL)
 		fprintf(log->fd, "%s", app);
 	else 
 		fprintf(log->fd, "\n");
@@ -174,7 +174,7 @@ void logVecFloat(mod_log_t *log, float *vec, int nelem, char *prep, char *app) {
 	fprintf(log->fd, FOAM_MODULES_LOG_FLT, vec[i]);
 
 	// Append trailing char if present, otherwise default to "\n"
-	if (*app != NULL)
+	if (app != NULL)
 		fprintf(log->fd, "%s", app);
 	else 
 		fprintf(log->fd, "\n");
@@ -198,7 +198,7 @@ void logGSLVecFloat(mod_log_t *log, gsl_vector_float *vec, char *prep, char *app
 	fprintf(log->fd, FOAM_MODULES_LOG_FLT, gsl_vector_float_get(vec, i));
 	
 	// Append trailing char if present, otherwise default to "\n"
-	if (*app != NULL)
+	if (app != NULL)
 		fprintf(log->fd, "%s", app);
 	else 
 		fprintf(log->fd, "\n");
