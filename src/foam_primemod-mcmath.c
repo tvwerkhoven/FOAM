@@ -37,8 +37,6 @@ extern pthread_cond_t mode_cond;
 // GLOBALS //
 /***********/
 
-#define FOAM_CONFIG_PRE "mcmath"
-
 // Displaying
 #ifdef FOAM_MCMATH_DISPLAY
 mod_display_t disp;
@@ -61,6 +59,10 @@ int okoright[19] = {4, 5, 6, 12, 13, 14, 15, 16, 17, 25, 26, 27, 28, 29, 30, 31,
 
 // Shack Hartmann tracking info
 mod_sh_track_t shtrack;
+
+// Log some data here
+mod_log_t shlog;
+mod_log_t wfclog;
 
 
 int modInitModule(control_t *ptc, config_t *cs_config) {
@@ -86,9 +88,9 @@ int modInitModule(control_t *ptc, config_t *cs_config) {
 	ptc->wfs[0].res.y = 256;
 	ptc->wfs[0].bpp = 8;
 	// this is where we will look for dark/flat/sky images
-	ptc->wfs[0].darkfile = FOAM_CONFIG_PRE "_dark.gsldump";	
-	ptc->wfs[0].flatfile = FOAM_CONFIG_PRE "_flat.gsldump";
-	ptc->wfs[0].skyfile = FOAM_CONFIG_PRE "_sky.gsldump";	
+	ptc->wfs[0].darkfile = FOAM_DATA FOAM_CONFIG_PRE "_dark.gsldump";	
+	ptc->wfs[0].flatfile = FOAM_DATA FOAM_CONFIG_PRE "_flat.gsldump";
+	ptc->wfs[0].skyfile = FOAM_DATA FOAM_CONFIG_PRE "_sky.gsldump";	
 	ptc->wfs[0].scandir = AO_AXES_XY;
 	ptc->wfs[0].id = 0;
 	ptc->wfs[0].fieldframes = 1000;     // take 1000 frames for a dark or flatfield
@@ -135,7 +137,7 @@ int modInitModule(control_t *ptc, config_t *cs_config) {
 	// configure ITIFG camera & buffer
 	dalsacam.module = 48;
 	dalsacam.device_name = "/dev/ic0dma";
-	dalsacam.config_file = "../config/dalsa-cad6-pcd.cam";
+	dalsacam.config_file = FOAM_CONFIG "dalsa-cad6-pcd.cam";
 	
 	buffer.frames = 8;
 	
@@ -189,14 +191,31 @@ int modInitModule(control_t *ptc, config_t *cs_config) {
 	shtrack.shsize.y = ptc->wfs[0].res.y/shtrack.cells.y;
 	shtrack.track.x = shtrack.shsize.x/2;   // tracker windows are half the size of the lenslet grid things
 	shtrack.track.y = shtrack.shsize.y/2;
-	shtrack.pinhole = FOAM_CONFIG_PRE "_pinhole.gsldump";
-	shtrack.influence = FOAM_CONFIG_PRE "_influence.gsldump";
+	shtrack.pinhole = FOAM_DATA FOAM_CONFIG_PRE "_pinhole.gsldump";
+	shtrack.influence = FOAM_DATA FOAM_CONFIG_PRE "_influence.gsldump";
 	shtrack.skipframes = 10;		// skip 10 frames before measureing
 	shtrack.measurecount = 3;		// measure 10 times per actuator voltage
 	shtrack.samxr = -1;			// 1 row edge erosion
 	shtrack.samini = 10;			// minimum intensity for subaptselection 10
 	// init the shtrack module for wfs 0 here
 	modInitSH(&(ptc->wfs[0]), &shtrack);	
+	
+	// Configure datalogging for SH offset measurements
+	shlog.fname = "sh-offsets";		// logfile name
+	shlog.mode = "a";				// open with append mode (don't delete existing files)
+	shlog.sep = " ";				// use space as a separator
+	shlog.comm = "#";				// use a hash as comment char
+	shlog.use = true;				// use the logfile immediately
+	// Configure log for WFC signals ('voltages')
+	wfclog.fname = "wfc-signals";
+	wfclog.mode = "a";
+	wfclog.sep = " ";
+	wfclog.comm = "#";	
+	wfclog.use = true;
+	
+	// Init logging
+	logInit(&shlog, ptc);
+	logInit(&wfclog, ptc);
 	
 	// configure cs_config here
 	cs_config->listenip = "0.0.0.0";	// listen on any IP by defaul
@@ -334,6 +353,11 @@ int modClosedLoop(control_t *ptc) {
 	
 	// set actuator
 	drvSetActuator(ptc, 0);
+	
+	// log some data, prepend 'C' for closed loop
+	logGSLVecFloat(&shlog, shtrack.disp, "C", 1);
+	logGSLVecFloat(&wfclog, ptc->wfc[0].ctrl, "C-TT", 1);
+	logGSLVecFloat(&wfclog, dmctrl, "C-DM", 1);
 	
     if (ptc->frames % ptc->logfrac == 0) {
 

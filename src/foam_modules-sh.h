@@ -41,11 +41,11 @@
  @brief This stores information on SH tracking
  
  The things prefixed by '(user)' must be supplied by the user immediately (i.e.
- hardcode it in or read some configuration file). The (mod) things will be calculcated
+ hardcode it in or read some configuration file). The (foam) things will be calculcated
  by this or other modules. (runtime) is something the user can change during runtime.
  */
 typedef struct {
-	int nsubap;						//!< (mod) amount of subapertures used (coordinates stored in subc)
+	int nsubap;						//!< (foam) amount of subapertures used (coordinates stored in subc)
 	int skipframes;					//!< (user) amount of frames to skip before measuring WFC influence
 	int measurecount;				//!< (user) amount of measurements to average for WFC influence
 	
@@ -55,14 +55,14 @@ typedef struct {
 	int samxr;					//!< (user) use this for edge erosion or to force maximum distance from reference subapt
 	float samini;					//!< (user) use this value as a minimum intensity for valid subapertures
 	
-	gsl_vector_float *singular;		//!< (mod) stores singular values from SVD (nact big)
-	gsl_matrix_float *dmmodes;		//!< (mod) stores dmmodes from SVD (nact*nact big)
-	gsl_matrix_float *wfsmodes;		//!< (mod) stores wfsmodes from SVD (nact*nsubap*2 big)
+	gsl_vector_float *singular;		//!< (foam) stores singular values from SVD (nact big)
+	gsl_matrix_float *dmmodes;		//!< (foam) stores dmmodes from SVD (nact*nact big)
+	gsl_matrix_float *wfsmodes;		//!< (foam) stores wfsmodes from SVD (nact*nsubap*2 big)
 	
-	coord_t *subc;					//!< (mod) this will hold the coordinates of each sub aperture
-	coord_t *gridc;					//!< (mod) this will hold the grid origin for a certain subaperture
-	gsl_vector_float *refc;			//!< (mod) reference displacements (i.e. definition of the origin)
-	gsl_vector_float *disp;			//!< (mod) measured displacements (compare with refence for actual shift)
+	coord_t *subc;					//!< (foam) this will hold the coordinates of each sub aperture
+	coord_t *gridc;					//!< (foam) this will hold the grid origin for a certain subaperture
+	gsl_vector_float *refc;			//!< (foam) reference displacements (i.e. definition of the origin)
+	gsl_vector_float *disp;			//!< (foam) measured displacements (compare with refence for actual shift)
 	
 	fcoord_t stepc;					//!< (runtime) add this to the reference displacement during correction
 	

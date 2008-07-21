@@ -268,7 +268,6 @@ int displayImgByte(uint8_t *img, mod_display_t *disp) {
 	}
 #ifdef FOAM_MODULES_DISLAY_SHSUPPORT
 	else if (disp->dispsrc == DISPSRC_FASTCALIB) {
-		float f[4];
 		for (i=0; i<shtrack->nsubap; i++) {
 			// we loop over all subapts, and display them one by
 			// one at coordinates subc[i].x, .y with size

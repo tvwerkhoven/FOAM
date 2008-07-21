@@ -56,6 +56,7 @@ typedef struct {
 
 	sim_err_t error;		//!< (user) what is the error source?
 	wfc_t *errwfc;			//!< (user) if the error source is a WFC, which WFC?
+	gsl_vector_float *errctrl; //!< (foam) the ctrl vector used to generate an eror signal for *errwfc
 	wfc_t *corr;			//!< (user) what is the correction WFC? (or NULL)
 	int noise;				//!< (user) the noise amplitude to simulate (0 for no noise)
 	

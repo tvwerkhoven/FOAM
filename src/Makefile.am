@@ -12,6 +12,8 @@ CFLAGS=-pipe -Wall -Wextra
 
 LDFLAGS=$(COMMON_LIBS) -lc
 
+# This is used to get the config directory as a define (see top-level Makefile.am)
+CPPFLAGS+=-DFOAM_CONFDIR=\"$(FOAMCONFDIR)\" -DFOAM_DATADIR=\"$(FOAMDATADIR)\" 
 # (un)comment this to toggle GSL inlining
 CPPFLAGS+=-DHAVE_INLINE -DGSL_RANGE_CHECK_OFF 
 # (un) comment this to toggle lowlevel debugging in some modules 
@@ -59,7 +61,7 @@ bin_PROGRAMS += foamcs-simstat
 foamcs_simstat_SOURCES = foam_primemod-simstatic.c
 # Other C files
 foamcs_simstat_SOURCES += $(FRAME_SRC) $(FRAME_HDR)
-foamcs_simstat_SOURCES += foam_modules-sh.c foam_modules-calib.c foam_modules-img.c
+foamcs_simstat_SOURCES += foam_modules-sh.c foam_modules-calib.c foam_modules-img.c foam_modules-log.c
 
 # Are we going to use OpenGL or not?
 if OPENGL
@@ -69,7 +71,7 @@ foamcs_simstat_SOURCES += foam_modules-dispsdl.c
 endif !OPENGL
 
 # header files are part of the sources as well
-foamcs_simstat_SOURCES += foam_modules-sh.h foam_modules-calib.h foam_modules-dispcommon.h foam_modules-img.h foam_primemod-simstatic.h
+foamcs_simstat_SOURCES += foam_modules-sh.h foam_modules-calib.h foam_modules-dispcommon.h foam_modules-img.h foam_primemod-simstatic.h foam_modules-log.h
 
 # Some CPP flags (include the primemod header, and configure some options)
 foamcs_simstat_CPPFLAGS = -include "foam_primemod-simstatic.h"
@@ -100,7 +102,7 @@ bin_PROGRAMS += foamcs-simdyn
 foamcs_simdyn_SOURCES = foam_primemod-simdyn.c
 # Other C files
 foamcs_simdyn_SOURCES += $(FRAME_SRC) $(FRAME_HDR)
-foamcs_simdyn_SOURCES += foam_modules-sh.c foam_modules-calib.c foam_modules-img.c foam_modules-sim.c
+foamcs_simdyn_SOURCES += foam_modules-sh.c foam_modules-calib.c foam_modules-img.c foam_modules-sim.c foam_modules-log.c
 
 # Are we going to use OpenGL or not?
 if OPENGL
@@ -110,7 +112,7 @@ foamcs_simdyn_SOURCES += foam_modules-dispsdl.c
 endif !OPENGL
 
 # header files are part of the sources as well
-foamcs_simdyn_SOURCES += foam_modules-sh.h foam_modules-calib.h foam_modules-dispcommon.h foam_modules-img.h foam_modules-sim.h foam_primemod-simdyn.h
+foamcs_simdyn_SOURCES += foam_modules-sh.h foam_modules-calib.h foam_modules-dispcommon.h foam_modules-img.h foam_modules-sim.h foam_modules-log.h foam_primemod-simdyn.h
 
 # Some CPP flags (include the primemod header, and configure some options)
 foamcs_simdyn_CPPFLAGS = -include "foam_primemod-simdyn.h"
@@ -143,7 +145,7 @@ foamcs_mcmath_SOURCES = foam_primemod-mcmath.c
 foamcs_mcmath_SOURCES += $(FRAME_SRC) $(FRAME_HDR)
 
 # Use some modules
-foamcs_mcmath_SOURCES += foam_modules-sh.c foam_modules-calib.c foam_modules-img.c
+foamcs_mcmath_SOURCES += foam_modules-sh.c foam_modules-calib.c foam_modules-img.c foam_modules-log.c
 if !SIMHW
 foamcs_mcmath_SOURCES += foam_modules-itifg.c foam_modules-okodm.c foam_modules-serial.c foam_modules-daq2k.c
 endif !SIMHW
@@ -154,7 +156,7 @@ else !OPENGL
 foamcs_mcmath_SOURCES += foam_modules-dispsdl.c
 endif !OPENGL
 
-foamcs_mcmath_SOURCES += foam_modules-sh.h foam_modules-calib.h foam_modules-img.h 
+foamcs_mcmath_SOURCES += foam_modules-sh.h foam_modules-calib.h foam_modules-img.h foam_modules-log.h
 if !SIMHW
 foamcs_mcmath_SOURCES += foam_modules-itifg.h foam_modules-okodm.h foam_modules-serial.h foam_modules-daq2k.h foam_modules-dispcommon.h
 endif !SIMHW

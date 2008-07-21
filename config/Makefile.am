@@ -1,6 +1,8 @@
-EXTRA_DIST = *.png *.cfg *.cam
-# install the camera configuration to the datadir
-foamconfdir = $(datadir)/foam-conf
+# Include these files in the dist, but don't install them
+EXTRA_DIST = *.png *.cfg *.cam *.pgm
+
+# Install the relevant configuration files to a subdir of the datadir
+foamconfdir = $(FOAMCONFDIR)
 dist_foamconf_DATA = 
 
 ### STATIC SIMULATION MODE ###

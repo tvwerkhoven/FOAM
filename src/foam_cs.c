@@ -114,6 +114,10 @@ int main(int argc, char *argv[]) {
 	
 	// BEGIN FOAM //
 	/**************/
+	ptc.starttime = time (NULL);
+	loctime = localtime (&ptc.starttime);
+	strftime (date, 64, "%A, %B %d %H:%M:%S, %Y (%Z).", loctime);	
+	
 	logInfo(LOG_NOFORMAT, "      ___           ___           ___           ___     \n\
      /\\  \\         /\\  \\         /\\  \\         /\\__\\    \n\
     /::\\  \\       /::\\  \\       /::\\  \\       /::|  |   \n\
@@ -126,14 +130,8 @@ int main(int argc, char *argv[]) {
                   \\::/  /        /:/  /        /:/  /   \n\
                    \\/__/         \\/__/         \\/__/ \n");
 
-	logInfo(0,"Starting %s (%s)", PACKAGE_NAME, PACKAGE_VERSION);
-	logInfo(0,"Copyright (C) 2008 Tim van Werkhoven, tvwerkhoven@xs4all.nl");
-    
-
-	ptc.starttime = time (NULL);
-	loctime = localtime (&ptc.starttime);
-	strftime (date, 64, "%A, %B %d %H:%M:%S, %Y (%Z).", loctime);	
-	logInfo(0,"at %s", date);
+	logInfo(0,"Starting %s (%s) at %s", PACKAGE_NAME, PACKAGE_VERSION, date);
+	logInfo(0,"Copyright 2007-2008 Tim van Werkhoven (tvwerkhoven@xs4all.nl)");
 
 	// INITIALIZE MODULES //
 	/**********************/
@@ -908,7 +906,6 @@ int parseCmd(char *msg, const int len, client_t *client) {
 	char local[strlen(msg)+1];
 	char *list[Maxparams];
 	int count;
-	int tmpint;
 	
 	// copy the string there, append \0
 	strncpy(local, msg, strlen(msg));
@@ -967,29 +964,6 @@ int parseCmd(char *msg, const int len, client_t *client) {
 			tellClient(client->buf_ev,"402 IMAGE REQUIRES ARG");
 		}		
 	}*/
-	else if (strcmp(list[0],"logmisc") == 0) {
-		if (count > 1) {
-			tmpint = strtol(list[1], NULL, 10);
-			if (tmpint == 1) {
-				if (ptc.misclog) {
-					fprintf(ptc.misclog, "%% LOG START\n");
-					ptc.domisclog = true;
-					tellClients("200 OK TOGGLED MISC LOGGING ON");
-				}
-				else {
-					ptc.domisclog = false;
-					tellClients("403 ERROR, MISCLOG FD INVALID");
-				}
-			}
-			else {
-				ptc.domisclog = false;
-				tellClients("200 OK TOGGLED MISC LOGGING OFF");
-			}
-		}	
-		else {
-			tellClient(client->buf_ev,"402 MISCLOG REQUIRES ARG (1 or 0)");
-		}
-	}
 	else if (strcmp(list[0],"broadcast") == 0) {
 		if (count > 1) {
 			tellClients("200 OK %s", msg);

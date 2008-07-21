@@ -136,10 +136,10 @@ typedef struct {
 
 
 /*!
- @brief Helper enum for ao mode operation.
+ @brief Stores the mode of the AO system.
  */
 typedef enum { // aomode_t
-	AO_MODE_OPEN,	//!< Open loop mode
+	AO_MODE_OPEN=0,	//!< Open loop mode
 	AO_MODE_CLOSED, //!< Closed loop mode
 	AO_MODE_CAL, 	//!< Calibration mode (in conjunction with calmode_t)
 	AO_MODE_LISTEN,	//!< Listen mode (idle)
@@ -168,7 +168,7 @@ typedef enum {
 } foam_datat_t;
 
 /*!
- @brief Helper enum for ao scanning mode
+ @brief AO scanning mode enum
  
  This is used to distinguish between different AO modes. Typically, AO
  corrects both in X and Y direction, but in certain cases it might be
@@ -177,13 +177,13 @@ typedef enum {
  (i.e. sunspot or planet).
  */
 typedef enum { // axes_t
-	AO_AXES_XY,		//!< Scan in X and Y direction
+	AO_AXES_XY=0,		//!< Scan in X and Y direction
 	AO_AXES_X,		//!< Scan X direction only
 	AO_AXES_Y		//!< Scan Y direction only
 } axes_t;
 
 /*!
- @brief Helper enum for filter wheel identification (user by control_t)
+ @brief Struct for filter wheel identification (used by control_t)
  
  This datatype must be used by the user to configure the AO system.
  To do anything useful, FOAM must know what filterwheels you are using,
@@ -199,7 +199,7 @@ typedef struct {
 } filtwheel_t;
 
 /*!
- @brief Helper struct to store WFC variables in \a ptc. Used by type \c control_t.
+ @brief Store WFC information. Used by type \c control_t.
  
  This datatype must be used by the user to configure the AO system.
  To do anything useful, FOAM must know what WFSs and WFCs you are using,
@@ -227,7 +227,7 @@ typedef struct { // wfc_t
 } wfc_t;
 
 /*!
- @brief Helper struct to store the WFS information. Used by type \c control_t.
+ @brief Stores WFS information. Used by type \c control_t.
  
  This datatype must be used by the user to configure the AO system.
  To do anything useful, FOAM must know what WFSs and WFCs you are using,
@@ -241,17 +241,22 @@ typedef struct { // wfc_t
  are stored in formats on disk that provide higher precision than the sensor
  itself. This is logical as the darkfield is an average of many frames, and
  if the sensor is 8 bit, the darkfield can be determined much more accurately
- than this 8 bit. Therefore the fields are stored in float format.
+ than this 8 bit. Therefore the fields are stored in float format, specifically
+ gsl_matrix_float as this dataformat provides easy matrix handling and
+ file I/O.
  
- Once the fields are taken and stored to disk, for actual AO performance,
- these are stored in the *dark, *gain and *corr frames. The datatype of these
- is chosen such that dark/flat-fielding can be done quickly, which generally
- means not combining floats and integer datatypes.
+ Once the fields are taken and stored to disk, during AO operations,
+ they are copied to *dark, *gain and *corr in a fast datatype, usually the sensor's.
+ If the sensor for example is 8 bit, is makes sense to store the dark, gain and corr
+ also in an integer type, since this prevents type conversion between floats and ints.
+ To circumvent the precision problem one might have, instead of storing the actual
+ darkfield, it is multiplied by for example 255 to provide better precision
  
  To further speed up the dark/flat-fielding process, some pre-calculation can be
  done. When doing a typical (raw-dark)/(flat-dark) calculation, flat-dark is
  always the same. Therefore, gain can hold 1/(flat-dark) such that this 
- is already precalculated.
+ is already precalculated. Corr is an additional 'field' that can be used to scale
+ the incoming sensor image.
 
  See dummy prime module for details.
  */
@@ -261,10 +266,10 @@ typedef struct { // wfs_t
 	int bpp;						//!< (user) bits per pixel to use when reading the sensor (only 8 or 16 atm)
     
 	void *image;					//!< (foam) pointer to the WFS output
-	gsl_matrix_float *darkim;		//!< (foam) darkfield for the CCD 
-	gsl_matrix_float *flatim;		//!< (foam) flatfield for the CCD (actually: flat-dark, as we never use flat directly)
-	gsl_matrix_float *skyim;		//!< (foam) skyfield for the CCD
-	gsl_matrix_float *corrim;		//!< (foam) corrected image to be processed
+	gsl_matrix_float *darkim;		//!< (foam) darkfield for the CCD, in floats for better precision
+	gsl_matrix_float *flatim;		//!< (foam) flatfield for the CCD (actually: flat-dark, as we never use flat directly), in floats
+	gsl_matrix_float *skyim;		//!< (foam) skyfield for the CCD, in floats
+	gsl_matrix_float *corrim;		//!< (foam) corrected image to be processed, in floats
 	void *dark;				//!< (foam) dark field actually used in calculations (actually for SH)
 	void *gain;				//!< (foam) gain used (1/(flat-dark)) in calculations (actually for SH)
 	void *corr;				//!< (foam) this is used to store the corrected image if we're doing closed loop (we only dark/flat the subapts we're using here and we do it in fast ASM code)
@@ -293,7 +298,11 @@ typedef struct { // wfs_t
  
  The logfrac field is used to stop superfluous logging. See logInfo() and logDebug()
  documentation for details. Errors and warnings are always logged/displayed, as these
- shouldn't occur.
+ shouldn't occur, and supressing these are generally unwanted.
+ 
+ The datalog* variables can be used to do miscellaneous logging to, in addition to general
+ operational details that are logged to the debug, info and error logfiles. Logging 
+ to this file must be taken care of by the prime module, 
  
  Also take a look at wfs_t, wfc_t and filtwheel_t.
  */
@@ -301,7 +310,7 @@ typedef struct { // control_t
 	aomode_t mode;		//!< (user) defines the mode the AO system is in, default AO_MODE_LISTEN
 	calmode_t calmode;	//!< (user) defines the possible calibration modes, default CAL_PINHOLE
 	time_t starttime;	//!< (foam) stores the starting time of the system
-	time_t lasttime;	//!< (foam) use this to track the framerate
+	time_t lasttime;	//!< (foam) use this to track the instantaneous framerate
     
 	long frames;		//!< (foam) store the number of frames parsed
 	long capped;			//!< (foam) stores the number of frames captured earlier (i.e. what files already exist)
@@ -310,10 +319,6 @@ typedef struct { // control_t
     
 	int logfrac;        //!< (user) fraction to log for certain info and debug (1 is always, 50 is 1/50 times), default 1000
 
-	FILE *misclog;		//!< (user) logfile to log miscellaneous AO information to
-	char *misclogfile;	//!< (user) filename for the above
-	bool domisclog;		//!< (user) toggle for misc logging	
-	
     // WFS variables
 	int wfs_count;		//!< (user) number of WFSs in the system, default 0
 	wfs_t *wfs;			//!< (user) pointer to a number of wfs_t structs, default NULL
@@ -330,7 +335,7 @@ typedef struct { // control_t
 
 
 /*!
- @brief Helper enum for loglevel. Can be LOGNONE, LOGERR, LOGINFO or LOGDEBUG
+ @brief Loglevel, one of LOGNONE, LOGERR, LOGINFO or LOGDEBUG
  
  This specifies the verbosity of logging, going from LOGNONE, LOGERR, LOGINFO
  and to LOGDEBUG in increasing amount of logging details. For production systems,

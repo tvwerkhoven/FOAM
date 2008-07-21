@@ -37,7 +37,6 @@ extern pthread_cond_t mode_cond;
 // GLOBALS //
 /***********/
 
-#define FOAM_CONFIG_PRE "simdyn"
 
 // Displaying
 #ifdef FOAM_SIMDYN_DISPLAY
@@ -49,6 +48,10 @@ mod_sh_track_t shtrack;
 // Simulation parameters
 mod_sim_t simparams;
 
+// Log some data here
+mod_log_t shlog;
+mod_log_t wfclog;
+
 int modInitModule(control_t *ptc, config_t *cs_config) {
 	logInfo(0, "This is the dynamical simulation (simdyn) prime module, enjoy.");
 	
@@ -56,7 +59,6 @@ int modInitModule(control_t *ptc, config_t *cs_config) {
 	ptc->mode = AO_MODE_LISTEN;			// start in listen mode (safe bet, you probably want this)
 	ptc->calmode = CAL_INFL;			// this is not really relevant initialliy
 	ptc->logfrac = 10;                  // log verbose messages only every 100 frames
-	ptc->misclogfile = FOAM_CONFIG_PRE "-datalog.dat"; 	// name the logfile
 	ptc->wfs_count = 1;					// just 1 'wfs' for simulation
 	ptc->wfc_count = 1;					// one TT mirror
 	ptc->fw_count = 2;					// 2 filterwheels (which we actually don't use)
@@ -65,15 +67,6 @@ int modInitModule(control_t *ptc, config_t *cs_config) {
 	ptc->filter = (filtwheel_t *) calloc(ptc->fw_count, sizeof(filtwheel_t));
 	ptc->wfc = (wfc_t *) calloc(ptc->wfc_count, sizeof(wfc_t));
 	ptc->wfs = (wfs_t *) calloc(ptc->wfs_count, sizeof(wfs_t));
-
-	// OPENING LOGFILE //
-	/////////////////////
-
-	ptc->misclog = fopen(ptc->misclogfile, "w+");		// open the logfile
-	if (!ptc->misclog) 
-		logErr("Could not open misc logfile '%s'!", ptc->misclogfile);
-	
-	ptc->domisclog = false;								// start with logging turned off
 
 	// CONFIGURE WAVEFRONT CORRECTORS //
 	////////////////////////////////////
@@ -134,9 +127,9 @@ int modInitModule(control_t *ptc, config_t *cs_config) {
 	ptc->wfs[0].res.y = 256;
 	ptc->wfs[0].bpp = 8;
 	// this is where we will look for dark/flat/sky images
-	ptc->wfs[0].darkfile = FOAM_CONFIG_PRE "_dark.gsldump";	
-	ptc->wfs[0].flatfile = FOAM_CONFIG_PRE "_flat.gsldump";
-	ptc->wfs[0].skyfile = FOAM_CONFIG_PRE "_sky.gsldump";
+	ptc->wfs[0].darkfile = FOAM_DATADIR FOAM_CONFIG_PRE "_dark.gsldump";	
+	ptc->wfs[0].flatfile = FOAM_DATADIR FOAM_CONFIG_PRE "_flat.gsldump";
+	ptc->wfs[0].skyfile = FOAM_DATADIR FOAM_CONFIG_PRE "_sky.gsldump";
 	ptc->wfs[0].scandir = AO_AXES_XY;
 	ptc->wfs[0].id = 0;
 	ptc->wfs[0].fieldframes = 1000;     // take 1000 frames for a dark or flatfield
@@ -152,15 +145,15 @@ int modInitModule(control_t *ptc, config_t *cs_config) {
 	simparams.noise = 0;
 	simparams.seeingfac = 0.3;
 	// these files are needed for AO simulation and will be read in by simInit()
-	simparams.wf = "../config/wavefront.png";
-	simparams.apert = "../config/apert15-256.pgm";
-	simparams.actpat = "../config/dm37-256.pgm";
+	simparams.wf = FOAM_CONFDIR "wavefront.png";
+	simparams.apert = FOAM_CONFDIR "apert15-256.pgm";
+	simparams.actpat = FOAM_CONFDIR "dm37-256.pgm";
 	// resolution of the simulated image
 	simparams.currimgres.x = ptc->wfs[0].res.x;
 	simparams.currimgres.y = ptc->wfs[0].res.y;
-	// These need to be init to NULL
+	// These need to be init to NULL so the sim module knows to generate the relevant data
 	simparams.shin = simparams.shout = simparams.plan_forward = NULL;
-	simparams.wisdomfile = FOAM_CONFIG_PRE "_fftw-wisdom";
+	simparams.wisdomfile = FOAM_DATADIR FOAM_CONFIG_PRE "_fftw-wisdom";
 	if(simInit(&simparams) != EXIT_SUCCESS)
 		logErr("Failed to initialize simulation module.");
 
@@ -178,8 +171,8 @@ int modInitModule(control_t *ptc, config_t *cs_config) {
 	shtrack.shsize.y = ptc->wfs[0].res.y/shtrack.cells.y;
 	shtrack.track.x = shtrack.shsize.x/2;   // tracker windows are half the size of the lenslet grid things
 	shtrack.track.y = shtrack.shsize.y/2;
-	shtrack.pinhole = FOAM_CONFIG_PRE "_pinhole.gsldump";
-	shtrack.influence = FOAM_CONFIG_PRE "_influence.gsldump";
+	shtrack.pinhole = FOAM_DATADIR FOAM_CONFIG_PRE "_pinhole.gsldump";
+	shtrack.influence = FOAM_DATADIR FOAM_CONFIG_PRE "_influence.gsldump";
 	shtrack.measurecount = 2;
 	shtrack.skipframes = 2;
 	shtrack.samxr = -1;			// 1 row edge erosion
@@ -187,6 +180,24 @@ int modInitModule(control_t *ptc, config_t *cs_config) {
 	// init the shtrack module now
 	if (modInitSH(&(ptc->wfs[0]), &shtrack) != EXIT_SUCCESS)
 		logErr("Failed to initialize shack-hartmann module.");
+	
+	// Configure datalogging for SH offset measurements
+	shlog.fname = "sh-offsets";		// logfile name
+	shlog.mode = "a";				// open with append mode (don't delete existing files)
+	shlog.sep = " ";				// use space as a separator
+	shlog.comm = "#";				// use a hash as comment char
+	shlog.use = true;				// use the logfile immediately
+	// Configure log for WFC signals ('voltages')
+	wfclog.fname = "wfc-signals";
+	wfclog.mode = "a";
+	wfclog.sep = " ";
+	wfclog.comm = "#";	
+	wfclog.use = true;
+	
+	// Init logging
+	logInit(&shlog, ptc);
+	logInit(&wfclog, ptc);
+	
 	
 	// CONFIGURE CS_CONFIG SETTINGS //
 	//////////////////////////////////
@@ -242,8 +253,6 @@ void modStopModule(control_t *ptc) {
 #ifdef FOAM_SIMDYN_DISPLAY
 	displayFinish(&disp);
 #endif
-	// close log file
-	fclose(ptc->misclog);
 	
 #ifdef __APPLE__
 	// need to call this before the thread dies:
@@ -268,6 +277,12 @@ int modOpenInit(control_t *ptc) {
 		gsl_vector_float_set_zero(ptc->wfc[i].ctrl);
 		drvSetActuator(ptc, i);
 	}
+	
+	// log mode change
+	logPTC(&shlog, ptc, shlog.comm);
+	logPTC(&wfclog, ptc, shlog.comm);
+	logMsg(&shlog, shlog.comm, "Init open loop", 1);
+	logMsg(&wfclog, shlog.comm, "Init open loop", 1);
 
 	// nothing to init for static simulation
 	return EXIT_SUCCESS;
@@ -275,7 +290,6 @@ int modOpenInit(control_t *ptc) {
 
 int modOpenLoop(control_t *ptc) {
 	static char title[64];
-	int sn;
 	
 	// Get simulated image for the first WFS
 	drvGetImg(ptc, 0);
@@ -285,26 +299,20 @@ int modOpenLoop(control_t *ptc) {
 	
 	modCogTrack(ptc->wfs[0].corrim, DATA_GSL_M_F, ALIGN_RECT, &shtrack, NULL, NULL);
 	
-	// log offsets measured
-	if (ptc->domisclog && shtrack.nsubap > 0) {
-		fprintf(ptc->misclog, "O, %ld, %d", ptc->frames, shtrack.nsubap);
-		for (sn = 0; sn < shtrack.nsubap; sn++)
-			fprintf(ptc->misclog, ", %f, %f", \
-					gsl_vector_float_get(shtrack.disp, 2*sn + 0), \
-					gsl_vector_float_get(shtrack.disp, 2*sn + 1));
-		fprintf(ptc->misclog, "\n");
-	}
+	// log offsets measured and TT signal
+	logGSLVecFloat(&shlog, shtrack.disp, "O", 1);
 
-#ifdef FOAM_SIMDYN_DISPLAY
     if (ptc->frames % ptc->logfrac == 0) {
+		logInfo(0, "Current framerate: %.2f FPS", ptc->fps);
+		
+#ifdef FOAM_SIMDYN_DISPLAY
 		displayDraw((&ptc->wfs[0]), &disp, &shtrack);
 		displaySDLEvents(&disp);
-		logInfo(0, "Current framerate: %.2f FPS", ptc->fps);
 		snprintf(title, 64, "%s (O) %.2f FPS", disp.caption, ptc->fps);
 		SDL_WM_SetCaption(title, 0);
-    }
 #endif
-	usleep(100000);
+    }
+
 	return EXIT_SUCCESS;
 }
 
@@ -319,7 +327,13 @@ int modOpenFinish(control_t *ptc) {
 int modClosedInit(control_t *ptc) {
 	// set disp source to calib
 	disp.dispsrc = DISPSRC_FASTCALIB;		
-	// start
+
+	// log mode change
+	logPTC(&shlog, ptc, shlog.comm);
+	logPTC(&wfclog, ptc, shlog.comm);
+	logMsg(&shlog, shlog.comm, "Init closed loop", 1);
+	logMsg(&wfclog, shlog.comm, "Init closed loop", 1);
+	
 	return EXIT_SUCCESS;
 }
 
@@ -340,37 +354,41 @@ int modClosedLoop(control_t *ptc) {
 	modCalcCtrl(ptc, &shtrack, 0, -1);
 	
 	// log offsets measured
-	if (ptc->domisclog && shtrack.nsubap > 0) {
-		fprintf(ptc->misclog, "C, %ld, %d", ptc->frames, shtrack.nsubap);
-		for (sn = 0; sn < shtrack.nsubap; sn++)
-			fprintf(ptc->misclog, ", %f, %f", \
-					gsl_vector_float_get(shtrack.disp, 2*sn + 0), \
-					gsl_vector_float_get(shtrack.disp, 2*sn + 1));
-		fprintf(ptc->misclog, "\n");
-	}
+	// log offsets measured and TT signal
+	logGSLVecFloat(&shlog, shtrack.disp, "C", 1);
+	
+	// Log WFC correction- and error signal
+	logGSLVecFloat(&wfclog, simparams.errctrl, "C: TT-Err", 0);
+	logGSLVecFloat(&wfclog, ptc->wfc[0].ctrl, "TT-Corr", 1);
 
-#ifdef FOAM_SIMDYN_DISPLAY
+
     if (ptc->frames % ptc->logfrac == 0) {
-		displayDraw((&ptc->wfs[0]), &disp, &shtrack);
-		displaySDLEvents(&disp);
 		logInfo(0, "Current framerate: %.2f FPS", ptc->fps);
+		
 		logInfo(0, "Displacements per subapt in (x, y) pairs (%d subaps):", shtrack.nsubap);
 		for (sn = 0; sn < shtrack.nsubap; sn++)
 			logInfo(LOG_NOFORMAT, "(%.1f,%.1f)", \
-			gsl_vector_float_get(shtrack.disp, 2*sn + 0), \
-			gsl_vector_float_get(shtrack.disp, 2*sn + 1));
+					gsl_vector_float_get(shtrack.disp, 2*sn + 0), \
+					gsl_vector_float_get(shtrack.disp, 2*sn + 1));
 
 		logInfo(LOG_NOFORMAT, "\n");
+		
+#ifdef FOAM_SIMDYN_DISPLAY
+		displayDraw((&ptc->wfs[0]), &disp, &shtrack);
+		displaySDLEvents(&disp);
 		snprintf(title, 64, "%s (C) %.2f FPS", disp.caption, ptc->fps);
 		SDL_WM_SetCaption(title, 0);
-    }
 #endif
-	usleep(100000);
+    }
+
 	return EXIT_SUCCESS;
 }
 
 int modClosedFinish(control_t *ptc) {
-	// stop
+	// stop logging
+	logFinish(&shlog);
+	logFinish(&wfclog);
+	
 	return EXIT_SUCCESS;
 }
 
@@ -504,7 +522,7 @@ int modCalibrate(control_t *ptc) {
 
 		// get a fake image, drvGetImg() knows about CAL_SUBAPSEL
 		drvGetImg(ptc, 0);
-		uint8_t *tmpimg = (uint8_t *) wfsinfo->image;
+//		uint8_t *tmpimg = (uint8_t *) wfsinfo->image;
 		
 		// run subapsel on this image
 		modSelSubapts(wfsinfo->image, DATA_UINT8, ALIGN_RECT, &shtrack, wfsinfo);
@@ -526,7 +544,7 @@ int modCalibrate(control_t *ptc) {
 		
 		// Get a fake image
 		drvGetImg(ptc, 0);
-		uint8_t *tmpimg = (uint8_t *) wfsinfo->image;
+//		uint8_t *tmpimg = (uint8_t *) wfsinfo->image;
 		
 		// perform a pinhole calibration
 		calibPinhole(ptc, 0, &shtrack);
@@ -536,7 +554,7 @@ int modCalibrate(control_t *ptc) {
 		
 		// Get a fake image
 		drvGetImg(ptc, 0);
-		uint8_t *tmpimg = (uint8_t *) wfsinfo->image;
+//		uint8_t *tmpimg = (uint8_t *) wfsinfo->image;
 		
 		// perform an influence matrix calibration
 		calibWFC(ptc, 0, &shtrack);
@@ -633,6 +651,7 @@ calibrate <mode>:       calibrate the ao system.\n\
 display <source>:       tell foam what display source to use.\n\
 vid <auto|c|v> [i]:     use autocontrast/brightness, or set manually.\n\
 set [prop]:             set or query certain properties.\n\
+log [on|off]:           toggle data logging on or off.\n\
 calibrate <mode>:       calibrate the ao system (dark, flat, subapt, etc).\n\
 saveimg [i]:            save the next i frames to disk.\
 ");
@@ -704,6 +723,24 @@ saveimg [i]:            save the next i frames to disk.\
 		}
 	}
 #endif
+	else if (strcmp(list[0], "log") == 0) {
+		if (count > 1) {
+			if (strcmp(list[1], "on") == 0) {
+				shlog.use = true;
+				wfclog.use = true;
+				tellClients("200 OK ENABLED DATA LOGGING");
+			}
+			else {
+				shlog.use = false;
+				wfclog.use = false;
+				tellClients("200 OK DISBLED DATA LOGGING");				
+			}
+		}	
+		else {
+			tellClient(client->buf_ev,"402 LOG REQUIRES ARG (ON OR OFF)");
+		}
+	}
+	
 	else if (strcmp(list[0],"saveimg") == 0) {
 		if (count > 1) {
 			tmplong = strtol(list[1], NULL, 10);
@@ -797,7 +834,6 @@ saveimg [i]:            save the next i frames to disk.\
 		else {
 			tellClient(client->buf_ev, "200 OK VALUES AS FOLLOWS:\n\
 logfrac (lf):           %d\n\
-datalogging (data):     %d\n\
 fieldframes (ff):       %d\n\
 SH array:               %dx%d cells\n\
 cell size:              %dx%d pixels\n\
@@ -812,7 +848,6 @@ wind (x,y):             (%d,%d)\n\
 samxr:                  %d\n\
 samini:                 %.2f",\
 ptc->logfrac, \
-ptc->domisclog, \
 ptc->wfs[0].fieldframes, \
 shtrack.cells.x, shtrack.cells.y,\
 shtrack.shsize.x, shtrack.shsize.y, \
@@ -1088,8 +1123,10 @@ int MMDarkFlatFullByte(wfs_t *wfs, mod_sh_track_t *shtrack) {
 				//gsl_matrix_float_set(wfs->corrim, i, j, 0.0);
 			else 
 				gsl_matrix_float_set(wfs->corrim, i, j, imagesrc[i*wfs->res.x +j]);
-				//gsl_matrix_float_set(wfs->corrim, i, j, \
+				/*
+				 gsl_matrix_float_set(wfs->corrim, i, j, \
 									 fmin(128 * pix2 / pix1, 255));
+				 */
 			gsl_matrix_float_set(wfs->corrim, i, j, imagesrc[i*wfs->res.x +j]);
 			
 		}
@@ -1106,7 +1143,6 @@ int MMDarkFlatFullByte(wfs_t *wfs, mod_sh_track_t *shtrack) {
 
 
 int drvGetImg(control_t *ptc, int wfs) {
-	int i;
 	if (ptc->mode == AO_MODE_CAL) {
 		if (ptc->calmode == CAL_DARKGAIN || ptc->calmode == CAL_DARK) {
 			// give flat 0 intensity image back
@@ -1178,21 +1214,10 @@ int drvGetImg(control_t *ptc, int wfs) {
 			logDebug(LOG_SOMETIMES, "Simulate seeing as error");
 		}
 		else if (simparams.error == ERR_WFC && simparams.errwfc != NULL) {
-			// log simulated error
-			/*
-			if (ptc->domisclog) {
-				fprintf(ptc->misclog, "WFC ERR, %d, %d", simparams.errwfc->id, simparams.errwfc->nact);
-				for (i=0; i<simparams.errwfc->nact; i++)
-					fprintf(ptc->misclog, ", %f", \
-							gsl_vector_float_get(simctrl,i));
-
-				fprintf(ptc->misclog, "\n");
-			}
-			*/
 			// Simulate a WFC error
 			if (simWFCError(&simparams, simparams.errwfc, 1, 40) != EXIT_SUCCESS)
 				return EXIT_FAILURE;
-
+			
 			logDebug(LOG_SOMETIMES, "Use a WFC (%s) as error", simparams.errwfc->name);
 		}
 		else if (simparams.error == ERR_NONE) {
@@ -1204,15 +1229,6 @@ int drvGetImg(control_t *ptc, int wfs) {
 		}
 
 		if (simparams.corr != NULL) {
-			// log WFC signal
-			if (ptc->domisclog) {
-				fprintf(ptc->misclog, "WFC CORR, %d, %d", simparams.corr->id, simparams.corr->nact);
-				for (i=0; i<simparams.corr->nact; i++)
-					fprintf(ptc->misclog, ", %f", \
-							gsl_vector_float_get(simparams.corr->ctrl,i));
-
-				fprintf(ptc->misclog, "\n");
-			}
 			// Simulate the WFCs themselves
 			if (simWFC(simparams.corr, &simparams) != EXIT_SUCCESS)
 				return EXIT_FAILURE;
@@ -1237,7 +1253,7 @@ int drvGetImg(control_t *ptc, int wfs) {
 	
 	if (ptc->saveimg > 0) { // user wants to save images, do so now!
 		char *fname;
-		asprintf(&fname, "foam-" FOAM_CONFIG_PRE "-cap-%05ld.pgm", ptc->capped);
+		asprintf(&fname, FOAM_DATADIR "foam-" FOAM_CONFIG_PRE "-cap-%05ld.pgm", ptc->capped);
 		modWritePGMArr(fname, simparams.currimg, DATA_UINT8, simparams.currimgres, 0, 1);
 		ptc->capped++;
 		ptc->saveimg--;

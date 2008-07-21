@@ -26,15 +26,16 @@ AC_PROG_MAKE_SET
 AC_PROG_INSTALL
 AC_PROG_RANLIB
 
+# These are the configuration- and data-directories
+FOAMCONFDIR=$datadir/foam-conf/
+FOAMDATADIR=./
+AC_SUBST(FOAMCONFDIR)
+AC_SUBST(FOAMDATADIR)
 
 # We'd like C99 enabled - breaks GSL, some define goes wrong
 #AC_PROG_CC_C99
 # We'd like const to work
 AC_C_CONST
-
-# Define where we can find the configuration files (doesn't work :<)
-#AC_DEFINE(CONFIGFILE, ${datarootdir}, [test])
-#AC_DEFINE_UNQUOTED(CONFIGFILE2, ${datarootdir}, [test2])
 
 # We always need these libs
 AC_SEARCH_LIBS([sin], [m] ,[], AC_MSG_ERROR([This package needs libm.]) ) 
@@ -42,6 +43,13 @@ AC_SEARCH_LIBS([bufferevent_base_set], [event] ,[], AC_MSG_ERROR([This package n
 AC_SEARCH_LIBS([pthread_create], [pthread] ,[], AC_MSG_ERROR([This package needs libpthread.]) ) 
 AC_SEARCH_LIBS([cblas_dgemm],[gslcblas], [], AC_MSG_ERROR([This package needs a cblas supplied with gsl like atlas]) ) 
 AC_SEARCH_LIBS([gsl_blas_dgemm],[gsl], [], AC_MSG_ERROR([This package needs libgsl.]) ) 
+
+# The following is kinda hacky because autoconf needs CFLAGS to include the 
+# libraries necessary for test-compiling, such as the ones above. However,
+# we use LIBS as well to detect which libraries we need to include certain 
+# packages for the different build targets (simstatic, simdyn, mcmath etc).
+# To test this, we reset $LIBS each time and thus compilation tests might fail,
+# hence we use this hack.
 
 # save common libs (this is kinda ugly)
 COMMON_LIBS=$LIBS
@@ -58,7 +66,6 @@ CFLAGS+=" $LIBS"
 ### BEGIN PKG_CONFIG ###
 ########################
 # Check for PKG_CHECK_MODULES first, for OS X
-# ToDo: is this syntax ok?
 if test x"$PKG_CONFIG_PATH" = x ; then
 	AC_MSG_NOTICE([The PKG_CONFIG_PATH variable was not set])
 	AC_MSG_NOTICE([You should set it to the directories that contain the .pc files])
@@ -79,12 +86,12 @@ SDL_LIBS=$(pkg-config sdl --libs)
 
 # Test if we want to compile the dynamical simulation package or not
 AC_ARG_ENABLE([simdyn],
-		AC_HELP_STRING([--enable-simdyn], [enable dynamical simulation mode (def: no)]),
+		AC_HELP_STRING([--enable-simdyn], [enable dynamical simulation mode (def: yes)]),
 		[case "${enableval}" in
 		yes) simdyn=true ;;
 		no)  simdyn=disabled ;;
 		*) AC_MSG_ERROR([bad value ${enableval} for --enable-simdyn]) ;;
-	esac],[simdyn=disabled])
+	esac],[simdyn=true])
 
 # Test if we want to compile the statical simulation package or not
 AC_ARG_ENABLE([simstat],

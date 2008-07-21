@@ -44,6 +44,9 @@
 #define MAX_THREADS 4				//!< number of threads besides the main thread that can be created (unused atm)
 #define MAX_FILTERS 8				//!< maximum number of filters one filterwheel can have
 
+#define FOAM_CONFIG_PRE "mcmath"	//!< used as prefix for datafiles etc.
+
+
 // DATATYPES //
 /************/
 
@@ -59,7 +62,7 @@
  what kind of calibration a user wants.
  */
 typedef enum { // calmode_t
-	CAL_PINHOLE,	//!< determine reference shifts after inserting a pinhole
+	CAL_PINHOLE=0,	//!< determine reference shifts after inserting a pinhole
 	CAL_INFL,		//!< determine the influence functions for each WFS-WFC pair
 	CAL_LINTEST,	//!< linearity test for WFCs
 	CAL_SUBAPSEL,		//!< For subaperture selection
@@ -84,7 +87,7 @@ typedef enum { // axes_t
  This enum includes all filterwheels present in the hardware system. 
  */
 typedef enum { //filter_t
-	FILT_PINHOLE,	//!< Pinhole used for subaperture selection (pinhole in front of SH lenslet array, after TT/DM)
+	FILT_PINHOLE=0,	//!< Pinhole used for subaperture selection (pinhole in front of SH lenslet array, after TT/DM)
     FILT_OPEN,      //!< Normal operations filter position
 	FILT_CLOSED,	//!< Closed filter position
     FILT_TARGET     //!< A target for doing stuff
@@ -117,6 +120,8 @@ int drvGetImg(control_t *ptc, int wfs);
 #include "foam_modules-calib.h"
 // for SH routines
 #include "foam_modules-sh.h"
+// for data logging
+#include "foam_modules-log.h"
 
 #ifndef FOAM_SIMHW
 // for okodm things

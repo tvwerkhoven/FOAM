@@ -19,7 +19,7 @@
 /*! 
 	@file foam_primemod-simdyn.h
 	@author @authortim
-	@date 2008-07-15
+	@date 2008-07-21
 
 	@brief Header file for the dynamical simulation prime module
 */
@@ -41,6 +41,8 @@
 #define MAX_CLIENTS 8				//!< maximum number of clients that can connect
 #define MAX_THREADS 4				//!< number of threads besides the main thread that can be created (unused atm)
 #define MAX_FILTERS 8				//!< maximum number of filters one filterwheel can have
+
+#define FOAM_CONFIG_PRE "simdyn"	//!< used as prefix for datafiles etc.
 
 // DATATYPES //
 /************/
@@ -117,7 +119,8 @@ int drvGetImg(control_t *ptc, int wfs);
 #include "foam_modules-sim.h"
 // for sh wfs tracking
 #include "foam_modules-sh.h"
-
+// for data logging
+#include "foam_modules-log.h"
 
 // These are simstatic specific (for the time being)
 int MMAvgFramesByte(control_t *ptc, gsl_matrix_float *output, wfs_t *wfs, int rounds);

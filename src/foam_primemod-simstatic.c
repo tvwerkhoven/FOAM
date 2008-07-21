@@ -39,8 +39,6 @@ extern pthread_cond_t mode_cond;
 // GLOBALS //
 /***********/
 
-#define FOAM_CONFIG_PRE "simstatic"
-
 // Displaying
 #ifdef FOAM_SIMSTAT_DISPLAY
 mod_display_t disp;
@@ -69,7 +67,7 @@ int modInitModule(control_t *ptc, config_t *cs_config) {
 	// set image to something static
 	coord_t imgres;
 	uint8_t *imgptr = (uint8_t *) ptc->wfs[0].image;
-	modReadIMGArrByte("../config/simstatic-irr.pgm", &(imgptr), &imgres);
+	modReadIMGArrByte(FOAM_CONFDIR "simstatic-irr.pgm", &(imgptr), &imgres);
 	ptc->wfs[0].image  = (void *) imgptr;
 	
 	// configure WFS 0
@@ -78,9 +76,9 @@ int modInitModule(control_t *ptc, config_t *cs_config) {
 	ptc->wfs[0].res.y = imgres.y;
 	ptc->wfs[0].bpp = 8;
 	// this is where we will look for dark/flat/sky images
-	ptc->wfs[0].darkfile = FOAM_CONFIG_PRE "_dark.gsldump";	
-	ptc->wfs[0].flatfile = FOAM_CONFIG_PRE "_flat.gsldump";
-	ptc->wfs[0].skyfile = FOAM_CONFIG_PRE "_sky.gsldump";
+	ptc->wfs[0].darkfile = FOAM_DATADIR FOAM_CONFIG_PRE "_dark.gsldump";	
+	ptc->wfs[0].flatfile = FOAM_DATADIR FOAM_CONFIG_PRE "_flat.gsldump";
+	ptc->wfs[0].skyfile = FOAM_DATADIR FOAM_CONFIG_PRE "_sky.gsldump";
 	ptc->wfs[0].scandir = AO_AXES_XY;
 	ptc->wfs[0].id = 0;
 	ptc->wfs[0].fieldframes = 1000;     // take 1000 frames for a dark or flatfield
@@ -95,8 +93,8 @@ int modInitModule(control_t *ptc, config_t *cs_config) {
 	shtrack.shsize.y = ptc->wfs[0].res.y/shtrack.cells.y;
 	shtrack.track.x = shtrack.shsize.x/2;   // tracker windows are half the size of the lenslet grid things
 	shtrack.track.y = shtrack.shsize.y/2;
-	shtrack.pinhole = FOAM_CONFIG_PRE "_pinhole.gsldump";
-	shtrack.influence = FOAM_CONFIG_PRE "_influence.gsldump";
+	shtrack.pinhole = FOAM_DATADIR FOAM_CONFIG_PRE "_pinhole.gsldump";
+	shtrack.influence = FOAM_DATADIR FOAM_CONFIG_PRE "_influence.gsldump";
 	shtrack.samxr = -1;			// 1 row edge erosion
 	shtrack.samini = 30;			// minimum intensity for subaptselection 10
 	// init the shtrack module now

@@ -87,7 +87,9 @@ int simInit(mod_sim_t *simparams) {
 	// - Allocate memory for (simulated) WFS output
 	simparams->currimg = (uint8_t *) malloc(simparams->currimgres.x	 * simparams->currimgres.y * sizeof(uint8_t));
 
-
+	// - Set error control signal to NULL
+	simparams->errctrl = NULL;
+	
 	logInfo(0, "Simulation module initialized. Currimg (%dx%d)", simparams->currimgres.x, simparams->currimgres.y);
 	return EXIT_SUCCESS;
 }
@@ -136,7 +138,7 @@ int simAtm(mod_sim_t *simparams) {
 	int i,j;
 	logDebug(LOG_SOMETIMES, "Simulating atmosphere.");
 	uint8_t min, max, pix;
-	uint64_t sum;
+//	uint64_t sum;
 	
 	// Now crop the image, i.e. take a part of the big wavefront and store it in 
 	// the location of the wavefront sensor image
@@ -169,7 +171,6 @@ int simFlat(mod_sim_t *simparams, int intensity) {
 int simNoise(mod_sim_t *simparams, int var) {
 	long i;
 	uint32_t old;
-	double n;
 	logDebug(LOG_SOMETIMES, "Simulation noise, variation %d.", var);
 	
 	for (i=0; i< simparams->currimgres.y * simparams->currimgres.x; i++) { // loop over all pixels
@@ -284,16 +285,17 @@ int simSHWFS(mod_sim_t *simparams, mod_sh_track_t *shwfs) {
 			simparams->plan_forward = fftw_plan_dft_2d(nx, ny, simparams->shin, simparams->shout, FFTW_FORWARD, FFTW_EXHAUSTIVE);
 			fclose(fp);
 		}
-		
 	}
 		
 	if (simparams->shout == NULL || simparams->shin == NULL || simparams->plan_forward == NULL)
 		logErr("Some allocation of memory for FFT failed.");
-	
-//	if (ptc.wfs[0].cells[0] * shsize[0] != ptc.wfs[0].res.x || \
-//		ptc.wfs[0].cells[1] * shsize[1] != ptc.wfs[0].res.y)
-//		logErr("Incomplete SH cell coverage! This means that nx_subapt * width_subapt != width_img x: (%d*%d,%d) y: (%d*%d,%d)", \
-//			ptc.wfs[0].cells[0], shsize[0], ptc.wfs[0].res.x, ptc.wfs[0].cells[1], shsize[1], ptc.wfs[0].res.y);
+
+	/*
+	if (ptc.wfs[0].cells[0] * shsize[0] != ptc.wfs[0].res.x || \
+		ptc.wfs[0].cells[1] * shsize[1] != ptc.wfs[0].res.y)
+		logErr("Incomplete SH cell coverage! This means that nx_subapt * width_subapt != width_img x: (%d*%d,%d) y: (%d*%d,%d)", \
+			ptc.wfs[0].cells[0], shsize[0], ptc.wfs[0].res.x, ptc.wfs[0].cells[1], shsize[1], ptc.wfs[0].res.y);
+	 */
 
 	
 	logDebug(LOG_SOMETIMES, "Beginning imaging simulation.");
@@ -424,26 +426,26 @@ int simSHWFS(mod_sim_t *simparams, mod_sh_track_t *shwfs) {
 }
 
 int simWFCError(mod_sim_t *simparams, wfc_t *wfc, int method, int period) {
-	// static ctrl vector so we don't lose it every time this function is called
-	static gsl_vector_float *simctrl = NULL;
-	int nact, i;
+	gsl_vector_float *simctrl = simparams->errctrl;
+	int i;
 	static int count=0;
 	float ctrl;
 
-	// allocate memory for the simulation controls
+	// allocate memory for the simulation controls, if necessary
 	if (simctrl == NULL) {
 		simctrl = gsl_vector_float_alloc(wfc->nact);
 	}
-	// if nact > size, we previously allocated memory for a smaller WFC,
-	// if so, reallocate some memory and continue
-	else if (wfc->nact > simctrl->size) {
+	// if nact != size, somebody switched *errwfc, and we need to
+	// reallocate memory and continue. This can happen if first
+	// we're using a simulated TT mirror to get errors and switch to
+	// DM after that, which typically has more actuators (very typically ;))
+	else if (wfc->ctrl->size !=  simctrl->size) {
 		gsl_vector_float_free(simctrl);
-		simctrl = gsl_vector_float_alloc(wfc->nact);
+		simctrl = gsl_vector_float_alloc(wfc->ctrl->size);
 	}
 	// if simctrl is NULL by now, something went wrong with allocation, stop
 	if (!simctrl)
 		logErr("Failed to allocate memory for simulation control vector.");
-	
 	
 
 	// we use this counter to make periodic signals
@@ -458,6 +460,11 @@ int simWFCError(mod_sim_t *simparams, wfc_t *wfc, int method, int period) {
 		ctrl = fabs(ctrl)*2-1;
 		gsl_vector_float_set_all(simctrl, ctrl);
 	}
+	else if (method == 2) {
+		// method 2: regular sine wave on all actuators:
+		ctrl = sin((float) count/period);
+		gsl_vector_float_set_all(simctrl, ctrl);
+	}
 	else {
 		// method 2: random drift:
 		for (i=0; i<wfc->nact; i++) {
@@ -469,18 +476,6 @@ int simWFCError(mod_sim_t *simparams, wfc_t *wfc, int method, int period) {
 			gsl_vector_float_set(simctrl, i, ctrl);
 		}
 	}
-	
-	// log simulated error
-	/*
-	if (ptc->domisclog) {
-		fprintf(ptc->misclog, "WFC ERR, %d, %d", wfc->id, wfc->nact);
-		for (i=0; i<wfc->nact; i++)
-			fprintf(ptc->misclog, ", %f", \
-				gsl_vector_float_get(simctrl,i));
-
-		fprintf(ptc->misclog, "\n");
-	}
-	*/
 	
 	// What routine do we need to call to simulate this WFC?
 	if (wfc->type == WFC_TT) {
@@ -502,20 +497,7 @@ int simWFCError(mod_sim_t *simparams, wfc_t *wfc, int method, int period) {
 }
 
 int simWFC(wfc_t *wfc, mod_sim_t *simparams) { 
-	int i;
 	logDebug(LOG_SOMETIMES, "Simulation WFC %d (%s) with  %d actuators", wfc->id, wfc->name, wfc->nact);
-
-	// log simulated correction
-	/*
-	if (ptc->domisclog) {
-		fprintf(ptc->misclog, "WFC CORR, %d, %d", wfc->id, wfc->nact);
-		for (i=0; i<wfc->nact; i++)
-			fprintf(ptc->misclog, ", %f", \
-				gsl_vector_float_get(wfc->ctrl,i));
-
-		fprintf(ptc->misclog, "\n");
-	}
-	*/
 
 	if (wfc->type == WFC_TT) {
 		simTT(simparams, wfc->ctrl, 1);

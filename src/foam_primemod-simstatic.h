@@ -41,6 +41,8 @@
 #define MAX_THREADS 4				//!< number of threads besides the main thread that can be created (unused atm)
 #define MAX_FILTERS 8				//!< maximum number of filters one filterwheel can have
 
+#define FOAM_CONFIG_PRE "simstatic"	//!< used as prefix for datafiles etc
+
 // DATATYPES //
 /************/
 

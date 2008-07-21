@@ -388,7 +388,7 @@ int modSelSubapts(void *image, foam_datat_t data, mod_sh_align_t align, mod_sh_t
 
 int modCogTrack(void *image, foam_datat_t data, mod_sh_align_t align, mod_sh_track_t *shtrack, float *aver, float *max) {
 	int ix, iy, sn=0;
-	float csx, csy, csum, fi, cmax; 			// variables for center-of-gravity
+	float csx, csy, csum, fi; 			// variables for center-of-gravity
 	float sum = 0;
 	
 	// loop over all subapertures (treat those all equal, i.e. no preference for 

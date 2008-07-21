@@ -190,7 +190,7 @@ int modWritePGMSurf(char *fname, SDL_Surface *img, int maxval, int pgmtype) {
 
 int modWritePGMArr(char *fname, void *img, foam_datat_t datatype, coord_t res, int maxval, int pgmtype) {
 	FILE *fd;
-	int x, y;
+	int x;
 	int linew, chars;
 	int val;
 	float max, min, pix;
