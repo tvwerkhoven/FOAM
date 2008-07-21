@@ -88,9 +88,9 @@ int modInitModule(control_t *ptc, config_t *cs_config) {
 	ptc->wfs[0].res.y = 256;
 	ptc->wfs[0].bpp = 8;
 	// this is where we will look for dark/flat/sky images
-	ptc->wfs[0].darkfile = FOAM_DATA FOAM_CONFIG_PRE "_dark.gsldump";	
-	ptc->wfs[0].flatfile = FOAM_DATA FOAM_CONFIG_PRE "_flat.gsldump";
-	ptc->wfs[0].skyfile = FOAM_DATA FOAM_CONFIG_PRE "_sky.gsldump";	
+	ptc->wfs[0].darkfile = FOAM_DATADIR FOAM_CONFIG_PRE "_dark.gsldump";	
+	ptc->wfs[0].flatfile = FOAM_DATADIR FOAM_CONFIG_PRE "_flat.gsldump";
+	ptc->wfs[0].skyfile = FOAM_DATADIR FOAM_CONFIG_PRE "_sky.gsldump";	
 	ptc->wfs[0].scandir = AO_AXES_XY;
 	ptc->wfs[0].id = 0;
 	ptc->wfs[0].fieldframes = 1000;     // take 1000 frames for a dark or flatfield
@@ -137,7 +137,7 @@ int modInitModule(control_t *ptc, config_t *cs_config) {
 	// configure ITIFG camera & buffer
 	dalsacam.module = 48;
 	dalsacam.device_name = "/dev/ic0dma";
-	dalsacam.config_file = FOAM_CONFIG "dalsa-cad6-pcd.cam";
+	dalsacam.config_file = FOAM_CONFDIR "dalsa-cad6-pcd.cam";
 	
 	buffer.frames = 8;
 	
@@ -191,8 +191,8 @@ int modInitModule(control_t *ptc, config_t *cs_config) {
 	shtrack.shsize.y = ptc->wfs[0].res.y/shtrack.cells.y;
 	shtrack.track.x = shtrack.shsize.x/2;   // tracker windows are half the size of the lenslet grid things
 	shtrack.track.y = shtrack.shsize.y/2;
-	shtrack.pinhole = FOAM_DATA FOAM_CONFIG_PRE "_pinhole.gsldump";
-	shtrack.influence = FOAM_DATA FOAM_CONFIG_PRE "_influence.gsldump";
+	shtrack.pinhole = FOAM_DATADIR FOAM_CONFIG_PRE "_pinhole.gsldump";
+	shtrack.influence = FOAM_DATADIR FOAM_CONFIG_PRE "_influence.gsldump";
 	shtrack.skipframes = 10;		// skip 10 frames before measureing
 	shtrack.measurecount = 3;		// measure 10 times per actuator voltage
 	shtrack.samxr = -1;			// 1 row edge erosion
@@ -647,7 +647,7 @@ set [prop] [val]:       set or query property values.\n\
 tellClient(client->buf_ev, "\
 200 OK HELP GAIN\n\
    prop [wfc] [f]       set proportional gain for [wfc].\n\
-   int [wfc] [f]        set integral gain for [wfc].\n\ 
+   int [wfc] [f]        set integral gain for [wfc].\n\
    diff [wfc] [f]       set differential gain for [wfc].");
 			}			
 			else if (strncmp(list[1], "cal",3) == 0) {
@@ -1165,11 +1165,15 @@ int MMDarkFlatFullByte(wfs_t *wfs, mod_sh_track_t *shtrack) {
 	for (i=0; (int) i < wfs->res.y; i++) {
 		for (j=0; (int) j < wfs->res.x; j++) {
 			// pix 1 is flat - dark
-//			pix1 = (gsl_matrix_float_get(wfs->flatim, i, j) - \
-//					gsl_matrix_float_get(wfs->darkim, i, j));
+			/*
+			pix1 = (gsl_matrix_float_get(wfs->flatim, i, j) - \
+					gsl_matrix_float_get(wfs->darkim, i, j));
+			*/
 			// pix 2 is max(raw - dark, 0)
-//			pix2 = fmax(imagesrc[i*wfs->res.x +j] - \
-//						gsl_matrix_float_get(wfs->darkim, i, j), 0);
+			/*
+			pix2 = fmax(imagesrc[i*wfs->res.x +j] - \
+						gsl_matrix_float_get(wfs->darkim, i, j), 0);
+			*/
 			// if flat - dark is 0, we set the output to zero to prevent 
 			// dividing by zero, otherwise we take max(pix2 / pix1, 255)
 			// we multiply by 128 because (raw-dark)/(flat-dark) is
