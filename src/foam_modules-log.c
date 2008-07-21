@@ -60,7 +60,7 @@
 /************/
 
 int logInit(mod_log_t *log, control_t *ptc) {
-	int i;
+	int i=0;
 	char *file;
 	
 	time_t t = time(NULL);
@@ -83,8 +83,10 @@ int logInit(mod_log_t *log, control_t *ptc) {
 			logInfo(0, "%s Logging to '%s' started.", log->fname, asctime(localt));
 			
 			// Log the AO system state for the record (if wanted)
-			if (ptc != NULL)
-				logPTC(log, ptc, log->comm);
+			// !!!:tim:20080721 temp disabled, ptc is not filled at the time
+			// logInit() is called, needs fixing
+//			if (ptc != NULL)
+//				logPTC(log, ptc, log->comm);
 			
 			return EXIT_SUCCESS;
 		}

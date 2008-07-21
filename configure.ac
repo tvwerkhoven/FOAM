@@ -14,7 +14,7 @@ AC_CONFIG_AUX_DIR([build-aux])
 AC_CONFIG_FILES([
 Makefile
 src/Makefile
-config/Makefile
+foam-conf/Makefile
 testing/Makefile
 ])
 
