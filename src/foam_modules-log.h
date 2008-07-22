@@ -89,6 +89,18 @@ int logInit(mod_log_t *log, control_t *ptc);
 */ 
 void logMsg(mod_log_t *log, char *prep, char *msg, char *app);
 
+/*! @brief Reset logging, clearing the logfile
+ 
+ This finished logging using logFinish(), and re-opens the logfile using
+ logInit() with mode "w". This means all old data is removed and the logging
+ is effectively reset.
+ 
+ @param [in] *log A mod_log_t struct filled with some configuration values
+ @param [in] *ptc Pointer to control_t struct if a logPTC() is wanted, NULL otherwise
+ @return EXIT_FAILURE if logInit() or logFinish() fail, or EXIT_SUCCESS otherwise
+ */
+int logReset(mod_log_t *log, control_t *ptc);
+
 /*! @brief Log the state of the AO system as stored in the control_t struct
  
  Log the main variables that define the state of the AO system. The logging is done over
@@ -122,10 +134,11 @@ void logVecFloat(mod_log_t *log, float *vec, int nelem, char *prep, char *app);
  
  @param [in] *log A mod_log_t struct filled with some configuration values
  @param [in] *vec The vector of type gsl_vector_float
+ @param [in] nelem Amount of elements to log, -1 for all. Useful if long vectors have a lot of trailing zeroes.
  @param [in] *prep A prefix used for logging, can 'ptc:' or '#' or even log->comm
  @param [in] *app An appendix used after logging. Can be "\n" or " " etc. Default "\n" if NULL
  */
-void logGSLVecFloat(mod_log_t *log, gsl_vector_float *vec, char *prep, char *app);
+void logGSLVecFloat(mod_log_t *log, gsl_vector_float *vec, int nelem, char *prep, char *app);
 
 /*! @brief Finish logging, close the logfile
  

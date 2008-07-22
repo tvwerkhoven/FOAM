@@ -79,8 +79,8 @@ int logInit(mod_log_t *log, control_t *ptc) {
 				return EXIT_FAILURE;
 			}
 			// If we're here, file opening worked
-			fprintf(log->fd, "%s Logging succesfully started at %s.\n", log->comm, asctime(localt));
-			logInfo(0, "%s Logging to '%s' started.", log->fname, asctime(localt));
+			fprintf(log->fd, "%s Logging succesfully started at %s", log->comm, asctime(localt));
+			logInfo(0, "Logging to '%s' started.", log->fname);
 			
 			// Log the AO system state for the record (if wanted)
 			// !!!:tim:20080721 temp disabled, ptc is not filled at the time
@@ -98,6 +98,22 @@ int logInit(mod_log_t *log, control_t *ptc) {
 	log->use = false;
 	
 	return EXIT_FAILURE;
+}
+
+int logReset(mod_log_t *log, control_t *ptc) {
+	// First close the logfile
+	if (logFinish(log) != EXIT_SUCCESS)
+		return EXIT_FAILURE;
+	
+	// Now re-open with mode 'w'
+	char *oldmode = log->mode;
+	log->mode = "w";
+	if (logInit(log, ptc) != EXIT_SUCCESS)
+		return EXIT_FAILURE;
+	
+	log->mode = oldmode;
+	
+	return EXIT_SUCCESS;
 }
 
 void logMsg(mod_log_t *log, char *prep, char *msg, char *app) {
@@ -143,7 +159,7 @@ void logPTC(mod_log_t *log, control_t *ptc, char *prep) {
 				ptc->wfc[i].id, ptc->wfc[i].name, ptc->wfc[i].nact, \
 				ptc->wfc[i].gain.p, ptc->wfc[i].gain.i, ptc->wfc[i].gain.d);
 		
-		logGSLVecFloat(log, ptc->wfc[i].ctrl, NULL, "\n");
+		logGSLVecFloat(log, ptc->wfc[i].ctrl, -1, NULL, "\n");
 	}
 	
 	// Log FW data
@@ -181,7 +197,7 @@ void logVecFloat(mod_log_t *log, float *vec, int nelem, char *prep, char *app) {
 	
 }
 
-void logGSLVecFloat(mod_log_t *log, gsl_vector_float *vec, char *prep, char *app) {
+void logGSLVecFloat(mod_log_t *log, gsl_vector_float *vec, int nelem, char *prep, char *app) {
 	if (!log->use || vec == NULL) // return immediately if we're not using this log session, or if vec is not allocated yet
 		return;
 
@@ -190,8 +206,12 @@ void logGSLVecFloat(mod_log_t *log, gsl_vector_float *vec, char *prep, char *app
 	if (prep != NULL)
 		fprintf(log->fd, "%s ", prep);
 	
+	// if count == -1, log all elements, otherwise, only log the first count
+	// because we are logging the last element separately, we need to subtract 1
+	if (nelem == -1) nelem = vec->size;
+
 	// Log all but last elements
-	for (i=0; i < vec->size-1; i++)
+	for (i=0; i < nelem-1; i++)
 		fprintf(log->fd, FOAM_MODULES_LOG_FLT "%s", gsl_vector_float_get(vec, i), log->sep);
 	
 	// Log last element without separator
@@ -210,7 +230,7 @@ int logFinish(mod_log_t *log) {
 	struct tm *localt = localtime(&t);
 
 	// Finish logging, close the file. 
-	fprintf(log->fd, "%s Logging succesfully stopped at %s.\n", log->comm, asctime(localt));
+	fprintf(log->fd, "%s Logging succesfully stopped at %s", log->comm, asctime(localt));
 	
 	if (fclose(log->fd)) {
 		logWarn("Error closing logfile '%s': %s.", log->fname, strerror(errno));	

@@ -186,13 +186,13 @@ int modInitModule(control_t *ptc, config_t *cs_config) {
 	shlog.mode = "w";				// open with append mode (don't delete existing files)
 	shlog.sep = " ";				// use space as a separator
 	shlog.comm = "#";				// use a hash as comment char
-	shlog.use = true;				// use the logfile immediately
+	shlog.use = false;				// don't use the logfile immediately
 	// Configure log for WFC signals ('voltages')
 	wfclog.fname = "wfc-signals.dat";
 	wfclog.mode = "w";
 	wfclog.sep = " ";
 	wfclog.comm = "#";	
-	wfclog.use = true;
+	wfclog.use = false;
 	
 	// Init logging
 	logInit(&shlog, ptc);
@@ -300,7 +300,7 @@ int modOpenLoop(control_t *ptc) {
 	modCogTrack(ptc->wfs[0].corrim, DATA_GSL_M_F, ALIGN_RECT, &shtrack, NULL, NULL);
 	
 	// log offsets measured and TT signal
-	logGSLVecFloat(&shlog, shtrack.disp, "O", "\n");
+	logGSLVecFloat(&shlog, shtrack.disp, shtrack.nsubap, "O", "\n");
 
     if (ptc->frames % ptc->logfrac == 0) {
 		logInfo(0, "Current framerate: %.2f FPS", ptc->fps);
@@ -355,11 +355,11 @@ int modClosedLoop(control_t *ptc) {
 	
 	// log offsets measured
 	// log offsets measured and TT signal
-	logGSLVecFloat(&shlog, shtrack.disp, "C", "\n");
+	logGSLVecFloat(&shlog, shtrack.disp, shtrack.nsubap, "C", "\n");
 	
 	// Log WFC correction- and error signal
-	logGSLVecFloat(&wfclog, simparams.errctrl, "C: TT-Err", " ");
-	logGSLVecFloat(&wfclog, ptc->wfc[0].ctrl, "TT-Corr", "\n");
+	logGSLVecFloat(&wfclog, simparams.errctrl, -1, "C: TT-Err", " ");
+	logGSLVecFloat(&wfclog, ptc->wfc[0].ctrl, -1, "TT-Corr", "\n");
 
 
     if (ptc->frames % ptc->logfrac == 0) {
@@ -571,9 +571,13 @@ int modMessage(control_t *ptc, const client_t *client, char *list[], const int c
 	// 403 MODE FORBIDDEN
 	// 300 ERROR
 	// 200 OK 
+	// Some useful variables
 	int tmpint;
-	long tmplong;
 	float tmpfloat;
+	long tmplong;
+	// Time and date for logging (asctime, anyone?)
+	time_t t = time(NULL);
+	struct tm *localt = localtime(&t);
 	
  	if (strncmp(list[0],"help",3) == 0) {
 		// give module specific help here
@@ -728,16 +732,28 @@ saveimg [i]:            save the next i frames to disk.\
 			if (strcmp(list[1], "on") == 0) {
 				shlog.use = true;
 				wfclog.use = true;
+				fprintf(shlog.fd, "%s Logging started at %s", shlog.comm, asctime(localt));
+				fprintf(wfclog.fd, "%s Logging started at %s", shlog.comm, asctime(localt));
 				tellClients("200 OK ENABLED DATA LOGGING");
 			}
-			else {
+			else if (strcmp(list[1], "off") == 0) {
+				fprintf(shlog.fd, "%s Logging stopped at %s", shlog.comm, asctime(localt));
+				fprintf(wfclog.fd, "%s Logging stopped at %s", shlog.comm, asctime(localt));
 				shlog.use = false;
 				wfclog.use = false;
-				tellClients("200 OK DISBLED DATA LOGGING");				
+				tellClients("200 OK DISBLED DATA LOGGING");
+			}
+			else if (strcmp(list[1], "reset") == 0) {
+				logReset(&shlog, ptc);
+				logReset(&wfclog, ptc);
+				tellClients("200 OK RESET DATA LOGGING");
+			}
+			else {
+				tellClient(client->buf_ev,"401 UNKNOWN LOG COMMAND (on, off, reset)");
 			}
 		}	
 		else {
-			tellClient(client->buf_ev,"402 LOG REQUIRES ARG (ON OR OFF)");
+			tellClient(client->buf_ev,"402 LOG REQUIRES ARG (on, off, reset)");
 		}
 	}
 	else if (strcmp(list[0],"saveimg") == 0) {

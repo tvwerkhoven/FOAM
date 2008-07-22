@@ -201,14 +201,14 @@ int modInitModule(control_t *ptc, config_t *cs_config) {
 	modInitSH(&(ptc->wfs[0]), &shtrack);	
 	
 	// Configure datalogging for SH offset measurements
-	shlog.fname = "sh-offsets";		// logfile name
-	shlog.mode = "a";				// open with append mode (don't delete existing files)
+	shlog.fname = "sh-offsets.dat";		// logfile name
+	shlog.mode = "w";				// open with append mode (don't delete existing files)
 	shlog.sep = " ";				// use space as a separator
 	shlog.comm = "#";				// use a hash as comment char
 	shlog.use = false;				// don't use the logfile immediately
 	// Configure log for WFC signals ('voltages')
-	wfclog.fname = "wfc-signals";
-	wfclog.mode = "a";
+	wfclog.fname = "wfc-signals.dat";
+	wfclog.mode = "w";
 	wfclog.sep = " ";
 	wfclog.comm = "#";	
 	wfclog.use = false;
@@ -366,9 +366,9 @@ int modClosedLoop(control_t *ptc) {
 	drvSetActuator(ptc, 0);
 	
 	// log some data, prepend 'C' for closed loop
-	logGSLVecFloat(&shlog, shtrack.disp, "C", "\n");
-	logGSLVecFloat(&wfclog, ptc->wfc[0].ctrl, "C-TT", " ");
-	logGSLVecFloat(&wfclog, dmctrl, "C-DM", "\n");
+	logGSLVecFloat(&shlog, shtrack.disp, shtrack.nsubap, "C", "\n");
+	logGSLVecFloat(&wfclog, ptc->wfc[0].ctrl, -1, "C-TT", " ");
+	logGSLVecFloat(&wfclog, dmctrl, -1, "C-DM", "\n");
 	
     if (ptc->frames % ptc->logfrac == 0) {
 
@@ -598,8 +598,14 @@ int modMessage(control_t *ptc, const client_t *client, char *list[], const int c
 	// 403 MODE FORBIDDEN
 	// 300 ERROR
 	// 200 OK 
+	
+	// Some useful variables
 	int tmpint;
 	float tmpfloat;
+	// Time and date for logging (asctime, anyone?)
+	time_t t = time(NULL);
+	struct tm *localt = localtime(&t);
+	
 	
  	if (strncmp(list[0],"help",3) == 0) {
 		// give module specific help here
@@ -670,7 +676,7 @@ calibrate <mode>:       calibrate the ao system.\n\
 === prime module options ===\n\
 display <source>:       tell foam what display source to use.\n\
 vid <auto|c|v> [i]:     use autocontrast/brightness, or set manually.\n\
-log [on|off]:           toggle data logging on or off.\n\
+log [on|off|reset]:     toggle data logging on or off, or reset the logfiles\n\
 resetdm [i]:            reset the DM to a certain voltage for all acts. def=0\n\
 resetdaq [i]:           reset the DAQ analog outputs to a certain voltage. def=0\n\
 set [prop]:             set or query certain properties.\n\
@@ -757,16 +763,28 @@ source:                 %d", disp.brightness, disp.contrast, disp.dispover, disp
 			if (strcmp(list[1], "on") == 0) {
 				shlog.use = true;
 				wfclog.use = true;
+				fprintf(shlog.fd, "%s Logging started at %s", shlog.comm, asctime(localt));
+				fprintf(wfclog.fd, "%s Logging started at %s", shlog.comm, asctime(localt));
 				tellClients("200 OK ENABLED DATA LOGGING");
 			}
-			else {
+			else if (strcmp(list[1], "off") == 0) {
+				fprintf(shlog.fd, "%s Logging stopped at %s", shlog.comm, asctime(localt));
+				fprintf(wfclog.fd, "%s Logging stopped at %s", shlog.comm, asctime(localt));
 				shlog.use = false;
 				wfclog.use = false;
-				tellClients("200 OK DISBLED DATA LOGGING");				
+				tellClients("200 OK DISBLED DATA LOGGING");
+			}
+			else if (strcmp(list[1], "reset") == 0) {
+				logReset(&shlog, ptc);
+				logReset(&wfclog, ptc);
+				tellClients("200 OK RESET DATA LOGGING");
+			}
+			else {
+				tellClient(client->buf_ev,"401 UNKNOWN LOG COMMAND (on, off, reset)");
 			}
 		}	
 		else {
-			tellClient(client->buf_ev,"402 LOG REQUIRES ARG (ON OR OFF)");
+			tellClient(client->buf_ev,"402 LOG REQUIRES ARG (on, off, reset)");
 		}
 	}
  	else if (strcmp(list[0], "resetdm") == 0) {
