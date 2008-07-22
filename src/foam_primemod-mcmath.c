@@ -348,8 +348,8 @@ int modClosedLoop(control_t *ptc) {
 	// Move the DM mirror around, generate some noise TT signal with 50-frame
 	// periodicty. Use sin and -sin to get nice signals
 	for (i = 0; i<18; i++) {
-		gsl_vector_float_set(dmctrl, okoleft[i], sin(ptc->frames *6.283 /50));
-		gsl_vector_float_set(dmctrl, okoright[i], -sin(ptc->frames *6.283 /50));
+		gsl_vector_float_set(dmctrl, okoleft[i], sin(ptc->frames *6.283 / 300));
+		gsl_vector_float_set(dmctrl, okoright[i], -sin(ptc->frames *6.283 / 300));
 	}
 	drvSetOkoDM(dmctrl, &okodm);
 			
