@@ -15,3 +15,40 @@ causes weird NSAutoReleasePool related errors. To solve this, every thread
 needs to initialize SDL with some Objective C code. Another solution is not to
 run it on OS X, as this platform will probably not be used for driving AO in 
 the first place.
+
+BUG #2 - 2008-07-21 21:25
+fftw-related simdyn crash
+-------------------------
+
+simdyn seems to crash after sending 'mode open', 'mode closed' after eachother
+several times, without calibration. Error is:
+ 06:28:33 <debug>: Simulating SH WFSs now.
+ 06:28:33 <debug>: Beginning imaging simulation.
+ *** glibc detected *** corrupted double-linked list: 0x08103798 ***
+
+ Program received signal SIGABRT, Aborted.
+ [Switching to Thread -1222587472 (LWP 14706)]
+ 0xb7f3a410 in ?? ()
+ 
+backtrace is:
+#0  0xb7f3a410 in ?? ()
+#1  0xb720bda8 in ?? ()
+#2  0x00000006 in ?? ()
+#3  0x00003972 in ?? ()
+#4  0xb7913811 in raise () from /lib/tls/i686/cmov/libc.so.6
+#5  0xb7914fb9 in abort () from /lib/tls/i686/cmov/libc.so.6
+#6  0xb7948dfa in __fsetlocking () from /lib/tls/i686/cmov/libc.so.6
+#7  0xb794ee4c in malloc_usable_size () from /lib/tls/i686/cmov/libc.so.6
+#8  0xb7950d28 in free () from /lib/tls/i686/cmov/libc.so.6
+#9  0xb7951cfa in free () from /lib/tls/i686/cmov/libc.so.6
+#10 0xb7952bb2 in memalign () from /lib/tls/i686/cmov/libc.so.6
+#11 0xb7e27f05 in fftw_kernel_malloc () from /usr/lib/libfftw3.so.3
+#12 0xb7e2733b in fftw_malloc_plain () from /usr/lib/libfftw3.so.3
+#13 0xb7e5b822 in fftw_rdft_vrank_geq1_register () from /usr/lib/libfftw3.so.3
+#14 0xb7e544ae in fftw_hc2hc_applicable () from /usr/lib/libfftw3.so.3
+#15 0xb7e30f74 in fftw_dft_generic_register () from /usr/lib/libfftw3.so.3
+#16 0xb7e2e364 in fftw_dft_conf_standard () from /usr/lib/libfftw3.so.3
+#17 0xb7e32d30 in fftw_dft_rader_register () from /usr/lib/libfftw3.so.3
+#18 0xb7e3319a in fftw_dft_solve () from /usr/lib/libfftw3.so.3
+#19 0xb7e9d37c in fftw_execute () from /usr/lib/libfftw3.so.3
+#20 0x08056350 in simSHWFS (simparams=0x805e9e0, shwfs=0x805ea60)
