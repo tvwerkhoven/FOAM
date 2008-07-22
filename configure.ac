@@ -1,10 +1,10 @@
 # dynamic versioning does not work :<
 #MAJOR=alpha
 #MINOR=$(shell svn log -r HEAD | head -n 2 | tail -n 1 | awk '{print$1"-"$5}')
-AC_INIT([FOAM], [r537], [twerkhoven@xs4all.nl])
+AC_INIT([FOAM], [r541], [twerkhoven@xs4all.nl])
 AC_COPYRIGHT([Copyright (C) 2008 Tim van Werkhoven <twerkhoven@xs4all.nl>])
 
-AC_REVISION($Revision: 537 $)
+AC_REVISION($Revision: 541 $)
 
 #AC_CANONICAL_SYSTEM
 

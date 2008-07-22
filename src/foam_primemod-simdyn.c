@@ -165,8 +165,8 @@ int modInitModule(control_t *ptc, config_t *cs_config) {
     // we have an image of WxH, with a lenslet array of WlxHl, such that
     // each lenslet occupies W/Wl x H/Hl pixels, and we use track.x x track.y
     // pixels to track the CoG or do correlation tracking.
-	shtrack.cells.x = 8;				// we're using a 16x16 lenslet array (fake)
-	shtrack.cells.y = 8;
+	shtrack.cells.x = 16;				// we're using a 16x16 lenslet array (fake)
+	shtrack.cells.y = 16;
 	shtrack.shsize.x = ptc->wfs[0].res.x/shtrack.cells.x;
 	shtrack.shsize.y = ptc->wfs[0].res.y/shtrack.cells.y;
 	shtrack.track.x = shtrack.shsize.x/2;   // tracker windows are half the size of the lenslet grid things
@@ -175,7 +175,7 @@ int modInitModule(control_t *ptc, config_t *cs_config) {
 	shtrack.influence = FOAM_DATADIR FOAM_CONFIG_PRE "_influence.gsldump";
 	shtrack.measurecount = 2;
 	shtrack.skipframes = 2;
-	shtrack.samxr = -1;			// 1 row edge erosion
+	shtrack.samxr = -3;			// 1 row edge erosion
 	shtrack.samini = 30;			// minimum intensity for subaptselection 10
 	// init the shtrack module now
 	if (modInitSH(&(ptc->wfs[0]), &shtrack) != EXIT_SUCCESS)
@@ -822,9 +822,12 @@ saveimg [i]:            save the next i frames to disk.\
 						}
 
 					}
-					else if (simparams.errwfc == NULL) {
+					if (simparams.errwfc == NULL) {
 						simparams.errwfc = &(ptc->wfc[0]);
 						tellClient(client->buf_ev, "200 OK SET ERROR TO WFC 0");
+					}
+					else {
+						tellClient(client->buf_ev, "200 OK SET ERROR TO PRECOMPILED WFC");
 					}
 				}
 				else if (strcmp(list[2], "off") == 0) {
