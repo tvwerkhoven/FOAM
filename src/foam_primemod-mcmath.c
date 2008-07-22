@@ -195,8 +195,8 @@ int modInitModule(control_t *ptc, config_t *cs_config) {
 	shtrack.influence = FOAM_DATADIR FOAM_CONFIG_PRE "_influence.gsldump";
 	shtrack.skipframes = 10;		// skip 10 frames before measureing
 	shtrack.measurecount = 3;		// measure 10 times per actuator voltage
-	shtrack.samxr = -1;			// 1 row edge erosion
-	shtrack.samini = 10;			// minimum intensity for subaptselection 10
+	shtrack.samxr = -4;			// 1 row edge erosion
+	shtrack.samini = 20;			// minimum intensity for subaptselection 10
 	// init the shtrack module for wfs 0 here
 	modInitSH(&(ptc->wfs[0]), &shtrack);	
 	
