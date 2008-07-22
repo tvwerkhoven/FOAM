@@ -655,7 +655,7 @@ calibrate <mode>:       calibrate the ao system.\n\
 display <source>:       tell foam what display source to use.\n\
 vid <auto|c|v> [i]:     use autocontrast/brightness, or set manually.\n\
 set [prop]:             set or query certain properties.\n\
-log [on|off]:           toggle data logging on or off.\n\
+log [on|off|reset]:     toggle data logging on or off, or reset the logfiles\n\
 calibrate <mode>:       calibrate the ao system (dark, flat, subapt, etc).\n\
 saveimg [i]:            save the next i frames to disk.\
 ");

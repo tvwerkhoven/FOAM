@@ -285,6 +285,7 @@ int modOpenInit(control_t *ptc) {
 int modOpenLoop(control_t *ptc) {
 	int i;
 	static char title[64];
+	char *fname;
 	// get an image, without using a timeout
 	if (drvGetImg(ptc, 0) != EXIT_SUCCESS)
 		return EXIT_FAILURE;
@@ -303,6 +304,13 @@ int modOpenLoop(control_t *ptc) {
 	}
 	drvSetOkoDM(dmctrl, &okodm);
 */
+	
+	if (ptc->saveimg > 0) { // user wants to save images, do so now!
+		asprintf(&fname, FOAM_DATADIR FOAM_CONFIG_PRE "-cap-%05ld.pgm", ptc->capped);
+		modWritePGMArr(fname, simparams.currimg, DATA_UINT8, simparams.currimgres, 0, 1);
+		ptc->capped++;
+		ptc->saveimg--;
+	}	
 	
 #ifdef FOAM_MCMATH_DISPLAY
     if (ptc->frames % ptc->logfrac == 0) {
@@ -341,6 +349,7 @@ int modClosedInit(control_t *ptc) {
 int modClosedLoop(control_t *ptc) {
 	static char title[64];
 	int i;
+	char *fname;
 	// get an image, without using a timeout
 	if (drvGetImg(ptc, 0) != EXIT_SUCCESS)
 		return EXIT_FAILURE;
@@ -369,6 +378,13 @@ int modClosedLoop(control_t *ptc) {
 	logGSLVecFloat(&shlog, shtrack.disp, shtrack.nsubap, "C", "\n");
 	logGSLVecFloat(&wfclog, ptc->wfc[0].ctrl, -1, "C-TT", " ");
 	logGSLVecFloat(&wfclog, dmctrl, -1, "C-DM", "\n");
+	
+	if (ptc->saveimg > 0) { // user wants to save images, do so now!
+		asprintf(&fname, FOAM_DATADIR FOAM_CONFIG_PRE "-cap-%05ld.pgm", ptc->capped);
+		modWritePGMArr(fname, simparams.currimg, DATA_UINT8, simparams.currimgres, 0, 1);
+		ptc->capped++;
+		ptc->saveimg--;
+	}	
 	
     if (ptc->frames % ptc->logfrac == 0) {
 
@@ -602,6 +618,7 @@ int modMessage(control_t *ptc, const client_t *client, char *list[], const int c
 	// Some useful variables
 	int tmpint;
 	float tmpfloat;
+	long tmplong;
 	// Time and date for logging (asctime, anyone?)
 	time_t t = time(NULL);
 	struct tm *localt = localtime(&t);
@@ -680,6 +697,7 @@ log [on|off|reset]:     toggle data logging on or off, or reset the logfiles\n\
 resetdm [i]:            reset the DM to a certain voltage for all acts. def=0\n\
 resetdaq [i]:           reset the DAQ analog outputs to a certain voltage. def=0\n\
 set [prop]:             set or query certain properties.\n\
+saveimg [i]:            save the next i frames to disk.\\n
 calibrate <mode>:       calibrate the ao system (dark, flat, subapt, etc).\
 ");
 		}
@@ -758,6 +776,16 @@ source:                 %d", disp.brightness, disp.contrast, disp.dispover, disp
 		}
 	}
 #endif
+	else if (strcmp(list[0],"saveimg") == 0) {
+		if (count > 1) {
+			tmplong = strtol(list[1], NULL, 10);
+			ptc->saveimg = tmplong;
+			tellClient(client->buf_ev, "200 OK SAVING NEXT %ld IMAGES", tmplong);
+		}
+		else {
+			tellClient(client->buf_ev,"402 SAVEIMG REQUIRES ARG (# FRAMES)");
+		}		
+	}	
 	else if (strcmp(list[0], "log") == 0) {
 		if (count > 1) {
 			if (strcmp(list[1], "on") == 0) {
