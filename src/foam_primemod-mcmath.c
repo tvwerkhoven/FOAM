@@ -304,10 +304,12 @@ int modOpenLoop(control_t *ptc) {
 	}
 	drvSetOkoDM(dmctrl, &okodm);
 */
+	// log some data, prepend 'C' for closed loop
+	logGSLVecFloat(&shlog, shtrack.disp, shtrack.nsubap, "O", "\n");
 	
 	if (ptc->saveimg > 0) { // user wants to save images, do so now!
 		asprintf(&fname, FOAM_DATADIR FOAM_CONFIG_PRE "-cap-%05ld.pgm", ptc->capped);
-		modWritePGMArr(fname, simparams.currimg, DATA_UINT8, simparams.currimgres, 0, 1);
+		modWritePGMArr(fname, ptc->wfs[0].image, DATA_UINT8, ptc->wfs[0].res, 0, 1);
 		ptc->capped++;
 		ptc->saveimg--;
 	}	
@@ -356,11 +358,13 @@ int modClosedLoop(control_t *ptc) {
 
 	// Move the DM mirror around, generate some noise TT signal with 50-frame
 	// periodicty. Use sin and -sin to get nice signals
+	/*
 	for (i = 0; i<18; i++) {
 		gsl_vector_float_set(dmctrl, okoleft[i], sin(ptc->frames *6.283 / 300));
 		gsl_vector_float_set(dmctrl, okoright[i], -sin(ptc->frames *6.283 / 300));
 	}
-	drvSetOkoDM(dmctrl, &okodm);
+	*/
+	//drvSetOkoDM(dmctrl, &okodm);
 			
 	// partial dark-flat correction
 	MMDarkFlatSubapByte(&(ptc->wfs[0]), &shtrack);
@@ -376,12 +380,12 @@ int modClosedLoop(control_t *ptc) {
 	
 	// log some data, prepend 'C' for closed loop
 	logGSLVecFloat(&shlog, shtrack.disp, shtrack.nsubap, "C", "\n");
-	logGSLVecFloat(&wfclog, ptc->wfc[0].ctrl, -1, "C-TT", " ");
-	logGSLVecFloat(&wfclog, dmctrl, -1, "C-DM", "\n");
+	//logGSLVecFloat(&wfclog, ptc->wfc[0].ctrl, -1, "C-TT", " ");
+	//logGSLVecFloat(&wfclog, dmctrl, -1, "C-DM", "\n");
 	
 	if (ptc->saveimg > 0) { // user wants to save images, do so now!
 		asprintf(&fname, FOAM_DATADIR FOAM_CONFIG_PRE "-cap-%05ld.pgm", ptc->capped);
-		modWritePGMArr(fname, simparams.currimg, DATA_UINT8, simparams.currimgres, 0, 1);
+		modWritePGMArr(fname, ptc->wfs[0].image, DATA_UINT8, ptc->wfs[0].res, 0, 1);
 		ptc->capped++;
 		ptc->saveimg--;
 	}	
@@ -697,7 +701,7 @@ log [on|off|reset]:     toggle data logging on or off, or reset the logfiles\n\
 resetdm [i]:            reset the DM to a certain voltage for all acts. def=0\n\
 resetdaq [i]:           reset the DAQ analog outputs to a certain voltage. def=0\n\
 set [prop]:             set or query certain properties.\n\
-saveimg [i]:            save the next i frames to disk.\\n
+saveimg [i]:            save the next i frames to disk.\n\
 calibrate <mode>:       calibrate the ao system (dark, flat, subapt, etc).\
 ");
 		}

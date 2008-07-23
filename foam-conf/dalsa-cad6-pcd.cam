@@ -25,7 +25,7 @@
       CCLK_STATIC_STATE = LEVEL_LOW
 #     EXT_SYNC_TIME = 572.000   # us (140ns ... 572us)
       # default exposure time !!!
-      EXT_SYNC_PERIOD_TIME = 3047.000  # us (210ns ... 18.75s)
+      EXT_SYNC_PERIOD_TIME = 10047.000  # us (210ns ... 18.75s)
       # default readout time !!!
       EXSYNC_MIDPOINT_DELAY = 47.000  # us (210ns ... 18.75s)
       # this controls the same as the above value (readout time)
