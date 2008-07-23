@@ -52,3 +52,20 @@ backtrace is:
 #18 0xb7e3319a in fftw_dft_solve () from /usr/lib/libfftw3.so.3
 #19 0xb7e9d37c in fftw_execute () from /usr/lib/libfftw3.so.3
 #20 0x08056350 in simSHWFS (simparams=0x805e9e0, shwfs=0x805ea60)
+
+July 22, 2008, different similar crash:
+#4  0xb78fe811 in raise () from /lib/tls/i686/cmov/libc.so.6
+#5  0xb78fffb9 in abort () from /lib/tls/i686/cmov/libc.so.6
+#6  0xb7933dfa in __fsetlocking () from /lib/tls/i686/cmov/libc.so.6
+#7  0xb793b68f in mallopt () from /lib/tls/i686/cmov/libc.so.6
+#8  0xb793b732 in free () from /lib/tls/i686/cmov/libc.so.6
+#9  0xb792af01 in fclose () from /lib/tls/i686/cmov/libc.so.6
+#10 0x080577ff in logFinish (log=0x805ebc0) at foam_modules-log.c:235
+#11 0x0804b6f6 in modClosedFinish (ptc=0x805e940) at foam_primemod-simdyn.c:389
+#12 0x0804f8cc in modeClosed () at foam_cs.c:628
+#13 0x0804f98c in modeListen () at foam_cs.c:666
+#14 0x0804e7bb in startThread () at foam_cs.c:209
+#15 0xb78c9240 in start_thread () from /lib/tls/i686/cmov/libpthread.so.0
+#16 0xb79a149e in clone () from /lib/tls/i686/cmov/libc.so.6
+
+Problem appears to be thread-related.

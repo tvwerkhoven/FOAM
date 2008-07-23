@@ -221,7 +221,7 @@ int displayImgByte(uint8_t *img, mod_display_t *disp) {
 	// Because OpenGL accepts only [0,1], we divide the actual brightness
 	// and contrast by 255 so that the image is scaled between 0 and 1
 	// (again, avg intensity 5, b=0, c=10 gives scaled avg 5*(10/255))
-	int i, pixels;
+	int i, pixels=0;
 	uint8_t min, max;
 	if (disp->autocontrast == 1) {
 		// if autocontrast is set to one, we calculate the min and max

@@ -324,7 +324,7 @@ int modCalibrate(control_t *ptc) {
 		
 		
 		// get the average flat-dark value for all subapertures (but not the whole image)
-		float tmpavg;
+		float tmpavg=0;
 		for (sn=0; sn < shtrack.nsubap; sn++) {
 			for (i=0; i< shtrack.track.y; i++) {
 				for (j=0; j< shtrack.track.x; j++) {
@@ -360,7 +360,7 @@ int modCalibrate(control_t *ptc) {
 		uint8_t *tmpimg = (uint8_t *) wfsinfo->image;
 		uint8_t tmpmax = tmpimg[0];
 		uint8_t tmpmin = tmpimg[0];
-		uint64_t tmpsum, i;
+		uint64_t tmpsum=0, i;
 		for (i=0; i<wfsinfo->res.x*wfsinfo->res.y; i++) {
 			tmpsum += tmpimg[i];
 			if (tmpimg[i] > tmpmax) tmpmax = tmpimg[i];

@@ -165,8 +165,8 @@ int modInitModule(control_t *ptc, config_t *cs_config) {
     // we have an image of WxH, with a lenslet array of WlxHl, such that
     // each lenslet occupies W/Wl x H/Hl pixels, and we use track.x x track.y
     // pixels to track the CoG or do correlation tracking.
-	shtrack.cells.x = 16;				// we're using a 16x16 lenslet array (fake)
-	shtrack.cells.y = 16;
+	shtrack.cells.x = 8;				// we're using a 16x16 lenslet array (fake)
+	shtrack.cells.y = 8;
 	shtrack.shsize.x = ptc->wfs[0].res.x/shtrack.cells.x;
 	shtrack.shsize.y = ptc->wfs[0].res.y/shtrack.cells.y;
 	shtrack.track.x = shtrack.shsize.x/2;   // tracker windows are half the size of the lenslet grid things
@@ -483,7 +483,7 @@ int modCalibrate(control_t *ptc) {
 		logInfo(0, "Taking dark and flat images to make convenient images to correct (dark/gain).");		
 		
 		// get mean(flat-dark) value for all subapertures (but not the whole image)
-		float tmpavg;
+		float tmpavg=0;
 		for (sn=0; sn < shtrack.nsubap; sn++) {
 			for (i=0; i< shtrack.track.y; i++) {
 				for (j=0; j< shtrack.track.x; j++) {
@@ -1017,7 +1017,7 @@ int drvSetupHardware(control_t *ptc, aomode_t aomode, calmode_t calmode) {
 
 int MMAvgFramesByte(control_t *ptc, gsl_matrix_float *output, wfs_t *wfs, int rounds) {
 	int k, i, j;
-	float min, max, sum, tmpvar;
+	float min, max, sum=0, tmpvar;
 	uint8_t *imgsrc;
     logDebug(0, "Averaging %d frames now (dark, flat, whatever)", rounds);
 	
