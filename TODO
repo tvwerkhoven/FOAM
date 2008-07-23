@@ -16,9 +16,7 @@ Minor fixes & tweaks
 
 * Improve configuration file inclusion by pointing to a directory defined in 
   config.h that points to the installdir of datafiles? (how?)
-
-* Improve dark/flat algorithm, raw-dark/(flat-dark) must be multiplied by
-  some factor when working with 8 bit bytes (as we are), but which factor?
+  Solved July 23, 2008, using configure.ac in conjuction with automake
 
 * 2008-07-15 
   System header files included are not organised very neatly. These need to
@@ -27,7 +25,13 @@ Minor fixes & tweaks
 
 * 2008-07-16
   Dark- and flat-fielding routines should have their own separate module,
-  this needs to be written
+  this needs to be written 
+  Improve dark/flat algorithm, raw-dark/(flat-dark) must be multiplied by
+  some factor when working with 8 bit bytes (as we are), but which factor?
+
+* 2008-07-23
+  Integrate open and closed loop, and decide what to do based on the stat
+  of the ptc variable. This works better with calibration as well.
 
 Major feature upgrades
 
