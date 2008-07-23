@@ -665,36 +665,36 @@ saveimg [i]:            save the next i frames to disk.\
  	else if (strncmp(list[0], "disp",3) == 0) {
 		if (count > 1) {
 			if (strncmp(list[1], "raw",3) == 0) {
-				tellClient(client->buf_ev, "200 OK DISPLAY RAW");
+				tellClients("200 OK DISPLAY RAW");
 				disp.dispsrc = DISPSRC_RAW;
 			}
 			else if (strncmp(list[1], "cfull",3) == 0) {
 				disp.dispsrc = DISPSRC_FULLCALIB;
-				tellClient(client->buf_ev, "200 OK DISPLAY CALIB");
+				tellClients( "200 OK DISPLAY CALIB");
 			}
 			else if (strncmp(list[1], "cfast",3) == 0) {
 				disp.dispsrc = DISPSRC_FASTCALIB;
-				tellClient(client->buf_ev, "200 OK DISPLAY CALIB");
+				tellClients( "200 OK DISPLAY CALIB");
 			}
 			else if (strncmp(list[1], "grid",3) == 0) {
 				logDebug(0, "overlay was: %d, is: %d, mask: %d", disp.dispover, disp.dispover ^ DISPOVERLAY_GRID, DISPOVERLAY_GRID);
 				disp.dispover ^= DISPOVERLAY_GRID;
-				tellClient(client->buf_ev, "200 OK TOGGLING GRID OVERLAY");
+				tellClients( "200 OK TOGGLING GRID OVERLAY");
 			}
 			else if (strncmp(list[1], "subaps",3) == 0) {
 				disp.dispover ^= DISPOVERLAY_SUBAPS;
-				tellClient(client->buf_ev, "200 OK TOGGLING SUBAPERTURE OVERLAY");
+				tellClients( "200 OK TOGGLING SUBAPERTURE OVERLAY");
 			}
 			else if (strncmp(list[1], "vectors",3) == 0) {
 				disp.dispover ^= DISPOVERLAY_VECTORS;
-				tellClient(client->buf_ev, "200 OK TOGGLING DISPLACEMENT VECTOR OVERLAY");
+				tellClients( "200 OK TOGGLING DISPLACEMENT VECTOR OVERLAY");
 			}
 			else if (strncmp(list[1], "col",3) == 0) {
 				if (count > 4) {
 					disp.col.r = strtol(list[2], NULL, 10);
 					disp.col.g = strtol(list[3], NULL, 10);
 					disp.col.b = strtol(list[4], NULL, 10);
-					tellClient(client->buf_ev, "200 OK COLOR IS NOW (%d,%d,%d)", disp.col.r, disp.col.g, disp.col.b);
+					tellClients( "200 OK COLOR IS NOW (%d,%d,%d)", disp.col.r, disp.col.g, disp.col.b);
 				}
 				else {
 					tellClient(client->buf_ev, "402 COLOR REQUIRES RGB FLOAT TRIPLET");
@@ -706,7 +706,7 @@ saveimg [i]:            save the next i frames to disk.\
 				}
 				else {
 					disp.dispsrc = DISPSRC_DARK;
-					tellClient(client->buf_ev, "200 OK DISPLAY DARK");
+					tellClients( "200 OK DISPLAY DARK");
 				}
 			}
 			else if (strncmp(list[1], "flat",3) == 0) {
@@ -715,7 +715,7 @@ saveimg [i]:            save the next i frames to disk.\
 				}
 				else {
 					disp.dispsrc = DISPSRC_FLAT;
-					tellClient(client->buf_ev, "200 OK DISPLAY FLAT");
+					tellClients( "200 OK DISPLAY FLAT");
 				}
 			}
 			else {
@@ -760,7 +760,7 @@ saveimg [i]:            save the next i frames to disk.\
 		if (count > 1) {
 			tmplong = strtol(list[1], NULL, 10);
 			ptc->saveimg = tmplong;
-			tellClient(client->buf_ev, "200 OK SAVING NEXT %ld IMAGES", tmplong);
+			tellClients( "200 OK SAVING NEXT %ld IMAGES", tmplong);
 		}
 		else {
 			tellClient(client->buf_ev,"402 SAVEIMG REQUIRES ARG (# FRAMES)");
@@ -772,27 +772,27 @@ saveimg [i]:            save the next i frames to disk.\
 			tmpfloat = strtof(list[2], NULL);
 			if (strcmp(list[1], "lf") == 0) {
 				ptc->logfrac = tmpint;
-				tellClient(client->buf_ev, "200 OK SET LOGFRAC TO %d", tmpint);
+				tellClients( "200 OK SET LOGFRAC TO %d", tmpint);
 			}
 			else if (strcmp(list[1], "ff") == 0) {
 				ptc->wfs[0].fieldframes = tmpint;
-				tellClient(client->buf_ev, "200 OK SET FIELDFRAMES TO %d", tmpint);
+				tellClients( "200 OK SET FIELDFRAMES TO %d", tmpint);
 			}
 			else if (strcmp(list[1], "windx") == 0) {
 				simparams.wind.x = tmpint;
-				tellClient(client->buf_ev, "200 OK SET WIND X TO %d", tmpint);
+				tellClients( "200 OK SET WIND X TO %d", tmpint);
 			}
 			else if (strcmp(list[1], "windy") == 0) {
 				simparams.wind.y = tmpint;
-				tellClient(client->buf_ev, "200 OK SET WIND Y TO %d", tmpint);
+				tellClients( "200 OK SET WIND Y TO %d", tmpint);
 			}
 			else if (strcmp(list[1], "see") == 0) {
 				simparams.seeingfac = tmpfloat;
-				tellClient(client->buf_ev, "200 OK SET SEEINGFACTOR TO %f", tmpfloat);
+				tellClients( "200 OK SET SEEINGFACTOR TO %f", tmpfloat);
 			}
 			else if (strcmp(list[1], "noise") == 0) {
 				simparams.noise = tmpint;
-				tellClient(client->buf_ev, "200 OK SET NOISE TO %d", tmpint);
+				tellClients( "200 OK SET NOISE TO %d", tmpint);
 			}
 			else if (strcmp(list[1], "corr") == 0) {
 				if (tmpint >= ptc->wfc_count) {
@@ -800,13 +800,13 @@ saveimg [i]:            save the next i frames to disk.\
 				}
 				else {
 					simparams.corr = &(ptc->wfc[tmpint]);
-					tellClient(client->buf_ev, "200 OK USING WFC %d FOR CORRECTION", tmpint);
+					tellClients( "200 OK USING WFC %d FOR CORRECTION", tmpint);
 				}
 			}
 			else if (strcmp(list[1], "err") == 0) {
 				if (strcmp(list[2], "see") == 0) {
 					simparams.error = ERR_SEEING;
-					tellClient(client->buf_ev, "200 OK SET ERROR TO SEEING");
+					tellClients( "200 OK SET ERROR TO SEEING");
 				}
 				else if (strcmp(list[2], "wfc") == 0) {
 					simparams.error = ERR_WFC;
@@ -814,7 +814,7 @@ saveimg [i]:            save the next i frames to disk.\
 						tmpint = strtol(list[3], NULL, 10);
 						if (tmpint >= 0 && tmpint < ptc->wfc_count)  {
 							simparams.errwfc = &(ptc->wfc[tmpint]);
-							tellClient(client->buf_ev, "200 OK SET ERROR TO WFC %d", tmpint);
+							tellClients( "200 OK SET ERROR TO WFC %d", tmpint);
 						}
 						else {
 							simparams.errwfc = &(ptc->wfc[0]);
@@ -824,26 +824,26 @@ saveimg [i]:            save the next i frames to disk.\
 					}
 					if (simparams.errwfc == NULL) {
 						simparams.errwfc = &(ptc->wfc[0]);
-						tellClient(client->buf_ev, "200 OK SET ERROR TO WFC 0");
+						tellClients( "200 OK SET ERROR TO WFC 0");
 					}
 					else {
-						tellClient(client->buf_ev, "200 OK SET ERROR TO PRECOMPILED WFC");
+						tellClients( "200 OK SET ERROR TO PRECOMPILED WFC");
 					}
 				}
 				else if (strcmp(list[2], "off") == 0) {
 					simparams.error = ERR_NONE;
-					tellClient(client->buf_ev, "200 OK DISABLED ERROR");
+					tellClients( "200 OK DISABLED ERROR");
 				}
 				else
 					tellClient(client->buf_ev, "400 UNKNOWN ERROR SOURCE");
 			}
 			else if (strcmp(list[1], "samini") == 0) {
 				shtrack.samini = tmpfloat;
-				tellClient(client->buf_ev, "200 OK SET SAMINI TO %.2f", tmpfloat);
+				tellClients( "200 OK SET SAMINI TO %.2f", tmpfloat);
 			}
 			else if (strcmp(list[1], "samxr") == 0) {
 				shtrack.samxr = tmpint;
-				tellClient(client->buf_ev, "200 OK SET SAMXR TO %d", tmpint);
+				tellClients( "200 OK SET SAMXR TO %d", tmpint);
 			}
 			else {
 				tellClient(client->buf_ev, "401 UNKNOWN PROPERTY, CANNOT SET");
@@ -885,14 +885,14 @@ shtrack.samini);
 		if (count > 1) {
 			if (strncmp(list[1], "auto",3) == 0) {
 				disp.autocontrast = 1;
-				tellClient(client->buf_ev, "200 OK USING AUTO SCALING");
+				tellClients( "200 OK USING AUTO SCALING");
 			}
 			else if (strcmp(list[1], "c") == 0) {
 				if (count > 2) {
 					tmpfloat = strtof(list[2], NULL);
 					disp.autocontrast = 0;
 					disp.contrast = tmpfloat;
-					tellClient(client->buf_ev, "200 OK CONTRAST %f", tmpfloat);
+					tellClients( "200 OK CONTRAST %f", tmpfloat);
 				}
 				else {
 					tellClient(client->buf_ev, "402 NO CONTRAST GIVEN");
@@ -903,7 +903,7 @@ shtrack.samini);
 					tmpint = strtol(list[2], NULL, 10);
 					disp.autocontrast = 0;
 					disp.brightness = tmpint;
-					tellClient(client->buf_ev, "200 OK BRIGHTNESS %d", tmpint);
+					tellClients( "200 OK BRIGHTNESS %d", tmpint);
 				}
 				else {
 					tellClient(client->buf_ev, "402 NO BRIGHTNESS GIVEN");
@@ -922,38 +922,38 @@ shtrack.samini);
 			if (strncmp(list[1], "dark",3) == 0) {
 				ptc->mode = AO_MODE_CAL;
 				ptc->calmode = CAL_DARK;
-                tellClient(client->buf_ev, "200 OK DARKFIELDING NOW");
+                tellClients( "200 OK DARKFIELDING NOW");
 				pthread_cond_signal(&mode_cond);
 				// add message to the users
 			}
 			else if (strncmp(list[1], "subap",3) == 0) {
 				ptc->mode = AO_MODE_CAL;
 				ptc->calmode = CAL_SUBAPSEL;
-                tellClient(client->buf_ev, "200 OK SELECTING SUBAPTS");
+                tellClients( "200 OK SELECTING SUBAPTS");
 				pthread_cond_signal(&mode_cond);
 			}
 			else if (strncmp(list[1], "flat",3) == 0) {
 				ptc->mode = AO_MODE_CAL;
 				ptc->calmode = CAL_FLAT;
-				tellClient(client->buf_ev, "200 OK FLATFIELDING NOW");
+				tellClients( "200 OK FLATFIELDING NOW");
 				pthread_cond_signal(&mode_cond);
 			}
 			else if (strncmp(list[1], "gain",3) == 0) {
 				ptc->mode = AO_MODE_CAL;
 				ptc->calmode = CAL_DARKGAIN;
-				tellClient(client->buf_ev, "200 OK CALCULATING DARK/GAIN NOW");
+				tellClients( "200 OK CALCULATING DARK/GAIN NOW");
 				pthread_cond_signal(&mode_cond);
 			}			
 			else if (strncmp(list[1], "pinhole",3) == 0) {
 				ptc->mode = AO_MODE_CAL;
 				ptc->calmode = CAL_PINHOLE;
-				tellClient(client->buf_ev, "200 OK PINHOLE CALIBRATION NOW");
+				tellClients( "200 OK PINHOLE CALIBRATION NOW");
 				pthread_cond_signal(&mode_cond);
 			}
 			else if (strncmp(list[1], "influence",3) == 0) {
 				ptc->mode = AO_MODE_CAL;
 				ptc->calmode = CAL_INFL;
-				tellClient(client->buf_ev, "200 OK INFLUENCE CALIBRATION NOW");
+				tellClients( "200 OK INFLUENCE CALIBRATION NOW");
 				pthread_cond_signal(&mode_cond);
 			}			
 			else {
@@ -1275,6 +1275,9 @@ int drvGetImg(control_t *ptc, int wfs) {
 		modWritePGMArr(fname, simparams.currimg, DATA_UINT8, simparams.currimgres, 0, 1);
 		ptc->capped++;
 		ptc->saveimg--;
+		if (ptc->saveimg == 0) { // this was the last frame, report this
+			tellClients("200 FRAME CAPTURE COMPLETE");
+		}
 	}
 		
 	//ptc->wfs[0].image = (void *) simparams.currimg;

@@ -312,6 +312,9 @@ int modOpenLoop(control_t *ptc) {
 		modWritePGMArr(fname, ptc->wfs[0].image, DATA_UINT8, ptc->wfs[0].res, 0, 1);
 		ptc->capped++;
 		ptc->saveimg--;
+		if (ptc->saveimg == 0) { // this was the last frame, report this
+			tellClients("200 FRAME CAPTURE COMPLETE");
+		}	
 	}	
 	
 #ifdef FOAM_MCMATH_DISPLAY
@@ -388,6 +391,9 @@ int modClosedLoop(control_t *ptc) {
 		modWritePGMArr(fname, ptc->wfs[0].image, DATA_UINT8, ptc->wfs[0].res, 0, 1);
 		ptc->capped++;
 		ptc->saveimg--;
+		if (ptc->saveimg == 0) { // this was the last frame, report this
+			tellClients("200 FRAME CAPTURE COMPLETE");
+		}
 	}	
 	
     if (ptc->frames % ptc->logfrac == 0) {
@@ -710,40 +716,40 @@ calibrate <mode>:       calibrate the ao system (dark, flat, subapt, etc).\
  	else if (strncmp(list[0], "disp",3) == 0) {
 		if (count > 1) {
 			if (strncmp(list[1], "raw",3) == 0) {
-				tellClient(client->buf_ev, "200 OK DISPLAY RAW");
+				tellClients("200 OK DISPLAY RAW");
 				disp.dispsrc = DISPSRC_RAW;
 			}
 			else if (strncmp(list[1], "cfull",3) == 0) {
 				disp.dispsrc = DISPSRC_FULLCALIB;
-				tellClient(client->buf_ev, "200 OK DISPLAY CALIB");
+				tellClients("200 OK DISPLAY CALIB");
 			}
 			else if (strncmp(list[1], "cfast",3) == 0) {
 				disp.dispsrc = DISPSRC_FASTCALIB;
-				tellClient(client->buf_ev, "200 OK DISPLAY CALIB");
+				tellClients("200 OK DISPLAY CALIB");
 			}
 			else if (strncmp(list[1], "grid",3) == 0) {
 				logDebug(0, "overlay was: %d, is: %d, mask: %d", disp.dispover, disp.dispover ^ DISPOVERLAY_GRID, DISPOVERLAY_GRID);
 				disp.dispover ^= DISPOVERLAY_GRID;
-				tellClient(client->buf_ev, "200 OK TOGGLING GRID OVERLAY");
+				tellClients("200 OK TOGGLING GRID OVERLAY");
 			}
 			else if (strncmp(list[1], "subaps",3) == 0) {
 				disp.dispover ^= DISPOVERLAY_SUBAPS;
-				tellClient(client->buf_ev, "200 OK TOGGLING SUBAPERTURE OVERLAY");
+				tellClients("200 OK TOGGLING SUBAPERTURE OVERLAY");
 			}
 			else if (strncmp(list[1], "vectors",3) == 0) {
 				disp.dispover ^= DISPOVERLAY_VECTORS;
-				tellClient(client->buf_ev, "200 OK TOGGLING DISPLACEMENT VECTOR OVERLAY");
+				tellClients("200 OK TOGGLING DISPLACEMENT VECTOR OVERLAY");
 			}
 			else if (strncmp(list[1], "labels",3) == 0) {
 				disp.dispover ^= DISPOVERLAY_SUBAPLABELS;
-				tellClient(client->buf_ev, "200 OK TOGGLING SUBAPERTURE LABELS");
+				tellClients("200 OK TOGGLING SUBAPERTURE LABELS");
 			}
 			else if (strncmp(list[1], "col",3) == 0) {
 				if (count > 4) {
 					disp.col.r = strtol(list[2], NULL, 10);
 					disp.col.g = strtol(list[3], NULL, 10);
 					disp.col.b = strtol(list[4], NULL, 10);
-					tellClient(client->buf_ev, "200 OK COLOR IS NOW (%d,%d,%d)", disp.col.r, disp.col.g, disp.col.b);
+					tellClients("200 OK COLOR IS NOW (%d,%d,%d)", disp.col.r, disp.col.g, disp.col.b);
 				}
 				else {
 					tellClient(client->buf_ev, "402 COLOR REQUIRES RGB FLOAT TRIPLET");
@@ -755,7 +761,7 @@ calibrate <mode>:       calibrate the ao system (dark, flat, subapt, etc).\
 				}
 				else {
 					disp.dispsrc = DISPSRC_DARK;
-					tellClient(client->buf_ev, "200 OK DISPLAY DARK");
+					tellClients("200 OK DISPLAY DARK");
 				}
 			}
 			else if (strncmp(list[1], "flat",3) == 0) {
@@ -764,7 +770,7 @@ calibrate <mode>:       calibrate the ao system (dark, flat, subapt, etc).\
 				}
 				else {
 					disp.dispsrc = DISPSRC_FLAT;
-					tellClient(client->buf_ev, "200 OK DISPLAY FLAT");
+					tellClients("200 OK DISPLAY FLAT");
 				}
 			}
 			else {
@@ -784,7 +790,7 @@ source:                 %d", disp.brightness, disp.contrast, disp.dispover, disp
 		if (count > 1) {
 			tmplong = strtol(list[1], NULL, 10);
 			ptc->saveimg = tmplong;
-			tellClient(client->buf_ev, "200 OK SAVING NEXT %ld IMAGES", tmplong);
+			tellClients("200 OK SAVING NEXT %ld IMAGES", tmplong);
 		}
 		else {
 			tellClient(client->buf_ev,"402 SAVEIMG REQUIRES ARG (# FRAMES)");
@@ -866,15 +872,15 @@ source:                 %d", disp.brightness, disp.contrast, disp.dispover, disp
 			if (tmpint >= 0 && tmpint < ptc->wfc_count && tmpfloat >= -1.0 && tmpfloat <= 1.0) {
 				if (strncmp(list[1], "prop",3) == 0) {
 					ptc->wfc[tmpint].gain.p = tmpfloat;
-					tellClient(client->buf_ev, "200 OK SET PROP GAIN FOR WFC %d TO %.2f", tmpint, tmpfloat);
+					tellClients( "200 OK SET PROP GAIN FOR WFC %d TO %.2f", tmpint, tmpfloat);
 				}
 				else if (strncmp(list[1], "diff",3) == 0) {
 					ptc->wfc[tmpint].gain.d = tmpfloat;
-					tellClient(client->buf_ev, "200 OK SET DIFF GAIN FOR WFC %d TO %.2f", tmpint, tmpfloat);
+					tellClients( "200 OK SET DIFF GAIN FOR WFC %d TO %.2f", tmpint, tmpfloat);
 				}
 				else if (strncmp(list[1], "int",3) == 0) {
 					ptc->wfc[tmpint].gain.i = tmpfloat;
-					tellClient(client->buf_ev, "200 OK SET INT GAIN FOR WFC %d TO %.2f", tmpint, tmpfloat);
+					tellClients( "200 OK SET INT GAIN FOR WFC %d TO %.2f", tmpint, tmpfloat);
 				}
 				else {
 					tellClient(client->buf_ev, "401 UNKNOWN GAINTYPE");
@@ -894,19 +900,19 @@ source:                 %d", disp.brightness, disp.contrast, disp.dispover, disp
 			tmpfloat = strtof(list[2], NULL);
 			if (strcmp(list[1], "lf") == 0) {
 				ptc->logfrac = tmpint;
-				tellClient(client->buf_ev, "200 OK SET LOGFRAC TO %d", tmpint);
+				tellClients( "200 OK SET LOGFRAC TO %d", tmpint);
 			}
 			else if (strcmp(list[1], "ff") == 0) {
 				ptc->wfs[0].fieldframes = tmpint;
-				tellClient(client->buf_ev, "200 OK SET FIELDFRAMES TO %d", tmpint);
+				tellClients( "200 OK SET FIELDFRAMES TO %d", tmpint);
 			}
 			else if (strcmp(list[1], "samini") == 0) {
 				shtrack.samini = tmpfloat;
-				tellClient(client->buf_ev, "200 OK SET SAMINI TO %.2f", tmpfloat);
+				tellClients( "200 OK SET SAMINI TO %.2f", tmpfloat);
 			}
 			else if (strcmp(list[1], "samxr") == 0) {
 				shtrack.samxr = tmpint;
-				tellClient(client->buf_ev, "200 OK SET SAMXR TO %d", tmpint);
+				tellClients( "200 OK SET SAMXR TO %d", tmpint);
 			}
 			else {
 				tellClient(client->buf_ev, "401 UNKNOWN PROPERTY, CANNOT SET");
@@ -931,11 +937,11 @@ shtrack.shsize.x, shtrack.shsize.y, shtrack.track.x, shtrack.track.y, ptc->wfs[0
 			tmpfloat = strtof(list[2], NULL);
 			if (strncmp(list[1], "x",3) == 0) {
 				shtrack.stepc.x = tmpfloat;
-				tellClient(client->buf_ev, "200 OK STEP X %+f", tmpfloat);
+				tellClients( "200 OK STEP X %+f", tmpfloat);
 			}
 			else if (strcmp(list[1], "y") == 0) {
 				shtrack.stepc.y = tmpfloat;
-				tellClient(client->buf_ev, "200 OK STEP Y %+f", tmpfloat);
+				tellClients( "200 OK STEP Y %+f", tmpfloat);
 			}
 		}
 		else {
@@ -947,14 +953,14 @@ step (x,y):             (%+f, %+f)", shtrack.stepc.x, shtrack.stepc.y);
 		if (count > 1) {
 			if (strncmp(list[1], "auto",3) == 0) {
 				disp.autocontrast = 1;
-				tellClient(client->buf_ev, "200 OK USING AUTO SCALING");
+				tellClients( "200 OK USING AUTO SCALING");
 			}
 			else if (strcmp(list[1], "c") == 0) {
 				if (count > 2) {
 					tmpfloat = strtof(list[2], NULL);
 					disp.autocontrast = 0;
 					disp.contrast = tmpfloat;
-					tellClient(client->buf_ev, "200 OK CONTRAST %f", tmpfloat);
+					tellClients( "200 OK CONTRAST %f", tmpfloat);
 				}
 				else {
 					tellClient(client->buf_ev, "402 NO CONTRAST GIVEN");
@@ -965,7 +971,7 @@ step (x,y):             (%+f, %+f)", shtrack.stepc.x, shtrack.stepc.y);
 					tmpint = strtol(list[2], NULL, 10);
 					disp.autocontrast = 0;
 					disp.brightness = tmpint;
-					tellClient(client->buf_ev, "200 OK BRIGHTNESS %d", tmpint);
+					tellClients( "200 OK BRIGHTNESS %d", tmpint);
 				}
 				else {
 					tellClient(client->buf_ev, "402 NO BRIGHTNESS GIVEN");
@@ -987,37 +993,37 @@ contrast:               %f", disp.brightness, disp.contrast);
 			if (strncmp(list[1], "dark",3) == 0) {
 				ptc->mode = AO_MODE_CAL;
 				ptc->calmode = CAL_DARK;
-                		tellClient(client->buf_ev, "200 OK DARKFIELDING NOW");
+                		tellClients( "200 OK DARKFIELDING NOW");
 				pthread_cond_signal(&mode_cond);
 			}
 			else if (strncmp(list[1], "subap",3) == 0) {
 				ptc->mode = AO_MODE_CAL;
 				ptc->calmode = CAL_SUBAPSEL;
-                		tellClient(client->buf_ev, "200 OK SELECTING SUBAPTS");
+                		tellClients( "200 OK SELECTING SUBAPTS");
 				pthread_cond_signal(&mode_cond);
 			}
 			else if (strncmp(list[1], "flat",3) == 0) {
 				ptc->mode = AO_MODE_CAL;
 				ptc->calmode = CAL_FLAT;
-				tellClient(client->buf_ev, "200 OK FLATFIELDING NOW");
+				tellClients( "200 OK FLATFIELDING NOW");
 				pthread_cond_signal(&mode_cond);
 			}
 			else if (strncmp(list[1], "gain",3) == 0) {
 				ptc->mode = AO_MODE_CAL;
 				ptc->calmode = CAL_DARKGAIN;
-				tellClient(client->buf_ev, "200 OK CALCULATING DARK/GAIN NOW");
+				tellClients( "200 OK CALCULATING DARK/GAIN NOW");
 				pthread_cond_signal(&mode_cond);
 			}
 			else if (strncmp(list[1], "pinhole",3) == 0) {
 				ptc->mode = AO_MODE_CAL;
 				ptc->calmode = CAL_PINHOLE;
-                tellClient(client->buf_ev, "200 OK GETTING REFERENCE COORDINATES");
+                tellClients( "200 OK GETTING REFERENCE COORDINATES");
 				pthread_cond_signal(&mode_cond);
 			}
 			else if (strncmp(list[1], "influence",3) == 0) {
 				ptc->mode = AO_MODE_CAL;
 				ptc->calmode = CAL_INFL;
-                tellClient(client->buf_ev, "200 OK GETTING INFLUENCE FUNCTION");
+                tellClients( "200 OK GETTING INFLUENCE FUNCTION");
 				pthread_cond_signal(&mode_cond);
 			}
 			else {
