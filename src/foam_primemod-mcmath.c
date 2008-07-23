@@ -873,14 +873,20 @@ source:                 %d", disp.brightness, disp.contrast, disp.dispover, disp
 				if (strncmp(list[1], "prop",3) == 0) {
 					ptc->wfc[tmpint].gain.p = tmpfloat;
 					tellClients( "200 OK SET PROP GAIN FOR WFC %d TO %.2f", tmpint, tmpfloat);
+					logMsg(&shlog, shlog.comm, "GAIN: Changed prop gain, PTC dump follows", "\n");
+					logPTC(&shlog, ptc, shlog.comm);
 				}
 				else if (strncmp(list[1], "diff",3) == 0) {
 					ptc->wfc[tmpint].gain.d = tmpfloat;
 					tellClients( "200 OK SET DIFF GAIN FOR WFC %d TO %.2f", tmpint, tmpfloat);
+					logMsg(&shlog, shlog.comm, "GAIN: Changed diff gain, PTC dump follows", "\n");
+					logPTC(&shlog, ptc, shlog.comm);					
 				}
 				else if (strncmp(list[1], "int",3) == 0) {
 					ptc->wfc[tmpint].gain.i = tmpfloat;
 					tellClients( "200 OK SET INT GAIN FOR WFC %d TO %.2f", tmpint, tmpfloat);
+					logMsg(&shlog, shlog.comm, "GAIN: Changed int gain, PTC dump follows", "\n");
+					logPTC(&shlog, ptc, shlog.comm);
 				}
 				else {
 					tellClient(client->buf_ev, "401 UNKNOWN GAINTYPE");
