@@ -86,12 +86,12 @@ int modInitModule(control_t *ptc, config_t *cs_config) {
 	
 	// configure TT WFC
 	
-	ptc->wfc[0].name = "TT";
-	ptc->wfc[0].nact = 2;
+	ptc->wfc[0].name = "DM";
+	ptc->wfc[0].nact = 37;
 	ptc->wfc[0].gain.p = 1.0;
 	ptc->wfc[0].gain.i = 1.0;
 	ptc->wfc[0].gain.d = 1.0;
-	ptc->wfc[0].type = WFC_TT;
+	ptc->wfc[0].type = WFC_DM;
 	ptc->wfc[0].id = 2;
 	ptc->wfc[0].calrange[0] = -1.0;
 	ptc->wfc[0].calrange[1] = 1.0;
@@ -139,7 +139,7 @@ int modInitModule(control_t *ptc, config_t *cs_config) {
 		
 	simparams.wind.x = 5;
 	simparams.wind.y = 5;
-	simparams.error = ERR_SEEING;
+	simparams.error = ERR_WFC;
 	simparams.errwfc= &(ptc->wfc[0]);
 	simparams.corr = &(ptc->wfc[0]);
 	simparams.noise = 0;
