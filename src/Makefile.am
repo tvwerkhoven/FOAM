@@ -8,7 +8,7 @@ CFLAGS=-pipe -Wall -Wextra
 # To diagnose linker errors:
 #CFLAGS+=-Wl,-verbose
 # To get some optimization:
-CFLAGS+=-O3 -ftree-vectorize
+#CFLAGS+=-O3 -ftree-vectorize
 
 LDFLAGS=$(COMMON_LIBS) -lc
 
