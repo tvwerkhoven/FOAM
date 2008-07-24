@@ -300,7 +300,7 @@ int modOpenLoop(control_t *ptc) {
 	modCogTrack(ptc->wfs[0].corrim, DATA_GSL_M_F, ALIGN_RECT, &shtrack, NULL, NULL);
 	
 	// log offsets measured and TT signal
-	logGSLVecFloat(&shlog, shtrack.disp, shtrack.nsubap, "O", "\n");
+	logGSLVecFloat(&shlog, shtrack.disp, 2*shtrack.nsubap, "O", "\n");
 
     if (ptc->frames % ptc->logfrac == 0) {
 		logInfo(0, "Current framerate: %.2f FPS", ptc->fps);
@@ -355,11 +355,11 @@ int modClosedLoop(control_t *ptc) {
 	
 	// log offsets measured
 	// log offsets measured and TT signal
-	logGSLVecFloat(&shlog, shtrack.disp, shtrack.nsubap, "C", "\n");
+	logGSLVecFloat(&shlog, shtrack.disp, 2*shtrack.nsubap, "C", "\n");
 	
 	// Log WFC correction- and error signal
-	logGSLVecFloat(&wfclog, simparams.errctrl, -1, "C: TT-Err", " ");
-	logGSLVecFloat(&wfclog, ptc->wfc[0].ctrl, -1, "TT-Corr", "\n");
+	logGSLVecFloat(&wfclog, simparams.errctrl, -1, "C: Error:", " ");
+	logGSLVecFloat(&wfclog, ptc->wfc[0].ctrl, -1, "Correction:", "\n");
 
 
     if (ptc->frames % ptc->logfrac == 0) {
@@ -1186,7 +1186,6 @@ int drvGetImg(control_t *ptc, int wfs) {
 			// take flat 32 intensity image, and pass through simTel, simSHWFS
 			if (simFlat(&simparams, 32) != EXIT_SUCCESS)
 				return EXIT_FAILURE;
-
 			
 			if (simTel(&simparams) != EXIT_SUCCESS)
 				return EXIT_FAILURE;
@@ -1203,7 +1202,6 @@ int drvGetImg(control_t *ptc, int wfs) {
 			// take flat 32 intensity image, and pass through simTel, simWFC and simSHWFS
 			if (simFlat(&simparams, 32) != EXIT_SUCCESS)
 				return EXIT_FAILURE;
-			
 			
 			if (simWFC(simparams.corr, &simparams) != EXIT_SUCCESS)
 				return EXIT_FAILURE;
@@ -1233,7 +1231,7 @@ int drvGetImg(control_t *ptc, int wfs) {
 		}
 		else if (simparams.error == ERR_WFC && simparams.errwfc != NULL) {
 			// Simulate a WFC error
-			if (simWFCError(&simparams, simparams.errwfc, 1, 40) != EXIT_SUCCESS)
+			if (simWFCError(&simparams, simparams.errwfc, 3, 40) != EXIT_SUCCESS)
 				return EXIT_FAILURE;
 			
 			logDebug(LOG_SOMETIMES, "Use a WFC (%s) as error", simparams.errwfc->name);

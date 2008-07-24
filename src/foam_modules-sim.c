@@ -465,8 +465,13 @@ int simWFCError(mod_sim_t *simparams, wfc_t *wfc, int method, int period) {
 		ctrl = sin((float) count/period);
 		gsl_vector_float_set_all(simparams->errctrl, ctrl);
 	}
+	else if (method == 3) {
+		// method 3: static error
+		ctrl = 0.0;
+		gsl_vector_float_set_all(simparams->errctrl, ctrl);
+	}
 	else {
-		// method 2: random drift:
+		// method 4: random drift:
 		for (i=0; i<wfc->nact; i++) {
 			// let the error drift around
 			ctrl = gsl_vector_float_get(simparams->errctrl,i) + (drand48()-0.5)*0.05;

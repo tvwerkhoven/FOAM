@@ -305,7 +305,7 @@ int modOpenLoop(control_t *ptc) {
 	drvSetOkoDM(dmctrl, &okodm);
 */
 	// log some data, prepend 'C' for closed loop
-	logGSLVecFloat(&shlog, shtrack.disp, shtrack.nsubap, "O", "\n");
+	logGSLVecFloat(&shlog, shtrack.disp, 2*shtrack.nsubap, "O", "\n");
 	
 	if (ptc->saveimg > 0) { // user wants to save images, do so now!
 		asprintf(&fname, FOAM_DATADIR FOAM_CONFIG_PRE "-cap-%05ld.pgm", ptc->capped);
@@ -382,9 +382,9 @@ int modClosedLoop(control_t *ptc) {
 	drvSetActuator(ptc, 0);
 	
 	// log some data, prepend 'C' for closed loop
-	logGSLVecFloat(&shlog, shtrack.disp, shtrack.nsubap, "C", "\n");
-	logGSLVecFloat(&wfclog, ptc->wfc[0].ctrl, -1, "C-TT", " ");
-	//logGSLVecFloat(&wfclog, dmctrl, -1, "C-DM", "\n");
+	logGSLVecFloat(&shlog, shtrack.disp, 2*shtrack.nsubap, "C", "\n");
+	logGSLVecFloat(&wfclog, ptc->wfc[0].ctrl, -1, "C-DM", "\n");
+	//logGSLVecFloat(&wfclog, dmctrl, -1, "C-DM", "\n")
 	
 	if (ptc->saveimg > 0) { // user wants to save images, do so now!
 		asprintf(&fname, FOAM_DATADIR FOAM_CONFIG_PRE "-cap-%05ld.pgm", ptc->capped);
