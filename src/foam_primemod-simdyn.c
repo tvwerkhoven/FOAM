@@ -47,6 +47,8 @@ mod_display_t disp;
 mod_sh_track_t shtrack;
 // Simulation parameters
 mod_sim_t simparams;
+// Use an image buffer
+mod_imgbuf_t imgbuf;
 
 // Log some data here
 mod_log_t shlog;
@@ -86,13 +88,13 @@ int modInitModule(control_t *ptc, config_t *cs_config) {
 	
 	// configure TT WFC
 	
-	ptc->wfc[0].name = "DM";
-	ptc->wfc[0].nact = 37;
+	ptc->wfc[0].name = "TT";
+	ptc->wfc[0].nact = 2;
 	ptc->wfc[0].gain.p = 1.0;
 	ptc->wfc[0].gain.i = 1.0;
 	ptc->wfc[0].gain.d = 1.0;
-	ptc->wfc[0].type = WFC_DM;
-	ptc->wfc[0].id = 2;
+	ptc->wfc[0].type = WFC_TT;
+	ptc->wfc[0].id = 1;
 	ptc->wfc[0].calrange[0] = -1.0;
 	ptc->wfc[0].calrange[1] = 1.0;
 	
@@ -136,7 +138,14 @@ int modInitModule(control_t *ptc, config_t *cs_config) {
 		
 	// CONFIGURE SIMULATION MODULE //
 	/////////////////////////////////
-		
+	
+	// Configure some img buff stuff
+	imgbuf.imgres = ptc->wfs[0].res;
+	imgbuf.imgsize = imgbuf.imgres.x * imgbuf.imgres.y;
+	imgbuf.initalloc = imgbuf.imgsize * 100;
+	imgInitBuf(&imgbuf);
+
+	// Configure simulation params
 	simparams.wind.x = 5;
 	simparams.wind.y = 5;
 	simparams.error = ERR_WFC;
@@ -255,6 +264,8 @@ void modStopModule(control_t *ptc) {
 #ifdef FOAM_SIMDYN_DISPLAY
 	displayFinish(&disp);
 #endif
+
+	imgFreeBuf(&imgbuf);
 	
 #ifdef __APPLE__
 	// need to call this before the thread dies:
@@ -659,7 +670,7 @@ vid <auto|c|v> [i]:     use autocontrast/brightness, or set manually.\n\
 set [prop]:             set or query certain properties.\n\
 log [on|off|reset]:     toggle data logging on or off, or reset the logfiles\n\
 calibrate <mode>:       calibrate the ao system (dark, flat, subapt, etc).\n\
-saveimg [i]:            save the next i frames to disk.\
+saveimg [i]:            buffer & dump the next i frames to disk.\
 ");
 		}
 	}
@@ -1233,7 +1244,7 @@ int drvGetImg(control_t *ptc, int wfs) {
 		}
 		else if (simparams.error == ERR_WFC && simparams.errwfc != NULL) {
 			// Simulate a WFC error
-			if (simWFCError(&simparams, simparams.errwfc, 3, 40) != EXIT_SUCCESS)
+			if (simWFCError(&simparams, simparams.errwfc, 2, 40) != EXIT_SUCCESS)
 				return EXIT_FAILURE;
 			
 			logDebug(LOG_SOMETIMES, "Use a WFC (%s) as error", simparams.errwfc->name);
@@ -1246,11 +1257,11 @@ int drvGetImg(control_t *ptc, int wfs) {
 			logDebug(LOG_SOMETIMES, "No error, flat WF");
 		}
 
-		//if (simparams.corr != NULL) {
+		if (simparams.corr != NULL) {
 			// Simulate the WFCs themselves
-			//if (simWFC(simparams.corr, &simparams) != EXIT_SUCCESS)
-				//return EXIT_FAILURE;
-		//}
+			if (simWFC(simparams.corr, &simparams) != EXIT_SUCCESS)
+				return EXIT_FAILURE;
+		}
 		
 		// Simulate telescope aperture
 		if (simTel(&simparams) != EXIT_SUCCESS)
@@ -1270,13 +1281,11 @@ int drvGetImg(control_t *ptc, int wfs) {
 	}
 	
 	if (ptc->saveimg > 0) { // user wants to save images, do so now!
-		char *fname;
-		asprintf(&fname, FOAM_DATADIR FOAM_CONFIG_PRE "-cap-%05ld.pgm", ptc->capped);
-		imgWritePGMArr(fname, simparams.currimg, DATA_UINT8, simparams.currimgres, 0, 1);
-		ptc->capped++;
+		imgSaveToBuf(&imgbuf, simparams.currimg, DATA_UINT8, simparams.currimgres);
 		ptc->saveimg--;
 		if (ptc->saveimg == 0) { // this was the last frame, report this
-			tellClients("200 FRAME CAPTURE COMPLETE");
+			//tellClients("200 FRAME CAPTURE COMPLETE");
+			imgDumpBuf(&imgbuf, ptc);
 		}
 	}
 		

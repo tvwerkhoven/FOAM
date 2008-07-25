@@ -201,19 +201,21 @@ int imgInitBuf(mod_imgbuf_t *buf) {
 	buf->used = 0;
 	buf->imgused = 0;
 	buf->use = true;
+
+	logInfo(0, "Successfully initialized image buffer for %d bytes", buf->initalloc);
 	
 	return EXIT_SUCCESS;
 }
 
 int imgSaveToBuf(mod_imgbuf_t *buf, void *img, foam_datat_t datatype, coord_t res) {
-	int i;
-	
 	// Check if we are using this buffer
-	if (buf->use == false)
+	if (buf->use == false || buf->data == NULL)
 		return EXIT_SUCCESS;
 	
+	int i;
+	
 	// Check if we have space left
-	if ((buf->size - buf->used) < 10*buf->imgsize) {
+	if ((buf->size - buf->used) < buf->imgsize) {
 		// Re-alloc some data, add 'initalloc' to the buffer
 		void *newptr;
 		newptr = realloc(buf->data, buf->size + buf->initalloc);
@@ -231,8 +233,10 @@ int imgSaveToBuf(mod_imgbuf_t *buf, void *img, foam_datat_t datatype, coord_t re
 		// to the new allocation, frees the old allocation, and returns a pointer to
 		// the allocated memory."
 		else if (newptr != buf->data) {
-			logWarn("Image buffer re-allocation problematic, you might want to stop buffering.");
-			buf->size += buf->initalloc;
+			logWarn("Image buffer re-allocation problematic, stopping buffering");
+			buf->data = newptr;
+			buf->use = false;
+			return EXIT_FAILURE;
 		}
 		else {
 			logInfo(0, "Image buffer size increased successfully");
@@ -257,21 +261,32 @@ int imgSaveToBuf(mod_imgbuf_t *buf, void *img, foam_datat_t datatype, coord_t re
 	return EXIT_SUCCESS;
 }
 
-int imgDumpBuf(mod_imgbuf_t *buf) {
+int imgDumpBuf(mod_imgbuf_t *buf, control_t *ptc) {
+	if (buf->data == NULL) {
+		logWarn("Image buffer data not allocated, cannot dump");
+		return EXIT_FAILURE;
+	}
+
 	// Dump the frames to disk
 	char fname[128];
-	int i, fail;
+	int i, fail=0;
 	
+	logInfo(0, "Writing %d frames to disk....", buf->imgused);
 	for (i=0; i<buf->imgused; i++) {
 		// Get the pointer to the right data, which is located at buf->data + the offset
 		// of the images we have already written to disk (i). To get the right pointer,
 		// convert the void data ptr to the right datatype, and then add the correct offset,
 		// and convert it back to a void pointer to it can be passed on to imgWritePGMArr.
 		void *currimg = (void *) (((uint8_t *) buf->data) + i * buf->imgsize);
-		snprintf(fname, 128, FOAM_DATADIR FOAM_CONFIG_PRE "-bufdump-%05d.pgm", i);
-		if (imgWritePGMArr(fname, currimg, DATA_UINT8, buf->imgres, 0, 1) != EXIT_SUCCESS)
+		snprintf(fname, 128, FOAM_DATADIR FOAM_CONFIG_PRE "-bufdump-%05d.pgm", ptc->capped);
+		//logDebug(LOG_NOFORMAT, " %d",i);
+		if (imgWritePGMArr(fname, currimg, DATA_UINT8, buf->imgres, 0, 1) != EXIT_SUCCESS) 
 			fail++;
+		else
+			ptc->capped++;
 	}
+	//logDebug(LOG_NOFORMAT, "\n");
+	
 
 	// Finish, report any fails if they happened.
 	if (fail > 0)
@@ -279,12 +294,19 @@ int imgDumpBuf(mod_imgbuf_t *buf) {
 	else 
 		logInfo(0, "Buffer successfully written to disk");
 
-			
-	// Try to free the data
-	free(buf->data);
-	free(buf);
+	// Reset the buffer for further usage
+	buf->imgused = 0;
+	buf->used = 0;
 	
 	return EXIT_SUCCESS;
+}
+
+void imgFreeBuf(mod_imgbuf_t *buf) {
+	// Free the data, don't use the buffer anymore, or re-init
+	free(buf->data);
+	buf->data = NULL;
+	buf->use = false;
+
 }
 
 int imgWritePGMArr(char *fname, void *img, foam_datat_t datatype, coord_t res, int maxval, int pgmtype) {
