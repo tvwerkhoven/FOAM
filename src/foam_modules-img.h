@@ -50,6 +50,12 @@
  which badly influences AO performance), storing it to memory first
  and then dumping it to disk is generally a better idea. This struct holds
  the relevant data to store these images temporarily.
+ 
+ initalloc tells imgInitBuf() how much memory to allocate initially for
+ normal operations. imgSaveToBuf() uses this amount to increase the buffer
+ size if space is running out, but preferably the memory allocated by
+ imgInitBuf() should suffice. A nice value would be the amount of frames
+ you are going to store in one run, and values around 500 are ok.
  */
 typedef struct {
 	void *data;		//!< (foam) Holds the data 
@@ -67,6 +73,22 @@ typedef struct {
 // PROTOTYPES //
 /**************/
 
+/*! @brief Initialize an image-saving buffer
+ */
+int imgInitBuf(mod_imgbuf_t *buf);
+
+/*! @brief Copy an image/frame to the buffer
+ */
+int imgSaveToBuf(mod_imgbuf_t *buf, void *img, foam_datat_t datatype, coord_t res);
+	
+/*! @brief Dump the buffer to disk and reset the buffer
+ */
+int imgDumpBuf(mod_imgbuf_t *buf, control_t *ptc);
+
+/* @brief Free the memory occupied by the buffer
+ */
+void imgFreeBuf(mod_imgbuf_t *buf);
+ 
 /*!
  @brief Reads image files from disk into an SDL_Surface
 

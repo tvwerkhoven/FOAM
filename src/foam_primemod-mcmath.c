@@ -321,8 +321,8 @@ int modOpenLoop(control_t *ptc) {
 	// log some data, prepend 'C' for closed loop
 	logGSLVecFloat(&shlog, shtrack.disp, 2*shtrack.nsubap, "O", "\n");
 	
-	if (ptc->saveimg > 0) { // user wants to save images, do so now!
-		imgSaveToBuf(&imgbuf, simparams.currimg, DATA_UINT8, simparams.currimgres);
+	if (ptc->saveimg > 0) { // user wants to save images, do so now!		
+		imgSaveToBuf(&imgbuf, ptc->wfs[0].image, DATA_UINT8, ptc->wfs[0].res);
 		ptc->saveimg--;
 		if (ptc->saveimg == 0) { // this was the last frame, report this
 			//tellClients("200 FRAME CAPTURE COMPLETE");
@@ -400,7 +400,7 @@ int modClosedLoop(control_t *ptc) {
 	//logGSLVecFloat(&wfclog, dmctrl, -1, "C-DM", "\n")
 	
 	if (ptc->saveimg > 0) { // user wants to save images, do so now!
-		imgSaveToBuf(&imgbuf, simparams.currimg, DATA_UINT8, simparams.currimgres);
+		imgSaveToBuf(&imgbuf, ptc->wfs[0].image, DATA_UINT8, ptc->wfs[0].res);
 		ptc->saveimg--;
 		if (ptc->saveimg == 0) { // this was the last frame, report this
 			//tellClients("200 FRAME CAPTURE COMPLETE");
