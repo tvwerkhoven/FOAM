@@ -64,6 +64,9 @@ mod_sh_track_t shtrack;
 mod_log_t shlog;
 mod_log_t wfclog;
 
+// Use an image buffer to store & dump images off the WFS
+mod_imgbuf_t imgbuf;
+
 
 int modInitModule(control_t *ptc, config_t *cs_config) {
 	logInfo(0, "This is the McMath-Pierce prime module, enjoy.");
@@ -200,6 +203,12 @@ int modInitModule(control_t *ptc, config_t *cs_config) {
 	// init the shtrack module for wfs 0 here
 	shInit(&(ptc->wfs[0]), &shtrack);	
 	
+	// Configure some img buffering stuff
+	imgbuf.imgres = ptc->wfs[0].res;
+	imgbuf.imgsize = imgbuf.imgres.x * imgbuf.imgres.y;
+	imgbuf.initalloc = imgbuf.imgsize * 100;
+	imgInitBuf(&imgbuf);
+	
 	// Configure datalogging for SH offset measurements
 	shlog.fname = "sh-offsets.dat";		// logfile name
 	shlog.mode = "w";				// open with append mode (don't delete existing files)
@@ -313,14 +322,14 @@ int modOpenLoop(control_t *ptc) {
 	logGSLVecFloat(&shlog, shtrack.disp, 2*shtrack.nsubap, "O", "\n");
 	
 	if (ptc->saveimg > 0) { // user wants to save images, do so now!
-		asprintf(&fname, FOAM_DATADIR FOAM_CONFIG_PRE "-cap-%05ld.pgm", ptc->capped);
-		imgWritePGMArr(fname, ptc->wfs[0].image, DATA_UINT8, ptc->wfs[0].res, 0, 1);
-		ptc->capped++;
+		imgSaveToBuf(&imgbuf, simparams.currimg, DATA_UINT8, simparams.currimgres);
 		ptc->saveimg--;
 		if (ptc->saveimg == 0) { // this was the last frame, report this
-			tellClients("200 FRAME CAPTURE COMPLETE");
-		}	
-	}	
+			//tellClients("200 FRAME CAPTURE COMPLETE");
+			logInfo(0, "Frame capture complete, now dumping to disk");
+			imgDumpBuf(&imgbuf, ptc);
+		}
+	}
 	
 #ifdef FOAM_MCMATH_DISPLAY
     if (ptc->frames % ptc->logfrac == 0) {
@@ -391,15 +400,14 @@ int modClosedLoop(control_t *ptc) {
 	//logGSLVecFloat(&wfclog, dmctrl, -1, "C-DM", "\n")
 	
 	if (ptc->saveimg > 0) { // user wants to save images, do so now!
-		asprintf(&fname, FOAM_DATADIR FOAM_CONFIG_PRE "-cap-%05ld.pgm", ptc->capped);
-		imgWritePGMArr(fname, ptc->wfs[0].image, DATA_UINT8, ptc->wfs[0].res, 0, 1);
-		ptc->capped++;
+		imgSaveToBuf(&imgbuf, simparams.currimg, DATA_UINT8, simparams.currimgres);
 		ptc->saveimg--;
 		if (ptc->saveimg == 0) { // this was the last frame, report this
-			tellClients("200 FRAME CAPTURE COMPLETE");
+			//tellClients("200 FRAME CAPTURE COMPLETE");
+			logInfo(0, "Frame capture complete, now dumping to disk");
+			imgDumpBuf(&imgbuf, ptc);
 		}
 	}	
-	
     if (ptc->frames % ptc->logfrac == 0) {
 
 		logInfo(0, "Subapt displacements:");
@@ -711,7 +719,7 @@ log [on|off|reset]:     toggle data logging on or off, or reset the logfiles\n\
 resetdm [i]:            reset the DM to a certain voltage for all acts. def=0\n\
 resetdaq [i]:           reset the DAQ analog outputs to a certain voltage. def=0\n\
 set [prop]:             set or query certain properties.\n\
-saveimg [i]:            save the next i frames to disk.\n\
+saveimg [i]:            buffer & dump the next i frames to disk.\n\
 calibrate <mode>:       calibrate the ao system (dark, flat, subapt, etc).\
 ");
 		}
