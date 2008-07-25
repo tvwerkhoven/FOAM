@@ -424,15 +424,18 @@ int displayVecs(mod_sh_track_t *shtrack, mod_display_t *disp) {
 
 	int sn=0;
 
-	// To draw the displacement vector relative to the center of the lenslet grid,
+	// To draw the displacement vector relative to the reference coordinates,
 	// we take gridc, which are lower left coordinates of the grid cells, and 
-	// add half the grid size to get to the center, and then use the disp vector
-	// to draw the vector itself.
-	// color already set at init, unecessary if no change
+	// add half the grid size to get to the center. From there we add
+	// the reference coordinates on one end, and the disp vector
+	// on the other end.
 
 	glBegin(GL_LINES);
 	for (sn=0; sn < shtrack->nsubap; sn++) {
-		glVertex2f((GLfloat) shtrack->gridc[sn].x + (shtrack->shsize.x/2), (GLfloat) shtrack->gridc[sn].y + (shtrack->shsize.y/2));
+		glVertex2f((GLfloat) shtrack->gridc[sn].x + (shtrack->shsize.x/2) + \
+					gsl_vector_float_get(shtrack->refc, sn*2+0), \
+				   (GLfloat) shtrack->gridc[sn].y + (shtrack->shsize.y/2) + \
+					gsl_vector_float_get(shtrack->refc, sn*2+0));
 		glVertex2f(shtrack->subc[sn].x + (shtrack->track.x/2) + \
 		gsl_vector_float_get(shtrack->disp, sn*2+0),\
 		shtrack->subc[sn].y + (shtrack->track.y/2) + \
