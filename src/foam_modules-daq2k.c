@@ -44,11 +44,11 @@
  
  \section Functions
  
- \li drvInitDaq2k() - Initialize the Daqboard 2000 (call this first!)
- \li drvCloseDaq2k() - Close the Daqboard 2000 (call this at the end!)
- \li drvDaqSetDAC() - Write analog output to specific ports (ranges from 0 to 65535 (16bit))
- \li drvDaqSetDACs() - Write analog output to all (ranges from 0 to 65535 (16bit))
- \li drvDaqSetP2() - Write digital output to specific ports
+ \li daq2kInit() - Initialize the Daqboard 2000 (call this first!)
+ \li daq2kClose() - Close the Daqboard 2000 (call this at the end!)
+ \li daq2kSetDAC() - Write analog output to specific ports (ranges from 0 to 65535 (16bit))
+ \li daq2kSetDACs() - Write analog output to all (ranges from 0 to 65535 (16bit))
+ \li daq2kSetP2() - Write digital output to specific ports
  
  \section Configuration
  
@@ -220,7 +220,7 @@ static int initDaqIOP2(mod_daq2k_board_t *board) {
 // PUBLIC FUNCTIONS //
 /********************/
 
-int drvInitDaq2k(mod_daq2k_board_t *board) {
+int daq2kInit(mod_daq2k_board_t *board) {
 	// set these variables to 1, assume success
 	board->dacinit = 1;
 	board->iop2init = 1;
@@ -276,7 +276,7 @@ int drvInitDaq2k(mod_daq2k_board_t *board) {
 	return EXIT_SUCCESS;		
 }
 
-void drvCloseDaq2k(mod_daq2k_board_t *board) {
+void daq2kClose(mod_daq2k_board_t *board) {
 	
 	// close open daqboard (fd != -1)
 	if (board->fd >= 0)
@@ -284,7 +284,7 @@ void drvCloseDaq2k(mod_daq2k_board_t *board) {
 	
 }
 
-int drvDaqSetP2(mod_daq2k_board_t *board, int port, int bitpat) {
+int daq2kSetP2(mod_daq2k_board_t *board, int port, int bitpat) {
 	// port must be either 0, 1, 2 or 3 for portA, portB, portC high and low
 	// respectively
 	if (board->fd == -1)
@@ -323,14 +323,14 @@ int drvDaqSetP2(mod_daq2k_board_t *board, int port, int bitpat) {
 	return EXIT_SUCCESS;
 }
 
-void drvDaqSetDAC(mod_daq2k_board_t *board, int chan, int val) {
+void daq2kSetDAC(mod_daq2k_board_t *board, int chan, int val) {
 	if (board->fd == -1)
 		return;
 
 	daqDacWt(board->fd, DddtLocal, (DWORD) chan, (WORD) (val & 0xffff));
 }
 
-void drvDaqSetDACs(mod_daq2k_board_t *board, int val) {
+void daq2kSetDACs(mod_daq2k_board_t *board, int val) {
 	if (board->fd == -1)
 		return;
 	
@@ -350,7 +350,7 @@ int main() {
 		.iop2conf = {0,0,1,1},
 	};
 	
-	if (drvInitDaq2k(&board) != EXIT_SUCCESS)
+	if (daq2kInit(&board) != EXIT_SUCCESS)
 		exit(-1);
 	
 	printf("Opened DAQboard %s!\n", board.device);
@@ -366,7 +366,7 @@ int main() {
 	printf("portA and portB (8bit): ");
 	for (i=1; i<256; i *= 2) { 
 		printf("0x%u...", i);
-		if (drvDaqSetP2(&board, 0, i) != EXIT_SUCCESS || drvDaqSetP2(&board, 1, i) != EXIT_SUCCESS) 
+		if (daq2kSetP2(&board, 0, i) != EXIT_SUCCESS || daq2kSetP2(&board, 1, i) != EXIT_SUCCESS) 
 			printf("(failed), ");
 		else 
 			printf("(ok), ");
@@ -374,7 +374,7 @@ int main() {
 	}
 	i=255;
 	printf("0x%u...", i);
-	if (drvDaqSetP2(&board, 0, i) != EXIT_SUCCESS || drvDaqSetP2(&board, 1, i) != EXIT_SUCCESS) 
+	if (daq2kSetP2(&board, 0, i) != EXIT_SUCCESS || daq2kSetP2(&board, 1, i) != EXIT_SUCCESS) 
 		printf("(failed), ");
 	else 
 		printf("(ok), ");
@@ -386,7 +386,7 @@ int main() {
 	printf("portC low and high (4bit), this should fail in default config: ");
 	for (i=1; i<16; i *= 2) {
 		printf("0x%u...", i);
-		if (drvDaqSetP2(&board, 2, i) != EXIT_SUCCESS || drvDaqSetP2(&board, 3, i) != EXIT_SUCCESS) 
+		if (daq2kSetP2(&board, 2, i) != EXIT_SUCCESS || daq2kSetP2(&board, 3, i) != EXIT_SUCCESS) 
 			printf("(failed), ");
 		else 
 			printf("(ok), ");
@@ -395,7 +395,7 @@ int main() {
 	
 	i=15;
 	printf("0x%u...", i);
-	if (drvDaqSetP2(&board, 2, i) != EXIT_SUCCESS || drvDaqSetP2(&board, 3, i) != EXIT_SUCCESS) 
+	if (daq2kSetP2(&board, 2, i) != EXIT_SUCCESS || daq2kSetP2(&board, 3, i) != EXIT_SUCCESS) 
 		printf("(failed), ");
 	else 
 		printf("(ok), ");
@@ -410,7 +410,7 @@ int main() {
 	printf("Will now drive filterwheel connected to port A, sending values 0 through 7 by using the first three bits\n");
 	for (i=0; i<8; i++) {
 		printf("0x%u...", i);
-		drvDaqSetP2(&board,0,i);
+		daq2kSetP2(&board,0,i);
 		sleep(1);
 	}
 	printf("done\n");
@@ -424,15 +424,15 @@ int main() {
 		for (i=0; i<=100; i++) {
 			if (i % 10 == 0) printf("%d%%", i);
 			else printf(".");
-			//drvDaqSetDACs(&board, i*65536/100);
-			drvDaqSetDAC(&board, j, 65536/2 + i*65536/2/100);
+			//daq2kSetDACs(&board, i*65536/100);
+			daq2kSetDAC(&board, j, 65536/2 + i*65536/2/100);
 			usleep(200000);
 		}
 		printf("..done\n");
 		printf("\n");
 	}
 	
-	drvCloseDaq2k(&board);	
+	daq2kClose(&board);	
 	printf("Closed DAQboard!\n");
 	return EXIT_SUCCESS;
 }

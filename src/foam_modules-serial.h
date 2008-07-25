@@ -49,6 +49,6 @@
  @param [in] *cmd The string to write to the port, such as 'XR0\\r'
  @return Number of bytes written on success, EXIT_FAILURE otherwise.
  */
-int drvSetSerial(const char *port, const char *cmd);
+int serialSetPort(const char *port, const char *cmd);
 
 #endif //#ifndef FOAM_MODULES_SERIAL

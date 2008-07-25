@@ -60,15 +60,15 @@ int simInit(mod_sim_t *simparams) {
 	
 	// Initialize the module:
 	// - Load the wavefront into memory
-	if (modReadIMGArrByte(simparams->wf, &(simparams->wfimg), &(simparams->wfres)) != EXIT_SUCCESS)
+	if (imgReadIMGArrByte(simparams->wf, &(simparams->wfimg), &(simparams->wfres)) != EXIT_SUCCESS)
 		return EXIT_FAILURE;
 	
 	// - Load the aperture into memory	
-	if (modReadIMGArrByte(simparams->apert, &(simparams->apertimg), &(simparams->apertres)) != EXIT_SUCCESS)
+	if (imgReadIMGArrByte(simparams->apert, &(simparams->apertimg), &(simparams->apertres)) != EXIT_SUCCESS)
 		return EXIT_FAILURE;
 	
 	// - Load the actuator pattern into memory
-	if (modReadIMGArrByte(simparams->actpat, &(simparams->actpatimg), &(simparams->actpatres)) != EXIT_SUCCESS)
+	if (imgReadIMGArrByte(simparams->actpat, &(simparams->actpatimg), &(simparams->actpatres)) != EXIT_SUCCESS)
 		return EXIT_FAILURE;
 	
 	// - Check sanity of values in simparams

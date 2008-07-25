@@ -854,7 +854,7 @@ void sockOnRead(struct bufferevent *bev, void *arg) {
 int explode(char *str, char **list) {
 	size_t begin, len;
 	int i;
-	// Take a string 'str' which has space-seperated
+	// Take a string 'str' which has space-separated
 	// words in it and store pointers to the
 	// individual words in 'list'
 	for (i=0; i<Maxparams; i++ ) { 
@@ -1335,7 +1335,7 @@ modeCal() {
 	@name currently depends on the following libraries to be present on the system:
 	\li \c libevent used to handle networking with several simultaneous connections,
 	\li \c SDL which is used to display the sensor output,
-	\li \c pthread used to seperate functions over thread and distribute load,
+	\li \c pthread used to separate functions over thread and distribute load,
 	\li \c libgsl used to do singular value decomposition, link to BLAS and various other matrix/vector operation.
 	
 	For other prime modules, additional libraries may be required. For example,
@@ -1406,7 +1406,7 @@ modeCal() {
 	A module in @name can take any form, but to keep things at least slightly 
 	organised, some conventions apply. These guidelines include:
 	
-	\li Seperate functionally different routines in different modules,
+	\li separate functionally different routines in different modules,
 	\li Name your modules `foam_modules-\<modulename\>.c' and supply a header file,
 	\li Include doxygen compatible information on the module in general in the C file
 	\li Include doxygen compatible information on the routines in the header file

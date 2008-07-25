@@ -155,7 +155,7 @@ replaced CoG tracking with a more generic routine, reworked some of the tracking
 ------------------------------------------------------------------------
 r138 | 0315133 | 2008-03-14 15:08:21 +0100 (Fri, 14 Mar 2008) | 1 line
 
-modSelSubapts improved, no longer depends on the global struct, just needs some parameters which it actually uses
+shSelSubapts improved, no longer depends on the global struct, just needs some parameters which it actually uses
 ------------------------------------------------------------------------
 r137 | 0315133 | 2008-03-13 15:56:06 +0100 (Thu, 13 Mar 2008) | 1 line
 
@@ -263,7 +263,7 @@ root sync
 ------------------------------------------------------------------------
 r108 | 0315133 | 2008-02-25 18:00:11 +0100 (Mon, 25 Feb 2008) | 1 line
 
-busy with modCalcCtrl, continue tomorrow :)
+busy with shCalcCtrl, continue tomorrow :)
 ------------------------------------------------------------------------
 r107 | 0315133 | 2008-02-25 17:41:20 +0100 (Mon, 25 Feb 2008) | 1 line
 
@@ -535,11 +535,11 @@ test reorganisation
 ------------------------------------------------------------------------
 r40 | 0315133 | 2008-01-17 10:46:15 +0100 (Thu, 17 Jan 2008) | 1 line
 
-modParseSH() cleaned up, removed debug code and idl code. see previous rev if you need this. code included calculation of maximum values for subapertures and some summing.
+shParseSH() cleaned up, removed debug code and idl code. see previous rev if you need this. code included calculation of maximum values for subapertures and some summing.
 ------------------------------------------------------------------------
 r39 | 0315133 | 2008-01-17 10:45:10 +0100 (Thu, 17 Jan 2008) | 1 line
 
-modParseSH() cleaned up, removed debug code and idl code. see previous rev if you need this. code included calculation of maximum values for subapertures and some summing.
+shParseSH() cleaned up, removed debug code and idl code. see previous rev if you need this. code included calculation of maximum values for subapertures and some summing.
 ------------------------------------------------------------------------
 r38 | 0315133 | 2008-01-17 10:39:26 +0100 (Thu, 17 Jan 2008) | 1 line
 
@@ -591,7 +591,7 @@ project file update
 ------------------------------------------------------------------------
 r26 | 0315133 | 2008-01-11 17:59:38 +0100 (Fri, 11 Jan 2008) | 1 line
 
-update on fits readout simulation, starting with modParseSH() (does not work in this revision)
+update on fits readout simulation, starting with shParseSH() (does not work in this revision)
 ------------------------------------------------------------------------
 r25 | 0315133 | 2008-01-08 23:41:12 +0100 (Tue, 08 Jan 2008) | 1 line
 
@@ -603,7 +603,7 @@ minor update
 ------------------------------------------------------------------------
 r23 | 0315133 | 2008-01-07 11:37:58 +0100 (Mon, 07 Jan 2008) | 1 line
 
-slight updaet on modparsesh(), mainly typos
+slight updaet on shParseSH(), mainly typos
 ------------------------------------------------------------------------
 r22 | 0315133 | 2007-12-15 03:35:53 +0100 (Sat, 15 Dec 2007) | 1 line
 

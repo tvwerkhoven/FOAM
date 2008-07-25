@@ -29,10 +29,10 @@
 	\section Functions
 	
 	The functions provided to the outside world are:
-	\li modSelSubapts() - Selects subapertures suitable for tracking
-	\li modCogTrack() - Center of Gravity tracking module
-	\li modCogFind() - Find target using a larger area, used for recovery 
-	\li modCalcCtrl() - Calculate WFC control vectors given target displacements
+	\li shSelSubapts() - Selects subapertures suitable for tracking
+	\li shCogTrack() - Center of Gravity tracking module
+	\li shCogFind() - Find target using a larger area, used for recovery 
+	\li shCalcCtrl() - Calculate WFC control vectors given target displacements
 
 	\section Dependencies
 	
@@ -47,7 +47,7 @@
 // ROUTINES //
 /************/
 
-int modInitSH(wfs_t *wfsinfo, mod_sh_track_t *shtrack) {
+int shInit(wfs_t *wfsinfo, mod_sh_track_t *shtrack) {
 	logInfo(0, "Initializing SH tracking module");
 	
 	shtrack->subc = calloc(shtrack->cells.x * shtrack->cells.y, sizeof(coord_t));
@@ -60,7 +60,7 @@ int modInitSH(wfs_t *wfsinfo, mod_sh_track_t *shtrack) {
 	if (shtrack->subc == NULL || shtrack->gridc == NULL || shtrack->disp == NULL || \
 		shtrack->refc == NULL) {
 		// this is actually superfluous, errors handled by gsl
-		logErr("Could not allocate memory in modInitSH()!");
+		logErr("Could not allocate memory in shInit()!");
 		return EXIT_FAILURE;
 	}
 	
@@ -76,7 +76,7 @@ int modInitSH(wfs_t *wfsinfo, mod_sh_track_t *shtrack) {
 
 	// check if allocation worked
 	if (wfsinfo->dark == NULL || wfsinfo->gain == NULL || wfsinfo->corr == NULL) {
-		logErr("Could not allocate memory in modInitSH()!");
+		logErr("Could not allocate memory in shInit()!");
 		return EXIT_FAILURE;
 	}
 
@@ -84,7 +84,7 @@ int modInitSH(wfs_t *wfsinfo, mod_sh_track_t *shtrack) {
 	return EXIT_SUCCESS;
 }
 
-int modSelSubapts(void *image, foam_datat_t data, mod_sh_align_t align, mod_sh_track_t *shtrack, wfs_t *shwfs) {
+int shSelSubapts(void *image, foam_datat_t data, mod_sh_align_t align, mod_sh_track_t *shtrack, wfs_t *shwfs) {
 	// stolen from ao3.c by CUK
 	int isy, isx, iy, ix, i, sn=0, nsubap=0;	//init sn to zero!!
 	float sum=0.0, fi=0.0;						// check 'intensity' of a subapt
@@ -112,7 +112,7 @@ int modSelSubapts(void *image, foam_datat_t data, mod_sh_align_t align, mod_sh_t
 	logInfo(0, "Image info: sum: %f, avg: %f, range: (%d,%d)", sum, (float) sum / (shwfs->res.x*shwfs->res.y), min, max);
 	 */
 	if (align != ALIGN_RECT) {
-		logWarn("Other alignments besides simple rectangles not supported by modSelSubapts");
+		logWarn("Other alignments besides simple rectangles not supported by shSelSubapts");
 		return EXIT_FAILURE;
 	}
 
@@ -386,7 +386,7 @@ int modSelSubapts(void *image, foam_datat_t data, mod_sh_align_t align, mod_sh_t
 	return EXIT_SUCCESS;
 }
 
-int modCogTrack(void *image, foam_datat_t data, mod_sh_align_t align, mod_sh_track_t *shtrack, float *aver, float *max) {
+int shCogTrack(void *image, foam_datat_t data, mod_sh_align_t align, mod_sh_track_t *shtrack, float *aver, float *max) {
 	int ix, iy, sn=0;
 	float csx, csy, csum, fi; 			// variables for center-of-gravity
 	float sum = 0;
@@ -431,7 +431,7 @@ int modCogTrack(void *image, foam_datat_t data, mod_sh_align_t align, mod_sh_tra
 			}
 		}
 		else {
-				logWarn("Unknown datatype/alignment combination in modCogTrack");
+				logWarn("Unknown datatype/alignment combination in shCogTrack");
 				return EXIT_FAILURE;
 		}
 		sum += csum;
@@ -458,7 +458,7 @@ int modCogTrack(void *image, foam_datat_t data, mod_sh_align_t align, mod_sh_tra
 	return EXIT_SUCCESS;
 }
 
-void modCogFind(wfs_t *wfsinfo, int xc, int yc, int width, int height, float samini, float *sumout, float *cog) {
+void shCogFind(wfs_t *wfsinfo, int xc, int yc, int width, int height, float samini, float *sumout, float *cog) {
 	int ix, iy;
 	coord_t res = wfsinfo->res;			// image resolution
 	float *image = wfsinfo->image;		// source image from sensor
@@ -488,7 +488,7 @@ void modCogFind(wfs_t *wfsinfo, int xc, int yc, int width, int height, float sam
 
 
 
-int modCalcCtrl(control_t *ptc, mod_sh_track_t *shtrack, const int wfs, int nmodes) {
+int shCalcCtrl(control_t *ptc, mod_sh_track_t *shtrack, const int wfs, int nmodes) {
 	logDebug(LOG_SOMETIMES, "Calculating WFC ctrls");
 	// function assumes presence of dmmodes, singular and wfsmodes...
 	if (shtrack->dmmodes == NULL || shtrack->singular == NULL || shtrack->wfsmodes == NULL) {
@@ -574,11 +574,11 @@ int modCalcCtrl(control_t *ptc, mod_sh_track_t *shtrack, const int wfs, int nmod
 	// gsl_blas_sgemv(CblasNoTrans, 1.0, ptc->wfs[wfs].dmmodes, work, 0.0, total);
 	
 	// After calculating the control vector in one go (one vector for all 
-	// controls), we split these up into the seperate vectors assigned
+	// controls), we split these up into the separate vectors assigned
 	// to each WFC. In doing so we apply the gain at the same time, 
 	// as the calculated controls are actually *corrections* to the
 	// control commands already being used
-	logDebug(LOG_SOMETIMES, "Storing reconstructed actuator command to seperate vectors");
+	logDebug(LOG_SOMETIMES, "Storing reconstructed actuator command to separate vectors");
 	j=0;
 	float old, ctrl;
 	for (wfc=0; wfc< ptc->wfc_count; wfc++) {
@@ -619,7 +619,7 @@ int modCalcCtrl(control_t *ptc, mod_sh_track_t *shtrack, const int wfs, int nmod
  @param [out] *disp The displacement vector wrt the reference displacements
  @param [in] *refc The reference displacements (i.e. after pinhole calibration)
  */
-int modParseSH(gsl_matrix_float *image, int (*subc)[2], int (*gridc)[2], int nsubap, coord_t track, gsl_vector_float *disp, gsl_vector_float *refc) {
+int shParseSH(gsl_matrix_float *image, int (*subc)[2], int (*gridc)[2], int nsubap, coord_t track, gsl_vector_float *disp, gsl_vector_float *refc) {
 	float aver=0.0, max=0.0;
 	float rmsx=0.0, rmsy=0.0;
 	float maxx=0, maxy=0;
@@ -627,8 +627,8 @@ int modParseSH(gsl_matrix_float *image, int (*subc)[2], int (*gridc)[2], int nsu
 	int i;
 	
 	// track the maxima using CoG
-	printf("modcogtrack turned off\n");
-	//modCogTrack(image, subc, nsubap, track, &aver, &max, coords);
+	printf("shCogTrack turned off\n");
+	//shCogTrack(image, subc, nsubap, track, &aver, &max, coords);
 	
 	// logDebug(0 | LOG_SOMETIMES, "Coords: ");	
 	for (i=0; i<nsubap; i++) {

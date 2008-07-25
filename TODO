@@ -5,7 +5,7 @@ We are looking for volunteers to do the following tasks :).
 
 Minor fixes & tweaks
 
-* modsubapsel() / modcogtrack() -> same functions, make more general or wrap 
+* modsubapsel() / shCogTrack() -> same functions, make more general or wrap 
   around
 
 * dispsdl -> needs autocontrast to run only once and set bright/contrast, not 

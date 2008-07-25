@@ -152,6 +152,7 @@ int modInitModule(control_t *ptc, config_t *cs_config) {
 	simparams.currimgres.x = ptc->wfs[0].res.x;
 	simparams.currimgres.y = ptc->wfs[0].res.y;
 	// These need to be init to NULL so the sim module knows to generate the relevant data
+	// (This is a little flaky, simparams.plan_forward might not actually hold a NULL ptr...)
 	simparams.shin = simparams.shout = simparams.plan_forward = NULL;
 	simparams.wisdomfile = FOAM_DATADIR FOAM_CONFIG_PRE "_fftw-wisdom";
 	if(simInit(&simparams) != EXIT_SUCCESS)
@@ -178,7 +179,7 @@ int modInitModule(control_t *ptc, config_t *cs_config) {
 	shtrack.samxr = -3;			// 1 row edge erosion
 	shtrack.samini = 30;			// minimum intensity for subaptselection 10
 	// init the shtrack module now
-	if (modInitSH(&(ptc->wfs[0]), &shtrack) != EXIT_SUCCESS)
+	if (shInit(&(ptc->wfs[0]), &shtrack) != EXIT_SUCCESS)
 		logErr("Failed to initialize shack-hartmann module.");
 	
 	// Configure datalogging for SH offset measurements
@@ -297,7 +298,7 @@ int modOpenLoop(control_t *ptc) {
 	// dark-flat the whole frame
 	MMDarkFlatFullByte(&(ptc->wfs[0]), &shtrack);
 	
-	modCogTrack(ptc->wfs[0].corrim, DATA_GSL_M_F, ALIGN_RECT, &shtrack, NULL, NULL);
+	shCogTrack(ptc->wfs[0].corrim, DATA_GSL_M_F, ALIGN_RECT, &shtrack, NULL, NULL);
 	
 	// log offsets measured and TT signal
 	logGSLVecFloat(&shlog, shtrack.disp, 2*shtrack.nsubap, "O", "\n");
@@ -348,10 +349,10 @@ int modClosedLoop(control_t *ptc) {
 	MMDarkFlatSubapByte(&(ptc->wfs[0]), &shtrack);
 
 	// try to get the center of gravity 
-	//modCogTrack(ptc->wfs[0].corrim, DATA_GSL_M_F, ALIGN_RECT, &shtrack, NULL, NULL);
-	modCogTrack(ptc->wfs[0].corr, DATA_UINT8, ALIGN_SUBAP, &shtrack, NULL, NULL);
+	//shCogTrack(ptc->wfs[0].corrim, DATA_GSL_M_F, ALIGN_RECT, &shtrack, NULL, NULL);
+	shCogTrack(ptc->wfs[0].corr, DATA_UINT8, ALIGN_SUBAP, &shtrack, NULL, NULL);
 	
-	modCalcCtrl(ptc, &shtrack, 0, -1);
+	shCalcCtrl(ptc, &shtrack, 0, -1);
 	
 	// log offsets measured
 	// log offsets measured and TT signal
@@ -525,7 +526,7 @@ int modCalibrate(control_t *ptc) {
 //		uint8_t *tmpimg = (uint8_t *) wfsinfo->image;
 		
 		// run subapsel on this image
-		modSelSubapts(wfsinfo->image, DATA_UINT8, ALIGN_RECT, &shtrack, wfsinfo);
+		shSelSubapts(wfsinfo->image, DATA_UINT8, ALIGN_RECT, &shtrack, wfsinfo);
 
 		logInfo(0, "Subaperture selection complete, found %d subapertures.", shtrack.nsubap);
 
@@ -1270,7 +1271,7 @@ int drvGetImg(control_t *ptc, int wfs) {
 	if (ptc->saveimg > 0) { // user wants to save images, do so now!
 		char *fname;
 		asprintf(&fname, FOAM_DATADIR FOAM_CONFIG_PRE "-cap-%05ld.pgm", ptc->capped);
-		modWritePGMArr(fname, simparams.currimg, DATA_UINT8, simparams.currimgres, 0, 1);
+		imgWritePGMArr(fname, simparams.currimg, DATA_UINT8, simparams.currimgres, 0, 1);
 		ptc->capped++;
 		ptc->saveimg--;
 		if (ptc->saveimg == 0) { // this was the last frame, report this

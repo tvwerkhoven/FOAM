@@ -86,27 +86,27 @@ typedef struct {
  routine maps [-1,1] to [0,255] appropriately.
  
  @param [in] *ctrl Holds the controls to send to the mirror in the -1 to 1 range
- @param [in] *dm DM configuration information, filled by drvInitOkoDM()
+ @param [in] *dm DM configuration information, filled by okoInitDM()
  @return EXIT_SUCCESS on success, EXIT_FAILURE otherwise.
  */
-int drvSetOkoDM(gsl_vector_float *ctrl, mod_okodm_t *dm);
+int okoSetDM(gsl_vector_float *ctrl, mod_okodm_t *dm);
 
 /*!
  @brief Resets all actuators on the DM to dm->minvolt
  
- @param [in] *dm DM configuration information, filled by drvInitOkoDM()
+ @param [in] *dm DM configuration information, filled by okoInitDM()
  @return EXIT_SUCCESS on success, EXIT_FAILURE otherwise.
  */
-int drvRstOkoDM(mod_okodm_t *dm);
+int okoRstDM(mod_okodm_t *dm);
 
 /*!
  @brief Sets all actuators on the substrate to a certain voltage.
  
  @param [in] volt The voltage to set on all actuators
- @param [in] *dm DM configuration information, filled by drvInitOkoDM()
+ @param [in] *dm DM configuration information, filled by okoInitDM()
  @return EXIT_SUCCESS on success, EXIT_FAILURE otherwise.
  */
-int drvSetAllOkoDM(mod_okodm_t *dm, int volt);
+int okoSetAllDM(mod_okodm_t *dm, int volt);
 
 /*!
  @brief Initialize the module (software and hardware)
@@ -118,7 +118,7 @@ int drvSetAllOkoDM(mod_okodm_t *dm, int volt);
  @param [in] *dm DM configuration information
  @return EXIT_SUCCESS on success, EXIT_FAILURE otherwise.
  */
-int drvInitOkoDM(mod_okodm_t *dm);
+int okoInitDM(mod_okodm_t *dm);
 
 /*!
  @brief Close the module (software and hardware)
@@ -126,9 +126,9 @@ int drvInitOkoDM(mod_okodm_t *dm);
  You need to call this function *after* the last DM command. This
  resets the mirror and closes the file descriptor.
  
- @param [in] *dm DM configuration information, filled by drvInitOkoDM()
+ @param [in] *dm DM configuration information, filled by okoInitDM()
  @return EXIT_SUCCESS on success, EXIT_FAILURE otherwise.
  */
-int drvCloseOkoDM(mod_okodm_t *dm);
+int okoCloseDM(mod_okodm_t *dm);
 
 #endif //#ifndef FOAM_MODULES_OKODM

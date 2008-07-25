@@ -37,10 +37,10 @@
  
  \section Functions
  
- \li drvInitOkoDM() - Initialize the Okotech DM
- \li drvSetOkoDM() - Sets the Okotech 37ch DM to a certain voltage set.
- \li drvRstOkoDM() - Resets the Okotech DM to FOAM_MODOKODM_RSTVOLT
- \li drvCloseOkoDM() - Calls drvRstOkoDM, then closes the Okotech DM (call this at the end!)
+ \li okoInitDM() - Initialize the Okotech DM
+ \li okoSetDM() - Sets the Okotech 37ch DM to a certain voltage set.
+ \li okoRstDM() - Resets the Okotech DM to FOAM_MODOKODM_RSTVOLT
+ \li okoCloseDM() - Calls okoRstDM, then closes the Okotech DM (call this at the end!)
  
  \section Configuration
  
@@ -213,7 +213,7 @@ static int okoWrite(int dmfd, int addr, int voltage) {
 	return EXIT_SUCCESS;
 }
 
-int drvSetOkoDM(gsl_vector_float *ctrl, mod_okodm_t *dm) {
+int okoSetDM(gsl_vector_float *ctrl, mod_okodm_t *dm) {
 	int i, volt;
 	float voltf;
 
@@ -245,7 +245,7 @@ int drvSetOkoDM(gsl_vector_float *ctrl, mod_okodm_t *dm) {
 	return EXIT_SUCCESS;
 }
 
-int drvRstOkoDM(mod_okodm_t *dm) {
+int okoRstDM(mod_okodm_t *dm) {
 	int i;
 
 	// !!!:tim:20080414 removed, not really necessary, blame the user :P
@@ -257,10 +257,10 @@ int drvRstOkoDM(mod_okodm_t *dm) {
 //#endif
 //		return EXIT_FAILURE;
 //	}
-	return drvSetAllOkoDM(dm, dm->minvolt);
+	return okoSetAllDM(dm, dm->minvolt);
 }
 
-int drvSetAllOkoDM(mod_okodm_t *dm, int volt) {
+int okoSetAllDM(mod_okodm_t *dm, int volt) {
 	int i;
 	
 	for (i=1; i< dm->nchan; i++) {
@@ -273,7 +273,7 @@ int drvSetAllOkoDM(mod_okodm_t *dm, int volt) {
 }
 
 
-int drvInitOkoDM(mod_okodm_t *dm) {
+int okoInitDM(mod_okodm_t *dm) {
 	// Set the global list of addresses for the various actuators:
 	okoSetAddr(dm);
 	
@@ -284,9 +284,9 @@ int drvInitOkoDM(mod_okodm_t *dm) {
 	return EXIT_SUCCESS;
 }
 
-int drvCloseOkoDM(mod_okodm_t *dm) {
+int okoCloseDM(mod_okodm_t *dm) {
 	// reset the mirror
-	if (drvRstOkoDM(dm) == EXIT_FAILURE) {
+	if (okoRstDM(dm) == EXIT_FAILURE) {
 #ifdef FOAM_DEBUG
 		printf("Could not reset the DM to voltage %d\n", dm->midvolt);
 #else
@@ -334,7 +334,7 @@ int main () {
 	
 	ctrl = gsl_vector_float_calloc(defmir.nchan-1);
 	
-	if (drvInitOkoDM(&defmir) == EXIT_FAILURE) {
+	if (okoInitDM(&defmir) == EXIT_FAILURE) {
 		printf("Failed to init the mirror\n");
 		return EXIT_FAILURE;
 	}
@@ -355,7 +355,7 @@ int main () {
 	}
 	printf("\n");
 	
-	if (drvSetOkoDM(ctrl, &defmir) != EXIT_SUCCESS) {
+	if (okoSetDM(ctrl, &defmir) != EXIT_SUCCESS) {
 		printf("Could not set voltages\n");
 		return EXIT_FAILURE;
 	}
@@ -375,7 +375,7 @@ int main () {
 		gsl_vector_float_set(ctrl, i, 1);
 		
 		printf("%d...", i);
-		if (drvSetOkoDM(ctrl, &defmir) == EXIT_FAILURE) {
+		if (okoSetDM(ctrl, &defmir) == EXIT_FAILURE) {
 			printf("Could not set voltages!\n");
 			return EXIT_FAILURE;
 		}
@@ -391,7 +391,7 @@ int main () {
 		printf("lo..");
 		gsl_vector_float_set_all(ctrl, -1.0);
 		
-		if (drvSetOkoDM(ctrl, &defmir) != EXIT_SUCCESS) {
+		if (okoSetDM(ctrl, &defmir) != EXIT_SUCCESS) {
 			printf("FAILED");
 			return EXIT_FAILURE;
 		}
@@ -401,7 +401,7 @@ int main () {
 
 		gsl_vector_float_set_all(ctrl, 1.0);
 		
-		if (drvSetOkoDM(ctrl, &defmir) != EXIT_SUCCESS) {
+		if (okoSetDM(ctrl, &defmir) != EXIT_SUCCESS) {
 			printf("FAILED");
 			return EXIT_FAILURE;
 		}
@@ -410,7 +410,7 @@ int main () {
 	}
 	printf("done, cleaning up\n");
 	
-	if (drvCloseOkoDM(&defmir) == EXIT_FAILURE)
+	if (okoCloseDM(&defmir) == EXIT_FAILURE)
 		return EXIT_FAILURE;
 	
 	printf("exit.\n");

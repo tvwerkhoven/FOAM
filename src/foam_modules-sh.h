@@ -95,7 +95,7 @@ typedef enum {
  @param [in] *wfsinfo Pointer to the WFS to init for
  @param [in] *shtrack A pre-filled mod_sh_track_t struct with the SH sensor configuration
  */
-int modInitSH(wfs_t *wfsinfo, mod_sh_track_t *shtrack);
+int shInit(wfs_t *wfsinfo, mod_sh_track_t *shtrack);
 
 /*!
  @brief Selects suitable subapts to work with for a certain WFS
@@ -110,7 +110,7 @@ int modInitSH(wfs_t *wfsinfo, mod_sh_track_t *shtrack);
  @param [in] *shtrack The SH sensor configuration for this WFS
  @param [in] *shwfs The wavefront sensor configuration
  */
-int modSelSubapts(void *image, foam_datat_t data, mod_sh_align_t align, mod_sh_track_t *shtrack, wfs_t *shwfs);
+int shSelSubapts(void *image, foam_datat_t data, mod_sh_align_t align, mod_sh_track_t *shtrack, wfs_t *shwfs);
 
 /*!
  @brief Tracks the targets in center of gravity tracking
@@ -126,7 +126,7 @@ int modSelSubapts(void *image, foam_datat_t data, mod_sh_align_t align, mod_sh_t
  @param [out] *aver The average pixel intensity in all tracked subapertures
  @param [out] *max The maximum pixel intensity in all tracked subapertures
  */
-int modCogTrack(void *image, foam_datat_t data, mod_sh_align_t align, mod_sh_track_t *shtrack, float *aver, float *max);
+int shCogTrack(void *image, foam_datat_t data, mod_sh_align_t align, mod_sh_track_t *shtrack, float *aver, float *max);
 
 /*!
  @brief Calculates the controls to be sent to the various WFC, given displacements.
@@ -141,12 +141,12 @@ int modCogTrack(void *image, foam_datat_t data, mod_sh_align_t align, mod_sh_tra
  @param [in] wfs The WFS to use as input for voltage calculation
  @param [in] nmodes The number of WFC modes to take into account, should be less than the total nr of actuators in the system
  */
-int modCalcCtrl(control_t *ptc, mod_sh_track_t *shtrack, const int wfs, int nmodes);
+int shCalcCtrl(control_t *ptc, mod_sh_track_t *shtrack, const int wfs, int nmodes);
 
 /*!
  @brief Search for a maxium within (xc, yc) -> (xc+width, yc+height) in a certain WFS output.
  */
-void modCogFind(wfs_t *wfsinfo, int xc, int yc, int width, int height, float samini, float *sum, float *cog);
+void shCogFind(wfs_t *wfsinfo, int xc, int yc, int width, int height, float samini, float *sum, float *cog);
 
 
 #endif /* FOAM_MODULES_SH */

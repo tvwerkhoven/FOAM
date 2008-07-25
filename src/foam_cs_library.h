@@ -517,7 +517,7 @@ int modCalibrate(control_t *ptc);
  @brief This routine is run if a client sends a message over the socket
  
  If the networking thread of the control software receives data, it will 
- split the string received in space-seperate words. After that, the
+ split the string received in space-separate words. After that, the
  routine will handle some default commands itself, like 'help', 'quit',
  'shutdown' and others (see parseCmd()). If a command is not recognized, it 
  is passed to this routine, which must then do something, or return 0 to

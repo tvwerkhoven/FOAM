@@ -159,9 +159,9 @@ int modInitModule(control_t *ptc, config_t *cs_config) {
 	// init Daq2k board, sets voltage to 0
 	// The Daq2k board ranges from -10 to 10 volts, with 16 bit precision.
 	// 0 results in -10V, 65535 in 10V, so that 32768 is 0V. 5V is thus 65535*3/4 = 49152
-	drvInitDaq2k(&daqboard);
+	daq2kInit(&daqboard);
 	// since the TT works from 0V to 10V, set the Daq2k output to 5V for center
-	drvDaqSetDACs(&daqboard, (int) 32768 + 16384);
+	daq2kSetDACs(&daqboard, (int) 32768 + 16384);
 	
 	// configure DM here
 	
@@ -177,7 +177,7 @@ int modInitModule(control_t *ptc, config_t *cs_config) {
 	okodm.pcibase[3] = 0xffff;
 	
 	// init the mirror
-	drvInitOkoDM(&okodm);
+	okoInitDM(&okodm);
 	// allocate memory for fake ctrl
 	dmctrl = gsl_vector_float_alloc(37);
 	
@@ -198,7 +198,7 @@ int modInitModule(control_t *ptc, config_t *cs_config) {
 	shtrack.samxr = -4;			// 1 row edge erosion
 	shtrack.samini = 20;			// minimum intensity for subaptselection 10
 	// init the shtrack module for wfs 0 here
-	modInitSH(&(ptc->wfs[0]), &shtrack);	
+	shInit(&(ptc->wfs[0]), &shtrack);	
 	
 	// Configure datalogging for SH offset measurements
 	shlog.fname = "sh-offsets.dat";		// logfile name
@@ -259,11 +259,16 @@ void modStopModule(control_t *ptc) {
 	displayFinish(&disp);
 #endif
 	
+	// Stop ITIFG
 	itifgStopGrab(&dalsacam);
 	itifgStopBufs(&buffer, &dalsacam);
 	itifgStopBoard(&dalsacam);
 	
-	drvCloseDaq2k(&daqboard);
+	// Stop the DAQboard
+	daq2kClose(&daqboard);
+	
+	// Stop the Okotech DM
+	okoCloseDM(&okodm);
 }
 
 
@@ -294,7 +299,7 @@ int modOpenLoop(control_t *ptc) {
 	MMDarkFlatFullByte(&(ptc->wfs[0]), &shtrack);
 	
 	// Track the CoG using the full-frame corrected image
-	modCogTrack(ptc->wfs[0].corrim, DATA_GSL_M_F, ALIGN_RECT, &shtrack, NULL, NULL);
+	shCogTrack(ptc->wfs[0].corrim, DATA_GSL_M_F, ALIGN_RECT, &shtrack, NULL, NULL);
 	
 	// Move the DM mirror around, generate some noise TT signal with 50-frame
 	// periodicty. Use sin and -sin to get nice signals
@@ -302,14 +307,14 @@ int modOpenLoop(control_t *ptc) {
 		gsl_vector_float_set(dmctrl, okoleft[i], sin(ptc->frames *6.283 /50));
 		gsl_vector_float_set(dmctrl, okoright[i], -sin(ptc->frames *6.283 /50));
 	}
-	drvSetOkoDM(dmctrl, &okodm);
+	okoSetDM(dmctrl, &okodm);
 */
 	// log some data, prepend 'C' for closed loop
 	logGSLVecFloat(&shlog, shtrack.disp, 2*shtrack.nsubap, "O", "\n");
 	
 	if (ptc->saveimg > 0) { // user wants to save images, do so now!
 		asprintf(&fname, FOAM_DATADIR FOAM_CONFIG_PRE "-cap-%05ld.pgm", ptc->capped);
-		modWritePGMArr(fname, ptc->wfs[0].image, DATA_UINT8, ptc->wfs[0].res, 0, 1);
+		imgWritePGMArr(fname, ptc->wfs[0].image, DATA_UINT8, ptc->wfs[0].res, 0, 1);
 		ptc->capped++;
 		ptc->saveimg--;
 		if (ptc->saveimg == 0) { // this was the last frame, report this
@@ -331,7 +336,6 @@ int modOpenLoop(control_t *ptc) {
 
 int modOpenFinish(control_t *ptc) {
 	// stop grabbing frames
-
 	return itifgStopGrab(&dalsacam);
 }
 
@@ -367,16 +371,16 @@ int modClosedLoop(control_t *ptc) {
 		gsl_vector_float_set(dmctrl, okoright[i], -sin(ptc->frames *6.283 / 300));
 	}
 	*/
-	//drvSetOkoDM(dmctrl, &okodm);
+	//okoSetDM(dmctrl, &okodm);
 			
 	// partial dark-flat correction
 	MMDarkFlatSubapByte(&(ptc->wfs[0]), &shtrack);
 	
 	// Track the CoG using the partial corrected frame
-	modCogTrack(ptc->wfs[0].corr, DATA_UINT8, ALIGN_SUBAP, &shtrack, NULL, NULL);
+	shCogTrack(ptc->wfs[0].corr, DATA_UINT8, ALIGN_SUBAP, &shtrack, NULL, NULL);
 	
 	// calculate the control signals
-	modCalcCtrl(ptc, &shtrack, 0, -1);
+	shCalcCtrl(ptc, &shtrack, 0, -1);
 	
 	// set actuator
 	drvSetActuator(ptc, 0);
@@ -388,7 +392,7 @@ int modClosedLoop(control_t *ptc) {
 	
 	if (ptc->saveimg > 0) { // user wants to save images, do so now!
 		asprintf(&fname, FOAM_DATADIR FOAM_CONFIG_PRE "-cap-%05ld.pgm", ptc->capped);
-		modWritePGMArr(fname, ptc->wfs[0].image, DATA_UINT8, ptc->wfs[0].res, 0, 1);
+		imgWritePGMArr(fname, ptc->wfs[0].image, DATA_UINT8, ptc->wfs[0].res, 0, 1);
 		ptc->capped++;
 		ptc->saveimg--;
 		if (ptc->saveimg == 0) { // this was the last frame, report this
@@ -584,8 +588,8 @@ int modCalibrate(control_t *ptc) {
 
 		// run subapsel on this image
 		//modSelSubapsByte((uint8_t *) wfsinfo->image, &shtrack, wfsinfo);
-		modSelSubapts(wfsinfo->image, DATA_UINT8, ALIGN_RECT, &shtrack, wfsinfo);
-			//modSelSubaptsByte(void *image, mod_sh_track_t *shtrack, wfs_t *shwfs, int *totnsubap, float samini, int samxr) 
+		shSelSubapts(wfsinfo->image, DATA_UINT8, ALIGN_RECT, &shtrack, wfsinfo);
+			//shSelSubaptsByte(void *image, mod_sh_track_t *shtrack, wfs_t *shwfs, int *totnsubap, float samini, int samxr) 
 
 	
 		logInfo(0, "Subaperture selection complete, found %d subapertures.", shtrack.nsubap);
@@ -830,7 +834,7 @@ source:                 %d", disp.brightness, disp.contrast, disp.dispover, disp
 			tmpint = strtol(list[1], NULL, 10);
 			
 			if (tmpint >= okodm.minvolt && tmpint <= okodm.maxvolt) {
-				if (drvSetAllOkoDM(&okodm, tmpint) == EXIT_SUCCESS)
+				if (okoSetAllDM(&okodm, tmpint) == EXIT_SUCCESS)
 					tellClients("200 OK RESETDM %dV", tmpint);
 				else
 					tellClient(client->buf_ev, "300 ERROR RESETTING DM");
@@ -841,7 +845,7 @@ source:                 %d", disp.brightness, disp.contrast, disp.dispover, disp
 			}
 		}
 		else {
-			if (drvRstOkoDM(&okodm) == EXIT_SUCCESS)
+			if (okoRstDM(&okodm) == EXIT_SUCCESS)
 				tellClients("200 OK RESETDM 0V");
 			else 
 				tellClient(client->buf_ev, "300 ERROR RESETTING DM");
@@ -853,7 +857,7 @@ source:                 %d", disp.brightness, disp.contrast, disp.dispover, disp
 			tmpfloat = strtof(list[1], NULL);
 			
 			if (tmpfloat >= daqboard.minvolt && tmpfloat <= daqboard.maxvolt) {
-				drvDaqSetDACs(&daqboard, (int) 65536*(tmpfloat-daqboard.minvolt)/(daqboard.maxvolt-daqboard.minvolt) -1);
+				daq2kSetDACs(&daqboard, (int) 65536*(tmpfloat-daqboard.minvolt)/(daqboard.maxvolt-daqboard.minvolt) -1);
 				tellClients("200 OK RESETDAQ %.2fV", tmpfloat);
 			}
 			else {
@@ -861,7 +865,7 @@ source:                 %d", disp.brightness, disp.contrast, disp.dispover, disp
 			}
 		}
 		else {
-			drvDaqSetDACs(&daqboard, 65536*3/4);
+			daq2kSetDACs(&daqboard, 65536*3/4);
 			tellClients("200 OK RESETDAQ %.2fV", 5.0);			
 		}
 	}
@@ -1068,13 +1072,13 @@ int drvSetActuator(control_t *ptc, int wfc) {
 		// as output). TT is on ports 0 and 1
 		// 32768 = 2^15, 16384 = 2^14, ([-1,1] + 1) * 16384 = [0,32768]
 		// -1 to prevent overflow for ctrl = 1
-		drvDaqSetDAC(&daqboard, 0, (int) 32768 + (gsl_vector_float_get(ptc->wfc[wfc].ctrl, 0)+1) * 16384 - 1);
-		drvDaqSetDAC(&daqboard, 1, (int) 32768 + (gsl_vector_float_get(ptc->wfc[wfc].ctrl, 1)+1) * 16384 - 1);
+		daq2kSetDAC(&daqboard, 0, (int) 32768 + (gsl_vector_float_get(ptc->wfc[wfc].ctrl, 0)+1) * 16384 - 1);
+		daq2kSetDAC(&daqboard, 1, (int) 32768 + (gsl_vector_float_get(ptc->wfc[wfc].ctrl, 1)+1) * 16384 - 1);
 		return EXIT_SUCCESS;
 	}
 	else if (ptc->wfc[wfc].type == WFC_DM) {
 		/*
-		 drvSetOkoDM(ptc->wfc[wfc].ctrl, &okodm);
+		 okoSetDM(ptc->wfc[wfc].ctrl, &okodm);
 		 
 		 */
 		return EXIT_SUCCESS;
@@ -1096,7 +1100,7 @@ int drvSetupHardware(control_t *ptc, aomode_t aomode, calmode_t calmode) {
         else if (calmode == CAL_PINHOLE) {
             logInfo(0, "Configuring hardware for subaperture reference calibration");
 			// set TT to 5V = middle
-			drvDaqSetDACs(&daqboard, (int) 32768 + 16384);
+			daq2kSetDACs(&daqboard, (int) 32768 + 16384);
         }
         else {
             logWarn("No special setup needed for this calibration mode, ignored");

@@ -30,7 +30,7 @@
  
  \section Functions
  
- \li drvSetSerial() - Sets a value on a serial port
+ \li serialSetPort() - Sets a value on a serial port
  
  \section Configuration
  
@@ -41,7 +41,7 @@
 
 #include "foam_modules-serial.h"
 
-int drvSetSerial(const char *port, const char *cmd) {
+int serialSetPort(const char *port, const char *cmd) {
 	int fd;
 	// cmd is something like "3Xn\r" with n a number (from tt<3|4>.h)
 	// port is something like "/dev/ttyS0"
@@ -113,7 +113,7 @@ int main (int argc, char *argv[]) {
 		cmd[2] = i+0x30; // convert int to ASCII
 		printf("Trying to write 'XR%d\\r' to %s...", i, argv[1]);
 
-		if (drvSetSerial(argv[1], cmd) == -1) {
+		if (serialSetPort(argv[1], cmd) == -1) {
 			printf("failed.\n");
 		}
 		else {
@@ -145,7 +145,7 @@ int main (int argc, char *argv[]) {
 	cmd[2] = i+0x30; // convert int to ASCII
 	printf("Trying to write 'XR%d\\r' to %s...", i, argv[1]);
 
-	if (drvSetSerial(argv[1], cmd) == -1)
+	if (serialSetPort(argv[1], cmd) == -1)
 		printf("failed.\n");
 	else
 		printf("success!\n");

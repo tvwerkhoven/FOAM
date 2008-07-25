@@ -81,14 +81,14 @@ typedef struct {
  @param [in] *board The daqboard to initialize
  @return EXIT_SUCCESS on success, EXIT_FAILURE on failure.
  */
-int drvInitDaq2k(mod_daq2k_board_t *board);
+int daq2kInit(mod_daq2k_board_t *board);
 
 /*!
  @brief Close the daqboard opened successfully previously, call this before quitting
  
  @param [in] *board The daqboard to close
  */
-void drvCloseDaq2k(mod_daq2k_board_t *board);
+void daq2kClose(mod_daq2k_board_t *board);
 
 /*!
  @brief Set a bitpattern on a digital IO port on a specific board
@@ -104,7 +104,7 @@ void drvCloseDaq2k(mod_daq2k_board_t *board);
  
  @return EXIT_SUCCESS on (partial) success, EXIT_FAILURE on complete failure.
  */
-int drvDaqSetP2(mod_daq2k_board_t *board, int port, int bitpat);
+int daq2kSetP2(mod_daq2k_board_t *board, int port, int bitpat);
 
 /*!
  @brief Write something to a DAC channel on a board
@@ -125,18 +125,18 @@ int drvDaqSetP2(mod_daq2k_board_t *board, int port, int bitpat);
  @param [in] chan The channel to write to
  @param [in] val The value to write [0, 65535], 16bit
  */
-void drvDaqSetDAC(mod_daq2k_board_t *board, int chan, int val);
+void daq2kSetDAC(mod_daq2k_board_t *board, int chan, int val);
 
 /*!
  @brief Write something to all DAC channels on a board
  
- This routine writes the same value to all DAC channels on a board, see drvDaqSetDAC() for details.
+ This routine writes the same value to all DAC channels on a board, see daq2kSetDAC() for details.
  
  If the board->fd is -1, this function returns with EXIT_SUCCESS immmediately
  
  @param [in] *board The board to use
  @param [in] val The value to write [0, 65535], 16bit
  */
-void drvDaqSetDACs(mod_daq2k_board_t *board, int val);
+void daq2kSetDACs(mod_daq2k_board_t *board, int val);
 
 #endif // #ifndef FOAM_MODULES_DAQ2k

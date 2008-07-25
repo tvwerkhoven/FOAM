@@ -67,7 +67,7 @@ int modInitModule(control_t *ptc, config_t *cs_config) {
 	// set image to something static
 	coord_t imgres;
 	uint8_t *imgptr = (uint8_t *) ptc->wfs[0].image;
-	modReadIMGArrByte(FOAM_CONFDIR "simstatic-irr.pgm", &(imgptr), &imgres);
+	imgReadIMGArrByte(FOAM_CONFDIR "simstatic-irr.pgm", &(imgptr), &imgres);
 	ptc->wfs[0].image  = (void *) imgptr;
 	
 	// configure WFS 0
@@ -98,7 +98,7 @@ int modInitModule(control_t *ptc, config_t *cs_config) {
 	shtrack.samxr = -1;			// 1 row edge erosion
 	shtrack.samini = 30;			// minimum intensity for subaptselection 10
 	// init the shtrack module now
-	modInitSH(&(ptc->wfs[0]), &shtrack);
+	shInit(&(ptc->wfs[0]), &shtrack);
 	
 	// configure cs_config here
 	cs_config->listenip = "0.0.0.0";	// listen on any IP by defaul
@@ -178,7 +178,7 @@ int modOpenLoop(control_t *ptc) {
 	// dark-flat the whole frame
 	MMDarkFlatFullByte(&(ptc->wfs[0]), &shtrack);
 	
-	modCogTrack(ptc->wfs[0].corrim, DATA_GSL_M_F, ALIGN_RECT, &shtrack, NULL, NULL);
+	shCogTrack(ptc->wfs[0].corrim, DATA_GSL_M_F, ALIGN_RECT, &shtrack, NULL, NULL);
 	
 #ifdef FOAM_SIMSTAT_DISPLAY
     if (ptc->frames % ptc->logfrac == 0) {
@@ -216,7 +216,7 @@ int modClosedLoop(control_t *ptc) {
 	MMDarkFlatSubapByte(&(ptc->wfs[0]), &shtrack);
 
 	// try to get the center of gravity 
-	modCogTrack(ptc->wfs[0].corr, DATA_UINT8, ALIGN_SUBAP, &shtrack, NULL, NULL);
+	shCogTrack(ptc->wfs[0].corr, DATA_UINT8, ALIGN_SUBAP, &shtrack, NULL, NULL);
 	
 #ifdef FOAM_SIMSTAT_DISPLAY
     if (ptc->frames % ptc->logfrac == 0) {
@@ -369,7 +369,7 @@ int modCalibrate(control_t *ptc) {
 		logInfo(0, "Image info: sum: %ld, avg: %f, range: (%d,%d)", tmpsum, (float) tmpsum / (wfsinfo->res.x*wfsinfo->res.y), tmpmin, tmpmax);
 
 		// run subapsel on this image
-		modSelSubapts(wfsinfo->image, DATA_UINT8, ALIGN_RECT, &shtrack, wfsinfo);
+		shSelSubapts(wfsinfo->image, DATA_UINT8, ALIGN_RECT, &shtrack, wfsinfo);
 
 		logInfo(0, "Subaperture selection complete, found %d subapertures.", shtrack.nsubap);
 		// set new display settings to show the darkfield

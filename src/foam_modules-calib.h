@@ -48,8 +48,8 @@ extern int drvSetActuator(control_t *ptc, int wfc);
 
 This function measures the influence function for a single
 WFS for all WFCs and stores this in an influence matrix. After
-that, this matrix is inverted using SVD and the seperate matrices
-are stored in seperate files. These can later be read to memory
+that, this matrix is inverted using SVD and the separate matrices
+are stored in separate files. These can later be read to memory
 such that recalibration is not always necessary. Using this decomposition,
 the control vectors for all WFCs for a given WFS can be calculated.
  

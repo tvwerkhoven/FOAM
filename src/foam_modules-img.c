@@ -29,12 +29,12 @@
 	\section Functions
 	
 	The functions provided to the outside world are:
-	\li modReadIMGSurf() - Read an img (png, pgm, jpg, etc.) to an SDL_Surface.
+	\li imgReadIMGSurf() - Read an img (png, pgm, jpg, etc.) to an SDL_Surface.
 	\li modReadIMGArr() - Read an img (png, pgm, jpg, etc.) to an array.
-	\li modWritePGMSurf() - Write an 8-bit ASCII PGM file from an SDL_Surface.
-	\li modWritePGMArr() - Write an 8-bit ASCII PGM file from an array.
+	\li imgWritePGMSurf() - Write an 8-bit ASCII PGM file from an SDL_Surface.
+	\li imgWritePGMArr() - Write an 8-bit ASCII PGM file from an array.
  	\li imgGetStats() - Get statistics on an image, min, max, mean etc.
-	\li modWritePNGSurf() - Write an 8-bit grayscale PNG file from an SDL_Surface.
+	\li imgWritePNGSurf() - Write an 8-bit grayscale PNG file from an SDL_Surface.
 
 	\section Dependencies
 	
@@ -59,7 +59,7 @@
 // ROUTINES //
 /************/
 
-int modReadIMGSurf(char *fname, SDL_Surface **surf) {
+int imgReadIMGSurf(char *fname, SDL_Surface **surf) {
 	*surf = NULL;
 	
 	*surf = IMG_Load(fname);
@@ -71,7 +71,7 @@ int modReadIMGSurf(char *fname, SDL_Surface **surf) {
 	return EXIT_SUCCESS;
 }
 
-int modReadIMGArrByte(char *fname, uint8_t **img, coord_t *outres) {
+int imgReadIMGArrByte(char *fname, uint8_t **img, coord_t *outres) {
 	SDL_Surface *sdlimg;
 	int x, y;
 	//uint8_t pix;
@@ -79,7 +79,7 @@ int modReadIMGArrByte(char *fname, uint8_t **img, coord_t *outres) {
 	float pix, min, max, sum = 0.0;
 	//uint64_t sum=0;
 	
-	if (modReadIMGSurf(fname, &sdlimg) != EXIT_SUCCESS)
+	if (imgReadIMGSurf(fname, &sdlimg) != EXIT_SUCCESS)
 		return EXIT_FAILURE;
 
 	// copy image from SDL_Surface to *img
@@ -106,12 +106,12 @@ int modReadIMGArrByte(char *fname, uint8_t **img, coord_t *outres) {
 	
 	SDL_FreeSurface(sdlimg);
 
-	logDebug(0, "modReadIMGArrByte: Read byte image (%dx%d), min: %f, max: %f, sum: %f, avg: %f", outres->x, outres->y, min, max, sum, sum/(outres->x * outres->y));
+	logDebug(0, "imgReadIMGArrByte: Read byte image (%dx%d), min: %f, max: %f, sum: %f, avg: %f", outres->x, outres->y, min, max, sum, sum/(outres->x * outres->y));
 	
 	return EXIT_SUCCESS;
 }
 
-int modWritePGMSurf(char *fname, SDL_Surface *img, int maxval, int pgmtype) {
+int imgWritePGMSurf(char *fname, SDL_Surface *img, int maxval, int pgmtype) {
 	FILE *fd;
 	int x, y;
 	int linew, chars;
@@ -188,7 +188,106 @@ int modWritePGMSurf(char *fname, SDL_Surface *img, int maxval, int pgmtype) {
 	return EXIT_SUCCESS;
 }
 
-int modWritePGMArr(char *fname, void *img, foam_datat_t datatype, coord_t res, int maxval, int pgmtype) {
+int imgInitBuf(mod_imgbuf_t *buf) {
+	// Init an image buffer here, malloc some data
+	buf->data = malloc(buf->initalloc);
+	if (buf->data == NULL) {
+		logErr("Cannot allocate memory for image buffer!");
+		return EXIT_FAILURE;
+	}
+	
+	// Allocation successful, use the buffer!
+	buf->size = buf->initalloc;
+	buf->used = 0;
+	buf->imgused = 0;
+	buf->use = true;
+	
+	return EXIT_SUCCESS;
+}
+
+int imgSaveToBuf(mod_imgbuf_t *buf, void *img, foam_datat_t datatype, coord_t res) {
+	int i;
+	
+	// Check if we are using this buffer
+	if (buf->use == false)
+		return EXIT_SUCCESS;
+	
+	// Check if we have space left
+	if ((buf->size - buf->used) < 10*buf->imgsize) {
+		// Re-alloc some data, add 'initalloc' to the buffer
+		void *newptr;
+		newptr = realloc(buf->data, buf->size + buf->initalloc);
+		
+		// If the ptr is NULL, we're out of luck :(
+		if (newptr == NULL) {
+			logWarn("Image buffer re-allocation failed, stopping image buffering.");
+			buf->use = false;
+			return EXIT_FAILURE;
+		}
+		// if the oldptr and the new ptr are different, realloc did not succeed completely:
+		//  "If there is not enough room to
+		// enlarge the memory allocation pointed to by ptr, realloc() creates a new
+		// allocation, copies as much of the old data pointed to by ptr as will fit
+		// to the new allocation, frees the old allocation, and returns a pointer to
+		// the allocated memory."
+		else if (newptr != buf->data) {
+			logWarn("Image buffer re-allocation problematic, you might want to stop buffering.");
+			buf->size += buf->initalloc;
+		}
+		else {
+			logInfo(0, "Image buffer size increased successfully");
+			buf->size += buf->initalloc;
+		}
+	}
+	
+	// Now buffer the image
+	if (datatype == DATA_UINT8) { // uint8_t ONLY
+		// use this pointer to store the data, offset it a bit from the start
+		uint8_t *storeptr = ((uint8_t *) buf->data)+buf->used;
+		// use this pointer to access the image
+		uint8_t *srcptr = (uint8_t *) img;
+		
+		for (i=0; i<res.x*res.y; i++)
+			storeptr[i] = srcptr[i];
+		
+		buf->used += res.x*res.y;
+		buf->imgused++;
+	}
+	
+	return EXIT_SUCCESS;
+}
+
+int imgDumpBuf(mod_imgbuf_t *buf) {
+	// Dump the frames to disk
+	char fname[128];
+	int i, fail;
+	
+	for (i=0; i<buf->imgused; i++) {
+		// Get the pointer to the right data, which is located at buf->data + the offset
+		// of the images we have already written to disk (i). To get the right pointer,
+		// convert the void data ptr to the right datatype, and then add the correct offset,
+		// and convert it back to a void pointer to it can be passed on to imgWritePGMArr.
+		void *currimg = (void *) (((uint8_t *) buf->data) + i * buf->imgsize);
+		snprintf(fname, 128, FOAM_DATADIR FOAM_CONFIG_PRE "-bufdump-%05d.pgm", i);
+		if (imgWritePGMArr(fname, currimg, DATA_UINT8, buf->imgres, 0, 1) != EXIT_SUCCESS)
+			fail++;
+	}
+
+	// Finish, report any fails if they happened.
+	if (fail > 0)
+		logInfo(0, "Wrote %d out of %d images successfully to disk", buf->imgused-fail, buf->imgused);
+	else 
+		logInfo(0, "Buffer successfully written to disk");
+
+			
+	// Try to free the data
+	free(buf->data);
+	free(buf);
+	
+	return EXIT_SUCCESS;
+}
+
+int imgWritePGMArr(char *fname, void *img, foam_datat_t datatype, coord_t res, int maxval, int pgmtype) {
 	FILE *fd;
 	int x;
 	int linew, chars;
@@ -270,7 +369,7 @@ int modWritePGMArr(char *fname, void *img, foam_datat_t datatype, coord_t res, i
 	return EXIT_SUCCESS;
 }
 
-int modWritePNGArr(char *fname, void *imgc, coord_t res, int datatype) {
+int imgWritePNGArr(char *fname, void *imgc, coord_t res, int datatype) {
 	FILE *fd;
 	float max, min, pix;
 	int x, y, i;
@@ -351,7 +450,7 @@ int modWritePNGArr(char *fname, void *imgc, coord_t res, int datatype) {
 	
 }
 
-int modWritePNGSurf(char *fname, SDL_Surface *img) {
+int imgWritePNGSurf(char *fname, SDL_Surface *img) {
 	FILE *fd;
 	float max, min, pix;
 	min = max = getPixel(img, 0, 0);
@@ -402,7 +501,7 @@ int modWritePNGSurf(char *fname, SDL_Surface *img) {
 	return EXIT_SUCCESS;
 }
 
-int modStorPNGArr(char *filename, char *post, int seq, float *img, coord_t res) {
+int imgStorPNGArr(char *filename, char *post, int seq, float *img, coord_t res) {
 //	int i;
 	char date[64];
 	struct tm *loctime;
@@ -416,14 +515,14 @@ int modStorPNGArr(char *filename, char *post, int seq, float *img, coord_t res) 
 //	for (i = 0; i < ptc.wfs_count; i++) {
 	snprintf(filename, COMMANDLEN, "foam_capture-%s_%05d-%s.png", date, seq, post);
 	logDebug(0, "Storing capture to %s", filename);
-	modWritePNGArr(filename, img, res, 0);
+	imgWritePNGArr(filename, img, res, 0);
 //	}
 	
 	return EXIT_SUCCESS;
 		
 }
 
-int modStorPNGSurf(char *filename, char *post, int seq, SDL_Surface *img) {
+int imgStorPNGSurf(char *filename, char *post, int seq, SDL_Surface *img) {
 	char date[64];
 	struct tm *loctime;
 	time_t curtime;
@@ -434,7 +533,7 @@ int modStorPNGSurf(char *filename, char *post, int seq, SDL_Surface *img) {
 
 	snprintf(filename, COMMANDLEN, "foam_capture-%s_%05d-%s.png", date, seq, post);
 	logDebug(0, "Storing capture to %s", filename);
-	modWritePNGSurf(filename, img);
+	imgWritePNGSurf(filename, img);
 	
 	return EXIT_SUCCESS;	
 }
@@ -525,31 +624,31 @@ int main(int argc, char *argv[]) {
 	
 	printf("Trying to read image '%s' to SDL_Surface\n", argv[0]);
 	SDL_Surface *image;
-	modReadIMGSurf(argv[0], &image);
+	imgReadIMGSurf(argv[0], &image);
 	printf("Trying to write image just read to 8 bit binary PGM file 'modimg-test1-8bin.pgm'\n");
-	modWritePGMSurf("modimg-test2-8bin.pgm", image, 255, 1);
+	imgWritePGMSurf("modimg-test2-8bin.pgm", image, 255, 1);
 	printf("Trying to write image just read to 16 bit binary PGM file 'modimg-test1-16bin.pgm'\n");
-	modWritePGMSurf("modimg-test2-16bin.pgm", image, 65535, 1);
+	imgWritePGMSurf("modimg-test2-16bin.pgm", image, 65535, 1);
 
 	printf("Trying to write image just read to 8 bit ascii PGM file 'modimg-test1-8ascii.pgm'\n");
-	modWritePGMSurf("modimg-test2-8ascii.pgm", image, 255, 0);
+	imgWritePGMSurf("modimg-test2-8ascii.pgm", image, 255, 0);
 	printf("Trying to write image just read to 16 bit ascii PGM file 'modimg-test1-16ascii.pgm'\n");
-	modWritePGMSurf("modimg-test2-16ascii.pgm", image, 65535, 0);
+	imgWritePGMSurf("modimg-test2-16ascii.pgm", image, 65535, 0);
 
 	printf("Trying to read image '%s' to array\n", argv[0]);
 	float *img;
 	coord_t res;
-	modReadIMGArrByte(argv[0], &img, &res);
+	imgReadIMGArrByte(argv[0], &img, &res);
 
 	printf("Trying to write image just read to 8 bit binary PGM file 'modimg-test2-8bin.pgm'\n");
-	modWritePGMArr("modimg-test2-8bin.pgm", img, 0, res, 255, 1);
+	imgWritePGMArr("modimg-test2-8bin.pgm", img, 0, res, 255, 1);
 	printf("Trying to write image just read to 16 bit binary PGM file 'modimg-test2-16bin.pgm'\n");
-	modWritePGMArr("modimg-test2-16bin.pgm", img, 0, res, 65535, 1);
+	imgWritePGMArr("modimg-test2-16bin.pgm", img, 0, res, 65535, 1);
 	
 	printf("Trying to write image just read to 8 bit ascii PGM file 'modimg-test2-8ascii.pgm'\n");
-	modWritePGMArr("modimg-test2-8ascii.pgm", img, 0, res, 255, 0);
+	imgWritePGMArr("modimg-test2-8ascii.pgm", img, 0, res, 255, 0);
 	printf("Trying to write image just read to 16 bit ascii PGM file 'modimg-test2-16ascii.pgm'\n");
-	modWritePGMArr("modimg-test2-16ascii.pgm", img, 0, res, 65535, 0);
+	imgWritePGMArr("modimg-test2-16ascii.pgm", img, 0, res, 65535, 0);
 	
 	printf("Testing complete! Check files in the current directory to see if everything worked\n");
 	
