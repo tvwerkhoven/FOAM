@@ -467,7 +467,7 @@ int simWFCError(mod_sim_t *simparams, wfc_t *wfc, int method, int period) {
 	}
 	else if (method == 3) {
 		// method 3: static error
-		ctrl = 0.0;
+		ctrl = 0.5;
 		gsl_vector_float_set_all(simparams->errctrl, ctrl);
 	}
 	else {

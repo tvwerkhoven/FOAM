@@ -1199,7 +1199,12 @@ int drvGetImg(control_t *ptc, int wfs) {
 			// take flat 32 intensity image, and pass through simTel, simSHWFS
 			if (simFlat(&simparams, 32) != EXIT_SUCCESS)
 				return EXIT_FAILURE;
+
+			// Add a WFC error at the calibration
+			if (simWFCError(&simparams, simparams.errwfc, 3, 40) != EXIT_SUCCESS)
+				return EXIT_FAILURE;
 			
+
 			if (simTel(&simparams) != EXIT_SUCCESS)
 				return EXIT_FAILURE;
 

@@ -432,10 +432,16 @@ int displayVecs(mod_sh_track_t *shtrack, mod_display_t *disp) {
 
 	glBegin(GL_LINES);
 	for (sn=0; sn < shtrack->nsubap; sn++) {
-		glVertex2f((GLfloat) shtrack->gridc[sn].x + (shtrack->shsize.x/2) + \
-					gsl_vector_float_get(shtrack->refc, sn*2+0), \
-				   (GLfloat) shtrack->gridc[sn].y + (shtrack->shsize.y/2) + \
-					gsl_vector_float_get(shtrack->refc, sn*2+0));
+		// This is the center of the subap grid:
+		// glVertex2f((GLfloat) shtrack->gridc[sn].x + (shtrack->shsize.x/2), (GLfloat) shtrack->gridc[sn].y + (shtrack->shsize.y/2) );
+		
+		// This is the offset reference to correct to
+		glVertex2f(shtrack->subc[sn].x + (shtrack->track.x/2) + \
+		gsl_vector_float_get(shtrack->refc, sn*2+0),\
+		shtrack->subc[sn].y + (shtrack->track.y/2) + \
+		gsl_vector_float_get(shtrack->refc, sn*2+1));
+	
+		// This is the measured SH offset:
 		glVertex2f(shtrack->subc[sn].x + (shtrack->track.x/2) + \
 		gsl_vector_float_get(shtrack->disp, sn*2+0),\
 		shtrack->subc[sn].y + (shtrack->track.y/2) + \
