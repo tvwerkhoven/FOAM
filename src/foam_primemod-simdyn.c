@@ -142,6 +142,7 @@ int modInitModule(control_t *ptc, config_t *cs_config) {
 	simparams.error = ERR_WFC;
 	simparams.errwfc= &(ptc->wfc[0]);
 	simparams.corr = &(ptc->wfc[0]);
+	//simparams.corr = NULL;
 	simparams.noise = 0;
 	simparams.seeingfac = 0.3;
 	// these files are needed for AO simulation and will be read in by simInit()
@@ -187,13 +188,13 @@ int modInitModule(control_t *ptc, config_t *cs_config) {
 	shlog.mode = "w";				// open with append mode (don't delete existing files)
 	shlog.sep = " ";				// use space as a separator
 	shlog.comm = "#";				// use a hash as comment char
-	shlog.use = false;				// don't use the logfile immediately
+	shlog.use = true;				// don't use the logfile immediately
 	// Configure log for WFC signals ('voltages')
 	wfclog.fname = "wfc-signals.dat";
 	wfclog.mode = "w";
 	wfclog.sep = " ";
 	wfclog.comm = "#";	
-	wfclog.use = false;
+	wfclog.use = true;
 	
 	// Init logging
 	logInit(&shlog, ptc);
@@ -1245,11 +1246,11 @@ int drvGetImg(control_t *ptc, int wfs) {
 			logDebug(LOG_SOMETIMES, "No error, flat WF");
 		}
 
-		if (simparams.corr != NULL) {
+		//if (simparams.corr != NULL) {
 			// Simulate the WFCs themselves
-			if (simWFC(simparams.corr, &simparams) != EXIT_SUCCESS)
-				return EXIT_FAILURE;
-		}
+			//if (simWFC(simparams.corr, &simparams) != EXIT_SUCCESS)
+				//return EXIT_FAILURE;
+		//}
 		
 		// Simulate telescope aperture
 		if (simTel(&simparams) != EXIT_SUCCESS)

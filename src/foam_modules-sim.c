@@ -523,7 +523,7 @@ int simDM(mod_sim_t *simparams, gsl_vector_float *ctrl, int nact, int mode, int 
 	int volt;								// temporary storage for voltage
 	coord_t res = simparams->currimgres;	// simulated wavefront resolution
 	
-	static uint8_t *actvolt=NULL;			// this must hold the actuator pattern with
+	static float *actvolt=NULL;			// this must hold the actuator pattern with
 											// the voltages per actuator
 	static float *resp=NULL;				// store the mirror response here temporarily
 	
