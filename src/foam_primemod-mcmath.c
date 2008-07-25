@@ -206,7 +206,7 @@ int modInitModule(control_t *ptc, config_t *cs_config) {
 	// Configure some img buffering stuff
 	imgbuf.imgres = ptc->wfs[0].res;
 	imgbuf.imgsize = imgbuf.imgres.x * imgbuf.imgres.y;
-	imgbuf.initalloc = imgbuf.imgsize * 100;
+	imgbuf.initalloc = imgbuf.imgsize * 750;
 	imgInitBuf(&imgbuf);
 	
 	// Configure datalogging for SH offset measurements
