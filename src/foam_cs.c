@@ -78,6 +78,9 @@ extern int modClosedFinish(control_t *ptc);
 extern int modCalibrate(control_t *ptc);
 extern int modMessage(control_t *ptc, const client_t *client, char *list[], const int count);
 
+// These are local
+static int explode(char *str, char **list);
+
 	/*! 
 	@brief Initialisation function.
 	
@@ -851,7 +854,7 @@ void sockOnRead(struct bufferevent *bev, void *arg) {
 	parseCmd(msg, nbytes, client);
 }
 
-int explode(char *str, char **list) {
+static int explode(char *str, char **list) {
 	size_t begin, len;
 	int i;
 	// Take a string 'str' which has space-separated

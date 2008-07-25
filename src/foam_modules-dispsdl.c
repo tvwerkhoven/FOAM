@@ -252,7 +252,7 @@ int displayFinish(mod_display_t *disp) {
 
 #if (0) // Disable the following piece of code
 // This function works but floats are currently not supported
-int displayImgFloat(float *img, mod_display_t *disp) {
+//int displayImgFloat(float *img, mod_display_t *disp) {
 	// ONLY does float images as input
 	int x, y;
     Uint8 i;
