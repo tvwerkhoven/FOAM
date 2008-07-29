@@ -1192,17 +1192,17 @@ ALIASES += cslib="foam_cs_library.*"
 	with the mutexes `mode_mutex' and `mode_cond'.
 	
 	The framework provides the following hooks to prime modules: 
-	\li void modStopModule(control_t *ptc);
-	\li int modInitModule(control_t *ptc, config_t *cs_config);
-	\li int modPostInitModule(control_t *ptc, config_t *cs_config);
-	\li int modOpenInit(control_t *ptc);
-	\li int modOpenLoop(control_t *ptc);
-	\li int modOpenFinish(control_t *ptc);
-	\li int modClosedInit(control_t *ptc);
-	\li int modClosedLoop(control_t *ptc);
-	\li int modClosedFinish(control_t *ptc);
-	\li int modCalibrate(control_t *ptc);
-	\li int modMessage(control_t *ptc, const client_t *client, char *list[], const int count); 
+	\li modStopModule(control_t *ptc)
+	\li modInitModule(control_t *ptc, config_t *cs_config)
+	\li modPostInitModule(control_t *ptc, config_t *cs_config)
+	\li modOpenInit(control_t *ptc)
+	\li modOpenLoop(control_t *ptc)
+	\li modOpenFinish(control_t *ptc)
+	\li modClosedInit(control_t *ptc)
+	\li modClosedLoop(control_t *ptc)
+	\li modClosedFinish(control_t *ptc)
+	\li modCalibrate(control_t *ptc)
+	\li modMessage(control_t *ptc, const client_t *client, char *list[], const int count)
 	
 	See the documentation on the specific functions for more details on what these functions
 	can be used for.
@@ -1331,7 +1331,7 @@ modeCal() {
 	\endcode
  
 	Note that all hooks (starting with mod*) are run from the AO thread, except for
-	modMessage(), which is ran from the networking thread.
+	modMessage(), which is run from the networking thread.
  
 	\section install_sec Installation
 	
@@ -1366,7 +1366,7 @@ modeCal() {
 	\subsection config Configure @name
 	
 	With simulation, make sure you do \b not copy the FFTW wisdom file 
-	\c 'fftw_wisdom.dat' to new machines, this file contains some 
+	<tt>'fftw_wisdom.dat'</tt> to new machines, this file contains some 
 	simple benchmarking results done by FFTW and are very machine dependent. 
 	@name will regenerate the file if necessary, but it cannot detect 
 	`wrong' wisdom files. Copying bad files is worse than deleting, thus
@@ -1375,7 +1375,7 @@ modeCal() {
 	\section drivers Developing Packages
 
 	As said before, @name itself does not do a lot (compile & run 
-	./foamcs-dummy to verify), it provides a framework to which modules can be 
+	<tt>./foamcs-dummy</tt> to verify), it provides a framework to which modules can be 
 	attached. Fortunately, this approach allows for complex bundles of 
 	modules, or `packages', as explained previously in \ref struct.
 	
@@ -1447,7 +1447,7 @@ modeCal() {
 	can vary.
 	
 	2xx codes are given upon success:
-	\li 200: Succesful reception of command, executing immediately,
+	\li 200: Successful reception of command, executing immediately,
 	\li 201: Executing immediately command succeeded.
 	
 	4xx codes are errors:
@@ -1467,6 +1467,6 @@ modeCal() {
 	\li On OS X, SDL does not appear to behave nicely, especially during shutdown (this is a problem of the OS X SDL implementation and cannot easily be fixed without using Objective C code)
 	
 	There might be other limitations or bugs, but these are not listed here 
-	because I am not aware of them. If you find some, please let me know.
+	because I am not aware of them. If you find some, please let me know (@authortim).
  
 */
