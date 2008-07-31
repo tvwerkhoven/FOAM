@@ -1,5 +1,5 @@
 /*
- Copyright (C) 2008 Tim van Werkhoven (tvwerkhoven@xs4all.nl)
+ Copyright (C) 2008 Tim van Werkhoven (t.i.m.vanwerkhoven@xs4all.nl)
  
  This file is part of FOAM.
  
@@ -134,7 +134,7 @@ int main(int argc, char *argv[]) {
                    \\/__/         \\/__/         \\/__/ \n");
 
 	logInfo(0,"Starting %s (%s) at %s", PACKAGE_NAME, PACKAGE_VERSION, date);
-	logInfo(0,"Copyright 2007-2008 Tim van Werkhoven (tvwerkhoven@xs4all.nl)");
+	logInfo(0,"Copyright 2007-2008 Tim van Werkhoven (t.i.m.vanwerkhoven@xs4all.nl)");
 
 	// INITIALIZE MODULES //
 	/**********************/
