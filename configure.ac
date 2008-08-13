@@ -1,6 +1,6 @@
-# dynamic versioning does not work :<
-#MAJOR=alpha
-#MINOR=$(shell svn log -r HEAD | head -n 2 | tail -n 1 | awk '{print$1"-"$5}')
+## Copyright 2007-2008 Tim van Werkhoven (t.i.m.vanwerkhoven@xs4all.nl)
+## $Id$
+
 AC_INIT([FOAM], [m4_esyscmd([./version.sh | tr -d '\n'])], [t.i.m.vanwerkhoven@xs4all.nl])
 AC_COPYRIGHT([Copyright (C) 2008 Tim van Werkhoven <t.i.m.vanwerkhoven@xs4all.nl>])
 
