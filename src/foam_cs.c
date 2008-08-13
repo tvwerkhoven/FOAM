@@ -1141,8 +1141,9 @@ ALIASES += cslib="foam_cs_library.*"
 	\li Usable - It is controllable over a network by multiple clients simultaneously
 	\li Free - It licensed under the GPL and therefore can be used by anyone.
 	
-	For more information, see the FOAM wiki at http://www.astro.uu.nl/~astrowik/astrowiki/index.php/FOAM or the documentation
-	on http://www.phys.uu.nl/~0315133/foam/docs/ .
+	For more information, see the @name wiki at http://www.astro.uu.nl/~astrowik/astrowiki/index.php/FOAM or the documentation
+	at http://dotdb.phys.uu.nl/~tim/foam/ . All versions of @name are available at the
+	Subversion repository located at http://dotdb.phys.uu.nl/svn/foam/ .
 	
 	\section struct @name structure
 	
@@ -1150,7 +1151,7 @@ ALIASES += cslib="foam_cs_library.*"
 	concepts are explained which are used within @name.
 	
 	@name uses several concepts, for which it is useful to have names. First of 
-	all, the complete set of files (downloadable from for example http://www.phys.uu.nl/~0315133/foam/tags/) 
+	all, the complete set of files (downloadable from for example http://dotdb.phys.uu.nl/~tim/foam/) 
 	is simply called a \e `distribution', or \e `version' or just \e @name.
 	
 	Historically, there was a @name Control Software (CS) and a User Interface 
@@ -1355,13 +1356,13 @@ modeCal() {
 	libraries are missing, the configure script will tell you so.
 	
 	To install @name, follow these simple steps:
-	\li Download a @name release from http://www.phys.uu.nl/~0315133/foam/tags/
+	\li Download a @name release from http://dotdb.phys.uu.nl/~tim/foam/ or check out a version of @name from http://dotdb.phys.uu.nl/svn/foam/
 	\li Extract the tarball
-	\li Run `autoreconf -s -i` which generates the configure script
+	\li For an svn checkout: run `autoreconf -s -i` to the configure script
 	\li Run `./configure --help` to check what options you would like to use
-	\li Run `./configure` (with specific options) to check if your system will support @name. If not, configure will tell you so
-	\li Run `make` which makes the various @name packages
-	\li cd into src/, run any of the executables
+	\li Run `./configure` (with specific options) to prepare @name for building. If some libraries are missing, configure will tell you so
+	\li Run `make install` which makes the various @name packages and installs them in $PREFIX
+	\li Run any of the executables (foamcs-*)
 	\li Connect to localhost:10000 (default) with a telnet client
 	\li Type `help' to get a list of @name commands
 	
