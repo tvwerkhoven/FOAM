@@ -1,10 +1,12 @@
 During the development of FOAM, the following people provided helpful insights
 on various occassions:
 
-* Guus Sliepen for his expertise on developing, C, discussion and 
-  suggestions.
+* Guus Sliepen for his expertise on discussion and suggestions. It would've been a
+  lot harder without his expertise on programming.
 
 * Christoph Keller for supervising this project.
 
 * Claude Plymate for suggestions to improve the functionality and
   usability of the system. Also for testing stuff at Kitt Peak.
+  
+* Eric Galayda for helping to test the software at Kitt Peak.

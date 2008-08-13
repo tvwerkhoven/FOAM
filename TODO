@@ -9,14 +9,8 @@ Minor fixes & tweaks
   around
 
 * dispsdl -> needs autocontrast to run only once and set bright/contrast, not 
-  each time (see dispgl)
-
-* rename functions in modules to include the modulename, i.e. instead of 
-  modSubapSel -> shSubapSel
-
-* Improve configuration file inclusion by pointing to a directory defined in 
-  config.h that points to the installdir of datafiles? (how?)
-  Solved July 23, 2008, using configure.ac in conjuction with automake
+  each time (see dispgl). Update 2008-07-15: might deprecate dispsdl in favour
+  of dispgl.
 
 * 2008-07-15 
   System header files included are not organised very neatly. These need to
@@ -33,13 +27,17 @@ Minor fixes & tweaks
   Integrate open and closed loop, and decide what to do based on the stat
   of the ptc variable. This works better with calibration as well.
 
+* 2008-08-07 
+  Make a separate thread for the display module. This thread can then display
+  frames with a constant framerate, regardless of the camera speed.
+    
 Major feature upgrades
 
 * Correlation tracking functions for Shack Hartmann sensors.
 
 * 2008-07-15
-  Fix libevent thread-unsafety such that both threads can communicate with 
-  the clients
+  Investigate libevent thread-unsafety. Modify use such that both threads 
+  can communicate with the clients. 
 
 * Adding MCAO capabilities
 
