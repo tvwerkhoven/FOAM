@@ -14,7 +14,7 @@ AC_CONFIG_AUX_DIR([build-aux])
 AC_CONFIG_FILES([
 Makefile
 src/Makefile
-conf/Makefile
+foam-conf/Makefile
 testing/Makefile
 ])
 
@@ -27,7 +27,7 @@ AC_PROG_INSTALL
 AC_PROG_RANLIB
 
 # These are the configuration- and data-directories
-FOAMCONFDIR=$datadir/conf/
+FOAMCONFDIR=$datadir/foam-conf/
 FOAMDATADIR=./
 AC_SUBST(FOAMCONFDIR)
 AC_SUBST(FOAMDATADIR)
