@@ -29,7 +29,7 @@
 // HEADERS //
 /***********/
 
-//#include "foam_primemod-dummy.h"
+#include "libfoam.h"
 
 extern pthread_mutex_t mode_mutex;
 extern pthread_cond_t mode_cond;

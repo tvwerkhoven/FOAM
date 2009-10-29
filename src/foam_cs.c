@@ -36,15 +36,15 @@
 // HEADERS //
 /***********/
 
-#include "foam_cs_library.h"
+#include "libfoam.h"
 
 // GLOBAL VARIABLES //
 /********************/	
 
 int Maxparams=32;
 
-// These are defined in foam_cs_library.c, and declared in
-// foam_cs_library.h
+// These are defined in libfoam.c, and declared in
+// libfoam.h
 extern conntrack_t clientlist;			// Stores a list of clients connected
 extern struct event_base *sockbase;		// Stores the eventbase to be used
 

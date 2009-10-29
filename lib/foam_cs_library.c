@@ -19,7 +19,7 @@
  $Id$
 */ 
 /*! 
-	@file foam_cs_library.c
+	@file libfoam.c
 	@brief Library file for @name
 	@author @authortim
 	@date November 13 2007
@@ -32,7 +32,7 @@
 	the software controlling AO before @name was thought of.
 */
 
-#include "foam_cs_library.h"
+#include "libfoam.h"
 
 control_t ptc = { //!< Global struct to hold system characteristics and other data. Initialize with complete but minimal configuration
 	.mode = AO_MODE_LISTEN,

@@ -95,7 +95,7 @@ typedef enum { //filter_t
 // We always use config.h
 #include "config.h"
 // We always use the main library for datatypes etc
-#include "foam_cs_library.h"
+#include "libfoam.h"
 
 // ROUTINE PROTOTYPES //
 /**********************/

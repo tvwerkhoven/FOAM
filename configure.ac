@@ -1,20 +1,21 @@
 ## Copyright 2007-2008 Tim van Werkhoven (t.i.m.vanwerkhoven@xs4all.nl)
 ## $Id$
 
-AC_INIT([FOAM], [m4_esyscmd([./version.sh | tr -d '\n'])], [t.i.m.vanwerkhoven@xs4all.nl])
-AC_COPYRIGHT([Copyright (C) 2008 Tim van Werkhoven <t.i.m.vanwerkhoven@xs4all.nl>])
+AC_INIT([FOAM], [0.1], [t.i.m.vanwerkhoven@xs4all.nl])
+AC_COPYRIGHT([Copyright (C) 2007-2009 Tim van Werkhoven <t.i.m.vanwerkhoven@xs4all.nl>])
 
-AC_REVISION($Revision: m4_esyscmd([./version.sh | tr -d '\n']) $)
+AC_REVISION(`git describe`)
 
 #AC_CANONICAL_SYSTEM
 
 
-AC_CONFIG_HEADERS([src/config.h])
+AC_CONFIG_HEADERS([lib/config.h])
 AC_CONFIG_AUX_DIR([build-aux])
 AC_CONFIG_FILES([
 Makefile
-src/Makefile
-foam-conf/Makefile
+lib/Makefile
+foam/Makefile
+conf/Makefile
 testing/Makefile
 ])
 
@@ -27,7 +28,7 @@ AC_PROG_INSTALL
 AC_PROG_RANLIB
 
 # These are the configuration- and data-directories
-FOAMCONFDIR=$datadir/foam-conf/
+FOAMCONFDIR=$datadir/conf/
 FOAMDATADIR=./
 AC_SUBST(FOAMCONFDIR)
 AC_SUBST(FOAMDATADIR)
@@ -39,10 +40,10 @@ AC_C_CONST
 
 # We always need these libs
 AC_SEARCH_LIBS([sin], [m] ,[], AC_MSG_ERROR([This package needs libm.]) ) 
-AC_SEARCH_LIBS([bufferevent_base_set], [event] ,[], AC_MSG_ERROR([This package needs libevent.]) ) 
+AC_SEARCH_LIBS([bufferevent_base_set], [event] ,[], AC_MSG_ERROR([This package needs libevent > v1.1.]) ) 
 AC_SEARCH_LIBS([pthread_create], [pthread] ,[], AC_MSG_ERROR([This package needs libpthread.]) ) 
 AC_SEARCH_LIBS([cblas_dgemm],[gslcblas], [], AC_MSG_ERROR([This package needs a cblas supplied with gsl like atlas]) ) 
-AC_SEARCH_LIBS([gsl_blas_dgemm],[gsl], [], AC_MSG_ERROR([This package needs libgsl.]) ) 
+AC_SEARCH_LIBS([gsl_blas_dgemm], [gsl], [], AC_MSG_ERROR([This package needs libgsl.]) ) 
 
 # The following is kinda hacky because autoconf needs CFLAGS to include the 
 # libraries necessary for test-compiling, such as the ones above. However,
@@ -86,21 +87,21 @@ SDL_LIBS=$(pkg-config sdl --libs)
 
 # Test if we want to compile the dynamical simulation package or not
 AC_ARG_ENABLE([simdyn],
-		AC_HELP_STRING([--enable-simdyn], [enable dynamical simulation mode (def: yes)]),
+		AC_HELP_STRING([--enable-simdyn], [enable dynamical simulation mode (def: no)]),
 		[case "${enableval}" in
 		yes) simdyn=true ;;
 		no)  simdyn=disabled ;;
 		*) AC_MSG_ERROR([bad value ${enableval} for --enable-simdyn]) ;;
-	esac],[simdyn=true])
+	esac],[simdyn=config.h])
 
 # Test if we want to compile the statical simulation package or not
 AC_ARG_ENABLE([simstat],
-		AC_HELP_STRING([--enable-simstat], [enable static simulation mode (def: yes)]),
+		AC_HELP_STRING([--enable-simstat], [enable static simulation mode (def: no)]),
 		[case "${enableval}" in
 		yes) simstat=true ;;
 		no)  simstat=disabled ;;
 		*) AC_MSG_ERROR([bad value ${enableval} for --enable-simstat]) ;;
-	esac],[simstat=true])
+	esac],[simstat=config.h])
 		
 # Test if we want to include the UI or not
 AC_ARG_ENABLE([ui],

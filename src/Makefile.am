@@ -1,50 +1,56 @@
 # init the bin_programs variable
 bin_PROGRAMS = 
 
+# Include lib and mods
+AM_CPPFLAGS = \
+        -I$(top_srcdir)/lib \
+        -I$(top_srcdir)/mods
+
 # some shared compiler flags which must always be used
 # (not using AM_* flags because of http://sourceware.org/automake/automake.html#Flag-Variables-Ordering)
 #CC=/usr/bin/gcc-4.1
-CFLAGS=-pipe -Wall -Wextra 
+AM_CFLAGS = -pipe -Wall -Wextra
 # To diagnose linker errors:
-#CFLAGS+=-Wl,-verbose
+#AM_CFLAGS+=-Wl,-verbose
 # To get some optimization:
-#CFLAGS+=-O3 -ftree-vectorize
+#AM_CFLAGS+=-O3 -ftree-vectorize
+# (un)comment this to toggle debugging
+#AM_CFLAGS += -g
 
-LDFLAGS=$(COMMON_LIBS) -lc
+#LDFLAGS=$(COMMON_LIBS) -lc
 
 # This is used to get the config directory as a define (see top-level Makefile.am)
-CPPFLAGS+=-DFOAM_CONFDIR=\"$(FOAMCONFDIR)\" -DFOAM_DATADIR=\"$(FOAMDATADIR)\" 
+AM_CPPFLAGS += -DFOAM_CONFDIR=\"$(FOAMCONFDIR)\" \
+		-DFOAM_DATADIR=\"$(FOAMDATADIR)\" 
 # (un)comment this to toggle GSL inlining
-CPPFLAGS+=-DHAVE_INLINE -DGSL_RANGE_CHECK_OFF 
+AM_CPPFLAGS += -DHAVE_INLINE \
+		-DGSL_RANGE_CHECK_OFF
 # (un) comment this to toggle lowlevel debugging in some modules 
 # absolutely not recommended for production systems
-CPPFLAGS+=-DFOAM_DEBUG=1
+AM_CPPFLAGS += -DFOAM_DEBUG=1
 # This is necessary for itifg
-CPPFLAGS+= -DDEBUG_ITIFG=255 -DLinux
-
-# (un)comment this to toggle debugging
-CFLAGS+=-g
-# (un)comment these to toggle malloc debugging
-#HAVE_DMALLOC=1
-#LDFLAGS+=-ldmalloc 
+#AM_CPPFLAGS += -DDEBUG_ITIFG=255 -DLinux
 
 # basic framework files which are always needed
-FRAME_SRC = foam_cs.c foam_cs_library.c
-FRAME_HDR = foam_cs_library.h foam_cs_config.h
+FRAME_SRC = foam.c
+FRAME_HDR = foam_cs_config.h
 
 # dummy moduleset
-bin_PROGRAMS += foamcs-dummy
-foamcs_dummy_SOURCES = foam_primemod-dummy.c $(FRAME_SRC) 
-foamcs_dummy_SOURCES += foam_primemod-dummy.h $(FRAME_HDR)
-foamcs_dummy_CPPFLAGS = -include "foam_primemod-dummy.h"
-foamcs_dummy_CFLAGS = -g
+bin_PROGRAMS += foam-dummy
+foam_dummy_LDADD = $(top_builddir)/lib/libfoam.a
+foam_dummy_SOURCES = foam-dummy.c $(FRAME_SRC) 
+foam_dummy_SOURCES += $(FRAME_HDR)
+
+# foam_primemod-dummy.h
+#foamcs_dummy_CPPFLAGS = -include "foam_primemod-dummy.h"
+#foamcs_dummy_CFLAGS = -g
 
 ### UI MODE ###
 ###############
 if UI
 bin_PROGRAMS += foamui
-foamui_SOURCES = foam_ui.c foam_ui_library.c
-foamui_SOURCES += foam_ui_library.h
+foamui_SOURCES = foam_ui.c foam_ui_libfoam.c
+foamui_SOURCES += foam_ui_libfoam.h
 foamui_CFLAGS = $(UI_CFLAGS)
 foamui_LDFLAGS = $(UI_LIBS)
 endif UI
