@@ -58,6 +58,11 @@
 
 #include "log.h"
 
+// TODO: these should not be necessary
+extern control_t ptc;
+extern config_t cs_config;
+#define FOAM_CONFIG_PRE "foam-devel"
+
 // ROUTINES //
 /************/
 
