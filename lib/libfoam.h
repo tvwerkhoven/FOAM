@@ -581,63 +581,6 @@ int modMessage(control_t *ptc, const client_t *client, char *list[], const int c
  */
 void startThread();
 
-/*!
- @brief logInfo() prints out info messages to the appropriate streams.
- 
- This function accepts a variable amount of arguments (like vfprintf) and passes
- them on to vfprintf more or less unchanged, except for the appended newline character
- and some prefix. This function returns immediately if the loglevel is too low to log
- info messages (see the level_t type for available levels).
- 
- The parameter 'flag' can be set to a XOR of LOG_SOMETIMES and LOG_NOFORMAT.
- The first option makes sure that logging only happens every \a config.logfrac
- frames, which can be useful if logging during adaptive optics operations when
- logging too much can cause performance problems. LOG_NOFORMAT can be used to
- specify that logging should be done without formatting anything (i.e. no prefix
- nor a newline at the end of the log message).
- 
- logInfo() first attempts to write to the file descriptor provided by \a cs_config.infofd
- if this is not \c NULL. After that the boolean variable \a cs_config.use_stderr
- is checked to see if the user requested output to stderr. Finally, 
- \a cs_config.use_syslog is checked to see if output to syslog is desired.
- This function does not report any problems at all.
- 
- @param [in] flag Some options on how to log the data
- @param [in] msg The string to be passed on to vfprintf.
- */
-void logInfo(const int flag, const char *msg, ...);
-
-/*!
- @brief logErr() prints out error messages to the appropriate streams, and exits.
- 
- This function assumes there was an error as it checks errno and appends 
- this to the error message. This function should be used for fatal errors, because
- this function exits after printing. See documentation on logInfo() for more information.
- 
- @param [in] msg The string to be passed on to vfprintf.
- */
-void logErr(const char *msg, ...);
-
-/*!
- @brief logWarn() prints out error messages to the appropriate streams.
- 
- This function assumes there was an error as it checks errno and appends 
- this to the error message. This function does not exit, and should be used
- for non-fatal errors. See documentation on logInfo() for more information.
- 
- @param [in] msg The string to be passed on to vfprintf.
- */
-void logWarn(const char *msg, ...);
-
-/*!
- @brief logDebug() prints out debug messages to the appropriate streams.
- 
- This function is used for debug logging. See documentation on logInfo() for more information.
- 
- @param [in] flag Some options on how to log the data
- @param [in] msg The string to be passed on to vfprintf.
- */
-void logDebug(const int flag, const char *msg, ...);
 
 /*! 
  @brief Runs @name in open-loop mode.

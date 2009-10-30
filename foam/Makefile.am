@@ -37,7 +37,8 @@ FRAME_HDR = foam_cs_config.h
 
 # dummy moduleset
 bin_PROGRAMS += foam-dummy
-foam_dummy_LDADD = $(top_builddir)/lib/libfoam.a
+foam_dummy_LDADD = $(top_builddir)/lib/libfoam.a \
+		$(top_builddir)/lib/liblog.a
 foam_dummy_SOURCES = foam-dummy.c $(FRAME_SRC) 
 foam_dummy_SOURCES += $(FRAME_HDR)
 

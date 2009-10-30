@@ -1,13 +1,8 @@
-## Copyright 2007-2008 Tim van Werkhoven (t.i.m.vanwerkhoven@xs4all.nl)
-## $Id$
+## Copyright 2007-2009 Tim van Werkhoven (t.i.m.vanwerkhoven@xs4all.nl)
 
 AC_INIT([FOAM], [0.1], [t.i.m.vanwerkhoven@xs4all.nl])
 AC_COPYRIGHT([Copyright (C) 2007-2009 Tim van Werkhoven <t.i.m.vanwerkhoven@xs4all.nl>])
-
 AC_REVISION(`git describe`)
-
-#AC_CANONICAL_SYSTEM
-
 
 AC_CONFIG_HEADERS([lib/config.h])
 AC_CONFIG_AUX_DIR([build-aux])
@@ -21,6 +16,8 @@ testing/Makefile
 
 AM_INIT_AUTOMAKE([-Wall -Werror foreign])
 
+AC_PROG_CXX
+AC_PROG_CXXCPP
 AC_PROG_CC
 AC_PROG_CPP
 AC_PROG_MAKE_SET
@@ -33,17 +30,30 @@ FOAMDATADIR=./
 AC_SUBST(FOAMCONFDIR)
 AC_SUBST(FOAMDATADIR)
 
-# We'd like C99 enabled - breaks GSL, some define goes wrong
-#AC_PROG_CC_C99
-# We'd like const to work
-AC_C_CONST
+AC_SEARCH_LIBS([sin],
+		[m],
+		[haslibm=true],
+		[haslibm=false])
 
-# We always need these libs
-AC_SEARCH_LIBS([sin], [m] ,[], AC_MSG_ERROR([This package needs libm.]) ) 
-AC_SEARCH_LIBS([bufferevent_base_set], [event] ,[], AC_MSG_ERROR([This package needs libevent > v1.1.]) ) 
-AC_SEARCH_LIBS([pthread_create], [pthread] ,[], AC_MSG_ERROR([This package needs libpthread.]) ) 
-AC_SEARCH_LIBS([cblas_dgemm],[gslcblas], [], AC_MSG_ERROR([This package needs a cblas supplied with gsl like atlas]) ) 
-AC_SEARCH_LIBS([gsl_blas_dgemm], [gsl], [], AC_MSG_ERROR([This package needs libgsl.]) ) 
+AC_SEARCH_LIBS([pthread_create],
+		[pthread],
+		[haspthread=true],
+		[haspthread=false])
+
+AC_SEARCH_LIBS([bufferevent_base_set], 
+		[event],
+		[haslibevent=true],
+		[haslibevent=fakse])
+		
+AC_SEARCH_LIBS([gsl_blas_dgemm],
+		[gsl],
+		[haslibgsl=true],
+		[haslibgsl=false])
+
+AC_SEARCH_LIBS([cblas_dgemm],
+		[gslcblas],
+		[haslibgslcblas=true],
+		[haslibgslcblas=false])
 
 # The following is kinda hacky because autoconf needs CFLAGS to include the 
 # libraries necessary for test-compiling, such as the ones above. However,
@@ -64,100 +74,60 @@ CFLAGS+=" $LIBS"
 # You can edit this section if you're using this package in some other 
 # configuration than we are. See manual for details.
 
-### BEGIN PKG_CONFIG ###
-########################
-# Check for PKG_CHECK_MODULES first, for OS X
-if test x"$PKG_CONFIG_PATH" = x ; then
-	AC_MSG_NOTICE([The PKG_CONFIG_PATH variable was not set])
-	AC_MSG_NOTICE([You should set it to the directories that contain the .pc files])
-	AC_MSG_NOTICE([Try adding the env variables like: ])
-	AC_MSG_NOTICE([ACLOCAL_FLAGS "-I /sw/share/aclocal" ])
-	AC_MSG_NOTICE([PKG_CONFIG_PATH "/sw/lib/pkgconfig"])
-	AC_MSG_ERROR([Abort])
-fi
+PKG_CHECK_MODULES(SDL, sdl)
+AC_SUBST(SDL_CFLAGS)
+AC_SUBST(SDL_LIBS)
 
-# This fails on OS X
-# PKG_CHECK_MODULES(SDL, sdl) 
-# This appears to be slightly more portable
-SDL_CFLAGS=$(pkg-config sdl --cflags)
-SDL_LIBS=$(pkg-config sdl --libs)
+#SDL_CFLAGS=$(pkg-config sdl --cflags)
+#SDL_LIBS=$(pkg-config sdl --libs)
 
-### TEST FOR USER INPUT ###
-###########################
+### BUILD TARGETS ###
+#####################
 
-# Test if we want to compile the dynamical simulation package or not
-AC_ARG_ENABLE([simdyn],
-		AC_HELP_STRING([--enable-simdyn], [enable dynamical simulation mode (def: no)]),
-		[case "${enableval}" in
-		yes) simdyn=true ;;
-		no)  simdyn=disabled ;;
-		*) AC_MSG_ERROR([bad value ${enableval} for --enable-simdyn]) ;;
-	esac],[simdyn=config.h])
+AC_ARG_ENABLE([dummy],
+		AC_HELP_STRING([--disable-dummy], [build dummy mode]),
+		[test "$enableval" = yes && simdyn=false])
 
-# Test if we want to compile the statical simulation package or not
 AC_ARG_ENABLE([simstat],
-		AC_HELP_STRING([--enable-simstat], [enable static simulation mode (def: no)]),
-		[case "${enableval}" in
-		yes) simstat=true ;;
-		no)  simstat=disabled ;;
-		*) AC_MSG_ERROR([bad value ${enableval} for --enable-simstat]) ;;
-	esac],[simstat=config.h])
-		
-# Test if we want to include the UI or not
-AC_ARG_ENABLE([ui],
-		AC_HELP_STRING([--enable-ui], [enable the UI (def: no)]),
-		[case "${enableval}" in
-		yes) ui=true ;;
-		no)  ui=disabled ;;
-		*) AC_MSG_ERROR([bad value ${enableval} for --enable-ui]) ;;
-	esac],[ui=disabled])
-	
-# Test if we want to do hardware debugging (i.e. compile stand alone modules)
-AC_ARG_ENABLE([hwdebug],
-		AC_HELP_STRING([--enable-hwdebug], [enable hardware debugging (def: no)]),
-		[case "${enableval}" in
-		yes) hwdebug=true ;;
-		no)  hwdebug=disabled ;;
-		*) AC_MSG_ERROR([bad value ${enableval} for --enable-hwdebug]) ;;
-	esac],[hwdebug=disabled])
+		AC_HELP_STRING([--enable-simstat], [build static simulation mode]),
+		[test "$enableval" = yes && simstat=true])
 
-# test if we are using OpenGL
-AC_ARG_ENABLE([opengl],
-		AC_HELP_STRING([--enable-opengl], [enable usage of opengl instead of plain SDL (def: yes)]),
-		[case "${enableval}" in
-		yes) opengl=true ;;
-		no)  opengl=disabled ;;
-		*) AC_MSG_ERROR([bad value ${enableval} for --enable-opengl]) ;;
-	esac],[opengl=true])
+AC_ARG_ENABLE([simdyn],
+		AC_HELP_STRING([--enable-simdyn], [build dynamical simulation mode]),
+		[test "$enableval" = yes && simdyn=true])
+
+AC_ARG_ENABLE([simhw],
+		AC_HELP_STRING([--enable-simhw], [build simulation of hardware]),
+		[test "$enableval" = yes && simhw=true])
+
+AC_ARG_ENABLE([hwdebug],
+		AC_HELP_STRING([--enable-hwdebug], [build hardware debugging]),
+		[test "$enableval" = yes && hwdebug=true])
+
+AC_ARG_ENABLE([mcmath],
+		AC_HELP_STRING([--enable-mcmath], [build mcmath mode]),
+		[test "$enableval" = yes && mcmath=true])
+
+AC_ARG_ENABLE([ui],
+		AC_HELP_STRING([--enable-ui], [build the UI]),
+		[test "$enableval" = yes && ui=true])
+
+### BUILD OPTIONS ###
+#####################
+
+AC_ARG_WITH([opengl],
+		AC_HELP_STRING([--with-opengl], [use OpenGL instead of SDL]),
+		[test "$withval" = yes && opengl=true])
 
 
 # test if we need OS X OpenGL (with frameworks, different compiling)
-AC_ARG_ENABLE([osxopengl],
-		AC_HELP_STRING([--enable-osxopengl], [use opengl framework on OS X (def: no)]),
-		[case "${enableval}" in
-		yes) osxopengl=true ;;
-		no)  osxopengl=disabled ;;
-		*) AC_MSG_ERROR([bad value ${enableval} for --enable-osxopengl]) ;;
-	esac],[osxopengl=disabled])
-
-# Test if we want mcmath enabled 
-AC_ARG_ENABLE([mcmath],
-		AC_HELP_STRING([--enable-mcmath], [enable mcmath mode (def: no)]),
-		[case "${enableval}" in
-		yes) mcmath=true ;;
-		no)  mcmath=disabled ;;
-		*) AC_MSG_ERROR([bad value ${enableval} for --enable-mcmath]) ;;
-	esac],[mcmath=disabled])
-	
-# Test if we want to simulate the hardware or not
-AC_ARG_ENABLE([simhw],
-		AC_HELP_STRING([--enable-simhw], [enable simulation of hardware (def: no)]),
-		[case "${enableval}" in
-		yes) simhw=true ;;
-		no)  simhw=disabled ;;
-		*) AC_MSG_ERROR([bad value ${enableval} for --enable-simhw]) ;;
-	esac],[simhw=disabled])
-	
+# AC_ARG_ENABLE([osxopengl],
+# 		AC_HELP_STRING([--enable-osxopengl], [use opengl framework on OS X (def: no)]),
+# 		[case "${enableval}" in
+# 		yes) osxopengl=true ;;
+# 		no)  osxopengl=disabled ;;
+# 		*) AC_MSG_ERROR([bad value ${enableval} for --enable-osxopengl]) ;;
+# 	esac],[osxopengl=disabled])
 
 ### Set some automake variables ###
 ###################################
@@ -169,7 +139,6 @@ AM_CONDITIONAL([SIMHW], [test x$simhw = xtrue])
 ### STATIC SIMULATION MODE ###
 ##############################
 if test "$simstat" = true ; then
-	# search for static simulation libraries here, exit if not found
 	AC_MSG_NOTICE([static simulation enabled, checking for extra libs])
 	# this is kinda ugly
 	simstatmissing=""
