@@ -16,7 +16,6 @@ testing/Makefile
 
 AM_INIT_AUTOMAKE([-Wall -Werror foreign])
 
-AC_PROG_SED
 AC_PROG_CXX
 AC_PROG_CXXCPP
 AC_PROG_CC
@@ -43,10 +42,10 @@ AC_SEARCH_LIBS([pthread_create],
 		[],
 		[AC_MSG_ERROR([cannot continue without pthread.])])
 
-AC_SEARCH_LIBS([bufferevent_base_set], 
-		[event],
-		[],
-		[AC_MSG_ERROR([cannot continue without libevent.])])
+#AC_SEARCH_LIBS([bufferevent_base_set], 
+		#[event],
+		#[],
+		#[AC_MSG_ERROR([cannot continue without libevent.])])
 
 AC_SEARCH_LIBS([gsl_blas_dgemm],
 		[gsl],
