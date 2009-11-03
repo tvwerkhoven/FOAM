@@ -19,19 +19,20 @@ AM_CFLAGS = -pipe -Wall -Wextra \
 		-O3 -ftree-vectorize \
 		-g
 
-AM_LDFLAGS = $(top_builddir)/lib/libsocket.a
+AM_LDFLAGS = $(top_builddir)/lib/libsocket.a \
+		$(top_builddir)/lib/libio.a
 
 # Basic framework files which are always needed
-FRAME_SRC = foam.c
+FRAME_SRC = foam.cc
 FRAME_HDR = foam.h config.h
 
 ### DUMMY MODE ###
 ##################
 bin_PROGRAMS = foam-dummy
-foam_dummy_LDADD = $(top_builddir)/lib/liblog.a
+#foam_dummy_LDADD = $(top_builddir)/lib/liblog.a
 foam_dummy_CFLAGS = -g $(AM_CFLAGS)
 foam_dummy_CPPFLAGS = -DFOAM_DEBUG=1 $(AM_CPPFLAGS)
-foam_dummy_SOURCES = foam-dummy.c $(FRAME_SRC) 
+foam_dummy_SOURCES = foam-dummy.cc $(FRAME_SRC) 
 foam_dummy_SOURCES += $(FRAME_HDR)
 
 ### STATIC SIMULATION MODE ###

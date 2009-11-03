@@ -38,6 +38,7 @@
 
 #include "foam.h"
 #include "types.h"
+#include "io.h"
 
 
 // GLOBAL VARIABLES //
@@ -49,6 +50,7 @@ int Maxparams=32;
 // libfoam.h
 extern conntrack_t clientlist;			// Stores a list of clients connected
 extern struct event_base *sockbase;		// Stores the eventbase to be used
+Io *io;
 
 // These are defined in the prime module file, but declared in
 // foam_cs_libray.h. Beware of this if you really want to get your hands dirty
@@ -105,11 +107,15 @@ static int explode(char *str, char **list);
 int main(int argc, char *argv[]) {
 	// INIT VARS // 
 	/*************/
+	io = new Io(4);
 	
+  memset((void*) (&ptc), 0, sizeof(ptc));
+  memset((void*) (&cs_config), 0, sizeof(cs_config));
+  
 	if (pthread_mutex_init(&mode_mutex, NULL) != 0)
-		logErr("pthread_mutex_init failed.");
+		io->msg(IO_ERR, "pthread_mutex_init failed.");
 	if (pthread_cond_init (&mode_cond, NULL) != 0)
-		logErr("pthread_cond_init failed.");
+		io->msg(IO_ERR, "pthread_cond_init failed.");
 	
 	char date[64];
 	struct tm *loctime;
@@ -125,7 +131,7 @@ int main(int argc, char *argv[]) {
 	loctime = localtime (&ptc.starttime);
 	strftime (date, 64, "%A, %B %d %H:%M:%S, %Y (%Z).", loctime);	
 	
-	logInfo(LOG_NOFORMAT, "      ___           ___           ___           ___     \n\
+	io->msg(IO_NOID|IO_INFO, "      ___           ___           ___           ___     \n\
      /\\  \\         /\\  \\         /\\  \\         /\\__\\    \n\
     /::\\  \\       /::\\  \\       /::\\  \\       /::|  |   \n\
    /:/\\:\\  \\     /:/\\:\\  \\     /:/\\:\\  \\     /:|:|  |   \n\
@@ -137,8 +143,8 @@ int main(int argc, char *argv[]) {
                   \\::/  /        /:/  /        /:/  /   \n\
                    \\/__/         \\/__/         \\/__/ \n");
 
-	logInfo(0,"Starting %s (%s) at %s", PACKAGE_NAME, PACKAGE_VERSION, date);
-	logInfo(0,"Copyright 2007-2009 Tim van Werkhoven (t.i.m.vanwerkhoven@xs4all.nl)");
+	io->msg(IO_INFO,"Starting %s (%s) at %s", PACKAGE_NAME, PACKAGE_VERSION, date);
+	io->msg(IO_INFO,"Copyright 2007-2009 Tim van Werkhoven (t.i.m.vanwerkhoven@xs4all.nl)");
 
 	// INITIALIZE MODULES //
 	/**********************/
@@ -156,10 +162,10 @@ int main(int argc, char *argv[]) {
 	
 	// ignore all signals that might cause problems (^C),
 	// and enable them on a per-thread basis lateron.
-    sigemptyset(&signal_mask);
-    sigaddset(&signal_mask, SIGINT); // 'user' stuff
-    sigaddset(&signal_mask, SIGTERM);
-    sigaddset(&signal_mask, SIGPIPE);
+  sigemptyset(&signal_mask);
+  sigaddset(&signal_mask, SIGINT); // 'user' stuff
+  sigaddset(&signal_mask, SIGTERM);
+  sigaddset(&signal_mask, SIGPIPE);
 	
 	sigaddset(&signal_mask, SIGSEGV); // 'bad' stuff, try to do a clean exit
 	sigaddset(&signal_mask, SIGBUS);
@@ -168,9 +174,9 @@ int main(int argc, char *argv[]) {
 	
 	threadrc = pthread_sigmask (SIG_BLOCK, &signal_mask, NULL);
     if (threadrc) {
-		logWarn("Could not set signal blocking for threads.");
-		logWarn("This might cause problems when sending signals to the program.");
-    }
+		io->msg(IO_WARN,"Could not set signal blocking for threads.");
+		io->msg(IO_WARN,"This might cause problems when sending signals to the program.");
+  }
 	
 	// make thread explicitly joinable
 	pthread_attr_init(&attr);
@@ -178,9 +184,9 @@ int main(int argc, char *argv[]) {
 	
 	// Create thread which does all the work
 	// this thread inherits the signal blocking defined above
-	threadrc = pthread_create(&(cs_config.threads[0]), &attr, (void *) startThread, NULL);
+	threadrc = pthread_create(&(cs_config.threads[0]), &attr, &startThread, NULL);
 	if (threadrc)
-		logErr("Error in pthread_create, return code was: %d.", threadrc);
+		io->msg(IO_ERR,"Error in pthread_create, return code was: %d.", threadrc);
 
 	cs_config.nthreads = 1;
 	
@@ -200,10 +206,11 @@ int main(int argc, char *argv[]) {
 	/****************************/
 	sockListen(); 		
 
+    delete io;
 	return EXIT_SUCCESS;
 }
 
-void startThread() {
+void *startThread(void *arg) {
 	// POST-THREADING MODULE INIT//
 	/*****************************/
 	
@@ -216,7 +223,7 @@ void startThread() {
 	modeListen();
 }
 
-void catchSIGINT() {
+void catchSIGINT(int) {
 	// it could be a good idea to reset signal handler, as noted 
 	// on http://www.cs.cf.ac.uk/Dave/C/node24.html , but it is
 	// currently disabled. This means that after a failed ^C,
@@ -238,7 +245,7 @@ void stopFOAM() {
 	
 	// Tell the clients we're going down
 	tellClients("200 OK SHUTTING DOWN NOW");
-	logInfo(0, "Shutting down FOAM now");
+	io->msg(IO_INFO, "Shutting down FOAM now");
 	
 	// disconnect all clients
 	for (i=0; i < MAX_CLIENTS; i++) {
@@ -247,7 +254,7 @@ void stopFOAM() {
 				sockOnErr(clientlist.connlist[i]->buf_ev, EVBUFFER_EOF, clientlist.connlist[i]);
 			}
 			else {
-				logWarn("Error closing client %d, client_t not NULL, but fd <=0!", i);
+				io->msg(IO_WARN, "Error closing client %d, client_t not NULL, but fd <=0!", i);
 			}
 		}
 	}
@@ -268,31 +275,31 @@ void stopFOAM() {
 	strftime (date, 64, "%A, %B %d %H:%M:%S, %Y (%Z).", loctime);	
 	
 	// stop prime prime module if it hasn't already
-	logInfo(0, "Trying to stop modules...");
+	io->msg(IO_INFO, "Trying to stop modules...");
 	modStopModule(&ptc);
 	
 	// and join with all threads
-	logInfo(0, "Waiting for threads to stop...");
+	io->msg(IO_INFO, "Waiting for threads to stop...");
 	for (i=0; i<cs_config.nthreads; i++) {
 		rc = pthread_join(cs_config.threads[i], &status);
 		if (rc)
-			logWarn("There was a problem joining worker thread %d/%d, return code was: %d (%s)", \
+			io->msg(IO_WARN, "There was a problem joining worker thread %d/%d, return code was: %d (%s)", \
 					i+1, cs_config.nthreads, rc, strerror(errno));
 		else
-			logDebug(0, "Thread %d/%d joined successfully, exit status was: %ld", \
+			io->msg(IO_DEB1, "Thread %d/%d joined successfully, exit status was: %ld", \
 					i+1, cs_config.nthreads, (long) status);
 
 	}
 	
 	// finally, destroy the pthread variables
-	logDebug(0, "Destroying thread configuration (mutex, cond, attr)...");
+	io->msg(IO_DEB1, "Destroying thread configuration (mutex, cond, attr)...");
 	pthread_mutex_destroy(&mode_mutex);
 	pthread_cond_destroy(&mode_cond);
 	pthread_attr_destroy(&attr);
 	
 	// last log message just before closing the logfiles
-	logInfo(0, "Stopping FOAM at %s", date);
-	logInfo(0, "Ran for %ld seconds, parsed %ld frames (%.1f FPS).", \
+	io->msg(IO_INFO, "Stopping FOAM at %s", date);
+	io->msg(IO_INFO, "Ran for %ld seconds, parsed %ld frames (%.1f FPS).", \
 		end-ptc.starttime, ptc.frames, ptc.frames/(float) (end-ptc.starttime));
 
 	// close the logfiles
@@ -308,7 +315,7 @@ void checkFieldFiles(wfs_t *wfsinfo) {
 	FILE *fieldfd;
 	// check if the filename is set (or is at least not zero)
 	if (wfsinfo->darkfile == NULL) {
-		logInfo(0, "Not using darkfield calibration, no darkfield file given");
+		io->msg(IO_INFO, "Not using darkfield calibration, no darkfield file given");
 	}
 	else {
 		// if the filename is set, try to open the file and see if that works
@@ -317,13 +324,13 @@ void checkFieldFiles(wfs_t *wfsinfo) {
 			// if we cannot open the file, we need to darkcalibrate at some
 			// point and store the calibration in wfsinfo->darkfile.
 			// Allocate the memory anyway so the image can be stored here later on
-			logInfo(0, "Darkfield file (%s) could not be opened, will create darkfield calibration later (%s).", wfsinfo->darkfile, strerror(errno));
+			io->msg(IO_INFO, "Darkfield file (%s) could not be opened, will create darkfield calibration later (%s).", wfsinfo->darkfile, strerror(errno));
 			wfsinfo->darkim = gsl_matrix_float_calloc(wfsinfo->res.x, wfsinfo->res.y);
 		}
 		else {
 			// if we can open the file, there is already darkfield calibration
 			// present. allocate memory for the image, and try to import it
-			logInfo(0, "Darkfield file found and, trying to import into memory.");
+			io->msg(IO_INFO, "Darkfield file found and, trying to import into memory.");
 			// checking alloc success is not necessary because we use gsl's own checking
 			wfsinfo->darkim = gsl_matrix_float_calloc(wfsinfo->res.x, wfsinfo->res.y);
 			gsl_matrix_float_fscanf(fieldfd, wfsinfo->darkim);
@@ -334,16 +341,16 @@ void checkFieldFiles(wfs_t *wfsinfo) {
 	
 	// same for flatfield
 	if (wfsinfo->flatfile == NULL) {
-		logInfo(0, "Not using flatfield calibration, no flatfield file given");
+		io->msg(IO_INFO, "Not using flatfield calibration, no flatfield file given");
 	}
 	else {
 		fieldfd = fopen(wfsinfo->flatfile, "r");
 		if (fieldfd == NULL) {
-			logInfo(0, "Flatfield file (%s) could not be opened, will create flatfield calibration later (%s).", wfsinfo->flatfile, strerror(errno));
+			io->msg(IO_INFO, "Flatfield file (%s) could not be opened, will create flatfield calibration later (%s).", wfsinfo->flatfile, strerror(errno));
 			wfsinfo->flatim = gsl_matrix_float_calloc(wfsinfo->res.x, wfsinfo->res.y);
 		}
 		else {
-			logInfo(0, "Flatfield file found and, trying to import into memory.");
+			io->msg(IO_INFO, "Flatfield file found and, trying to import into memory.");
 			wfsinfo->flatim = gsl_matrix_float_calloc(wfsinfo->res.x, wfsinfo->res.y);
 			gsl_matrix_float_fscanf(fieldfd, wfsinfo->flatim);
 			fclose(fieldfd);
@@ -352,16 +359,16 @@ void checkFieldFiles(wfs_t *wfsinfo) {
 	
 	// same for skyfield
 	if (wfsinfo->skyfile == NULL) {
-		logInfo(0, "Not using skyfield calibration, no skyfield file given");
+		io->msg(IO_INFO, "Not using skyfield calibration, no skyfield file given");
 	}
 	else {
 		fieldfd = fopen(wfsinfo->skyfile, "r");
 		if (fieldfd == NULL) {
-			logInfo(0, "Skyfield file (%s) could not be opened, will create skyfield calibration later (%s).", wfsinfo->skyfile, strerror(errno));
+			io->msg(IO_INFO, "Skyfield file (%s) could not be opened, will create skyfield calibration later (%s).", wfsinfo->skyfile, strerror(errno));
 			wfsinfo->skyim = gsl_matrix_float_calloc(wfsinfo->res.x, wfsinfo->res.y);
 		}
 		else {
-			logInfo(0, "Skyfield file found and, trying to import into memory.");
+			io->msg(IO_INFO, "Skyfield file found and, trying to import into memory.");
 			wfsinfo->skyim = gsl_matrix_float_calloc(wfsinfo->res.x, wfsinfo->res.y);
 			gsl_matrix_float_fscanf(fieldfd, wfsinfo->skyim);
 			fclose(fieldfd);
@@ -376,16 +383,16 @@ void checkAOConfig(control_t *ptc) {
 	
 	// first check the amount of WFSs, less than 0 is weird, as is more than 4 (in simple systems at least)
 	if (ptc->wfs_count < 0 || ptc->wfs_count > 3) {
-		logWarn("Total of %d WFS, seems unsane?", ptc->wfs_count);
+		io->msg(IO_WARN, "Total of %d WFS, seems unsane?", ptc->wfs_count);
 	}
 	else {
 		// then check each WFS setting individually
 		for (i=0; i< ptc->wfs_count; i++) {
 			if (ptc->wfs[i].res.x < 0 || ptc->wfs[i].res.x > 1024 || ptc->wfs[i].res.y < 0 || ptc->wfs[i].res.y > 1024) 
-				logWarn("Resolution of WFS %d is odd: %dx%d", i, ptc->wfs[i].res.x, ptc->wfs[i].res.y);
+				io->msg(IO_WARN, "Resolution of WFS %d is odd: %dx%d", i, ptc->wfs[i].res.x, ptc->wfs[i].res.y);
 
 			if (ptc->wfs[i].bpp != 8) {
-				logWarn("Bitdepth %d for WFS %d unsupported, defaulting to 8.", ptc->wfs[i].bpp, i);
+				io->msg(IO_WARN, "Bitdepth %d for WFS %d unsupported, defaulting to 8.", ptc->wfs[i].bpp, i);
 				ptc->wfs[i].bpp = 8;
 			}
 			
@@ -397,7 +404,7 @@ void checkAOConfig(control_t *ptc) {
 			
 			// check scandir
 			if (ptc->wfs[i].scandir != AO_AXES_XY && ptc->wfs[i].scandir != AO_AXES_Y && ptc->wfs[i].scandir != AO_AXES_X) {
-				logWarn("Scandir not set to either AO_AXES_XY, AO_AXES_X or AO_AXES_Y, defaulting to AO_AXES_XY");
+				io->msg(IO_WARN, "Scandir not set to either AO_AXES_XY, AO_AXES_X or AO_AXES_Y, defaulting to AO_AXES_XY");
 				ptc->wfs[i].scandir = AO_AXES_XY;
 			}
 		}
@@ -408,25 +415,25 @@ void checkAOConfig(control_t *ptc) {
 	
 	// first check the amount of WFCs
 	if (ptc->wfc_count < 0 || ptc->wfc_count > 3) {
-		logWarn("Total of %d WFC, seems unsane?", ptc->wfc_count);
+		io->msg(IO_WARN, "Total of %d WFC, seems unsane?", ptc->wfc_count);
 	}
 	else {
 		// then check each WFC setting individually
 		for (i=0; i< ptc->wfc_count; i++) {
 			if (ptc->wfc[i].nact < 1) {
-				logWarn("%d actuators for WFC %d? This is hard to believe, disabling WFC %d.", ptc->wfc[i].nact, i, i);
+				io->msg(IO_WARN, "%d actuators for WFC %d? This is hard to believe, disabling WFC %d.", ptc->wfc[i].nact, i, i);
 				// 0 acts effectively disables a WFC
 				ptc->wfc[i].nact = 0;
 				ptc->wfc[i].ctrl = NULL;
 			}
 			else {
-				if (ptc->wfc[i].nact > 1000) logInfo(0, "%d actuators for WFC %d? Impressive...", ptc->wfc[i].nact, i);
-				logInfo(0, "Allocating memory for %d actuator control voltages.", ptc->wfc[i].nact);
+				if (ptc->wfc[i].nact > 1000) io->msg(IO_INFO, "%d actuators for WFC %d? Impressive...", ptc->wfc[i].nact, i);
+				io->msg(IO_INFO, "Allocating memory for %d actuator control voltages.", ptc->wfc[i].nact);
 				ptc->wfc[i].ctrl = gsl_vector_float_calloc(ptc->wfc[i].nact);
 			}
 			
 			if (ptc->wfc[0].type != WFC_DM && ptc->wfc[0].type != WFC_TT) {
-				logWarn("Unknown WFC type (not WFC_DM, nor WFC_TT). Defaulting to WFC_DM");
+				io->msg(IO_WARN, "Unknown WFC type (not WFC_DM, nor WFC_TT). Defaulting to WFC_DM");
 				ptc->wfc[0].type = WFC_DM;
 			}
 		}
@@ -437,18 +444,18 @@ void checkAOConfig(control_t *ptc) {
 	
 	// first check the amount of FWs
 	if (ptc->fw_count < 0 || ptc->fw_count > 3) {
-		logWarn("Total of %d FWs, seems unsane?", ptc->fw_count);
+		io->msg(IO_WARN, "Total of %d FWs, seems unsane?", ptc->fw_count);
 	}
 	else {
 		// then check each FW setting individually
 		for (i=0; i< ptc->fw_count; i++) {
 			if (ptc->filter[0].nfilts > MAX_FILTERS) {
-				logWarn("Warning, number of filters (%d) for filterwheel %d larger than MAX_FILTERS, filters above position %d will not be used.", \
+				io->msg(IO_WARN, "Warning, number of filters (%d) for filterwheel %d larger than MAX_FILTERS, filters above position %d will not be used.", \
 				ptc->filter[0].nfilts, i, MAX_FILTERS);
 				ptc->filter[0].nfilts = MAX_FILTERS;
 			}
 			else if (ptc->filter[0].nfilts <= 0) {
-				logWarn("Warning, zero or less filters for filterweel %d, disabling filterwheel.", i);
+				io->msg(IO_WARN, "Warning, zero or less filters for filterweel %d, disabling filterwheel.", i);
 				ptc->filter[0].nfilts = 0;
 			}
 		}
@@ -460,15 +467,15 @@ void checkAOConfig(control_t *ptc) {
 	if (ptc->logfrac < 1)
 		ptc->logfrac = 0;
 	else if (ptc->logfrac > 10000)
-		logWarn("%d might be a rather large value for logfrac.", ptc->logfrac);
+		io->msg(IO_WARN, "%d might be a rather large value for logfrac.", ptc->logfrac);
 	
-	logInfo(0, "AO Configuration for wavefront sensors, wavefront correctors, and filterwheels verified.");
+	io->msg(IO_INFO, "AO Configuration for wavefront sensors, wavefront correctors, and filterwheels verified.");
 }
 
 void checkFOAMConfig(config_t *conf) {
 	// check port to listen on, must be sane (1 -- 2^16-1), or default to 10000
 	if (conf->listenport < 1 || conf->listenport > 65535) {
-		logWarn("Warning, port invalid, choose between 1 and 65535. Defaulting to 10000.");
+		io->msg(IO_WARN, "Warning, port invalid, choose between 1 and 65535. Defaulting to 10000.");
 		conf->listenport = 10000;
 	}
 	
@@ -478,58 +485,58 @@ void checkFOAMConfig(config_t *conf) {
 	// Init syslog if necessary
 	if (conf->use_syslog == true) {
 		openlog(conf->syslog_prepend, LOG_PID, LOG_USER);
-		logInfo(0, "Syslog successfully initialized.");
+		io->msg(IO_INFO, "Syslog successfully initialized.");
 	}
 	
-	logInfo(0, "Configuration successfully loaded...");
+	io->msg(IO_INFO, "Configuration successfully loaded...");
 }
 
 int initLogFiles() {
 	// INFO LOGGING
 	if (cs_config.infofile != NULL) {
 		if ((cs_config.infofd = fopen(cs_config.infofile,"a")) == NULL) {
-			logWarn("Unable to open file %s for info-logging! Not using this logmethod!", cs_config.infofile);
+			io->msg(IO_WARN, "Unable to open file %s for info-logging! Not using this logmethod!", cs_config.infofile);
 			cs_config.infofile[0] = '\0';
 		}	
-		else logInfo(0, "Info logfile '%s' successfully opened.", cs_config.infofile);
+		else io->msg(IO_INFO, "Info logfile '%s' successfully opened.", cs_config.infofile);
 	}
 	else
-		logInfo(0, "Not logging general info to disk.");
+		io->msg(IO_INFO, "Not logging general info to disk.");
 
 	// ERROR/WARNING LOGGING
 	if (cs_config.errfile != NULL) {
 		if (strcmp(cs_config.errfile, cs_config.infofile) == 0) {	// If the errorfile is the same as the infofile, use the same FD
 			cs_config.errfd = cs_config.infofd;
-			logDebug(0, "Using the same file '%s' for info- and error- logging.", cs_config.errfile);
+			io->msg(IO_DEB1, "Using the same file '%s' for info- and error- logging.", cs_config.errfile);
 		}
 		else if ((cs_config.errfd = fopen(cs_config.errfile,"a")) == NULL) {
-			logWarn("Unable to open file %s for error-logging! Not using this logmethod!", cs_config.errfile);
+			io->msg(IO_WARN, "Unable to open file %s for error-logging! Not using this logmethod!", cs_config.errfile);
 			cs_config.errfile[0] = '\0';
 		}
-		else logInfo(0, "Error logfile '%s' successfully opened.", cs_config.errfile);
+		else io->msg(IO_INFO, "Error logfile '%s' successfully opened.", cs_config.errfile);
 	}
 	else {
-		logInfo(0, "Not logging errors to disk.");
+		io->msg(IO_INFO, "Not logging errors to disk.");
 	}
 
 	// DEBUG LOGGING
 	if (cs_config.debugfile != 0) {
 		if (strcmp(cs_config.debugfile,cs_config.infofile) == 0) {
 			cs_config.debugfd = cs_config.infofd;	
-			logDebug(0, "Using the same file '%s' for debug- and info- logging.", cs_config.debugfile);
+			io->msg(IO_DEB1, "Using the same file '%s' for debug- and info- logging.", cs_config.debugfile);
 		}
 		else if (strcmp(cs_config.debugfile,cs_config.errfile) == 0) {
 			cs_config.debugfd = cs_config.errfd;	
-			logDebug(0, "Using the same file '%s' for debug- and error- logging.", cs_config.debugfile);
+			io->msg(IO_DEB1, "Using the same file '%s' for debug- and error- logging.", cs_config.debugfile);
 		}
 		else if ((cs_config.debugfd = fopen(cs_config.debugfile,"a")) == NULL) {
-			logWarn("Unable to open file %s for debug-logging! Not using this logmethod!", cs_config.debugfile);
+			io->msg(IO_WARN, "Unable to open file %s for debug-logging! Not using this logmethod!", cs_config.debugfile);
 			cs_config.debugfile[0] = '\0';
 		}
-		else logInfo(0, "Debug logfile '%s' successfully opened.", cs_config.debugfile);
+		else io->msg(IO_INFO, "Debug logfile '%s' successfully opened.", cs_config.debugfile);
 	}
 	else {
-		logInfo(0, "Not logging debug to disk.");
+		io->msg(IO_INFO, "Not logging debug to disk.");
 	}
 
 	return EXIT_SUCCESS;
@@ -542,10 +549,10 @@ void modeOpen() {
 	gettimeofday(&last, NULL);
 	lastframes = ptc.frames;
 
-	logInfo(0, "Entering open loop.");
+	io->msg(IO_INFO, "Entering open loop.");
 
 	if (ptc.wfs_count == 0) {	// we need wave front sensors
-		logWarn("Error, no WFSs defined.");
+		io->msg(IO_WARN, "Error, no WFSs defined.");
 		ptc.mode = AO_MODE_LISTEN;
 		return;
 	}
@@ -553,7 +560,7 @@ void modeOpen() {
 	// Run the initialisation function of the modules used, pass
 	// along a pointer to ptc
 	if (modOpenInit(&ptc) != EXIT_SUCCESS) {		// check if we can init the module
-		logWarn("modOpenInit failed");
+		io->msg(IO_WARN, "modOpenInit failed");
 		ptc.mode = AO_MODE_LISTEN;
 		return;
 	}
@@ -562,7 +569,7 @@ void modeOpen() {
 	// tellClients("201 MODE OPEN SUCCESSFUL");
 	while (ptc.mode == AO_MODE_OPEN) {
 		if (modOpenLoop(&ptc) != EXIT_SUCCESS) {
-			logWarn("modOpenLoop failed");
+			io->msg(IO_WARN, "modOpenLoop failed");
 			ptc.mode = AO_MODE_LISTEN;
 			return;
 		}
@@ -580,7 +587,7 @@ void modeOpen() {
 	
 	// Finish the open loop here
 	if (modOpenFinish(&ptc) != EXIT_SUCCESS) {		// check if we can finish
-		logWarn("modOpenFinish failed");
+		io->msg(IO_WARN, "modOpenFinish failed");
 		ptc.mode = AO_MODE_LISTEN;
 		return;
 	}
@@ -594,10 +601,10 @@ void modeClosed() {
 	long lastframes, curframes;
 	gettimeofday(&last, NULL);
 	lastframes = ptc.frames;
-	logInfo(0, "Entering closed loop.");
+	io->msg(IO_INFO, "Entering closed loop.");
 
 	if (ptc.wfs_count == 0) {						// we need wave front sensors
-		logWarn("Error, no WFSs defined.");
+		io->msg(IO_WARN, "Error, no WFSs defined.");
 		ptc.mode = AO_MODE_LISTEN;
 		return;
 	}
@@ -605,7 +612,7 @@ void modeClosed() {
 	// Run the initialisation function of the modules used, pass
 	// along a pointer to ptc
 	if (modClosedInit(&ptc) != EXIT_SUCCESS) {
-		logWarn("modClosedInit failed");
+		io->msg(IO_WARN, "modClosedInit failed");
 		ptc.mode = AO_MODE_LISTEN;
 		return;
 	}
@@ -615,7 +622,7 @@ void modeClosed() {
 	while (ptc.mode == AO_MODE_CLOSED) {
 		
 		if (modClosedLoop(&ptc) != EXIT_SUCCESS) {
-			logWarn("modClosedLoop failed");
+			io->msg(IO_WARN, "modClosedLoop failed");
 			ptc.mode = AO_MODE_LISTEN;
 			return;
 		}							
@@ -633,7 +640,7 @@ void modeClosed() {
 	
 	// Finish the open loop here
 	if (modClosedFinish(&ptc) != EXIT_SUCCESS) {	// check if we can finish
-		logWarn("modClosedFinish failed");
+		io->msg(IO_WARN, "modClosedFinish failed");
 		ptc.mode = AO_MODE_LISTEN;
 		return;
 	}
@@ -643,17 +650,17 @@ void modeClosed() {
 }
 
 void modeCal() {
-	logInfo(0, "Starting Calibration");
+	io->msg(IO_INFO, "Starting Calibration");
 	
 	// this links to a module
 	if (modCalibrate(&ptc) != EXIT_SUCCESS) {
-		logWarn("modCalibrate failed");
+		io->msg(IO_WARN, "modCalibrate failed");
 		// tellClients("404 ERROR CALIBRATION FAILED");
 		ptc.mode = AO_MODE_LISTEN;
 		return;
 	}
 	
-	logInfo(0, "Calibration loop done, switching to listen mode");
+	io->msg(IO_INFO, "Calibration loop done, switching to listen mode");
 	// tellClients("201 CALIBRATION SUCCESSFUL");
 	ptc.mode = AO_MODE_LISTEN;
 		
@@ -663,7 +670,7 @@ void modeCal() {
 void modeListen() {
 	
 	while (true) {
-		logInfo(0, "Now running in listening mode.");
+		io->msg(IO_INFO, "Now running in listening mode.");
 		
 		switch (ptc.mode) {
 			case AO_MODE_OPEN:
@@ -699,11 +706,11 @@ int sockListen() {
 	
 	sockbase = event_init();		// Initialize libevent
 	
-	logDebug(0, "Starting listening socket on %s:%d.", cs_config.listenip, cs_config.listenport);
+	io->msg(IO_DEB1, "Starting listening socket on %s:%d.", cs_config.listenip, cs_config.listenport);
 	
 	// Initialize the internet socket. We want streaming and we want TCP
 	if ((sock = socket(PF_INET, SOCK_STREAM, 0)) < 0)
-		logErr("Failed to set up socket.");
+		io->msg(IO_ERR, "Failed to set up socket.");
 		
 	// Get the address fixed:
 	serv_addr.sin_family = AF_INET;
@@ -713,20 +720,20 @@ int sockListen() {
 
 	// Set reusable and nosigpipe flags so we don't get into trouble later on.
 	if (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval)) != 0)
-		logWarn("Could not set socket flag SO_REUSEADDR.");
+		io->msg(IO_WARN, "Could not set socket flag SO_REUSEADDR.");
 	
 	// We now actually bind the socket to something
 	if (bind(sock, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) != 0)
-		logErr("Binding socket failed: %s", strerror(errno));
+		io->msg(IO_ERR, "Binding socket failed: %s", strerror(errno));
 	
 	if (listen (sock, 1) != 0) 
-		logErr("Listen failed: %s", strerror(errno));
+		io->msg(IO_ERR, "Listen failed: %s", strerror(errno));
 		
 	// Set socket to non-blocking mode, nice for events
 	if (setNonBlock(sock) != EXIT_SUCCESS) 
-		logWarn("Coult not set socket to non-blocking mode, might cause undesired side-effects.");
+		io->msg(IO_WARN, "Coult not set socket to non-blocking mode, might cause undesired side-effects.");
 		
-	logInfo(0, "Successfully initialized socket on %s:%d, setting up event schedulers.", cs_config.listenip, cs_config.listenport);
+	io->msg(IO_INFO, "Successfully initialized socket on %s:%d, setting up event schedulers.", cs_config.listenip, cs_config.listenport);
 	
 	// configure the event to be scheduled 
 	event_set(&sockevent, sock, EV_READ | EV_PERSIST, sockAccept, NULL);
@@ -735,7 +742,7 @@ int sockListen() {
 	// add the event to the buffer
     event_add(&sockevent, NULL);
 
-	logInfo(0, "This tread will block for incoming network traffic now...");
+	io->msg(IO_INFO, "This tread will block for incoming network traffic now...");
 	event_base_dispatch(sockbase);				// Start looping
 	
 	return EXIT_SUCCESS;
@@ -765,21 +772,21 @@ void sockAccept(const int sock, const short event, void *arg) {
 	newsock = accept(sock, (struct sockaddr *) &cli_addr, &cli_len);
 		
 	if (newsock < 0) 
-		logWarn("Accepting socket failed: %s!", strerror(errno));
+		io->msg(IO_WARN, "Accepting socket failed: %s!", strerror(errno));
 	
 	if (setNonBlock(newsock) != EXIT_SUCCESS)
-		logWarn("Unable to set new client socket to non-blocking.");
+		io->msg(IO_WARN, "Unable to set new client socket to non-blocking.");
 
 	// Check if we do not exceed the maximum number of connections:
 	if (clientlist.nconn >= MAX_CLIENTS) {
 		close(newsock);
-		logWarn("Refused connection, maximum clients reached (%d)", MAX_CLIENTS);
+		io->msg(IO_WARN, "Refused connection, maximum clients reached (%d)", MAX_CLIENTS);
 		return;
 	}
 	
-	client = calloc(1, sizeof(*client));
+	client = (client_t*) calloc(1, sizeof(*client));
 	if (client == NULL)
-		logErr("Calloc failed in sockAccept.");
+		io->msg(IO_ERR, "Calloc failed in sockAccept.");
 
 	client->fd = newsock;			// Add socket to the client struct
 	client->buf_ev = bufferevent_new(newsock, sockOnRead, sockOnWrite, sockOnErr, client);
@@ -793,13 +800,13 @@ void sockAccept(const int sock, const short event, void *arg) {
 	
 	// Since we are using multiple bases, assign this one to a specific base:
 	if (bufferevent_base_set(sockbase, client->buf_ev) != 0)
-		logErr("Failed to set base for buffered events.");
+		io->msg(IO_ERR, "Failed to set base for buffered events.");
 
 	// We have to enable it before our callbacks will be effective
 	if (bufferevent_enable(client->buf_ev, EV_READ) != 0)
-		logErr("Failed to enable buffered event.");
+		io->msg(IO_ERR, "Failed to enable buffered event.");
 
-	logInfo(0, "Succesfully accepted connection from %s (using sock %d and buf_ev %p)", \
+	io->msg(IO_INFO, "Succesfully accepted connection from %s (using sock %d and buf_ev %p)", \
 		inet_ntoa(cli_addr.sin_addr), newsock, client->buf_ev);
 	
 	// welcome the client
@@ -810,9 +817,9 @@ void sockOnErr(struct bufferevent *bev, short event, void *arg) {
 	client_t *client = (client_t *)arg;
 
 	if (event & EVBUFFER_EOF) 
-		logInfo(0, "Client successfully disconnected.");
+		io->msg(IO_INFO, "Client successfully disconnected.");
 	else
-		logWarn("Client socket error, disconnecting.");
+		io->msg(IO_WARN, "Client socket error, disconnecting.");
 		
 	clientlist.nconn--;
 	// !!!:tim:20080415 this works, because clientlist.connlist[(int) client->connid] 
@@ -843,7 +850,7 @@ void sockOnRead(struct bufferevent *bev, void *arg) {
 	
 	// if the message was too long, give a warning and return
 	if (flag == 1) {
-		logWarn("Received very long command over socket which was ignored.");
+		io->msg(IO_WARN, "Received very long command over socket which was ignored.");
 		tellClient(client->buf_ev,"400 COMMAND IGNORED: TOO LONG (MAX: %d)", COMMANDLEN);
 		return;
 	}
@@ -854,7 +861,7 @@ void sockOnRead(struct bufferevent *bev, void *arg) {
 	if ((tmp = strchr(msg, '\r')) != NULL) // there might be a trailing newline which we don't want
 		*tmp = '\0';
 	
-	logDebug(0, "Received %d bytes on socket reading: '%s'.", nbytes, msg);
+	io->msg(IO_DEB1, "Received %d bytes on socket reading: '%s'.", nbytes, msg);
 	parseCmd(msg, nbytes, client);
 }
 
@@ -924,10 +931,10 @@ int parseCmd(char *msg, const int len, client_t *client) {
 
 	// explode the string, list[i] now holds the ith word in 'local'
 	if ((count = explode(local, list)) == 0) {
-		logWarn("parseCmd called without any words: '%s' or '%s' has %d words", msg, local, count);
+		io->msg(IO_WARN, "parseCmd called without any words: '%s' or '%s' has %d words", msg, local, count);
 		return EXIT_FAILURE;
 	}
-	logDebug(0, "We got: '%s', first word: '%s', words: %d", msg, list[0], count);
+	io->msg(IO_DEB1, "We got: '%s', first word: '%s', words: %d", msg, list[0], count);
 			
 	// inspect the string, see what we are going to do:
 	if (strcmp(list[0],"help") == 0) {
@@ -1028,18 +1035,18 @@ int tellClients(char *msg, ...) {
 	// format string and add newline
 	asprintf(&out2, "%s\n", out);
 
-	logDebug(0, "Telling all clients");
+	io->msg(IO_DEB1, "Telling all clients");
 	for (i=0; i < MAX_CLIENTS; i++) {
-		logDebug(LOG_NOFORMAT, "%d ", i);
+		io->msg(IO_DEB1|IO_NOID, "%d ", i);
 		if (clientlist.connlist[i] != NULL && clientlist.connlist[i]->fd > 0) { 
-			logDebug(LOG_NOFORMAT, "Telling! ");	
+			io->msg(IO_DEB1|IO_NOID, "Telling! ");	
 			if (bufferevent_write(clientlist.connlist[i]->buf_ev, out2, strlen(out2)+1) != 0) {
-				logWarn("Error telling client %d", i);
+				io->msg(IO_WARN, "Error telling client %d", i);
 				return EXIT_FAILURE; 
 			}
 		}
 	}
-	logDebug(LOG_NOFORMAT, "\n");
+	io->msg(IO_DEB1|IO_NOID, "\n");
 	return EXIT_SUCCESS;
 }
 
@@ -1054,7 +1061,7 @@ int tellClient(struct bufferevent *bufev, char *msg, ...) {
 	asprintf(&out2, "%s\n", out);
 
 	if (bufferevent_write(bufev, out2, strlen(out2)+1) != 0) {
-		logWarn("Error telling client something");
+		io->msg(IO_WARN, "Error telling client something");
 		return EXIT_FAILURE; 
 	}
 	

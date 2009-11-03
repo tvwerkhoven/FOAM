@@ -31,33 +31,35 @@
 
 #include "foam.h"
 
-control_t ptc = { //!< Global struct to hold system characteristics and other data. Initialize with complete but minimal configuration
-	.mode = AO_MODE_LISTEN,
-	.calmode = CAL_INFL,
-	.wfs_count = 0,
-	.wfc_count = 0,
-	.fw_count = 0,
-	.frames = 0,
-	.logfrac = 1000,
-	.capped = 0,
-};
+control_t ptc;
+//  = { //!< Global struct to hold system characteristics and other data. Initialize with complete but minimal configuration
+//  .mode = AO_MODE_LISTEN,
+//  .calmode = CAL_INFL,
+//  .wfs_count = 0,
+//  .wfc_count = 0,
+//  .fw_count = 0,
+//  .frames = 0,
+//  .logfrac = 1000,
+//  .capped = 0,
+// };
 
 
-config_t cs_config = { //!< Global struct to hold system configuration. Init with complete but minimal configuration
-	.listenip = "0.0.0.0", 	// listen on any IP by default, can be overridden by config file
-	.listenport = 10000,	// listen on port 10000 by default
-	.infofile = NULL,
-	.infofd = NULL,
-	.errfile = NULL,
-	.errfd = NULL,
-	.debugfile = NULL,
-	.debugfd = NULL,
-	.use_syslog = false,
-	.syslog_prepend = "foam",
-	.use_stdout = true,
-	.loglevel = LOGDEBUG,
-	.nthreads = 0
-};
+config_t cs_config;
+//  = { //!< Global struct to hold system configuration. Init with complete but minimal configuration
+//  .listenip = "0.0.0.0",  // listen on any IP by default, can be overridden by config file
+//  .listenport = 10000,  // listen on port 10000 by default
+//  .infofile = NULL,
+//  .infofd = NULL,
+//  .errfile = NULL,
+//  .errfd = NULL,
+//  .debugfile = NULL,
+//  .debugfd = NULL,
+//  .use_syslog = false,
+//  .syslog_prepend = "foam",
+//  .use_stdout = true,
+//  .loglevel = LOGDEBUG,
+//  .nthreads = 0
+// };
 
 conntrack_t clientlist;
 struct event_base *sockbase;
@@ -66,7 +68,7 @@ extern pthread_mutex_t mode_mutex;
 extern pthread_cond_t mode_cond;
 
 int modInitModule(control_t *ptc, config_t *cs_config) {
-	logInfo(0, "Running in dummy mode, don't expect great AO results :)");
+	//logInfo(0, "Running in dummy mode, don't expect great AO results :)");
 	
 	// populate ptc here
 	ptc->mode = AO_MODE_LISTEN;			// start in listen mode (safe bet, you probably want this)
@@ -86,6 +88,7 @@ int modInitModule(control_t *ptc, config_t *cs_config) {
 	ptc->wfs[0].name = "SH WFS";
 	ptc->wfs[0].res.x = 256;
 	ptc->wfs[0].res.y = 256;
+	ptc->wfs[0].bpp = 8;
 	ptc->wfs[0].darkfile = NULL;
 	ptc->wfs[0].flatfile = NULL;
 	ptc->wfs[0].skyfile = NULL;

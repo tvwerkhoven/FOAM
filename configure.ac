@@ -8,7 +8,6 @@ AC_CONFIG_HEADERS([lib/config.h])
 AC_CONFIG_AUX_DIR([build-aux])
 AC_CONFIG_FILES([
 Makefile
-docs/Makefile
 lib/Makefile
 foam/Makefile
 conf/Makefile
@@ -55,7 +54,7 @@ AC_SEARCH_LIBS([gsl_blas_dgemm],
 
 AC_SEARCH_LIBS([cblas_dgemm],
 		[gslcblas],
-		[],
+		[COMMON_LIBS+="-lgslcblas"],
 		[AC_MSG_ERROR([cannot continue without gslcblas.])])
 
 ### BUILD TARGETS ###
@@ -110,35 +109,31 @@ AC_ARG_WITH([opengl],
 AM_CONDITIONAL([DEBUG], [test "$debug" = true])
 AM_CONDITIONAL([HWDEBUG], [test "$hwdebug" = true])
 
-# Save common libs (this is kinda ugly)
-COMMON_LIBS=$LIBS
-
 ### STATIC SIMULATION MODE ###
 ##############################
 if test "$simstat" = true ; then
 	AC_MSG_NOTICE([static simulation enabled, checking for extra libs])
 	simstatmissing=""
-	LIBS=""
 	PKG_CHECK_MODULES(SDL, sdl, [],
 		[AC_MSG_WARN([This package needs SDL in simstat mode.])])
 
-	AC_SEARCH_LIBS([IMG_Load], [SDL_image] ,[], 
+	AC_SEARCH_LIBS([IMG_Load], [SDL_image], [SIMSTAT_LIBS+=" -lSDL_image"], 
 		[AC_MSG_WARN([This package needs SDL_image in simstat mode.]);
 		simstat=false;
 		simstatmissing+=" sdl-image"])
 	
-	AC_SEARCH_LIBS([gdImageCreate], [gd] ,[], 
+	AC_SEARCH_LIBS([gdImageCreate], [gd], [SIMSTAT_LIBS+=" -lgd"], 
 		[AC_MSG_WARN([This package needs gd in simstat mode.]);
 		simstat=false;
 		simstatmissing+=" gd"])
 	
-	AC_SEARCH_LIBS([gdImagePng], [png] ,[], 
+	AC_SEARCH_LIBS([gdImagePng], [png], [SIMSTAT_LIBS+=" -lpng"], 
 		[AC_MSG_WARN([This package needs png in simstat mode.]);
 		simstat=false;
 		simstatmissing+=" png"])
 	
 	SIMSTAT_CFLAGS+="$SDL_CFLAGS"
-	SIMSTAT_LIBS+="$LIBS $SDL_LIBS"
+	SIMSTAT_LIBS+="$SDL_LIBS"
 else 
 	AC_MSG_NOTICE([static simulation disabled])
 fi
@@ -263,8 +258,6 @@ fi
 AC_SUBST(OPENGL_LIBS)
 AC_SUBST(OPENGL_CFLAGS)
 AM_CONDITIONAL([OPENGL], [test "$opengl" = true])
-
-LIBS=$COMMON_LIBS
 
 ### END CHECKING FOR LIBS ###
 #############################
