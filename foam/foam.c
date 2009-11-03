@@ -36,7 +36,9 @@
 // HEADERS //
 /***********/
 
-#include "libfoam.h"
+#include "foam.h"
+#include "types.h"
+
 
 // GLOBAL VARIABLES //
 /********************/	

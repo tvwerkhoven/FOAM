@@ -23,13 +23,12 @@ endif DEBUG
 
 # Basic framework files which are always needed
 FRAME_SRC = foam.c
-FRAME_HDR = config.h
+FRAME_HDR = foam.h config.h
 
 ### DUMMY MODE ###
 ##################
 bin_PROGRAMS += foam-dummy
-foam_dummy_LDADD = $(top_builddir)/lib/libfoam.a \
-		$(top_builddir)/lib/liblog.a
+foam_dummy_LDADD = $(top_builddir)/lib/liblog.a
 foam_dummy_SOURCES = foam-dummy.c $(FRAME_SRC) 
 foam_dummy_SOURCES += $(FRAME_HDR)
 

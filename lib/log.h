@@ -26,17 +26,20 @@
  @brief This file contains prototyped routines to log measurements and other data
  */
 
-#ifndef FOAM_MODULES_LOG
-#define FOAM_MODULES_LOG
+#ifndef __LOG_H__
+#define __LOG_H__
 
 // LIBRARIES //
 /*************/
 
 #include <stdio.h>					// for stuff, fopen etc
+#include <stdarg.h>
 #include <time.h>					// for time and date functions
 #include <gsl/gsl_linalg.h>			// for vectors and stuff
 #include <stdbool.h>				// for true and false
-#include "libfoam.h"		        // for the rest
+#include <pthread.h> 				// threads
+#include <syslog.h> 				// used for syslogging
+#include "types.h"   		        // for custom datatypes
 
 
 // DATATYPES //
@@ -211,4 +214,4 @@ void logWarn(const char *msg, ...);
  */
 void logDebug(const int flag, const char *msg, ...);
 
-#endif // #ifndef FOAM_MODULES_LOG
+#endif // __LOG_H__
