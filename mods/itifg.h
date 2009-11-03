@@ -20,7 +20,7 @@
  */
 /*! 
 	@file foam_modules-itifg.h
-	@author @authortim
+	@author Tim van Werkhoven (t.i.m.vanwerkhoven@xs4all.nl)
 	@date 2008-07-15
 
 	@brief This file contains prototypes to read out a PCDIG framegrabber using the ITIFG driver.

@@ -20,7 +20,7 @@
  */
 /*! 
  @file foam_primemod-mcmath.c
- @author @authortim
+ @author Tim van Werkhoven (t.i.m.vanwerkhoven@xs4all.nl)
  @date 2008-07-15
  
  @brief This is the McMath prime-module which can be used at that telescope.

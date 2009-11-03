@@ -20,7 +20,7 @@
  */
 /*! 
  @file foam_modules-itifg.c
- @author @authortim
+ @author Tim van Werkhoven (t.i.m.vanwerkhoven@xs4all.nl)
  @date 2008-07-15
  
  \section Info

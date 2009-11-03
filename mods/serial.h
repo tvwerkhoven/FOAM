@@ -20,7 +20,7 @@
  */
 /*! 
  @file foam_modules-serial.h
- @author @authortim
+ @author Tim van Werkhoven (t.i.m.vanwerkhoven@xs4all.nl)
  @date 2008-07-15
  
  @brief This file contains prototyped routines to drive the serial port (i.e. for filterwheels)

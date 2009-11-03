@@ -20,7 +20,7 @@
  */
 /*! 
 	@file foam_primemod-simdyn.h
-	@author @authortim
+	@author Tim van Werkhoven (t.i.m.vanwerkhoven@xs4all.nl)
 	@date 2008-07-21
 
 	@brief Header file for the dynamical simulation prime module

@@ -8,6 +8,7 @@ AC_CONFIG_HEADERS([lib/config.h])
 AC_CONFIG_AUX_DIR([build-aux])
 AC_CONFIG_FILES([
 Makefile
+docs/Makefile
 lib/Makefile
 foam/Makefile
 conf/Makefile
@@ -63,6 +64,10 @@ AC_SEARCH_LIBS([cblas_dgemm],
 AC_ARG_ENABLE([dummy],
 		AC_HELP_STRING([--disable-dummy], [build dummy mode]),
 		[test "$enableval" = yes && dummy=disabled], [dummy=true])
+
+AC_ARG_ENABLE([docs],
+		AC_HELP_STRING([--disable-docs], [compile documentation]),
+		[test "$enableval" = yes && docs=disabled], [docs=true])
 
 AC_ARG_ENABLE([simstat],
 		AC_HELP_STRING([--enable-simstat], [build static simulation mode]),

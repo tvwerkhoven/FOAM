@@ -19,17 +19,17 @@
  $Id$
 */
 /*! 
-	@file foam_cs.c
-	@author @authortim
+	@file foam.c
+	@author Tim van Werkhoven (t.i.m.vanwerkhoven@xs4all.nl)
 	@date 2008-07-15 16:35
 
-	@brief This is the main file for @name.
+	@brief This is the main file for FOAM.
 
-	This is the framework for @name, it provides basic functionality and can be 
+	This is the framework for FOAM, it provides basic functionality and can be 
 	customized through the use of certains `hooks'. These hooks are functions that
 	are called at crucial moments during the adaptive optics controlling such 
-	that the person implementing @name on a specific AO setup can customize
-	what @name does.
+	that the person implementing FOAM on a specific AO setup can customize
+	what FOAM does.
  
 */
 
@@ -138,7 +138,7 @@ int main(int argc, char *argv[]) {
                    \\/__/         \\/__/         \\/__/ \n");
 
 	logInfo(0,"Starting %s (%s) at %s", PACKAGE_NAME, PACKAGE_VERSION, date);
-	logInfo(0,"Copyright 2007-2008 Tim van Werkhoven (t.i.m.vanwerkhoven@xs4all.nl)");
+	logInfo(0,"Copyright 2007-2009 Tim van Werkhoven (t.i.m.vanwerkhoven@xs4all.nl)");
 
 	// INITIALIZE MODULES //
 	/**********************/
@@ -1121,21 +1121,21 @@ ALIASES += cslib="foam_cs_library.*"
 */
 
 
-/*!	\mainpage @name 
+/*!	\mainpage FOAM 
 
 	\section aboutdoc About this document
 	
-	This is the (developer) documentation for @name, the @longname 
-	 (yes, @name is backwards). It is intended to clarify the
+	This is the (developer) documentation for FOAM, the Modular Adaptive Optics Framework 
+	 (yes, FOAM is backwards). It is intended to clarify the
 	code and give some help to people re-using or implementing the code for their specific needs.
 	
-	\section aboutfoam About @name
+	\section aboutfoam About FOAM
 	
-	@name, the @longname, is intended to be a modular
+	FOAM, the Modular Adaptive Optics Framework, is intended to be a modular
 	framework which works independent of hardware and should provide such
 	flexibility that the framework can be implemented on any AO system.
 	
-	A short list of the features of @name follows:
+	A short list of the features of FOAM follows:
  
 	\li Portable - It runs on many (Unix) systems and is hardware independent
 	\li Scalable - It scales easily and handle multiple cores/CPU's
@@ -1143,20 +1143,20 @@ ALIASES += cslib="foam_cs_library.*"
 	\li Usable - It is controllable over a network by multiple clients simultaneously
 	\li Free - It licensed under the GPL and therefore can be used by anyone.
 	
-	For more information, see the @name wiki at http://www.astro.uu.nl/~astrowik/astrowiki/index.php/FOAM or the documentation
-	at http://dotdb.phys.uu.nl/~tim/foam/ . All versions of @name are available at the
+	For more information, see the FOAM wiki at http://www.astro.uu.nl/~astrowik/astrowiki/index.php/FOAM or the documentation
+	at http://dotdb.phys.uu.nl/~tim/foam/ . All versions of FOAM are available at the
 	Subversion repository located at http://dotdb.phys.uu.nl/svn/foam/ .
 	
-	\section struct @name structure
+	\section struct FOAM structure
 	
-	In this section, the structure of @name will be clarified. First, some key 
-	concepts are explained which are used within @name.
+	In this section, the structure of FOAM will be clarified. First, some key 
+	concepts are explained which are used within FOAM.
 	
-	@name uses several concepts, for which it is useful to have names. First of 
+	FOAM uses several concepts, for which it is useful to have names. First of 
 	all, the complete set of files (downloadable from for example http://dotdb.phys.uu.nl/~tim/foam/) 
-	is simply called a \e `distribution', or \e `version' or just \e @name.
+	is simply called a \e `distribution', or \e `version' or just \e FOAM.
 	
-	Historically, there was a @name Control Software (CS) and a User Interface 
+	Historically, there was a FOAM Control Software (CS) and a User Interface 
 	(UI), although the latter is not actively being developed as telnet suffices
 	for the moment. This explains the \c `_cs' and \c `_ui' prefix in some filenames.
 	
@@ -1250,7 +1250,7 @@ ALIASES += cslib="foam_cs_library.*"
 	which can only be called from one thread, and thus must be initialized in
 	the thread it will be called from.
  
-	To circumvent possible problems, @name provides two initialization routines,
+	To circumvent possible problems, FOAM provides two initialization routines,
 	one is run at the beginning before any threading, modInitModule(), while
 	the other is run in the thread that will be controlling the AO, 
 	modPostInitModule(). Most configuration consists of things like allocating 
@@ -1267,7 +1267,7 @@ ALIASES += cslib="foam_cs_library.*"
  
 	\subsection codeskel Code skeleton
  
-	To provide some insight in the way @name functions, consider this code skeleton:
+	To provide some insight in the way FOAM functions, consider this code skeleton:
 
 	\code
 main() {
@@ -1340,7 +1340,7 @@ modeCal() {
  
 	\section install_sec Installation
 	
-	@name currently depends on the following libraries to be present on the system:
+	FOAM currently depends on the following libraries to be present on the system:
 	\li \c libevent used to handle networking with several simultaneous connections,
 	\li \c SDL which is used to display the sensor output,
 	\li \c pthread used to separate functions over thread and distribute load,
@@ -1351,40 +1351,40 @@ modeCal() {
 	\li \c fftw3 which is used to compute FFT's to simulate the SH lenslet array,
 	\li \c SDL_Image used to read image files files.
 	
-	Furthermore @name requires basic things like a hosted compilation environment, 
-	a compiler etc. For a full list of dependencies, see the header files. @name 
+	Furthermore FOAM requires basic things like a hosted compilation environment, 
+	a compiler etc. For a full list of dependencies, see the header files. FOAM 
 	is however supplied with an (auto-)configure script which checks these
-	things and tells you what the capabilities of @name on your system will be. If
+	things and tells you what the capabilities of FOAM on your system will be. If
 	libraries are missing, the configure script will tell you so.
 	
-	To install @name, follow these simple steps:
-	\li Download a @name release from http://dotdb.phys.uu.nl/~tim/foam/ or check out a version of @name from http://dotdb.phys.uu.nl/svn/foam/
+	To install FOAM, follow these simple steps:
+	\li Download a FOAM release from http://dotdb.phys.uu.nl/~tim/foam/ or check out a version of FOAM from http://dotdb.phys.uu.nl/svn/foam/
 	\li Extract the tarball
 	\li For an svn checkout: run `autoreconf -s -i` to the configure script
 	\li Run `./configure --help` to check what options you would like to use
-	\li Run `./configure` (with specific options) to prepare @name for building. If some libraries are missing, configure will tell you so
-	\li Run `make install` which makes the various @name packages and installs them in $PREFIX
+	\li Run `./configure` (with specific options) to prepare FOAM for building. If some libraries are missing, configure will tell you so
+	\li Run `make install` which makes the various FOAM packages and installs them in $PREFIX
 	\li Run any of the executables (foamcs-*)
 	\li Connect to localhost:10000 (default) with a telnet client
-	\li Type `help' to get a list of @name commands
+	\li Type `help' to get a list of FOAM commands
 	
-	\subsection config Configure @name
+	\subsection config Configure FOAM
 	
 	With simulation, make sure you do \b not copy the FFTW wisdom file 
 	<tt>'fftw_wisdom.dat'</tt> to new machines, this file contains some 
 	simple benchmarking results done by FFTW and are very machine dependent. 
-	@name will regenerate the file if necessary, but it cannot detect 
+	FOAM will regenerate the file if necessary, but it cannot detect 
 	`wrong' wisdom files. Copying bad files is worse than deleting, thus
 	if unsure: delete the wisdom file.
 	
 	\section drivers Developing Packages
 
-	As said before, @name itself does not do a lot (compile & run 
+	As said before, FOAM itself does not do a lot (compile & run 
 	<tt>./foamcs-dummy</tt> to verify), it provides a framework to which modules can be 
 	attached. Fortunately, this approach allows for complex bundles of 
 	modules, or `packages', as explained previously in \ref struct.
 	
-	If you want to use @name in a specific setup, you'll probably have to 
+	If you want to use FOAM in a specific setup, you'll probably have to 
 	program some modules yourself. To do this, start with a `prime module' 
 	which \b must contain the functions listed in \ref struct-frame (see 
 	foam_primemod-dummy.c for example). 
@@ -1392,11 +1392,11 @@ modeCal() {
 	These functions provide hooks for the package to work with, and if 
 	their meaning is not immediately clear, the documentation provides some 
 	more details on what these functions do. It is also wise to look at the 
-	control_t struct which is used throughout @name to store data, settings 
+	control_t struct which is used throughout FOAM to store data, settings 
 	and other information.
 	
 	Once these functions are defined, you can link the prime module to modules 
-	already supplied with @name. Simply do this by including the header files 
+	already supplied with FOAM. Simply do this by including the header files 
 	of the specific modules you want to add. For information on what certain 
 	modules do, look at the documentation of the files. This documentation 
 	tells you what the module does, what functions are available, and what 
@@ -1404,14 +1404,14 @@ modeCal() {
 	
 	If the default set of modules is insufficient to build a package in your 
 	situation, you will have to write your own. This scenario is (unfortunately) 
-	very likely, because @name does not provide modules to read out all possible 
+	very likely, because FOAM does not provide modules to read out all possible 
 	framegrabbers/cameras and cannot drive all possible filter wheels, tip-tilt 
 	mirrors, deformable mirrors etc. If you have written your own module, please 
-	e-mail it to me (@authortim) so I can add it to the complete distribution.
+	e-mail it to me (Tim van Werkhoven (t.i.m.vanwerkhoven@xs4all.nl)) so I can add it to the complete distribution.
 	
 	\subsection ownmodule Write your own modules
 	
-	A module in @name can take any form, but to keep things at least slightly 
+	A module in FOAM can take any form, but to keep things at least slightly 
 	organised, some conventions apply. These guidelines include:
 	
 	\li separate functionally different routines in different modules,
@@ -1464,14 +1464,14 @@ modeCal() {
 	
 	\section limit_sec Limitations/bugs
 	
-	There are some limitations to @name which are discussed in this section. The list includes:
+	There are some limitations to FOAM which are discussed in this section. The list includes:
 
 	\li The subaperture resolution must be a multiple of 4, because of tracking windows
-	\li Commands given to @name over the socket/network can be at most 1024 characters,
+	\li Commands given to FOAM over the socket/network can be at most 1024 characters,
 	\li At the moment, most modules work with bytes to process data
 	\li On OS X, SDL does not appear to behave nicely, especially during shutdown (this is a problem of the OS X SDL implementation and cannot easily be fixed without using Objective C code)
 	
 	There might be other limitations or bugs, but these are not listed here 
-	because I am not aware of them. If you find some, please let me know (@authortim).
+	because I am not aware of them. If you find some, please let me know (Tim van Werkhoven (t.i.m.vanwerkhoven@xs4all.nl)).
  
 */

@@ -20,7 +20,7 @@
  */
 /*! 
 	@file foam_modules-okodm.c
-	@author @authortim
+	@author Tim van Werkhoven (t.i.m.vanwerkhoven@xs4all.nl)
 	@date 2008-03-20 10:07
 
 	@brief This file contains routines to drive a 37 actuator Okotech DM using PCI interface

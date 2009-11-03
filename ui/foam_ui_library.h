@@ -20,7 +20,7 @@
  */
 /*! 
  @file foam_ui_library.h
- @author @authortim
+ @author Tim van Werkhoven (t.i.m.vanwerkhoven@xs4all.nl)
  @date November 14 2007
  
  @brief This is the header file for the connecting client

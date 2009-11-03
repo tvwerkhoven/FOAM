@@ -20,7 +20,7 @@
  */
 /*! 
 	@file foam_modules-img.c
-	@author @authortim
+	@author Tim van Werkhoven (t.i.m.vanwerkhoven@xs4all.nl)
 	@date 2008-07-09
 
 	@brief This file contains functions to read and write image files.

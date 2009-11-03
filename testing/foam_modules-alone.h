@@ -18,7 +18,7 @@
  */
 /*! 
  @file foam_modules-alone.h
- @author @authortim
+ @author Tim van Werkhoven (t.i.m.vanwerkhoven@xs4all.nl)
  @date 2008-07-15 19:12
  
  @brief This header file includes some definitions necessary to run modules on their own.

@@ -20,7 +20,7 @@
  */
 /*! 
  @file foam_modules-dispcommon.h
- @author @authortim
+ @author Tim van Werkhoven (t.i.m.vanwerkhoven@xs4all.nl)
  @date 2008-03-12
  
  @brief This is the headerfile for graphics routines	

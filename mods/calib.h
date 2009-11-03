@@ -20,7 +20,7 @@
  */
 /*! 
 	@file foam_modules-calib.h
-	@author @authortim
+	@author Tim van Werkhoven (t.i.m.vanwerkhoven@xs4all.nl)
 	@date 2008-07-15
  
 	@brief This header file prototypes functions used in calibration

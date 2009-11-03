@@ -20,7 +20,7 @@
  */
 /*! 
  @file foam_primemod-simdyn.c
- @author @authortim
+ @author Tim van Werkhoven (t.i.m.vanwerkhoven@xs4all.nl)
  @date 2008-07-15
  
  @brief This is a dynamical simulation mode, which simulates an AO system at wavefront level 

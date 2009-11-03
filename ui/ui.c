@@ -21,7 +21,7 @@
 
 /*! 
  @file foam_ui.c
- @author @authortim
+ @author Tim van Werkhoven (t.i.m.vanwerkhoven@xs4all.nl)
  @date November 14 2007
  
  @brief This is a client which can connect to the Control Software

@@ -1,19 +1,13 @@
-# init the bin_programs variable
-bin_PROGRAMS = 
-
-# Include lib and mods
 AM_CPPFLAGS = \
         -I$(top_srcdir)/lib \
         -I$(top_srcdir)/mods
-
-AM_CFLAGS = -pipe -Wall -Wextra \
-		-O3 -ftree-vectorize \
-		-g
 
 # This is used to get the config directory as a define (see top-level Makefile.am)
 # TODO: check this
 AM_CPPFLAGS += -DFOAM_CONFDIR=\"$(FOAMCONFDIR)\" \
 		-DFOAM_DATADIR=\"$(FOAMDATADIR)\" 
+
+# GSL flags
 AM_CPPFLAGS += -DHAVE_INLINE \
 		-DGSL_RANGE_CHECK_OFF
 
@@ -21,14 +15,22 @@ if DEBUG
 AM_CPPFLAGS += -DFOAM_DEBUG=1
 endif DEBUG
 
+AM_CFLAGS = -pipe -Wall -Wextra \
+		-O3 -ftree-vectorize \
+		-g
+
+AM_LDFLAGS = $(top_builddir)/lib/libsocket.a
+
 # Basic framework files which are always needed
 FRAME_SRC = foam.c
 FRAME_HDR = foam.h config.h
 
 ### DUMMY MODE ###
 ##################
-bin_PROGRAMS += foam-dummy
+bin_PROGRAMS = foam-dummy
 foam_dummy_LDADD = $(top_builddir)/lib/liblog.a
+foam_dummy_CFLAGS = -g $(AM_CFLAGS)
+foam_dummy_CPPFLAGS = -DFOAM_DEBUG=1 $(AM_CPPFLAGS)
 foam_dummy_SOURCES = foam-dummy.c $(FRAME_SRC) 
 foam_dummy_SOURCES += $(FRAME_HDR)
 

@@ -20,7 +20,7 @@
  */
 /*! 
 	@file foam_modules-calib.c
-	@author @authortim
+	@author Tim van Werkhoven (t.i.m.vanwerkhoven@xs4all.nl)
 	@date 2008-07-15
 
 	@brief This file is used to calibrate actuators like the DM and TT mirrors used in AO systems.

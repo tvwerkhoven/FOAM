@@ -20,13 +20,13 @@
  */
 /*! 
  @file libfoam.h
- @brief This file is the main library for @name
- @author @authortim
+ @brief This file is the main library for FOAM
+ @author Tim van Werkhoven (t.i.m.vanwerkhoven@xs4all.nl)
  @date 2008-07-15 18:06
  
- This header file contains all functions used by the framework of @name.
+ This header file contains all functions used by the framework of FOAM.
  In addition to that, it contains a lot of structs to hold data used in 
- @name. These include things like the state of the AO system (\c control_t), 
+ FOAM. These include things like the state of the AO system (\c control_t), 
  as well as some structs to track network connections to the CS.
  */
 

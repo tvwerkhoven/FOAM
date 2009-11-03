@@ -20,10 +20,10 @@
  */
 /*! 
 	@file foam_modules-sim.c
-	@author @authortim
+	@author Tim van Werkhoven (t.i.m.vanwerkhoven@xs4all.nl)
 	@date 2008-07-15
 
-	@brief This file contains the functions to run @name in simulation mode.
+	@brief This file contains the functions to run FOAM in simulation mode.
 	
 	\section Info
 	This module provides some functions to run an AO system in simulation mode.

@@ -20,7 +20,7 @@
  */
 /*! 
  @file foam_primemod-simstatic.c
- @author @authortim
+ @author Tim van Werkhoven (t.i.m.vanwerkhoven@xs4all.nl)
  @date 2008-04-18
  
  @brief This is a static simulation mode, with just a simple image to work with.

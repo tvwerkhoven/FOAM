@@ -20,7 +20,7 @@
  */
 /*! 
 	@file foam_modules-sh.c
-	@author @authortim
+	@author Tim van Werkhoven (t.i.m.vanwerkhoven@xs4all.nl)
 	@date 2008-07-15
 
 	@brief This file contains modules and functions related to Shack-Hartmann wavefront sensing.

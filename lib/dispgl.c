@@ -20,7 +20,7 @@
  */
 /*! 
  @file foam_modules-dispgl.c
- @author @authortim
+ @author Tim van Werkhoven (t.i.m.vanwerkhoven@xs4all.nl)
  @date 2008-07-15
  
  @brief This file contains functions to display stuff using SDL with OpenGL

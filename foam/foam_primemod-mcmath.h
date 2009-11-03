@@ -20,7 +20,7 @@
  */
 /*! 
 	@file foam_primemod-mcmath.h
-	@author @authortim
+	@author Tim van Werkhoven (t.i.m.vanwerkhoven@xs4all.nl)
 	@date 2008-04-18 12:55
 
 	@brief This is the prime module header file for 'mcmath', which holds some the definition of some

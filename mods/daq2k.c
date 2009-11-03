@@ -20,7 +20,7 @@
  */
 /*! 
 	@file foam_modules-daq2k.c
-	@author @authortim
+	@author Tim van Werkhoven (t.i.m.vanwerkhoven@xs4all.nl)
 	@date 2008-07-15
  
 	@brief This file contains routines to drive a DaqBoard 2000 PCI board

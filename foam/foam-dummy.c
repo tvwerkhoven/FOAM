@@ -19,8 +19,8 @@
  $Id$
  */
 /*! 
-	@file foam_primemod-dummy.c
-	@author @authortim
+	@file foam-dummy.c
+	@author Tim van Werkhoven (t.i.m.vanwerkhoven@xs4all.nl)
 	@date November 30 2007
 
 	@brief This is a dummy module to test the bare FOAM framework capabilities.
