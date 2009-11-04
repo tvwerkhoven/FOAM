@@ -35,12 +35,12 @@ AC_SUBST(FOAMDATADIR)
 AC_SEARCH_LIBS([sin],
 		[m],
 		[],
-		[AC_MSG_ERROR([cannot continue without libm.])])
+		[FATAL=yes;MISSING+=" libm"])
 
 AC_SEARCH_LIBS([pthread_create],
 		[pthread],
 		[],
-		[AC_MSG_ERROR([cannot continue without pthread.])])
+		[FATAL=yes;MISSING+=" pthread"])
 
 # AC_SEARCH_LIBS([pthread_yield],
 # 		[pthread],
@@ -70,10 +70,10 @@ AC_SEARCH_LIBS([pthread_create],
 	
 
 PKG_CHECK_MODULES(SIGC, [sigc++-2.0 >= 2.0], [],
-	AC_MSG_ERROR([cannot continue without sigc.]))
+	[FATAL=yes;MISSING+=" sigc++-2.0"])
 
 PKG_CHECK_MODULES(GSL, [gsl], [],
-	AC_MSG_ERROR([cannot continue without gsl.]))
+	[FATAL=yes;MISSING+=" gsl gslcblas"])
 
 COMMON_CFLAGS="$SIGC_CFLAGS $GSL_CFLAGS"
 COMMON_LIBS="$SIGC_LIBS $GSL_LIBS"
@@ -135,7 +135,7 @@ AM_CONDITIONAL([HWDEBUG], [test "$hwdebug" = true])
 ### STATIC SIMULATION MODE ###
 ##############################
 if test "$simstat" = true ; then
-	AC_MSG_NOTICE([static simulation enabled, checking for extra libs])
+	AC_MSG_NOTICE([*** Static simulation enabled, checking for extra libs])
 	simstatmissing=""
 	
 	# Arbitrary version
@@ -162,7 +162,7 @@ if test "$simstat" = true ; then
 	SIMSTAT_CFLAGS+="$SDL_CFLAGS"
 	SIMSTAT_LIBS+="$SDL_LIBS"
 else 
-	AC_MSG_NOTICE([static simulation disabled])
+	AC_MSG_NOTICE([*** Static simulation disabled])
 fi
 
 AC_SUBST(SIMSTAT_CFLAGS)
@@ -267,7 +267,7 @@ AM_CONDITIONAL([SIMSTAT], [test "$simstat" = true])
 ### OPENGL FEATURE ### 
 ######################
 if test "$opengl" = true ; then
-	AC_MSG_NOTICE([opengl enabled, checking for extra libs])
+	AC_MSG_NOTICE([*** OpenGL enabled, checking for extra libs.])
 	AX_CHECK_GL
 	AX_CHECK_GLU
 	AX_CHECK_GLUT
@@ -276,10 +276,10 @@ if test "$opengl" = true ; then
 	OPENGL_LIBS+="$GL_LIBS $GLU_LIBS $GLUT_LIBS"
 	if test "$no_gl" = yes || test  "$no_glu" = yes || test "$no_glut" = yes ; then
 		opengl=false
-		AC_MSG_WARN([OpenGL not found.])
+		AC_MSG_WARN([*** OpenGL not found!])
 	fi
 else 
-	AC_MSG_NOTICE([OpenGL disabled.])
+	AC_MSG_NOTICE([*** OpenGL disabled.])
 fi
 
 AC_SUBST(OPENGL_LIBS)
@@ -288,6 +288,10 @@ AM_CONDITIONAL([OPENGL], [test "$opengl" = true])
 
 ### END CHECKING FOR LIBS ###
 #############################
+
+if test "$FATAL" = true ; then
+	AC_MSG_ERROR([Cannot build FOAM! Missing libraries $MISSING!])
+fi
 
 AC_MSG_NOTICE([===============Summary================])
 
@@ -299,6 +303,13 @@ else
 	AC_MSG_NOTICE([Static sim mode:         not available])
 	AC_MSG_NOTICE([Static sim mode:         missing: $simstatmissing])
 fi
+
+if test "$hwdebug" = true ; then
+	AC_MSG_NOTICE([hwdebug mode:            available])
+else
+	AC_MSG_NOTICE([hwdebug mode:            disabled])
+fi
+
 
 # if test "$simdyn" = true ; then
 # 	AC_MSG_NOTICE([Dynamic sim mode:        available])
@@ -317,14 +328,6 @@ fi
 # 	AC_MSG_NOTICE([mcmath mode:             not available])
 # 	AC_MSG_NOTICE([mcmath mode:             missing: $mcmathmissing])
 # fi
-
-if test "$hwdebug" = true ; then
-	AC_MSG_NOTICE([hwdebug mode:            available])
-elif test "$hwdebug" = disabled; then
-	AC_MSG_NOTICE([hwdebug mode:            disabled])
-else
-	AC_MSG_NOTICE([hwdebug mode:            unknown])
-fi
 
 # if test "$ui" = true ; then
 # 	AC_MSG_NOTICE([UI:                      available])
