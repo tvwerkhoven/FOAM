@@ -44,30 +44,29 @@ foam_dummy_SOURCES += $(FRAME_HDR)
 if SIMSTAT
 bin_PROGRAMS += foam-simstat
 
-foam_simstat_SOURCES = foam_simstatic.c
-foam_simstat_SOURCES += $(FRAME_SRC) $(FRAME_HDR)
-foam_simstat_SOURCES += foam_modules-sh.c foam_modules-calib.c foam_modules-img.c foam_modules-log.c
+foam_simstat_SOURCES = foam-simstatic.cc \
+		$(FRAME_SRC) $(FRAME_HDR) \
+		sh.c calib.c img.c log.c
 
 # Are we using OpenGL or not?
 if OPENGL
-foam_simstat_SOURCES += foam_modules-dispgl.c
+foam_simstat_SOURCES += dispgl.c
 else !OPENGL
-foam_simstat_SOURCES += foam_modules-dispsdl.c
+foam_simstat_SOURCES += dispsdl.c
 endif !OPENGL
 
 # header files are part of the sources as well
-foam_simstat_SOURCES += foam_modules-sh.h foam_modules-calib.h foam_modules-dispcommon.h foam_modules-img.h foam_primemod-simstatic.h foam_modules-log.h
+foam_simstat_SOURCES += sh.h calib.h dispcommon.h img.h foam-simstatic.h log.h
 
 # Some CPP flags (include the primemod header, and configure some options)
-foam_simstat_CPPFLAGS = -include "foam_primemod-simstatic.h"
 #foamcs_mcmath_CPPFLAGS += -DDEBUG_ITIFG=255 
-foam_simstat_CPPFLAGS += -DFOAM_SIMSTAT_DISPLAY=1 -DFOAM_MODULES_DISLAY_SHSUPPORT=1
+foam_simstat_CPPFLAGS = -DFOAM_SIMSTAT_DISPLAY=1 -DFOAM_MODULES_DISLAY_SHSUPPORT=1 -D____CPPFLBEF $(SIMSTAT_CFLAGS) -D____CPPFLAFT $(AM_CPPFLAGS)
 
 # specific flags and libraries
-foam_simstat_CFLAGS = $(SIMSTAT_CFLAGS)
-foam_simstat_LDFLAGS = $(SIMSTAT_LIBS)
-foam_simstat_CPPFLAGS += -DFOAM_MODULES_DISPLAY_OPENGL=1 
+foam_simstat_CFLAGS = -D____CFLBEF $(SIMSTAT_CFLAGS) -D____CFLAFT $(AM_CFLAGS)
+foam_simstat_LDFLAGS = $(SIMSTAT_LIBS) $(AM_LDFLAGS)
 if OPENGL
+foam_simstat_CPPFLAGS += -DFOAM_MODULES_DISPLAY_OPENGL=1 
 # add some flags necessary for OpenGL
 foam_simstat_CFLAGS += $(OPENGL_CFLAGS)
 foam_simstat_LDFLAGS += $(OPENGL_LIBS)

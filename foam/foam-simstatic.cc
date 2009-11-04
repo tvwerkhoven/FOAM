@@ -19,7 +19,7 @@
  $Id$
  */
 /*! 
- @file foam_primemod-simstatic.c
+ @file foam-simstatic.c
  @author Tim van Werkhoven (t.i.m.vanwerkhoven@xs4all.nl)
  @date 2008-04-18
  
@@ -33,10 +33,15 @@
 // HEADERS //
 /***********/
 
+#include "foam-simstatic.h"
+#include "types.h"
+#include "io.h"
+
 // We need these for modMessage, see foam_cs.c
 extern pthread_mutex_t mode_mutex;
 extern pthread_cond_t mode_cond;
 
+extern Io *io;
 
 // GLOBALS //
 /***********/
@@ -50,7 +55,7 @@ mod_display_t disp;
 mod_sh_track_t shtrack;
 
 int modInitModule(control_t *ptc, config_t *cs_config) {
-	logInfo(0, "This is the simstatic prime module, enjoy.");
+	io->msg(IO_INFO, "This is the simstatic prime module, enjoy.");
 	
 	// populate ptc here
 	ptc->mode = AO_MODE_LISTEN;			// start in listen mode (safe bet, you probably want this)
@@ -78,9 +83,14 @@ int modInitModule(control_t *ptc, config_t *cs_config) {
 	ptc->wfs[0].res.y = imgres.y;
 	ptc->wfs[0].bpp = 8;
 	// this is where we will look for dark/flat/sky images
-	ptc->wfs[0].darkfile = FOAM_DATADIR FOAM_CONFIG_PRE "_dark.gsldump";	
-	ptc->wfs[0].flatfile = FOAM_DATADIR FOAM_CONFIG_PRE "_flat.gsldump";
-	ptc->wfs[0].skyfile = FOAM_DATADIR FOAM_CONFIG_PRE "_sky.gsldump";
+	
+	// TODO: FIXME!
+  // ptc->wfs[0].darkfile = FOAM_DATADIR + FOAM_CONFIG_PRE + "_dark.gsldump"; 
+  // ptc->wfs[0].flatfile = FOAM_DATADIR + FOAM_CONFIG_PRE + "_flat.gsldump";
+  // ptc->wfs[0].skyfile = FOAM_DATADIR + FOAM_CONFIG_PRE + "_sky.gsldump";
+  ptc->wfs[0].darkfile = "_dark.gsldump"; 
+  ptc->wfs[0].flatfile = "_flat.gsldump";
+  ptc->wfs[0].skyfile = "_sky.gsldump";
 	ptc->wfs[0].scandir = AO_AXES_XY;
 	ptc->wfs[0].id = 0;
 	ptc->wfs[0].fieldframes = 1000;     // take 1000 frames for a dark or flatfield
@@ -186,7 +196,7 @@ int modOpenLoop(control_t *ptc) {
     if (ptc->frames % ptc->logfrac == 0) {
 		displayDraw((&ptc->wfs[0]), &disp, &shtrack);
 		displaySDLEvents(&disp);
-		logInfo(0, "Current framerate: %.2f FPS", ptc->fps);
+		io->msg(IO_INFO, "Current framerate: %.2f FPS", ptc->fps);
 		snprintf(title, 64, "%s (O) %.2f FPS", disp.caption, ptc->fps);
 		SDL_WM_SetCaption(title, 0);
     }
@@ -224,14 +234,14 @@ int modClosedLoop(control_t *ptc) {
     if (ptc->frames % ptc->logfrac == 0) {
 		displayDraw((&ptc->wfs[0]), &disp, &shtrack);
 		displaySDLEvents(&disp);
-		logInfo(0, "Current framerate: %.2f FPS", ptc->fps);
-		logInfo(0, "Displacements per subapt in (x, y) pairs (%d subaps):", shtrack.nsubap);
+		io->msg(IO_INFO, "Current framerate: %.2f FPS", ptc->fps);
+		io->msg(IO_INFO, "Displacements per subapt in (x, y) pairs (%d subaps):", shtrack.nsubap);
 		for (sn = 0; sn < shtrack.nsubap; sn++)
-			logInfo(LOG_NOFORMAT, "(%.1f,%.1f)", \
+			io->msg(IO_INFO|IO_NOID, "(%.1f,%.1f)", \
 			gsl_vector_float_get(shtrack.disp, 2*sn + 0), \
 			gsl_vector_float_get(shtrack.disp, 2*sn + 1));
 
-		logInfo(LOG_NOFORMAT, "\n");
+		io->msg(IO_INFO|IO_NOID, "\n");
 		snprintf(title, 64, "%s (C) %.2f FPS", disp.caption, ptc->fps);
 		SDL_WM_SetCaption(title, 0);
     }
@@ -259,7 +269,7 @@ int modCalibrate(control_t *ptc) {
 
 	if (ptc->calmode == CAL_DARK) {
 		// take dark frames, and average
-		logInfo(0, "Starting darkfield calibration now");
+		io->msg(IO_INFO, "Starting darkfield calibration now");
 
 		// we fake a darkfield here (random pixels between 2-6)
 		min = max = 4.0;
@@ -277,12 +287,12 @@ int modCalibrate(control_t *ptc) {
 		// saving image for later usage
 		fieldfd = fopen(wfsinfo->darkfile, "w+");	
 		if (!fieldfd)  {
-			logWarn("Could not open darkfield storage file '%s', not saving darkfield (%s).", wfsinfo->darkfile, strerror(errno));
+			io->msg(IO_WARN, "Could not open darkfield storage file '%s', not saving darkfield (%s).", wfsinfo->darkfile, strerror(errno));
 			return EXIT_SUCCESS;
 		}
 		gsl_matrix_float_fprintf(fieldfd, wfsinfo->darkim, "%.10f");
 		fclose(fieldfd);
-		logInfo(0, "Darkfield calibration done (m: %f, m: %f, s: %f, a: %f), and stored to disk.", min, max, sum, sum/(wfsinfo->res.x * wfsinfo->res.y));
+		io->msg(IO_INFO, "Darkfield calibration done (m: %f, m: %f, s: %f, a: %f), and stored to disk.", min, max, sum, sum/(wfsinfo->res.x * wfsinfo->res.y));
 		
 		// set new display settings to show the darkfield
 		disp.dispsrc = DISPSRC_DARK;
@@ -296,7 +306,7 @@ int modCalibrate(control_t *ptc) {
 		disp.dispover = oldover;
 	}
 	else if (ptc->calmode == CAL_FLAT) {
-		logInfo(0, "Starting flatfield calibration now");
+		io->msg(IO_INFO, "Starting flatfield calibration now");
 
 		// set flat constant so we get a gain of 1
 		gsl_matrix_float_set_all(wfsinfo->darkim, 32.0);
@@ -304,12 +314,12 @@ int modCalibrate(control_t *ptc) {
 		// saving image for later usage
 		fieldfd = fopen(wfsinfo->flatfile, "w+");	
 		if (!fieldfd)  {
-			logWarn("Could not open flatfield storage file '%s', not saving flatfield (%s).", wfsinfo->flatfile, strerror(errno));
+			io->msg(IO_WARN, "Could not open flatfield storage file '%s', not saving flatfield (%s).", wfsinfo->flatfile, strerror(errno));
 			return EXIT_SUCCESS;
 		}
 		gsl_matrix_float_fprintf(fieldfd, wfsinfo->flatim, "%.10f");
 		fclose(fieldfd);
-		logInfo(0, "Flatfield calibration done, and stored to disk.");
+		io->msg(IO_INFO, "Flatfield calibration done, and stored to disk.");
 		
 		// set new display settings to show the darkfield
 		disp.dispsrc = DISPSRC_FLAT;
@@ -322,7 +332,7 @@ int modCalibrate(control_t *ptc) {
 		disp.dispover = oldover;
 	}
 	else if (ptc->calmode == CAL_DARKGAIN) {
-		logInfo(0, "Taking dark and flat images to make convenient images to correct (dark/gain).");
+		io->msg(IO_INFO, "Taking dark and flat images to make convenient images to correct (dark/gain).");
 		
 		
 		// get the average flat-dark value for all subapertures (but not the whole image)
@@ -353,10 +363,10 @@ int modCalibrate(control_t *ptc) {
 			}
 		}
 
-		logInfo(0, "Dark and gain fields initialized");
+		io->msg(IO_INFO, "Dark and gain fields initialized");
 	}
 	else if (ptc->calmode == CAL_SUBAPSEL) {
-		logInfo(0, "Starting subaperture selection now");
+		io->msg(IO_INFO, "Starting subaperture selection now");
 		// no need to get get an image, it's alway the same for static simulation
 
 		uint8_t *tmpimg = (uint8_t *) wfsinfo->image;
@@ -368,12 +378,12 @@ int modCalibrate(control_t *ptc) {
 			if (tmpimg[i] > tmpmax) tmpmax = tmpimg[i];
 			else if (tmpimg[i] < tmpmin) tmpmin = tmpimg[i];
 		}           
-		logInfo(0, "Image info: sum: %ld, avg: %f, range: (%d,%d)", tmpsum, (float) tmpsum / (wfsinfo->res.x*wfsinfo->res.y), tmpmin, tmpmax);
+		io->msg(IO_INFO, "Image info: sum: %ld, avg: %f, range: (%d,%d)", tmpsum, (float) tmpsum / (wfsinfo->res.x*wfsinfo->res.y), tmpmin, tmpmax);
 
 		// run subapsel on this image
 		shSelSubapts(wfsinfo->image, DATA_UINT8, ALIGN_RECT, &shtrack, wfsinfo);
 
-		logInfo(0, "Subaperture selection complete, found %d subapertures.", shtrack.nsubap);
+		io->msg(IO_INFO, "Subaperture selection complete, found %d subapertures.", shtrack.nsubap);
 		// set new display settings to show the darkfield
 		disp.dispsrc = DISPSRC_RAW;
 		disp.dispover = DISPOVERLAY_SUBAPS | DISPOVERLAY_GRID;
@@ -481,7 +491,7 @@ calibrate <mode>:       calibrate the ao system (dark, flat, subapt, etc).\
 				tellClient(client->buf_ev, "200 OK DISPLAY CALIB");
 			}
 			else if (strncmp(list[1], "grid",3) == 0) {
-				logDebug(0, "overlay was: %d, is: %d, mask: %d", disp.dispover, disp.dispover ^ DISPOVERLAY_GRID, DISPOVERLAY_GRID);
+				io->msg(IO_DEB1, "overlay was: %d, is: %d, mask: %d", disp.dispover, disp.dispover ^ DISPOVERLAY_GRID, DISPOVERLAY_GRID);
 				disp.dispover ^= DISPOVERLAY_GRID;
 				tellClient(client->buf_ev, "200 OK TOGGLING GRID OVERLAY");
 			}
@@ -666,26 +676,26 @@ int drvSetActuator(control_t *ptc, int wfc) {
 int drvSetupHardware(control_t *ptc, aomode_t aomode, calmode_t calmode) {
     if (aomode == AO_MODE_CAL) {
         if (calmode == CAL_DARK) {
-            logInfo(0, "Configuring hardware for darkfield calibration");
+            io->msg(IO_INFO, "Configuring hardware for darkfield calibration");
         }
         else if (calmode == CAL_FLAT) {
-            logInfo(0, "Configuring hardware for flatfield calibration");
+            io->msg(IO_INFO, "Configuring hardware for flatfield calibration");
         }
         else if (calmode == CAL_INFL) {
-            logInfo(0, "Configuring hardware for influence matrix calibration");
+            io->msg(IO_INFO, "Configuring hardware for influence matrix calibration");
         }
         else if (calmode == CAL_PINHOLE) {
-            logInfo(0, "Configuring hardware for subaperture reference calibration");
+            io->msg(IO_INFO, "Configuring hardware for subaperture reference calibration");
         }
         else {
-            logWarn("No special setup needed for this calibration mode, ignored");
+            io->msg(IO_WARN, "No special setup needed for this calibration mode, ignored");
         }
     }
     else if (aomode == AO_MODE_OPEN || aomode == AO_MODE_CLOSED) {
-        logInfo(0, "Configuring hardware for open/closed loop mode calibration");
+        io->msg(IO_INFO, "Configuring hardware for open/closed loop mode calibration");
     }
     else {
-        logWarn("No special setup needed for this aomode, ignored");
+        io->msg(IO_WARN, "No special setup needed for this aomode, ignored");
     }        
     
     return EXIT_SUCCESS;
@@ -693,7 +703,7 @@ int drvSetupHardware(control_t *ptc, aomode_t aomode, calmode_t calmode) {
 
 // Dark flat calibration, only per subaperture
 int MMDarkFlatSubapByte(wfs_t *wfs, mod_sh_track_t *shtrack) {
-	logDebug(LOG_SOMETIMES, "Fast per-subapt darkflat correcting now");
+	//logDebug(LOG_SOMETIMES, "Fast per-subapt darkflat correcting now");
 	// if correct, CAL_DARKGAIN was run before this is called,
 	// and we have wfs->dark and wfs->gain to scale the image with like
 	// corrected = ((img*256 - dark) * gain)/256. In ASM (MMX/SSE2)
@@ -745,12 +755,12 @@ int MMDarkFlatSubapByte(wfs_t *wfs, mod_sh_track_t *shtrack) {
 
 // Dark flat calibration, currently only does raw-dark
 int MMDarkFlatFullByte(wfs_t *wfs, mod_sh_track_t *shtrack) {
-	logDebug(LOG_SOMETIMES, "Slow full-frame darkflat correcting now");
+	//logDebug(LOG_SOMETIMES, "Slow full-frame darkflat correcting now");
 	size_t i, j; // size_t because gsl wants this
 	uint8_t* imagesrc = (uint8_t*) wfs->image;
 	
 	if (wfs->darkim == NULL || wfs->flatim == NULL || wfs->corrim == NULL) {
-		logWarn("Dark, flat or correct image memory not available, please calibrate first");
+		io->msg(IO_WARN, "Dark, flat or correct image memory not available, please calibrate first");
 		return EXIT_FAILURE;
 	}
 	// copy the image to corrim, while doing dark/flat fielding at the same time

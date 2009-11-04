@@ -163,6 +163,7 @@ int main(int argc, char *argv[]) {
 		
   protocol = new Protocol::Server("10100");
   protocol->slot_message = sigc::ptr_fun(on_message);
+  protocol->slot_connected = sigc::ptr_fun(on_connect);
   protocol->listen();
   
 	// START THREADING //
@@ -711,11 +712,53 @@ void modeListen() {
 	} // end while(true)
 }
 
+static void on_connect(Connection *connection, bool status) {
+  if (status) {
+    connection->write("201 :CLIENT CONNECTED");
+    io->msg(IO_DEB1, "Client connected.");
+  }
+  else {
+    connection->write("201 :CLIENT DISCONNECTED");
+    io->msg(IO_DEB1, "Client disconnected.");
+  }
+}
+
 static void on_message(Connection *connection, string line) {
-	//string command = popword(line);
   io->msg(IO_DEB1, "got %db: '%s'.", line.length(), line.c_str());
-  connection->write("200 OK");
-  //parseCmd(msg, nbytes, client);
+  connection->write("200 :OK");
+	
+	string cmd = popword(line);
+	
+	if (cmd == "help") {
+    // if (showhelp(connection, line) < 0)
+    //   if (modMessage(connection, cmd, line) < 0)
+    //     connection->write("401 :UNKNOWN HELP TOPIC");
+  }
+  else if (cmd == "exit" || cmd == "quit" ) {
+    //connection->broadcast("201 :CLIENT DISCONNECTED");
+    connection->close();
+  }
+  else if (cmd == "shutdown") {
+    connection->write("201 :FOAM SHUTTING DOWN");
+  }
+  else if (cmd == "mode") {
+    //
+  }
+  else {
+    //modMessage(connection, cmd, line) <= 0)
+  }
+//  if (subhelp == NULL) {
+//    tellClient(client->buf_ev, "\
+// 200 OK HELP\n\
+// help [command]:         help (on a certain command, if available).\n\
+// mode <mode>:            close or open the loop.\n\
+// broadcast <msg>:        send a message to all connected clients.\n\
+// exit or quit:           disconnect from daemon.\n\
+// shutdown:               shutdown the FOAM program.");
+// //image <wfs>:            get the image from a certain WFS.\n
+//  }
+	
+  //parseCmd(line, nbytes, client);
 }
 // 
 // 

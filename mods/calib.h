@@ -32,9 +32,10 @@
 // LIBRABRIES //
 /**************/
 
-#include "foam_cs_library.h"
-#include "foam_modules-sh.h"
 #include <sys/stat.h>
+#include "types.h"
+#include "foam.h"
+#include "sh.h"
 
 // DEPENDENCIES //
 /****************/

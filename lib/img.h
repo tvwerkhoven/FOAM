@@ -38,9 +38,10 @@
 // LIBRARIES //
 /*************/
 
-#include "foam_cs_library.h"		// we link to the main program here (i.e. we use common (log) functions)
-#include "SDL_image.h"				// we need this to read image files
+#include <SDL_image.h>				// we need this to read image files
 #include <gd.h>						// we need this to write png/jpg files
+#include "types.h"
+#include "foam.h"		// we link to the main program here (i.e. we use common (log) functions)
 
 // DATATYPES //
 /*************/

@@ -42,11 +42,10 @@
 #ifdef FOAM_MODITIFG_ALONE
 #define FOAM_DEBUG 1
 // used for writing the frames to disk
-#include "foam_modules-img.h"
+#include "img.h"
 // used for displaying stuff
-#include "foam_modules-dispcommon.h"
+#include "dispcommon.h"
 // necessary for coord_t
-#include "foam_cs_library.h"
 #endif
 
 
@@ -68,6 +67,9 @@
 // itifg does not like timeval if built standalone...
 #include <sys/time.h>	// for timeval
 #endif
+
+#include "foam.h"
+#include "types.h"
 
 // Old stuff from test_itifg begins here:
 //#include <signal.h> // ?

@@ -34,7 +34,8 @@
 
 #include <gsl/gsl_math.h>			// for small integer powers
 #include <gsl/gsl_linalg.h>			// for vectors and stuff
-#include "foam_cs_library.h"
+#include "foam.h"
+#include "types.h"
 
 // DATATYPES //
 /*************/

@@ -37,8 +37,6 @@
 #include <fcntl.h>		// for fcntl
 #include <errno.h>
 #include <string.h>
-//#include <string.h>
-//#include <math.h>
 
 #ifdef FOAM_MODSERIAL_ALONE
 #define FOAM_DEBUG 1		//!< set to 1 for debugging, in that case this module compiles on its own

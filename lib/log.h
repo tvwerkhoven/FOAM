@@ -46,7 +46,7 @@
 /*************/
 
 typedef struct {
-	char *fname;		//!< (user) Filename for the logfile, will be appended to the #FOAM_CONFIG_PRE define
+	char *fname;		//!< (user) Filename for the logfile
 	FILE *fd;			//!< (foam) Filedescriptor to log to
 	char *mode;			//!< (user) Mode to open the file with (append, truncate, etc)
 	char *sep;			//!< (user) Value separator to use while logging (i.e. ", " for CSV)	

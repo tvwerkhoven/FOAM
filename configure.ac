@@ -290,7 +290,7 @@ AM_CONDITIONAL([OPENGL], [test "$opengl" = true])
 #############################
 
 if test "$FOAM_FATAL" = yes ; then
-	AC_MSG_ERROR([Cannot build FOAM! Missing libraries $FOAM_MISSING!])
+	AC_MSG_ERROR([Cannot build FOAM! Missing libraries$FOAM_MISSING!])
 fi
 
 AC_MSG_NOTICE([===============Summary================])
@@ -301,7 +301,7 @@ elif test "$simstat" = disabled; then
 	AC_MSG_NOTICE([Static sim mode:         disabled])
 else
 	AC_MSG_NOTICE([Static sim mode:         not available])
-	AC_MSG_NOTICE([Static sim mode:         missing: $simstatmissing])
+	AC_MSG_NOTICE([Static sim mode:         missing:$simstatmissing])
 fi
 
 if test "$hwdebug" = true ; then

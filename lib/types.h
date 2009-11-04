@@ -103,7 +103,11 @@ typedef struct {
 typedef enum { // calmode_t
 	CAL_PINHOLE,	//!< determine reference shifts after inserting a pinhole
 	CAL_INFL,		//!< determine the influence functions for each WFS-WFC pair
-	CAL_LINTEST		//!< linearity test for WFCs
+	CAL_LINTEST,		//!< linearity test for WFCs
+	CAL_DARK,
+	CAL_DARKGAIN,
+	CAL_SUBAPSEL,
+	CAL_FLAT
 } calmode_t;
 
 /*!

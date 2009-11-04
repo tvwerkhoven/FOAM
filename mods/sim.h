@@ -32,9 +32,10 @@
 /*************/
 
 #include <fftw3.h> 					// we need this for modSimSH()
-#include "foam_cs_library.h"		// we link to the main program here (i.e. we use common (log) functions)
-#include "foam_modules-calib.h"		// we want the calibration
-#include "foam_modules-sh.h"		// we want image IO
+#include "types.h"
+#include "foam.h"		// we link to the main program here (i.e. we use common (log) functions)
+#include "calib.h"		// we want the calibration
+#include "sh.h"		// we want image IO
 
 // DATATYPES //
 /*************/

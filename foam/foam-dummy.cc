@@ -30,6 +30,7 @@
 /***********/
 
 #include "foam.h"
+#include "io.h"
 
 //control_t *ptc;
 //  = { //!< Global struct to hold system characteristics and other data. Initialize with complete but minimal configuration
@@ -62,12 +63,14 @@
 // };
 
 conntrack_t clientlist;
-struct event_base *sockbase;
+//struct event_base *sockbase;
 
 extern pthread_mutex_t mode_mutex;
 extern pthread_cond_t mode_cond;
+extern Io *io;
 
 int modInitModule(control_t *ptc, config_t *cs_config) {
+  io->msg(IO_INFO, "Running in dummy mode, don't expect great AO results :)");
 	//logInfo(0, "Running in dummy mode, don't expect great AO results :)");
 	
 	// populate ptc here

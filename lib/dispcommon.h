@@ -32,18 +32,18 @@
 // LIBRARIES //
 /*************/
 
-#include "foam_cs_library.h"
-#include "SDL.h" 	// most portable way according to 
-//http://www.libsdl.org/cgi/docwiki.cgi/FAQ_20Including_20SDL_20Headers
+#include "types.h"
+#include "foam.h"
+#include <SDL.h>
 
 #ifdef FOAM_MODULES_DISLAY_SHSUPPORT
 	// The user wants to have SH specific drawing routines, include sh header for datatypes
-	#include "foam_modules-sh.h"
-#endif //#ifdef FOAM_MODULES_DISLAY_SHSUPPORT
+#include "sh.h"
+#endif // FOAM_MODULES_DISLAY_SHSUPPORT
 
 #ifdef FOAM_MODULES_DISPLAY_OPENGL
 // The user wants  to use OpenGL with SDL, include appropriate libraries
-#include "SDL_opengl.h"
+#include <SDL_opengl.h>
 #ifdef __APPLE__
     #warning "Apple is not fully supported, SDL is not well-implemented there"
     #include <OpenGL/glu.h>
@@ -58,7 +58,7 @@
     //#define glXGetProcAddress(x) (*glXGetProcAddressARB)((const GLubyte*)x)
 #endif //__APPLE__
 
-#endif //FOAM_MODULES_DISPLAY_OPENGL
+#endif // FOAM_MODULES_DISPLAY_OPENGL
 
 
 // DATATYPES //
