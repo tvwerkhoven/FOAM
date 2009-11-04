@@ -137,9 +137,13 @@ AM_CONDITIONAL([HWDEBUG], [test "$hwdebug" = true])
 if test "$simstat" = true ; then
 	AC_MSG_NOTICE([static simulation enabled, checking for extra libs])
 	simstatmissing=""
-	PKG_CHECK_MODULES(SDL, sdl, [],
-		[AC_MSG_WARN([This package needs SDL in simstat mode.])])
-
+	
+	# Arbitrary version
+	SDL_VERSION=1.2.0
+	AM_PATH_SDL($SDL_VERSION,
+		[],
+		AC_MSG_WARN([This package needs SDL in simstat mode]))
+	
 	AC_SEARCH_LIBS([IMG_Load], [SDL_image], [SIMSTAT_LIBS+=" -lSDL_image"], 
 		[AC_MSG_WARN([This package needs SDL_image in simstat mode.]);
 		simstat=false;
