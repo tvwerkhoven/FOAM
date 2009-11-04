@@ -57,19 +57,28 @@ AC_SEARCH_LIBS([pthread_create],
 # 		[],
 # 		[AC_MSG_ERROR([cannot continue without libevent.])])
 
-AC_SEARCH_LIBS([gsl_blas_dgemm],
-		[gsl],
-		[],
-		[AC_MSG_ERROR([cannot continue without gsl.])])
+# AC_SEARCH_LIBS([gsl_blas_dgemm],
+# 		[gsl],
+# 		[],
+# 		[AC_MSG_ERROR([cannot continue without gsl.])])
+# 
+# AC_SEARCH_LIBS([cblas_dgemm],
+# 		[gslcblas],
+# 		[COMMON_LIBS+="-lgslcblas"],
+# 		[AC_MSG_ERROR([cannot continue without gslcblas.])])
 
-AC_SEARCH_LIBS([cblas_dgemm],
-		[gslcblas],
-		[COMMON_LIBS+="-lgslcblas"],
-		[AC_MSG_ERROR([cannot continue without gslcblas.])])
+	
 
-PKG_CHECK_MODULES(SIGCPP, [sigc++-2.0 >= 2.0])
-AC_SUBST(SIGCPP_CFLAGS)
-AC_SUBST(SIGCPP_LIBS)
+PKG_CHECK_MODULES(SIGC, [sigc++-2.0 >= 2.0], [],
+	AC_MSG_ERROR([cannot continue without sigc.]))
+
+PKG_CHECK_MODULES(GSL, [gsl], [],
+	AC_MSG_ERROR([cannot continue without gsl.]))
+
+COMMON_CFLAGS="$SIGC_CFLAGS $GSL_CFLAGS"
+COMMON_LIBS="$SIGC_LIBS $GSL_LIBS"
+AC_SUBST(COMMON_CFLAGS)
+AC_SUBST(COMMON_LIBS)
 
 ### BUILD TARGETS ###
 #####################

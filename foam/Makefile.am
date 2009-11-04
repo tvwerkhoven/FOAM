@@ -6,7 +6,7 @@ AM_CPPFLAGS = \
 # TODO: check this
 AM_CPPFLAGS += -DFOAM_CONFDIR=\"$(FOAMCONFDIR)\" \
 		-DFOAM_DATADIR=\"$(FOAMDATADIR)\" \
-		$(SIGCPP_CFLAGS)
+		$(COMMON_CFLAGS)
 
 # GSL flags
 AM_CPPFLAGS += -DHAVE_INLINE \
@@ -23,7 +23,7 @@ AM_CFLAGS = -pipe -Wall -Wextra \
 AM_LDFLAGS = $(top_builddir)/lib/libsocket.a \
 		$(top_builddir)/lib/libio.a \
 		$(top_builddir)/lib/libprotocol.a \
-		$(SIGCPP_LIBS)
+		$(COMMON_LIBS)
 
 # Basic framework files which are always needed
 FRAME_SRC = foam.cc
