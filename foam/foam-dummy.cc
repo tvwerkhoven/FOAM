@@ -31,7 +31,7 @@
 
 #include "foam.h"
 
-control_t ptc;
+//control_t *ptc;
 //  = { //!< Global struct to hold system characteristics and other data. Initialize with complete but minimal configuration
 //  .mode = AO_MODE_LISTEN,
 //  .calmode = CAL_INFL,
@@ -44,7 +44,7 @@ control_t ptc;
 // };
 
 
-config_t cs_config;
+//config_t *cs_config;
 //  = { //!< Global struct to hold system configuration. Init with complete but minimal configuration
 //  .listenip = "0.0.0.0",  // listen on any IP by default, can be overridden by config file
 //  .listenport = 10000,  // listen on port 10000 by default
@@ -168,11 +168,11 @@ int modMessage(control_t *ptc, const client_t *client, char *list[], const int c
 			return 0;
 		}
 		else {
-			tellClient(client->buf_ev, "This is the dummy module and does not provide any additional commands");
+      // tellClient(client->buf_ev, "This is the dummy module and does not provide any additional commands");
 		}
 	}
 	else { // no valid command found? tell the user this is the dummy module, there is nothing useful here
-		tellClient(client->buf_ev, "This is the dummy module and does not provide any additional commands");
+    // tellClient(client->buf_ev, "This is the dummy module and does not provide any additional commands");
 	} // strcmp stops here
 	
 	// if we end up here, we didn't return 0, so we found a valid command

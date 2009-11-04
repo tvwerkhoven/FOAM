@@ -42,6 +42,16 @@ AC_SEARCH_LIBS([pthread_create],
 		[],
 		[AC_MSG_ERROR([cannot continue without pthread.])])
 
+# AC_SEARCH_LIBS([pthread_yield],
+# 		[pthread],
+# 		[AM_CONDITIONAL([HAVE_PTHREAD_YIELD], [true])],
+# 		[AM_CONDITIONAL([HAVE_PTHREAD_YIELD], [false])])
+
+AC_SEARCH_LIBS([sched_yield],
+		[rt],
+		[AM_CONDITIONAL([HAVE_SCHED_YIELD], [true])],
+		[AM_CONDITIONAL([HAVE_SCHED_YIELD], [false])])
+				
 AC_SEARCH_LIBS([bufferevent_base_set], 
 		[event],
 		[],
@@ -56,6 +66,10 @@ AC_SEARCH_LIBS([cblas_dgemm],
 		[gslcblas],
 		[COMMON_LIBS+="-lgslcblas"],
 		[AC_MSG_ERROR([cannot continue without gslcblas.])])
+
+PKG_CHECK_MODULES(SIGCPP, [sigc++-2.0 >= 2.0])
+AC_SUBST(SIGCPP_CFLAGS)
+AC_SUBST(SIGCPP_LIBS)
 
 ### BUILD TARGETS ###
 #####################

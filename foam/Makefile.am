@@ -5,7 +5,8 @@ AM_CPPFLAGS = \
 # This is used to get the config directory as a define (see top-level Makefile.am)
 # TODO: check this
 AM_CPPFLAGS += -DFOAM_CONFDIR=\"$(FOAMCONFDIR)\" \
-		-DFOAM_DATADIR=\"$(FOAMDATADIR)\" 
+		-DFOAM_DATADIR=\"$(FOAMDATADIR)\" \
+		$(SIGCPP_CFLAGS)
 
 # GSL flags
 AM_CPPFLAGS += -DHAVE_INLINE \
@@ -20,7 +21,9 @@ AM_CFLAGS = -pipe -Wall -Wextra \
 		-g
 
 AM_LDFLAGS = $(top_builddir)/lib/libsocket.a \
-		$(top_builddir)/lib/libio.a
+		$(top_builddir)/lib/libio.a \
+		$(top_builddir)/lib/libprotocol.a \
+		$(SIGCPP_LIBS)
 
 # Basic framework files which are always needed
 FRAME_SRC = foam.cc

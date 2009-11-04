@@ -39,7 +39,9 @@
 #include "foam.h"
 #include "types.h"
 #include "io.h"
+#include "protocol.h"
 
+using namespace std;
 
 // GLOBAL VARIABLES //
 /********************/	
@@ -52,10 +54,9 @@ extern conntrack_t clientlist;			// Stores a list of clients connected
 extern struct event_base *sockbase;		// Stores the eventbase to be used
 Io *io;
 
-// These are defined in the prime module file, but declared in
-// foam_cs_libray.h. Beware of this if you really want to get your hands dirty
-extern control_t ptc;
-extern config_t cs_config;
+// Global AO and FOAM configuration 
+control_t *ptc;
+config_t *cs_config;
 
 // These are used for communication between worker thread and
 // networking thread
@@ -64,6 +65,8 @@ pthread_cond_t mode_cond;
 
 // This is to make threads joinable
 static pthread_attr_t attr;
+
+static Protocol::Server *protocol = 0;
 
 // PROTOTYPES //
 /**************/	
@@ -109,17 +112,14 @@ int main(int argc, char *argv[]) {
 	/*************/
 	io = new Io(4);
 	
-  memset((void*) (&ptc), 0, sizeof(ptc));
-  memset((void*) (&cs_config), 0, sizeof(cs_config));
+  ptc = (control_t*) calloc(1, sizeof(*ptc));
+  cs_config = (config_t*) calloc(1, sizeof(*cs_config));
   
 	if (pthread_mutex_init(&mode_mutex, NULL) != 0)
 		io->msg(IO_ERR, "pthread_mutex_init failed.");
 	if (pthread_cond_init (&mode_cond, NULL) != 0)
 		io->msg(IO_ERR, "pthread_cond_init failed.");
 	
-	char date[64];
-	struct tm *loctime;
-
 	// we use this to block signals in threads
 	// see http://www.opengroup.org/onlinepubs/009695399/functions/sigprocmask.html
 	static sigset_t signal_mask;
@@ -127,8 +127,9 @@ int main(int argc, char *argv[]) {
 	
 	// BEGIN FOAM //
 	/**************/
-	ptc.starttime = time (NULL);
-	loctime = localtime (&ptc.starttime);
+	ptc->starttime = time(NULL);
+	struct tm *loctime = localtime(&(ptc->starttime));
+	char date[64];
 	strftime (date, 64, "%A, %B %d %H:%M:%S, %Y (%Z).", loctime);	
 	
 	io->msg(IO_NOID|IO_INFO, "      ___           ___           ___           ___     \n\
@@ -150,13 +151,20 @@ int main(int argc, char *argv[]) {
 	/**********************/
 	
 	// this routine will populate ptc and possibly 
-	// adapt cs_config. changes will be processed below
-	modInitModule(&ptc, &cs_config);
+	// adapt cs_config-> changes will be processed below
+	modInitModule(ptc, cs_config);
 	
 	// Check user configuration done in modInitModule();
-	checkAOConfig(&ptc);
-	checkFOAMConfig(&cs_config);
-			
+	checkAOConfig(ptc);
+	checkFOAMConfig(cs_config);
+	
+	// START DAEMON //
+	/****************/
+		
+  protocol = new Protocol::Server("10100");
+  protocol->slot_message = sigc::ptr_fun(on_message);
+  protocol->listen();
+  
 	// START THREADING //
 	/*******************/
 	
@@ -184,11 +192,11 @@ int main(int argc, char *argv[]) {
 	
 	// Create thread which does all the work
 	// this thread inherits the signal blocking defined above
-	threadrc = pthread_create(&(cs_config.threads[0]), &attr, &startThread, NULL);
+	threadrc = pthread_create(&(cs_config->threads[0]), &attr, &startThread, NULL);
 	if (threadrc)
 		io->msg(IO_ERR,"Error in pthread_create, return code was: %d.", threadrc);
 
-	cs_config.nthreads = 1;
+	cs_config->nthreads = 1;
 	
 	// now make sure the main thread handles the signals by unblocking them:
 	// SIGNAL HANDLING //
@@ -204,9 +212,13 @@ int main(int argc, char *argv[]) {
 	
 	// START LISTENING ON SOCKET//
 	/****************************/
-	sockListen(); 		
+	//sockListen();
+	while (ptc->mode != AO_MODE_SHUTDOWN)
+    usleep(1000*1000);
+    
+  // Cleanup & shutdown should go here!
 
-    delete io;
+  delete io;
 	return EXIT_SUCCESS;
 }
 
@@ -217,7 +229,7 @@ void *startThread(void *arg) {
 	// some things have to be init'ed after threading, like
 	// my rather crude implementation of OpenGL.
 	// That's done here
-	modPostInitModule(&ptc, &cs_config);
+	modPostInitModule(ptc, cs_config);
 
 	// directly afterwards, start modeListen
 	modeListen();
@@ -244,24 +256,25 @@ void stopFOAM() {
 	int rc;
 	
 	// Tell the clients we're going down
-	tellClients("200 OK SHUTTING DOWN NOW");
+	//tellClients("200 OK SHUTTING DOWN NOW");
 	io->msg(IO_INFO, "Shutting down FOAM now");
-	
+  protocol->broadcast("500 :SHUTTING DOWN NOW");
+	ptc->mode = AO_MODE_SHUTDOWN;
+		
 	// disconnect all clients
-	for (i=0; i < MAX_CLIENTS; i++) {
-		if (clientlist.connlist[i] != NULL) {
-			if (clientlist.connlist[i]->fd > 0) {
-				sockOnErr(clientlist.connlist[i]->buf_ev, EVBUFFER_EOF, clientlist.connlist[i]);
-			}
-			else {
-				io->msg(IO_WARN, "Error closing client %d, client_t not NULL, but fd <=0!", i);
-			}
-		}
-	}
+  // for (i=0; i < MAX_CLIENTS; i++) {
+  //  if (clientlist.connlist[i] != NULL) {
+  //    if (clientlist.connlist[i]->fd > 0) {
+  //      sockOnErr(clientlist.connlist[i]->buf_ev, EVBUFFER_EOF, clientlist.connlist[i]);
+  //    }
+  //    else {
+  //      io->msg(IO_WARN, "Error closing client %d, client_t not NULL, but fd <=0!", i);
+  //    }
+  //  }
+  // }
 	
 	// set the mode to shutdown so the modules know
 	// we're finishing up
-	ptc.mode = AO_MODE_SHUTDOWN;
 	
 	// signal the change to the other thread(s)
 	pthread_cond_signal(&mode_cond);
@@ -276,18 +289,18 @@ void stopFOAM() {
 	
 	// stop prime prime module if it hasn't already
 	io->msg(IO_INFO, "Trying to stop modules...");
-	modStopModule(&ptc);
+	modStopModule(ptc);
 	
 	// and join with all threads
 	io->msg(IO_INFO, "Waiting for threads to stop...");
-	for (i=0; i<cs_config.nthreads; i++) {
-		rc = pthread_join(cs_config.threads[i], &status);
+	for (i=0; i<cs_config->nthreads; i++) {
+		rc = pthread_join(cs_config->threads[i], &status);
 		if (rc)
 			io->msg(IO_WARN, "There was a problem joining worker thread %d/%d, return code was: %d (%s)", \
-					i+1, cs_config.nthreads, rc, strerror(errno));
+					i+1, cs_config->nthreads, rc, strerror(errno));
 		else
 			io->msg(IO_DEB1, "Thread %d/%d joined successfully, exit status was: %ld", \
-					i+1, cs_config.nthreads, (long) status);
+					i+1, cs_config->nthreads, (long) status);
 
 	}
 	
@@ -300,12 +313,12 @@ void stopFOAM() {
 	// last log message just before closing the logfiles
 	io->msg(IO_INFO, "Stopping FOAM at %s", date);
 	io->msg(IO_INFO, "Ran for %ld seconds, parsed %ld frames (%.1f FPS).", \
-		end-ptc.starttime, ptc.frames, ptc.frames/(float) (end-ptc.starttime));
+		end-ptc->starttime, ptc->frames, ptc->frames/(float) (end-ptc->starttime));
 
 	// close the logfiles
-	if (cs_config.infofd) fclose(cs_config.infofd);
-	if (cs_config.errfd) fclose(cs_config.errfd);
-	if (cs_config.debugfd) fclose(cs_config.debugfd);
+	if (cs_config->infofd) fclose(cs_config->infofd);
+	if (cs_config->errfd) fclose(cs_config->errfd);
+	if (cs_config->debugfd) fclose(cs_config->debugfd);
 	
 	// and exit with success
 	exit(EXIT_SUCCESS);
@@ -493,47 +506,47 @@ void checkFOAMConfig(config_t *conf) {
 
 int initLogFiles() {
 	// INFO LOGGING
-	if (cs_config.infofile != NULL) {
-		if ((cs_config.infofd = fopen(cs_config.infofile,"a")) == NULL) {
-			io->msg(IO_WARN, "Unable to open file %s for info-logging! Not using this logmethod!", cs_config.infofile);
-			cs_config.infofile[0] = '\0';
+	if (cs_config->infofile != NULL) {
+		if ((cs_config->infofd = fopen(cs_config->infofile,"a")) == NULL) {
+			io->msg(IO_WARN, "Unable to open file %s for info-logging! Not using this logmethod!", cs_config->infofile);
+			cs_config->infofile[0] = '\0';
 		}	
-		else io->msg(IO_INFO, "Info logfile '%s' successfully opened.", cs_config.infofile);
+		else io->msg(IO_INFO, "Info logfile '%s' successfully opened.", cs_config->infofile);
 	}
 	else
 		io->msg(IO_INFO, "Not logging general info to disk.");
 
 	// ERROR/WARNING LOGGING
-	if (cs_config.errfile != NULL) {
-		if (strcmp(cs_config.errfile, cs_config.infofile) == 0) {	// If the errorfile is the same as the infofile, use the same FD
-			cs_config.errfd = cs_config.infofd;
-			io->msg(IO_DEB1, "Using the same file '%s' for info- and error- logging.", cs_config.errfile);
+	if (cs_config->errfile != NULL) {
+		if (strcmp(cs_config->errfile, cs_config->infofile) == 0) {	// If the errorfile is the same as the infofile, use the same FD
+			cs_config->errfd = cs_config->infofd;
+			io->msg(IO_DEB1, "Using the same file '%s' for info- and error- logging.", cs_config->errfile);
 		}
-		else if ((cs_config.errfd = fopen(cs_config.errfile,"a")) == NULL) {
-			io->msg(IO_WARN, "Unable to open file %s for error-logging! Not using this logmethod!", cs_config.errfile);
-			cs_config.errfile[0] = '\0';
+		else if ((cs_config->errfd = fopen(cs_config->errfile,"a")) == NULL) {
+			io->msg(IO_WARN, "Unable to open file %s for error-logging! Not using this logmethod!", cs_config->errfile);
+			cs_config->errfile[0] = '\0';
 		}
-		else io->msg(IO_INFO, "Error logfile '%s' successfully opened.", cs_config.errfile);
+		else io->msg(IO_INFO, "Error logfile '%s' successfully opened.", cs_config->errfile);
 	}
 	else {
 		io->msg(IO_INFO, "Not logging errors to disk.");
 	}
 
 	// DEBUG LOGGING
-	if (cs_config.debugfile != 0) {
-		if (strcmp(cs_config.debugfile,cs_config.infofile) == 0) {
-			cs_config.debugfd = cs_config.infofd;	
-			io->msg(IO_DEB1, "Using the same file '%s' for debug- and info- logging.", cs_config.debugfile);
+	if (cs_config->debugfile != 0) {
+		if (strcmp(cs_config->debugfile,cs_config->infofile) == 0) {
+			cs_config->debugfd = cs_config->infofd;	
+			io->msg(IO_DEB1, "Using the same file '%s' for debug- and info- logging.", cs_config->debugfile);
 		}
-		else if (strcmp(cs_config.debugfile,cs_config.errfile) == 0) {
-			cs_config.debugfd = cs_config.errfd;	
-			io->msg(IO_DEB1, "Using the same file '%s' for debug- and error- logging.", cs_config.debugfile);
+		else if (strcmp(cs_config->debugfile,cs_config->errfile) == 0) {
+			cs_config->debugfd = cs_config->errfd;	
+			io->msg(IO_DEB1, "Using the same file '%s' for debug- and error- logging.", cs_config->debugfile);
 		}
-		else if ((cs_config.debugfd = fopen(cs_config.debugfile,"a")) == NULL) {
-			io->msg(IO_WARN, "Unable to open file %s for debug-logging! Not using this logmethod!", cs_config.debugfile);
-			cs_config.debugfile[0] = '\0';
+		else if ((cs_config->debugfd = fopen(cs_config->debugfile,"a")) == NULL) {
+			io->msg(IO_WARN, "Unable to open file %s for debug-logging! Not using this logmethod!", cs_config->debugfile);
+			cs_config->debugfile[0] = '\0';
 		}
-		else io->msg(IO_INFO, "Debug logfile '%s' successfully opened.", cs_config.debugfile);
+		else io->msg(IO_INFO, "Debug logfile '%s' successfully opened.", cs_config->debugfile);
 	}
 	else {
 		io->msg(IO_INFO, "Not logging debug to disk.");
@@ -547,48 +560,48 @@ void modeOpen() {
 	struct timeval last, cur;
 	long lastframes, curframes;
 	gettimeofday(&last, NULL);
-	lastframes = ptc.frames;
+	lastframes = ptc->frames;
 
 	io->msg(IO_INFO, "Entering open loop.");
 
-	if (ptc.wfs_count == 0) {	// we need wave front sensors
+	if (ptc->wfs_count == 0) {	// we need wave front sensors
 		io->msg(IO_WARN, "Error, no WFSs defined.");
-		ptc.mode = AO_MODE_LISTEN;
+		ptc->mode = AO_MODE_LISTEN;
 		return;
 	}
 	
 	// Run the initialisation function of the modules used, pass
 	// along a pointer to ptc
-	if (modOpenInit(&ptc) != EXIT_SUCCESS) {		// check if we can init the module
+	if (modOpenInit(ptc) != EXIT_SUCCESS) {		// check if we can init the module
 		io->msg(IO_WARN, "modOpenInit failed");
-		ptc.mode = AO_MODE_LISTEN;
+		ptc->mode = AO_MODE_LISTEN;
 		return;
 	}
-	ptc.frames++;
+	ptc->frames++;
 	
 	// tellClients("201 MODE OPEN SUCCESSFUL");
-	while (ptc.mode == AO_MODE_OPEN) {
-		if (modOpenLoop(&ptc) != EXIT_SUCCESS) {
+	while (ptc->mode == AO_MODE_OPEN) {
+		if (modOpenLoop(ptc) != EXIT_SUCCESS) {
 			io->msg(IO_WARN, "modOpenLoop failed");
-			ptc.mode = AO_MODE_LISTEN;
+			ptc->mode = AO_MODE_LISTEN;
 			return;
 		}
-		ptc.frames++;	// increment the amount of frames parsed
-		if (ptc.frames % ptc.logfrac == 0) {
-			curframes = ptc.frames;
+		ptc->frames++;	// increment the amount of frames parsed
+		if (ptc->frames % ptc->logfrac == 0) {
+			curframes = ptc->frames;
 			gettimeofday(&cur, NULL);
-			ptc.fps = (cur.tv_sec * 1000000 + cur.tv_usec)- (last.tv_sec*1000000 + last.tv_usec);	
-			ptc.fps /= 1000000;
-			ptc.fps = (curframes-lastframes)/ptc.fps;
+			ptc->fps = (cur.tv_sec * 1000000 + cur.tv_usec)- (last.tv_sec*1000000 + last.tv_usec);	
+			ptc->fps /= 1000000;
+			ptc->fps = (curframes-lastframes)/ptc->fps;
 			last = cur;
 			lastframes = curframes;
 		}
 	}
 	
 	// Finish the open loop here
-	if (modOpenFinish(&ptc) != EXIT_SUCCESS) {		// check if we can finish
+	if (modOpenFinish(ptc) != EXIT_SUCCESS) {		// check if we can finish
 		io->msg(IO_WARN, "modOpenFinish failed");
-		ptc.mode = AO_MODE_LISTEN;
+		ptc->mode = AO_MODE_LISTEN;
 		return;
 	}
 	
@@ -600,48 +613,48 @@ void modeClosed() {
 	struct timeval last, cur;
 	long lastframes, curframes;
 	gettimeofday(&last, NULL);
-	lastframes = ptc.frames;
+	lastframes = ptc->frames;
 	io->msg(IO_INFO, "Entering closed loop.");
 
-	if (ptc.wfs_count == 0) {						// we need wave front sensors
+	if (ptc->wfs_count == 0) {						// we need wave front sensors
 		io->msg(IO_WARN, "Error, no WFSs defined.");
-		ptc.mode = AO_MODE_LISTEN;
+		ptc->mode = AO_MODE_LISTEN;
 		return;
 	}
 	
 	// Run the initialisation function of the modules used, pass
 	// along a pointer to ptc
-	if (modClosedInit(&ptc) != EXIT_SUCCESS) {
+	if (modClosedInit(ptc) != EXIT_SUCCESS) {
 		io->msg(IO_WARN, "modClosedInit failed");
-		ptc.mode = AO_MODE_LISTEN;
+		ptc->mode = AO_MODE_LISTEN;
 		return;
 	}
 	
-	ptc.frames++;
+	ptc->frames++;
 	// tellClients("201 MODE CLOSED SUCCESSFUL");
-	while (ptc.mode == AO_MODE_CLOSED) {
+	while (ptc->mode == AO_MODE_CLOSED) {
 		
-		if (modClosedLoop(&ptc) != EXIT_SUCCESS) {
+		if (modClosedLoop(ptc) != EXIT_SUCCESS) {
 			io->msg(IO_WARN, "modClosedLoop failed");
-			ptc.mode = AO_MODE_LISTEN;
+			ptc->mode = AO_MODE_LISTEN;
 			return;
 		}							
-		ptc.frames++;								// increment the amount of frames parsed
-		if (ptc.frames % ptc.logfrac == 0) {
-			curframes = ptc.frames;
+		ptc->frames++;								// increment the amount of frames parsed
+		if (ptc->frames % ptc->logfrac == 0) {
+			curframes = ptc->frames;
 			gettimeofday(&cur, NULL);
-			ptc.fps = (cur.tv_sec * 1000000 + cur.tv_usec)- (last.tv_sec*1000000 + last.tv_usec);	
-			ptc.fps /= 1000000;
-			ptc.fps = (curframes-lastframes)/ptc.fps;
+			ptc->fps = (cur.tv_sec * 1000000 + cur.tv_usec)- (last.tv_sec*1000000 + last.tv_usec);	
+			ptc->fps /= 1000000;
+			ptc->fps = (curframes-lastframes)/ptc->fps;
 			last = cur;
 			lastframes = curframes;
 		}
 	}
 	
 	// Finish the open loop here
-	if (modClosedFinish(&ptc) != EXIT_SUCCESS) {	// check if we can finish
+	if (modClosedFinish(ptc) != EXIT_SUCCESS) {	// check if we can finish
 		io->msg(IO_WARN, "modClosedFinish failed");
-		ptc.mode = AO_MODE_LISTEN;
+		ptc->mode = AO_MODE_LISTEN;
 		return;
 	}
 	
@@ -653,16 +666,16 @@ void modeCal() {
 	io->msg(IO_INFO, "Starting Calibration");
 	
 	// this links to a module
-	if (modCalibrate(&ptc) != EXIT_SUCCESS) {
+	if (modCalibrate(ptc) != EXIT_SUCCESS) {
 		io->msg(IO_WARN, "modCalibrate failed");
 		// tellClients("404 ERROR CALIBRATION FAILED");
-		ptc.mode = AO_MODE_LISTEN;
+		ptc->mode = AO_MODE_LISTEN;
 		return;
 	}
 	
 	io->msg(IO_INFO, "Calibration loop done, switching to listen mode");
 	// tellClients("201 CALIBRATION SUCCESSFUL");
-	ptc.mode = AO_MODE_LISTEN;
+	ptc->mode = AO_MODE_LISTEN;
 		
 	return;
 }
@@ -672,7 +685,7 @@ void modeListen() {
 	while (true) {
 		io->msg(IO_INFO, "Now running in listening mode.");
 		
-		switch (ptc.mode) {
+		switch (ptc->mode) {
 			case AO_MODE_OPEN:
 				modeOpen();
 				break;
@@ -698,420 +711,261 @@ void modeListen() {
 	} // end while(true)
 }
 
-int sockListen() {
-	int sock;						// Stores the main socket listening for connections
-	struct event sockevent;			// Stores the associated event
-	int optval=1; 					// Used to set socket options
-	struct sockaddr_in serv_addr;	// Store the server address here
-	
-	sockbase = event_init();		// Initialize libevent
-	
-	io->msg(IO_DEB1, "Starting listening socket on %s:%d.", cs_config.listenip, cs_config.listenport);
-	
-	// Initialize the internet socket. We want streaming and we want TCP
-	if ((sock = socket(PF_INET, SOCK_STREAM, 0)) < 0)
-		io->msg(IO_ERR, "Failed to set up socket.");
-		
-	// Get the address fixed:
-	serv_addr.sin_family = AF_INET;
-	serv_addr.sin_addr.s_addr = inet_addr(cs_config.listenip);
-	serv_addr.sin_port = htons(cs_config.listenport);
-	memset(serv_addr.sin_zero, '\0', sizeof(serv_addr.sin_zero));
-
-	// Set reusable and nosigpipe flags so we don't get into trouble later on.
-	if (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval)) != 0)
-		io->msg(IO_WARN, "Could not set socket flag SO_REUSEADDR.");
-	
-	// We now actually bind the socket to something
-	if (bind(sock, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) != 0)
-		io->msg(IO_ERR, "Binding socket failed: %s", strerror(errno));
-	
-	if (listen (sock, 1) != 0) 
-		io->msg(IO_ERR, "Listen failed: %s", strerror(errno));
-		
-	// Set socket to non-blocking mode, nice for events
-	if (setNonBlock(sock) != EXIT_SUCCESS) 
-		io->msg(IO_WARN, "Coult not set socket to non-blocking mode, might cause undesired side-effects.");
-		
-	io->msg(IO_INFO, "Successfully initialized socket on %s:%d, setting up event schedulers.", cs_config.listenip, cs_config.listenport);
-	
-	// configure the event to be scheduled 
-	event_set(&sockevent, sock, EV_READ | EV_PERSIST, sockAccept, NULL);
-	// associated the event with a certain event_base
-	event_base_set(sockbase, &sockevent);
-	// add the event to the buffer
-    event_add(&sockevent, NULL);
-
-	io->msg(IO_INFO, "This tread will block for incoming network traffic now...");
-	event_base_dispatch(sockbase);				// Start looping
-	
-	return EXIT_SUCCESS;
+static void on_message(Connection *connection, string line) {
+	//string command = popword(line);
+  io->msg(IO_DEB1, "got %db: '%s'.", line.length(), line.c_str());
+  connection->write("200 OK");
+  //parseCmd(msg, nbytes, client);
 }
+// 
+// 
+// static int explode(char *str, char **list) {
+//  size_t begin, len;
+//  int i;
+//  // Take a string 'str' which has space-separated
+//  // words in it and store pointers to the
+//  // individual words in 'list'
+//  for (i=0; i<Maxparams; i++ ) { 
+//    // search for the first non-space char
+//    begin = strspn(str, " \t\n\r\0");
+//    str += begin;
+//  
+//    // search for the first space char,
+//    // starting from the first nons-space char
+//    len = strcspn(str, " \t\n\r\0");
+// 
+//    // if len=0, there are no more words
+//    // in 'str', use NULL to indicate this
+//    // in 'list'
+//    if (len == 0)  {
+//      list[i] = NULL;
+//      return i+1;
+//    }   
+//    // if len !=0, store the pointer to 
+//    // the word in the list
+//    list[i] = str;
+// 
+//    // if the next character is a null
+//    // char, we've reached the end of
+//    // 'str'
+//    if (str[len] == '\0') {
+//      // if i<16, we can still use
+//      // NULL to indicate this was
+//      // the last word. Otherwise,
+//      // we've stopped anyway
+//      if (i < 15) list[i+1] = NULL;
+//      return i+1;
+//    }   
+//    // replace the first space after
+//    // the word with a null character
+//    str[len] = '\0';
+// 
+//    // proceed the pointer with the length
+//    // of the word, + 1 for the null char
+//    str += len+1;
+//  }
+//  
+//  // if we finish the loop, we parsed Maxlength words:
+//  return i+1;
+// }
+// 
+// int parseCmd(char *msg, const int len, client_t *client) {
+//  // reserve memory for a local copy of 'msg'
+//  char local[strlen(msg)+1];
+//  char *list[Maxparams];
+//  int count;
+//  
+//  // copy the string there, append \0
+//  strncpy(local, msg, strlen(msg));
+//  local[strlen(msg)] = '\0';
+// 
+//  // length < 2? nothing to see here, move on
+//  if (strlen(msg) < 2)
+//    return tellClient(client->buf_ev,"400 UNKNOWN");
+// 
+//  // explode the string, list[i] now holds the ith word in 'local'
+//  if ((count = explode(local, list)) == 0) {
+//    io->msg(IO_WARN, "parseCmd called without any words: '%s' or '%s' has %d words", msg, local, count);
+//    return EXIT_FAILURE;
+//  }
+//  io->msg(IO_DEB1, "We got: '%s', first word: '%s', words: %d", msg, list[0], count);
+//      
+//  // inspect the string, see what we are going to do:
+//  if (strcmp(list[0],"help") == 0) {
+//    // Does the user want help on a specific command?
+//    // if so, count > 1 and list[1] holds the command the user wants help on
+//    if (count > 1) {    
+//      // if both showHelp (general FOAM help) and modMessage (specific module help)
+//      // do not have help info for list[1], we tell the client that we don't know either
+//      if (showHelp(client, list[1]) <= 0 && modMessage(ptc, client, list, count) <= 0)
+//        tellClient(client->buf_ev, "401 UNKOWN HELP");
+//    }
+//    else {
+//      // Give generic help here, both on FOAM and on the modules
+//      showHelp(client, NULL);
+//      modMessage(ptc, client, list, count);
+//    }
+//  }
+//  else if ((strcmp(list[0],"exit") == 0) || (strcmp(list[0],"quit") == 0)) {
+//    tellClient(client->buf_ev, "200 OK EXIT");
+//    // we disconnect a client by simulation EOF
+//    sockOnErr(client->buf_ev, EVBUFFER_EOF, client);
+//  }
+//  else if (strcmp(list[0],"shutdown") == 0) {
+//    tellClients("200 OK SHUTTING DOWN NOW!");
+//    stopFOAM();
+//  }
+//  /* This probably does not work correctly yet
+//  else if (strcmp(list[0],"image") == 0) {
+//    if (count > 1) {
+//      tmpint = (int) strtol(list[1], NULL, 10);
+//      if (tmpint < ptc->wfs_count) {
+//        tellClient(client->buf_ev, "200 OK IMAGE WFS %d", tmpint);
+//        tellClient(client->buf_ev, "SIZE %d", ptc->wfs[tmpint].res.x * ptc->wfs[tmpint].res.y * ptc->wfs[tmpint].bpp/8);
+//        bufferevent_write(client->buf_ev, ptc->wfs[tmpint].image, ptc->wfs[tmpint].res.x * ptc->wfs[tmpint].res.y * ptc->wfs[tmpint].res.x * ptc->wfs[tmpint].bpp/8);
+//      }
+//      else {
+//        tellClient(client->buf_ev,"401 UNKNOWN WFS %d", tmpint);
+//      }
+//    }
+//    else {
+//      tellClient(client->buf_ev,"402 IMAGE REQUIRES ARG");
+//    }   
+//  }*/
+//  else if (strcmp(list[0],"broadcast") == 0) {
+//    if (count > 1) {
+//      tellClients("200 OK %s", msg);
+//    }
+//    else if (count == Maxparams) {
+//      tellClient(client->buf_ev,"401 BROADCAST ACCEPTS ONLY %d WORDS", Maxparams);
+//    }
+//    else {
+//      tellClient(client->buf_ev,"402 BROADCAST REQUIRES ARG (BROADCAST TEXT)");
+//    }
+//  }
+//  else if (strcmp(list[0],"mode") == 0) {
+//    if (count > 1) {
+//      if (strcmp(list[1],"closed") == 0) {
+//        ptc->mode = AO_MODE_CLOSED;
+//        pthread_cond_signal(&mode_cond); // signal a change to the main thread
+//        tellClients("200 OK MODE CLOSED");
+//      }
+//      else if (strcmp(list[1],"open") == 0) {
+//        ptc->mode = AO_MODE_OPEN;
+//        pthread_cond_signal(&mode_cond);
+//        tellClients("200 OK MODE OPEN");
+//      }
+//      else if (strcmp(list[1],"listen") == 0) {
+//        ptc->mode = AO_MODE_LISTEN;
+//        pthread_cond_signal(&mode_cond);
+//        tellClients("200 OK MODE LISTEN");
+//      }
+//      else {
+//        tellClient(client->buf_ev,"401 UNKNOWN MODE");
+//      }
+//    }
+//    else {
+//      tellClient(client->buf_ev,"402 MODE REQUIRES ARG (CLOSED, OPEN, LISTEN)");
+//    }
+//  }
+//  else {
+//    // No valid command found? pass it to the module
+//    if (modMessage(ptc, client, list, count) <= 0) {
+//      return tellClient(client->buf_ev,"400 UNKNOWN");
+//    }
+//  }
+//  
+//  return EXIT_SUCCESS;
+// }
 
-int setNonBlock(int fd) {
-	int flags;
-
-    flags = fcntl(fd, F_GETFL);
-    if (flags < 0)
-            return EXIT_FAILURE;
-	
-    flags |= O_NONBLOCK;
-    if (fcntl(fd, F_SETFL, flags) < 0)
-            return EXIT_FAILURE;
-
-    return EXIT_SUCCESS;
-}
-
-void sockAccept(const int sock, const short event, void *arg) {
-	int newsock, i;					// Store the newly accepted connection here
-	struct sockaddr_in cli_addr;	// Store the client address here
-	socklen_t cli_len;				// store the length here
-	client_t *client;				// connection data
-	cli_len = sizeof(cli_addr);
-	
-	newsock = accept(sock, (struct sockaddr *) &cli_addr, &cli_len);
-		
-	if (newsock < 0) 
-		io->msg(IO_WARN, "Accepting socket failed: %s!", strerror(errno));
-	
-	if (setNonBlock(newsock) != EXIT_SUCCESS)
-		io->msg(IO_WARN, "Unable to set new client socket to non-blocking.");
-
-	// Check if we do not exceed the maximum number of connections:
-	if (clientlist.nconn >= MAX_CLIENTS) {
-		close(newsock);
-		io->msg(IO_WARN, "Refused connection, maximum clients reached (%d)", MAX_CLIENTS);
-		return;
-	}
-	
-	client = (client_t*) calloc(1, sizeof(*client));
-	if (client == NULL)
-		io->msg(IO_ERR, "Calloc failed in sockAccept.");
-
-	client->fd = newsock;			// Add socket to the client struct
-	client->buf_ev = bufferevent_new(newsock, sockOnRead, sockOnWrite, sockOnErr, client);
-
-	clientlist.nconn++;
-	for (i=0; clientlist.connlist[i] != NULL && i < MAX_CLIENTS; i++) 
-		;	// Run through array until we find an empty connlist entry
-
-	client->connid = i;
-	clientlist.connlist[i] = client;
-	
-	// Since we are using multiple bases, assign this one to a specific base:
-	if (bufferevent_base_set(sockbase, client->buf_ev) != 0)
-		io->msg(IO_ERR, "Failed to set base for buffered events.");
-
-	// We have to enable it before our callbacks will be effective
-	if (bufferevent_enable(client->buf_ev, EV_READ) != 0)
-		io->msg(IO_ERR, "Failed to enable buffered event.");
-
-	io->msg(IO_INFO, "Succesfully accepted connection from %s (using sock %d and buf_ev %p)", \
-		inet_ntoa(cli_addr.sin_addr), newsock, client->buf_ev);
-	
-	// welcome the client
-	tellClients("200 OK NEW CLIENT CONNECTED");
-}
-
-void sockOnErr(struct bufferevent *bev, short event, void *arg) {
-	client_t *client = (client_t *)arg;
-
-	if (event & EVBUFFER_EOF) 
-		io->msg(IO_INFO, "Client successfully disconnected.");
-	else
-		io->msg(IO_WARN, "Client socket error, disconnecting.");
-		
-	clientlist.nconn--;
-	// !!!:tim:20080415 this works, because clientlist.connlist[(int) client->connid] 
-	// points to client, which is freed below.
-	clientlist.connlist[(int) client->connid] = NULL; // Does this work nicely?
-	bufferevent_free(client->buf_ev);
-	close(client->fd);
-	free(client);
-	
-	tellClients("200 OK CLIENT DISCONNECTED");
-}
-
-// This does nothing, but libevent really wants an onwrite function, NULL pointers crash it
-void sockOnWrite(struct bufferevent *bev, void *arg) {
-}
-
-void sockOnRead(struct bufferevent *bev, void *arg) {
-	client_t *client = (client_t *)arg;
-
-	char msg[COMMANDLEN];
-	char *tmp;
-	int nbytes;
-	int flag=0;
-	
-	// detect very long messages, read everything and set a flag
-	while ((nbytes = bufferevent_read(bev, msg, (size_t) COMMANDLEN-1)) == COMMANDLEN-1)
-		flag=1;
-	
-	// if the message was too long, give a warning and return
-	if (flag == 1) {
-		io->msg(IO_WARN, "Received very long command over socket which was ignored.");
-		tellClient(client->buf_ev,"400 COMMAND IGNORED: TOO LONG (MAX: %d)", COMMANDLEN);
-		return;
-	}
-		
-	msg[nbytes] = '\0';
-	if ((tmp = strchr(msg, '\n')) != NULL) // there might be a trailing newline which we don't want
-		*tmp = '\0';
-	if ((tmp = strchr(msg, '\r')) != NULL) // there might be a trailing newline which we don't want
-		*tmp = '\0';
-	
-	io->msg(IO_DEB1, "Received %d bytes on socket reading: '%s'.", nbytes, msg);
-	parseCmd(msg, nbytes, client);
-}
-
-static int explode(char *str, char **list) {
-	size_t begin, len;
-	int i;
-	// Take a string 'str' which has space-separated
-	// words in it and store pointers to the
-	// individual words in 'list'
-	for (i=0; i<Maxparams; i++ ) { 
-		// search for the first non-space char
-		begin = strspn(str, " \t\n\r\0");
-		str += begin;
-	
-		// search for the first space char,
-		// starting from the first nons-space char
-		len = strcspn(str, " \t\n\r\0");
-
-		// if len=0, there are no more words
-		// in 'str', use NULL to indicate this
-		// in 'list'
-		if (len == 0)  {
-			list[i] = NULL;
-			return i+1;
-		}   
-		// if len !=0, store the pointer to 
-		// the word in the list
-		list[i] = str;
-
-		// if the next character is a null
-		// char, we've reached the end of
-		// 'str'
-		if (str[len] == '\0') {
-			// if i<16, we can still use
-			// NULL to indicate this was
-			// the last word. Otherwise,
-			// we've stopped anyway
-			if (i < 15) list[i+1] = NULL;
-			return i+1;
-		}   
-		// replace the first space after
-		// the word with a null character
-		str[len] = '\0';
-
-		// proceed the pointer with the length
-		// of the word, + 1 for the null char
-		str += len+1;
-	}
-	
-	// if we finish the loop, we parsed Maxlength words:
-	return i+1;
-}
-
-int parseCmd(char *msg, const int len, client_t *client) {
-	// reserve memory for a local copy of 'msg'
-	char local[strlen(msg)+1];
-	char *list[Maxparams];
-	int count;
-	
-	// copy the string there, append \0
-	strncpy(local, msg, strlen(msg));
-	local[strlen(msg)] = '\0';
-
-	// length < 2? nothing to see here, move on
-	if (strlen(msg) < 2)
-		return tellClient(client->buf_ev,"400 UNKNOWN");
-
-	// explode the string, list[i] now holds the ith word in 'local'
-	if ((count = explode(local, list)) == 0) {
-		io->msg(IO_WARN, "parseCmd called without any words: '%s' or '%s' has %d words", msg, local, count);
-		return EXIT_FAILURE;
-	}
-	io->msg(IO_DEB1, "We got: '%s', first word: '%s', words: %d", msg, list[0], count);
-			
-	// inspect the string, see what we are going to do:
-	if (strcmp(list[0],"help") == 0) {
-		// Does the user want help on a specific command?
-		// if so, count > 1 and list[1] holds the command the user wants help on
-		if (count > 1) { 		
-			// if both showHelp (general FOAM help) and modMessage (specific module help)
-			// do not have help info for list[1], we tell the client that we don't know either
-			if (showHelp(client, list[1]) <= 0 && modMessage(&ptc, client, list, count) <= 0)
-				tellClient(client->buf_ev, "401 UNKOWN HELP");
-		}
-		else {
-			// Give generic help here, both on FOAM and on the modules
-			showHelp(client, NULL);
-			modMessage(&ptc, client, list, count);
-		}
-	}
-	else if ((strcmp(list[0],"exit") == 0) || (strcmp(list[0],"quit") == 0)) {
-		tellClient(client->buf_ev, "200 OK EXIT");
-		// we disconnect a client by simulation EOF
-		sockOnErr(client->buf_ev, EVBUFFER_EOF, client);
-	}
-	else if (strcmp(list[0],"shutdown") == 0) {
-		tellClients("200 OK SHUTTING DOWN NOW!");
-		stopFOAM();
-	}
-	/* This probably does not work correctly yet
-	else if (strcmp(list[0],"image") == 0) {
-		if (count > 1) {
-			tmpint = (int) strtol(list[1], NULL, 10);
-			if (tmpint < ptc.wfs_count) {
-				tellClient(client->buf_ev, "200 OK IMAGE WFS %d", tmpint);
-				tellClient(client->buf_ev, "SIZE %d", ptc.wfs[tmpint].res.x * ptc.wfs[tmpint].res.y * ptc.wfs[tmpint].bpp/8);
-				bufferevent_write(client->buf_ev, ptc.wfs[tmpint].image, ptc.wfs[tmpint].res.x * ptc.wfs[tmpint].res.y * ptc.wfs[tmpint].res.x * ptc.wfs[tmpint].bpp/8);
-			}
-			else {
-				tellClient(client->buf_ev,"401 UNKNOWN WFS %d", tmpint);
-			}
-		}
-		else {
-			tellClient(client->buf_ev,"402 IMAGE REQUIRES ARG");
-		}		
-	}*/
-	else if (strcmp(list[0],"broadcast") == 0) {
-		if (count > 1) {
-			tellClients("200 OK %s", msg);
-		}
-		else if (count == Maxparams) {
-			tellClient(client->buf_ev,"401 BROADCAST ACCEPTS ONLY %d WORDS", Maxparams);
-		}
-		else {
-			tellClient(client->buf_ev,"402 BROADCAST REQUIRES ARG (BROADCAST TEXT)");
-		}
-	}
-	else if (strcmp(list[0],"mode") == 0) {
-		if (count > 1) {
-			if (strcmp(list[1],"closed") == 0) {
-				ptc.mode = AO_MODE_CLOSED;
-				pthread_cond_signal(&mode_cond); // signal a change to the main thread
-				tellClients("200 OK MODE CLOSED");
-			}
-			else if (strcmp(list[1],"open") == 0) {
-				ptc.mode = AO_MODE_OPEN;
-				pthread_cond_signal(&mode_cond);
-				tellClients("200 OK MODE OPEN");
-			}
-			else if (strcmp(list[1],"listen") == 0) {
-				ptc.mode = AO_MODE_LISTEN;
-				pthread_cond_signal(&mode_cond);
-				tellClients("200 OK MODE LISTEN");
-			}
-			else {
-				tellClient(client->buf_ev,"401 UNKNOWN MODE");
-			}
-		}
-		else {
-			tellClient(client->buf_ev,"402 MODE REQUIRES ARG (CLOSED, OPEN, LISTEN)");
-		}
-	}
-	else {
-		// No valid command found? pass it to the module
-		if (modMessage(&ptc, client, list, count) <= 0) {
-			return tellClient(client->buf_ev,"400 UNKNOWN");
-		}
-	}
-	
-	return EXIT_SUCCESS;
-}
-
-int tellClients(char *msg, ...) {
-	va_list ap;
-	int i;
-	char *out, *out2;
-
-	va_start(ap, msg);
-
-	vasprintf(&out, msg, ap);
-	// format string and add newline
-	asprintf(&out2, "%s\n", out);
-
-	io->msg(IO_DEB1, "Telling all clients");
-	for (i=0; i < MAX_CLIENTS; i++) {
-		io->msg(IO_DEB1|IO_NOID, "%d ", i);
-		if (clientlist.connlist[i] != NULL && clientlist.connlist[i]->fd > 0) { 
-			io->msg(IO_DEB1|IO_NOID, "Telling! ");	
-			if (bufferevent_write(clientlist.connlist[i]->buf_ev, out2, strlen(out2)+1) != 0) {
-				io->msg(IO_WARN, "Error telling client %d", i);
-				return EXIT_FAILURE; 
-			}
-		}
-	}
-	io->msg(IO_DEB1|IO_NOID, "\n");
-	return EXIT_SUCCESS;
-}
-
-int tellClient(struct bufferevent *bufev, char *msg, ...) {
-	va_list ap;
-	char *out, *out2;
-
-	va_start(ap, msg);
-
-	// !!!:tim:20080414 this can be done faster?
-	vasprintf(&out, msg, ap);
-	asprintf(&out2, "%s\n", out);
-
-	if (bufferevent_write(bufev, out2, strlen(out2)+1) != 0) {
-		io->msg(IO_WARN, "Error telling client something");
-		return EXIT_FAILURE; 
-	}
-	
-	return EXIT_SUCCESS;
-}
-
-int showHelp(const client_t *client, const char *subhelp) {
-	// spaces are important here!!!
-	if (subhelp == NULL) {
-		tellClient(client->buf_ev, "\
-200 OK HELP\n\
-help [command]:         help (on a certain command, if available).\n\
-mode <mode>:            close or open the loop.\n\
-broadcast <msg>:        send a message to all connected clients.\n\
-exit or quit:           disconnect from daemon.\n\
-shutdown:               shutdown the FOAM program.");
-//image <wfs>:            get the image from a certain WFS.\n
-	}
-	else if (strcmp(subhelp, "mode") == 0) {
-		tellClient(client->buf_ev, "\
-200 OK HELP MODE\n\
-mode <mode>: close or open the loop.\n\
-   mode=open: opens the loop and only records what's happening with the AO \n\
-        system and does not actually drive anything.\n\
-   mode=closed: closes the loop and starts the feedbackloop, correcting the\n\
-        wavefront as fast as possible.\n\
-   mode=listen: stops looping and waits for input from the users. Basically\n\
-        does nothing.\n");
-	}
-	else if (strcmp(subhelp, "image") == 0) {
-		tellClient(client->buf_ev, "\
-200 OK HELP IMAGE\n\
-image <wfs>: request to send a WFS image over the network.\n\
-    <wfs> must be a valid wavefrontsensor.\n\
-    Note that this transfer may take a while and could slowdown the AO itself.\n");
-	}	
-	else if (strcmp(subhelp, "help") == 0) {
-			tellClient(client->buf_ev, "\
-200 OK HELP HELP\n\
-help [topic]\n\
-   show help on a topic, or (if omitted) in general");
-	}
-	else {
-		// if we end up here, 'subhelp' was unknown to us, and we tell parseCmd
-		return 0;
-	}
-	
-	// if we end up here, everything went ok
-	return 1;
-}
+// int tellClients(char *msg, ...) {
+//  va_list ap;
+//  int i;
+//  char *out, *out2;
+// 
+//  va_start(ap, msg);
+// 
+//  vasprintf(&out, msg, ap);
+//  // format string and add newline
+//  asprintf(&out2, "%s\n", out);
+// 
+//  io->msg(IO_DEB1, "Telling all clients");
+//  for (i=0; i < MAX_CLIENTS; i++) {
+//    io->msg(IO_DEB1|IO_NOID, "%d ", i);
+//    if (clientlist.connlist[i] != NULL && clientlist.connlist[i]->fd > 0) { 
+//      io->msg(IO_DEB1|IO_NOID, "Telling! ");  
+//      if (bufferevent_write(clientlist.connlist[i]->buf_ev, out2, strlen(out2)+1) != 0) {
+//        io->msg(IO_WARN, "Error telling client %d", i);
+//        return EXIT_FAILURE; 
+//      }
+//    }
+//  }
+//  io->msg(IO_DEB1|IO_NOID, "\n");
+//  return EXIT_SUCCESS;
+// }
+// 
+// int tellClient(struct bufferevent *bufev, char *msg, ...) {
+//  va_list ap;
+//  char *out, *out2;
+// 
+//  va_start(ap, msg);
+// 
+//  // !!!:tim:20080414 this can be done faster?
+//  vasprintf(&out, msg, ap);
+//  asprintf(&out2, "%s\n", out);
+// 
+//  if (bufferevent_write(bufev, out2, strlen(out2)+1) != 0) {
+//    io->msg(IO_WARN, "Error telling client something");
+//    return EXIT_FAILURE; 
+//  }
+//  
+//  return EXIT_SUCCESS;
+// }
+// 
+// int showHelp(const client_t *client, const char *subhelp) {
+//  // spaces are important here!!!
+//  if (subhelp == NULL) {
+//    tellClient(client->buf_ev, "\
+// 200 OK HELP\n\
+// help [command]:         help (on a certain command, if available).\n\
+// mode <mode>:            close or open the loop.\n\
+// broadcast <msg>:        send a message to all connected clients.\n\
+// exit or quit:           disconnect from daemon.\n\
+// shutdown:               shutdown the FOAM program.");
+// //image <wfs>:            get the image from a certain WFS.\n
+//  }
+//  else if (strcmp(subhelp, "mode") == 0) {
+//    tellClient(client->buf_ev, "\
+// 200 OK HELP MODE\n\
+// mode <mode>: close or open the loop.\n\
+//    mode=open: opens the loop and only records what's happening with the AO \n\
+//         system and does not actually drive anything.\n\
+//    mode=closed: closes the loop and starts the feedbackloop, correcting the\n\
+//         wavefront as fast as possible.\n\
+//    mode=listen: stops looping and waits for input from the users. Basically\n\
+//         does nothing.\n");
+//  }
+//  else if (strcmp(subhelp, "image") == 0) {
+//    tellClient(client->buf_ev, "\
+// 200 OK HELP IMAGE\n\
+// image <wfs>: request to send a WFS image over the network.\n\
+//     <wfs> must be a valid wavefrontsensor.\n\
+//     Note that this transfer may take a while and could slowdown the AO itself.\n");
+//  } 
+//  else if (strcmp(subhelp, "help") == 0) {
+//      tellClient(client->buf_ev, "\
+// 200 OK HELP HELP\n\
+// help [topic]\n\
+//    show help on a topic, or (if omitted) in general");
+//  }
+//  else {
+//    // if we end up here, 'subhelp' was unknown to us, and we tell parseCmd
+//    return 0;
+//  }
+//  
+//  // if we end up here, everything went ok
+//  return 1;
+// }
 
 // DOXYGEN GENERAL DOCUMENTATION //
 /*********************************/
@@ -1302,9 +1156,9 @@ startThread() {
 }
 
 listenLoop() {
-	while (ptc.mode != shutdown) { // Run continuously until
+	while (ptc->mode != shutdown) { // Run continuously until
 								// shutdown.
-		switch (ptc.mode) {		// Read the mode requested
+		switch (ptc->mode) {		// Read the mode requested
 								// and switch to that mode.
 			case 'open': modeOpen()
 			case 'closed': modeClosed()
@@ -1317,7 +1171,7 @@ listenLoop() {
 modeOpen() {
 	modOpenInit()				// Open loop init hook.
 	
-	while (ptc.mode == AO_MODE_OPEN) { 
+	while (ptc->mode == AO_MODE_OPEN) { 
 								// Loop until mode changes.
 		modOpenLoop()			// Actual work is done here.
 	}
@@ -1329,7 +1183,7 @@ modeClosed() {
 	modClosedInit()				// Closed loop works the
 								// same as open loop.
 	
-	while (ptc.mode == AO_MODE_CLOSED) {
+	while (ptc->mode == AO_MODE_CLOSED) {
 		modClosedLoop()
 	}
 	
