@@ -35,12 +35,12 @@ AC_SUBST(FOAMDATADIR)
 AC_SEARCH_LIBS([sin],
 		[m],
 		[],
-		[FATAL=yes;MISSING+=" libm"])
+		[FOAM_FATAL=yes;FOAM_MISSING+=" libm"])
 
 AC_SEARCH_LIBS([pthread_create],
 		[pthread],
 		[],
-		[FATAL=yes;MISSING+=" pthread"])
+		[FOAM_FATAL=yes;FOAM_MISSING+=" pthread"])
 
 # AC_SEARCH_LIBS([pthread_yield],
 # 		[pthread],
@@ -70,10 +70,10 @@ AC_SEARCH_LIBS([pthread_create],
 	
 
 PKG_CHECK_MODULES(SIGC, [sigc++-2.0 >= 2.0], [],
-	[FATAL=yes;MISSING+=" sigc++-2.0"])
+	[FOAM_FATAL=yes;FOAM_MISSING+=" sigc++-2.0"])
 
 PKG_CHECK_MODULES(GSL, [gsl], [],
-	[FATAL=yes;MISSING+=" gsl gslcblas"])
+	[FOAM_FATAL=yes;FOAM_MISSING+=" gsl gslcblas"])
 
 COMMON_CFLAGS="$SIGC_CFLAGS $GSL_CFLAGS"
 COMMON_LIBS="$SIGC_LIBS $GSL_LIBS"
@@ -289,8 +289,8 @@ AM_CONDITIONAL([OPENGL], [test "$opengl" = true])
 ### END CHECKING FOR LIBS ###
 #############################
 
-if test "$FATAL" = yes ; then
-	AC_MSG_ERROR([Cannot build FOAM! Missing libraries $MISSING!])
+if test "$FOAM_FATAL" = yes ; then
+	AC_MSG_ERROR([Cannot build FOAM! Missing libraries $FOAM_MISSING!])
 fi
 
 AC_MSG_NOTICE([===============Summary================])
