@@ -289,7 +289,7 @@ AM_CONDITIONAL([OPENGL], [test "$opengl" = true])
 ### END CHECKING FOR LIBS ###
 #############################
 
-if test "$FATAL" = true ; then
+if test "$FATAL" = yes ; then
 	AC_MSG_ERROR([Cannot build FOAM! Missing libraries $MISSING!])
 fi
 
