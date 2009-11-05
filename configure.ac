@@ -4,7 +4,7 @@ AC_INIT([FOAM], [0.1], [t.i.m.vanwerkhoven@xs4all.nl])
 AC_COPYRIGHT([Copyright (C) 2007-2009 Tim van Werkhoven <t.i.m.vanwerkhoven@xs4all.nl>])
 AC_REVISION(`git describe`)
 
-AC_CONFIG_HEADERS([lib/config.h])
+AC_CONFIG_HEADERS([foam/config.h])
 AC_CONFIG_AUX_DIR([build-aux])
 AC_CONFIG_FILES([
 Makefile

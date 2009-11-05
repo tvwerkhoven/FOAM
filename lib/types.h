@@ -359,7 +359,7 @@ typedef enum { // level_t
  */
 typedef struct { // config_t
 	char *listenip;				//!< (user) IP to listen on, default "0.0.0.0"
-	int listenport;				//!< (user) port to listen on, default 10000
+	char *listenport;				//!< (user) port to listen on, default 1010
 	
 	char *infofile;				//!< (user) file to log info messages to, default none
 	FILE *infofd;				//!< (foam) associated filepointer

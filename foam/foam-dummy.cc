@@ -114,7 +114,7 @@ int modInitModule(control_t *ptc, config_t *cs_config) {
 		
 	// configure cs_config here
 	cs_config->listenip = "0.0.0.0";	// listen on any IP by defaul
-	cs_config->listenport = 10000;		// listen on port 10000 by default
+	cs_config->listenport = "1025";		// listen on port 1010 by default
 	cs_config->use_syslog = false;		// don't use the syslog
 	cs_config->syslog_prepend = "foam";	// prepend logging with 'foam'
 	cs_config->use_stdout = true;		// do use stdout

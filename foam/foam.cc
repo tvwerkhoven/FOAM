@@ -1,5 +1,5 @@
 /*
- Copyright (C) 2008 Tim van Werkhoven (t.i.m.vanwerkhoven@xs4all.nl)
+ Copyright (C) 2008-2009 Tim van Werkhoven (t.i.m.vanwerkhoven@xs4all.nl)
  
  This file is part of FOAM.
  
@@ -15,13 +15,10 @@
  
  You should have received a copy of the GNU General Public License
  along with FOAM.  If not, see <http://www.gnu.org/licenses/>.
-
- $Id$
 */
 /*! 
-	@file foam.c
+	@file foam.cc
 	@author Tim van Werkhoven (t.i.m.vanwerkhoven@xs4all.nl)
-	@date 2008-07-15 16:35
 
 	@brief This is the main file for FOAM.
 
@@ -41,32 +38,25 @@
 #include "io.h"
 #include "protocol.h"
 
-using namespace std;
 
 // GLOBAL VARIABLES //
 /********************/	
 
-int Maxparams=32;
-
-// These are defined in libfoam.c, and declared in
-// libfoam.h
-extern conntrack_t clientlist;			// Stores a list of clients connected
-extern struct event_base *sockbase;		// Stores the eventbase to be used
-Io *io;
+using namespace std;
 
 // Global AO and FOAM configuration 
 control_t *ptc;
 config_t *cs_config;
 
-// These are used for communication between worker thread and
-// networking thread
+// Inter-thread communication
 pthread_mutex_t mode_mutex;
 pthread_cond_t mode_cond;
-
-// This is to make threads joinable
 static pthread_attr_t attr;
 
+// Server network functions
 static Protocol::Server *protocol = 0;
+// Message output and logging 
+Io *io;
 
 // PROTOTYPES //
 /**************/	
@@ -86,9 +76,6 @@ extern int modClosedFinish(control_t *ptc);
 
 extern int modCalibrate(control_t *ptc);
 extern int modMessage(control_t *ptc, const client_t *client, char *list[], const int count);
-
-// These are local
-static int explode(char *str, char **list);
 
 	/*! 
 	@brief Initialisation function.
@@ -146,10 +133,14 @@ int main(int argc, char *argv[]) {
 
 	io->msg(IO_INFO,"Starting %s (%s) at %s", PACKAGE_NAME, PACKAGE_VERSION, date);
 	io->msg(IO_INFO,"Copyright 2007-2009 Tim van Werkhoven (t.i.m.vanwerkhoven@xs4all.nl)");
+	
+	// Read configuration 
+	
 
 	// INITIALIZE MODULES //
 	/**********************/
 	
+	io->msg(IO_INFO,"Initializing modules...");
 	// this routine will populate ptc and possibly 
 	// adapt cs_config-> changes will be processed below
 	modInitModule(ptc, cs_config);
@@ -161,7 +152,8 @@ int main(int argc, char *argv[]) {
 	// START DAEMON //
 	/****************/
 		
-  protocol = new Protocol::Server("10100");
+	io->msg(IO_INFO,"Starting daemon at port %s...", cs_config->listenport);
+  protocol = new Protocol::Server(cs_config->listenport);
   protocol->slot_message = sigc::ptr_fun(on_message);
   protocol->slot_connected = sigc::ptr_fun(on_connect);
   protocol->listen();
@@ -211,14 +203,12 @@ int main(int argc, char *argv[]) {
 	sigaction(SIGINT, &act, NULL);
 	pthread_sigmask (SIG_UNBLOCK, &signal_mask, NULL);
 	
-	// START LISTENING ON SOCKET//
-	/****************************/
-	//sockListen();
 	while (ptc->mode != AO_MODE_SHUTDOWN)
     usleep(1000*1000);
     
-  // Cleanup & shutdown should go here!
-
+  // TODO: Cleanup & shutdown should go here!
+  
+  delete protocol;
   delete io;
 	return EXIT_SUCCESS;
 }
@@ -256,31 +246,17 @@ void stopFOAM() {
 	void *status;
 	int rc;
 	
-	// Tell the clients we're going down
-	//tellClients("200 OK SHUTTING DOWN NOW");
+  // Change mode
+	ptc->mode = AO_MODE_SHUTDOWN;
+	
+	// Notify shutdown
 	io->msg(IO_INFO, "Shutting down FOAM now");
   protocol->broadcast("500 :SHUTTING DOWN NOW");
-	ptc->mode = AO_MODE_SHUTDOWN;
-		
-	// disconnect all clients
-  // for (i=0; i < MAX_CLIENTS; i++) {
-  //  if (clientlist.connlist[i] != NULL) {
-  //    if (clientlist.connlist[i]->fd > 0) {
-  //      sockOnErr(clientlist.connlist[i]->buf_ev, EVBUFFER_EOF, clientlist.connlist[i]);
-  //    }
-  //    else {
-  //      io->msg(IO_WARN, "Error closing client %d, client_t not NULL, but fd <=0!", i);
-  //    }
-  //  }
-  // }
 	
-	// set the mode to shutdown so the modules know
-	// we're finishing up
-	
-	// signal the change to the other thread(s)
+	// Signal the change to the other thread(s)
 	pthread_cond_signal(&mode_cond);
 	
-	// sleep a short while to give the modules time to stop
+	// Wait for the modules
 	usleep(100000); // 0.1 sec
 
 	// get the time to see how long we've run
@@ -327,63 +303,41 @@ void stopFOAM() {
 
 void checkFieldFiles(wfs_t *wfsinfo) {
 	FILE *fieldfd;
-	// check if the filename is set (or is at least not zero)
 	if (wfsinfo->darkfile == NULL) {
+	  // File not set, not using darkfield calibration
 		io->msg(IO_INFO, "Not using darkfield calibration, no darkfield file given");
-	}
-	else {
-		// if the filename is set, try to open the file and see if that works
+	} else {
+		// Allocate memory, try to load the file into memory
+		wfsinfo->darkim = gsl_matrix_float_calloc(wfsinfo->res.x, wfsinfo->res.y);
 		fieldfd = fopen(wfsinfo->darkfile, "r");
-		if (fieldfd == NULL) {
-			// if we cannot open the file, we need to darkcalibrate at some
-			// point and store the calibration in wfsinfo->darkfile.
-			// Allocate the memory anyway so the image can be stored here later on
-			io->msg(IO_INFO, "Darkfield file (%s) could not be opened, will create darkfield calibration later (%s).", wfsinfo->darkfile, strerror(errno));
-			wfsinfo->darkim = gsl_matrix_float_calloc(wfsinfo->res.x, wfsinfo->res.y);
-		}
-		else {
-			// if we can open the file, there is already darkfield calibration
-			// present. allocate memory for the image, and try to import it
-			io->msg(IO_INFO, "Darkfield file found and, trying to import into memory.");
-			// checking alloc success is not necessary because we use gsl's own checking
-			wfsinfo->darkim = gsl_matrix_float_calloc(wfsinfo->res.x, wfsinfo->res.y);
+		if (fieldfd != NULL) {
+			io->msg(IO_INFO, "Loading darkfield file (%s)...", wfsinfo->darkfile);
 			gsl_matrix_float_fscanf(fieldfd, wfsinfo->darkim);
-			// close the file again
 			fclose(fieldfd);
 		}
 	}
 	
-	// same for flatfield
+	// Same for flatfield
 	if (wfsinfo->flatfile == NULL) {
 		io->msg(IO_INFO, "Not using flatfield calibration, no flatfield file given");
-	}
-	else {
+	} else {
+	  wfsinfo->flatim = gsl_matrix_float_calloc(wfsinfo->res.x, wfsinfo->res.y);
 		fieldfd = fopen(wfsinfo->flatfile, "r");
-		if (fieldfd == NULL) {
-			io->msg(IO_INFO, "Flatfield file (%s) could not be opened, will create flatfield calibration later (%s).", wfsinfo->flatfile, strerror(errno));
-			wfsinfo->flatim = gsl_matrix_float_calloc(wfsinfo->res.x, wfsinfo->res.y);
-		}
-		else {
-			io->msg(IO_INFO, "Flatfield file found and, trying to import into memory.");
-			wfsinfo->flatim = gsl_matrix_float_calloc(wfsinfo->res.x, wfsinfo->res.y);
+		if (fieldfd != NULL) {
+			io->msg(IO_INFO, "Loading flatfield file (%s)...", wfsinfo->flatfile);
 			gsl_matrix_float_fscanf(fieldfd, wfsinfo->flatim);
 			fclose(fieldfd);
 		}
 	}
 	
-	// same for skyfield
+	// Same for skyfield
 	if (wfsinfo->skyfile == NULL) {
 		io->msg(IO_INFO, "Not using skyfield calibration, no skyfield file given");
-	}
-	else {
+	} else {
+	  wfsinfo->skyim = gsl_matrix_float_calloc(wfsinfo->res.x, wfsinfo->res.y);
 		fieldfd = fopen(wfsinfo->skyfile, "r");
-		if (fieldfd == NULL) {
-			io->msg(IO_INFO, "Skyfield file (%s) could not be opened, will create skyfield calibration later (%s).", wfsinfo->skyfile, strerror(errno));
-			wfsinfo->skyim = gsl_matrix_float_calloc(wfsinfo->res.x, wfsinfo->res.y);
-		}
-		else {
-			io->msg(IO_INFO, "Skyfield file found and, trying to import into memory.");
-			wfsinfo->skyim = gsl_matrix_float_calloc(wfsinfo->res.x, wfsinfo->res.y);
+		if (fieldfd != NULL) {
+			io->msg(IO_INFO, "Loading skyfield file (%s)...", wfsinfo->skyfile);
 			gsl_matrix_float_fscanf(fieldfd, wfsinfo->skyim);
 			fclose(fieldfd);
 		}
@@ -410,13 +364,13 @@ void checkAOConfig(control_t *ptc) {
 				ptc->wfs[i].bpp = 8;
 			}
 			
-			// check dark, flat and sky calibration files, allocate memory if necessary
+			// check dark, flat and sky calibration files
 			checkFieldFiles(&(ptc->wfs[i]));
 			
 			// allocate memory for corrected image
 			ptc->wfs[0].corrim = gsl_matrix_float_alloc(ptc->wfs[0].res.x, ptc->wfs[0].res.y);
 			
-			// check scandir
+			// check scan direction
 			if (ptc->wfs[i].scandir != AO_AXES_XY && ptc->wfs[i].scandir != AO_AXES_Y && ptc->wfs[i].scandir != AO_AXES_X) {
 				io->msg(IO_WARN, "Scandir not set to either AO_AXES_XY, AO_AXES_X or AO_AXES_Y, defaulting to AO_AXES_XY");
 				ptc->wfs[i].scandir = AO_AXES_XY;
@@ -447,8 +401,7 @@ void checkAOConfig(control_t *ptc) {
 			}
 			
 			if (ptc->wfc[0].type != WFC_DM && ptc->wfc[0].type != WFC_TT) {
-				io->msg(IO_WARN, "Unknown WFC type (not WFC_DM, nor WFC_TT). Defaulting to WFC_DM");
-				ptc->wfc[0].type = WFC_DM;
+				io->msg(IO_ERR, "Unknown WFC type (not WFC_DM, nor WFC_TT).");
 			}
 		}
 	}
@@ -487,12 +440,6 @@ void checkAOConfig(control_t *ptc) {
 }
 
 void checkFOAMConfig(config_t *conf) {
-	// check port to listen on, must be sane (1 -- 2^16-1), or default to 10000
-	if (conf->listenport < 1 || conf->listenport > 65535) {
-		io->msg(IO_WARN, "Warning, port invalid, choose between 1 and 65535. Defaulting to 10000.");
-		conf->listenport = 10000;
-	}
-	
 	// Check the info, error and debug files that we possibly have to log to
 	initLogFiles();
 	

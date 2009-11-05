@@ -1,5 +1,5 @@
-/* lib/config.h.  Generated from config.h.in by configure.  */
-/* lib/config.h.in.  Generated from configure.ac by autoheader.  */
+/* foam/config.h.  Generated from config.h.in by configure.  */
+/* foam/config.h.in.  Generated from configure.ac by autoheader.  */
 
 /* Define to 1 if you have the <GLUT/glut.h> header file. */
 /* #undef HAVE_GLUT_GLUT_H */
