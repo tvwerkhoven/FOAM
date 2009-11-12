@@ -35,7 +35,7 @@
 
 // INCLUDES //
 /************/
-#include "config.h"
+#include "autoconfig.h"
 
 // these were used in ITIFG
 //#include <sys/select.h> //?

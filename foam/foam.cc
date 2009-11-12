@@ -33,6 +33,7 @@
 // HEADERS //
 /***********/
 
+#include "autoconfig.h"
 #include "foam.h"
 #include "types.h"
 #include "io.h"

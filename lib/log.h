@@ -38,6 +38,7 @@
 #include <gsl/gsl_linalg.h>			// for vectors and stuff
 #include <stdbool.h>				// for true and false
 #include <pthread.h> 				// threads
+#include <string.h> 				// string functions
 #include <syslog.h> 				// used for syslogging
 #include "types.h"   		        // for custom datatypes
 
