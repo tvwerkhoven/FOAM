@@ -114,7 +114,7 @@ int modInitModule(control_t *ptc, config_t *cs_config) {
 	
 	// configure cs_config here
 	cs_config->listenip = "0.0.0.0";	// listen on any IP by defaul
-	cs_config->listenport = 10000;		// listen on port 10000 by default
+	cs_config->listenport = "1025";		// listen on port 10000 by default
 	cs_config->use_syslog = false;		// don't use the syslog
 	cs_config->syslog_prepend = "foam-stat";	// prepend logging with 'foam-stat'
 	cs_config->use_stdout = true;		// do use stdout
@@ -409,250 +409,250 @@ int modMessage(control_t *ptc, const client_t *client, char *list[], const int c
 	int tmpint;
 	float tmpfloat;
 	
- 	if (strncmp(list[0],"help",3) == 0) {
-		// give module specific help here
-		if (count > 1) { 
-			
-			if (strncmp(list[1], "disp",3) == 0) {
-				tellClient(client->buf_ev, "\
-200 OK HELP DISPLAY\n\
-display <source>:       change the display source.\n\
-   <sources:>\n\
-   raw:                 direct images from the camera.\n\
-   cfull:               full dark/flat corrected images.\n\
-   cfast:               fast partial dark/flat corrected images.\n\
-   dark:                show the darkfield being used.\n\
-   flat:                show the flatfield being used.\n\
-   <overlays:>\n\
-   subap:               toggle displat of the subapertures.\n\
-   grid:                toggle display of the grid.\n\
-   vecs:                toggle display of the displacement vectors.\n\
-   col [i] [i] [i]:     change the overlay color (OpenGL only).\
-");
-			}
-			else if (strncmp(list[1], "vid",3) == 0) {
-				tellClient(client->buf_ev, "\
-200 OK HELP VID\n\
-vid <mode> [val]:       configure the video output.\n\
-   auto:                use auto contrast/brightness.\n\
-   c [i]:               use manual c/b with this contrast.\n\
-   b [i]:               use manual c/b with this brightness.\
-");
-			}
-			else if (strncmp(list[1], "set",3) == 0) {
-				tellClient(client->buf_ev, "\
-200 OK HELP SET\n\
-set [prop] [val]:       set or query property values.\n\
-   lf [i]:              set the logfraction.\n\
-   ff [i]:              set the number of frames to use for dark/flats.\n\
-   samini [f]:          set the minimum intensity for subapt selection.\n\
-   samxr [i]:           set maxr used for subapt selection.\n\
-   -:                   if no prop is given, query the values.\
-");
-			}
-			else if (strncmp(list[1], "cal",3) == 0) {
-				tellClient(client->buf_ev, "\
-200 OK HELP CALIBRATE\n\
-calibrate <mode>:       calibrate the ao system.\n\
-   dark:                take a darkfield by averaging %d frames.\n\
-   flat:                take a flatfield by averaging %d frames.\n\
-   gain:                calc dark/gain to do actual corrections with.\n\
-   selsubap:            select some subapertures.\
-", ptc->wfs[0].fieldframes, ptc->wfs[0].fieldframes);
-			}
-			else // we don't know. tell this to parseCmd by returning 0
-				return 0;
-		}
-		else {
-			tellClient(client->buf_ev, "\
-=== prime module options ===\n\
-display <source>:       tell foam what display source to use.\n\
-vid <auto|c|v> [i]:     use autocontrast/brightness, or set manually.\n\
-resetdm [i]:            reset the DM to a certain voltage for all acts. def=0\n\
-resetdaq [i]:           reset the DAQ analog outputs to a certain voltage. def=0\n\
-set [prop]:             set or query certain properties.\n\
-calibrate <mode>:       calibrate the ao system (dark, flat, subapt, etc).\
-");
-		}
-	}
-#ifdef FOAM_SIMSTAT_DISPLAY
- 	else if (strncmp(list[0], "disp",3) == 0) {
-		if (count > 1) {
-			if (strncmp(list[1], "raw",3) == 0) {
-				tellClient(client->buf_ev, "200 OK DISPLAY RAW");
-				disp.dispsrc = DISPSRC_RAW;
-			}
-			else if (strncmp(list[1], "cfull",3) == 0) {
-				disp.dispsrc = DISPSRC_FULLCALIB;
-				tellClient(client->buf_ev, "200 OK DISPLAY CALIB");
-			}
-			else if (strncmp(list[1], "cfast",3) == 0) {
-				disp.dispsrc = DISPSRC_FASTCALIB;
-				tellClient(client->buf_ev, "200 OK DISPLAY CALIB");
-			}
-			else if (strncmp(list[1], "grid",3) == 0) {
-				io->msg(IO_DEB1, "overlay was: %d, is: %d, mask: %d", disp.dispover, disp.dispover ^ DISPOVERLAY_GRID, DISPOVERLAY_GRID);
-				disp.dispover ^= DISPOVERLAY_GRID;
-				tellClient(client->buf_ev, "200 OK TOGGLING GRID OVERLAY");
-			}
-			else if (strncmp(list[1], "subaps",3) == 0) {
-				disp.dispover ^= DISPOVERLAY_SUBAPS;
-				tellClient(client->buf_ev, "200 OK TOGGLING SUBAPERTURE OVERLAY");
-			}
-			else if (strncmp(list[1], "vectors",3) == 0) {
-				disp.dispover ^= DISPOVERLAY_VECTORS;
-				tellClient(client->buf_ev, "200 OK TOGGLING DISPLACEMENT VECTOR OVERLAY");
-			}
-			else if (strncmp(list[1], "col",3) == 0) {
-				if (count > 4) {
-					disp.col.r = strtol(list[2], NULL, 10);
-					disp.col.g = strtol(list[3], NULL, 10);
-					disp.col.b = strtol(list[4], NULL, 10);
-					tellClient(client->buf_ev, "200 OK COLOR IS NOW (%d,%d,%d)", disp.col.r, disp.col.g, disp.col.b);
-				}
-				else {
-					tellClient(client->buf_ev, "402 COLOR REQUIRES RGB FLOAT TRIPLET");
-				}
-			}
-			else if (strncmp(list[1], "dark",3) == 0) {
-				if  (ptc->wfs[0].darkim == NULL) {
-					tellClient(client->buf_ev, "400 ERROR DARKFIELD NOT AVAILABLE");
-				}
-				else {
-					disp.dispsrc = DISPSRC_DARK;
-					tellClient(client->buf_ev, "200 OK DISPLAY DARK");
-				}
-			}
-			else if (strncmp(list[1], "flat",3) == 0) {
-				if  (ptc->wfs[0].flatim == NULL) {
-					tellClient(client->buf_ev, "400 ERROR FLATFIELD NOT AVAILABLE");
-				}
-				else {
-					disp.dispsrc = DISPSRC_FLAT;
-					tellClient(client->buf_ev, "200 OK DISPLAY FLAT");
-				}
-			}
-			else {
-				tellClient(client->buf_ev, "401 UNKNOWN DISPLAY");
-			}
-		}
-		else {
-			tellClient(client->buf_ev, "402 DISPLAY REQUIRES ARGS");
-		}
-	}
-#endif
- 	else if (strncmp(list[0], "set",3) == 0) {
-		if (count > 2) {
-			tmpint = strtol(list[2], NULL, 10);
-			tmpfloat = strtof(list[2], NULL);
-			if (strcmp(list[1], "lf") == 0) {
-				ptc->logfrac = tmpint;
-				tellClient(client->buf_ev, "200 OK SET LOGFRAC TO %d", tmpint);
-			}
-			else if (strcmp(list[1], "ff") == 0) {
-				ptc->wfs[0].fieldframes = tmpint;
-				tellClient(client->buf_ev, "200 OK SET FIELDFRAMES TO %d", tmpint);
-			}
-			else if (strcmp(list[1], "samini") == 0) {
-				shtrack.samini = tmpfloat;
-				tellClient(client->buf_ev, "200 OK SET SAMINI TO %.2f", tmpfloat);
-			}
-			else if (strcmp(list[1], "samxr") == 0) {
-				shtrack.samxr = tmpint;
-				tellClient(client->buf_ev, "200 OK SET SAMXR TO %d", tmpint);
-			}
-			else {
-				tellClient(client->buf_ev, "401 UNKNOWN PROPERTY, CANNOT SET");
-			}
-		}
-		else {
-			tellClient(client->buf_ev, "200 OK VALUES AS FOLLOWS:\n\
-logfrac (lf):           %d\n\
-fieldframes (ff):       %d\n\
-SH array:               %dx%d cells\n\
-cell size:              %dx%d pixels\n\
-track size:             %dx%d pixels\n\
-ccd size:               %dx%d pixels\n\
-samxr:                  %d\n\
-samini:                 %.2f\n\
-", ptc->logfrac, ptc->wfs[0].fieldframes, shtrack.cells.x, shtrack.cells.y,\
-shtrack.shsize.x, shtrack.shsize.y, shtrack.track.x, shtrack.track.y, ptc->wfs[0].res.x, ptc->wfs[0].res.y, shtrack.samxr, shtrack.samini);
-		}
-	}
- 	else if (strncmp(list[0], "vid",3) == 0) {
-		if (count > 1) {
-			if (strncmp(list[1], "auto",3) == 0) {
-				disp.autocontrast = 1;
-				tellClient(client->buf_ev, "200 OK USING AUTO SCALING");
-			}
-			else if (strcmp(list[1], "c") == 0) {
-				if (count > 2) {
-					tmpfloat = strtof(list[2], NULL);
-					disp.autocontrast = 0;
-					disp.contrast = tmpfloat;
-					tellClient(client->buf_ev, "200 OK CONTRAST %f", tmpfloat);
-				}
-				else {
-					tellClient(client->buf_ev, "402 NO CONTRAST GIVEN");
-				}
-			}
-			else if (strcmp(list[1], "b") == 0) {
-				if (count > 2) {
-					tmpint = strtol(list[2], NULL, 10);
-					disp.autocontrast = 0;
-					disp.brightness = tmpint;
-					tellClient(client->buf_ev, "200 OK BRIGHTNESS %d", tmpint);
-				}
-				else {
-					tellClient(client->buf_ev, "402 NO BRIGHTNESS GIVEN");
-				}
-			}
-			else {
-				tellClient(client->buf_ev, "401 UNKNOWN VID");
-			}
-		}
-		else {
-			tellClient(client->buf_ev, "402 VID REQUIRES ARGS");
-		}
-	}
- 	else if (strncmp(list[0], "cal",3) == 0) {
-		if (count > 1) {
-			if (strncmp(list[1], "dark",3) == 0) {
-				ptc->mode = AO_MODE_CAL;
-				ptc->calmode = CAL_DARK;
-                tellClient(client->buf_ev, "200 OK DARKFIELDING NOW");
-				pthread_cond_signal(&mode_cond);
-				// add message to the users
-			}
-			else if (strncmp(list[1], "sel",3) == 0) {
-				ptc->mode = AO_MODE_CAL;
-				ptc->calmode = CAL_SUBAPSEL;
-                tellClient(client->buf_ev, "200 OK SELECTING SUBAPTS");
-				pthread_cond_signal(&mode_cond);
-			}
-			else if (strncmp(list[1], "flat",3) == 0) {
-				ptc->mode = AO_MODE_CAL;
-				ptc->calmode = CAL_FLAT;
-				tellClient(client->buf_ev, "200 OK FLATFIELDING NOW");
-				pthread_cond_signal(&mode_cond);
-			}
-			else if (strncmp(list[1], "gain",3) == 0) {
-				ptc->mode = AO_MODE_CAL;
-				ptc->calmode = CAL_DARKGAIN;
-				tellClient(client->buf_ev, "200 OK CALCULATING DARK/GAIN NOW");
-				pthread_cond_signal(&mode_cond);
-			}
-			else {
-				tellClient(client->buf_ev, "401 UNKNOWN CALIBRATION");
-			}
-		}
-		else {
-			tellClient(client->buf_ev, "402 CALIBRATE REQUIRES ARGS");
-		}
-	}
-	else { // no valid command found? return 0 so that the main thread knows this
-		return 0;
-	} // strcmp stops here
+//    if (strncmp(list[0],"help",3) == 0) {
+//    // give module specific help here
+//    if (count > 1) { 
+//      
+//      if (strncmp(list[1], "disp",3) == 0) {
+//        tellClient(client->buf_ev, "\
+// 200 OK HELP DISPLAY\n\
+// display <source>:       change the display source.\n\
+//    <sources:>\n\
+//    raw:                 direct images from the camera.\n\
+//    cfull:               full dark/flat corrected images.\n\
+//    cfast:               fast partial dark/flat corrected images.\n\
+//    dark:                show the darkfield being used.\n\
+//    flat:                show the flatfield being used.\n\
+//    <overlays:>\n\
+//    subap:               toggle displat of the subapertures.\n\
+//    grid:                toggle display of the grid.\n\
+//    vecs:                toggle display of the displacement vectors.\n\
+//    col [i] [i] [i]:     change the overlay color (OpenGL only).\
+// ");
+//      }
+//      else if (strncmp(list[1], "vid",3) == 0) {
+//        tellClient(client->buf_ev, "\
+// 200 OK HELP VID\n\
+// vid <mode> [val]:       configure the video output.\n\
+//    auto:                use auto contrast/brightness.\n\
+//    c [i]:               use manual c/b with this contrast.\n\
+//    b [i]:               use manual c/b with this brightness.\
+// ");
+//      }
+//      else if (strncmp(list[1], "set",3) == 0) {
+//        tellClient(client->buf_ev, "\
+// 200 OK HELP SET\n\
+// set [prop] [val]:       set or query property values.\n\
+//    lf [i]:              set the logfraction.\n\
+//    ff [i]:              set the number of frames to use for dark/flats.\n\
+//    samini [f]:          set the minimum intensity for subapt selection.\n\
+//    samxr [i]:           set maxr used for subapt selection.\n\
+//    -:                   if no prop is given, query the values.\
+// ");
+//      }
+//      else if (strncmp(list[1], "cal",3) == 0) {
+//        tellClient(client->buf_ev, "\
+// 200 OK HELP CALIBRATE\n\
+// calibrate <mode>:       calibrate the ao system.\n\
+//    dark:                take a darkfield by averaging %d frames.\n\
+//    flat:                take a flatfield by averaging %d frames.\n\
+//    gain:                calc dark/gain to do actual corrections with.\n\
+//    selsubap:            select some subapertures.\
+// ", ptc->wfs[0].fieldframes, ptc->wfs[0].fieldframes);
+//      }
+//      else // we don't know. tell this to parseCmd by returning 0
+//        return 0;
+//    }
+//    else {
+//      tellClient(client->buf_ev, "\
+// === prime module options ===\n\
+// display <source>:       tell foam what display source to use.\n\
+// vid <auto|c|v> [i]:     use autocontrast/brightness, or set manually.\n\
+// resetdm [i]:            reset the DM to a certain voltage for all acts. def=0\n\
+// resetdaq [i]:           reset the DAQ analog outputs to a certain voltage. def=0\n\
+// set [prop]:             set or query certain properties.\n\
+// calibrate <mode>:       calibrate the ao system (dark, flat, subapt, etc).\
+// ");
+//    }
+//  }
+// #ifdef FOAM_SIMSTAT_DISPLAY
+//    else if (strncmp(list[0], "disp",3) == 0) {
+//    if (count > 1) {
+//      if (strncmp(list[1], "raw",3) == 0) {
+//        tellClient(client->buf_ev, "200 OK DISPLAY RAW");
+//        disp.dispsrc = DISPSRC_RAW;
+//      }
+//      else if (strncmp(list[1], "cfull",3) == 0) {
+//        disp.dispsrc = DISPSRC_FULLCALIB;
+//        tellClient(client->buf_ev, "200 OK DISPLAY CALIB");
+//      }
+//      else if (strncmp(list[1], "cfast",3) == 0) {
+//        disp.dispsrc = DISPSRC_FASTCALIB;
+//        tellClient(client->buf_ev, "200 OK DISPLAY CALIB");
+//      }
+//      else if (strncmp(list[1], "grid",3) == 0) {
+//        io->msg(IO_DEB1, "overlay was: %d, is: %d, mask: %d", disp.dispover, disp.dispover ^ DISPOVERLAY_GRID, DISPOVERLAY_GRID);
+//        disp.dispover ^= DISPOVERLAY_GRID;
+//        tellClient(client->buf_ev, "200 OK TOGGLING GRID OVERLAY");
+//      }
+//      else if (strncmp(list[1], "subaps",3) == 0) {
+//        disp.dispover ^= DISPOVERLAY_SUBAPS;
+//        tellClient(client->buf_ev, "200 OK TOGGLING SUBAPERTURE OVERLAY");
+//      }
+//      else if (strncmp(list[1], "vectors",3) == 0) {
+//        disp.dispover ^= DISPOVERLAY_VECTORS;
+//        tellClient(client->buf_ev, "200 OK TOGGLING DISPLACEMENT VECTOR OVERLAY");
+//      }
+//      else if (strncmp(list[1], "col",3) == 0) {
+//        if (count > 4) {
+//          disp.col.r = strtol(list[2], NULL, 10);
+//          disp.col.g = strtol(list[3], NULL, 10);
+//          disp.col.b = strtol(list[4], NULL, 10);
+//          tellClient(client->buf_ev, "200 OK COLOR IS NOW (%d,%d,%d)", disp.col.r, disp.col.g, disp.col.b);
+//        }
+//        else {
+//          tellClient(client->buf_ev, "402 COLOR REQUIRES RGB FLOAT TRIPLET");
+//        }
+//      }
+//      else if (strncmp(list[1], "dark",3) == 0) {
+//        if  (ptc->wfs[0].darkim == NULL) {
+//          tellClient(client->buf_ev, "400 ERROR DARKFIELD NOT AVAILABLE");
+//        }
+//        else {
+//          disp.dispsrc = DISPSRC_DARK;
+//          tellClient(client->buf_ev, "200 OK DISPLAY DARK");
+//        }
+//      }
+//      else if (strncmp(list[1], "flat",3) == 0) {
+//        if  (ptc->wfs[0].flatim == NULL) {
+//          tellClient(client->buf_ev, "400 ERROR FLATFIELD NOT AVAILABLE");
+//        }
+//        else {
+//          disp.dispsrc = DISPSRC_FLAT;
+//          tellClient(client->buf_ev, "200 OK DISPLAY FLAT");
+//        }
+//      }
+//      else {
+//        tellClient(client->buf_ev, "401 UNKNOWN DISPLAY");
+//      }
+//    }
+//    else {
+//      tellClient(client->buf_ev, "402 DISPLAY REQUIRES ARGS");
+//    }
+//  }
+// #endif
+//    else if (strncmp(list[0], "set",3) == 0) {
+//    if (count > 2) {
+//      tmpint = strtol(list[2], NULL, 10);
+//      tmpfloat = strtof(list[2], NULL);
+//      if (strcmp(list[1], "lf") == 0) {
+//        ptc->logfrac = tmpint;
+//        tellClient(client->buf_ev, "200 OK SET LOGFRAC TO %d", tmpint);
+//      }
+//      else if (strcmp(list[1], "ff") == 0) {
+//        ptc->wfs[0].fieldframes = tmpint;
+//        tellClient(client->buf_ev, "200 OK SET FIELDFRAMES TO %d", tmpint);
+//      }
+//      else if (strcmp(list[1], "samini") == 0) {
+//        shtrack.samini = tmpfloat;
+//        tellClient(client->buf_ev, "200 OK SET SAMINI TO %.2f", tmpfloat);
+//      }
+//      else if (strcmp(list[1], "samxr") == 0) {
+//        shtrack.samxr = tmpint;
+//        tellClient(client->buf_ev, "200 OK SET SAMXR TO %d", tmpint);
+//      }
+//      else {
+//        tellClient(client->buf_ev, "401 UNKNOWN PROPERTY, CANNOT SET");
+//      }
+//    }
+//    else {
+//      tellClient(client->buf_ev, "200 OK VALUES AS FOLLOWS:\n\
+// logfrac (lf):           %d\n\
+// fieldframes (ff):       %d\n\
+// SH array:               %dx%d cells\n\
+// cell size:              %dx%d pixels\n\
+// track size:             %dx%d pixels\n\
+// ccd size:               %dx%d pixels\n\
+// samxr:                  %d\n\
+// samini:                 %.2f\n\
+// ", ptc->logfrac, ptc->wfs[0].fieldframes, shtrack.cells.x, shtrack.cells.y,\
+// shtrack.shsize.x, shtrack.shsize.y, shtrack.track.x, shtrack.track.y, ptc->wfs[0].res.x, ptc->wfs[0].res.y, shtrack.samxr, shtrack.samini);
+//    }
+//  }
+//    else if (strncmp(list[0], "vid",3) == 0) {
+//    if (count > 1) {
+//      if (strncmp(list[1], "auto",3) == 0) {
+//        disp.autocontrast = 1;
+//        tellClient(client->buf_ev, "200 OK USING AUTO SCALING");
+//      }
+//      else if (strcmp(list[1], "c") == 0) {
+//        if (count > 2) {
+//          tmpfloat = strtof(list[2], NULL);
+//          disp.autocontrast = 0;
+//          disp.contrast = tmpfloat;
+//          tellClient(client->buf_ev, "200 OK CONTRAST %f", tmpfloat);
+//        }
+//        else {
+//          tellClient(client->buf_ev, "402 NO CONTRAST GIVEN");
+//        }
+//      }
+//      else if (strcmp(list[1], "b") == 0) {
+//        if (count > 2) {
+//          tmpint = strtol(list[2], NULL, 10);
+//          disp.autocontrast = 0;
+//          disp.brightness = tmpint;
+//          tellClient(client->buf_ev, "200 OK BRIGHTNESS %d", tmpint);
+//        }
+//        else {
+//          tellClient(client->buf_ev, "402 NO BRIGHTNESS GIVEN");
+//        }
+//      }
+//      else {
+//        tellClient(client->buf_ev, "401 UNKNOWN VID");
+//      }
+//    }
+//    else {
+//      tellClient(client->buf_ev, "402 VID REQUIRES ARGS");
+//    }
+//  }
+//    else if (strncmp(list[0], "cal",3) == 0) {
+//    if (count > 1) {
+//      if (strncmp(list[1], "dark",3) == 0) {
+//        ptc->mode = AO_MODE_CAL;
+//        ptc->calmode = CAL_DARK;
+//                 tellClient(client->buf_ev, "200 OK DARKFIELDING NOW");
+//        pthread_cond_signal(&mode_cond);
+//        // add message to the users
+//      }
+//      else if (strncmp(list[1], "sel",3) == 0) {
+//        ptc->mode = AO_MODE_CAL;
+//        ptc->calmode = CAL_SUBAPSEL;
+//                 tellClient(client->buf_ev, "200 OK SELECTING SUBAPTS");
+//        pthread_cond_signal(&mode_cond);
+//      }
+//      else if (strncmp(list[1], "flat",3) == 0) {
+//        ptc->mode = AO_MODE_CAL;
+//        ptc->calmode = CAL_FLAT;
+//        tellClient(client->buf_ev, "200 OK FLATFIELDING NOW");
+//        pthread_cond_signal(&mode_cond);
+//      }
+//      else if (strncmp(list[1], "gain",3) == 0) {
+//        ptc->mode = AO_MODE_CAL;
+//        ptc->calmode = CAL_DARKGAIN;
+//        tellClient(client->buf_ev, "200 OK CALCULATING DARK/GAIN NOW");
+//        pthread_cond_signal(&mode_cond);
+//      }
+//      else {
+//        tellClient(client->buf_ev, "401 UNKNOWN CALIBRATION");
+//      }
+//    }
+//    else {
+//      tellClient(client->buf_ev, "402 CALIBRATE REQUIRES ARGS");
+//    }
+//  }
+//  else { // no valid command found? return 0 so that the main thread knows this
+//    return 0;
+//  } // strcmp stops here
 	
 	// if we end up here, we didn't return 0, so we found a valid command
 	return 1;

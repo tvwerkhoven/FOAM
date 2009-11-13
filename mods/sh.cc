@@ -44,27 +44,28 @@
 // HEADERS //
 /***********/
 
-#include "foam_modules-sh.h"
+#include "sh.h"
+#include "io.h"
 
 // ROUTINES //
 /************/
+extern Io *io;
 
 int shInit(wfs_t *wfsinfo, mod_sh_track_t *shtrack) {
-	logInfo(0, "Initializing SH tracking module");
+	io->msg(IO_INFO, "Initializing SH tracking module");
 	
-	shtrack->subc = calloc(shtrack->cells.x * shtrack->cells.y, sizeof(coord_t));
-	shtrack->gridc = calloc(shtrack->cells.x * shtrack->cells.y , sizeof(coord_t));
+	shtrack->subc = (coord_t *) calloc(shtrack->cells.x * shtrack->cells.y, sizeof(coord_t));
+	shtrack->gridc = (coord_t *) calloc(shtrack->cells.x * shtrack->cells.y , sizeof(coord_t));
+	if (shtrack->subc == NULL || shtrack->gridc == NULL) {
+		io->msg(IO_ERR, "Could not allocate memory in shInit()!");
+		return EXIT_FAILURE;
+	}
+	
 	// we store displacement coordinates here
 	shtrack->disp = gsl_vector_float_calloc(shtrack->cells.x * shtrack->cells.y * 2);
 	// we store reference coordinates here
 	shtrack->refc = gsl_vector_float_calloc(shtrack->cells.x * shtrack->cells.y * 2);
 	
-	if (shtrack->subc == NULL || shtrack->gridc == NULL || shtrack->disp == NULL || \
-		shtrack->refc == NULL) {
-		// this is actually superfluous, errors handled by gsl
-		logErr("Could not allocate memory in shInit()!");
-		return EXIT_FAILURE;
-	}
 	
 	// allocate data for dark (nsubaps.x * nsubaps.y * subapsize). As we're 
 	// using bpp images, we need twice that bitdepth for dark and flats. align 
@@ -78,7 +79,7 @@ int shInit(wfs_t *wfsinfo, mod_sh_track_t *shtrack) {
 
 	// check if allocation worked
 	if (wfsinfo->dark == NULL || wfsinfo->gain == NULL || wfsinfo->corr == NULL) {
-		logErr("Could not allocate memory in shInit()!");
+		io->msg(IO_ERR, "Could not allocate memory in shInit()!");
 		return EXIT_FAILURE;
 	}
 
@@ -111,16 +112,16 @@ int shSelSubapts(void *image, foam_datat_t data, mod_sh_align_t align, mod_sh_tr
 		if (byteimg[i] > max) max = byteimg[i];
 		else if (byteimg[i] < min) min = byteimg[i];
 	}	
-	logInfo(0, "Image info: sum: %f, avg: %f, range: (%d,%d)", sum, (float) sum / (shwfs->res.x*shwfs->res.y), min, max);
+	io->msg(IO_INFO, "Image info: sum: %f, avg: %f, range: (%d,%d)", sum, (float) sum / (shwfs->res.x*shwfs->res.y), min, max);
 	 */
 	if (align != ALIGN_RECT) {
-		logWarn("Other alignments besides simple rectangles not supported by shSelSubapts");
+		io->msg(IO_WARN, "Other alignments besides simple rectangles not supported by shSelSubapts");
 		return EXIT_FAILURE;
 	}
 
 	sum = 0;
 	
-	logInfo(0, "Selecting subapertures now.");
+	io->msg(IO_INFO, "Selecting subapertures now.");
 	for (isy=0; isy<shtrack->cells.y; isy++) { // loops over all potential subapertures
 		for (isx=0; isx<shtrack->cells.x; isx++) {
 			// set apmap and apmap2 to zero
@@ -173,14 +174,14 @@ int shSelSubapts(void *image, foam_datat_t data, mod_sh_align_t align, mod_sh_tr
 				apmap[isx][isy] = 1; // set aperture map
 				shtrack->gridc[sn].x = isx;
 				shtrack->gridc[sn].y = isy;
-				//logDebug(0, "cog (%.2f,%.2f) subc (%d,%d) gridc (%d,%d) sum %f (min: %f, max: %d)", cs[0], cs[1], shtrack->subc[sn].x, shtrack->subc[sn].y, isx, isy, csum, samini, samxr);
+				//io->msg(IO_DEB1, "cog (%.2f,%.2f) subc (%d,%d) gridc (%d,%d) sum %f (min: %f, max: %d)", cs[0], cs[1], shtrack->subc[sn].x, shtrack->subc[sn].y, isx, isy, csum, samini, samxr);
 				sn++;
 			} else {
 				apmap[isx][isy] = 0; // don't use this subapt if the intensity is too low
 			}
 		}
 	}
-	logInfo(0, "CoG for subapts done, found %d with intensity > 0.", sn);
+	io->msg(IO_INFO, "CoG for subapts done, found %d with intensity > 0.", sn);
 	
 	nsubap = sn; 			// nsubap: variable that contains number of subapertures
 	cx = cx / (float) sn; 	// TODO what does this do? why?
@@ -198,7 +199,7 @@ int shSelSubapts(void *image, foam_datat_t data, mod_sh_align_t align, mod_sh_tr
 			csa = i; 		// new best guess for central subaperture
 		}
 	}
-	logInfo(0, "Reference apt best guess: %d (%d,%d)", csa, shtrack->subc[csa].x, shtrack->subc[csa].y);
+	io->msg(IO_INFO, "Reference apt best guess: %d (%d,%d)", csa, shtrack->subc[csa].x, shtrack->subc[csa].y);
 	// put reference subaperture as subaperture 0
 	cs[0]				= shtrack->subc[0].x; 		cs[1]				= shtrack->subc[0].y;
 	shtrack->subc[0].x	= shtrack->subc[csa].x; 	shtrack->subc[0].y 	= shtrack->subc[csa].y;
@@ -266,10 +267,10 @@ int shSelSubapts(void *image, foam_datat_t data, mod_sh_align_t align, mod_sh_tr
 		}
 	}
 	
-	logInfo(0, "old subx=%d, old suby=%d",shtrack->subc[0].x, shtrack->subc[0].y);
+	io->msg(IO_INFO, "old subx=%d, old suby=%d",shtrack->subc[0].x, shtrack->subc[0].y);
 	shtrack->subc[0].x += (int) (cs[0]/csum+0.5) - shtrack->track.x; // +0.5 to prevent integer cropping rounding error
 	shtrack->subc[0].y += (int) (cs[1]/csum+0.5) - shtrack->track.y; // use track.x|y because or CoG is for a larger subapt (shsize and not shsize/2)
-	logInfo(0, "new subx=%d, new suby=%d",shtrack->subc[0].x, shtrack->subc[0].y);
+	io->msg(IO_INFO, "new subx=%d, new suby=%d",shtrack->subc[0].x, shtrack->subc[0].y);
 	
 	// enforce maximum radial distance from center of gravity of all
 	// potential subapertures if samxr is positive
@@ -296,13 +297,13 @@ int shSelSubapts(void *image, foam_datat_t data, mod_sh_align_t align, mod_sh_tr
 	while (samxr < 0) {
 		samxr = samxr + 1;
 		// print ASCII map of aperture
-		logInfo(0, "ASCII map of aperture:");
+		io->msg(IO_INFO, "ASCII map of aperture:");
 		for (isy=0; isy<shtrack->cells.y; isy++) {
-			logInfo(LOG_NOFORMAT, "%d:", isy);
+			io->msg(IO_INFO | IO_NOID, "%d:", isy);
 			for (isx=0; isx<shtrack->cells.x; isx++)
-				if (apmap[isx][isy] == 0) logInfo(LOG_NOFORMAT, " "); 
-				else logInfo(LOG_NOFORMAT, "X");
-			logInfo(LOG_NOFORMAT, "\n");
+				if (apmap[isx][isy] == 0) io->msg(IO_INFO | IO_NOID, " "); 
+				else io->msg(IO_INFO | IO_NOID, "X");
+			io->msg(IO_INFO | IO_NOID, "\n");
 		}
 		
 		// always take the reference subapt to the new map, 
@@ -340,7 +341,7 @@ int shSelSubapts(void *image, foam_datat_t data, mod_sh_align_t align, mod_sh_tr
 	}
 	//*totnsubap = nsubap;		// store to external variable
 	shtrack->nsubap = nsubap;
-	logInfo(0, "Selected %d usable subapertures", nsubap);
+	io->msg(IO_INFO, "Selected %d usable subapertures", nsubap);
 	
 	// WARNING! I don't know what goes wrong, but somehow x and y 
 	// are swapped. I manually reset it here, but this is indeed a 
@@ -348,25 +349,25 @@ int shSelSubapts(void *image, foam_datat_t data, mod_sh_align_t align, mod_sh_tr
 	/*
 	int tmpswap;
 	for (sn=0; sn<nsubap; sn++) {
-		logDebug(LOG_NOFORMAT, "before: (%d,%d) and (%d,%d) ", shtrack->gridc[sn].x, shtrack->gridc[sn].y, shtrack->subc[sn].x, shtrack->subc[sn].y);
+		io->msg(IO_DEB1 | IO_NOID, "before: (%d,%d) and (%d,%d) ", shtrack->gridc[sn].x, shtrack->gridc[sn].y, shtrack->subc[sn].x, shtrack->subc[sn].y);
 		tmpswap = shtrack->gridc[sn].y;
 		shtrack->gridc[sn].y = shtrack->gridc[sn].x;
 		shtrack->gridc[sn].x = tmpswap;
 		tmpswap = shtrack->subc[sn].y;
 		shtrack->subc[sn].y = shtrack->subc[sn].x;
 		shtrack->subc[sn].x = tmpswap;
-		logDebug(LOG_NOFORMAT, "after: (%d,%d) and (%d,%d)\n", shtrack->gridc[sn].x, shtrack->gridc[sn].y, shtrack->subc[sn].x, shtrack->subc[sn].y);
+		io->msg(IO_DEB1 | IO_NOID, "after: (%d,%d) and (%d,%d)\n", shtrack->gridc[sn].x, shtrack->gridc[sn].y, shtrack->subc[sn].x, shtrack->subc[sn].y);
 	}
 	*/
 	// END WARNING
 	
-	logInfo(0, "ASCII map of aperture:");
+	io->msg(IO_INFO, "ASCII map of aperture:");
 	for (isy=0; isy<shtrack->cells.y; isy++) {
-		logInfo(LOG_NOFORMAT, "%d:", isy);
+		io->msg(IO_INFO | IO_NOID, "%d:", isy);
 		for (isx=0; isx<shtrack->cells.x; isx++)
-			if (apmap[isx][isy] == 0) logInfo(LOG_NOFORMAT, " "); 
-			else logInfo(LOG_NOFORMAT, "X");
-		logInfo(LOG_NOFORMAT, "\n");
+			if (apmap[isx][isy] == 0) io->msg(IO_INFO | IO_NOID, " "); 
+			else io->msg(IO_INFO | IO_NOID, "X");
+		io->msg(IO_INFO | IO_NOID, "\n");
 	}
 	
 	// set remaining subaperture coordinates to 0
@@ -377,13 +378,13 @@ int shSelSubapts(void *image, foam_datat_t data, mod_sh_align_t align, mod_sh_tr
 		shtrack->gridc[sn].y = 0;
 	}
 	
-	logDebug(0, "Final gridcs:");
+	io->msg(IO_DEB1, "Final gridcs:");
 	for (sn=0; sn<nsubap; sn++) {
 		shtrack->gridc[sn].y *= shtrack->shsize.y;
 		shtrack->gridc[sn].x *= shtrack->shsize.x;
-		logDebug(LOG_NOFORMAT, "%d (%d,%d) ", sn, shtrack->gridc[sn].x, shtrack->gridc[sn].y);
+		io->msg(IO_DEB1 | IO_NOID, "%d (%d,%d) ", sn, shtrack->gridc[sn].x, shtrack->gridc[sn].y);
 	}
-	logDebug(LOG_NOFORMAT, "\n");
+	io->msg(IO_DEB1 | IO_NOID, "\n");
 	
 	return EXIT_SUCCESS;
 }
@@ -433,7 +434,7 @@ int shCogTrack(void *image, foam_datat_t data, mod_sh_align_t align, mod_sh_trac
 			}
 		}
 		else {
-				logWarn("Unknown datatype/alignment combination in shCogTrack");
+				io->msg(IO_WARN, "Unknown datatype/alignment combination in shCogTrack");
 				return EXIT_FAILURE;
 		}
 		sum += csum;
@@ -463,7 +464,7 @@ int shCogTrack(void *image, foam_datat_t data, mod_sh_align_t align, mod_sh_trac
 void shCogFind(wfs_t *wfsinfo, int xc, int yc, int width, int height, float samini, float *sumout, float *cog) {
 	int ix, iy;
 	coord_t res = wfsinfo->res;			// image resolution
-	float *image = wfsinfo->image;		// source image from sensor
+	float *image = (float *) wfsinfo->image;		// source image from sensor
 	image += yc * res.x + xc;				// forward the pointer to the right coordinate
 
 	float sum=0.0; float cs[] = {0.0, 0.0}; float csum = 0.0;
@@ -491,10 +492,10 @@ void shCogFind(wfs_t *wfsinfo, int xc, int yc, int width, int height, float sami
 
 
 int shCalcCtrl(control_t *ptc, mod_sh_track_t *shtrack, const int wfs, int nmodes) {
-	logDebug(LOG_SOMETIMES, "Calculating WFC ctrls");
+	//logDebug(LOG_SOMETIMES, "Calculating WFC ctrls");
 	// function assumes presence of dmmodes, singular and wfsmodes...
 	if (shtrack->dmmodes == NULL || shtrack->singular == NULL || shtrack->wfsmodes == NULL) {
-		logWarn("Cannot calculate WFC ctrls, calibration incomplete.");
+		io->msg(IO_WARN, "Cannot calculate WFC ctrls, calibration incomplete.");
 		return EXIT_FAILURE;
 	}
 	
@@ -513,7 +514,7 @@ int shCalcCtrl(control_t *ptc, mod_sh_track_t *shtrack, const int wfs, int nmode
 	if (nmodes <= 0) 
 		nmodes = nacttot;
 	else if (nmodes > nacttot) {
-		logWarn("nmodes cannot be higher than the total number of actuators, cropping.");
+		io->msg(IO_WARN, "nmodes cannot be higher than the total number of actuators, cropping.");
 		nmodes = nacttot;
 	}
 
@@ -530,7 +531,7 @@ int shCalcCtrl(control_t *ptc, mod_sh_track_t *shtrack, const int wfs, int nmode
 	oldsize = shtrack->disp->size;
 	shtrack->disp->size = nsubap*2;
 	
-	logDebug(LOG_SOMETIMES, "Calculating control stuff for WFS %d (modes: %d)", wfs, nmodes);
+	//logDebug(LOG_SOMETIMES, "Calculating control stuff for WFS %d (modes: %d)", wfs, nmodes);
 //	for (i=0; i < nsubap; i++)
 //		logDebug(LOG_SOMETIMES | LOG_NOFORMAT, "(%f, %f)", gsl_vector_float_get(shtrack->disp, 2*i+0), gsl_vector_float_get(shtrack->disp, 2*i+1));
 //		
@@ -580,7 +581,7 @@ int shCalcCtrl(control_t *ptc, mod_sh_track_t *shtrack, const int wfs, int nmode
 	// to each WFC. In doing so we apply the gain at the same time, 
 	// as the calculated controls are actually *corrections* to the
 	// control commands already being used
-	logDebug(LOG_SOMETIMES, "Storing reconstructed actuator command to separate vectors");
+	//logDebug(LOG_SOMETIMES, "Storing reconstructed actuator command to separate vectors");
 	j=0;
 	float old, ctrl;
 	for (wfc=0; wfc< ptc->wfc_count; wfc++) {
@@ -673,8 +674,8 @@ int shParseSH(gsl_matrix_float *image, int (*subc)[2], int (*gridc)[2], int nsub
 	
 	rmsx = sqrt(rmsx/nsubap);
 	rmsy = sqrt(rmsy/nsubap);
-	logInfo(LOG_SOMETIMES, "RMS displacement wrt reference: x: %.3f, y: %.3f", rmsx, rmsy);
-	logInfo(LOG_SOMETIMES, "Max abs disp in tracker window (<(.5, .5)): (%.3f, %.3f)", maxx, maxy);
+	// logInfo(LOG_SOMETIMES, "RMS displacement wrt reference: x: %.3f, y: %.3f", rmsx, rmsy);
+	// logInfo(LOG_SOMETIMES, "Max abs disp in tracker window (<(.5, .5)): (%.3f, %.3f)", maxx, maxy);
 	
 	return EXIT_SUCCESS;
 }

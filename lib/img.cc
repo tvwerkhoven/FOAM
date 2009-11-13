@@ -19,7 +19,7 @@
  $Id$
  */
 /*! 
-	@file foam_modules-img.c
+	@file img.cc
 	@author Tim van Werkhoven (t.i.m.vanwerkhoven@xs4all.nl)
 	@date 2008-07-09
 
@@ -56,7 +56,10 @@
 // HEADERS //
 /***********/
 
-#include "foam_modules-img.h"
+#include "img.h"
+#include "io.h"
+
+extern Io *io;
 
 // ROUTINES //
 /************/
@@ -66,7 +69,7 @@ int imgReadIMGSurf(char *fname, SDL_Surface **surf) {
 	
 	*surf = IMG_Load(fname);
 	if (!*surf) {
-		logWarn("IMG_Load: %s", IMG_GetError());
+		io->msg(IO_WARN, "IMG_Load: %s", IMG_GetError());
 		return EXIT_FAILURE;
 	}
 	
@@ -87,7 +90,7 @@ int imgReadIMGArrByte(char *fname, uint8_t **img, coord_t *outres) {
 	// copy image from SDL_Surface to *img
 	*img = (uint8_t *) malloc(sdlimg->w * sdlimg->h * sizeof(uint8_t));
 	if (*img == NULL)
-		logErr("Failed to allocate memory in modReadIMGArr().");
+		return io->msg(IO_ERR, "Failed to allocate memory in modReadIMGArr().");
 		
 	outres->x = sdlimg->w;
 	outres->y = sdlimg->h;
@@ -99,7 +102,7 @@ int imgReadIMGArrByte(char *fname, uint8_t **img, coord_t *outres) {
 			(*img)[y*sdlimg->w + x] = (uint8_t) pix;
 			if (pix > max) { 
 				max = pix;
-				//logDebug(0, "max update at (%d, %d): %d\n", x,y, max);
+				//io->msg(IO_DEB1, "max update at (%d, %d): %d\n", x,y, max);
 			}
 			else if (pix < min) min = pix;
 			sum += pix;
@@ -108,7 +111,7 @@ int imgReadIMGArrByte(char *fname, uint8_t **img, coord_t *outres) {
 	
 	SDL_FreeSurface(sdlimg);
 
-	logDebug(0, "imgReadIMGArrByte: Read byte image (%dx%d), min: %f, max: %f, sum: %f, avg: %f", outres->x, outres->y, min, max, sum, sum/(outres->x * outres->y));
+	io->msg(IO_DEB1, "imgReadIMGArrByte: Read byte image (%dx%d), min: %f, max: %f, sum: %f, avg: %f", outres->x, outres->y, min, max, sum, sum/(outres->x * outres->y));
 	
 	return EXIT_SUCCESS;
 }
@@ -123,12 +126,12 @@ int imgWritePGMSurf(char *fname, SDL_Surface *img, int maxval, int pgmtype) {
 	
 	fd = fopen(fname,"wb+");
 	if (!fd) {
-		logWarn("Error, cannot open file %s: %s", fname, strerror(errno));
+		io->msg(IO_WARN, "Error, cannot open file %s: %s", fname, strerror(errno));
 		return EXIT_FAILURE;
 	}
 	
 	if (maxval > 65535 || maxval < 0) {
-		logWarn("Cannot write PGM file with maximum value %d (must be 0--65536)", maxval);
+		io->msg(IO_WARN, "Cannot write PGM file with maximum value %d (must be 0--65536)", maxval);
 		return EXIT_FAILURE;
 	}
 	
@@ -194,7 +197,7 @@ int imgInitBuf(mod_imgbuf_t *buf) {
 	// Init an image buffer here, malloc some data
 	buf->data = malloc(buf->initalloc);
 	if (buf->data == NULL) {
-		logErr("Cannot allocate memory for image buffer!");
+		io->msg(IO_ERR, "Cannot allocate memory for image buffer!");
 		return EXIT_FAILURE;
 	}
 	
@@ -204,7 +207,7 @@ int imgInitBuf(mod_imgbuf_t *buf) {
 	buf->imgused = 0;
 	buf->use = true;
 
-	logInfo(0, "Successfully initialized image buffer for %d bytes", buf->initalloc);
+	io->msg(IO_INFO, "Successfully initialized image buffer for %d bytes", buf->initalloc);
 	
 	return EXIT_SUCCESS;
 }
@@ -224,7 +227,7 @@ int imgSaveToBuf(mod_imgbuf_t *buf, void *img, foam_datat_t datatype, coord_t re
 		
 		// If the ptr is NULL, we're out of luck :(
 		if (newptr == NULL) {
-			logWarn("Image buffer re-allocation failed, stopping image buffering.");
+			io->msg(IO_WARN, "Image buffer re-allocation failed, stopping image buffering.");
 			buf->use = false;
 			return EXIT_FAILURE;
 		}
@@ -235,13 +238,13 @@ int imgSaveToBuf(mod_imgbuf_t *buf, void *img, foam_datat_t datatype, coord_t re
 		// to the new allocation, frees the old allocation, and returns a pointer to
 		// the allocated memory."
 		else if (newptr != buf->data) {
-			logWarn("Image buffer re-allocation problematic, stopping buffering");
+			io->msg(IO_WARN, "Image buffer re-allocation problematic, stopping buffering");
 			buf->data = newptr;
 			buf->use = false;
 			return EXIT_FAILURE;
 		}
 		else {
-			logInfo(0, "Image buffer size increased successfully");
+			io->msg(IO_INFO, "Image buffer size increased successfully");
 			buf->size += buf->initalloc;
 		}
 	}
@@ -265,7 +268,7 @@ int imgSaveToBuf(mod_imgbuf_t *buf, void *img, foam_datat_t datatype, coord_t re
 
 int imgDumpBuf(mod_imgbuf_t *buf, control_t *ptc) {
 	if (buf->data == NULL) {
-		logWarn("Image buffer data not allocated, cannot dump");
+		io->msg(IO_WARN, "Image buffer data not allocated, cannot dump");
 		return EXIT_FAILURE;
 	}
 
@@ -273,14 +276,14 @@ int imgDumpBuf(mod_imgbuf_t *buf, control_t *ptc) {
 	char fname[128];
 	int i, fail=0;
 	
-	logInfo(0, "Writing %d frames to disk....", buf->imgused);
+	io->msg(IO_INFO, "Writing %d frames to disk....", buf->imgused);
 	for (i=0; i<buf->imgused; i++) {
 		// Get the pointer to the right data, which is located at buf->data + the offset
 		// of the images we have already written to disk (i). To get the right pointer,
 		// convert the void data ptr to the right datatype, and then add the correct offset,
 		// and convert it back to a void pointer to it can be passed on to imgWritePGMArr.
 		void *currimg = (void *) (((uint8_t *) buf->data) + i * buf->imgsize);
-		snprintf(fname, 128, FOAM_DATADIR FOAM_CONFIG_PRE "-bufdump-%05d.pgm", ptc->capped);
+		snprintf(fname, 128, FOAM_DATADIR "foam-bufdump-%05d.pgm", ptc->capped);
 		//logDebug(LOG_NOFORMAT, " %d",i);
 		if (imgWritePGMArr(fname, currimg, DATA_UINT8, buf->imgres, 0, 1) != EXIT_SUCCESS) 
 			fail++;
@@ -292,9 +295,9 @@ int imgDumpBuf(mod_imgbuf_t *buf, control_t *ptc) {
 
 	// Finish, report any fails if they happened.
 	if (fail > 0)
-		logInfo(0, "Wrote %d out of %d images successfully to disk", buf->imgused-fail, buf->imgused);
+		io->msg(IO_INFO, "Wrote %d out of %d images successfully to disk", buf->imgused-fail, buf->imgused);
 	else 
-		logInfo(0, "Buffer successfully written to disk");
+		io->msg(IO_INFO, "Buffer successfully written to disk");
 
 	// Reset the buffer for further usage
 	buf->imgused = 0;
@@ -320,12 +323,12 @@ int imgWritePGMArr(char *fname, void *img, foam_datat_t datatype, coord_t res, i
 
 	fd = fopen(fname,"wb+");
 	if (!fd) {
-		logWarn("Error, cannot open file %s: %s", fname, strerror(errno));
+		io->msg(IO_WARN, "Error, cannot open file %s: %s", fname, strerror(errno));
 		return EXIT_FAILURE;
 	}
 	
 	if (maxval > 65535 || maxval < 0) {
-		logWarn("Cannot write PGM file with maximum value %d (must be 0--65536)", maxval);
+		io->msg(IO_WARN, "Cannot write PGM file with maximum value %d (must be 0--65536)", maxval);
 		return EXIT_FAILURE;
 	}
 
@@ -538,7 +541,7 @@ int imgStorPNGArr(char *filename, char *post, int seq, float *img, coord_t res) 
 	
 //	for (i = 0; i < ptc.wfs_count; i++) {
 	snprintf(filename, COMMANDLEN, "foam_capture-%s_%05d-%s.png", date, seq, post);
-	logDebug(0, "Storing capture to %s", filename);
+	io->msg(IO_DEB1, "Storing capture to %s", filename);
 	imgWritePNGArr(filename, img, res, 0);
 //	}
 	
@@ -556,7 +559,7 @@ int imgStorPNGSurf(char *filename, char *post, int seq, SDL_Surface *img) {
 	strftime (date, 64, "%Y%m%d_%H%M%S", loctime);
 
 	snprintf(filename, COMMANDLEN, "foam_capture-%s_%05d-%s.png", date, seq, post);
-	logDebug(0, "Storing capture to %s", filename);
+	io->msg(IO_DEB1, "Storing capture to %s", filename);
 	imgWritePNGSurf(filename, img);
 	
 	return EXIT_SUCCESS;	

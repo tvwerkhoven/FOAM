@@ -41,7 +41,7 @@
  \li \b FOAM_DEBUG (*undef*), ifdef, gives lowlevel debug information
  */
 
-#include "foam_modules-serial.h"
+#include "serial.h"
 
 int serialSetPort(const char *port, const char *cmd) {
 	int fd;

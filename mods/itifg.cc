@@ -74,7 +74,7 @@
  
  */
 
-#include "foam_modules-itifg.h"
+#include "itifg.h"
 
 int itifgInitBoard(mod_itifg_cam_t *cam) {
 	int flags = O_RDWR | O_APPEND | O_SYNC; 

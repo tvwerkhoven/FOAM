@@ -35,6 +35,8 @@
 
 // INCLUDES //
 /************/
+#include <gsl/gsl_linalg.h> 		// this is for SVD / matrix datatype
+#include <pthread.h>
 #include "autoconfig.h"
 
 // these were used in ITIFG
@@ -161,7 +163,7 @@ typedef enum { // aomode_t
 typedef enum {
 	DATA_UINT8,			//!< ID for uint8_t
 	DATA_UINT16,		//!< ID for uint16_t
-	DATA_FL,			//!< ID for float
+	DATA_FL,			  //!< ID for float
 	DATA_GSL_M_F,		//!< ID for gsl_matrix_float
 	DATA_GSL_V_F		//!< ID for gsl_vector_float
 } foam_datat_t;

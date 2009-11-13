@@ -74,7 +74,11 @@
 // HEADERS //
 /***********/
 
-#include "foam_modules-dispcommon.h"
+#include <inttypes.h>
+#include "dispcommon.h"
+#include "io.h"
+
+extern Io *io;
 
 // GLOBAL VARIABLES //
 /********************/
@@ -228,10 +232,8 @@ static void drawPixel(SDL_Surface *screen, int x, int y, Uint8 R, Uint8 G, Uint8
 /************/
 
 int displayInit(mod_display_t *disp) {
-    if (SDL_Init(SDL_INIT_VIDEO) == -1) {
-		logWarn("Could not initialize SDL: %s", SDL_GetError());
-		return EXIT_FAILURE;
-	}
+  if (SDL_Init(SDL_INIT_VIDEO) == -1)
+		return io->msg(IO_WARN, "Could not initialize SDL: %s", SDL_GetError());
 	
 	atexit(SDL_Quit);
 	
@@ -240,10 +242,9 @@ int displayInit(mod_display_t *disp) {
 	disp->flags = SDL_HWSURFACE | SDL_DOUBLEBUF;
 	disp->screen = SDL_SetVideoMode(disp->res.x, disp->res.y, 0, disp->flags);
 	
-	if (disp->screen == NULL) {
-		logWarn("Unable to set video: %s", SDL_GetError());
-		return EXIT_FAILURE;
-	}
+	if (disp->screen == NULL)
+		return io->msg(IO_WARN, "Unable to set video: %s", SDL_GetError());
+	
 	return EXIT_SUCCESS;
 }
 
@@ -461,7 +462,7 @@ int displayGSLImg(gsl_matrix_float *gslimg, mod_display_t *disp, int doscale) {
 	float min, max;
 	// we want to display a GSL image, copy it over the normal image 
 	if (tmpimg_b == NULL)
-		tmpimg_b = malloc(disp->res.x * disp->res.y);
+		tmpimg_b = (uint8_t *) malloc(disp->res.x * disp->res.y);
 	
 	if (doscale == 1) {
 		// although this calls seem to be fast code (asm optimized or something)

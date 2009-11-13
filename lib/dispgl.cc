@@ -73,7 +73,7 @@
 // HEADERS //
 /***********/
 
-#include "foam_modules-dispcommon.h"
+#include "dispcommon.h"
 
 // PRIVATE ROUTINES //
 /********************/

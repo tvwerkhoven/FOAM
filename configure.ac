@@ -13,12 +13,12 @@ Makefile
 lib/Makefile
 foam/Makefile
 conf/Makefile
+data/Makefile
 testing/Makefile
 ])
 
 # These are the configuration- and data-directories
-# TODO: necessary?
-FOAMCONFDIR=$datadir/conf/
+FOAMCONFDIR=$datadir/foam/
 FOAMDATADIR=./
 AC_SUBST(FOAMCONFDIR)
 AC_SUBST(FOAMDATADIR)
@@ -109,23 +109,23 @@ if test "$simstat" = true ; then
 		[],
 		AC_MSG_WARN([This package needs SDL in simstat mode]))
 	
-	AC_SEARCH_LIBS([IMG_Load], [SDL_image], [SIMSTAT_LIBS+=" -lSDL_image"], 
+	AC_SEARCH_LIBS([IMG_Load], [SDL_image], [SIMSTAT_LIBS+="-lSDL_image "], 
 		[AC_MSG_WARN([This package needs SDL_image in simstat mode.]);
 		simstat=false;
 		simstatmissing+=" sdl-image"])
 	
-	AC_SEARCH_LIBS([gdImageCreate], [gd], [SIMSTAT_LIBS+=" -lgd"], 
+	AC_SEARCH_LIBS([gdImageCreate], [gd], [SIMSTAT_LIBS+="-lgd "], 
 		[AC_MSG_WARN([This package needs gd in simstat mode.]);
 		simstat=false;
 		simstatmissing+=" gd"])
 	
-	AC_SEARCH_LIBS([gdImagePng], [png], [SIMSTAT_LIBS+=" -lpng"], 
+	AC_SEARCH_LIBS([gdImagePng], [png], [SIMSTAT_LIBS+="-lpng "], 
 		[AC_MSG_WARN([This package needs png in simstat mode.]);
 		simstat=false;
 		simstatmissing+=" png"])
 	
-	SIMSTAT_CFLAGS+="$SDL_CFLAGS"
-	SIMSTAT_LIBS+="$SDL_LIBS"
+	SIMSTAT_CFLAGS+=" $SDL_CFLAGS "
+	SIMSTAT_LIBS+=" $SDL_LIBS "
 else 
 	AC_MSG_NOTICE([*** Static simulation disabled])
 fi
@@ -165,6 +165,12 @@ fi
 
 AC_MSG_NOTICE([===============Summary================])
 
+if test "$dummy" = true ; then
+	AC_MSG_NOTICE([Dummy mode:              available])
+else
+	AC_MSG_NOTICE([Dummy mode               disabled])
+fi
+
 if test "$simstat" = true ; then
 	AC_MSG_NOTICE([Static sim mode:         available])
 elif test "$simstat" = disabled; then
@@ -175,9 +181,9 @@ else
 fi
 
 if test "$hwdebug" = true ; then
-	AC_MSG_NOTICE([hwdebug mode:            available])
+	AC_MSG_NOTICE([Hardware debug mode:     available])
 else
-	AC_MSG_NOTICE([hwdebug mode:            disabled])
+	AC_MSG_NOTICE([Hardware debug mode      disabled])
 fi
 
 AC_MSG_NOTICE([======================================])

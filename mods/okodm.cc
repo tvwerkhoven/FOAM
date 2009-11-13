@@ -68,7 +68,7 @@
 // HEADERS //
 /***********/
 
-#include "foam_modules-okodm.h"
+#include "okodm.h"
 
 // LOCAL FUNCTIONS //
 /*******************/

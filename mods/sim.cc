@@ -53,7 +53,7 @@
 // HEADERS //
 /***********/
 
-#include "foam_modules-sim.h"
+#include "sim.h"
 
 // ROUTINES //
 /************/

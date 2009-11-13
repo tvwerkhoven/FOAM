@@ -62,7 +62,10 @@
 // HEADERS //
 /***********/
 
-#include "foam_modules-calib.h"
+#include "calib.h"
+#include "io.h"
+
+extern Io *io;
 
 // ROUTINES //
 /************/
@@ -71,18 +74,14 @@ int calibPinhole(control_t *ptc, int wfs, mod_sh_track_t *shtrack) {
 	int i, j;
 	FILE *fd;
 	
-	if (shtrack->nsubap == 0) {
-		logWarn("Cannot calibrate reference coordinates if subapertures are not selected yet");
-		return EXIT_FAILURE;
-	}
+	if (shtrack->nsubap == 0)
+		return io->msg(IO_WARN, "Cannot calibrate reference coordinates if subapertures are not selected yet");
 	
 	// Set filterwheel to pinhole and set voltages to 180V. This must be done
 	// by the prime module and is provided through the function 
 	// drvSetupHardware().
-	if (drvSetupHardware(ptc, ptc->mode, ptc->calmode) != EXIT_SUCCESS) {
-		logWarn("Could not setup hardware for pinhole calibration");
-		return EXIT_FAILURE;
-	}
+	if (drvSetupHardware(ptc, ptc->mode, ptc->calmode) != EXIT_SUCCESS)
+		return io->msg(IO_WARN, "Could not setup hardware for pinhole calibration");
 	
 	// set all actuators to the center
 	for (i=0; i < ptc->wfc_count; i++) {
@@ -96,27 +95,25 @@ int calibPinhole(control_t *ptc, int wfs, mod_sh_track_t *shtrack) {
 	// displacement, and does not modify the hardware in any way (TT, DM).
 	// This does not seem like a stringent requirement so I'm leaving it at this.
 	if (modOpenInit(ptc) != EXIT_SUCCESS || modOpenLoop(ptc) == EXIT_FAILURE ||
-		modOpenFinish(ptc) != EXIT_SUCCESS) {
-		logWarn("Could not run an open loop for pinhole calibration");
-		return EXIT_FAILURE;
-	}
+		modOpenFinish(ptc) != EXIT_SUCCESS)
+		return io->msg(IO_WARN, "Could not run an open loop for pinhole calibration");
 	
 	// collect displacement vectors and store as reference
-	logInfo(0, "Found following reference coordinates:");
+	io->msg(IO_INFO, "Found following reference coordinates:");
 	for (j=0; j < shtrack->nsubap; j++) {
 		gsl_vector_float_set(shtrack->refc, 2*j+0, gsl_vector_float_get(shtrack->disp, 2*j+0)); // x
 		gsl_vector_float_set(shtrack->refc, 2*j+1, gsl_vector_float_get(shtrack->disp, 2*j+1)); // y
 				
-		logInfo(LOG_NOFORMAT, "(%f,%f) ", gsl_vector_float_get(shtrack->refc, 2*j+0), gsl_vector_float_get(shtrack->refc, 2*j+1));
+		io->msg(IO_INFO | IO_NOID, "(%f,%f) ", gsl_vector_float_get(shtrack->refc, 2*j+0), gsl_vector_float_get(shtrack->refc, 2*j+1));
 	}	
-	logInfo(LOG_NOFORMAT, "\n");
+	io->msg(IO_INFO | IO_NOID, "\n");
 	
 	// storing to file:
 	fd = fopen(shtrack->pinhole, "w+");
-	if (!fd) logWarn("Could not open file %s: %s", shtrack->pinhole, strerror(errno));
+	if (!fd) io->msg(IO_WARN, "Could not open file %s: %s", shtrack->pinhole, strerror(errno));
 	gsl_vector_float_fprintf(fd, shtrack->refc, "%.10f");
 	fclose(fd);
-	logInfo(0, "Successfully stored reference coordinates to %s.", shtrack->pinhole);
+	io->msg(IO_INFO, "Successfully stored reference coordinates to %s.", shtrack->pinhole);
 	
 	return EXIT_SUCCESS;
 }
@@ -126,7 +123,7 @@ int calibPinholeChk(control_t *ptc, int wfs, mod_sh_track_t *shtrack) {
 	
 	fd = fopen(shtrack->pinhole, "r");
 	if (!fd) {
-		logWarn("Could not open file %s: %s", shtrack->pinhole, strerror(errno));
+		io->msg(IO_WARN, "Could not open file %s: %s", shtrack->pinhole, strerror(errno));
 		return EXIT_FAILURE;
 	}
 	gsl_vector_float_fscanf(fd, shtrack->refc);
@@ -146,19 +143,19 @@ int calibWFC(control_t *ptc, int wfs, mod_sh_track_t *shtrack) {
 	gsl_matrix_float *infl;
 	
 	if (shtrack->nsubap == 0) {
-		logWarn("Cannot calibrate influence function if subapertures are not selected yet");
+		io->msg(IO_WARN, "Cannot calibrate influence function if subapertures are not selected yet");
 		return EXIT_FAILURE;
 	}
 	
-	logInfo(0, "Starting WFC influence function calibration for WFS %d", wfs);
+	io->msg(IO_INFO, "Starting WFC influence function calibration for WFS %d", wfs);
 	
 	// delete SVD files:
 	asprintf(&file, "%s-singular", shtrack->influence);
-	if (unlink(file) != 0) logWarn("Problem removing old SVD files: %s", strerror(errno));
+	if (unlink(file) != 0) io->msg(IO_WARN, "Problem removing old SVD files: %s", strerror(errno));
 	asprintf(&file, "%s-wfsmodes", shtrack->influence);
-	if (unlink(file) != 0) logWarn("Problem removing old SVD files: %s", strerror(errno));
+	if (unlink(file) != 0) io->msg(IO_WARN, "Problem removing old SVD files: %s", strerror(errno));
 	asprintf(&file, "%s-dmmodes", shtrack->influence);
-	if (unlink(file) != 0) logWarn("Problem removing old SVD files: %s", strerror(errno));
+	if (unlink(file) != 0) io->msg(IO_WARN, "Problem removing old SVD files: %s", strerror(errno));
 		
 	// set hardware correctly for this calibration
 	drvSetupHardware(ptc, ptc->mode, ptc->calmode);
@@ -177,19 +174,19 @@ int calibWFC(control_t *ptc, int wfs, mod_sh_track_t *shtrack) {
 	nsubap = shtrack->nsubap;
 	float q0x[nsubap], q0y[nsubap];
 
-	logDebug(0, "Allocating temporary matrix to store influence function (%d x %d)", nsubap*2, nacttot);
+	io->msg(IO_DEB1, "Allocating temporary matrix to store influence function (%d x %d)", nsubap*2, nacttot);
 	// this will store the influence matrix (which calculates displacements given actuator signals)
 	infl = gsl_matrix_float_calloc(nsubap*2, nacttot);
 				
-	logInfo(0, "Calibrating WFCs using %d actuators and WFS %d with %d subapts, storing in %s.", \
+	io->msg(IO_INFO, "Calibrating WFCs using %d actuators and WFS %d with %d subapts, storing in %s.", \
 		nacttot, wfs, nsubap, shtrack->influence);
-	logInfo(0, "Measuring each act %d times, skipping %d frames each time.", \
+	io->msg(IO_INFO, "Measuring each act %d times, skipping %d frames each time.", \
 			shtrack->measurecount, shtrack->skipframes);
 			
 	for (wfc=0; wfc < ptc->wfc_count; wfc++) { // loop over all wave front correctors 
 		nact = ptc->wfc[wfc].nact;
 		
-		logInfo(0, "Startin WFC %d calibration with calibration range: (%.2f, %.2f)", \
+		io->msg(IO_INFO, "Startin WFC %d calibration with calibration range: (%.2f, %.2f)", \
 				wfc, ptc->wfc[wfc].calrange[0], ptc->wfc[wfc].calrange[1]);
 		
 		for (j=0; j<nact; j++) { // loop over all actuators  and all subapts for (wfc,wfs)
@@ -199,7 +196,7 @@ int calibWFC(control_t *ptc, int wfs, mod_sh_track_t *shtrack) {
 				q0y[i] = 0.0;
 			}
 
-			logInfo(0, "Act %d/%d (WFC %d/%d)", j+1, ptc->wfc[wfc].nact, wfc+1, ptc->wfc_count);
+			io->msg(IO_INFO, "Act %d/%d (WFC %d/%d)", j+1, ptc->wfc[wfc].nact, wfc+1, ptc->wfc_count);
 	
 			origvolt = gsl_vector_float_get(ptc->wfc[wfc].ctrl, j);
 	
@@ -214,7 +211,7 @@ int calibWFC(control_t *ptc, int wfs, mod_sh_track_t *shtrack) {
 		
 				for (skip=0; skip< shtrack->skipframes + 1; skip++) { // skip some frames here
 					modOpenLoop(ptc);
-					logInfo(LOG_NOFORMAT, ".");
+					io->msg(IO_INFO | IO_NOID, ".");
 				}
 				
 		
@@ -229,9 +226,9 @@ int calibWFC(control_t *ptc, int wfs, mod_sh_track_t *shtrack) {
 						
 				for (skip=0; skip< shtrack->skipframes +1; skip++) { // skip some frames here
 					modOpenLoop(ptc);
-					logInfo(LOG_NOFORMAT, ".");
+					io->msg(IO_INFO | IO_NOID, ".");
 				}
-				logInfo(LOG_NOFORMAT, "\n");
+				io->msg(IO_INFO | IO_NOID, "\n");
 		
 				// take the shifts and subtract those store those (wrt to reference shifts)
 	    		for (i=0;i<nsubap;i++) { 
@@ -256,18 +253,18 @@ int calibWFC(control_t *ptc, int wfs, mod_sh_track_t *shtrack) {
 	modOpenFinish(ptc);
 	
 	fd = fopen(shtrack->influence, "w+");
-	if (!fd) logErr("Could not open file %s: %s", shtrack->influence, strerror(errno));
+	if (!fd) io->msg(IO_ERR, "Could not open file %s: %s", shtrack->influence, strerror(errno));
 	gsl_matrix_float_fprintf(fd, infl, "%.10f");
 	fclose(fd);
 	
 	// save metadata too (nact, n measurements, nsubap);
 	asprintf(&file, "%s-meta", shtrack->influence);
 	fd = fopen(file, "w+");
-	if (!fd) logErr("Could not open file for saving metadata %s: %s", file, strerror(errno));
+	if (!fd) io->msg(IO_ERR, "Could not open file for saving metadata %s: %s", file, strerror(errno));
 	fprintf(fd, "%d\n%d\n%d\n", nacttot, nsubap, 2*nsubap);
 	fclose(fd);
 
-	logInfo(0, "WFS %d (%s) influence function successfully saved for in file %s", wfs, ptc->wfs[wfs].name, shtrack->influence);
+	io->msg(IO_INFO, "WFS %d (%s) influence function successfully saved for in file %s", wfs, ptc->wfs[wfs].name, shtrack->influence);
 	
 	calibSVDGSL(ptc, wfs, shtrack);
 	
@@ -280,13 +277,13 @@ int calibWFCChk(control_t *ptc, int wfs, mod_sh_track_t *shtrack) {
 	char *outfile;
 	FILE *fd;
 	
-	logInfo(0, "Checking if influence function calibration can be loaded from files");
+	io->msg(IO_INFO, "Checking if influence function calibration can be loaded from files");
 	// calculate total nr of act for all wfc
 	for (i=0; i< ptc->wfc_count; i++)
 		nacttot += ptc->wfc[i].nact;
 	
 	if (shtrack->nsubap == 0) {
-		logWarn("Cannot load influence function if subapertures are not selected yet");
+		io->msg(IO_WARN, "Cannot load influence function if subapertures are not selected yet");
 		return EXIT_FAILURE;
 	}
 	
@@ -295,17 +292,17 @@ int calibWFCChk(control_t *ptc, int wfs, mod_sh_track_t *shtrack) {
 	asprintf(&outfile, "%s-meta", shtrack->influence);
 	fd = fopen(outfile, "r");
 	if (!fd) {
-		logWarn("Could not open file %s: %s", outfile, strerror(errno));
+		io->msg(IO_WARN, "Could not open file %s: %s", outfile, strerror(errno));
 		return EXIT_FAILURE;
 	}
 	if (fscanf(fd, "%d\n%d\n", &chknact, &chksubap) != 2) {
-		logWarn("Could not read metadata from %s on calibration, please re-calibrate.", outfile);
+		io->msg(IO_WARN, "Could not read metadata from %s on calibration, please re-calibrate.", outfile);
 		return EXIT_FAILURE;
 	}
 	if (chknact != nacttot || chksubap != nsubap) {
-		logWarn("Calibration appears to be old, please re-calibrate");
-		logWarn("Calibration parameters do not match current system parameters:");
-		logWarn("# act: file: %d current: %d, nsubap: file: %d current: %d", chknact, nacttot, chksubap, nsubap);
+		io->msg(IO_WARN, "Calibration appears to be old, please re-calibrate");
+		io->msg(IO_WARN, "Calibration parameters do not match current system parameters:");
+		io->msg(IO_WARN, "# act: file: %d current: %d, nsubap: file: %d current: %d", chknact, nacttot, chksubap, nsubap);
 		return EXIT_FAILURE;
 	}
 		
@@ -316,7 +313,7 @@ int calibWFCChk(control_t *ptc, int wfs, mod_sh_track_t *shtrack) {
 	// read vector from file (should be made by calibSVDGSL)
 	fd = fopen(outfile, "r");
 	if (!fd) {
-		logWarn("Could not open singular values file %s: %s", outfile, strerror(errno));
+		io->msg(IO_WARN, "Could not open singular values file %s: %s", outfile, strerror(errno));
 		return EXIT_FAILURE;
 	}
 	// We set up SVD data (wfsmodes, singular, dmmodes) per WFS, i.e.
@@ -326,9 +323,9 @@ int calibWFCChk(control_t *ptc, int wfs, mod_sh_track_t *shtrack) {
 	// actuators in the system
 	if (shtrack->singular == NULL) {
 		shtrack->singular = gsl_vector_float_calloc(nacttot);
-		if (shtrack->singular == NULL) logErr("Failed to allocate memory for singular values vector.");
+		if (shtrack->singular == NULL) io->msg(IO_ERR, "Failed to allocate memory for singular values vector.");
 	}
-	logDebug(0, "Reading singular values into memory from %s now...", outfile);
+	io->msg(IO_DEB1, "Reading singular values into memory from %s now...", outfile);
 	gsl_vector_float_fscanf(fd, shtrack->singular);
 	fclose(fd);
 
@@ -340,15 +337,15 @@ int calibWFCChk(control_t *ptc, int wfs, mod_sh_track_t *shtrack) {
 	// read vector from file (should be made by calibSVDGSL)
 	fd = fopen(outfile, "r");
 	if (!fd) {
-		logWarn("Could not open file %s: %s", outfile, strerror(errno));
+		io->msg(IO_WARN, "Could not open file %s: %s", outfile, strerror(errno));
 		return EXIT_FAILURE;
 	}
 	if (shtrack->wfsmodes == NULL) {
 		shtrack->wfsmodes = gsl_matrix_float_calloc(nsubap*2, nacttot);
-		if (shtrack->wfsmodes == NULL) logErr("Failed to allocate memory for wfsmodes matrix.");
+		if (shtrack->wfsmodes == NULL) io->msg(IO_ERR, "Failed to allocate memory for wfsmodes matrix.");
 	}
 
-	logDebug(0, "Reading WFS modes into memory from %s now...", outfile);
+	io->msg(IO_DEB1, "Reading WFS modes into memory from %s now...", outfile);
 	gsl_matrix_float_fscanf(fd, shtrack->wfsmodes);
 	fclose(fd);
 	
@@ -359,19 +356,19 @@ int calibWFCChk(control_t *ptc, int wfs, mod_sh_track_t *shtrack) {
 	// read vector from file (from modSVDGSL)
 	fd = fopen(outfile, "r");
 	if (!fd) {
-		logWarn("Could not open file %s: %s", outfile, strerror(errno));
+		io->msg(IO_WARN, "Could not open file %s: %s", outfile, strerror(errno));
 		return EXIT_FAILURE;
 	}
 	if (shtrack->dmmodes == NULL) {
 		shtrack->dmmodes = gsl_matrix_float_calloc(nacttot, nacttot);
-		if (shtrack->dmmodes == NULL) logErr("Failed to allocate memory for dmmodes matrix.");
+		if (shtrack->dmmodes == NULL) io->msg(IO_ERR, "Failed to allocate memory for dmmodes matrix.");
 	}
 
-	logDebug(0, "Reading DM modes into memory from %s now...", outfile);
+	io->msg(IO_DEB1, "Reading DM modes into memory from %s now...", outfile);
 	gsl_matrix_float_fscanf(fd, shtrack->dmmodes);
 	fclose(fd);
 
-	logInfo(0, "Successfully read influence function calibration & decomposition into memory.");
+	io->msg(IO_INFO, "Successfully read influence function calibration & decomposition into memory.");
  	return EXIT_SUCCESS;
 }
 
@@ -380,13 +377,13 @@ int calibSVDGSL(control_t *ptc, int wfs, mod_sh_track_t *shtrack) {
 	int i, j, nact=0, nsubap = shtrack->nsubap;
 	double tmp;
 	if (nsubap == 0) {
-		logWarn("Cannot do SVD if no subapertures are selected");
+		io->msg(IO_WARN, "Cannot do SVD if no subapertures are selected");
 		return EXIT_FAILURE;
 	}
 	for (i=0; i< ptc->wfc_count; i++)
 		nact += ptc->wfc[i].nact;
 	
-	logInfo(0, "Doing SVD of influence function for %d subaps and %d actuators", nsubap, nact);
+	io->msg(IO_INFO, "Doing SVD of influence function for %d subaps and %d actuators", nsubap, nact);
 	// temporary matrices to store stuff in
 	gsl_matrix *mat, *v;
 	gsl_vector *sing, *work, *testin, *testout;
@@ -422,7 +419,7 @@ int calibSVDGSL(control_t *ptc, int wfs, mod_sh_track_t *shtrack) {
 	// read influence matrix from file (from calibWFC)
 	fd = fopen(shtrack->influence, "r");
 	if (!fd) {
-		logWarn("Could not open file %s: %s", shtrack->influence, strerror(errno));
+		io->msg(IO_WARN, "Could not open file %s: %s", shtrack->influence, strerror(errno));
 		return EXIT_FAILURE;
 	}
 	gsl_matrix_fscanf(fd, mat);
@@ -430,7 +427,7 @@ int calibSVDGSL(control_t *ptc, int wfs, mod_sh_track_t *shtrack) {
 	fclose(fd);
 	fd = fopen(shtrack->influence, "r");
 	if (!fd) {
-		logWarn("Could not open file %s: %s", shtrack->influence, strerror(errno));
+		io->msg(IO_WARN, "Could not open file %s: %s", shtrack->influence, strerror(errno));
 		return EXIT_FAILURE;
 	}
 	gsl_matrix_float_fscanf(fd, matf);
@@ -440,7 +437,7 @@ int calibSVDGSL(control_t *ptc, int wfs, mod_sh_track_t *shtrack) {
 	gsl_blas_dgemv(CblasNoTrans, 1.0, mat, testin, 0.0, testout);
 	gsl_blas_sgemv(CblasNoTrans, 1.0, matf, testinf, 0.0, testoutf);
 	
-	logInfo(0, "Performing SVD on matrix from %s. nsubap: %d, nact: %d.", shtrack->influence, nsubap, nact);
+	io->msg(IO_INFO, "Performing SVD on matrix from %s. nsubap: %d, nact: %d.", shtrack->influence, nsubap, nact);
 	
 	// perform SVD
 	gsl_linalg_SV_decomp(mat, v, sing, work);
@@ -450,31 +447,31 @@ int calibSVDGSL(control_t *ptc, int wfs, mod_sh_track_t *shtrack) {
 	// write matrix U to file (wfs modes):
 	asprintf(&outfile, "%s-wfsmodes", shtrack->influence);
 	fd = fopen(outfile, "w+");
-	if (!fd) logErr("Error opening output file %s: %s", outfile, strerror(errno));
+	if (!fd) io->msg(IO_ERR, "Error opening output file %s: %s", outfile, strerror(errno));
 	gsl_matrix_fprintf (fd, mat, "%.15lf");
 	fclose(fd);
 	
 	// write matrix V to file (wfs dmmodes):
 	asprintf(&outfile, "%s-dmmodes", shtrack->influence);
 	fd = fopen(outfile, "w+");
-	if (!fd) logErr("Error opening output file %s: %s", outfile, strerror(errno));
+	if (!fd) io->msg(IO_ERR, "Error opening output file %s: %s", outfile, strerror(errno));
 	gsl_matrix_fprintf (fd, v, "%.15lf");
 	fclose(fd);
 	
 	// write out singular values:
 	asprintf(&outfile, "%s-singular", shtrack->influence);
 	fd = fopen(outfile, "w+");
-	if (!fd) logErr("Error opening output file %s: %s", outfile, strerror(errno));
+	if (!fd) io->msg(IO_ERR, "Error opening output file %s: %s", outfile, strerror(errno));
 	gsl_vector_fprintf (fd, sing, "%.15lf");
 	fclose(fd);
 
-	logDebug(0, "Re-reading stored matrices and vector into memory");
+	io->msg(IO_DEB1, "Re-reading stored matrices and vector into memory");
 	if (calibWFCChk(ptc, wfs, shtrack) != EXIT_SUCCESS) {
-		logWarn("Re-reading stored SVD files failed.");
+		io->msg(IO_WARN, "Re-reading stored SVD files failed.");
 		return EXIT_FAILURE;
 	}
 	
-	logInfo(0, "SVD complete, sanity checking begins");
+	io->msg(IO_INFO, "SVD complete, sanity checking begins");
 	// check if the SVD worked:
 	// V^T . testin
 	// gsl_blas_sgemv(CblasTrans, 1.0, ptc->wfs[wfs].dmmodes, testin, 0.0, work);
@@ -513,26 +510,26 @@ int calibSVDGSL(control_t *ptc, int wfs, mod_sh_track_t *shtrack) {
 	double diffin=0, diffout=0;
 	float cond, min, max;
 	
-	logDebug(0, "Reconstruction test double: (values per line should be equal)");
+	io->msg(IO_DEB1, "Reconstruction test double: (values per line should be equal)");
 	for (j=0; j<nact; j++) {
 		diffin += gsl_vector_get(testinrec, j)/gsl_vector_get(testin, j);
-		logDebug(LOG_NOFORMAT, "%f, %f\n", gsl_vector_get(testinrec, j), gsl_vector_get(testin, j));
+		io->msg(IO_DEB1 | IO_NOID, "%f, %f\n", gsl_vector_get(testinrec, j), gsl_vector_get(testin, j));
 	}
 	diffin /= nact;
 	
-	logDebug(0, "Reconstruction test float: (values per line should be equal)");
+	io->msg(IO_DEB1, "Reconstruction test float: (values per line should be equal)");
 	for (j=0; j<nact; j++) {
 		diffout += gsl_vector_float_get(testinrecf, j)/gsl_vector_float_get(testinf, j);
-		logDebug(LOG_NOFORMAT, "%f, %f\n", gsl_vector_float_get(testinrecf, j), gsl_vector_float_get(testinf, j));
+		io->msg(IO_DEB1 | IO_NOID, "%f, %f\n", gsl_vector_float_get(testinrecf, j), gsl_vector_float_get(testinf, j));
 	}
 	diffout /= nact;
 	// get max and min to calculate condition
 	gsl_vector_float_minmax(shtrack->singular, &min, &max);
 	cond = max/min;
 
-	logInfo(0, "SVD Succeeded, decomposition (U, V and Sing) stored to files.");
-	logInfo(0, "SVD # of zero singvals (0 is good): %d. Condition (close to 1 would be nice): %lf.", singvals, cond);
-	logInfo(0, "SVD quality: in (double), in (float) ratio (must be 1): %lf and %lf", diffin, diffout);
+	io->msg(IO_INFO, "SVD Succeeded, decomposition (U, V and Sing) stored to files.");
+	io->msg(IO_INFO, "SVD # of zero singvals (0 is good): %d. Condition (close to 1 would be nice): %lf.", singvals, cond);
+	io->msg(IO_INFO, "SVD quality: in (double), in (float) ratio (must be 1): %lf and %lf", diffin, diffout);
 
 	return EXIT_SUCCESS;
 }

@@ -72,7 +72,7 @@
 // HEADERS //
 /***********/
 
-#include "foam_modules-daq2k.h"
+#include "daq2k.h"
 
 // LOCAL FUNCTIONS //
 /*******************/
