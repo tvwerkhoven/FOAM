@@ -11,7 +11,6 @@ AC_CONFIG_AUX_DIR([build-aux])
 AC_CONFIG_FILES([
 Makefile
 lib/Makefile
-libsiu/Makefile
 foam/Makefile
 conf/Makefile
 testing/Makefile
