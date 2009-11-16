@@ -58,6 +58,7 @@ foam_simstat_SOURCES = foam-simstatic.cc \
 		$(MODS_DIR)/sh.cc \
 		$(MODS_DIR)/calib.cc \
 		$(LIB_DIR)/img.cc \
+		$(LIB_DIR)/imgio.cc \
 		$(LIB_DIR)/log.cc
 
 # Are we using OpenGL or not?
@@ -72,6 +73,7 @@ foam_simstat_SOURCES += foam-simstatic.h \
 		$(MODS_DIR)/sh.h \
 		$(MODS_DIR)/calib.h \
 		$(LIB_DIR)/img.h \
+		$(LIB_DIR)/imgio.h \
 		$(LIB_DIR)/log.h \
 		$(LIB_DIR)/dispcommon.h
 

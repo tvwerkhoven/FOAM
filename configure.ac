@@ -67,8 +67,8 @@ AC_ARG_ENABLE([docs],
 		[test "$enableval" = yes && docs=disabled], [docs=true])
 
 AC_ARG_ENABLE([simstat],
-		AC_HELP_STRING([--enable-simstat], [build static simulation mode]),
-		[test "$enableval" = yes && simstat=true], [simstat=disabled])
+		AC_HELP_STRING([--disable-simstat], [build static simulation mode]),
+		[test "$enableval" = yes && simstat=disabled], [simstat=true])
 
 AC_ARG_ENABLE([debug],
 		AC_HELP_STRING([--enable-debug], [enable debugging mode]),
@@ -109,6 +109,11 @@ if test "$simstat" = true ; then
 		[],
 		AC_MSG_WARN([This package needs SDL in simstat mode]))
 	
+	PKG_CHECK_MODULES(CFITSIO, [cfitsio], [],
+		[AC_MSG_WARN([This package needs cfitsio in simstat mode.]);
+		simstat=false;
+		simstatmissing+=" cfitsio"])
+	
 	AC_SEARCH_LIBS([IMG_Load], [SDL_image], [SIMSTAT_LIBS+="-lSDL_image "], 
 		[AC_MSG_WARN([This package needs SDL_image in simstat mode.]);
 		simstat=false;
@@ -124,8 +129,8 @@ if test "$simstat" = true ; then
 		simstat=false;
 		simstatmissing+=" png"])
 	
-	SIMSTAT_CFLAGS+=" $SDL_CFLAGS "
-	SIMSTAT_LIBS+=" $SDL_LIBS "
+	SIMSTAT_CFLAGS+=" $SDL_CFLAGS $CFITSIO_CFLAGS"
+	SIMSTAT_LIBS+=" $SDL_LIBS $CFITSIO_LIBS"
 else 
 	AC_MSG_NOTICE([*** Static simulation disabled])
 fi

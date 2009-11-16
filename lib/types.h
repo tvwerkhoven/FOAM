@@ -37,7 +37,10 @@
 /************/
 #include <gsl/gsl_linalg.h> 		// this is for SVD / matrix datatype
 #include <pthread.h>
+#include <string>
 #include "autoconfig.h"
+
+using namespace std;
 
 // these were used in ITIFG
 //#include <sys/select.h> //?
@@ -360,18 +363,20 @@ typedef enum { // level_t
  should be ok).
  */
 typedef struct { // config_t
-	char *listenip;				//!< (user) IP to listen on, default "0.0.0.0"
-	char *listenport;				//!< (user) port to listen on, default 1010
+	string listenip;				//!< (user) IP to listen on, default "0.0.0.0"
+	string listenport;			//!< (user) port to listen on, default 1010
 	
-	char *infofile;				//!< (user) file to log info messages to, default none
-	FILE *infofd;				//!< (foam) associated filepointer
-	char *errfile;				//!< (user) file to log error messages to, default none
-	FILE *errfd;				//!< (foam) associated filepointer
-	char *debugfile;			//!< (user) file to log debug messages to, default none
+	string datadir;	//!< (user) path to data directory (pgm, fits files)
+	
+	string infofile;				//!< (user) file to log info messages to, default none
+	FILE *infofd;					//!< (foam) associated filepointer
+	string errfile;				//!< (user) file to log error messages to, default none
+	FILE *errfd;					//!< (foam) associated filepointer
+	string debugfile;			//!< (user) file to log debug messages to, default none
 	FILE *debugfd;				//!< (foam) associated filepointer
 	
 	bool use_syslog; 			//!< (user) syslog usage flag, default no
-	char *syslog_prepend;		//!< (user) string to prepend to syslogs, default "foam"
+	string syslog_prepend;	//!< (user) string to prepend to syslogs, default "foam"
 	bool use_stdout; 			//!< (user) stdout usage flag, default no
 	
 	level_t loglevel;			//!< (user) level to log, default LOG_DEBUG
