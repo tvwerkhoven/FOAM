@@ -32,38 +32,7 @@
 #include "foam.h"
 #include "io.h"
 
-//control_t *ptc;
-//  = { //!< Global struct to hold system characteristics and other data. Initialize with complete but minimal configuration
-//  .mode = AO_MODE_LISTEN,
-//  .calmode = CAL_INFL,
-//  .wfs_count = 0,
-//  .wfc_count = 0,
-//  .fw_count = 0,
-//  .frames = 0,
-//  .logfrac = 1000,
-//  .capped = 0,
-// };
-
-
-//config_t *cs_config;
-//  = { //!< Global struct to hold system configuration. Init with complete but minimal configuration
-//  .listenip = "0.0.0.0",  // listen on any IP by default, can be overridden by config file
-//  .listenport = 10000,  // listen on port 10000 by default
-//  .infofile = NULL,
-//  .infofd = NULL,
-//  .errfile = NULL,
-//  .errfd = NULL,
-//  .debugfile = NULL,
-//  .debugfd = NULL,
-//  .use_syslog = false,
-//  .syslog_prepend = "foam",
-//  .use_stdout = true,
-//  .loglevel = LOGDEBUG,
-//  .nthreads = 0
-// };
-
 conntrack_t clientlist;
-//struct event_base *sockbase;
 
 extern pthread_mutex_t mode_mutex;
 extern pthread_cond_t mode_cond;
@@ -71,13 +40,12 @@ extern Io *io;
 
 int modInitModule(control_t *ptc, config_t *cs_config) {
   io->msg(IO_INFO, "Running in dummy mode, don't expect great AO results :)");
-	//logInfo(0, "Running in dummy mode, don't expect great AO results :)");
 	
 	// populate ptc here
-	ptc->mode = AO_MODE_LISTEN;			// start in listen mode (safe bet, you probably want this)
+	ptc->mode = AO_MODE_LISTEN;		// start in listen mode
 	ptc->calmode = CAL_INFL;			// this is not really relevant
-	ptc->logfrac = 100;                 // log verbose messages only every 100 frames    
-	ptc->wfs_count = 1;					// 1 FW, WFS and WFC
+	ptc->logfrac = 100;           // log verbose messages only every 100 frames    
+	ptc->wfs_count = 1;						// 1 FW, WFS and WFC
 	ptc->wfc_count = 1;
 	ptc->fw_count = 1;
 	
@@ -92,9 +60,9 @@ int modInitModule(control_t *ptc, config_t *cs_config) {
 	ptc->wfs[0].res.x = 256;
 	ptc->wfs[0].res.y = 256;
 	ptc->wfs[0].bpp = 8;
-	ptc->wfs[0].darkfile = NULL;
-	ptc->wfs[0].flatfile = NULL;
-	ptc->wfs[0].skyfile = NULL;
+	ptc->wfs[0].darkfile = "";
+	ptc->wfs[0].flatfile = "";
+	ptc->wfs[0].skyfile = "";
 	ptc->wfs[0].scandir = AO_AXES_XY;
 	
 	// configure WFC 0
@@ -117,11 +85,7 @@ int modInitModule(control_t *ptc, config_t *cs_config) {
 	cs_config->listenport = "1025";		// listen on port 1010 by default
 	cs_config->use_syslog = false;		// don't use the syslog
 	cs_config->syslog_prepend = "foam";	// prepend logging with 'foam'
-	cs_config->use_stdout = true;		// do use stdout
-	cs_config->loglevel = LOGDEBUG;		// log error, info and debug
-	cs_config->infofile = NULL;			// don't log anything to file
-	cs_config->errfile = NULL;
-	cs_config->debugfile = NULL;
+	cs_config->logfile = "./dummylog";					// log to file
 
 	return EXIT_SUCCESS;
 }
@@ -163,9 +127,8 @@ int modCalibrate(control_t *ptc) {
 }
 
 int modMessage(control_t *ptc, const client_t *client, char *list[], const int count) {
-	// spaces are important!!!	
  	if (strcmp(list[0],"help") == 0) {
-		// give module specific help here
+		// Give module-specific help here
 		if (count > 1) { 
 			// we don't know. tell this to parseCmd by returning 0
 			return 0;

@@ -28,38 +28,15 @@
 #ifndef FOAM_PRIME_SIMSTATIC
 #define FOAM_PRIME_SIMSTATIC
 
-// We always use config.h
+#define FOAM_CONFIG_PRE "foam-simstat"
+
 #include "config.h"
-#include "foam.h"
-#include "types.h"
-
-#define FOAM_CONFIG_PRE "foam-static"
-
-// ROUTINE PROTOTYPES //
-/**********************/
-
-// These *must* be defined in a prime module
-int drvSetupHardware(control_t *ptc, aomode_t aomode, calmode_t calmode);
-int drvSetActuator(control_t *ptc, int wfc);
-int drvGetImg(control_t *ptc, int wfs);
 
 // LIBRARIES //
 /*************/
 
-#ifdef FOAM_SIMSTAT_DISPLAY
-// for displaying stuff (SDL)
-#include "dispcommon.h"
-#endif
-
-// for image file I/O
-#include "img.h"
-// for calibrating the image lateron
-#include "calib.h"
-
-// These are simstatic specific (for the time being)
-int MMAvgFramesByte(control_t *ptc, gsl_matrix_float *output, wfs_t *wfs, int rounds);
-int MMDarkFlatFullByte(wfs_t *wfs, mod_sh_track_t *shtrack);
-int MMDarkFlatSubapByte(wfs_t *wfs, mod_sh_track_t *shtrack);
+#include "foam.h"
+#include "types.h"
 
 
 #endif // #ifndef FOAM_PRIME_SIMSTATIC

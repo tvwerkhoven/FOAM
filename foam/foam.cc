@@ -100,8 +100,8 @@ int main(int argc, char *argv[]) {
 	/*************/
 	io = new Io(4);
 	
-  ptc = (control_t*) calloc(1, sizeof(*ptc));
-  cs_config = (config_t*) calloc(1, sizeof(*cs_config));
+  ptc = new control_t;
+  cs_config = new config_t;
   
 	if (pthread_mutex_init(&mode_mutex, NULL) != 0)
 		io->msg(IO_ERR, "pthread_mutex_init failed.");
@@ -132,8 +132,8 @@ int main(int argc, char *argv[]) {
                   \\::/  /        /:/  /        /:/  /   \n\
                    \\/__/         \\/__/         \\/__/ \n");
 
-	io->msg(IO_INFO,"Starting %s (%s) at %s", PACKAGE_NAME, PACKAGE_VERSION, date);
-	io->msg(IO_INFO,"Copyright 2007-2009 Tim van Werkhoven (t.i.m.vanwerkhoven@xs4all.nl)");
+	io->msg(IO_INFO, "Starting %s (%s) at %s", PACKAGE_NAME, PACKAGE_VERSION, date);
+	io->msg(IO_INFO, "Copyright 2007-2009 Tim van Werkhoven (t.i.m.vanwerkhoven@xs4all.nl)");
 	
 	// Read configuration 
 	
@@ -141,7 +141,7 @@ int main(int argc, char *argv[]) {
 	// INITIALIZE MODULES //
 	/**********************/
 	
-	io->msg(IO_INFO,"Initializing modules...");
+	io->msg(IO_INFO, "Initializing modules...");
 	// this routine will populate ptc and possibly 
 	// adapt cs_config-> changes will be processed below
 	modInitModule(ptc, cs_config);
@@ -153,7 +153,8 @@ int main(int argc, char *argv[]) {
 	// START DAEMON //
 	/****************/
 		
-	io->msg(IO_INFO,"Starting daemon at port %s...", cs_config->listenport);
+	io->msg(IO_INFO, "Starting daemon at port %s...", \
+	 	cs_config->listenport.c_str());
   protocol = new Protocol::Server(cs_config->listenport);
   protocol->slot_message = sigc::ptr_fun(on_message);
   protocol->slot_connected = sigc::ptr_fun(on_connect);
@@ -293,10 +294,9 @@ void stopFOAM() {
 	io->msg(IO_INFO, "Ran for %ld seconds, parsed %ld frames (%.1f FPS).", \
 		end-ptc->starttime, ptc->frames, ptc->frames/(float) (end-ptc->starttime));
 
-	// close the logfiles
-	if (cs_config->infofd) fclose(cs_config->infofd);
-	if (cs_config->errfd) fclose(cs_config->errfd);
-	if (cs_config->debugfd) fclose(cs_config->debugfd);
+	delete io;
+	delete ptc;
+	delete cs_config;
 	
 	// and exit with success
 	exit(EXIT_SUCCESS);
@@ -304,41 +304,41 @@ void stopFOAM() {
 
 void checkFieldFiles(wfs_t *wfsinfo) {
 	FILE *fieldfd;
-	if (wfsinfo->darkfile == NULL) {
+	if (wfsinfo->darkfile == "") {
 	  // File not set, not using darkfield calibration
 		io->msg(IO_INFO, "Not using darkfield calibration, no darkfield file given");
 	} else {
 		// Allocate memory, try to load the file into memory
 		wfsinfo->darkim = gsl_matrix_float_calloc(wfsinfo->res.x, wfsinfo->res.y);
-		fieldfd = fopen(wfsinfo->darkfile, "r");
-		if (fieldfd != NULL) {
-			io->msg(IO_INFO, "Loading darkfield file (%s)...", wfsinfo->darkfile);
+		fieldfd = fopen(wfsinfo->darkfile.c_str(), "r");
+		if (fieldfd) {
+			io->msg(IO_INFO, "Loading darkfield file (%s)...", wfsinfo->darkfile.c_str());
 			gsl_matrix_float_fscanf(fieldfd, wfsinfo->darkim);
 			fclose(fieldfd);
 		}
 	}
 	
 	// Same for flatfield
-	if (wfsinfo->flatfile == NULL) {
+	if (wfsinfo->flatfile == "") {
 		io->msg(IO_INFO, "Not using flatfield calibration, no flatfield file given");
 	} else {
 	  wfsinfo->flatim = gsl_matrix_float_calloc(wfsinfo->res.x, wfsinfo->res.y);
-		fieldfd = fopen(wfsinfo->flatfile, "r");
-		if (fieldfd != NULL) {
-			io->msg(IO_INFO, "Loading flatfield file (%s)...", wfsinfo->flatfile);
+		fieldfd = fopen(wfsinfo->flatfile.c_str(), "r");
+		if (fieldfd) {
+			io->msg(IO_INFO, "Loading flatfield file (%s)...", wfsinfo->flatfile.c_str());
 			gsl_matrix_float_fscanf(fieldfd, wfsinfo->flatim);
 			fclose(fieldfd);
 		}
 	}
 	
 	// Same for skyfield
-	if (wfsinfo->skyfile == NULL) {
+	if (wfsinfo->skyfile == "") {
 		io->msg(IO_INFO, "Not using skyfield calibration, no skyfield file given");
 	} else {
 	  wfsinfo->skyim = gsl_matrix_float_calloc(wfsinfo->res.x, wfsinfo->res.y);
-		fieldfd = fopen(wfsinfo->skyfile, "r");
-		if (fieldfd != NULL) {
-			io->msg(IO_INFO, "Loading skyfield file (%s)...", wfsinfo->skyfile);
+		fieldfd = fopen(wfsinfo->skyfile.c_str(), "r");
+		if (fieldfd) {
+			io->msg(IO_INFO, "Loading skyfield file (%s)...", wfsinfo->skyfile.c_str());
 			gsl_matrix_float_fscanf(fieldfd, wfsinfo->skyim);
 			fclose(fieldfd);
 		}
@@ -441,67 +441,17 @@ void checkAOConfig(control_t *ptc) {
 }
 
 void checkFOAMConfig(config_t *conf) {
-	// Check the info, error and debug files that we possibly have to log to
-	initLogFiles();
-	
+	// Init output logging if necessary
+	if (conf->logfile != "")
+		io->setLogfile(conf->logfile);
+		
 	// Init syslog if necessary
 	if (conf->use_syslog == true) {
-		openlog(conf->syslog_prepend, LOG_PID, LOG_USER);
+		openlog(conf->syslog_prepend.c_str(), LOG_PID, LOG_USER);
 		io->msg(IO_INFO, "Syslog successfully initialized.");
 	}
 	
 	io->msg(IO_INFO, "Configuration successfully loaded...");
-}
-
-int initLogFiles() {
-	// INFO LOGGING
-	if (cs_config->infofile != NULL) {
-		if ((cs_config->infofd = fopen(cs_config->infofile,"a")) == NULL) {
-			io->msg(IO_WARN, "Unable to open file %s for info-logging! Not using this logmethod!", cs_config->infofile);
-			cs_config->infofile[0] = '\0';
-		}	
-		else io->msg(IO_INFO, "Info logfile '%s' successfully opened.", cs_config->infofile);
-	}
-	else
-		io->msg(IO_INFO, "Not logging general info to disk.");
-
-	// ERROR/WARNING LOGGING
-	if (cs_config->errfile != NULL) {
-		if (strcmp(cs_config->errfile, cs_config->infofile) == 0) {	// If the errorfile is the same as the infofile, use the same FD
-			cs_config->errfd = cs_config->infofd;
-			io->msg(IO_DEB1, "Using the same file '%s' for info- and error- logging.", cs_config->errfile);
-		}
-		else if ((cs_config->errfd = fopen(cs_config->errfile,"a")) == NULL) {
-			io->msg(IO_WARN, "Unable to open file %s for error-logging! Not using this logmethod!", cs_config->errfile);
-			cs_config->errfile[0] = '\0';
-		}
-		else io->msg(IO_INFO, "Error logfile '%s' successfully opened.", cs_config->errfile);
-	}
-	else {
-		io->msg(IO_INFO, "Not logging errors to disk.");
-	}
-
-	// DEBUG LOGGING
-	if (cs_config->debugfile != 0) {
-		if (strcmp(cs_config->debugfile,cs_config->infofile) == 0) {
-			cs_config->debugfd = cs_config->infofd;	
-			io->msg(IO_DEB1, "Using the same file '%s' for debug- and info- logging.", cs_config->debugfile);
-		}
-		else if (strcmp(cs_config->debugfile,cs_config->errfile) == 0) {
-			cs_config->debugfd = cs_config->errfd;	
-			io->msg(IO_DEB1, "Using the same file '%s' for debug- and error- logging.", cs_config->debugfile);
-		}
-		else if ((cs_config->debugfd = fopen(cs_config->debugfile,"a")) == NULL) {
-			io->msg(IO_WARN, "Unable to open file %s for debug-logging! Not using this logmethod!", cs_config->debugfile);
-			cs_config->debugfile[0] = '\0';
-		}
-		else io->msg(IO_INFO, "Debug logfile '%s' successfully opened.", cs_config->debugfile);
-	}
-	else {
-		io->msg(IO_INFO, "Not logging debug to disk.");
-	}
-
-	return EXIT_SUCCESS;
 }
 
 void modeOpen() {

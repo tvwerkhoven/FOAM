@@ -38,7 +38,7 @@
 
 #ifdef FOAM_MODULES_DISLAY_SHSUPPORT
 	// The user wants to have SH specific drawing routines, include sh header for datatypes
-#include "sh.h"
+//#include "sh.h"
 #endif // FOAM_MODULES_DISLAY_SHSUPPORT
 
 #ifdef FOAM_MODULES_DISPLAY_OPENGL

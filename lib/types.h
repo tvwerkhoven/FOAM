@@ -164,12 +164,13 @@ typedef enum { // aomode_t
  to cope with different datatypes.
 */
 typedef enum {
+	DATA_INT8,			//!< ID for int8_t
 	DATA_UINT8,			//!< ID for uint8_t
+	DATA_INT16,			//!< ID for int16_t
 	DATA_UINT16,		//!< ID for uint16_t
-	DATA_FL,			  //!< ID for float
 	DATA_GSL_M_F,		//!< ID for gsl_matrix_float
 	DATA_GSL_V_F		//!< ID for gsl_vector_float
-} foam_datat_t;
+} dtype_t;
 
 /*!
  @brief AO scanning mode enum
@@ -267,8 +268,9 @@ typedef struct { // wfc_t
 typedef struct { // wfs_t
 	char *name;						//!< (user) name of the specific WFS
 	coord_t res;					//!< (user) x,y-resolution of this WFS
-	int bpp;						//!< (user) bits per pixel to use when reading the sensor (only 8 or 16 atm)
-    
+	int bpp;							//!< (user) bits per pixel to use when reading the sensor (only 8 or 16 atm)
+	dtype_t dtype;				//!< (user) datatype (see dtype_t)
+	
 	void *image;					//!< (foam) pointer to the WFS output
 	gsl_matrix_float *darkim;		//!< (foam) darkfield for the CCD, in floats for better precision
 	gsl_matrix_float *flatim;		//!< (foam) flatfield for the CCD (actually: flat-dark, as we never use flat directly), in floats
@@ -278,13 +280,13 @@ typedef struct { // wfs_t
 	void *gain;				//!< (foam) gain used (1/(flat-dark)) in calculations (actually for SH)
 	void *corr;				//!< (foam) this is used to store the corrected image if we're doing closed loop (we only dark/flat the subapts we're using here and we do it in fast ASM code)
 	
-	char *darkfile;					//!< (user) filename for the darkfield calibration
-	char *flatfile;					//!< (user) filename for the flatfield calibration
-	char *skyfile;		 			//!< (user) filename for the flatfield calibration
+	string darkfile;					//!< (user) filename for the darkfield calibration
+	string flatfile;					//!< (user) filename for the flatfield calibration
+	string skyfile;		 			//!< (user) filename for the flatfield calibration
 	int fieldframes;				//!< (user) take this many frames when dark or flatfielding.
-    
+	
 	axes_t scandir; 				//!< (user) scanning direction(s) used
-    int id;                         //!< (user) a unique ID to identify the wfs
+	int id;                         //!< (user) a unique ID to identify the wfs
 } wfs_t;
 
 
@@ -366,20 +368,12 @@ typedef struct { // config_t
 	string listenip;				//!< (user) IP to listen on, default "0.0.0.0"
 	string listenport;			//!< (user) port to listen on, default 1010
 	
-	string datadir;	//!< (user) path to data directory (pgm, fits files)
+	string datadir;					//!< (user) path to data directory (pgm, fits files)
 	
-	string infofile;				//!< (user) file to log info messages to, default none
-	FILE *infofd;					//!< (foam) associated filepointer
-	string errfile;				//!< (user) file to log error messages to, default none
-	FILE *errfd;					//!< (foam) associated filepointer
-	string debugfile;			//!< (user) file to log debug messages to, default none
-	FILE *debugfd;				//!< (foam) associated filepointer
+	string logfile;					//!< (user) file to log info messages to, (none)
 	
-	bool use_syslog; 			//!< (user) syslog usage flag, default no
+	bool use_syslog; 				//!< (user) syslog usage flag, default no
 	string syslog_prepend;	//!< (user) string to prepend to syslogs, default "foam"
-	bool use_stdout; 			//!< (user) stdout usage flag, default no
-	
-	level_t loglevel;			//!< (user) level to log, default LOG_DEBUG
 	
 	pthread_t threads[MAX_THREADS]; //!< (foam) this stores the thread ids of all threads created
 	int nthreads;				//!< (foam) stores the number of threads in use

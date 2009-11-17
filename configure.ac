@@ -27,8 +27,6 @@ AM_INIT_AUTOMAKE([-Wall -Werror foreign])
 
 AC_PROG_CXX
 AC_PROG_CXXCPP
-AC_PROG_CC
-AC_PROG_CPP
 AC_PROG_MAKE_SET
 AC_PROG_INSTALL
 AC_PROG_RANLIB
@@ -58,17 +56,20 @@ AC_SUBST(COMMON_LIBS)
 ### BUILD TARGETS ###
 #####################
 
+dummy=true
 AC_ARG_ENABLE([dummy],
 		AC_HELP_STRING([--disable-dummy], [build dummy mode]),
-		[test "$enableval" = yes && dummy=disabled], [dummy=true])
+		[test "$enableval" = no && dummy=disabled], [])
 
+docs=true
 AC_ARG_ENABLE([docs],
 		AC_HELP_STRING([--disable-docs], [compile documentation]),
-		[test "$enableval" = yes && docs=disabled], [docs=true])
+		[test "$enableval" = no && docs=disabled], [])
 
+simstat=true
 AC_ARG_ENABLE([simstat],
 		AC_HELP_STRING([--disable-simstat], [build static simulation mode]),
-		[test "$enableval" = yes && simstat=disabled], [simstat=true])
+		[test "$enableval" = no && simstat=disabled], [])
 
 AC_ARG_ENABLE([debug],
 		AC_HELP_STRING([--enable-debug], [enable debugging mode]),

@@ -6,7 +6,7 @@
 
 // Datatypes
 #define IMGIO_FITS				0x00000001
-#define IMGIO_PGM					0x00000001
+#define IMGIO_PGM					0x00000002
 
 // Image types
 #define IMGIO_BYTE			7
@@ -14,24 +14,30 @@
 #define IMGIO_SHORT			15
 #define IMGIO_USHORT		16
 
+
+typedef struct {
+	void *data;
+	coord_t res;
+	int stride;
+	int bitpix;
+	int dtype;
+} img_t;
+
 class Imgio {
 	std::string path;
-	
-	int dtype, bitpix;
-	coord_t res;
-	void *data;
-	
-	std::string err;
+	img_t *img;
 public:
+	std::string strerr;
+	
 	Imgio::Imgio(std::string, int);
 	~Imgio(void);
 	int Imgio::loadImg();
 	int Imgio::writeImg(int, std::string);
-	void *Imgio::getData() { return data; }
-	int Imgio::getWidth() { return res.x; }
-	int Imgio::getHeight() { return res.y; }
-	int Imgio::getDtype() { return dtype; }
-	int Imgio::getBitpix() { return bitpix; }
+	void *Imgio::getData() { return img->data; }
+	int Imgio::getWidth() { return img->res.x; }
+	int Imgio::getHeight() { return img->res.y; }
+	int Imgio::getDtype() { return img->dtype; }
+	int Imgio::getBitpix() { return img->bitpix; }
 private:
 	int Imgio::loadFits(std::string);
 	int Imgio::writeFits(std::string);

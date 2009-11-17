@@ -55,27 +55,13 @@ bin_PROGRAMS += foam-simstat
 
 foam_simstat_SOURCES = foam-simstatic.cc \
 		$(FRAME_SRC) $(FRAME_HDR) \
-		$(MODS_DIR)/sh.cc \
-		$(MODS_DIR)/calib.cc \
-		$(LIB_DIR)/img.cc \
-		$(LIB_DIR)/imgio.cc \
-		$(LIB_DIR)/log.cc
+		$(MODS_DIR)/shtrack.cc \
+		$(LIB_DIR)/imgio.cc
 
-# Are we using OpenGL or not?
-if OPENGL
-foam_simstat_SOURCES += $(LIB_DIR)/dispgl.cc
-else !OPENGL
-foam_simstat_SOURCES += $(LIB_DIR)/dispsdl.cc
-endif !OPENGL
-
-# header files are part of the sources as well
+# Header files are part of the sources as well
 foam_simstat_SOURCES += foam-simstatic.h \
-		$(MODS_DIR)/sh.h \
-		$(MODS_DIR)/calib.h \
-		$(LIB_DIR)/img.h \
-		$(LIB_DIR)/imgio.h \
-		$(LIB_DIR)/log.h \
-		$(LIB_DIR)/dispcommon.h
+		$(MODS_DIR)/shtrack.h \
+		$(LIB_DIR)/imgio.h
 
 # Some CPP flags (include the primemod header, and configure some options)
 foam_simstat_CPPFLAGS = -DFOAM_SIMSTAT_DISPLAY=1 \
@@ -85,13 +71,6 @@ foam_simstat_CPPFLAGS = -DFOAM_SIMSTAT_DISPLAY=1 \
 # specific flags and libraries
 foam_simstat_CFLAGS = $(SIMSTAT_CFLAGS) $(AM_CFLAGS)
 foam_simstat_LDFLAGS = $(SIMSTAT_LIBS) $(AM_LDFLAGS)
-
-if OPENGL
-foam_simstat_CPPFLAGS += -DFOAM_MODULES_DISPLAY_OPENGL=1 
-# add some flags necessary for OpenGL
-foam_simstat_CFLAGS += $(OPENGL_CFLAGS)
-foam_simstat_LDFLAGS += $(OPENGL_LIBS)
-endif OPENGL
 
 endif SIMSTAT
 ### END STATIC SIMULATION MODE ###
