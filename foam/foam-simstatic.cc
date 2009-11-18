@@ -237,20 +237,21 @@ int modMessage(control_t *ptc, Connection *connection, string cmd, string line) 
 	// 403 MODE FORBIDDEN
 	// 300 ERROR
 	// 200 OK
+	// 201 STATE CHANGE
 	if (cmd == "help") {
 		string topic = popword(line);
 		if (topic.size() == 0) {
 			connection->write("This is the simstat module of FOAM.");
 		}
 		else if (topic == "calib") {
-			connection->write("4XX :HELP ON CALIB NOT AVAILABLE");
+			connection->write("404 :HELP ON CALIB NOT AVAILABLE");
 		}
 		else {
 			return -1;
 		}
 	}
 	else if (cmd == "calib") {
-		connection->write("4XX :CALIB NOT AVAILABLE");
+		connection->write("404 :CALIB NOT AVAILABLE");
 	}
 	else {
 		return -1;

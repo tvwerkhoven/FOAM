@@ -15,17 +15,14 @@
  
  You should have received a copy of the GNU General Public License
  along with FOAM.  If not, see <http://www.gnu.org/licenses/>.
-
- $Id$
  */
 /*! 
- @file libfoam.h
- @brief This file is the main library for FOAM
+ @file types.h
+ @brief This file contains some datatypes used.
  @author Tim van Werkhoven (t.i.m.vanwerkhoven@xs4all.nl)
  @date 2008-07-15 18:06
  
- This header file contains all functions used by the framework of FOAM.
- In addition to that, it contains a lot of structs to hold data used in 
+ This header file contains a lot of structs to hold data used in 
  FOAM. These include things like the state of the AO system (\c control_t), 
  as well as some structs to track network connections to the CS.
  */
@@ -41,27 +38,6 @@
 #include "autoconfig.h"
 
 using namespace std;
-
-// these were used in ITIFG
-//#include <sys/select.h> //?
-//#include <limits.h> 				// LINE_MAX
-//#include <sys/uio.h> //?
-//#include <inttypes.h> //?
-//#include <xlocale.h> //?
-
-
-// GLOBAL VARIABLES //
-/********************/
-
-#define LOG_SOMETIMES 1
-#define LOG_NOFORMAT 2
-
-#define FILENAMELEN 64				//!< maximum length for logfile names (no need to touch)
-#define COMMANDLEN 1024				//!< maximum length for commands we read over the socket (no need to touch)
-
-#define MAX_CLIENTS 8				//!< maximum number of clients that can connect
-#define MAX_THREADS 4				//!< number of threads besides the main thread that can be created (unused atm)
-#define MAX_FILTERS 8				//!< maximum number of filters one filterwheel can have
 
 // STRUCTS AND TYPES //
 /*********************/
@@ -195,12 +171,12 @@ typedef enum { // axes_t
  and therefore you must fill in the (user) fields at the beginning.
  */
 typedef struct {
-	char *name;			//!< (user) Filterwheel name
-	int nfilts;			//!< (user) Number of filters present in this wheel
-	filter_t curfilt;	//!< (foam) Current filter in place
-	filter_t filters[MAX_FILTERS];	//!< (user) All filters present in this wheel
-    int delay;          //!< (user) The time in seconds the filterwheel needs to adjust, which is used in a sleep() call to give the filterwheel time
-    int id;             //!< (user) a unique ID to identify the filterwheel
+	char *name;					//!< (user) Filterwheel name
+	int nfilts;					//!< (user) Number of filters present in this wheel
+	filter_t curfilt;		//!< (foam) Current filter in place
+	filter_t *filters;	//!< (user) All filters present in this wheel
+	int delay;          //!< (user) The time in seconds the filterwheel needs to adjust, which is used in a sleep() call to give the filterwheel time
+	int id;             //!< (user) a unique ID to identify the filterwheel
 } filtwheel_t;
 
 /*!
@@ -341,20 +317,6 @@ typedef struct { // control_t
 
 
 /*!
- @brief Loglevel, one of LOGNONE, LOGERR, LOGINFO or LOGDEBUG
- 
- This specifies the verbosity of logging, going from LOGNONE, LOGERR, LOGINFO
- and to LOGDEBUG in increasing amount of logging details. For production systems,
- LOGINFO should suffice, while developers might want to use LOGDEBUG.
- */
-typedef enum { // level_t
-	LOGNONE, 	//!< Log nothing
-	LOGERR, 	//!< Log only errors
-	LOGINFO, 	//!< Log info and errors
-	LOGDEBUG	//!< Log debug messages, info and errors
-} level_t;
-
-/*!
  @brief Struct to configuration data in.
  
  This struct stores things like the IP and port it should be listening on, the 
@@ -375,29 +337,8 @@ typedef struct { // config_t
 	bool use_syslog; 				//!< (user) syslog usage flag, default no
 	string syslog_prepend;	//!< (user) string to prepend to syslogs, default "foam"
 	
-	pthread_t threads[MAX_THREADS]; //!< (foam) this stores the thread ids of all threads created
-	int nthreads;				//!< (foam) stores the number of threads in use
+	pthread_t *threads;			//!< (foam) this stores the thread ids of all threads created
+	int nthreads;						//!< (foam) stores the number of threads in use
 } config_t;
-
-/* 
- @brief This holds information on one particular client connection . Used by \c conntrack_t
- */
-typedef struct {
-	int fd; 						//!< FD for the client 
-	int connid;						//!< ID used in conntrack_t
-	struct bufferevent *buf_ev;		//!< The buffered event for the connected client
-} client_t;
-
-/* 
- @brief This keeps track of clients connected.
- 
- Maximum amount of connections is defined by \c MAX_CLIENTS, in foam_cs_config.h, 
- which can be changed if necessary.
- */
-typedef struct {
-	int nconn;							//!< Amount of connections used
-	client_t *connlist[MAX_CLIENTS];	//!< List of connected clients (max MAX_CLIENTS)
-} conntrack_t;
-
 
 #endif /* __TYPES_H__ */

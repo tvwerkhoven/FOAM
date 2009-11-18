@@ -65,17 +65,13 @@ typedef unsigned char u_char;
 #include <gsl/gsl_linalg.h> 		// this is for SVD / matrix datatype
 #include <gsl/gsl_blas.h> 			// this is for SVD
 
-//#include <iostream>
 #include <string>
-//#include <cstring>
-
 
 #include "autoconfig.h"
 #include "types.h"
 #include "protocol.h"
 
 typedef Protocol::Server::Connection Connection;
-
 
 // PROTOTYPES //
 /**************/
@@ -191,31 +187,33 @@ int modOpenFinish(control_t *ptc);
 int modCalibrate(control_t *ptc);
 
 /*!
- @brief This routine is run if a client sends a message over the socket
+ @brief Called when a message is received
  
  If the networking thread of the control software receives data, it will 
- split the string received in space-separate words. After that, the
- routine will handle some default commands itself, like 'help', 'quit',
- 'shutdown' and others (see parseCmd()). If a command is not recognized, it 
- is passed to this routine, which must then do something, or return 0 to
- indicate an unknown command. parseCmd() itself will then warn the user.\n
- \n
+ try to handle some default commands itself, like 'help', 'quit',
+ 'shutdown' and others (see on_message()). If a command is not recognized, it 
+ is passed to this routine, which must then do something, or return -1 to
+ indicate an unknown command. on_message() itself will then warn the user.
+
  Besides parsing commands, this routine must also provide help informtion
  about which commands are available in the first place. FOAM itself
  already provides some help on the basic functions, and after sending this
- to the user, modMessage is called with list[0] == 'help' such that this 
- routine can add its own help info.\n
- \n
+ to the user, modMessage is called with cmd == 'help' such that this 
+ routine can add its own help info.
+
  If a client sends 'help <topic>', this is also passed to modMessage(),
- with list[0] == help and list[1] == <topic>. It should then give
- information on that topic and return 1, or return 0 if it does not
- 'know' that topic.\n
- \n
+ with cmd == 'help' and the topic is stored in 'line'. It should then give
+ information on that topic and return 0, or return -1 if it does not 'know' 
+ that topic.
+ 
  For an example of modMessage(), see foam_primemod-dummy.c.
+ 
+ See also on_message().
+ 
  @param [in] *ptc A control_t struct that has been configured in a prime module 
- @param [in] *client Information on the client that sent data
- @param [in] *list The list of words received over the network
- @param [in] count The amount of words received over the network
+ @param [in] *connection Reference to the connection
+ @param [in] cmd The command given (first word)
+ @param [in] line The remainder of the data received.
  */
 int modMessage(control_t *ptc, Connection *connection, string cmd, string line);
 
@@ -269,122 +267,43 @@ void modeListen();
 void modeCal();
 
 /*! 
- @brief Listens on a socket for connections
+ @brief Process commands received.
  
- Listen on a socket for connections by any client, for example telnet. Uses 
- the global \a ptc (see control_t) struct to provide data to the connected 
- clients or to change the behaviour of FOAM as dictated by the client.
+ This function is called when a message is received from a client, which
+ is stored in 'line'. This will then be interpreted and appropriate action
+ will be taken.
  
- This function initializes the listening socket, and calls sockAccept() when
- a client connects to it. This event handling is done by libevent, which also
- multiplexes the other socket interactions.
+ The first word of 'line' is the command, following words can be options or
+ parameters. If the command is recognized, it is processed right away. If not,
+ it will be passed on to modMessage().
  
- @return \c EXIT_SUCCESS if it ran succesfully, \c EXIT_FAILURE otherwise.
+ See also showhelp() and modMessage().
+ 
+ @param [in] *connection reference to the connection this applies to.
+ @param [in] line the message received
  */
-int sockListen();
-
-/*! 
- @brief Accept new client connection.
- 
- Accept a new connection pending on \a sock and add the
- socket to the set of active sockets (see conntrack_t and client_t).
- This function is called if there is an event on the main socket, which means 
- someone wants to connect. It spawns a new bufferent event which keeps an eye 
- on activity on the new socket, in which case there is data to be read. 
- 
- The event handling for this socket (such as processing incoming user data or
- sending data back to the client) is handled by libevent.
- 
- @param [in] sock Socket with pending connection
- @param [in] event The way this function was called
- @param [in] *arg Necessary additional argument to use as caller function for libevent
- */
-void sockAccept(int sock, short event, void *arg);
-
-/*!
- @brief Sets a socket to non-blocking mode.
- 
- Taken from \c http://unx.ca/log/libevent_echosrv_bufferedc/
- 
- @return \c EXIT_SUCCESS if it ran succesfully, \c EXIT_FAILURE otherwise. 
- */
-int setNonBlock(int fd);
-
-/*! 
- @brief Process the command given by the user.
- 
- This function is called by sockOnRead if there is data on a socket. The data
- is then passed on to this function which interprets it and
- takes action if necessary. Currently this function can only
- read 1 kb in one time maximum (which should be enough).
- 
- 'msg' contains the string received from the client, which is passed to
- explode() which chops it up in several words.
- 
- The first word in 'msg' is compared against a few commands known by parseCmd()
- and if one is found, apropriate actions are taken if necessary. If the command
- is unknown, it is passed to modMessage(), which should be provided by the prime
- module. This way, the commands FOAM accepts can be expanded by the user.
- 
- One special case is the 'help' command. If simply 'help' is given with nothing
- after that, parseCmd() calls showHelp() to display general usage information
- for the FOAM framework. After showing this information, modMessage() is also
- called, such that specific usage information for the prime module can also 
- be dispalyed.
- 
- If 'help' is followed by another word which is the topic a user requests
- help on, it is passed to showHelp() and modMessage() as well. If these routines
- both return 0, the topic is unknown and an error is given to the user.
-  
- @param [in] *msg the char array (max length \c COMMANDLEN)
- @param [in] len the actual length of msg
- @param [in] *client the client_t struct of the client we want to parse a command from
- @return \c EXIT_SUCCESS upon success, or \c EXIT_FAILURE otherwise.
- */
-int parseCmd(char *msg, int len, client_t *client);
-
-/*!
- @brief This function is called if there is an error on the socket.
- 
- An error on the socket can mean that the client simply wants to disconnect,
- in which cas \c event is equal to \c EVBUFFER_EOF. If so, this is not a problem.
- If \c event is something different, a real error occurred. In both cases, the
- bufferevent is freed, the socket is closed, and the client struct is freed, in that order.
- */
-void sockOnErr(struct bufferevent *bev, short event, void *arg);
-
-/*!
- @brief This function is called if there is data to be read on the socket.
- 
- Data waiting to be read usually means there is a command coming from one of the connected
- clients. This routine reads the data, checking if it does not exceed \c COMMANDLEN,
- and then passes the result on to parseCmd().
- */
-void sockOnRead(struct bufferevent *bev, void *arg);
-
-
-// TODO: document
 static void on_message(Connection *connection, std::string line);
+
+/*!
+ @brief Called when a client (dis)connects to FOAM.
+ 
+ @param [in] *connection reference to the connection this applies to.
+ @param [in] status true on connecti, false on disconnect.
+*/
 static void on_connect(Connection *connection, bool status);
 
 /*!
- @brief This function is called if the socket is ready for writing.
+ @brief Give usage information on FOAM to a client.
  
- This function is necessary because passing a NULL pointer to bufferevent_new for the write
- function causes it to crash. Therefore this placeholder is used, which does exactly nothing.
- */
-void sockOnWrite(struct bufferevent *bev, void *arg);
-
-/*!
- @brief Open a stream to the appropriate logfiles, as defined in the configuration file.
+ This function gives help to the cliet which sent a HELP command over the socket.
+ Also look at on_message() function.
  
- This function opens the error-, info- and debug-log files *if* they
- are defined in the global struct cs_config (see config_t). If some filenames are equal, the
- logging is linked. This can be useful if users want to log everything to the same
- file. No filename means that no stream will be opened.
- @return EXIT_SUCCESS if the load succeeds, EXIT_FAILURE otherwise.
+ @param [in] *connection the client that requested help
+ @param [in] topic the helpcode requested by the client (i.e. what topic)
+ @param [in] rest the remainder of the query string.
+ @return 1 everything went ok, or 0 if the user requested an unknown topic.
  */
-int initLogFiles();
+static int showhelp(Connection *connection, string topic, string rest);
 
 /*!
  @brief Check & initialize darkfield, flatfield and skyfield files.
@@ -419,18 +338,6 @@ void checkAOConfig(control_t *ptc);
 void checkFOAMConfig(config_t *conf);
 
 /*!
- @brief Give usage information on FOAM to a client.
- 
- This function gives help to the cliet which sent a HELP command over the socket.
- Also look at parseCmd() function.
- 
- @param [in] *client the client that requested help
- @param [in] *subhelp the helpcode requested by the client (i.e. what topic)
- @return 1 everything went ok, or 0 if the user requested an unknown topic.
- */
-int showHelp(const client_t *client, const char *subhelp);
-
-/*!
  @brief Function which wraps up FOAM (free some memory, gives some stats)
  
  This routine does the following:
@@ -445,22 +352,5 @@ void stopFOAM();
  @brief Catches \c SIGINT signals and stops FOAM gracefully, calling \c stopFOAM().
  */
 void catchSIGINT(int);
-
-/*!
- @brief This sends a message 'msg' to all connected clients.
- 
- @param [in] *msg The message to send to the clients
- @return EXIT_SUCCESS on success, EXIT_FAILURE otherwise.
- */
-int tellClients(char *msg, ...);
-
-/*!
- @brief This sends a message 'msg' to a specific client.
- 
- @param [in] *bufev The bufferevent associated with a client
- @param [in] *msg The message to send to the clients
- @return EXIT_SUCCESS on success, EXIT_FAILURE otherwise.
- */
-int tellClient(struct bufferevent *bufev, char *msg, ...);
 
 #endif // __FOAM_H__

@@ -15,8 +15,6 @@
  
  You should have received a copy of the GNU General Public License
  along with FOAM.  If not, see <http://www.gnu.org/licenses/>.
-
- $Id$
  */
 /*! 
 	@file foam-dummy.c
@@ -31,8 +29,6 @@
 
 #include "foam.h"
 #include "io.h"
-
-conntrack_t clientlist;
 
 extern pthread_mutex_t mode_mutex;
 extern pthread_cond_t mode_cond;
@@ -49,11 +45,10 @@ int modInitModule(control_t *ptc, config_t *cs_config) {
 	ptc->wfc_count = 1;
 	ptc->fw_count = 1;
 	
-	// allocate memory for filters, wfcs and wfss
-	// use malloc to make the memory globally available
-	ptc->filter = new filtwheel_t[1];
-	ptc->wfc = new wfc_t[1]; //(wfc_t *) malloc(ptc->wfc_count * sizeof(wfc_t));
-	ptc->wfs = new wfs_t[1]; //(wfs_t *) malloc(ptc->wfs_count * sizeof(wfs_t));
+	// allocate memory for filters, wfc's and wfs's
+	ptc->wfs = new wfs_t[ptc->wfs_count];
+	ptc->wfc = new wfc_t[ptc->wfc_count];
+	ptc->filter = new filtwheel_t[ptc->fw_count];
 	
 	// configure WFS 0
 	ptc->wfs[0].name = "SH WFS";
@@ -76,6 +71,7 @@ int modInitModule(control_t *ptc, config_t *cs_config) {
 	// configure filter 0
 	ptc->filter[0].name = "Telescope FW";
 	ptc->filter[0].nfilts = 3;
+	ptc->filter[0].filters = new filter_t[ptc->filter[0].nfilts];
 	ptc->filter[0].filters[0] = FILT_PINHOLE;
 	ptc->filter[0].filters[1] = FILT_OPEN;
 	ptc->filter[0].filters[2] = FILT_CLOSED;
@@ -85,7 +81,7 @@ int modInitModule(control_t *ptc, config_t *cs_config) {
 	cs_config->listenport = "1025";		// listen on port 1010 by default
 	cs_config->use_syslog = false;		// don't use the syslog
 	cs_config->syslog_prepend = "foam";	// prepend logging with 'foam'
-	cs_config->logfile = "./dummylog";					// log to file
+	cs_config->logfile = "./dummylog";	// log to file
 
 	return EXIT_SUCCESS;
 }

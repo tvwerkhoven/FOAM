@@ -101,7 +101,9 @@ int main(int argc, char *argv[]) {
 	
 	io = new Io(4);
   ptc = new control_t;
+//	*ptc = 0;
   cs_config = new config_t;
+//	*cs_config = 0;
   
 	if (pthread_mutex_init(&mode_mutex, NULL) != 0)
 		io->msg(IO_ERR, "pthread_mutex_init failed.");
@@ -188,11 +190,12 @@ int main(int argc, char *argv[]) {
 	
 	// Create thread which does all the work
 	// this thread inherits the signal blocking defined above
+	cs_config->nthreads = 1;
+	cs_config->threads = new pthread_t[cs_config->nthreads];
 	threadrc = pthread_create(&(cs_config->threads[0]), &attr, &startThread, NULL);
 	if (threadrc)
 		io->msg(IO_ERR, "Error in pthread_create, return code was: %d.", threadrc);
 
-	cs_config->nthreads = 1;
 	
 	// now make sure the main thread handles the signals by unblocking them:
 	// SIGNAL HANDLING //
@@ -393,7 +396,7 @@ void checkAOConfig(control_t *ptc) {
 				ptc->wfc[i].ctrl = gsl_vector_float_calloc(ptc->wfc[i].nact);
 			}
 			
-			if (ptc->wfc[0].type != WFC_DM && ptc->wfc[0].type != WFC_TT) {
+			if (ptc->wfc[i].type != WFC_DM && ptc->wfc[i].type != WFC_TT) {
 				io->msg(IO_ERR, "Unknown WFC type (not WFC_DM, nor WFC_TT).");
 			}
 		}
@@ -409,14 +412,12 @@ void checkAOConfig(control_t *ptc) {
 	else {
 		// then check each FW setting individually
 		for (i=0; i< ptc->fw_count; i++) {
-			if (ptc->filter[0].nfilts > MAX_FILTERS) {
-				io->msg(IO_WARN, "Warning, number of filters (%d) for filterwheel %d larger than MAX_FILTERS, filters above position %d will not be used.", \
-				ptc->filter[0].nfilts, i, MAX_FILTERS);
-				ptc->filter[0].nfilts = MAX_FILTERS;
+			if (ptc->filter[i].nfilts > 10) {
+				io->msg(IO_WARN, "Warning, number of filters (%d) for filterwheel %d is quite large.");
 			}
 			else if (ptc->filter[0].nfilts <= 0) {
 				io->msg(IO_WARN, "Warning, zero or less filters for filterweel %d, disabling filterwheel.", i);
-				ptc->filter[0].nfilts = 0;
+				ptc->filter[i].nfilts = 0;
 			}
 		}
 	}
@@ -602,95 +603,99 @@ void modeListen() {
 	} // end while(true)
 }
 
-static int showhelp(Connection *connection, string topic, string rest);
-
 static void on_connect(Connection *connection, bool status) {
 	fprintf(stderr, "on_connect");
   if (status) {
     connection->write("201 :CLIENT CONNECTED");
-		//fprintf(stderr, "connected");
-    io->msg(IO_DEB1, "Client connected.");
+    io->msg(IO_DEB1, "Client connected from %s.", connection->getpeername().c_str());
   }
   else {
     connection->write("201 :CLIENT DISCONNECTED");
-		//fprintf(stderr, "disconnected");
-    io->msg(IO_DEB1, "Client disconnected.");
+    io->msg(IO_DEB1, "Client from %s disconnected.", connection->getpeername().c_str());
   }
 }
 
 static void on_message(Connection *connection, string line) {
   io->msg(IO_DEB1, "Got %db: '%s'.", line.length(), line.c_str());
-	connection->write("2XX :OK");
 	string cmd = popword(line);
-	string orig = line;
 	
 	if (cmd == "help") {
+		connection->write("200 :HELP OK");
+		string orig = line;
 		string topic = popword(line);
     if (showhelp(connection, topic, line))
 			if (modMessage(ptc, connection, "help", orig))
-				connection->write("4XX :HELP TOPIC UNKNOWN");
+				connection->write("401 :HELP TOPIC UNKNOWN");
   }
-  else if (cmd == "exit" || cmd == "quit" ) {
-    connection->server->broadcast("2XX :CLIENT DISCONNECTED");
+  else if (cmd == "exit" || cmd == "quit" || cmd == "bye") {
+		connection->write("200 :EXIT OK");
+    connection->server->broadcast("201 :CLIENT DISCONNECTED");
     connection->close();
   }
   else if (cmd == "shutdown") {
+		connection->write("200 :SHUTDOWN OK");
 		stopFOAM();
-		//ptc->mode = AO_MODE_SHUTDOWN;
-		//pthread_cond_signal(&mode_cond);
-    connection->server->broadcast("2XX :FOAM SHUTTING DOWN");
   }
+  else if (cmd == "broadcast") {
+		connection->write("200 :BROADCAST OK");
+		connection->server->broadcast(format("201 :BROADCAST FROM %s: %s", 
+																				 connection->getpeername().c_str(), 
+																				 line.c_str()));
+	}
   else if (cmd == "mode") {
     string mode = popword(line);
 		if (mode == "closed") {
+			connection->write("200 :MODE CLOSED OK");
 			ptc->mode = AO_MODE_CLOSED;
 			pthread_cond_signal(&mode_cond); // signal a change to the main thread
-			connection->server->broadcast("2XX :MODE CLOSED");
+			connection->server->broadcast("201 :MODE CLOSED");
 		}
 		else if (mode == "open") {
+			connection->write("200 :MODE OPEN OK");
 			ptc->mode = AO_MODE_OPEN;
 			pthread_cond_signal(&mode_cond); // signal a change to the main thread
-			connection->server->broadcast("2XX :MODE OPEN");
+			connection->server->broadcast("201 :MODE OPEN");
 		}
 		else if (mode == "listen") {
+			connection->write("200 :MODE LISTEN OK");
 			ptc->mode = AO_MODE_LISTEN;
 			pthread_cond_signal(&mode_cond); // signal a change to the main thread
-			connection->server->broadcast("2XX :MODE LISTEN");
+			connection->server->broadcast("201 :MODE LISTEN");
 		}
 		else {
-			connection->write("4XX :MODE UNKOWN");
+			connection->write("401 :MODE UNKOWN");
 		}
-		
   }
   else {
-    modMessage(ptc, connection, cmd, orig);
+    if (modMessage(ptc, connection, cmd, line))
+			connection->write("401 :COMMAND UNKNOWN");
+
   }
 }
 
 static int showhelp(Connection *connection, string topic, string rest) {
 	if (topic.size() == 0) {
-		connection->write("\
-											help [command]:         help (on a certain command, if available).\n\
-											mode <mode>:            close or open the loop.\n\
-											broadcast <msg>:        send a message to all connected clients.\n\
-											exit or quit:           disconnect from daemon.\n\
-											shutdown:               shutdown the FOAM program.\n");
+		connection->write(\
+"help [command]:         Help (on a certain command, if available).\n"
+"mode <mode>:            close or open the loop.\n"
+"broadcast <msg>:        send a message to all connected clients.\n"
+"exit or quit:           disconnect from daemon.\n"
+"shutdown:               shutdown FOAM.");
 		// pass it along to modMessage() as well
 		modMessage(ptc, connection, "help", rest);
 	}		
 	else if (topic == "mode") {
-		connection->write("\
-mode <mode>:            close or open the loop.\n\
-  mode=open:            opens the loop and only records what's happening with\n\
-                        the AO system and does not actually drive anything.\n\
-  mode=closed:          closes the loop and starts the feedbackloop, \n\
-                        correcting the wavefront as fast as possible.\n\
-  mode=listen:          stops looping and waits for input from the users.\n\
-                        Basically does nothing.\n");
+		connection->write(\
+"mode <mode>:            Close or open the AO-loop.\n"
+"  mode=open:            opens the loop and only records what's happening with\n"
+"                        the AO system and does not actually drive anything.\n"
+"  mode=closed:          closes the loop and starts the feedbackloop, \n"
+"                        correcting the wavefront as fast as possible.\n"
+"  mode=listen:          stops looping and waits for input from the users.");
 	}
 	else if (topic == "broadcast") {
-		connection->write("\
-broadcast <mode>:       broadcast a message to all clients.\n");
+		connection->write(\
+"broadcast <mode>:       broadcast a message to all clients.");
 	}
 	else {
 		// Unknown topic, return error
