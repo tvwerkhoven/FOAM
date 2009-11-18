@@ -176,7 +176,7 @@ int Imgio::loadPgm(std::string path) {
 	
 	img->dtype = IMGIO_UBYTE;
 	img->bitpix = 8;
-	img->data = new uint8_t[nel];
+	img->data = malloc(nel * img->bitpix/8);
 	
 	// Read the rest
 	if (strcmp(magic, "P5")) { // Binary

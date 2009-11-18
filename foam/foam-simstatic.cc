@@ -71,7 +71,7 @@ int modInitModule(control_t *ptc, config_t *cs_config) {
 	ptc->fw_count = 0;
 	
 	// Only one WFS in simulation
-	ptc->wfs = new wfs_t[1]; // (wfs_t *) calloc(ptc->wfs_count, sizeof(wfs_t));
+	ptc->wfs = new wfs_t[1];
 	
 	// configure WFS 0
 	// set image to something static
@@ -79,7 +79,6 @@ int modInitModule(control_t *ptc, config_t *cs_config) {
 	if (wfi->loadImg())
 		io->msg(IO_ERR | IO_FATAL, "Error loading image!");
 	
-	printf("success\n");
 	io->msg(IO_INFO, "Got image %dx%dx%d.", wfi->getWidth(), wfi->getHeight(), wfi->getBitpix());
 
 	ptc->wfs[0].image = (uint8_t *) wfi->getData();
@@ -216,35 +215,6 @@ int modCalibrate(control_t *ptc) {
 	}
 	else if (ptc->calmode == CAL_DARKGAIN) {
 		io->msg(IO_INFO, "Taking dark and flat images to make convenient images to correct (dark/gain).");
-		
-		// get the average flat-dark value for all subapertures (but not the whole image)
-//		float tmpavg=0;
-//		for (sn=0; sn < shtrack->sh->ns; sn++) {
-//			for (i=0; i< shtrack.track.y; i++) {
-//				for (j=0; j< shtrack.track.x; j++) {
-//					tmpavg += (gsl_matrix_float_get(wfsinfo->flatim, shtrack.subc[sn].y + i, shtrack.subc[sn].x + j) - \
-//						gsl_matrix_float_get(wfsinfo->darkim, shtrack.subc[sn].y + i, shtrack.subc[sn].x + j));
-//				}
-//			}
-//		}
-//		tmpavg /= ((shtrack.cells.x * shtrack.cells.y) * (shtrack.track.x * shtrack.track.y));
-//		
-//		// make actual matrices from dark and flat
-//		uint16_t *darktmp = (uint16_t *) wfsinfo->dark;
-//		uint16_t *gaintmp = (uint16_t *) wfsinfo->gain;
-//
-//		for (sn=0; sn < shtrack.nsubap; sn++) {
-//			for (i=0; i< shtrack.track.y; i++) {
-//				for (j=0; j< shtrack.track.x; j++) {
-//					darktmp[sn*(shtrack.track.x*shtrack.track.y) + i*shtrack.track.x + j] = \
-//						(uint16_t) (256.0 * gsl_matrix_float_get(wfsinfo->darkim, shtrack.subc[sn].y + i, shtrack.subc[sn].x + j));
-//					gaintmp[sn*(shtrack.track.x*shtrack.track.y) + i*shtrack.track.x + j] = (uint16_t) (256.0 * tmpavg / \
-//						(gsl_matrix_float_get(wfsinfo->flatim, shtrack.subc[sn].y + i, shtrack.subc[sn].x + j) - \
-//						 gsl_matrix_float_get(wfsinfo->darkim, shtrack.subc[sn].y + i, shtrack.subc[sn].x + j)));
-//				}
-//			}
-//		}
-
 		io->msg(IO_INFO, "Dark and gain fields initialized");
 	}
 	else if (ptc->calmode == CAL_SUBAPSEL) {
@@ -259,15 +229,33 @@ int modCalibrate(control_t *ptc) {
 	return EXIT_SUCCESS;
 }
 
-int modMessage(control_t *ptc, const client_t *client, char *list[], const int count) {
+int modMessage(control_t *ptc, Connection *connection, string cmd, string line) {
 	// Quick recap of messaging codes:
 	// 400 UNKNOWN
 	// 401 UNKNOWN MODE
 	// 402 MODE REQUIRES ARG
 	// 403 MODE FORBIDDEN
 	// 300 ERROR
-	// 200 OK 
-
+	// 200 OK
+	if (cmd == "help") {
+		string topic = popword(line);
+		if (topic.size() == 0) {
+			connection->write("This is the simstat module of FOAM.");
+		}
+		else if (topic == "calib") {
+			connection->write("4XX :HELP ON CALIB NOT AVAILABLE");
+		}
+		else {
+			return -1;
+		}
+	}
+	else if (cmd == "calib") {
+		connection->write("4XX :CALIB NOT AVAILABLE");
+	}
+	else {
+		return -1;
+	}
+	
 	// if we end up here, we didn't return 0, so we found a valid command
-	return 1;
+	return 0;
 }

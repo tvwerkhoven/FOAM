@@ -51,9 +51,9 @@ int modInitModule(control_t *ptc, config_t *cs_config) {
 	
 	// allocate memory for filters, wfcs and wfss
 	// use malloc to make the memory globally available
-	ptc->filter = (filtwheel_t *) malloc(ptc->fw_count * sizeof(filtwheel_t));
-	ptc->wfc = (wfc_t *) malloc(ptc->wfc_count * sizeof(wfc_t));
-	ptc->wfs = (wfs_t *) malloc(ptc->wfs_count * sizeof(wfs_t));
+	ptc->filter = new filtwheel_t[1];
+	ptc->wfc = new wfc_t[1]; //(wfc_t *) malloc(ptc->wfc_count * sizeof(wfc_t));
+	ptc->wfs = new wfs_t[1]; //(wfs_t *) malloc(ptc->wfs_count * sizeof(wfs_t));
 	
 	// configure WFS 0
 	ptc->wfs[0].name = "SH WFS";
@@ -98,6 +98,9 @@ int modOpenInit(control_t *ptc) {
 	return EXIT_SUCCESS;
 }
 void modStopModule(control_t *ptc) {
+	delete[] ptc->filter;
+	delete[] ptc->wfc;
+	delete[] ptc->wfs;
 	// placeholder ftw!
 }
 
@@ -126,22 +129,6 @@ int modCalibrate(control_t *ptc) {
 	return EXIT_SUCCESS;
 }
 
-int modMessage(control_t *ptc, const client_t *client, char *list[], const int count) {
- 	if (strcmp(list[0],"help") == 0) {
-		// Give module-specific help here
-		if (count > 1) { 
-			// we don't know. tell this to parseCmd by returning 0
-			return 0;
-		}
-		else {
-      // tellClient(client->buf_ev, "This is the dummy module and does not provide any additional commands");
-		}
-	}
-	else { // no valid command found? tell the user this is the dummy module, there is nothing useful here
-    // tellClient(client->buf_ev, "This is the dummy module and does not provide any additional commands");
-	} // strcmp stops here
-	
-	// if we end up here, we didn't return 0, so we found a valid command
-	return 1;
-	
+int modMessage(control_t *ptc, Connection *connection, string cmd, string rest) {
+	return 0;
 }

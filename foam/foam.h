@@ -217,7 +217,7 @@ int modCalibrate(control_t *ptc);
  @param [in] *list The list of words received over the network
  @param [in] count The amount of words received over the network
  */
-int modMessage(control_t *ptc, const client_t *client, char *list[], const int count);
+int modMessage(control_t *ptc, Connection *connection, string cmd, string line);
 
 // FOAM (LIBRARY) ROUTINES BEGIN HERE //
 /**************************************/
