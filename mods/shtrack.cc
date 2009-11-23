@@ -93,56 +93,56 @@ static int _cog(void *img, dtype_t dtype, coord_t res, int stride, int samini, f
 	return csum;
 }
 
-int Shtrack::selSubaps(wfs_t *wfs) {
-	int csum;
-	float cog[2], savec[2] = {0};
-	int apmap[sh->cells.x][sh->cells.y];
-	
-	io->msg(IO_INFO, __FILE__ ": __FILE__: Selecting subapertures now...");
+//int Shtrack::selSubaps(wfs_t *wfs) {
+//	int csum;
+//	float cog[2], savec[2] = {0};
+//	int apmap[sh->cells.x][sh->cells.y];
+//	
+//	io->msg(IO_INFO, __FILE__ ": __FILE__: Selecting subapertures now...");
+//
+//	for (int isy=0; isy < sh->cells.y; isy++) { // loops over all grid cells
+//		for (int isx=0; isx < sh->cells.x; isx++) {
+//			csum = _cog(wfs->image, wfs->dtype, wfs->res, wfs->res.x, sh->samini, cog);
+//			if (csum > 0) {
+//				apmap[isx][isy] = 1;
+//				sh->cellc[sh->ns].x = isx * sh->shsize.x; // Subap position
+//				sh->cellc[sh->ns].y = isy * sh->shsize.y;
+//				savec[0] += sh->subc[sh->ns].x; // Sum all subap positions
+//				savec[1] += sh->subc[sh->ns].y;
+//				sh->ns++;
+//			}
+//			else
+//				apmap[isx][isy] = 1;
+//		}
+//	}
+//	
+//	// *Average* subaperture position (wrt the image origin)
+//	savec[0] /= sh->ns;
+//	savec[1] /= sh->ns;
+//	
+//	io->msg(IO_INFO, __FILE__ "Found %d subaps with I > %d.", sh->ns, sh->samini);
+//	
+//	// Find central aperture by minimizing (subap position - average position)
+//	int csa = 0;
+//	float dist, rmin;
+//	rmin = sqrtf( ((sh->cellc[csa].x - savec[0]) * (sh->cellc[csa].x - savec[0])) 
+//		+ ((sh->cellc[csa].y - savec[1]) * (sh->cellc[csa].y - savec[1])));
+//	for (int i=1; i < sh->ns; i++) {
+//		dist = sqrt(
+//			((sh->cellc[i].x - savec[0]) * (sh->cellc[i].x - savec[0]))
+//			+ ((sh->cellc[i].y - savec[1]) * (sh->cellc[i].y - savec[1])));
+//		if (dist < rmin) {
+//			rmin = dist;
+//			csa = i; 									// new best guess for central subaperture
+//		}
+//	}
+//
+//	io->msg(IO_INFO, __FILE__ "Central subaperture #%d at (%d,%d)", csa,
+//		sh->cellc[csa].x, sh->cellc[csa].y);
+//	
+//	return sh->ns;
+//}
 
-	for (int isy=0; isy < sh->cells.y; isy++) { // loops over all grid cells
-		for (int isx=0; isx < sh->cells.x; isx++) {
-			csum = _cog(wfs->image, wfs->dtype, wfs->res, wfs->res.x, sh->samini, cog);
-			if (csum > 0) {
-				apmap[isx][isy] = 1;
-				sh->cellc[sh->ns].x = isx * sh->shsize.x; // Subap position
-				sh->cellc[sh->ns].y = isy * sh->shsize.y;
-				savec[0] += sh->subc[sh->ns].x; // Sum all subap positions
-				savec[1] += sh->subc[sh->ns].y;
-				sh->ns++;
-			}
-			else
-				apmap[isx][isy] = 1;
-		}
-	}
-	
-	// *Average* subaperture position (wrt the image origin)
-	savec[0] /= sh->ns;
-	savec[1] /= sh->ns;
-	
-	io->msg(IO_INFO, __FILE__ "Found %d subaps with I > %d.", sh->ns, sh->samini);
-	
-	// Find central aperture by minimizing (subap position - average position)
-	int csa = 0;
-	float dist, rmin;
-	rmin = sqrtf( ((sh->cellc[csa].x - savec[0]) * (sh->cellc[csa].x - savec[0])) 
-		+ ((sh->cellc[csa].y - savec[1]) * (sh->cellc[csa].y - savec[1])));
-	for (int i=1; i < sh->ns; i++) {
-		dist = sqrt(
-			((sh->cellc[i].x - savec[0]) * (sh->cellc[i].x - savec[0]))
-			+ ((sh->cellc[i].y - savec[1]) * (sh->cellc[i].y - savec[1])));
-		if (dist < rmin) {
-			rmin = dist;
-			csa = i; 									// new best guess for central subaperture
-		}
-	}
-
-	io->msg(IO_INFO, __FILE__ "Central subaperture #%d at (%d,%d)", csa,
-		sh->cellc[csa].x, sh->cellc[csa].y);
-	
-	return sh->ns;
-}
-
-int Shtrack::cogFind(wfs_t *wfs) {
-  return 0;
-}
+//int Shtrack::cogFind(wfs_t *wfs) {
+//  return 0;
+//}

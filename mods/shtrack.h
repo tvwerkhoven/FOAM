@@ -33,6 +33,7 @@
 /**************/
 
 #include "foam.h"
+#include "foamctrl.h"
 #include "types.h"
 #include "imgio.h"
 
@@ -78,8 +79,8 @@ public:
 	void Shtrack::setPHFile(string f) { phfile = f; }
 	void Shtrack::setInfFile(string f) { inffile = f; }
 	
-	int Shtrack::selSubaps(wfs_t *wfs);
-	int Shtrack::cogFind(wfs_t *wfs);
+//	int Shtrack::selSubaps(wfs_t *wfs);
+//	int Shtrack::cogFind(wfs_t *wfs);
 };
 
 #endif /* __SHTRACK_H__ */
