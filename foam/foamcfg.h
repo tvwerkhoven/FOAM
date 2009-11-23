@@ -23,6 +23,7 @@
 #define __FOAMCFG_H__
 
 #include "types.h"
+#include "config.h"
 
 /*!
  @brief Runtime configuration class.
@@ -30,6 +31,8 @@
  This class stores relevant runtime configuration settings.
  */
 class foamcfg {
+	config *cfgfile;
+	
 	public:
 	foamcfg();
 	foamcfg(string &file);

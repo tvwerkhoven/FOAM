@@ -30,6 +30,7 @@ extern Io *io;
 
 foamctrl::~foamctrl(void) {
 	io->msg(IO_DEB2, "foamctrl::~foamctrl(void)");
+	delete cfgfile;
 	delete[] wfs;
 	delete[] wfc;
 	delete[] filter;
@@ -53,7 +54,7 @@ foamctrl::foamctrl(string &file) {
 int foamctrl::parse(string &file) {
 	io->msg(IO_DEB2, "foamctrl::parse(string &file)");
 	conffile = file;
-	config *cfgfile = new config(conffile);
+	cfgfile = new config(conffile);
 	
 	// Configure AO system now
 	try {
@@ -98,7 +99,7 @@ int foamctrl::parse(string &file) {
 	}
 	
 	io->msg(IO_INFO, "Parsed control configuration.");
-	
+
 	return 0;
 }
 

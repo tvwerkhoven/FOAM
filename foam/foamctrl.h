@@ -26,6 +26,7 @@
 #include "wfs.h"
 #include "wfc.h"
 #include "foamcfg.h"
+#include "config.h"
 
 /*!
  @brief Struct for filter wheel identification (used by foamctrl)
@@ -67,6 +68,8 @@ typedef struct {
  Also take a look at wfs_t, wfc_t and fwheel_t.
  */
 class foamctrl {
+	config *cfgfile;
+	
 	public:
 	foamctrl(void);
 	foamctrl(string &file);

@@ -126,7 +126,6 @@ int main(int argc, char *argv[]) {
 	// INIT VARS // 
 	/*************/
 	io = new Io(4);
-	config *cfgfile = new config;
   
 	if (pthread_mutex_init(&mode_mutex, NULL) != 0)
 		io->msg(IO_ERR, "pthread_mutex_init failed.");
@@ -197,6 +196,7 @@ int main(int argc, char *argv[]) {
 	}
 	
 	// Init control and configuration using the config file
+	io->msg(IO_INFO, "Initializing control & AO configuration...");
   cs_config = new foamcfg(conffile);
 	ptc = new foamctrl(conffile);
 	
@@ -266,6 +266,9 @@ int main(int argc, char *argv[]) {
 	
 	int rc = stopFOAM();
 	
+	delete cs_config;
+	delete io;
+	
 	return rc;
 }
 
@@ -279,6 +282,7 @@ void catchSIGINT(int) {
 	
 	// stop the framework
 	ptc->mode = AO_MODE_SHUTDOWN;
+	pthread_cond_signal(&mode_cond); // signal a change to the threads
 	io->msg(IO_WARN, "Got SIGINT, shutting down...");
 }
 
@@ -293,16 +297,17 @@ int stopFOAM() {
 	struct tm * loctime = localtime(&end);
 	char date[64];	
 	strftime(date, 64, "%A, %B %d %H:%M:%S, %Y (%Z).", loctime);
+
+	// Last log message just before closing the logfiles
+	io->msg(IO_INFO, "Stopping FOAM at %s", date);
+	io->msg(IO_INFO, "Ran for %ld seconds, parsed %ld frames (%.1f FPS).", \
+					end-ptc->starttime, ptc->frames, ptc->frames/(float) (end-ptc->starttime));
+	
 	
 	// stop prime prime module if it hasn't already
 	io->msg(IO_INFO, "Trying to stop modules...");
 	
 	delete ptc;
-	
-	// Last log message just before closing the logfiles
-	io->msg(IO_INFO, "Stopping FOAM at %s", date);
-	io->msg(IO_INFO, "Ran for %ld seconds, parsed %ld frames (%.1f FPS).", \
-		end-ptc->starttime, ptc->frames, ptc->frames/(float) (end-ptc->starttime));
 	
 	return 0;
 }
@@ -439,20 +444,23 @@ void modeCal() {
 
 void modeListen() {
 	
+	io->msg(IO_DEB1, __FILE__ "::modeListen() begin");				
 	while (true) {
-		io->msg(IO_INFO, "Now running in listening mode.");
-		
 		switch (ptc->mode) {
 			case AO_MODE_OPEN:
+				io->msg(IO_DEB1, __FILE__ "::modeListen() AO_MODE_OPEN");				
 				modeOpen();
 				break;
 			case AO_MODE_CLOSED:
+				io->msg(IO_DEB1, __FILE__ "::modeListen() AO_MODE_CLOSED");				
 				modeClosed();
 				break;
 			case AO_MODE_CAL:
+				io->msg(IO_DEB1, __FILE__ "::modeListen() AO_MODE_CAL");				
 				modeCal();
 				break;
 			case AO_MODE_LISTEN:
+				io->msg(IO_DEB1, __FILE__ "::modeListen() AO_MODE_LISTEN");				
 				// We wait until the mode changed
 				protocol->broadcast("201 :MODE LISTEN SUCCESSFUL");
 				pthread_mutex_lock(&mode_mutex);
@@ -460,6 +468,7 @@ void modeListen() {
 				pthread_mutex_unlock(&mode_mutex);
 				break;
 			case AO_MODE_SHUTDOWN:
+				io->msg(IO_DEB1, __FILE__ "::modeListen() AO_MODE_SHUTDOWN");				
 				// we want to shutdown the program, return modeListen
 				return;
 				break;

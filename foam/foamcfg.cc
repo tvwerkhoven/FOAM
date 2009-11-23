@@ -30,6 +30,10 @@ extern Io *io;
 
 foamcfg::~foamcfg(void) {
 	io->msg(IO_DEB2, "foamcfg::~foamcfg()");
+	
+	delete cfgfile;
+	
+	if (use_syslog) closelog();
 }
 
 foamcfg::foamcfg(void) {
@@ -45,14 +49,14 @@ foamcfg::foamcfg(string &file) {
 int foamcfg::parse(string &file) {
 	io->msg(IO_DEB2, "foamcfg::parse(string &file)");
 	conffile = file;
-	config *cfgfile = new config(conffile);
+	cfgfile = new config(conffile);
 	
 	// PID file
 	pidfile = cfgfile->getstring("pidfile", "/tmp/foam.pid");
 	
 	// Datadir
 	datadir = cfgfile->getstring("datadir", "./");
-	if (datadir == "./") io->msg(IO_WARN, "Warning: datadir not set, using current directory.");
+	if (datadir == "./") io->msg(IO_WARN, "datadir not set, using current directory.");
 	else io->msg(IO_DEB1, "Datadir: %s.", datadir.c_str());
 	
 	// Daemon settings
@@ -70,7 +74,7 @@ int foamcfg::parse(string &file) {
 	// Logfile settings
 	logfile = cfgfile->getstring("logfile", "");
 	if (logfile != "") io->setLogfile(logfile);
-	
+		
 	return 0;
 }
 
