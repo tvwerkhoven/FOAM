@@ -20,18 +20,19 @@ if DEBUG
 AM_CPPFLAGS += -DFOAM_DEBUG=1
 endif DEBUG
 
-AM_CFLAGS = -pipe -Wall -Wextra \
+AM_CXXFLAGS = -pipe -Wall -Wextra \
 		-O3 -ftree-vectorize \
 		-g
 
 AM_LDFLAGS = $(top_builddir)/$(LIBSIU)/libsocket.a \
 		$(top_builddir)/$(LIBSIU)/libio.a \
+		$(top_builddir)/$(LIBSIU)/libconfig.a \
 		$(top_builddir)/$(LIBSIU)/libprotocol.a \
 		$(COMMON_LIBS)
 
 # Basic framework files which are always needed
-FRAME_SRC = foam.cc
-FRAME_HDR = foam.h config.h
+FRAME_SRC = foam.cc foamctrl.cc foamcfg.cc
+FRAME_HDR = foam.h foamctrl.h foamcfg.h config.h wfc.h wfs.h
 
 MODS_DIR = $(top_builddir)/mods
 LIB_DIR = $(top_builddir)/lib

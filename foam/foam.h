@@ -29,47 +29,35 @@
 #ifndef __FOAM_H__
 #define __FOAM_H__
 
-
 #include <stdio.h>
 #include <math.h>
 #include <string.h>
 #include <unistd.h>
-#ifndef FOAM_MODITIFG_ALONE
-// We must not include sys/time.h if we're only building the itifg module
-// This is a little ugly but somehow itifg decided to redefine timeval
-#include <sys/time.h>
-#endif
 #ifndef _GNU_SOURCE				
 #define _GNU_SOURCE				// for vasprintf / asprintf
 #endif
 #include <sys/socket.h>				// networking
 #include <arpa/inet.h>				// networking
-#ifndef FOAM_MODITIFG_ALONE
-// Same as above, itifg redefines u_int32_t
 #include <sys/types.h>
-#endif
 #include <sys/errno.h>
-#ifndef FOAM_MODITIFG_ALONE
-// Same as above, itifg redefines u_int32_t
 #include <stdlib.h>
-#endif
 #include <syslog.h> 				// used for syslogging
 #include <stdarg.h>
 #include <pthread.h> 				// threads
-#include <stdbool.h> 				// true/false
 #include <signal.h> 				// signal handlers
 #include <time.h> 					// needed by libevent/event.h
-typedef unsigned char u_char;
-#include <event.h> 					// include AFTER stdlib.h (which defined u_char needed by event.h)
 #include <fcntl.h>
 #include <gsl/gsl_linalg.h> 		// this is for SVD / matrix datatype
 #include <gsl/gsl_blas.h> 			// this is for SVD
 
 #include <string>
+#include <stdexcept>
 
 #include "autoconfig.h"
 #include "types.h"
+#include "config.h"
 #include "protocol.h"
+#include "foamctrl.h"
 
 typedef Protocol::Server::Connection Connection;
 
@@ -86,11 +74,11 @@ typedef Protocol::Server::Connection Connection;
  a standardized means to initialize the module before anything has been done, like allocate memory, read in 
  some configuration files, start cameras or anything else.
  
- @param [in] *ptc A control_t struct that has been configured in a prime module
- @param [in] *cs_config A config_t struct that has been configured in a prime module
+ @param [in] *ptc A foamctrl struct that has been configured in a prime module
+ @param [in] *cs_config A foamcfg struct that has been configured in a prime module
  @return EXIT_SUCCESS or EXIT_FAILURE depening on success or not.
  */
-int modInitModule(control_t *ptc, config_t *cs_config);
+int modInitModule(foamctrl *ptc, foamcfg *cs_config);
 
 /*!
  @brief This routine is run right after the program has split into two threads.
@@ -98,11 +86,11 @@ int modInitModule(control_t *ptc, config_t *cs_config);
  This routine can be used to initialize things that are not thread safe,
  such as OpenGL. See modInitModule for more details.
  
- @param [in] *ptc A control_t struct that has been configured in a prime module
- @param [in] *cs_config A config_t struct that has been configured in a prime module
+ @param [in] *ptc A foamctrl struct that has been configured in a prime module
+ @param [in] *cs_config A foamcfg struct that has been configured in a prime module
  @return EXIT_SUCCESS or EXIT_FAILURE depening on success or not. 
  */
-int modPostInitModule(control_t *ptc, config_t *cs_config);
+int modPostInitModule(foamctrl *ptc, foamcfg *cs_config);
 
 /*!
  @brief This routine is run at the very end of the FOAM program.
@@ -110,9 +98,9 @@ int modPostInitModule(control_t *ptc, config_t *cs_config);
  modStopModule() can be used to wrap up things related to the module, like stop cameras, set
  filterwheels back or anything else. If this module fails, FOAM *will* exit anyway.
  
- @param [in] *ptc A control_t struct that has been configured in a prime module
+ @param [in] *ptc A foamctrl struct that has been configured in a prime module
  */
-void modStopModule(control_t *ptc);
+void modStopModule(foamctrl *ptc);
 
 /*! 
  @brief This routine is run during closed loop.
@@ -121,47 +109,47 @@ void modStopModule(control_t *ptc);
  routine is called in a loop, modClosedInit() is first called once to initialize things related to closed loop
  operation.
  
- @param [in] *ptc A control_t struct that has been configured in a prime module
+ @param [in] *ptc A foamctrl struct that has been configured in a prime module
  @return EXIT_SUCCESS or EXIT_FAILURE depening on success or not. 
  */
-int modClosedLoop(control_t *ptc);
+int modClosedLoop(foamctrl *ptc);
 
 /*! 
  @brief This routine is run once before entering closed loop.
  
  modClosedInit() should be provided by a module which does the necessary things just before closed loop.
- @param [in] *ptc A control_t struct that has been configured in a prime module 
+ @param [in] *ptc A foamctrl struct that has been configured in a prime module 
  @return EXIT_SUCCESS or EXIT_FAILURE depening on success or not. 
  */
-int modClosedInit(control_t *ptc);
+int modClosedInit(foamctrl *ptc);
 
 /*! 
  @brief This routine is run after closed loop.
  
  modClosedFinish() can be used to shut down camera's temporarily, i.e.
  to stop grabbing frames or something similar.
- @param [in] *ptc A control_t struct that has been configured in a prime module 
+ @param [in] *ptc A foamctrl struct that has been configured in a prime module 
  @return EXIT_SUCCESS or EXIT_FAILURE depening on success or not. 
  */
-int modClosedFinish(control_t *ptc);
+int modClosedFinish(foamctrl *ptc);
 
 /*! 
  @brief This routine is run during open loop.
  
  modOpenLoop() should be provided by a module which does the necessary things in open loop.
- @param [in] *ptc A control_t struct that has been configured in a prime module 
+ @param [in] *ptc A foamctrl struct that has been configured in a prime module 
  @return EXIT_SUCCESS or EXIT_FAILURE depening on success or not. 
  */
-int modOpenLoop(control_t *ptc);
+int modOpenLoop(foamctrl *ptc);
 
 /*! 
  @brief This routine is run once before entering open loop.
  
  modOpenInit() should be provided by a module which does the necessary things just before open loop.
- @param [in] *ptc A control_t struct that has been configured in a prime module 
+ @param [in] *ptc A foamctrl struct that has been configured in a prime module 
  @return EXIT_SUCCESS or EXIT_FAILURE depening on success or not.  
  */
-int modOpenInit(control_t *ptc);
+int modOpenInit(foamctrl *ptc);
 
 /*! 
  @brief This routine is run after open loop.
@@ -169,22 +157,22 @@ int modOpenInit(control_t *ptc);
  modOpenFinish() can be used to shut down camera's temporarily, i.e.
  to stop grabbing frames or something similar.
  
- @param [in] *ptc A control_t struct that has been configured in a prime module 
+ @param [in] *ptc A foamctrl struct that has been configured in a prime module 
  @return EXIT_SUCCESS or EXIT_FAILURE depening on success or not. 
  */
-int modOpenFinish(control_t *ptc);
+int modOpenFinish(foamctrl *ptc);
 
 /*! 
  @brief This routine is run in calibration mode.
  
  Slightly different from open and closed mode is the calibration mode. This mode does not have
  a loop which runs forever, but only calls modCalibrate once. It is left to the programmer to decide 
- what to do in this mode. control_t provides a flag (.calmode) to distinguish between different calibration modes.
+ what to do in this mode. foamctrl provides a flag (.calmode) to distinguish between different calibration modes.
  
- @param [in] *ptc A control_t struct that has been configured in a prime module 
+ @param [in] *ptc A foamctrl struct that has been configured in a prime module 
  @return EXIT_SUCCESS or EXIT_FAILURE depening on success or not.  
  */
-int modCalibrate(control_t *ptc);
+int modCalibrate(foamctrl *ptc);
 
 /*!
  @brief Called when a message is received
@@ -210,22 +198,15 @@ int modCalibrate(control_t *ptc);
  
  See also on_message().
  
- @param [in] *ptc A control_t struct that has been configured in a prime module 
+ @param [in] *ptc A foamctrl struct that has been configured in a prime module 
  @param [in] *connection Reference to the connection
  @param [in] cmd The command given (first word)
  @param [in] line The remainder of the data received.
  */
-int modMessage(control_t *ptc, Connection *connection, string cmd, string line);
+int modMessage(foamctrl *ptc, Connection *connection, string cmd, string line);
 
 // FOAM (LIBRARY) ROUTINES BEGIN HERE //
 /**************************************/
-
-/*!
- @brief This is the routine that is run immediately after threading, and should run modeListen after initializing the prime module.
-
- */
-void *startThread(void *arg);
-
 
 /*! 
  @brief Runs FOAM in open-loop mode.
@@ -305,37 +286,6 @@ static void on_connect(Connection *connection, bool status);
  */
 static int showhelp(Connection *connection, string topic, string rest);
 
-/*!
- @brief Check & initialize darkfield, flatfield and skyfield files.
- 
- Check if the darkfield, flatfield and skyfield files are available, and if so,
- allocate memory for the various images in memory and load them into the
- newly allocated matrices. 
- 
- If the files are not present, the FD's will be NULL. Allocate memory anyway in that
- case so we can directly store the frames in the specific memory later on.
- 
- If the files are set to NULL, don't use dark/flat/sky field calibration at all.
- */
-void checkFieldFiles(wfs_t *wfsinfo);
-
-/*!
- @brief Check if the ptc struct has reasonable values
- 
- Check if the values in ptc set by modInitModule() by the user are reasonable.
- If they are not reasonable, give a warning about it. If necessary, allocate
- some memory.
- */
-void checkAOConfig(control_t *ptc);
-
-/*!
- @brief Check if the cs_config struct has reasonable values
- 
- Check if the values in cs_config set by modInitModule() by the user are reasonable.
- If they are not reasonable, give a warning about it. If necessary, allocate
- some memory.
- */
-void checkFOAMConfig(config_t *conf);
 
 /*!
  @brief Function which wraps up FOAM (free some memory, gives some stats)
@@ -346,7 +296,7 @@ void checkFOAMConfig(config_t *conf);
  \li Destroy the mutexes for the threads
  \li Close files for info/error/debug logging.
  */
-void stopFOAM();
+int stopFOAM();
 
 /*!
  @brief Catches \c SIGINT signals and stops FOAM gracefully, calling \c stopFOAM().

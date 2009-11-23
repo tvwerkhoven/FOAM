@@ -266,7 +266,7 @@ int imgSaveToBuf(mod_imgbuf_t *buf, void *img, foam_datat_t datatype, coord_t re
 	return EXIT_SUCCESS;
 }
 
-int imgDumpBuf(mod_imgbuf_t *buf, control_t *ptc) {
+int imgDumpBuf(mod_imgbuf_t *buf, foamctrl *ptc) {
 	if (buf->data == NULL) {
 		io->msg(IO_WARN, "Image buffer data not allocated, cannot dump");
 		return EXIT_FAILURE;

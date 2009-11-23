@@ -1,5 +1,5 @@
 /*
- Copyright (C) 2008 Tim van Werkhoven (t.i.m.vanwerkhoven@xs4all.nl)
+ Copyright (C) 2008-2009 Tim van Werkhoven (t.i.m.vanwerkhoven@xs4all.nl)
  
  This file is part of FOAM.
  
@@ -15,8 +15,6 @@
  
  You should have received a copy of the GNU General Public License
  along with FOAM.  If not, see <http://www.gnu.org/licenses/>.
-
- $Id$
  */
 /*! 
 	@file foam-simstatic.h

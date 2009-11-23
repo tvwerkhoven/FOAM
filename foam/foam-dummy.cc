@@ -34,97 +34,47 @@ extern pthread_mutex_t mode_mutex;
 extern pthread_cond_t mode_cond;
 extern Io *io;
 
-int modInitModule(control_t *ptc, config_t *cs_config) {
+int modInitModule(foamctrl *ptc, foamcfg *cs_config) {
   io->msg(IO_INFO, "Running in dummy mode, don't expect great AO results :)");
-	
-	// populate ptc here
-	ptc->mode = AO_MODE_LISTEN;		// start in listen mode
-	ptc->calmode = CAL_INFL;			// this is not really relevant
-	ptc->logfrac = 100;           // log verbose messages only every 100 frames    
-	ptc->wfs_count = 1;						// 1 FW, WFS and WFC
-	ptc->wfc_count = 1;
-	ptc->fw_count = 1;
-	
-	// allocate memory for filters, wfc's and wfs's
-	ptc->wfs = new wfs_t[ptc->wfs_count];
-	ptc->wfc = new wfc_t[ptc->wfc_count];
-	ptc->filter = new filtwheel_t[ptc->fw_count];
-	
-	// configure WFS 0
-	ptc->wfs[0].name = "SH WFS";
-	ptc->wfs[0].res.x = 256;
-	ptc->wfs[0].res.y = 256;
-	ptc->wfs[0].bpp = 8;
-	ptc->wfs[0].darkfile = "";
-	ptc->wfs[0].flatfile = "";
-	ptc->wfs[0].skyfile = "";
-	ptc->wfs[0].scandir = AO_AXES_XY;
-	
-	// configure WFC 0
-	ptc->wfc[0].name = "OkoDM";
-	ptc->wfc[0].nact = 37;
-	ptc->wfc[0].gain.p = 1.0;
-	ptc->wfc[0].gain.i = 1.0;
-	ptc->wfc[0].gain.d = 1.0;
-	ptc->wfc[0].type = WFC_DM;
-	
-	// configure filter 0
-	ptc->filter[0].name = "Telescope FW";
-	ptc->filter[0].nfilts = 3;
-	ptc->filter[0].filters = new filter_t[ptc->filter[0].nfilts];
-	ptc->filter[0].filters[0] = FILT_PINHOLE;
-	ptc->filter[0].filters[1] = FILT_OPEN;
-	ptc->filter[0].filters[2] = FILT_CLOSED;
-		
-	// configure cs_config here
-	cs_config->listenip = "0.0.0.0";	// listen on any IP by defaul
-	cs_config->listenport = "1025";		// listen on port 1010 by default
-	cs_config->use_syslog = false;		// don't use the syslog
-	cs_config->syslog_prepend = "foam";	// prepend logging with 'foam'
-	cs_config->logfile = "./dummylog";	// log to file
-
 	return EXIT_SUCCESS;
 }
 
-int modPostInitModule(control_t *ptc, config_t *cs_config) {
+int modPostInitModule(foamctrl *ptc, foamcfg *cs_config) {
 	return EXIT_SUCCESS;
 }
 
-int modOpenInit(control_t *ptc) {
+int modOpenInit(foamctrl *ptc) {
 	return EXIT_SUCCESS;
 }
-void modStopModule(control_t *ptc) {
-	delete[] ptc->filter;
-	delete[] ptc->wfc;
-	delete[] ptc->wfs;
+void modStopModule(foamctrl *ptc) {
 	// placeholder ftw!
 }
 
-int modOpenLoop(control_t *ptc) {
+int modOpenLoop(foamctrl *ptc) {
 	return EXIT_SUCCESS;
 }
 
-int modOpenFinish(control_t *ptc) {
+int modOpenFinish(foamctrl *ptc) {
 	return EXIT_SUCCESS;
 }
 
 
-int modClosedInit(control_t *ptc) {
+int modClosedInit(foamctrl *ptc) {
 	return EXIT_SUCCESS;
 }
 
-int modClosedLoop(control_t *ptc) {
+int modClosedLoop(foamctrl *ptc) {
 	return EXIT_SUCCESS;
 }
 
-int modClosedFinish(control_t *ptc) {
+int modClosedFinish(foamctrl *ptc) {
 	return EXIT_SUCCESS;
 }
 
-int modCalibrate(control_t *ptc) {
+int modCalibrate(foamctrl *ptc) {
 	return EXIT_SUCCESS;
 }
 
-int modMessage(control_t *ptc, Connection *connection, string cmd, string rest) {
+int modMessage(foamctrl *ptc, Connection *connection, string cmd, string rest) {
 	return 0;
 }

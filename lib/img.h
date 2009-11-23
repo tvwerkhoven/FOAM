@@ -86,7 +86,7 @@ int imgSaveToBuf(mod_imgbuf_t *buf, void *img, foam_datat_t datatype, coord_t re
 	
 /*! @brief Dump the buffer to disk and reset the buffer
  */
-int imgDumpBuf(mod_imgbuf_t *buf, control_t *ptc);
+int imgDumpBuf(mod_imgbuf_t *buf, foamctrl *ptc);
 
 /* @brief Free the memory occupied by the buffer
  */

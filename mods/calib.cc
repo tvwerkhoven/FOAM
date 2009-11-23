@@ -70,7 +70,7 @@ extern Io *io;
 // ROUTINES //
 /************/
 
-int calibPinhole(control_t *ptc, int wfs, mod_sh_track_t *shtrack) {
+int calibPinhole(foamctrl *ptc, int wfs, mod_sh_track_t *shtrack) {
 	int i, j;
 	FILE *fd;
 	
@@ -118,7 +118,7 @@ int calibPinhole(control_t *ptc, int wfs, mod_sh_track_t *shtrack) {
 	return EXIT_SUCCESS;
 }
 
-int calibPinholeChk(control_t *ptc, int wfs, mod_sh_track_t *shtrack) {
+int calibPinholeChk(foamctrl *ptc, int wfs, mod_sh_track_t *shtrack) {
 	FILE *fd;
 	
 	fd = fopen(shtrack->pinhole, "r");
@@ -132,7 +132,7 @@ int calibPinholeChk(control_t *ptc, int wfs, mod_sh_track_t *shtrack) {
 	return EXIT_SUCCESS;
 }
 
-int calibWFC(control_t *ptc, int wfs, mod_sh_track_t *shtrack) {
+int calibWFC(foamctrl *ptc, int wfs, mod_sh_track_t *shtrack) {
 	int j, i, k, skip;
 	int nact=0, nacttot=0;			// total nr of acts for all WFCs
 	int nsubap=0; 		// nr of subapts for specific WFS
@@ -271,7 +271,7 @@ int calibWFC(control_t *ptc, int wfs, mod_sh_track_t *shtrack) {
 	return EXIT_SUCCESS;
 }
 
-int calibWFCChk(control_t *ptc, int wfs, mod_sh_track_t *shtrack) {
+int calibWFCChk(foamctrl *ptc, int wfs, mod_sh_track_t *shtrack) {
 	int i, chknact, chksubap;
 	int nsubap = shtrack->nsubap, nacttot=0;
 	char *outfile;
@@ -372,7 +372,7 @@ int calibWFCChk(control_t *ptc, int wfs, mod_sh_track_t *shtrack) {
  	return EXIT_SUCCESS;
 }
 
-int calibSVDGSL(control_t *ptc, int wfs, mod_sh_track_t *shtrack) {
+int calibSVDGSL(foamctrl *ptc, int wfs, mod_sh_track_t *shtrack) {
 	FILE *fd;
 	int i, j, nact=0, nsubap = shtrack->nsubap;
 	double tmp;

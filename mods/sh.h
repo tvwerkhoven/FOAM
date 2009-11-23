@@ -144,7 +144,7 @@ int shCogTrack(void *image, foam_datat_t data, mod_sh_align_t align, mod_sh_trac
  @param [in] wfs The WFS to use as input for voltage calculation
  @param [in] nmodes The number of WFC modes to take into account, should be less than the total nr of actuators in the system
  */
-int shCalcCtrl(control_t *ptc, mod_sh_track_t *shtrack, const int wfs, int nmodes);
+int shCalcCtrl(foamctrl *ptc, mod_sh_track_t *shtrack, const int wfs, int nmodes);
 
 /*!
  @brief Search for a maxium within (xc, yc) -> (xc+width, yc+height) in a certain WFS output.

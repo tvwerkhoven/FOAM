@@ -491,7 +491,7 @@ void shCogFind(wfs_t *wfsinfo, int xc, int yc, int width, int height, float sami
 
 
 
-int shCalcCtrl(control_t *ptc, mod_sh_track_t *shtrack, const int wfs, int nmodes) {
+int shCalcCtrl(foamctrl *ptc, mod_sh_track_t *shtrack, const int wfs, int nmodes) {
 	//logDebug(LOG_SOMETIMES, "Calculating WFC ctrls");
 	// function assumes presence of dmmodes, singular and wfsmodes...
 	if (shtrack->dmmodes == NULL || shtrack->singular == NULL || shtrack->wfsmodes == NULL) {

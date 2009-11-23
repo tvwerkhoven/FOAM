@@ -44,38 +44,23 @@ extern pthread_mutex_t mode_mutex;
 extern pthread_cond_t mode_cond;
 
 extern Io *io;
+Imgio *wfi;
 
 // GLOBALS //
 /***********/
 Shtrack *shtrack;
 
-int modInitModule(control_t *ptc, config_t *cs_config) {
+int modInitModule(foamctrl *ptc, foamcfg *cs_config) {
 	io->msg(IO_INFO, "This is the simstatic prime module, enjoy.");
 	
 	// Setup configuration directives
-	// TODO: should go to config file.
 	cs_config->datadir = "/Users/tim/workdocs/work/dev/foam/data/"; // datadir
-	cs_config->listenip = "0.0.0.0";	// listen on any IP by defaul
-	cs_config->listenport = "1025";		// listen on port 10000 by default
-	cs_config->use_syslog = false;		// don't use the syslog
-	cs_config->syslog_prepend = "foam-simstat";	// prepend logging with 'foam-stat'
-	cs_config->logfile = "";					// don't log anything to file
 	
-	// Populate ptc here
-	// TODO: should go into config file
-	ptc->mode = AO_MODE_LISTEN;			// start in listen mode (safe bet, you probably want this)
-	ptc->calmode = CAL_INFL;			  // this is not really relevant initialliy
 	ptc->logfrac = 100;             // log verbose messages only every 100 frames
-	ptc->wfs_count = 1;					    // just 1 static 'wfs' for simulation
-	ptc->wfc_count = 0;
-	ptc->fw_count = 0;
-	
-	// Only one WFS in simulation
-	ptc->wfs = new wfs_t[1];
-	
+
 	// configure WFS 0
 	// set image to something static
-	Imgio *wfi = new Imgio(cs_config->datadir + "simstatic-irr.pgm", IMGIO_PGM);
+	wfi = new Imgio(cs_config->datadir + "simstatic-irr.pgm", IMGIO_PGM);
 	if (wfi->loadImg())
 		io->msg(IO_ERR | IO_FATAL, "Error loading image!");
 	
@@ -87,9 +72,6 @@ int modInitModule(control_t *ptc, config_t *cs_config) {
 	ptc->wfs[0].res.y = wfi->getHeight();
 	ptc->wfs[0].bpp = wfi->getBitpix();
 	// this is where we will look for dark/flat/sky images
-	ptc->wfs[0].darkfile = cs_config->datadir + "_dark.gsldump";
-  ptc->wfs[0].flatfile = cs_config->datadir + "_flat.gsldump";
-  ptc->wfs[0].skyfile = cs_config->datadir + "_sky.gsldump";
 	ptc->wfs[0].scandir = AO_AXES_XY;
 	ptc->wfs[0].id = 0;
 	ptc->wfs[0].fieldframes = 1000;     // take 1000 frames for a dark or flatfield
@@ -114,21 +96,23 @@ int modInitModule(control_t *ptc, config_t *cs_config) {
 	return EXIT_SUCCESS;
 }
 
-int modPostInitModule(control_t *ptc, config_t *cs_config) {
+int modPostInitModule(foamctrl *ptc, foamcfg *cs_config) {
 	return EXIT_SUCCESS;
 }
 
-void modStopModule(control_t *ptc) {
+void modStopModule(foamctrl *ptc) {
+	delete shtrack;
+	delete wfi;
 }
 
 // OPEN LOOP ROUTINES //
 /*********************/
 
-int modOpenInit(control_t *ptc) {
+int modOpenInit(foamctrl *ptc) {
 	return EXIT_SUCCESS;
 }
 
-int modOpenLoop(control_t *ptc) {
+int modOpenLoop(foamctrl *ptc) {
 	//MMDarkFlatFullByte(&(ptc->wfs[0]), &shtrack);
 	
 	shtrack->cogFind(&(ptc->wfs[0]));
@@ -137,7 +121,7 @@ int modOpenLoop(control_t *ptc) {
 	return EXIT_SUCCESS;
 }
 
-int modOpenFinish(control_t *ptc) {
+int modOpenFinish(foamctrl *ptc) {
 	// stop
 	return EXIT_SUCCESS;
 }
@@ -145,11 +129,11 @@ int modOpenFinish(control_t *ptc) {
 // CLOSED LOOP ROUTINES //
 /************************/
 
-int modClosedInit(control_t *ptc) {
+int modClosedInit(foamctrl *ptc) {
 	return EXIT_SUCCESS;
 }
 
-int modClosedLoop(control_t *ptc) {
+int modClosedLoop(foamctrl *ptc) {
 	int sn;
 	
 	// dark-flat the whole frame
@@ -163,14 +147,14 @@ int modClosedLoop(control_t *ptc) {
 	return EXIT_SUCCESS;
 }
 
-int modClosedFinish(control_t *ptc) {
+int modClosedFinish(foamctrl *ptc) {
 	return EXIT_SUCCESS;
 }
 
 // MISC ROUTINES //
 /*****************/
 
-int modCalibrate(control_t *ptc) {
+int modCalibrate(foamctrl *ptc) {
 	FILE *fieldfd;
 	int i, j, sn;
 	float min, max, sum, pix;
@@ -229,7 +213,7 @@ int modCalibrate(control_t *ptc) {
 	return EXIT_SUCCESS;
 }
 
-int modMessage(control_t *ptc, Connection *connection, string cmd, string line) {
+int modMessage(foamctrl *ptc, Connection *connection, string cmd, string line) {
 	// Quick recap of messaging codes:
 	// 400 UNKNOWN
 	// 401 UNKNOWN MODE

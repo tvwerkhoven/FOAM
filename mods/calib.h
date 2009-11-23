@@ -40,8 +40,8 @@
 // DEPENDENCIES //
 /****************/
 
-extern int drvSetupHardware(control_t *ptc, aomode_t mode, calmode_t calmode);
-extern int drvSetActuator(control_t *ptc, int wfc);
+extern int drvSetupHardware(foamctrl *ptc, aomode_t mode, calmode_t calmode);
+extern int drvSetActuator(foamctrl *ptc, int wfc);
 
 // PROTOTYPES //
 /**************/
@@ -65,7 +65,7 @@ the control vectors for all WFCs for a given WFS can be calculated.
  @param [in] *shtrack Pointer to a SH tracker configuration
  @return EXIT_FAILURE upon failure, EXIT_SUCCESS otherwise 
 */
-int calibWFC(control_t *ptc, int wfs, mod_sh_track_t *shtrack);
+int calibWFC(foamctrl *ptc, int wfs, mod_sh_track_t *shtrack);
 
 /*!
 @brief Checks whether influence function calibration has been performed.
@@ -78,7 +78,7 @@ int calibWFC(control_t *ptc, int wfs, mod_sh_track_t *shtrack);
  @param [in] *shtrack Pointer to a SH tracker configuration
  @return EXIT_FAILURE upon failure, EXIT_SUCCESS otherwise
 */
-int calibWFCChk(control_t *ptc, int wfs, mod_sh_track_t *shtrack);
+int calibWFCChk(foamctrl *ptc, int wfs, mod_sh_track_t *shtrack);
 
 /*!
 @brief Measure the reference displacement and store it.
@@ -96,7 +96,7 @@ int calibWFCChk(control_t *ptc, int wfs, mod_sh_track_t *shtrack);
  @param [in] *shtrack Pointer to a SH tracker configuration
  @return EXIT_FAILURE upon failure, EXIT_SUCCESS otherwise
 */
-int calibPinhole(control_t *ptc, int wfs, mod_sh_track_t *shtrack);
+int calibPinhole(foamctrl *ptc, int wfs, mod_sh_track_t *shtrack);
 
 /*!
 @brief Checks whether pinhole has been performed, and loads the calibration.
@@ -106,7 +106,7 @@ int calibPinhole(control_t *ptc, int wfs, mod_sh_track_t *shtrack);
  @param [in] *shtrack Pointer to a SH tracker configuration
  @return EXIT_FAILURE upon failure, EXIT_SUCCESS otherwise 
 */
-int calibPinholeChk(control_t *ptc, int wfs, mod_sh_track_t *shtrack);
+int calibPinholeChk(foamctrl *ptc, int wfs, mod_sh_track_t *shtrack);
 
 /*!
 @brief Used to SVD the influence matrix and store the result to file.
@@ -121,6 +121,6 @@ This routine uses singular value decomposition as provided by a GSL interface
  @param [in] *shtrack Pointer to a SH tracker configuration
  @return EXIT_FAILURE upon failure, EXIT_SUCCESS otherwise 
 */
-int calibSVDGSL(control_t *ptc, int wfs, mod_sh_track_t *shtrack);
+int calibSVDGSL(foamctrl *ptc, int wfs, mod_sh_track_t *shtrack);
 
 #endif
