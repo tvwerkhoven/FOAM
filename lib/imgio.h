@@ -29,20 +29,20 @@ class Imgio {
 public:
 	std::string strerr;
 	
-	Imgio::Imgio(std::string, int);
+	Imgio(std::string, int);
 	~Imgio(void);
-	int Imgio::loadImg();
-	int Imgio::writeImg(int, std::string);
-	void *Imgio::getData() { return img->data; }
-	int Imgio::getWidth() { return img->res.x; }
-	int Imgio::getHeight() { return img->res.y; }
-	int Imgio::getDtype() { return img->dtype; }
-	int Imgio::getBitpix() { return img->bitpix; }
+	int loadImg();
+	int writeImg(int, std::string);
+	void *getData() { return img->data; }
+	int getWidth() { return img->res.x; }
+	int getHeight() { return img->res.y; }
+	int getDtype() { return img->dtype; }
+	int getBitpix() { return img->bitpix; }
 private:
-	int Imgio::loadFits(std::string);
-	int Imgio::writeFits(std::string);
-	int Imgio::loadPgm(std::string);
-	int Imgio::writePgm(std::string);
+	int loadFits(std::string);
+	int writeFits(std::string);
+	int loadPgm(std::string);
+	int writePgm(std::string);
 };
 
 static int readNumber(FILE *fd);
