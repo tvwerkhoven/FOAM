@@ -27,6 +27,7 @@
 
 #include <stdio.h>
 #include <fitsio.h>
+#include <string.h>
 
 #include <string>
 
