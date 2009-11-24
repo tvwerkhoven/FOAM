@@ -60,27 +60,27 @@ class Shtrack {
 	string phfile;
 	string inffile;
 public:
-	Shtrack::Shtrack(int, int);
-	Shtrack::Shtrack(coord_t);
+	Shtrack(int, int);
+	Shtrack(coord_t);
 	~Shtrack(void);
 
 	shwfs_t *sh;
 	
-	void Shtrack::setShsize(int w, int h) { sh->shsize.x = w; sh->shsize.y = h; }
-	void Shtrack::setShsize(coord_t size) { sh->shsize = size; }
-	void Shtrack::setSize(coord_t size) { sh->size = size; }
-	void Shtrack::setTrack(float f) { setTrack(f,f); }
-	void Shtrack::setTrack(float fx, float fy) { 
+	void setShsize(int w, int h) { sh->shsize.x = w; sh->shsize.y = h; }
+	void setShsize(coord_t size) { sh->shsize = size; }
+	void setSize(coord_t size) { sh->size = size; }
+	void setTrack(float f) { setTrack(f,f); }
+	void setTrack(float fx, float fy) { 
 		sh->track.x = sh->shsize.x * fx;
 		sh->track.y = sh->shsize.y * fy;
 	}
-	void Shtrack::setSamaxr(int maxr) { sh->samaxr = maxr; }
-	void Shtrack::setSamini(int i) { sh->samini = i; }
-	void Shtrack::setPHFile(string f) { phfile = f; }
-	void Shtrack::setInfFile(string f) { inffile = f; }
+	void setSamaxr(int maxr) { sh->samaxr = maxr; }
+	void setSamini(int i) { sh->samini = i; }
+	void setPHFile(string f) { phfile = f; }
+	void setInfFile(string f) { inffile = f; }
 	
-//	int Shtrack::selSubaps(wfs_t *wfs);
-//	int Shtrack::cogFind(wfs_t *wfs);
+//	int selSubaps(wfs_t *wfs);
+//	int cogFind(wfs_t *wfs);
 };
 
 #endif /* __SHTRACK_H__ */
