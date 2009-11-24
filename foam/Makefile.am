@@ -24,11 +24,12 @@ AM_CXXFLAGS = -pipe -Wall -Wextra \
 		-O3 -ftree-vectorize \
 		-g
 
-AM_LDFLAGS = $(top_builddir)/$(LIBSIU)/libsocket.a \
+AM_LDFLAGS = $(COMMON_LIBS)
+
+LDADD = $(top_builddir)/$(LIBSIU)/libsocket.a \
 		$(top_builddir)/$(LIBSIU)/libio.a \
 		$(top_builddir)/$(LIBSIU)/libconfig.a \
-		$(top_builddir)/$(LIBSIU)/libprotocol.a \
-		$(COMMON_LIBS)
+		$(top_builddir)/$(LIBSIU)/libprotocol.a
 
 # Basic framework files which are always needed
 FRAME_SRC = foam.cc foamctrl.cc foamcfg.cc
@@ -41,7 +42,6 @@ LIB_DIR = $(top_builddir)/lib
 ##################
 
 bin_PROGRAMS = foam-dummy
-foam_dummy_CFLAGS = -g $(AM_CFLAGS)
 foam_dummy_CPPFLAGS = -DFOAM_DEBUG=1 $(AM_CPPFLAGS)
 foam_dummy_SOURCES = foam-dummy.cc $(FRAME_SRC) 
 foam_dummy_SOURCES += $(FRAME_HDR)
@@ -70,7 +70,7 @@ foam_simstat_CPPFLAGS = -DFOAM_SIMSTAT_DISPLAY=1 \
 		$(SIMSTAT_CFLAGS) $(AM_CPPFLAGS)
 
 # specific flags and libraries
-foam_simstat_CFLAGS = $(SIMSTAT_CFLAGS) $(AM_CFLAGS)
+foam_simstat_CXXFLAGS = $(SIMSTAT_CFLAGS) $(AM_CXXFLAGS)
 foam_simstat_LDFLAGS = $(SIMSTAT_LIBS) $(AM_LDFLAGS)
 
 endif SIMSTAT
