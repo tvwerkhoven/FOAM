@@ -110,11 +110,11 @@ if test "$simstat" = true ; then
 		[],
 		AC_MSG_WARN([This package needs SDL in simstat mode]))
 	
-	PKG_CHECK_MODULES(CFITSIO, [cfitsio], [],
+	AC_SEARCH_LIBS([ffopen], [cfitsio], [SIMSTAT_LIBS+="-lcfitsio "], 
 		[AC_MSG_WARN([This package needs cfitsio in simstat mode.]);
 		simstat=false;
 		simstatmissing+=" cfitsio"])
-	
+
 	AC_SEARCH_LIBS([IMG_Load], [SDL_image], [SIMSTAT_LIBS+="-lSDL_image "], 
 		[AC_MSG_WARN([This package needs SDL_image in simstat mode.]);
 		simstat=false;
@@ -130,8 +130,8 @@ if test "$simstat" = true ; then
 		simstat=false;
 		simstatmissing+=" png"])
 	
-	SIMSTAT_CFLAGS+=" $SDL_CFLAGS $CFITSIO_CFLAGS"
-	SIMSTAT_LIBS+=" $SDL_LIBS $CFITSIO_LIBS"
+	SIMSTAT_CFLAGS+=" $SDL_CFLAGS"
+	SIMSTAT_LIBS+=" $SDL_LIBS"
 else 
 	AC_MSG_NOTICE([*** Static simulation disabled])
 fi
