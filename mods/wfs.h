@@ -51,7 +51,8 @@ class Wfs {
 	
 	Camera *cam;									//!< Camera specific class
 	
-	virtual int verify() { return 0; }
+	virtual int verify() { return 0; } //!< Verify settings
+	virtual int calibrate(void) { return 0; } //!< Initialize WFS
 	virtual void* measure() { return NULL; }
 	
 	static Wfs *create(config &config);	//!< Initialize new wavefront sensor

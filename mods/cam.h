@@ -39,6 +39,7 @@ extern Io *io;
  @data // :tim:20091126 
  */
 class Camera {
+protected:
 	void *image;									//!< Pointer to the image data (can be ringbuffer)
 	void *darkim;									//!< Pointer to a darkfield image
 	void *flatim;									//!< Pointer to a flatfield image
@@ -60,7 +61,7 @@ public:
 	
 	coord_t res;									//!< Camera pixel resolution
 	int bpp;											//!< Camera pixel depth
-	int dtype;										//!< Camera datatype
+	dtype_t dtype;								//!< Camera datatype
 	
 	string darkfile;
 	string flatfile;
@@ -74,6 +75,7 @@ public:
 	virtual int get_width() {return 0;}
 	virtual int get_height() {return 0;}
 	virtual int get_depth() {return 0;}
+	virtual dtype_t get_dtype() {return dtype;}
 	virtual mode get_mode() {return OFF;}
 	
 	virtual void set_exposure(double) {}
@@ -84,6 +86,7 @@ public:
 	
 	virtual bool thumbnail(uint8_t *) {return false;}
 	virtual void init_capture() {}
+	virtual bool get_image(void **out) {return NULL;}
 	virtual bool capture(int fd) {return false;}
 	virtual bool monitor(void *frame, size_t &size, int &x1, int &y1, int &x2, int &y2, int &scale) {return false;}
 	

@@ -127,6 +127,10 @@ int modClosedFinish(foamctrl *ptc) {
 int modCalibrate(foamctrl *ptc) {
 	io->msg(IO_DEB2, __FILE__ "::modCalibrate(foamctrl *ptc)");
 
+	if (ptc->calmode == CAL_SUBAPSEL) {
+		io->msg(IO_DEB2, __FILE__ "::modCalibrate CAL_SUBAPSEL");
+		ptc->wfs[0]->calibrate();
+	}
 		
 	return EXIT_SUCCESS;
 }
@@ -146,14 +150,25 @@ int modMessage(foamctrl *ptc, Connection *connection, string cmd, string line) {
 			connection->write("This is the simstat module of FOAM.");
 		}
 		else if (topic == "calib") {
-			connection->write("404 :HELP ON CALIB NOT AVAILABLE");
+			connection->write(\
+												"calib <mode>:           Calibrate AO system.\n"
+												"  mode=sasel:			     Select subapertures.");
 		}
 		else {
 			return -1;
 		}
 	}
 	else if (cmd == "calib") {
-		connection->write("404 :CALIB NOT AVAILABLE");
+		string calmode = popword(line);
+		if (calmode == "sasel") {
+			connection->server->broadcast("201 :CALIB OK SUBAPSEL");
+			ptc->calmode = CAL_SUBAPSEL;
+			ptc->mode = AO_MODE_CAL;
+			pthread_cond_signal(&mode_cond); // signal a change to the main thread
+		}
+		else {
+			connection->write("401 :CALIB MODE UNKNOWN");
+		}	
 	}
 	else {
 		return -1;
