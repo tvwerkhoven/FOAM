@@ -1,40 +1,105 @@
-#ifndef __CAM_H_
-#define __CAM_H_
+/*
+ cam.h -- generic camera input/output wrapper
+ Copyright (C) 2009 Tim van Werkhoven (t.i.m.vanwerkhoven@xs4all.nl)
+ 
+ This file is part of FOAM.
+ 
+ FOAM is free software: you can redistribute it and/or modify
+ it under the terms of the GNU General Public License as published by
+ the Free Software Foundation, either version 3 of the License, or
+ (at your option) any later version.
+ 
+ FOAM is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.	See the
+ GNU General Public License for more details.
+ 
+ You should have received a copy of the GNU General Public License
+ along with FOAM.	If not, see <http://www.gnu.org/licenses/>.
+ 
+ */
 
-#include <string>
-#include "imgio.h"
+#ifndef __CAM_H__
+#define __CAM_H__
+
+#include <fstream>
+
+#include <stdint.h>
+
 #include "types.h"
+#include "config.h"
+#include "io.h"
+#include "cam.h"
 
-// Camera types
-#define CAM_STATIC				0x00000001  // Static image
+extern Io *io;
 
-// Camera datatype
-typedef struct {
-	int type;
-	img_t *img;
-} cam_t;
-
-
-typedef struct {
-	void *data;
-	coord_t res;
-	int stride;
-	int bitpix;
-	int dtype;
-} img_t;
-
-class Cam {
-	cam_t *cam;
-	int setup;
+/*!
+ @brief Base camera class. This will be overloaded with the specific camera class.
+ @author Tim van Werkhoven (t.i.m.vanwerkhoven@xs4all.nl) and Guus Sliepen (guus@sliepen.org)
+ @data // :tim:20091126 
+ */
+class Camera {
+	void *image;									//!< Pointer to the image data (can be ringbuffer)
+	void *darkim;									//!< Pointer to a darkfield image
+	void *flatim;									//!< Pointer to a flatfield image
+	void *gainim;									//!< Pointer to a flat-dark image
+	int ff;												//!< Number of images summed for dark- or flatfield
 	
 public:
-	Cam::Cam(int);
-	~Cam(void);
-	int Cam::init();
-	int Cam::reconf();
-	int Cam::getFrame();
+	class exception: public std::runtime_error {
+	public:
+		exception(const std::string reason): runtime_error(reason) {}
+	};
+	
+	typedef enum {
+		OFF = 0,
+		SLAVE = 1,
+		MASTER = 2,
+		RUNNING = 3,
+	} mode;
+	
+	coord_t res;									//!< Camera pixel resolution
+	int bpp;											//!< Camera pixel depth
+	int dtype;										//!< Camera datatype
+	
+	string darkfile;
+	string flatfile;
+	
+	virtual int verify() { return 0; }
+	
+	virtual double get_exposure() {return 0;}
+	virtual double get_interval() {return 0;}
+	virtual double get_gain() {return 0;}
+	virtual double get_offset() {return 0;}
+	virtual int get_width() {return 0;}
+	virtual int get_height() {return 0;}
+	virtual int get_depth() {return 0;}
+	virtual mode get_mode() {return OFF;}
+	
+	virtual void set_exposure(double) {}
+	virtual void set_interval(double) {}
+	virtual void set_gain(double) {}
+	virtual void set_offset(double) {}
+	virtual void set_mode(mode) {}
+	
+	virtual bool thumbnail(uint8_t *) {return false;}
+	virtual void init_capture() {}
+	virtual bool capture(int fd) {return false;}
+	virtual bool monitor(void *frame, size_t &size, int &x1, int &y1, int &x2, int &y2, int &scale) {return false;}
+	
+	static Camera *create(config &config);
+	static Camera *create(string conffile) {
+		io->msg(IO_DEB2, "Camera::create(string conffile)");
+		
+		ifstream fin(conffile.c_str(), ifstream::in);
+		if (!fin.is_open()) throw("Could not open configuration file!");
+		fin.close();
+		
+		config cfg(conffile);
+		return Camera::create(cfg);
+	}
+	virtual ~Camera() {};
 };
 
-static int readNumber(FILE *fd);
 
-#endif /* __CAM_H_ */
+#endif /* __CAM_H__ */

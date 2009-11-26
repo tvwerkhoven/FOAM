@@ -38,17 +38,23 @@ foamcfg::~foamcfg(void) {
 
 foamcfg::foamcfg(void) {
 	io->msg(IO_DEB2, "foamcfg::foamcfg()");
+	err = 0;
 }
 
 foamcfg::foamcfg(string &file) {
 	io->msg(IO_DEB2, "foamcfg::foamcfg(string &file)");
-	conffile = "";
+	err = 0;
 	parse(file);
 }
 
 int foamcfg::parse(string &file) {
 	io->msg(IO_DEB2, "foamcfg::parse(string &file)");
+	
+	// Configfile and path
 	conffile = file;
+	int idx = conffile.find_last_of("/");
+	confpath = conffile.substr(0, idx);
+	
 	cfgfile = new config(conffile);
 	
 	// PID file
@@ -62,7 +68,7 @@ int foamcfg::parse(string &file) {
 	// Daemon settings
 	listenip = cfgfile->getstring("listenip", "0.0.0.0");
 	io->msg(IO_DEB1, "IP: %s", listenip.c_str());
-	listenport = "1025";//cfgfile->getstring("listenport", "1025").c_str();
+	listenport = cfgfile->getstring("listenport", "1025").c_str();
 	io->msg(IO_DEB1, "Port: %s", listenport.c_str());
 	
 	// Syslog settings
@@ -73,8 +79,9 @@ int foamcfg::parse(string &file) {
 
 	// Logfile settings
 	logfile = cfgfile->getstring("logfile", "");
+	if (logfile[0] != '/') logfile = datadir + "/" + logfile; 
 	if (logfile != "") io->setLogfile(logfile);
-		
+	
 	return 0;
 }
 

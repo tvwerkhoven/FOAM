@@ -154,9 +154,7 @@ typedef enum {
 	DATA_INT8,			//!< ID for int8_t
 	DATA_UINT8,			//!< ID for uint8_t
 	DATA_INT16,			//!< ID for int16_t
-	DATA_UINT16,		//!< ID for uint16_t
-	DATA_GSL_M_F,		//!< ID for gsl_matrix_float
-	DATA_GSL_V_F		//!< ID for gsl_vector_float
+	DATA_UINT16			//!< ID for uint16_t
 } dtype_t;
 
 /*!

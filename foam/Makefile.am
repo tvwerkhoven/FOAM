@@ -21,6 +21,7 @@ AM_CPPFLAGS += -DFOAM_DEBUG=1
 endif DEBUG
 
 AM_CXXFLAGS = -pipe -Wall -Wextra \
+		-Wfatal-errors -Wno-unused-variable \
 		-O3 -ftree-vectorize \
 		-g
 
@@ -56,13 +57,13 @@ bin_PROGRAMS += foam-simstat
 
 foam_simstat_SOURCES = foam-simstatic.cc \
 		$(FRAME_SRC) $(FRAME_HDR) \
-		$(MODS_DIR)/shtrack.cc \
-		$(LIB_DIR)/imgio.cc
+		$(MODS_DIR)/shwfs.cc \
+		$(MODS_DIR)/dummy.cc
 
 # Header files are part of the sources as well
 foam_simstat_SOURCES += foam-simstatic.h \
-		$(MODS_DIR)/shtrack.h \
-		$(LIB_DIR)/imgio.h
+		$(MODS_DIR)/shwfs.h \
+		$(MODS_DIR)/cam.h
 
 # Some CPP flags (include the primemod header, and configure some options)
 foam_simstat_CPPFLAGS = -DFOAM_SIMSTAT_DISPLAY=1 \

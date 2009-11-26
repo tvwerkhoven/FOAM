@@ -41,14 +41,13 @@ class Wfc {
 	
 	int nact;											//!< Number of actuators
 	int wfctype;									//!< WFC type/model
-	string wfccfg;								//!< WFC configuration file
 	
 	virtual int verify() { return 0; }
 	virtual int setvolt(gsl_vector_float *ctrl) { return 0; }
 	virtual int setgain(gain_t gain) { return 0; }
 	
-	virtual gain_t getgain() {}
-	virtual gsl_vector_float* getvolt() {}
+	virtual gain_t getgain() { return gain; }
+	virtual gsl_vector_float* getvolt() { return NULL; }
 	
 	static Wfc *create(config &config);	//!< Initialize new wavefront corrector
 	

@@ -69,6 +69,7 @@ typedef struct {
  */
 class foamctrl {
 	config *cfgfile;
+	int err;
 	
 	public:
 	foamctrl(void);
@@ -77,8 +78,10 @@ class foamctrl {
 	
 	int parse(string &file);
 	int verify();
+	int error() { return err; }
 	
 	string conffile;							//!< Configuration file used
+	string confpath;							//!< Configuration path
 	
 	aomode_t mode;								//!< AO system mode, default AO_MODE_LISTEN
 	calmode_t calmode;						//!< Calibration mode, default CAL_PINHOLE
@@ -90,10 +93,12 @@ class foamctrl {
 	float fps;										//!< (foam) Current FPS
 	
 	int wfs_count;								//!< Number of WFSs in the system, default 0
-	Wfs *wfs;											//!< WFS entities
+	string *wfscfgs;							//!< WFS configuration files
+	Wfs **wfs;										//!< WFS entities
 	
 	int wfc_count;								//!< Number of WFCs in the system, default 0
-	Wfc *wfc;											//!< WFC entities
+	string *wfccfgs;							//!< WFC configuration files
+	Wfc **wfc;										//!< WFC entities
 	
 	int fw_count;									//!< Number of filterwheels in the system, default 0
 	fwheel_t *filter;							//!< FW entities

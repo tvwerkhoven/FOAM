@@ -198,8 +198,10 @@ int main(int argc, char *argv[]) {
 	// Init control and configuration using the config file
 	io->msg(IO_INFO, "Initializing control & AO configuration...");
   cs_config = new foamcfg(conffile);
+	if (cs_config->error()) return io->msg(IO_ERR, "Coult not parse control configuration");	
 	ptc = new foamctrl(conffile);
-	
+	if (ptc->error()) return io->msg(IO_ERR, "Coult not parse AO configuration");
+
 	// BEGIN FOAM //
 	/**************/
 	struct tm *loctime = localtime(&(ptc->starttime));
@@ -288,6 +290,10 @@ void catchSIGINT(int) {
 
 int stopFOAM() {
 	io->msg(IO_DEB2, __FILE__ "::stopFOAM()");
+	
+	if (ptc->mode != AO_MODE_SHUTDOWN)
+		return io->msg(IO_ERR, "Incorrect shutdown call, not in shutdown mode!");
+		
 	// Notify shutdown
 	io->msg(IO_WARN, "Shutting down FOAM now");
   protocol->broadcast("500 :SHUTTING DOWN NOW");
@@ -306,6 +312,8 @@ int stopFOAM() {
 	
 	// stop prime prime module if it hasn't already
 	io->msg(IO_INFO, "Trying to stop modules...");
+	
+	modStopModule(ptc);
 	
 	delete ptc;
 	
@@ -473,7 +481,7 @@ void modeListen() {
 				return;
 				break;
 		}
-	} // end while(true)
+	}
 }
 
 static void on_connect(Connection *connection, bool status) {
@@ -488,7 +496,7 @@ static void on_connect(Connection *connection, bool status) {
   }
 }
 
-static void on_message(Connection *connection, string line) {
+static void on_message(Connection *connection, std::string line) {
   io->msg(IO_DEB1, "Got %db: '%s'.", line.length(), line.c_str());
 	string cmd = popword(line);
 	
@@ -507,7 +515,8 @@ static void on_message(Connection *connection, string line) {
   }
   else if (cmd == "shutdown") {
 		connection->write("200 :SHUTDOWN OK");
-		stopFOAM();
+		ptc->mode = AO_MODE_SHUTDOWN;
+		pthread_cond_signal(&mode_cond); // signal a change to the threads
   }
   else if (cmd == "broadcast") {
 		connection->write("200 :BROADCAST OK");

@@ -8,13 +8,6 @@
 #define IMGIO_FITS				0x00000001
 #define IMGIO_PGM					0x00000002
 
-// Image types
-#define IMGIO_BYTE			7
-#define IMGIO_UBYTE			8
-#define IMGIO_SHORT			15
-#define IMGIO_USHORT		16
-
-
 typedef struct {
 	void *data;
 	coord_t res;
@@ -22,6 +15,8 @@ typedef struct {
 	int bitpix;
 	int dtype;
 } img_t;
+
+dtype_t
 
 class Imgio {
 	std::string path;

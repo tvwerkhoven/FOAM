@@ -32,6 +32,7 @@
  */
 class foamcfg {
 	config *cfgfile;
+	int err;
 	
 	public:
 	foamcfg();
@@ -40,22 +41,24 @@ class foamcfg {
 	
 	int verify();
 	int parse(string &file);
+	int error() { return err; }
 	
-	string conffile;				//!< (user) configuration file to use
-	string pidfile;					//!< (user) file to store PID to
+	string conffile;				//!< configuration file to use
+	string confpath;				//!< configuration path
+	string pidfile;					//!< file to store PID to
 	
-	string listenip;				//!< (user) IP to listen on, default "0.0.0.0"
-	string listenport;			//!< (user) port to listen on, default 1010
+	string listenip;				//!< IP to listen on, default "0.0.0.0"
+	string listenport;			//!< port to listen on, default 1010
 	
-	string datadir;					//!< (user) path to data directory (pgm, fits files)
+	string datadir;					//!< path to data directory (pgm, fits files)
 	
-	string logfile;					//!< (user) file to log info messages to, (none)
+	string logfile;					//!< file to log info messages to, (none)
 	
-	bool use_syslog; 				//!< (user) syslog usage flag, default no
-	string syslog_prepend;	//!< (user) string to prepend to syslogs, default "foam"
+	bool use_syslog; 				//!< syslog usage flag, default no
+	string syslog_prepend;	//!< string to prepend to syslogs, default "foam"
 	
-	pthread_t *threads;			//!< (foam) this stores the thread ids of all threads created
-	int nthreads;						//!< (foam) stores the number of threads in use
+	pthread_t *threads;			//!< this stores the thread ids of all threads created
+	int nthreads;						//!< stores the number of threads in use
 };
 
 #endif // __FOAMCFG_H__

@@ -30,10 +30,16 @@ extern Io *io;
 
 foamctrl::~foamctrl(void) {
 	io->msg(IO_DEB2, "foamctrl::~foamctrl(void)");
-	delete cfgfile;
+
+	for (int i=0; i<wfs_count; i++) delete wfs[i];
+	for (int i=0; i<wfc_count; i++) delete wfc[i];
+	
 	delete[] wfs;
 	delete[] wfc;
 	delete[] filter;
+	delete[] wfscfgs;
+	delete[] wfccfgs;
+	delete cfgfile;
 }
 
 foamctrl::foamctrl(void) { 
@@ -41,6 +47,7 @@ foamctrl::foamctrl(void) {
 	starttime = time(NULL); 
 	frames = 0; 
 	wfs_count = wfc_count = fw_count = 0;
+	err = 0;
 }
 
 foamctrl::foamctrl(string &file) {
@@ -48,57 +55,56 @@ foamctrl::foamctrl(string &file) {
 	starttime = time(NULL); 
 	frames = 0; 
 	wfs_count = wfc_count = fw_count = 0;
+	err = 0;
 	parse(file);
 }
 
 int foamctrl::parse(string &file) {
 	io->msg(IO_DEB2, "foamctrl::parse(string &file)");
+
 	conffile = file;
+	int idx = conffile.find_last_of("/");
+	confpath = conffile.substr(0, idx);
+	
+	io->msg(IO_DEB2, "foamctrl::parse: got file %s and path %s.", conffile.c_str(), confpath.c_str());
+
 	cfgfile = new config(conffile);
 	
-	// Configure AO system now
+	mode = AO_MODE_LISTEN;		// start in listen mode
+	calmode = CAL_INFL;
+	
+	// Load AO configuration files now
 	try {
-		mode = AO_MODE_LISTEN;		// start in listen mode
-		calmode = CAL_INFL;
-		
 		wfs_count = cfgfile->getint("wfs_count");
 		wfc_count = cfgfile->getint("wfc_count");
 		fw_count = 0;//cfgfile->getint("fw_count");
 		
-		// Allocate memory
-		wfs = new Wfs[wfs_count];
-		wfc = new Wfc[wfc_count];
+		// Allocate memory for configuration files
+		wfscfgs = new string[wfs_count];
+		wfccfgs = new string[wfc_count];
+		
+		wfs = new Wfs*[wfs_count];
+		wfc = new Wfc*[wfc_count];
 		filter = new fwheel_t[fw_count];
 		
-		// Configure WFS's
+		// Get WFS configuration files
 		for (int i=0; i<wfs_count; i++) {
 			io->msg(IO_XNFO, "Configuring wfs %d/%d", i, wfs_count);
-
-			wfs[i].wfstype = (wfstype_t) cfgfile->getint(format("wfs[%d].type", i));
-			wfs[i].name = cfgfile->getstring(format("wfs[%d].name", i), format("WFS #%d", i));
-
-			// Each WFS needs a specific WFS configuration file and a camera config file (can be the same)
-			wfs[i].wfscfg = cfgfile->getstring(format("wfs[%d].wfscfg", i));
-			wfs[i].camcfg = cfgfile->getstring(format("wfs[%d].camcfg", i));
+			wfscfgs[i] = confpath + "/" + cfgfile->getstring(format("wfs[%d].cfg", i));
 		}
 		
-		// Configure WFC's
+		// Get WFC configuration files
 		for (int i=0; i<wfc_count; i++) {
 			io->msg(IO_XNFO, "Configuring wfc %d/%d", i, wfc_count);
-
-			wfc[i].wfctype = (wfctype_t) cfgfile->getint(format("wfc[%d].type", i));
-			wfc[i].name = cfgfile->getstring(format("wfc[%d].name", i));
-			wfc[i].gain.p = cfgfile->getdouble(format("wfc[%d].gain_p", i));
-			wfc[i].gain.i = cfgfile->getdouble(format("wfc[%d].gain_i", i));
-			wfc[i].gain.d = cfgfile->getdouble(format("wfc[%d].gain_d", i));
-			wfc[i].nact = cfgfile->getint(format("wfc[%d].nact", i));
-			wfc[i].wfccfg = cfgfile->getstring(format("wfc[%d].wfccfg", i));
+			wfccfgs[i] = confpath + "/" + cfgfile->getstring(format("wfc[%d].cfg", i));
 		}
+	
 	} catch (exception &e) {
+		err = 1;
 		return io->msg(IO_ERR, "Could not parse configuration: %s", e.what());
 	}
 	
-	io->msg(IO_INFO, "Parsed control configuration.");
+	io->msg(IO_INFO, "Successfully parsed control configuration.");
 
 	return 0;
 }
@@ -106,9 +112,9 @@ int foamctrl::parse(string &file) {
 int foamctrl::verify() {
 	int ret=0;
 	for (int n=0; n < wfs_count; n++)
-		ret += wfs[n].verify();
-	for (int n=0; n < wfc_count; n++)
-		ret += wfc[n].verify();
+		ret += (wfs[n])->verify();
+//	for (int n=0; n < wfc_count; n++)
+//		ret += wfc[n]->verify();
 	
 	return ret;
 }

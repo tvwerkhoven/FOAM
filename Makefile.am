@@ -1,7 +1,6 @@
 ## @file Makefile.am
 ## @author Tim van Werkhoven (t.i.m.vanwerkhoven@xs4all.nl)
 
-#AUTOMAKE_OPTIONS = foreign
 ACLOCAL_AMFLAGS = -I m4
 
 SUBDIRS = lib libsiu foam conf testing
