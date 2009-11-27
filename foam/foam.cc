@@ -321,12 +321,6 @@ int stopFOAM() {
 }
 
 void modeOpen() {
-	// for FPS tracking
-	struct timeval last, cur;
-	long lastframes, curframes;
-	gettimeofday(&last, NULL);
-	lastframes = ptc->frames;
-
 	io->msg(IO_INFO, "Entering open loop.");
 
 	if (ptc->wfs_count == 0) {	// we need wavefront sensors
@@ -342,9 +336,7 @@ void modeOpen() {
 		ptc->mode = AO_MODE_LISTEN;
 		return;
 	}
-	
-	ptc->frames++;
-	
+		
 	protocol->broadcast("201 :MODE OPEN SUCCESSFUL");
 	
 	while (ptc->mode == AO_MODE_OPEN) {
@@ -354,15 +346,6 @@ void modeOpen() {
 			return;
 		}
 		ptc->frames++;	// increment the amount of frames parsed
-		if (ptc->frames % ptc->logfrac == 0) {
-			curframes = ptc->frames;
-			gettimeofday(&cur, NULL);
-			ptc->fps = (cur.tv_sec * 1000000 + cur.tv_usec)- (last.tv_sec*1000000 + last.tv_usec);	
-			ptc->fps /= 1000000;
-			ptc->fps = (curframes-lastframes)/ptc->fps;
-			last = cur;
-			lastframes = curframes;
-		}
 	}
 	
 	// Finish the open loop here
@@ -376,11 +359,6 @@ void modeOpen() {
 }
 
 void modeClosed() {	
-	// for FPS tracking
-	struct timeval last, cur;
-	long lastframes, curframes;
-	gettimeofday(&last, NULL);
-	lastframes = ptc->frames;
 	io->msg(IO_INFO, "Entering closed loop.");
 
 	if (ptc->wfs_count == 0) {						// we need wave front sensors
@@ -396,9 +374,7 @@ void modeClosed() {
 		ptc->mode = AO_MODE_LISTEN;
 		return;
 	}
-	
-	ptc->frames++;
-	
+		
 	protocol->broadcast("201 :MODE CLOSED SUCCESSFUL");
 	
 	while (ptc->mode == AO_MODE_CLOSED) {
@@ -407,19 +383,8 @@ void modeClosed() {
 			io->msg(IO_WARN, "modClosedLoop failed.");
 			ptc->mode = AO_MODE_LISTEN;
 			return;
-		}
-		
+		}		
 		ptc->frames++;								// increment the amount of frames parsed
-		
-		if (ptc->frames % ptc->logfrac == 0) {
-			curframes = ptc->frames;
-			gettimeofday(&cur, NULL);
-			ptc->fps = (cur.tv_sec * 1000000 + cur.tv_usec)- (last.tv_sec*1000000 + last.tv_usec);	
-			ptc->fps /= 1000000;
-			ptc->fps = (curframes-lastframes)/ptc->fps;
-			last = cur;
-			lastframes = curframes;
-		}
 	}
 	
 	// Finish the open loop here
