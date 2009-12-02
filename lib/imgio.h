@@ -4,42 +4,48 @@
 #include <string>
 #include "types.h"
 
-// Datatypes
-#define IMGIO_FITS				0x00000001
-#define IMGIO_PGM					0x00000002
-
-typedef struct {
-	void *data;
-	coord_t res;
-	int stride;
-	int bitpix;
-	int dtype;
-} img_t;
-
-dtype_t
 
 class Imgio {
-	std::string path;
-	img_t *img;
-public:
-	std::string strerr;
-	
-	Imgio(std::string, int);
-	~Imgio(void);
-	int loadImg();
-	int writeImg(int, std::string);
-	void *getData() { return img->data; }
-	int getWidth() { return img->res.x; }
-	int getHeight() { return img->res.y; }
-	int getDtype() { return img->dtype; }
-	int getBitpix() { return img->bitpix; }
 private:
 	int loadFits(std::string);
 	int writeFits(std::string);
 	int loadPgm(std::string);
 	int writePgm(std::string);
+	
+	std::string path;
+	
+public:
+	// Image formats
+	typedef enum {
+		FITS=0,
+		PGM,
+		UNDEF
+	} imgtype_t;
+	
+	void *data;
+	coord_t res;
+	int stride;
+	int bitpix;
+	
+	dtype_t dtype;
+	imgtype_t imgt;
+	
+	std::string strerr;
+	
+	Imgio::Imgio(void);
+	Imgio(std::string, imgtype_t);
+	~Imgio(void);
+	int loadImg();
+	int writeImg(imgtype_t, std::string);
+	
+	void *getData() { return data; }
+	int getWidth() { return res.x; }
+	int getHeight() { return res.y; }
+	dtype_t getDtype() { return dtype; }
+	int getBitpix() { return bitpix; }
+	imgtype_t getImgtype() { return imgt; }
 };
 
-static int readNumber(FILE *fd);
+int readNumber(FILE *fd);
 
 #endif

@@ -36,25 +36,30 @@
 
 extern Io *io;
 
-Imgio::Imgio(std::string fname, int dtype) {
+Imgio::Imgio(void) {
+	path = "";
+	imgt = Imgio::UNDEF;
+}
+
+Imgio::Imgio(std::string fname, imgtype_t imgtype) {
 	path = fname;
-	img = new img_t;
-	img->dtype = dtype;
+	imgt = imgtype;
+	loadImg();
 }
 
 Imgio::~Imgio(void) {
-	if (img->data) free(img->data);
+	if (data) free(data);
 }
 
 int Imgio::loadImg() {
-	if (img->dtype == IMGIO_FITS) return loadFits(path);
-	else if (img->dtype == IMGIO_PGM) return loadPgm(path);
+	if (imgt == Imgio::FITS) return loadFits(path);
+	else if (imgt == Imgio::PGM) return loadPgm(path);
 	else return io->msg(IO_ERR, "Unknown datatype");
 }
 
-int Imgio::writeImg(int dtype, std::string outpath) {
-	if (img->dtype == IMGIO_FITS) return writeFits(outpath);
-	else if (img->dtype == IMGIO_PGM) return writePgm(outpath);
+int Imgio::writeImg(imgtype_t imgtype, std::string outpath) {
+	if (imgtype == Imgio::FITS) return writeFits(outpath);
+	else if (imgtype == Imgio::PGM) return writePgm(outpath);
 	else return io->msg(IO_ERR, "Unknown datatype");
 }
 
@@ -68,29 +73,43 @@ int Imgio::loadFits(std::string path) {
 	float nulval = 0.0;
 	
 	fits_open_file(&fptr, path.c_str(), READONLY, &stat);
-	fits_get_img_param(fptr, 2, &img->bitpix, &naxis, naxes, &stat);
+	if (stat) {
+		fits_get_errstatus(stat, fits_err);
+		return io->msg(IO_ERR, "fits error: %s", fits_err);
+	}
 	
-	img->res.x = naxes[0];
-	img->res.y = naxes[1];
-	nel = img->res.x * img->res.y;
+		
+	fits_get_img_param(fptr, 2, &bitpix, &naxis, naxes, &stat);
+	if (stat) {
+		fits_get_errstatus(stat, fits_err);
+		return io->msg(IO_ERR, "fits error: %s", fits_err);
+	}
 	
-	img->data = malloc(nel * img->bitpix/8);
+	
+	res.x = naxes[0];
+	res.y = naxes[1];
+	
+	nel = res.x * res.y;
+	
+	data = (void *) malloc(nel * bitpix/8);
 	
 	// BYTE_IMG (8), SHORT_IMG (16), LONG_IMG (32), LONGLONG_IMG (64), FLOAT_IMG (-32), and DOUBLE_IMG (-64)
 	// TBYTE, TSBYTE, TSHORT, TUSHORT, TINT, TUINT, TLONG, TLONGLONG, TULONG, TFLOAT, TDOUBLE
 	
-	switch (img->bitpix) {
+	switch (bitpix) {
 		case BYTE_IMG: {
-			int8_t nulval = 0;
-			fits_read_img(fptr, TBYTE, 0, nel, &nulval, \
-					(int8_t *) img->data, &anynul, &stat);
+			uint8_t nulval = 0;
+			fits_read_img(fptr, TBYTE, 1, nel, &nulval, \
+					(uint8_t *) data, &anynul, &stat);
+			dtype = DATA_UINT8;
 			break;
 			
 		}
 		case SHORT_IMG: {
-			int16_t nulval = 0;
-			fits_read_img(fptr, TSHORT, 0, nel, &nulval, \
-					(int16_t *) img->data, &anynul, &stat);					
+			uint16_t nulval = 0;
+			fits_read_img(fptr, TUSHORT, 1, nel, &nulval, \
+					(uint16_t *) data, &anynul, &stat);					
+			dtype = DATA_UINT16;
 			break;
 		}
 		default: {
@@ -101,48 +120,57 @@ int Imgio::loadFits(std::string path) {
 
 	if (stat) {
 		fits_get_errstatus(stat, fits_err);
-		strerr.assign(fits_err);
-	}
+		return io->msg(IO_ERR, "fits error: %s", fits_err);
+	}	
 	
 	return stat;
 }
 
-int Imgio::writeFits(std::string outpath) {
+int Imgio::writeFits(std::string path) {
 	fitsfile *fptr;
 	int stat = 0;
 	long fpixel = 1, naxis = 2, nelements;
-	long naxes[2] = { img->res.x, img->res.y};
+	long naxes[2] = { res.x, res.y};
 	
 	nelements = naxes[0] * naxes[1];
+	char fits_err[30];
 	
 	fits_create_file(&fptr, path.c_str(), &stat);
 	
-	switch (img->bitpix) {
+	if (stat) {
+		fits_get_errstatus(stat, fits_err);
+		return io->msg(IO_ERR, "fits error: %s", fits_err);
+	}
+
+	switch (bitpix) {
 		case BYTE_IMG: {
 			fits_create_img(fptr, BYTE_IMG, naxis, naxes, &stat);
 			fits_write_img(fptr, TBYTE, fpixel, nelements, \
-				(int8_t *) img->data, &stat);
+				(uint8_t *) data, &stat);
 			break;
 		}
 		case SHORT_IMG: {
-			fits_create_img(fptr, SHORT_IMG, naxis, naxes, &stat);
-			fits_write_img(fptr, TSHORT, fpixel, nelements, \
-				(int16_t *) img->data, &stat);
+			fits_create_img(fptr, USHORT_IMG, naxis, naxes, &stat);
+			fits_write_img(fptr, TUSHORT, fpixel, nelements, \
+				(uint16_t *) data, &stat);
 			break;
 		}
 		default: {
-			strerr = "Unknown FITS datatype.";
-			return -1;
+			return io->msg(IO_ERR, "Unknown datatype");
 		}
 	}
+	
+	if (stat) {
+		fits_get_errstatus(stat, fits_err);
+		return io->msg(IO_ERR, "fits error: %s", fits_err);
+	}	
 
 	fits_close_file(fptr, &stat);
 
 	if (stat) {
-		char fits_err[30];
 		fits_get_errstatus(stat, fits_err);
-		strerr.assign(fits_err);
-	}
+		return io->msg(IO_ERR, "fits error: %s", fits_err);
+	}	
 	
 	return stat;
 }
@@ -163,11 +191,11 @@ int Imgio::loadPgm(std::string path) {
 		return io->msg(IO_ERR, "Error reading PGM file.");
 
 	// Resolution
-	img->res.x = readNumber(fd);
-	img->res.y = readNumber(fd);
-	long nel = img->res.x * img->res.y;
+	res.x = readNumber(fd);
+	res.y = readNumber(fd);
+	long nel = res.x * res.y;
 	
-	if (img->res.x <= 0 || img->res.y <= 0)
+	if (res.x <= 0 || res.y <= 0)
 		return io->msg(IO_ERR, "Unable to read image width and height");
 
   // Maxval
@@ -175,19 +203,19 @@ int Imgio::loadPgm(std::string path) {
 	if(maxval <= 0 || maxval > 255)
 		return io->msg(IO_ERR, "Unsupported PGM format");
 	
-	img->dtype = IMGIO_UBYTE;
-	img->bitpix = 8;
-	img->data = malloc(nel * img->bitpix/8);
+	dtype = DATA_UINT8;
+	bitpix = 8;
+	data = malloc(nel * bitpix/8);
 	
 	// Read the rest
 	if (strcmp(magic, "P5")) { // Binary
-		n = fread(img->data, nel, 1, fd);
+		n = fread(data, nel, 1, fd);
 		if (ferror(fd))
 			return io->msg(IO_ERR, "Could not read file.");
 	}
 	else if (strcmp(magic, "P2")) { // ASCII
 		for (int p=0; p < nel; p++)
-			((uint8_t *) img->data)[p] = readNumber(fd);
+			((uint8_t *) data)[p] = readNumber(fd);
 	}
 	else
 		return io->msg(IO_ERR, "Unsupported PGM format");
@@ -195,29 +223,29 @@ int Imgio::loadPgm(std::string path) {
 	return 0;
 }
 
-int Imgio::writePgm(std::string outpath) {
+int Imgio::writePgm(std::string path) {
 	FILE *fd;
  	fd = fopen(path.c_str(), "wb+");
 	
-	if (img->dtype != IMGIO_UBYTE || img->dtype != IMGIO_USHORT)
+	if (dtype != DATA_UINT8 && dtype != DATA_UINT16)
 		return io->msg(IO_ERR, "PGM only supports unsigned 8- or 16-bit integer images.");
 	
 	int maxval=0;
-	switch (img->dtype) {
-		case IMGIO_UBYTE: {
-			uint8_t *datap = (uint8_t *) img->data;
-			for (int p=0; p<img->res.x * img->res.y; p++)
+	switch (dtype) {
+		case DATA_UINT8: {
+			uint8_t *datap = (uint8_t *) data;
+			for (int p=0; p<res.x * res.y; p++)
 				if (datap[p] > maxval) maxval = datap[p];
-			fprintf(fd, "P5\n%d %d\n%d\n", img->res.x, img->res.y, maxval);
-			fwrite(datap, img->res.x * img->res.y * img->bitpix, 1, fd);
+			fprintf(fd, "P5\n%d %d\n%d\n", res.x, res.y, maxval);
+			fwrite(datap, res.x * res.y * bitpix/8, 1, fd);
 			break;
 		}
-		case IMGIO_USHORT: {
-			uint16_t *datap = (uint16_t *) img->data;
-			for (int p=0; p<img->res.x * img->res.y; p++)
+		case DATA_UINT16: {
+			uint16_t *datap = (uint16_t *) data;
+			for (int p=0; p<res.x * res.y; p++)
 				if (datap[p] > maxval) maxval = datap[p];
-			fprintf(fd, "P5\n%d %d\n%d\n", img->res.x, img->res.y, maxval);
-			fwrite(datap, img->res.x * img->res.y * img->bitpix, 1, fd);						 
+			fprintf(fd, "P5\n%d %d\n%d\n", res.x, res.y, maxval);
+			fwrite(datap, res.x * res.y * bitpix/8, 1, fd);
 			break;
 		}			
 		default:
@@ -225,12 +253,11 @@ int Imgio::writePgm(std::string outpath) {
 	}
 	
 	fclose(fd);
-	io->msg(IO_ERR, "Completed");
 	
 	return 0;
 }
 
-static int readNumber(FILE *fd) {
+int readNumber(FILE *fd) {
 	int number;
 	unsigned char ch;
 
