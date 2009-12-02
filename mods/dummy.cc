@@ -135,6 +135,7 @@ class DummyCamera: public Camera {
 	}
 	
 	bool get_image(void **out) {
+		update(true);
 		*out = (void *) frame;
 		return true;
 	}
