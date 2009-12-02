@@ -84,7 +84,7 @@ extern int modCalibrate(foamctrl *ptc);
 extern int modMessage(foamctrl *ptc, Connection *connection, string cmd, string rest);
 
 static void show_version() {
-	printf("FOAM (%s version %s, built %s %s)\n", PACKAGE, VERSION, __DATE__, __TIME__);
+	printf("FOAM (%s version %s, built %s %s)\n", PACKAGE_NAME, PACKAGE_VERSION, __DATE__, __TIME__);
 	printf("Copyright (c) 2007--2009 Tim van Werkhoven (T.I.M.vanWerkhoven@xs4all.nl)\n\n");
 	printf("FOAM comes with ABSOLUTELY NO WARRANTY. This is free software,\n"
 				 "and you are welcome to redistribute it under certain conditions;\n"
@@ -247,7 +247,6 @@ int main(int argc, char *argv[]) {
 	act.sa_handler = catchSIGINT;
 	act.sa_flags = 0;               // No special flags
 	act.sa_mask = signal_mask;      // Use this mask
-	sigaction(SIGINT, &act, NULL);
 	sigaction(SIGINT, &act, NULL);
 	
 	
@@ -489,6 +488,11 @@ static void on_message(Connection *connection, std::string line) {
 																				 connection->getpeername().c_str(), 
 																				 line.c_str()));
 	}
+  else if (cmd == "get") {
+    string var = popword(line);
+		if (var == "frames") connection->write(format("202 :FRAMES %d", ptc->frames));
+		else connection->write("401 :VARIABLE UNKNOWN");
+	}
   else if (cmd == "mode") {
     string mode = popword(line);
 		if (mode == "closed") {
@@ -516,7 +520,6 @@ static void on_message(Connection *connection, std::string line) {
   else {
     if (modMessage(ptc, connection, cmd, line))
 			connection->write("401 :COMMAND UNKNOWN");
-
   }
 }
 
@@ -525,6 +528,7 @@ static int showhelp(Connection *connection, string topic, string rest) {
 		connection->write(\
 "help [command]:         Help (on a certain command, if available).\n"
 "mode <mode>:            close or open the loop.\n"
+"get <var>:              read a system variable.\n"
 "broadcast <msg>:        send a message to all connected clients.\n"
 "exit or quit:           disconnect from daemon.\n"
 "shutdown:               shutdown FOAM.");
@@ -543,6 +547,11 @@ static int showhelp(Connection *connection, string topic, string rest) {
 	else if (topic == "broadcast") {
 		connection->write(\
 "broadcast <mode>:       broadcast a message to all clients.");
+	}
+	else if (topic == "get") {
+		connection->write(\
+											"get <var>:              read a system variable.\n"
+											"  frames:               number of frames processed");
 	}
 	else {
 		// Unknown topic, return error
