@@ -1,10 +1,14 @@
 ## @file foam/Makefile.am
 ## @author Tim van Werkhoven (t.i.m.vanwerkhoven@xs4all.nl)
 
+MODS_DIR = $(top_builddir)/mods
+LIB_DIR = $(top_builddir)/lib
+LIBSIU_DIR = $(top_srcdir)/$(LIBSIU)
+
 AM_CPPFLAGS = \
-        -I$(top_srcdir)/lib \
-        -I$(top_srcdir)/mods \
-        -I$(top_srcdir)/$(LIBSIU)
+        -I$(LIB_DIR) \
+        -I$(MODS_DIR) \
+        -I$(LIBSIU_DIR)
 
 # This is used to get the config directory as a define (see top-level Makefile.am)
 # TODO: check this
@@ -27,17 +31,14 @@ AM_CXXFLAGS = -pipe -Wall -Wextra \
 
 AM_LDFLAGS = $(COMMON_LIBS)
 
-LDADD = $(top_builddir)/$(LIBSIU)/libsocket.a \
-		$(top_builddir)/$(LIBSIU)/libio.a \
-		$(top_builddir)/$(LIBSIU)/libconfig.a \
-		$(top_builddir)/$(LIBSIU)/libprotocol.a
+LDADD = $(LIBSIU_DIR)/libsocket.a \
+		$(LIBSIU_DIR)/libio.a \
+		$(LIBSIU_DIR)/libconfig.a \
+		$(LIBSIU_DIR)/libprotocol.a
 
 # Basic framework files which are always needed
 FRAME_SRC = foam.cc foamctrl.cc foamcfg.cc
 FRAME_HDR = foam.h foamctrl.h foamcfg.h config.h wfc.h wfs.h
-
-MODS_DIR = $(top_builddir)/mods
-LIB_DIR = $(top_builddir)/lib
 
 ### DUMMY MODE ###
 ##################

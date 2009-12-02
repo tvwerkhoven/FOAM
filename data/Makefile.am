@@ -1,6 +1,6 @@
 # Install the relevant configuration files to a subdir of the datadir
 foamconfdir = $(FOAMCONFDIR)
-dist_foamconf_DATA = 
+dist_foamconf_DATA = ""
 
 ### STATIC SIMULATION MODE ###
 ##############################

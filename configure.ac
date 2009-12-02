@@ -3,33 +3,37 @@
 ## Copyright 2007-2009 Tim van Werkhoven (t.i.m.vanwerkhoven@xs4all.nl)
 
 AC_INIT([FOAM], [0.1], [t.i.m.vanwerkhoven@xs4all.nl])
+AC_CONFIG_AUX_DIR([build-aux])
+AM_INIT_AUTOMAKE([FOAM], [0.1], [t.i.m.vanwerkhoven@xs4all.nl])
+AC_PREREQ(2.61)
 AC_COPYRIGHT([Copyright (C) 2007-2009 Tim van Werkhoven <t.i.m.vanwerkhoven@xs4all.nl>])
 AC_REVISION(`git describe`)
 
-AC_CONFIG_HEADERS([foam/autoconfig.h])
-AC_CONFIG_AUX_DIR([build-aux])
+AC_CONFIG_SRCDIR(foam/foam.cc)
+AC_CONFIG_HEADERS(foam/autoconfig.h)
+
 AC_CONFIG_FILES([
 Makefile
-lib/Makefile
 foam/Makefile
+lib/Makefile
 conf/Makefile
 data/Makefile
 testing/Makefile
 ])
 
-# These are the configuration- and data-directories
-FOAMCONFDIR=$datadir/foam/
-FOAMDATADIR=./
-AC_SUBST(FOAMCONFDIR)
-AC_SUBST(FOAMDATADIR)
-
-AM_INIT_AUTOMAKE([-Wall -Werror foreign])
+AC_GNU_SOURCE
 
 AC_PROG_CXX
 AC_PROG_CXXCPP
 AC_PROG_MAKE_SET
 AC_PROG_INSTALL
 AC_PROG_RANLIB
+
+# These are the configuration- and data-directories
+FOAMCONFDIR=$datadir/foam/
+FOAMDATADIR=./
+AC_SUBST(FOAMCONFDIR)
+AC_SUBST(FOAMDATADIR)
 
 # These libraries are crucial for all targets
 AC_SEARCH_LIBS([sin],
@@ -71,9 +75,10 @@ AC_ARG_ENABLE([simstat],
 		AC_HELP_STRING([--disable-simstat], [build static simulation mode]),
 		[test "$enableval" = no && simstat=disabled], [])
 
+debug=true
 AC_ARG_ENABLE([debug],
-		AC_HELP_STRING([--enable-debug], [enable debugging mode]),
-		[test "$enableval" = yes && debug=true], [debug=disabled])
+		AC_HELP_STRING([--disable-debug], [disable debugging mode]),
+		[test "$enableval" = no && debug=disabled], [])
 
 AC_ARG_ENABLE([hwdebug],
 		AC_HELP_STRING([--enable-hwdebug], [build hardware debugging tests]),
@@ -186,10 +191,16 @@ else
 	AC_MSG_NOTICE([Static sim mode:         missing:$simstatmissing])
 fi
 
-if test "$hwdebug" = true ; then
-	AC_MSG_NOTICE([Hardware debug mode:     available])
+if test "$debug" = true ; then
+	AC_MSG_NOTICE([Debug targets:           available])
 else
-	AC_MSG_NOTICE([Hardware debug mode      disabled])
+	AC_MSG_NOTICE([Debug targets:           disabled])
+fi
+
+if test "$hwdebug" = true ; then
+	AC_MSG_NOTICE([Hardware debug targets:  available])
+else
+	AC_MSG_NOTICE([Hardware debug targets:  disabled])
 fi
 
 AC_MSG_NOTICE([======================================])
