@@ -36,19 +36,17 @@
 
 extern Io *io;
 
-Imgio::Imgio(void) {
-	path = "";
-	imgt = Imgio::UNDEF;
-}
-
-Imgio::Imgio(std::string fname, imgtype_t imgtype) {
-	path = fname;
-	imgt = imgtype;
-	loadImg();
-}
-
 Imgio::~Imgio(void) {
 	if (data) free(data);
+}
+
+int Imgio::init(std::string fname, imgtype_t imgtype) {
+	path = fname;
+	imgt = imgtype;	
+	data = NULL;
+	res.x = res.y = -1;
+	bpp = -1;
+	return 0;
 }
 
 int Imgio::loadImg() {
@@ -79,7 +77,7 @@ int Imgio::loadFits(std::string path) {
 	}
 	
 		
-	fits_get_img_param(fptr, 2, &bitpix, &naxis, naxes, &stat);
+	fits_get_img_param(fptr, 2, &bpp, &naxis, naxes, &stat);
 	if (stat) {
 		fits_get_errstatus(stat, fits_err);
 		return io->msg(IO_ERR, "fits error: %s", fits_err);
@@ -91,12 +89,12 @@ int Imgio::loadFits(std::string path) {
 	
 	nel = res.x * res.y;
 	
-	data = (void *) malloc(nel * bitpix/8);
+	data = (void *) malloc(nel * bpp/8);
 	
 	// BYTE_IMG (8), SHORT_IMG (16), LONG_IMG (32), LONGLONG_IMG (64), FLOAT_IMG (-32), and DOUBLE_IMG (-64)
 	// TBYTE, TSBYTE, TSHORT, TUSHORT, TINT, TUINT, TLONG, TLONGLONG, TULONG, TFLOAT, TDOUBLE
 	
-	switch (bitpix) {
+	switch (bpp) {
 		case BYTE_IMG: {
 			uint8_t nulval = 0;
 			fits_read_img(fptr, TBYTE, 1, nel, &nulval, \
@@ -142,7 +140,7 @@ int Imgio::writeFits(std::string path) {
 		return io->msg(IO_ERR, "fits error: %s", fits_err);
 	}
 
-	switch (bitpix) {
+	switch (bpp) {
 		case BYTE_IMG: {
 			fits_create_img(fptr, BYTE_IMG, naxis, naxes, &stat);
 			fits_write_img(fptr, TBYTE, fpixel, nelements, \
@@ -189,7 +187,7 @@ int Imgio::loadPgm(std::string path) {
 	fread(magic, 2, 1, fd);
 	if (ferror(fd))
 		return io->msg(IO_ERR, "Error reading PGM file.");
-
+	
 	// Resolution
 	res.x = readNumber(fd);
 	res.y = readNumber(fd);
@@ -200,22 +198,34 @@ int Imgio::loadPgm(std::string path) {
 
   // Maxval
 	maxval = readNumber(fd);
-	if(maxval <= 0 || maxval > 255)
+	if(maxval <= 0 || maxval > 65536)
 		return io->msg(IO_ERR, "Unsupported PGM format");
 	
-	dtype = DATA_UINT8;
-	bitpix = 8;
-	data = malloc(nel * bitpix/8);
+	if (maxval <= 255) {
+		dtype = DATA_UINT8;
+		bpp = 8;
+		data = malloc(nel * bpp/8);		
+	}
+	else {		
+		dtype = DATA_UINT16;
+		bpp = 16;
+		data = malloc(nel * bpp/8);		
+	}
 	
 	// Read the rest
-	if (strcmp(magic, "P5")) { // Binary
-		n = fread(data, nel, 1, fd);
+	if (!strncmp(magic, "P5", 2)) { // Binary
+		n = fread(data, bpp/8, nel, fd);
 		if (ferror(fd))
 			return io->msg(IO_ERR, "Could not read file.");
 	}
-	else if (strcmp(magic, "P2")) { // ASCII
-		for (int p=0; p < nel; p++)
-			((uint8_t *) data)[p] = readNumber(fd);
+	else if (!strncmp(magic, "P2", 2)) { // ASCII
+		if (dtype == DATA_UINT8)
+			for (int p=0; p < nel; p++)
+				((uint8_t *) data)[p] = readNumber(fd);
+		else
+			for (int p=0; p < nel; p++)
+				((uint16_t *) data)[p] = readNumber(fd);
+			
 	}
 	else
 		return io->msg(IO_ERR, "Unsupported PGM format");
@@ -237,7 +247,7 @@ int Imgio::writePgm(std::string path) {
 			for (int p=0; p<res.x * res.y; p++)
 				if (datap[p] > maxval) maxval = datap[p];
 			fprintf(fd, "P5\n%d %d\n%d\n", res.x, res.y, maxval);
-			fwrite(datap, res.x * res.y * bitpix/8, 1, fd);
+			fwrite(datap, res.x * res.y * bpp/8, 1, fd);
 			break;
 		}
 		case DATA_UINT16: {
@@ -245,7 +255,7 @@ int Imgio::writePgm(std::string path) {
 			for (int p=0; p<res.x * res.y; p++)
 				if (datap[p] > maxval) maxval = datap[p];
 			fprintf(fd, "P5\n%d %d\n%d\n", res.x, res.y, maxval);
-			fwrite(datap, res.x * res.y * bitpix/8, 1, fd);
+			fwrite(datap, res.x * res.y * bpp/8, 1, fd);
 			break;
 		}			
 		default:

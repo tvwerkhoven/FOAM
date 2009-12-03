@@ -25,16 +25,18 @@ public:
 	void *data;
 	coord_t res;
 	int stride;
-	int bitpix;
+	int bpp;
 	
 	dtype_t dtype;
 	imgtype_t imgt;
 	
 	std::string strerr;
 	
-	Imgio::Imgio(void);
-	Imgio(std::string, imgtype_t);
+	Imgio(void) { init("", Imgio::UNDEF); }
+	Imgio(std::string f, imgtype_t t) { init(f, t); }
 	~Imgio(void);
+	
+	int init(std::string, imgtype_t);
 	int loadImg();
 	int writeImg(imgtype_t, std::string);
 	
@@ -42,7 +44,8 @@ public:
 	int getWidth() { return res.x; }
 	int getHeight() { return res.y; }
 	dtype_t getDtype() { return dtype; }
-	int getBitpix() { return bitpix; }
+	int getBitpix() { return bpp; }
+	int getBPP() { return bpp; }
 	imgtype_t getImgtype() { return imgt; }
 };
 
