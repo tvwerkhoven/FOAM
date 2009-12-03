@@ -37,30 +37,67 @@
 extern Io *io;
 
 Imgio::~Imgio(void) {
+	io->msg(IO_DEB2, "Imgio::~Imgio(void)");
 	if (data) free(data);
 }
 
 int Imgio::init(std::string fname, imgtype_t imgtype) {
+	io->msg(IO_DEB2, "Imgio::init()");
 	path = fname;
 	imgt = imgtype;	
 	data = NULL;
 	res.x = res.y = -1;
 	bpp = -1;
+	range[0] = range[1] = 0;
+	sum = 0L;
 	return 0;
+}
+
+int Imgio::getPixel(int x, int y) {
+	if (!data) return -1;
+	if (dtype == DATA_UINT8) return ((uint8_t *)data)[y * res.x + x];
+	else if (dtype == DATA_UINT16) return ((uint16_t *)data)[y * res.x + x];
+	else return -1;
 }
 
 int Imgio::loadImg() {
 	if (imgt == Imgio::FITS) return loadFits(path);
 	else if (imgt == Imgio::PGM) return loadPgm(path);
-	else return io->msg(IO_ERR, "Unknown datatype");
+	else return io->msg(IO_ERR, "Imgio::loadImg(): Unknown datatype");
 }
 
 int Imgio::writeImg(imgtype_t imgtype, std::string outpath) {
 	if (imgtype == Imgio::FITS) return writeFits(outpath);
 	else if (imgtype == Imgio::PGM) return writePgm(outpath);
-	else return io->msg(IO_ERR, "Unknown datatype");
+	else return io->msg(IO_ERR, "Imgio::writeImg(): Unknown datatype");
 }
 
+int Imgio::calcRange() {
+	switch (dtype) {
+		case DATA_UINT8: {
+			uint8_t *tmpdata = (uint8_t *) data;
+			for (int p=0; p < res.x * res.y; p++) {
+				if (tmpdata[p] > range[1]) range[1] = tmpdata[p];
+				if (tmpdata[p] < range[0]) range[0] = tmpdata[p];
+				sum += tmpdata[p];
+			}
+			break;
+		}
+		case DATA_UINT16: {
+			uint16_t *tmpdata = (uint16_t *) data;
+			for (int p=0; p<res.x * res.y; p++) {
+				if (tmpdata[p] > range[1]) range[1] = tmpdata[p];
+				if (tmpdata[p] < range[0]) range[0] = tmpdata[p];
+				sum += tmpdata[p];
+			}
+			break;
+		}
+		default: {
+			return io->msg(IO_ERR, "Imgio::calcRange(): Unknown datatype");
+		}
+	}
+	return 0;
+}
 
 int Imgio::loadFits(std::string path) {
 	fitsfile *fptr;
@@ -75,15 +112,13 @@ int Imgio::loadFits(std::string path) {
 		fits_get_errstatus(stat, fits_err);
 		return io->msg(IO_ERR, "fits error: %s", fits_err);
 	}
-	
-		
+			
 	fits_get_img_param(fptr, 2, &bpp, &naxis, naxes, &stat);
 	if (stat) {
 		fits_get_errstatus(stat, fits_err);
 		return io->msg(IO_ERR, "fits error: %s", fits_err);
 	}
-	
-	
+		
 	res.x = naxes[0];
 	res.y = naxes[1];
 	
@@ -111,10 +146,11 @@ int Imgio::loadFits(std::string path) {
 			break;
 		}
 		default: {
-			strerr = "Unknown FITS datatype.";
-			return -1;
+			return io->msg(IO_ERR, "Unknown FITS datatype");
 		}
 	}
+	
+	calcRange();
 	
 	fits_close_file(fptr, &stat);
 
@@ -231,6 +267,8 @@ int Imgio::loadPgm(std::string path) {
 	}
 	else
 		return io->msg(IO_ERR, "Unsupported PGM format");
+	
+	calcRange();
 	
 	return 0;
 }

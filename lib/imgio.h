@@ -12,6 +12,8 @@ private:
 	int loadPgm(std::string);
 	int writePgm(std::string);
 	
+	int calcRange();
+	
 	std::string path;
 	
 public:
@@ -24,8 +26,10 @@ public:
 	
 	void *data;
 	coord_t res;
-	int stride;
 	int bpp;
+	
+	uint16_t range[2];
+	uint64_t sum;
 	
 	dtype_t dtype;
 	imgtype_t imgt;
@@ -41,6 +45,8 @@ public:
 	int writeImg(imgtype_t, std::string);
 	
 	void *getData() { return data; }
+	int getPixel(int x, int y);
+	
 	int getWidth() { return res.x; }
 	int getHeight() { return res.y; }
 	dtype_t getDtype() { return dtype; }
