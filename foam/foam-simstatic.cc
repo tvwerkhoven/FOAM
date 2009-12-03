@@ -53,7 +53,7 @@ int modInitModule(foamctrl *ptc, foamcfg *cs_config) {
 
 	io->msg(IO_INFO, "This is the simstatic prime module, enjoy.");
 	
-	// Set up WFS #1 with dummy camera
+	// Set up WFS #1 with image camera
 	ptc->wfs[0] = Wfs::create(ptc->wfscfgs[0]);
 	
 	return EXIT_SUCCESS;
@@ -150,7 +150,9 @@ int modMessage(foamctrl *ptc, Connection *connection, string cmd, string line) {
 	if (cmd == "help") {
 		string topic = popword(line);
 		if (topic.size() == 0) {
-			connection->write("This is the simstat module of FOAM.");
+			connection->write(\
+												"==== simstat help ==========================\n"
+												"calib <mode>:           Calibrate AO system.");
 		}
 		else if (topic == "calib") {
 			connection->write(\
