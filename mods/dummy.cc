@@ -24,16 +24,17 @@
 #include "cam.h"
 #include "pthread++.h"
 
+#define DUMMYCAM_TYPE "dummycam"
+
 using namespace std;
 
 class DummyCamera: public Camera {
 	pthread::mutex mutex;
-	int width;
-	int height;
-	int depth;
+	
 	double interval;
 	double exposure;
 	double noise;
+	
 	uint16_t *frame;
 	Camera::mode mode;
 	int offset;
@@ -44,10 +45,10 @@ class DummyCamera: public Camera {
 			usleep(interval * 1000000);
 
 		uint16_t *p = frame;
-		int mul = (1 << depth) - 1;
-		for(int y = 0; y < height; y++) {
-			for(int x = 0; x < height; x++) {
-				double value = drand48() * noise + (sin(M_PI * x / width) + 1 + sin((y + offset) * 100));
+		int mul = (1 << bpp) - 1;
+		for(int y = 0; y < res.y; y++) {
+			for(int x = 0; x < res.x; x++) {
+				double value = drand48() * noise + (sin(M_PI * x / res.x) + 1 + sin((y + offset) * 100));
 				value *= exposure;
 				if(value < 0)
 					value = 0;
@@ -64,20 +65,28 @@ class DummyCamera: public Camera {
 	public:
 	DummyCamera(config &config) {
 		io->msg(IO_DEB2, "DummyCamera::DummyCamera(config &config)");
-		width = config.getint("width", 512);
-		height = config.getint("height", 512);
-		depth = config.getint("depth", 16);
+		
+		string type = config.getstring("type");
+		if (type != DUMMYCAM_TYPE) throw exception("Type should be " DUMMYCAM_TYPE " for this class.");
+
+		res.x = config.getint("width", 512);
+		res.y = config.getint("height", 512);
 		noise = config.getdouble("noise", 0.001);
+		
+		bpp = 16;
 		interval = 0.25;
 		exposure = 0.3;
-		bpp = 16;
+		
 		dtype = DATA_UINT16;
 		mode = Camera::OFF;
-		frame = (uint16_t *)malloc(width * height * 2);
+		
+		frame = (uint16_t *)malloc(res.x * res.y * bpp/8);
+		
 		if(!frame)
 			throw exception("Could not allocate memory for framebuffer");
+		
 		io->msg(IO_INFO, "DummyCamera init success, got %dx%dx%d frame, noise=%g, intv=%g, exp=%g.", 
-						width, height, depth, noise, interval, exposure);
+						res.x, res.y, bpp, noise, interval, exposure);
 	}
 
 	~DummyCamera() {
@@ -93,15 +102,15 @@ class DummyCamera: public Camera {
 	}
 
 	int get_width() {
-		return width;
+		return res.x;
 	}
 
 	int get_height() {
-		return height;
+		return res.y;
 	}
 
 	int get_depth() {
-		return depth;
+		return bpp;
 	}
 
 	void set_mode(Camera::mode newmode) {
@@ -129,7 +138,7 @@ class DummyCamera: public Camera {
 		uint8_t *p = out;
 		for(int y = 0; y < 32; y++)
 			for(int x = 0 ; x < 32; x++)
-				 *p++ = in[width * y * (height / 32) + x * (width / 32)] >> (depth - 8);
+				 *p++ = in[res.x * y * (res.y / 32) + x * (res.x / 32)] >> (bpp - 8);
 
 		return true;
 	}
@@ -147,10 +156,10 @@ class DummyCamera: public Camera {
 			y1 = 0;
 		if(scale < 1)
 			scale = 1;
-		if(x2 * scale > width)
-			x2 = width / scale;
-		if(y2 * scale > height)
-			y2 = height / scale;
+		if(x2 * scale > res.x)
+			x2 = res.x / scale;
+		if(y2 * scale > res.y)
+			y2 = res.y / scale;
 
 		update(true);
 
@@ -161,11 +170,11 @@ class DummyCamera: public Camera {
 		
 		for(int y = y1 * scale; y < y2 * scale; y += scale) {
 			for(int x = x1 * scale; x < x2 * scale; x += scale) {
-				*p++ = data[y * width + x];
+				*p++ = data[y * res.y + x];
 			}
 		}
 
-		size = (p - (uint16_t *)out) * 2;
+		size = (p - (uint16_t *)out) * bpp/8;
 		return true;
 	}
 
@@ -178,7 +187,7 @@ class DummyCamera: public Camera {
 
 		pthread::mutexholder h(&mutex);
 
-		size_t size = width * height * 2;
+		size_t size = res.x * res.y * bpp/8;
 		if(write(fd, frame, size != size))
 			return false;
 
