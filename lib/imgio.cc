@@ -115,6 +115,8 @@ int Imgio::loadFits(std::string path) {
 			return -1;
 		}
 	}
+	
+	fits_close_file(fptr, &stat);
 
 	if (stat) {
 		fits_get_errstatus(stat, fits_err);
