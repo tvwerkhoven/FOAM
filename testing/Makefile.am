@@ -28,7 +28,7 @@ foamtest_PROGRAMS +=
 endif HWDEBUG
 
 if DEBUG
-foamtest_PROGRAMS += imgio-test io-test protocol-test
+foamtest_PROGRAMS += imgio-test imgio-convert-test io-test protocol-test
 
 io_test_SOURCES = io-test.cc
 io_test_LDADD = $(LIBSIU_DIR)/libio.a
@@ -36,6 +36,10 @@ io_test_LDADD = $(LIBSIU_DIR)/libio.a
 imgio_test_SOURCES = imgio-test.cc \
 		$(LIB_DIR)/imgio.cc $(LIB_DIR)/imgio.h
 imgio_test_LDADD = $(LIBSIU_DIR)/libio.a
+
+imgio_convert_test_SOURCES = imgio-convert-test.cc \
+		$(LIB_DIR)/imgio.cc $(LIB_DIR)/imgio.h
+imgio_convert_test_LDADD = $(LIBSIU_DIR)/libio.a
 
 protocol_test_SOURCES = protocol-test.cc
 protocol_test_LDADD = $(LIBSIU_DIR)/libprotocol.a \

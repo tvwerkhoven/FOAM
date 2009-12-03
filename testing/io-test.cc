@@ -40,6 +40,9 @@ int main() {
 	io->decVerb();
 	io->decVerb();
 	printf("==== Level = %d = %d\n", -2, io->getVerb());
+	
+	delete io;
+	
 	return 0;
 }
 
