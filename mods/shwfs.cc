@@ -36,7 +36,7 @@
 #include "io.h"
 #include "wfs.h"
 
-#define SHWFS_TYPE "sh"
+#define SHWFS_TYPE "shwfs"
 extern Io *io;
 
 // ROUTINES //
@@ -73,6 +73,7 @@ class Shwfs: public Wfs {
 		}
 		cog[0] /= csum;
 		cog[1] /= csum;
+		io->msg(IO_DEB2, "cog @ %d,%d got %g,%g (sum=%g).", xpos, ypos, cog[0], cog[1], csum);
 		return csum;		
 	}
 	
@@ -88,6 +89,7 @@ class Shwfs: public Wfs {
 		
 		// Get image first
 		if (cam->get_dtype() == DATA_UINT16) {
+			io->msg(IO_DEB2, "Shwfs::subapSel() got DATA_UINT16");
 			void *tmpimg;
 			cam->get_image(&tmpimg);
 			uint16_t *img = (uint16_t *) tmpimg;
@@ -108,6 +110,8 @@ class Shwfs: public Wfs {
 			}
 		}
 		else if (cam->get_dtype() == DATA_UINT8) {
+			io->msg(IO_DEB2, "Shwfs::subapSel() got DATA_UINT8");
+
 			void *tmpimg;
 			cam->get_image(&tmpimg);
 			uint8_t *img = (uint8_t *) tmpimg;
@@ -197,7 +201,7 @@ class Shwfs: public Wfs {
 		conffile = config.filename;
 		
 		wfstype = config.getstring("type");
-		if (wfstype != SHWFS_TYPE) throw exception("Type should be 'sh' for this class.");
+		if (wfstype != SHWFS_TYPE) throw exception("Type should be " SHWFS_TYPE " for this class.");
 		
 		int idx = conffile.find_last_of("/");
 		string camcfg = config.getstring("camcfg");
