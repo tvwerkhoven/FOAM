@@ -83,8 +83,9 @@ int modOpenInit(foamctrl *ptc) {
 int modOpenLoop(foamctrl *ptc) {
 	io->msg(IO_DEB2, __FILE__ "::modOpenLoop(foamctrl *ptc)");
 	
-	void *tmp;
-	ptc->wfs[0]->cam->get_image(&tmp);
+	//void *tmp;
+	//ptc->wfs[0]->cam->get_image(&tmp);
+	ptc->wfs[0]->measure();
 	
 	usleep(1000000);
 	return EXIT_SUCCESS;
