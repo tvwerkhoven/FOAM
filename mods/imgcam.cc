@@ -99,7 +99,7 @@ public:
 		io->msg(IO_INFO, "Range = %d--%d, sum=%lld", img->range[0], img->range[1], img->sum);
 	}
 
-	ImgCamera::~ImgCamera() {
+	~ImgCamera() {
 		io->msg(IO_DEB2, "ImgCamera::~ImgCamera()");
 		delete img;
 	}
