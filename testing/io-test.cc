@@ -25,6 +25,13 @@ int main() {
 	if (io->getVerb() != 1)
 		printf("ERROR: initial level wrong!\n");
 	
+	io->setVerb(2);
+	if (io->getVerb() != 2)
+		printf("ERROR: Cannot set level with int!\n");
+	io->setVerb("2");
+	if (io->getVerb() != 2)
+		printf("ERROR: Cannot set level with string!\n");
+	
 	// Increment a few times
 	io->incVerb();
 	io->incVerb();
