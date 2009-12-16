@@ -37,6 +37,7 @@
 #include "wfs.h"
 
 #define SHWFS_TYPE "shwfs"
+
 extern Io *io;
 
 // ROUTINES //
@@ -45,41 +46,58 @@ extern Io *io;
 class Shwfs: public Wfs {
 	private:
 	
+	typedef enum {
+		COG=0,
+		CORR
+	} mode_t;
+	
 	coord_t subap;			//!< Number of subapertures in X and Y
 	coord_t sasize;			//!< Subaperture pixel size
 	coord_t track;			//!< Subaperture tracking window size
 	int samaxr;					//!< Maximum radius to use, or edge erosion subapertures
 	int samini;					//!< Minimum amount of subapertures to use
 	
-	coord_t *trackpos;
+	mode_t mode;				//!< Data processing mode (Center of Gravity, correlation, etc)
+	
+	fcoord_t *trackpos;
 	coord_t *sapos;
 	
 	int ns;
 	
 	template <class T>
-	int _cog(T *img, int xpos, int ypos, int w, int h, int stride, int samini, float *cog) {
+	int _cog(T *img, int xpos, int ypos, int w, int h, int stride, int samini, fcoord_t& cog) {
 		float fi, csum = 0;
-		cog[0] = cog[1] = 0.0;
+		cog.x = cog.y = 0.0;
 		img += ypos*stride + xpos;
-		for (int iy=0; iy < w; iy++) { // loop over all pixels
-			for (int ix=0; ix < h; ix++) {
+		for (int iy=-w; iy < w; iy++) { // loop over all pixels
+			for (int ix=-h; ix < h; ix++) {
 				fi = img[ix + iy*stride];
 				if (fi > samini) {
 					csum += fi;
-					cog[0] += fi * ix;      // center of gravity of subaperture intensity 
-					cog[1] += fi * iy;
+					cog.x += fi * ix;      // center of gravity of subaperture intensity 
+					cog.y += fi * iy;
 				}
 			}
 		}
-		cog[0] /= csum;
-		cog[1] /= csum;
-		io->msg(IO_DEB2, "cog @ %d,%d got %g,%g (sum=%g).", xpos, ypos, cog[0], cog[1], csum);
+		cog.x /= csum;
+		cog.y /= csum;
+		io->msg(IO_DEB2, "Shwfs::_cog(): subap @ %d,%d got cog=%f,%f (sum=%f).", xpos, ypos, cog.x, cog.y, csum);
 		return csum;		
+	}
+	
+	template <class T>
+	int _cogframe(T *img) {
+		float csum=0;
+		for (int s=0; s<ns; s++) { // Loop over all previously selected subapertures
+			csum += _cog<T>(img, sapos[s].x, sapos[s].y, track.x/2, track.y/2, cam->get_width(), 0, trackpos[s]);
+		}
+		return 0;
 	}
 	
 	int subapSel() {
 		int csum;
-		float cog[2], savec[2] = {0};
+		float savec[2] = {0};
+		fcoord_t cog;
 		int apmap[subap.x][subap.y];
 		int apmap2[subap.x][subap.y];
 		
@@ -95,11 +113,11 @@ class Shwfs: public Wfs {
 			uint16_t *img = (uint16_t *) tmpimg;
 			for (int isy=0; isy < subap.y; isy++) { // loops over all grid cells
 				for (int isx=0; isx < subap.x; isx++) {
-					csum = _cog<uint16_t>(img, isx * sasize.x, isy * sasize.y, sasize.x, sasize.y, cam->get_width(), samini, cog);
+					csum = _cog<uint16_t>(img, (isx+0.5) * sasize.x, (isy+0.5) * sasize.y, sasize.x/2, sasize.y/2, cam->get_width(), samini, cog);
 					if (csum > 0) {
 						apmap[isx][isy] = 1;
-						sapos[ns].x = isx * sasize.x; // Subap position
-						sapos[ns].y = isy * sasize.y;
+						sapos[ns].x = (int) ((isx+0.5) * sasize.x + cog.x); // Subap position
+						sapos[ns].y = (int) ((isy+0.5) * sasize.y + cog.y);
 						savec[0] += sapos[ns].x; // Sum all subap positions
 						savec[1] += sapos[ns].y;
 						ns++;
@@ -118,11 +136,11 @@ class Shwfs: public Wfs {
 			
 			for (int isy=0; isy < subap.y; isy++) { // loops over all grid cells
 				for (int isx=0; isx < subap.x; isx++) {
-					csum = _cog<uint8_t>(img, isx * sasize.x, isy * sasize.y, sasize.x, sasize.y, cam->get_width(), samini, cog);
+					csum = _cog<uint8_t>(img, (isx+0.5) * sasize.x, (isy+0.5) * sasize.y, sasize.x/2, sasize.y/2, cam->get_width(), samini, cog);
 					if (csum > 0) {
 						apmap[isx][isy] = 1;
-						sapos[ns].x = isx * sasize.x; // Subap position
-						sapos[ns].y = isy * sasize.y;
+						sapos[ns].x = (isx+0.5) * sasize.x + cog.x; // Subap position
+						sapos[ns].y = (isy+0.5) * sasize.y + cog.y;
 						savec[0] += sapos[ns].x; // Sum all subap positions
 						savec[1] += sapos[ns].y;
 						ns++;
@@ -138,7 +156,8 @@ class Shwfs: public Wfs {
 		savec[1] /= ns;
 		
 		io->msg(IO_XNFO, "Found %d subaps with I > %d.", ns, samini);
-		
+		io->msg(IO_XNFO, "Average position: (%f, %f)", savec[0], savec[1]);
+
 		// Find central aperture by minimizing (subap position - average position)
 		int csa = 0;
 		float dist, rmin;
@@ -149,6 +168,7 @@ class Shwfs: public Wfs {
 									((sapos[i].x - savec[0]) * (sapos[i].x - savec[0]))
 									+ ((sapos[i].y - savec[1]) * (sapos[i].y - savec[1])));
 			if (dist < rmin) {
+				io->msg(IO_XNFO, "Better central position @ (%d, %d)", sapos[i].x, sapos[i].y);
 				rmin = dist;
 				csa = i;	// new best guess for central subaperture
 			}
@@ -222,8 +242,11 @@ class Shwfs: public Wfs {
 		samini = config.getint("samini", 30);
 		
 		// Positions for the tracking window and the subapertures in pixel coordinates
-		trackpos = new coord_t[subap.x * subap.y];
+		trackpos = new fcoord_t[subap.x * subap.y];
 		sapos = new coord_t[subap.x * subap.y];
+		
+		// Start in CoG mode
+		mode = COG;
 				
 		io->msg(IO_XNFO, "Shwfs init complete got %dx%d subaps.", subap.x, subap.y);
 	}
@@ -235,9 +258,36 @@ class Shwfs: public Wfs {
 		delete[] sapos;
 	}
 	
+	int measure(void) {
+		void *tmpimg;
+		cam->get_image(&tmpimg);
+		
+		if (cam->get_dtype() == DATA_UINT16) {
+			if (mode == COG) {
+				io->msg(IO_DEB2, "Shwfs::measure() got DATA_UINT16, COG");
+				return _cogframe<uint16_t>((uint16_t *) tmpimg);
+			}
+			else
+				return io->msg(IO_ERR, "Shwfs::measure() unknown wfs mode");
+		}
+		else if (cam->get_dtype() == DATA_UINT8) {
+			if (mode == COG) {
+				io->msg(IO_DEB2, "Shwfs::measure() got DATA_UINT8, COG");
+				return _cogframe<uint8_t>((uint8_t *) tmpimg);
+			}
+			else
+				return io->msg(IO_ERR, "Shwfs::measure() unknown wfs mode");
+		}
+		else
+			return io->msg(IO_ERR, "Shwfs::measure() unknown datatype");
+		
+		return -1;
+	}
+	
 	int calibrate(void) {
 		// For SH WFS: select the subapertures to use for processing
-		subapSel();
+		return subapSel();
+		// TODO: add calibration for reference coordinates (with pinhole)
 	}
 };
 

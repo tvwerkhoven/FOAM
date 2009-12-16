@@ -53,7 +53,7 @@ class Wfs {
 	
 	virtual int verify() { return 0; } //!< Verify settings
 	virtual int calibrate(void) { return 0; } //!< Initialize WFS
-	virtual void* measure() { return NULL; }
+	virtual int measure() { return 0; }
 	
 	static Wfs *create(config &config);	//!< Initialize new wavefront sensor
 	static Wfs *create(string conffile) {
