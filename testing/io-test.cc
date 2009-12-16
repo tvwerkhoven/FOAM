@@ -1,5 +1,5 @@
 #include <stdio.h>
-#include "Io.h"
+#include "io.h"
 
 int main() {
 	Io *io;
