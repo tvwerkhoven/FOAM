@@ -98,10 +98,14 @@ class Shwfs: public Wfs {
 		int csum;
 		float savec[2] = {0};
 		fcoord_t cog;
-		int apmap[subap.x][subap.y];
-		int apmap2[subap.x][subap.y];
+		int *apmap = new int[subap.x * subap.y];
+		int *apmap2 = new int[subap.x * subap.y];
 		
 		io->msg(IO_DEB2, "Shwfs::subapSel()");
+		
+		for (int isy=0; isy < subap.y; isy++)
+			for (int isx=0; isx < subap.x; isx++)
+				apmap[isy * subap.x + isx] = apmap2[isy * subap.x + isx] = 0;
 		
 		ns = 0;
 		
@@ -115,15 +119,15 @@ class Shwfs: public Wfs {
 				for (int isx=0; isx < subap.x; isx++) {
 					csum = _cog<uint16_t>(img, (isx+0.5) * sasize.x, (isy+0.5) * sasize.y, sasize.x/2, sasize.y/2, cam->get_width(), samini, cog);
 					if (csum > 0) {
-						apmap[isx][isy] = 1;
-						sapos[ns].x = (int) ((isx+0.5) * sasize.x + cog.x); // Subap position
-						sapos[ns].y = (int) ((isy+0.5) * sasize.y + cog.y);
+						apmap[isy * subap.x + isx] = 1;
+						sapos[ns].x = (int) ((isx+0.5) * sasize.x); // Subap position
+						sapos[ns].y = (int) ((isy+0.5) * sasize.y);
 						savec[0] += sapos[ns].x; // Sum all subap positions
 						savec[1] += sapos[ns].y;
 						ns++;
 					}
 					else
-						apmap[isx][isy] = 0;
+						apmap[isy * subap.x + isx] = 0;
 				}
 			}
 		}
@@ -138,15 +142,15 @@ class Shwfs: public Wfs {
 				for (int isx=0; isx < subap.x; isx++) {
 					csum = _cog<uint8_t>(img, (isx+0.5) * sasize.x, (isy+0.5) * sasize.y, sasize.x/2, sasize.y/2, cam->get_width(), samini, cog);
 					if (csum > 0) {
-						apmap[isx][isy] = 1;
-						sapos[ns].x = (isx+0.5) * sasize.x + cog.x; // Subap position
-						sapos[ns].y = (isy+0.5) * sasize.y + cog.y;
+						apmap[isy * subap.x + isx] = 1;
+						sapos[ns].x = (int) ((isx+0.5) * sasize.x); // Subap position
+						sapos[ns].y = (int) ((isy+0.5) * sasize.y);
 						savec[0] += sapos[ns].x; // Sum all subap positions
 						savec[1] += sapos[ns].y;
 						ns++;
 					}
 					else
-						apmap[isx][isy] = 0;
+						apmap[isy * subap.x + isx] = 0;
 				}
 			}
 		}
@@ -177,40 +181,48 @@ class Shwfs: public Wfs {
 		io->msg(IO_XNFO, "Central subaperture #%d at (%d,%d)", csa,
 						sapos[csa].x, sapos[csa].y);
 		
+		printGrid(apmap);
+				
 		// Edge erosion: erode the outer -samaxr rings of subapertures
-		while (samaxr < 0) {
+		for (int r=samaxr; r<0; r++) {
 			int isy, isx;
 			io->msg(IO_XNFO, "Running edge erosion iteration...");
 			for (int i=0; i<ns; i++) {
-				isy = sapos[i].y / sasize.y;
-				isx = sapos[i].x / sasize.x;
+				// TODO: not safe, may break down:
+				isy = (sapos[i].y / sasize.y);
+				isx = (sapos[i].x / sasize.x);
+				io->msg(IO_DEB1 | IO_NOLF, "Subap %d/%d @ (%d,%d) @ (%d,%d)...", i, ns, isx, isy, sapos[i].x, sapos[i].y);
 				// If this subaperture is on the edge, or it does not have 
 				// neighbours in all directions, cut it out
 				if (isy == 0 || isy > subap.y ||
 						isx == 0 || isx > subap.x ||
-						apmap[isx-1][isy] == 0 ||
-						apmap[isx][isy-1] == 0 ||
-						apmap[isx+1][isy] == 0 ||
-						apmap[isx][isy+1] == 0) {
+						apmap[(isy+0) * subap.x + (isx-1)] == 0 ||
+						apmap[(isy-1) * subap.x + (isx+0)] == 0 ||
+						apmap[(isy+0) * subap.x + (isx+1)] == 0 ||
+						apmap[(isy+1) * subap.x + (isx+0)] == 0) {
 					// Don't use this subaperture
-					apmap2[isx][isy] = 0;
+					apmap2[isy * subap.x + isx] = 0;
+					io->msg(IO_DEB1, " discard.");
 					for (int j=i; j<ns-1; j++)
 						sapos[j] = sapos[j+1];
 					ns--;
+					i--;
 				}
 				else {
-					apmap2[isx][isy] = 1;
+					io->msg(IO_DEB1 | IO_NOID, " keep.\n");
+					apmap2[isy * subap.x + isx] = 1;
 				}
 			}
 			for (int isy=0; isy < subap.y; isy++)
 				for (int isx=0; isx < subap.x; isx++)
-					apmap[isx][isy] = apmap2[isx][isy];
-			
-			samaxr++;
+					apmap[isy * subap.x + isx] = apmap2[isy * subap.x + isx];
+
+			printGrid(apmap);
 		}
 		
 		io->msg(IO_INFO, "Finally found %d subapertures", ns);
 		
+				
 		return ns;
 	}
 	
@@ -258,6 +270,16 @@ class Shwfs: public Wfs {
 		delete[] sapos;
 	}
 	
+	void printGrid(int *map) {
+		for (int isy=0; isy < subap.y; isy++) {
+			for (int isx=0; isx < subap.x; isx++) {
+				if (map[isy * subap.x + isx] == 1) io->msg(IO_XNFO | IO_NOID, "X ");
+				else io->msg(IO_XNFO | IO_NOID, ". ");
+			}
+			io->msg(IO_XNFO | IO_NOID, "\n");
+		}
+	}	
+		
 	int measure(void) {
 		void *tmpimg;
 		cam->get_image(&tmpimg);
