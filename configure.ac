@@ -5,7 +5,7 @@
 AC_INIT([FOAM], [0.1], [t.i.m.vanwerkhoven@xs4all.nl])
 AC_CONFIG_AUX_DIR([build-aux])
 AM_INIT_AUTOMAKE([FOAM], [0.1], [t.i.m.vanwerkhoven@xs4all.nl])
-AC_PREREQ(2.61)
+AC_PREREQ(2.59)
 AC_COPYRIGHT([Copyright (C) 2007-2009 Tim van Werkhoven <t.i.m.vanwerkhoven@xs4all.nl>])
 AC_REVISION(`git describe`)
 
