@@ -4,29 +4,39 @@
 int main() {
 	Io *io;
 
-	for (int i=0; i<10; i++) {
+	printf("Test printing at different error levels...\n");
+	for (int i=0; i<IO_MAXLEVEL+1; i++) {
 		io = new Io(i);
-		printf("==== Level = %d = %d\n", i, io->getVerb());
+		printf("==== Error level = %d\n", io->getVerb());
 
 		io->msg(IO_ERR, "Error");
-		io->msg(IO_WARN, "W");
-		io->msg(IO_INFO, "I");
-		io->msg(IO_XNFO, "X");
-		io->msg(IO_DEB1, "1");
-		io->msg(IO_DEB2, "2");
+		io->msg(IO_WARN, "Warn");
+		io->msg(IO_INFO, "Info");
+		io->msg(IO_XNFO, "Xnfo");
+		io->msg(IO_DEB1, "Debug1");
+		io->msg(IO_DEB2, "Debug2");
 		delete io;
 	}
+	
+	printf("Test level incrementing and decrementing...\n");
+	io = new Io(1);
+	
+	if (io->getVerb() != 1)
+		printf("ERROR: initial level wrong!\n");
+	
+	// Increment a few times
+	io->incVerb();
+	io->incVerb();
+	io->incVerb();
+	io->incVerb();
+	io->incVerb();
+	io->incVerb();
+	io->incVerb();
+	
+	if (io->getVerb() != 7 && io->getVerb() != IO_MAXLEVEL)
+		printf("ERROR: incrementing failed!\n");
 
-	io = new Io(0);
-	printf("==== Level = %d = %d\n", 0, io->getVerb());
-	io->incVerb();
-	io->incVerb();
-	io->incVerb();
-	io->incVerb();
-	io->incVerb();
-	io->incVerb();
-	io->incVerb();
-	printf("==== Level = %d = %d\n", 7, io->getVerb());
+	// Decrement more
 	io->decVerb();
 	io->decVerb();
 	io->decVerb();
@@ -39,10 +49,13 @@ int main() {
 	io->decVerb();
 	io->decVerb();
 	io->decVerb();
-	printf("==== Level = %d = %d\n", -2, io->getVerb());
+	
+	if (io->getVerb() != 1)
+		printf("ERROR: decrementing failed!\n");
 	
 	delete io;
 	
+	printf("Done!\n");
 	return 0;
 }
 

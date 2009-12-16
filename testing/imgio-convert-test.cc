@@ -20,8 +20,11 @@ Io *io = new Io();
 int main(int argc, char *argv[]) {
 	int ret;
 	
-	if (argc < 2)
-		return -1;
+	if (argc < 2) {
+		printf("Syntax: %s <file>.\n", argv[0]);
+		printf("Will convert <file> to <file>.fits.\n");
+		return -1;		
+	}
 	
 	// ########################################################################
 	printf("Loading image.\n");

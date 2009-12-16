@@ -6,9 +6,9 @@ LIB_DIR = $(top_builddir)/lib
 LIBSIU_DIR = $(top_srcdir)/$(LIBSIU)
 
 AM_CPPFLAGS = \
-        -I$(LIB_DIR) \
-        -I$(MODS_DIR) \
-        -I$(LIBSIU_DIR) \
+				-I$(LIB_DIR) \
+				-I$(MODS_DIR) \
+				-I$(LIBSIU_DIR) \
 				$(COMMON_CFLAGS)
 
 AM_CXXFLAGS = -pipe -Wall -Wextra \
