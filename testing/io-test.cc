@@ -9,12 +9,13 @@ int main() {
 		io = new Io(i);
 		printf("==== Error level = %d\n", io->getVerb());
 
-		io->msg(IO_ERR, "Error");
-		io->msg(IO_WARN, "Warn");
-		io->msg(IO_INFO, "Info");
-		io->msg(IO_XNFO, "Xnfo");
-		io->msg(IO_DEB1, "Debug1");
-		io->msg(IO_DEB2, "Debug2");
+		io->msg(IO_ERR | IO_NOLF, "Error ");
+		io->msg(IO_WARN | IO_NOLF, "Warn ");
+		io->msg(IO_INFO | IO_NOLF, "Info ");
+		io->msg(IO_XNFO | IO_NOLF, "Xnfo ");
+		io->msg(IO_DEB1 | IO_NOLF, "Debug1 ");
+		io->msg(IO_DEB2 | IO_NOLF, "Debug2 ");
+		printf("\n");
 		delete io;
 	}
 	
