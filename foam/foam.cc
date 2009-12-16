@@ -488,6 +488,14 @@ static void on_message(Connection *connection, std::string line) {
 																				 connection->getpeername().c_str(), 
 																				 line.c_str()));
 	}
+  else if (cmd == "verb") {
+		string var = popword(line);
+		if (var == "+") io->incVerb();
+		else if (var == "-") io->decVerb();
+		else io->setVerb(var);
+		
+		connection->server->broadcast(format("201 :VERBOSITY %d", io->getVerb()));
+	}
   else if (cmd == "get") {
     string var = popword(line);
 		if (var == "frames") connection->write(format("202 :FRAMES %d", ptc->frames));
@@ -529,6 +537,8 @@ static int showhelp(Connection *connection, string topic, string rest) {
 "help [command]:         Help (on a certain command, if available).\n"
 "mode <mode>:            close or open the loop.\n"
 "get <var>:              read a system variable.\n"
+"verb <level>:           set verbosity to <level>.\n"
+"verb <+|->:             increase/decrease verbosity by 1 step.\n"
 "broadcast <msg>:        send a message to all connected clients.\n"
 "exit or quit:           disconnect from daemon.\n"
 "shutdown:               shutdown FOAM.");
