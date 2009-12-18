@@ -5,5 +5,5 @@ AUTOMAKE_OPTIONS = foreign
 
 ACLOCAL_AMFLAGS = -I m4
 
-SUBDIRS = lib libsiu foam conf testing
+SUBDIRS = lib libsiu foam ui conf testing
 EXTRA_DIST = AUTHORS BUGS COPYING Changelog INSTALL README THANKS TODO NEWS

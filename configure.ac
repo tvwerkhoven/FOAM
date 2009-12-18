@@ -15,6 +15,7 @@ AC_CONFIG_HEADERS(foam/autoconfig.h)
 AC_CONFIG_FILES([
 Makefile
 foam/Makefile
+ui/Makefile
 lib/Makefile
 conf/Makefile
 data/Makefile
@@ -30,8 +31,8 @@ AC_PROG_INSTALL
 AC_PROG_RANLIB
 
 # These are the configuration- and data-directories
-FOAMCONFDIR=$datadir/foam/
-FOAMDATADIR=./
+FOAMCONFDIR=$datadir/foam
+FOAMDATADIR=$datadir
 AC_SUBST(FOAMCONFDIR)
 AC_SUBST(FOAMDATADIR)
 
@@ -79,6 +80,11 @@ debug=true
 AC_ARG_ENABLE([debug],
 		AC_HELP_STRING([--disable-debug], [disable debugging mode]),
 		[test "$enableval" = no && debug=disabled], [])
+
+gui=true
+AC_ARG_ENABLE([gui],
+		AC_HELP_STRING([--disable-gui], [build gui]),
+		[test "$enableval" = no && gui=disabled], [])
 
 AC_ARG_ENABLE([hwdebug],
 		AC_HELP_STRING([--enable-hwdebug], [build hardware debugging tests]),
@@ -144,6 +150,29 @@ fi
 AC_SUBST(SIMSTAT_CFLAGS)
 AC_SUBST(SIMSTAT_LIBS)
 AM_CONDITIONAL([SIMSTAT], [test "$simstat" = true])
+
+### GUI LIBRARIES ###
+#####################
+if test "$gui" = true ; then
+	AC_MSG_NOTICE([*** GUI enabled, checking for extra libs])
+	guimissing=""
+		
+	PKG_CHECK_MODULES(GTKMM, gtkmm-2.4 >= 2.6, [],
+		[AC_MSG_WARN([FOAM GUI needs gtkmm.]);guimissing+=" gtkmm-2.4"])
+	
+	PKG_CHECK_MODULES(GTHREAD, gthread-2.0, [],
+		[AC_MSG_WARN([FOAM GUI needs gthread-2.0.]);guimissing+=" gthread-2.0"])
+	
+	GUI_CFLAGS+=" $GTHREAD_CFLAGS $GTKMM_CFLAGS"
+	GUI_LIBS+=" $GTHREAD_LIBS $GTKMM_LIBS"
+else 
+	AC_MSG_NOTICE([*** GUI disabled])
+fi
+
+AC_SUBST(GUI_CFLAGS)
+AC_SUBST(GUI_LIBS)
+AM_CONDITIONAL([GUI], [test "$gui" = true])
+
 
 ### OPENGL FEATURE ### 
 ######################

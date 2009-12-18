@@ -129,11 +129,12 @@ typedef enum { // filter_t
 /*!
  @brief Stores the mode of the AO system.
  */
-typedef enum { // aomode_t
+volatile typedef enum { // aomode_t
 	AO_MODE_OPEN=0,	//!< Open loop mode
 	AO_MODE_CLOSED, //!< Closed loop mode
 	AO_MODE_CAL, 	//!< Calibration mode (in conjunction with calmode_t)
 	AO_MODE_LISTEN,	//!< Listen mode (idle)
+	AO_MODE_UNDEF,	//!< Undefined mode (default)
 	AO_MODE_SHUTDOWN //!< Set to this mode for the worker thread to finish
 } aomode_t;
 
