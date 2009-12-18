@@ -25,6 +25,7 @@
 
 #include <gtkmm.h>
 #include <gtkmm/accelmap.h>
+#include <string.h>
 
 #include "autoconfig.h"
 
@@ -33,11 +34,48 @@
 #include "log.h"
 #include "logview.h"
 #include "protocol.h"
+#include "foamcontrol.h"
+#include "controlview.h"
 
 extern Gtk::Tooltips *tooltips;
 
 using namespace std;
 using namespace Gtk;
+
+class ConnectDialog: public Dialog {
+	FoamControl &foamctrl;
+	
+	Label host;
+	Label port;
+	Entry hostentry;
+	Entry portentry;
+	
+	void on_ok() {
+		printf("ConnectDialog::on_ok()\n");
+		foamctrl.connect(hostentry.get_text(), portentry.get_text());
+		
+		hide();
+	}
+	
+	void on_cancel() {
+		printf("ConnectDialog::on_cancel()\n");
+		hide();
+	}
+	
+public:
+	ConnectDialog(FoamControl &foamctrl): foamctrl(foamctrl), host("Hostname"), port("Port"), hostentry(), portentry() {
+		set_title("Connect");
+		set_modal();
+		
+		add_button(Gtk::Stock::OK, 1)->signal_clicked().connect(sigc::mem_fun(*this, &ConnectDialog::on_ok));
+		add_button(Gtk::Stock::CANCEL, 0)->signal_clicked().connect(sigc::mem_fun(*this, &ConnectDialog::on_cancel));
+		
+		get_vbox()->add(host);
+		get_vbox()->add(port);
+		
+		show_all_children();
+	}
+};
 
 class MainMenu: public MenuBar {
 	MenuItem file;
@@ -88,9 +126,8 @@ class MainWindow: public Window {
 	Log log;
 	
 	LogPage logpage;
+	ControlPage controlpage;
 	
-	Frame logframe;
-
 	void on_about_activate() {
 		aboutdialog.present();
 	}
@@ -100,39 +137,33 @@ class MainWindow: public Window {
 	}	
 	
 	void on_connect_activate() {
-		log.add(Log::DEBUG, "Would connect here.\n");
+		printf("MainWindow::on_connect_activate()\n");
 	}	
 	
 public:	
 	MainMenu menubar;
 	
 	MainWindow():
-	logpage(log), logframe("Log"), menubar(*this)
+	logpage(log), controlpage(log), menubar(*this)
 	{
 		log.add(Log::NORMAL, "FOAM Control (" PACKAGE_NAME " version " PACKAGE_VERSION " built " __DATE__ " " __TIME__ ")");
 		log.add(Log::NORMAL, "Copyright (c) 2009 Tim van Werkhoven (T.I.M.vanWerkhoven@xs4all.nl)\n");
-
-		//restore_state();
 		
 		// widget properties
-		
 		set_title("FOAM Control");
 		set_default_size(600, 400);
 		set_gravity(Gdk::GRAVITY_STATIC);
 		
 		vbox.set_spacing(4);
 		vbox.pack_start(menubar, PACK_SHRINK);
-
+		
+		// signals
 		menubar.connect.signal_activate().connect(sigc::mem_fun(*this, &MainWindow::on_connect_activate));
 		menubar.quit.signal_activate().connect(sigc::mem_fun(*this, &MainWindow::on_quit_activate));
 		menubar.about.signal_activate().connect(sigc::mem_fun(*this, &MainWindow::on_about_activate));
 		
-		// signals
-		
-		//signal_configure_event().connect_notify(sigc::mem_fun(*this, &MainWindow::on_window_configure_event));
-		
+		notebook.append_page(controlpage, "_Control", "Control", true);
 		notebook.append_page(logpage, "_Log", "Log", true);
-
 		
 		vbox.pack_start(notebook);
 		
@@ -144,8 +175,6 @@ public:
 	}
 	
 	~MainWindow() {
-		//config.set("main.filechooserfolder", filechooser.get_current_folder());
-		//save_state();
 	}
 };
 

@@ -1,5 +1,5 @@
-#ifndef HAVE_LOGVIEW_H
-#define HAVE_LOGVIEW_H
+#ifndef __LOGVIEW_H__
+#define __LOGVIEW_H__
 
 #include <gtkmm.h>
 #include "log.h"
@@ -20,4 +20,4 @@ class LogPage: public Gtk::VBox {
 	LogPage(Log &log);
 };
 
-#endif
+#endif // __LOGVIEW_H__

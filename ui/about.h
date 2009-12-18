@@ -1,5 +1,5 @@
-#ifndef HAVE_ABOUT_H
-#define HAVE_ABOUT_H
+#ifndef __ABOUT_H__
+#define __ABOUT_H__
 
 #include <gtkmm.h>
 #include <gdkmm/pixbuf.h>
@@ -15,4 +15,4 @@ class AboutFOAMGui: public Gtk::AboutDialog {
 	AboutFOAMGui();
 };
 
-#endif
+#endif // __ABOUT_H__

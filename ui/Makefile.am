@@ -37,6 +37,6 @@ LDADD = $(LIBSIU_DIR)/libsocket.a \
 if GUI
 bin_PROGRAMS = foam-gui
 foam_gui_CPPFLAGS = $(GUI_CFLAGS) $(AM_CPPFLAGS)
-foam_gui_SOURCES = fgui.cc log.cc logview.cc about.cc foamcontrol.cc
-foam_gui_SOURCES += log.h logview.h about.h foamcontrol.h
+foam_gui_SOURCES = fgui.cc log.cc logview.cc about.cc foamcontrol.cc controlview.cc
+foam_gui_SOURCES += fgui.h log.h logview.h about.h foamcontrol.h controlview.h
 endif GUI

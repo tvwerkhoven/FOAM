@@ -26,25 +26,32 @@
 #ifndef __HAVE_FOAMCONTROL_H__
 #define __HAVE_FOAMCONTROL_H__
 
+#include <string>
+#include <glibmm/dispatcher.h>
+
 #include "protocol.h"
 #include "pthread++.h"
 #include "types.h"
-#include <glibmm/dispatcher.h>
+
+class ControlPage;
 
 class FoamControl {
-	Protocol::Client protocol;
-	Protocol::Client dataprotocol;
+	ControlPage &parent;
+	Protocol::Client *protocol;
+	
+	pthread::mutex mutex;
 	
 	aomode_t mode;
 	int numwfs;
 	int numwfc;
 	
 	bool ok;
+	bool connected;
 	std::string errormsg;
 	
 	void on_message(std::string line);
-	void on_data_message(std::string line);
-	void on_connected(bool connected);
+	void on_connected(bool conn);
+	void on_update();
 	
 public:
 	class exception: public std::runtime_error {
@@ -52,23 +59,34 @@ public:
 		exception(const std::string reason): runtime_error(reason) {}
 	};
 	
-	const std::string name;
-	const std::string host;
-	const std::string port;
-	FoamControl(const std::string &name, const std::string &host, const std::string &port);
+	std::string host;
+	std::string port;
+	
+	FoamControl(ControlPage &parent);
 	~FoamControl();
 	
+	void init();
+	int connect(const std::string &host, const std::string &port);
+	int disconnect();
+	
+	// get-like commands
+	std::string getport() { return port; }
+	std::string gethost() { return host; }
 	int get_numwfs();
 	int get_numwfc();
-	aomode_t get_mode() { return mode; }
+	//aomode_t get_mode() { return mode; }
 	
+	// set-like commands
 	void set_mode(aomode_t mode);
-	void shutdown() { protocol.write("shutdown"); }
+	void shutdown() { protocol->write("shutdown"); }
 	
 	bool is_ok() { return ok; }
+	bool is_connected() { return connected; }
 	std::string get_errormsg() { return errormsg; }
 	
 	Glib::Dispatcher signal_update;
 };
 
-#endif
+#include "controlview.h"
+
+#endif // __HAVE_FOAMCONTROL_H__

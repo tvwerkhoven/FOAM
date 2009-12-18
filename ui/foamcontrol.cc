@@ -25,8 +25,22 @@
 
 #include "foamcontrol.h"
 
-FoamControl::FoamControl(const string &name, const string &host, const string &port): protocol(host, port, ""), dataprotocol(host, port, ""), name(name), host(host), port(port) {
+FoamControl::FoamControl(ControlPage &parent): parent(parent) {
+	printf("%X:FoamControl::FoamControl()\n", pthread_self());
+
+	init();
+}
+
+FoamControl::~FoamControl() {
+	if (protocol) { delete protocol; protocol=NULL;}
+}
+
+void FoamControl::init() {
+	printf("%X:FoamControl::init()\n", pthread_self());
+	protocol = NULL;
+	
 	ok = false;
+	connected = false;	
 	errormsg = "Not connected";
 	
 	// Init variables
@@ -34,28 +48,82 @@ FoamControl::FoamControl(const string &name, const string &host, const string &p
 	numwfc = 0;
 	numwfs = 0;
 	
-	// Register callback functions
-	protocol.slot_message = sigc::mem_fun(this, &Camera::on_message);
-	protocol.slot_connected = sigc::mem_fun(this, &Camera::on_connected);
-	protocol.connect();
+	host = "none";
+	port = "-1";
+	
+	// register callbacks
+	signal_update.connect(sigc::mem_fun(*this, &FoamControl::on_update));
 }
 
-FoamControl::FoamControl() {
+int FoamControl::connect(const string &hostvar, const string &portvar) {
+	printf("%X:FoamControl::connect(%s, %s)\n", pthread_self(), host.c_str(), port.c_str());
+
+	if (protocol) { delete protocol; protocol=NULL;}
+	
+	// Copy to class
+	host = hostvar;
+	port = portvar;
+	connected = false;
+
+	// connect a control connection
+	protocol = new Protocol::Client(host, port, "");
+	
+	protocol->slot_message = sigc::mem_fun(this, &FoamControl::on_message);
+	protocol->slot_connected = sigc::mem_fun(this, &FoamControl::on_connected);
+	protocol->connect();
+	
+	return 0;
 }
 
-void FoamControl::on_connected(bool connected) {
-	if(!connected) {
+int FoamControl::disconnect() {
+	printf("%X:FoamControl::disconnect()\n", pthread_self());
+	if (protocol) { delete protocol; protocol=NULL;}
+	
+	// Init variables
+	connected = false;
+	mode = AO_MODE_UNDEF;
+	numwfc = 0;
+	numwfs = 0;
+	
+	signal_update();
+	return 0;
+}
+
+void FoamControl::on_update() {
+	printf("%X:FoamControl::on_update()\n", pthread_self());
+	if (!connected) {
+		// Why is this? Socket keeps on reconnecting after error?
+		if (protocol) { delete protocol; protocol=NULL; }
+	}
+	
+	// GUI updating is done in parent (a ControlPage)
+	parent.on_update();
+}
+
+void FoamControl::on_connected(bool conn) {
+	printf("%X:FoamControl::on_connected(bool=%d)\n", pthread_self(), conn);
+
+	if (!conn) {
 		ok = false;
+		connected = false;
 		errormsg = "Not connected";
+		protocol->running = false;
 		signal_update();
 		return;
 	}
 	
-	protocol.write("get numwfs");
-	protocol.write("get numwfc");
+	ok = true;
+	connected = true;
+	
+	protocol->write("get numwfs");
+	protocol->write("get numwfc");
+	signal_update();
+	return;
 }
 
 void FoamControl::on_message(string line) {
+	printf("%X:FoamControl::on_message(string=%s)\n", pthread_self(), line.c_str());
+
 	if(popword(line) != "OK") {
 		ok = false;
 		errormsg = popword(line);
@@ -74,11 +142,11 @@ void FoamControl::on_message(string line) {
 		if (modename == "listen")
 			mode = AO_MODE_LISTEN;
 		else if (modename == "closed")
-			mode = AO_MODE_CLOSED
+			mode = AO_MODE_CLOSED;
 		else if (modename == "open")
-			mode = AO_MODE_OPEN
+			mode = AO_MODE_OPEN;
 		else if (modename == "cal")
-			mode = AO_MODE_CAL
+			mode = AO_MODE_CAL;
 		else {
 			ok = false;
 			errormsg = "Unexpected mode '" + modename + "'";
@@ -88,6 +156,6 @@ void FoamControl::on_message(string line) {
 		errormsg = "Unexpected response '" + what + "'";
 	}
 	
-	signal_update();
+	//signal_update();
 }
 
