@@ -451,11 +451,11 @@ void modeListen() {
 static void on_connect(Connection *connection, bool status) {
 	fprintf(stderr, "on_connect");
   if (status) {
-    connection->write("201 CLIENT CONNECTED");
+    connection->write("OK CLIENT CONNECTED");
     io->msg(IO_DEB1, "Client connected from %s.", connection->getpeername().c_str());
   }
   else {
-    connection->write("201 CLIENT DISCONNECTED");
+    connection->write("OK CLIENT DISCONNECTED");
     io->msg(IO_DEB1, "Client from %s disconnected.", connection->getpeername().c_str());
   }
 }
@@ -465,100 +465,100 @@ static void on_message(Connection *connection, std::string line) {
 	string cmd = popword(line);
 	
 	if (cmd == "help") {
-		connection->write("200 CMD :HELP OK");
+		connection->write("OK CMD HELP");
 		string orig = line;
 		string topic = popword(line);
     if (showhelp(connection, topic, line))
 			if (modMessage(ptc, connection, "help", orig))
-				connection->write("401 HELP :TOPIC UNKNOWN");
+				connection->write("ERR CMD HELP :TOPIC UNKNOWN");
   }
   else if (cmd == "exit" || cmd == "quit" || cmd == "bye") {
-		connection->write("200 CMD EXIT OK");
-    connection->server->broadcast("201 CLIENT DISCONNECTED");
+		connection->write("OK CMD EXIT");
+    connection->server->broadcast("OK CLIENT DISCONNECTED");
     connection->close();
   }
   else if (cmd == "shutdown") {
-		connection->write("200 CMD SHUTDOWN OK");
+		connection->write("OK CMD SHUTDOWN");
 		ptc->mode = AO_MODE_SHUTDOWN;
 		pthread_cond_signal(&mode_cond); // signal a change to the threads
   }
   else if (cmd == "broadcast") {
-		connection->write("200 CMD BROADCAST OK");
-		connection->server->broadcast(format("201 BROADCAST FROM %s: %s", 
-																				 connection->getpeername().c_str(), 
-																				 line.c_str()));
+		connection->write("OK CMD BROADCAST");
+		connection->server->broadcast(format("OK BROADCAST %s :FROM %s", 
+																				 line.c_str(),
+																				 connection->getpeername().c_str()));
 	}
-  else if (cmd == "verb") {
+  else if (cmd == "verbosity") {
 		string var = popword(line);
 		if (var == "+") io->incVerb();
 		else if (var == "-") io->decVerb();
 		else io->setVerb(var);
 		
-		connection->server->broadcast(format("201 VERBOSITY %d OK", io->getVerb()));
+		connection->server->broadcast(format("OK VERBOSITY %d", io->getVerb()));
 	}
   else if (cmd == "get") {
     string var = popword(line);
-		if (var == "frames") connection->write(format("202 :FRAMES %d", ptc->frames));
-		else connection->write("401 GET VAR UNKNOWN");
+		if (var == "frames") connection->write(format("OK VAR FRAMES %d", ptc->frames));
+		else connection->write("ERR GET :VAR UNKNOWN");
 	}
   else if (cmd == "mode") {
     string mode = popword(line);
 		if (mode == "closed") {
-			connection->write("200 CMD MODE CLOSED OK");
+			connection->write("OK CMD MODE CLOSED");
 			ptc->mode = AO_MODE_CLOSED;
 			pthread_cond_signal(&mode_cond); // signal a change to the main thread
 		}
 		else if (mode == "open") {
-			connection->write("200 CMD MODE OPEN OK");
+			connection->write("OK CMD MODE OPEN");
 			ptc->mode = AO_MODE_OPEN;
 			pthread_cond_signal(&mode_cond); // signal a change to the main thread
 		}
 		else if (mode == "listen") {
-			connection->write("200 CMD MODE LISTEN OK");
+			connection->write("OK CMD MODE LISTEN");
 			ptc->mode = AO_MODE_LISTEN;
 			pthread_cond_signal(&mode_cond); // signal a change to the main thread
 		}
 		else {
-			connection->write("401 CMD MODE UNKOWN");
+			connection->write("ERR CMD MODE :UNKOWN");
 		}
   }
   else {
     if (modMessage(ptc, connection, cmd, line))
-			connection->write("401 CMD UNKNOWN");
+			connection->write("ERR CMD :UNKNOWN");
   }
 }
 
 static int showhelp(Connection *connection, string topic, string rest) {
 	if (topic.size() == 0) {
 		connection->write(\
-"help [command]:         Help (on a certain command, if available).\n"
-"mode <mode>:            close or open the loop.\n"
-"get <var>:              read a system variable.\n"
-"verb <level>:           set verbosity to <level>.\n"
-"verb <+|->:             increase/decrease verbosity by 1 step.\n"
-"broadcast <msg>:        send a message to all connected clients.\n"
-"exit or quit:           disconnect from daemon.\n"
-"shutdown:               shutdown FOAM.");
+":help [command]:         Help (on a certain command, if available).\n"
+":mode <mode>:            close or open the loop.\n"
+":get <var>:              read a system variable.\n"
+":verb <level>:           set verbosity to <level>.\n"
+":verb <+|->:             increase/decrease verbosity by 1 step.\n"
+":broadcast <msg>:        send a message to all connected clients.\n"
+":exit or quit:           disconnect from daemon.\n"
+":shutdown:               shutdown FOAM.");
 		// pass it along to modMessage() as well
 		modMessage(ptc, connection, "help", rest);
 	}		
 	else if (topic == "mode") {
 		connection->write(\
-"mode <mode>:            Close or open the AO-loop.\n"
-"  mode=open:            opens the loop and only records what's happening with\n"
-"                        the AO system and does not actually drive anything.\n"
-"  mode=closed:          closes the loop and starts the feedbackloop, \n"
-"                        correcting the wavefront as fast as possible.\n"
-"  mode=listen:          stops looping and waits for input from the users.");
+":mode <mode>:            Close or open the AO-loop.\n"
+":  mode=open:            opens the loop and only records what's happening with\n"
+":                        the AO system and does not actually drive anything.\n"
+":  mode=closed:          closes the loop and starts the feedbackloop, \n"
+":                        correcting the wavefront as fast as possible.\n"
+":  mode=listen:          stops looping and waits for input from the users.");
 	}
 	else if (topic == "broadcast") {
 		connection->write(\
-"broadcast <mode>:       broadcast a message to all clients.");
+":broadcast <mode>:       broadcast a message to all clients.");
 	}
 	else if (topic == "get") {
 		connection->write(\
-											"get <var>:              read a system variable.\n"
-											"  frames:               number of frames processed");
+											":get <var>:              read a system variable.\n"
+											":  frames:               number of frames processed");
 	}
 	else {
 		// Unknown topic, return error
