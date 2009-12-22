@@ -44,15 +44,16 @@ void FoamControl::init() {
 	errormsg = "Not connected";
 	
 	// Init variables
-	mode = AO_MODE_UNDEF;
-	numwfc = 0;
-	numwfs = 0;
+	state.mode = AO_MODE_UNDEF;
+	state.numwfc = 0;
+	state.numwfs = 0;
 	
 	host = "none";
 	port = "-1";
 	
 	// register callbacks
-	signal_update.connect(sigc::mem_fun(*this, &FoamControl::on_update));
+	signal_conn_update.connect(sigc::mem_fun(*this, &FoamControl::on_connect_update));
+	signal_msg_update.connect(sigc::mem_fun(*this, &FoamControl::on_message_update));
 }
 
 int FoamControl::connect(const string &hostvar, const string &portvar) {
@@ -75,29 +76,57 @@ int FoamControl::connect(const string &hostvar, const string &portvar) {
 	return 0;
 }
 
+void FoamControl::set_mode(aomode_t mode) {
+	if (!protocol) return;
+	
+	switch (mode) {
+		case AO_MODE_LISTEN:
+			printf("FoamControl::set_mode(AO_MODE_LISTEN)\n");
+			protocol->write("mode listen");
+			break;
+		case AO_MODE_OPEN:
+			printf("FoamControl::set_mode(AO_MODE_OPEN)\n");
+			protocol->write("mode open");
+			break;
+		case AO_MODE_CLOSED:
+			printf("FoamControl::set_mode(AO_MODE_CLOSED)\n");
+			protocol->write("mode closed");
+			break;
+		default:
+			printf("FoamControl::set_mode(UNKNOWN)\n");
+			break;
+	}
+}
+
 int FoamControl::disconnect() {
 	printf("%X:FoamControl::disconnect()\n", pthread_self());
 	if (protocol) { delete protocol; protocol=NULL;}
 	
 	// Init variables
 	connected = false;
-	mode = AO_MODE_UNDEF;
-	numwfc = 0;
-	numwfs = 0;
+	state.mode = AO_MODE_UNDEF;
+	state.numwfc = 0;
+	state.numwfs = 0;
 	
-	signal_update();
+	signal_conn_update();
 	return 0;
 }
 
-void FoamControl::on_update() {
-	printf("%X:FoamControl::on_update()\n", pthread_self());
+void FoamControl::on_connect_update() {
+	printf("%X:FoamControl::on_connect_update()\n", pthread_self());
 	if (!connected) {
 		// Why is this? Socket keeps on reconnecting after error?
 		if (protocol) { delete protocol; protocol=NULL; }
 	}
 	
 	// GUI updating is done in parent (a ControlPage)
-	parent.on_update();
+	parent.on_connect_update();
+}
+
+void FoamControl::on_message_update() {
+	printf("%X:FoamControl::on_message_update()\n", pthread_self());
+	// GUI updating is done in parent (a ControlPage)
+	parent.on_message_update();
 }
 
 void FoamControl::on_connected(bool conn) {
@@ -108,7 +137,7 @@ void FoamControl::on_connected(bool conn) {
 		connected = false;
 		errormsg = "Not connected";
 		protocol->running = false;
-		signal_update();
+		signal_conn_update();
 		return;
 	}
 	
@@ -117,14 +146,14 @@ void FoamControl::on_connected(bool conn) {
 	
 	protocol->write("get numwfs");
 	protocol->write("get numwfc");
-	signal_update();
+	signal_conn_update();
 	return;
 }
 
 void FoamControl::on_message(string line) {
 	printf("%X:FoamControl::on_message(string=%s)\n", pthread_self(), line.c_str());
 
-	if(popword(line) != "OK") {
+	if (popword(line) != "OK") {
 		ok = false;
 		errormsg = popword(line);
 		return;
@@ -133,20 +162,30 @@ void FoamControl::on_message(string line) {
 	ok = true;
 	string what = popword(line);
 	
-	if (what == "numwfs")
-		numwfs = popint32(line);
-	else if (what == "numwfc")
-		numwfc = popint32(line);
-	else if (what == "mode") {
+	if (what == "VAR") {
+		string var = popword(line);
+		if (var == "NUMWFC")
+			state.numwfc = popint32(line);
+		else if (var == "NUMWFS")
+			state.numwfs = popint32(line);
+	}
+	else if (what == "CMD") {
+		// command confirmation hook
+		state.currcmd = popword(line);
+	}
+	else if (what == "CALIB") {
+		// post-calibration hook
+	}
+	else if (what == "MODE") {
 		string modename = popword(line);
-		if (modename == "listen")
-			mode = AO_MODE_LISTEN;
-		else if (modename == "closed")
-			mode = AO_MODE_CLOSED;
-		else if (modename == "open")
-			mode = AO_MODE_OPEN;
-		else if (modename == "cal")
-			mode = AO_MODE_CAL;
+		if (modename == "LISTEN")
+			state.mode = AO_MODE_LISTEN;
+		else if (modename == "CLOSED")
+			state.mode = AO_MODE_CLOSED;
+		else if (modename == "OPEN")
+			state.mode = AO_MODE_OPEN;
+		else if (modename == "CALIB")
+			state.mode = AO_MODE_CAL;
 		else {
 			ok = false;
 			errormsg = "Unexpected mode '" + modename + "'";
@@ -156,6 +195,6 @@ void FoamControl::on_message(string line) {
 		errormsg = "Unexpected response '" + what + "'";
 	}
 	
-	//signal_update();
+	signal_msg_update();
 }
 

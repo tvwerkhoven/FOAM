@@ -51,18 +51,26 @@ class ControlPage: public VBox {
 	HBox cspacer;
 	
 	HBox modebox;
+	Button mode_idle;
+	Button mode_open;
+	Button mode_closed;
 	Button shutdown;
 	HBox mspacer;
 	
 	void on_connect_clicked();
 	void on_disconnect_clicked();
+	
 	void on_shutdown_clicked();
+	void on_mode_idle_clicked();
+	void on_mode_open_clicked();
+	void on_mode_closed_clicked();
 	
 public:
 	ControlPage(Log &log);
 	~ControlPage();
 
-	void on_update();
+	void on_connect_update();
+	void on_message_update();
 };
 
 #include "foamcontrol.h"

@@ -41,9 +41,13 @@ class FoamControl {
 	
 	pthread::mutex mutex;
 	
-	aomode_t mode;
-	int numwfs;
-	int numwfc;
+	// State of the AO system goes here
+	struct state_t {
+		aomode_t mode;
+		int numwfs;
+		int numwfc;
+		string currcmd;
+	} state;
 	
 	bool ok;
 	bool connected;
@@ -51,7 +55,9 @@ class FoamControl {
 	
 	void on_message(std::string line);
 	void on_connected(bool conn);
-	void on_update();
+	
+	void on_connect_update();
+	void on_message_update();
 	
 public:
 	class exception: public std::runtime_error {
@@ -84,7 +90,8 @@ public:
 	bool is_connected() { return connected; }
 	std::string get_errormsg() { return errormsg; }
 	
-	Glib::Dispatcher signal_update;
+	Glib::Dispatcher signal_conn_update;
+	Glib::Dispatcher signal_msg_update;
 };
 
 #include "controlview.h"
