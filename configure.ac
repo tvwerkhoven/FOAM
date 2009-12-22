@@ -158,10 +158,10 @@ if test "$gui" = true ; then
 	guimissing=""
 		
 	PKG_CHECK_MODULES(GTKMM, gtkmm-2.4 >= 2.6, [],
-		[AC_MSG_WARN([FOAM GUI needs gtkmm.]);guimissing+=" gtkmm-2.4"])
+		[AC_MSG_WARN([FOAM GUI needs gtkmm.]);gui=false;guimissing+=" gtkmm-2.4"])
 	
 	PKG_CHECK_MODULES(GTHREAD, gthread-2.0, [],
-		[AC_MSG_WARN([FOAM GUI needs gthread-2.0.]);guimissing+=" gthread-2.0"])
+		[AC_MSG_WARN([FOAM GUI needs gthread-2.0.]);gui=false;guimissing+=" gthread-2.0"])
 	
 	GUI_CFLAGS+=" $GTHREAD_CFLAGS $GTKMM_CFLAGS"
 	GUI_LIBS+=" $GTHREAD_LIBS $GTKMM_LIBS"
@@ -218,6 +218,15 @@ elif test "$simstat" = disabled; then
 else
 	AC_MSG_NOTICE([Static sim mode:         not available])
 	AC_MSG_NOTICE([Static sim mode:         missing:$simstatmissing])
+fi
+
+if test "$gui" = true ; then
+	AC_MSG_NOTICE([FOAM control GUI:        available])
+elif test "$gui" = disabled; then
+	AC_MSG_NOTICE([FOAM control GUI:        disabled])
+else
+	AC_MSG_NOTICE([FOAM control GUI:        not available])
+	AC_MSG_NOTICE([FOAM control GUI:        missing:$guimissing])
 fi
 
 if test "$debug" = true ; then
