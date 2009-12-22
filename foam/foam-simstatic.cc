@@ -140,25 +140,17 @@ int modCalibrate(foamctrl *ptc) {
 }
 
 int modMessage(foamctrl *ptc, Connection *connection, string cmd, string line) {
-	// Quick recap of messaging codes:
-	// 400 UNKNOWN
-	// 401 UNKNOWN MODE
-	// 402 MODE REQUIRES ARG
-	// 403 MODE FORBIDDEN
-	// 300 ERROR
-	// 200 OK
-	// 201 STATE CHANGE
 	if (cmd == "help") {
 		string topic = popword(line);
 		if (topic.size() == 0) {
 			connection->write(\
-												"==== simstat help ==========================\n"
-												"calib <mode>:           Calibrate AO system.");
+												":==== simstat help ==========================\n"
+												":calib <mode>:           Calibrate AO system.");
 		}
 		else if (topic == "calib") {
 			connection->write(\
-												"calib <mode>:           Calibrate AO system.\n"
-												"  mode=sasel:			     Select subapertures.");
+												":calib <mode>:           Calibrate AO system.\n"
+												":  mode=sasel:			     Select subapertures.");
 		}
 		else {
 			return -1;
@@ -167,13 +159,13 @@ int modMessage(foamctrl *ptc, Connection *connection, string cmd, string line) {
 	else if (cmd == "calib") {
 		string calmode = popword(line);
 		if (calmode == "sasel") {
-			connection->server->broadcast("201 :CALIB OK SUBAPSEL");
+			connection->server->broadcast("OK CMD CALIB SUBAPSEL");
 			ptc->calmode = CAL_SUBAPSEL;
 			ptc->mode = AO_MODE_CAL;
 			pthread_cond_signal(&mode_cond); // signal a change to the main thread
 		}
 		else {
-			connection->write("401 :CALIB MODE UNKNOWN");
+			connection->write("ERR CMD CALIB :MODE UNKNOWN");
 		}	
 	}
 	else {

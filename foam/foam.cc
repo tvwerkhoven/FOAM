@@ -295,7 +295,7 @@ int stopFOAM() {
 		
 	// Notify shutdown
 	io->msg(IO_WARN, "Shutting down FOAM now");
-  protocol->broadcast("500 :SHUTTING DOWN NOW");
+  protocol->broadcast("WARN :SHUTTING DOWN NOW");
 	
 	// Get the end time to see how long we've run
 	time_t end = time(NULL);
@@ -336,7 +336,7 @@ void modeOpen() {
 		return;
 	}
 		
-	protocol->broadcast("201 :MODE OPEN SUCCESSFUL");
+	protocol->broadcast("OK MODE OPEN");
 	
 	while (ptc->mode == AO_MODE_OPEN) {
 		if (modOpenLoop(ptc) != EXIT_SUCCESS) {
@@ -374,7 +374,7 @@ void modeClosed() {
 		return;
 	}
 		
-	protocol->broadcast("201 :MODE CLOSED SUCCESSFUL");
+	protocol->broadcast("OK MODE CLOSED");
 	
 	while (ptc->mode == AO_MODE_CLOSED) {
 		
@@ -402,13 +402,13 @@ void modeCal() {
 	// this links to a module
 	if (modCalibrate(ptc) != EXIT_SUCCESS) {
 		io->msg(IO_WARN, "modCalibrate failed.");
-		protocol->broadcast("404 :CALIBRATION FAILED");
+		protocol->broadcast("ERR CALIB :FAILED");
 		ptc->mode = AO_MODE_LISTEN;
 		return;
 	}
 	
 	io->msg(IO_INFO, "Calibration loop done, switching to listen mode.");
-	protocol->broadcast("201 :CALIBRATION SUCCESSFUL");
+	protocol->broadcast("OK CALIB");
 	ptc->mode = AO_MODE_LISTEN;
 	
 	return;
@@ -434,7 +434,7 @@ void modeListen() {
 			case AO_MODE_LISTEN:
 				io->msg(IO_DEB1, __FILE__ "::modeListen() AO_MODE_LISTEN");				
 				// We wait until the mode changed
-				protocol->broadcast("201 :MODE LISTEN SUCCESSFUL");
+				protocol->broadcast("OK MODE LISTEN");
 				pthread_mutex_lock(&mode_mutex);
 				pthread_cond_wait(&mode_cond, &mode_mutex);
 				pthread_mutex_unlock(&mode_mutex);
@@ -451,11 +451,11 @@ void modeListen() {
 static void on_connect(Connection *connection, bool status) {
 	fprintf(stderr, "on_connect");
   if (status) {
-    connection->write("201 :CLIENT CONNECTED");
+    connection->write("201 CLIENT CONNECTED");
     io->msg(IO_DEB1, "Client connected from %s.", connection->getpeername().c_str());
   }
   else {
-    connection->write("201 :CLIENT DISCONNECTED");
+    connection->write("201 CLIENT DISCONNECTED");
     io->msg(IO_DEB1, "Client from %s disconnected.", connection->getpeername().c_str());
   }
 }
@@ -465,26 +465,26 @@ static void on_message(Connection *connection, std::string line) {
 	string cmd = popword(line);
 	
 	if (cmd == "help") {
-		connection->write("200 :HELP OK");
+		connection->write("200 CMD :HELP OK");
 		string orig = line;
 		string topic = popword(line);
     if (showhelp(connection, topic, line))
 			if (modMessage(ptc, connection, "help", orig))
-				connection->write("401 :HELP TOPIC UNKNOWN");
+				connection->write("401 HELP :TOPIC UNKNOWN");
   }
   else if (cmd == "exit" || cmd == "quit" || cmd == "bye") {
-		connection->write("200 :EXIT OK");
-    connection->server->broadcast("201 :CLIENT DISCONNECTED");
+		connection->write("200 CMD EXIT OK");
+    connection->server->broadcast("201 CLIENT DISCONNECTED");
     connection->close();
   }
   else if (cmd == "shutdown") {
-		connection->write("200 :SHUTDOWN OK");
+		connection->write("200 CMD SHUTDOWN OK");
 		ptc->mode = AO_MODE_SHUTDOWN;
 		pthread_cond_signal(&mode_cond); // signal a change to the threads
   }
   else if (cmd == "broadcast") {
-		connection->write("200 :BROADCAST OK");
-		connection->server->broadcast(format("201 :BROADCAST FROM %s: %s", 
+		connection->write("200 CMD BROADCAST OK");
+		connection->server->broadcast(format("201 BROADCAST FROM %s: %s", 
 																				 connection->getpeername().c_str(), 
 																				 line.c_str()));
 	}
@@ -494,40 +494,37 @@ static void on_message(Connection *connection, std::string line) {
 		else if (var == "-") io->decVerb();
 		else io->setVerb(var);
 		
-		connection->server->broadcast(format("201 :VERBOSITY %d", io->getVerb()));
+		connection->server->broadcast(format("201 VERBOSITY %d OK", io->getVerb()));
 	}
   else if (cmd == "get") {
     string var = popword(line);
 		if (var == "frames") connection->write(format("202 :FRAMES %d", ptc->frames));
-		else connection->write("401 :VARIABLE UNKNOWN");
+		else connection->write("401 GET VAR UNKNOWN");
 	}
   else if (cmd == "mode") {
     string mode = popword(line);
 		if (mode == "closed") {
-			connection->write("200 :MODE CLOSED OK");
+			connection->write("200 CMD MODE CLOSED OK");
 			ptc->mode = AO_MODE_CLOSED;
 			pthread_cond_signal(&mode_cond); // signal a change to the main thread
-			connection->server->broadcast("201 :MODE CLOSED");
 		}
 		else if (mode == "open") {
-			connection->write("200 :MODE OPEN OK");
+			connection->write("200 CMD MODE OPEN OK");
 			ptc->mode = AO_MODE_OPEN;
 			pthread_cond_signal(&mode_cond); // signal a change to the main thread
-			connection->server->broadcast("201 :MODE OPEN");
 		}
 		else if (mode == "listen") {
-			connection->write("200 :MODE LISTEN OK");
+			connection->write("200 CMD MODE LISTEN OK");
 			ptc->mode = AO_MODE_LISTEN;
 			pthread_cond_signal(&mode_cond); // signal a change to the main thread
-			connection->server->broadcast("201 :MODE LISTEN");
 		}
 		else {
-			connection->write("401 :MODE UNKOWN");
+			connection->write("401 CMD MODE UNKOWN");
 		}
   }
   else {
     if (modMessage(ptc, connection, cmd, line))
-			connection->write("401 :COMMAND UNKNOWN");
+			connection->write("401 CMD UNKNOWN");
   }
 }
 
