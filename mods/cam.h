@@ -86,7 +86,7 @@ public:
 	
 	virtual bool thumbnail(uint8_t *) {return false;}
 	virtual void init_capture() {}
-	virtual bool get_image(void **out) {return NULL;}
+	virtual bool get_image(void **out) {return false;}
 	virtual bool capture(int fd) {return false;}
 	virtual bool monitor(void *frame, size_t &size, int &x1, int &y1, int &x2, int &y2, int &scale) {return false;}
 	

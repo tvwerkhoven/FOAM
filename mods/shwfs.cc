@@ -65,8 +65,8 @@ class Shwfs: public Wfs {
 	int ns;
 	
 	template <class T>
-	int _cog(T *img, int xpos, int ypos, int w, int h, int stride, int samini, fcoord_t& cog) {
-		float fi, csum = 0;
+	uint32_t _cog(T *img, int xpos, int ypos, int w, int h, int stride, int samini, fcoord_t& cog) {
+		uint32_t fi, csum = 0;
 		cog.x = cog.y = 0.0;
 		img += ypos*stride + xpos;
 		for (int iy=-w; iy < w; iy++) { // loop over all pixels
@@ -89,13 +89,13 @@ class Shwfs: public Wfs {
 	int _cogframe(T *img) {
 		float csum=0;
 		for (int s=0; s<ns; s++) { // Loop over all previously selected subapertures
-			csum += _cog<T>(img, sapos[s].x, sapos[s].y, track.x/2, track.y/2, cam->get_width(), 0, trackpos[s]);
+			csum += (float) _cog<T>(img, sapos[s].x, sapos[s].y, track.x/2, track.y/2, cam->get_width(), 0, trackpos[s]);
 		}
 		return 0;
 	}
 	
 	int subapSel() {
-		int csum;
+		uint32_t csum;
 		float savec[2] = {0};
 		fcoord_t cog;
 		int *apmap = new int[subap.x * subap.y];
@@ -117,7 +117,7 @@ class Shwfs: public Wfs {
 			uint16_t *img = (uint16_t *) tmpimg;
 			for (int isy=0; isy < subap.y; isy++) { // loops over all grid cells
 				for (int isx=0; isx < subap.x; isx++) {
-					csum = _cog<uint16_t>(img, (isx+0.5) * sasize.x, (isy+0.5) * sasize.y, sasize.x/2, sasize.y/2, cam->get_width(), samini, cog);
+					csum = _cog<uint16_t>(img, (int) (isx+0.5) * sasize.x, (int) (isy+0.5) * sasize.y, sasize.x/2, sasize.y/2, cam->get_width(), samini, cog);
 					if (csum > 0) {
 						apmap[isy * subap.x + isx] = 1;
 						sapos[ns].x = (int) ((isx+0.5) * sasize.x); // Subap position
@@ -140,7 +140,7 @@ class Shwfs: public Wfs {
 			
 			for (int isy=0; isy < subap.y; isy++) { // loops over all grid cells
 				for (int isx=0; isx < subap.x; isx++) {
-					csum = _cog<uint8_t>(img, (isx+0.5) * sasize.x, (isy+0.5) * sasize.y, sasize.x/2, sasize.y/2, cam->get_width(), samini, cog);
+					csum = _cog<uint8_t>(img, (int) (isx+0.5) * sasize.x, (int) (isy+0.5) * sasize.y, sasize.x/2, sasize.y/2, cam->get_width(), samini, cog);
 					if (csum > 0) {
 						apmap[isy * subap.x + isx] = 1;
 						sapos[ns].x = (int) ((isx+0.5) * sasize.x); // Subap position
@@ -247,8 +247,8 @@ class Shwfs: public Wfs {
 		sasize.x = cam->get_width() / subap.x;
 		sasize.y = cam->get_height() / subap.x;
 		
-		track.x = sasize.x * config.getdouble("trackx", 0.5);
-		track.y = sasize.y * config.getdouble("tracky", 0.5);
+		track.x = sasize.x * (int) config.getdouble("trackx", 0.5);
+		track.y = sasize.y * (int) config.getdouble("tracky", 0.5);
 		
 		samaxr = config.getint("samaxr", -1);
 		samini = config.getint("samini", 30);
