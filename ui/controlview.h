@@ -39,31 +39,45 @@ class ControlPage: public VBox {
 	FoamControl foamctrl;
 	
 	Frame connframe;
-	Frame modeframe;
-	
 	HBox connbox;
 	Label host;
-	Label port;
-	Button connect;
-	Button disconnect;
 	Entry hostentry;
+	Label port;
 	Entry portentry;
-	HBox cspacer;
+	Button connect;
 	
+	Frame modeframe;
 	HBox modebox;
 	Button mode_listen;
 	Button mode_open;
 	Button mode_closed;
 	Button shutdown;
-	HBox mspacer;
-	
+
+	Frame calibframe;
+	HBox calibbox;
+	Label calmode_lbl;
+	ComboBoxText calmode_select;
+	Button calib;
+
+	Frame statframe;
+	HBox statbox;
+	Label mode_lbl;
+	Entry mode_entry;
+	Label numwfs_lbl;
+	Entry numwfs_entry;
+	Label numwfc_lbl;
+	Entry numwfc_entry;
+	Label numframes_lbl;
+	Entry numframes_entry;
+
 	void on_connect_clicked();
-	void on_disconnect_clicked();
 	
-	void on_shutdown_clicked();
 	void on_mode_listen_clicked();
 	void on_mode_open_clicked();
 	void on_mode_closed_clicked();
+	void on_shutdown_clicked();
+
+	void on_calib_clicked();
 	
 public:
 	ControlPage(Log &log);

@@ -33,6 +33,8 @@
 #include "pthread++.h"
 #include "types.h"
 
+using namespace std;
+
 class ControlPage;
 
 class FoamControl {
@@ -46,48 +48,51 @@ class FoamControl {
 		aomode_t mode;
 		int numwfs;
 		int numwfc;
+		int numframes;
+		string calmodes[16];
 		string currcmd;
 	} state;
 	
 	bool ok;
-	std::string errormsg;
+	string errormsg;
 	
-	void on_message(std::string line);
+	void on_message(string line);
 	void on_connected(bool conn);
 	
 	void on_connect_update();
 	void on_message_update();
 	
 public:
-	class exception: public std::runtime_error {
+	class exception: public runtime_error {
 	public:
-		exception(const std::string reason): runtime_error(reason) {}
+		exception(const string reason): runtime_error(reason) {}
 	};
-	
-	std::string host;
-	std::string port;
 	
 	FoamControl(ControlPage &parent);
 	~FoamControl();
 	
 	void init();
-	int connect(const std::string &host, const std::string &port);
+	int connect(const string &host, const string &port);
 	int disconnect();
 	
 	// get-like commands
-	std::string getport() { return port; }
-	std::string gethost() { return host; }
-	int get_numwfs();
-	int get_numwfc();
+	string getpeername() { return protocol->getpeername(); }
+	string getsockname() { return protocol->getsockname(); }
+	int get_numwfs() { return state.numwfs; }
+	int get_numwfc() { return state.numwfc; }
+	int get_numframes() { return state.numframes; }
 	aomode_t get_mode() { return state.mode; }
+	string get_mode_str() { return mode2str(state.mode); }
+	string* get_calmodes() { return state.calmodes; }
 	
 	// set-like commands
 	void set_mode(aomode_t mode);
-	void shutdown() { protocol->write("shutdown"); }
+	void shutdown() { protocol->write("SHUTDOWN"); }
+	void calibrate(string);
 	
 	bool is_ok() { return ok; }
 	bool is_connected() { return protocol->is_connected(); }
-	std::string get_errormsg() { return errormsg; }
+	string get_errormsg() { return errormsg; }
 	
 	Glib::Dispatcher signal_conn_update;
 	Glib::Dispatcher signal_msg_update;

@@ -144,8 +144,7 @@ public:
 	MainMenu menubar;
 	
 	MainWindow():
-	logpage(log), controlpage(log), menubar(*this)
-	{
+	logpage(log), controlpage(log), menubar(*this) {
 		log.add(Log::NORMAL, "FOAM Control (" PACKAGE_NAME " version " PACKAGE_VERSION " built " __DATE__ " " __TIME__ ")");
 		log.add(Log::NORMAL, "Copyright (c) 2009 Tim van Werkhoven (T.I.M.vanWerkhoven@xs4all.nl)\n");
 		

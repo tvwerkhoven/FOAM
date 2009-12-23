@@ -37,7 +37,7 @@ FoamControl::~FoamControl() {
 }
 
 void FoamControl::init() {
-	printf("%xFoamControl::init()\n", pthread_self());
+	printf("%x:FoamControl::init()\n", pthread_self());
 	protocol = new Protocol::Client();
 	
 	ok = false;
@@ -45,8 +45,9 @@ void FoamControl::init() {
 	
 	// Init variables
 	state.mode = AO_MODE_UNDEF;
-	state.numwfc = 0;
-	state.numwfs = 0;
+	state.numwfc = -1;
+	state.numwfs = -1;
+	state.numframes = 0;
 	
 	// register callbacks
 	signal_conn_update.connect(sigc::mem_fun(*this, &FoamControl::on_connect_update));
@@ -70,54 +71,52 @@ int FoamControl::connect(const string &host, const string &port) {
 void FoamControl::set_mode(aomode_t mode) {
 	if (!protocol->is_connected()) return;
 	
+	printf("%x:FoamControl::set_mode(%s)\n", pthread_self(), mode2str(mode).c_str());
+	
 	switch (mode) {
 		case AO_MODE_LISTEN:
-			printf("FoamControl::set_mode(AO_MODE_LISTEN)\n");
 			protocol->write("MODE LISTEN");
 			break;
 		case AO_MODE_OPEN:
-			printf("FoamControl::set_mode(AO_MODE_OPEN)\n");
 			protocol->write("MODE OPEN");
 			break;
 		case AO_MODE_CLOSED:
-			printf("FoamControl::set_mode(AO_MODE_CLOSED)\n");
 			protocol->write("MODE CLOSED");
 			break;
 		default:
-			printf("FoamControl::set_mode(UNKNOWN)\n");
 			break;
 	}
 }
 
+void FoamControl::calibrate(std::string calmode) {
+	printf("%x:FoamControl::calibrate(%s)\n", pthread_self(), calmode.c_str());
+	protocol->write(format("CALIB %s", calmode.c_str()));
+}
+
 int FoamControl::disconnect() {
-	printf("%xFoamControl::disconnect()\n", pthread_self());
+	printf("%x:FoamControl::disconnect()\n", pthread_self());
 	if (protocol->is_connected())
 		protocol->disconnect();
-	
-	// Init variables
-	state.mode = AO_MODE_UNDEF;
-	state.numwfc = 0;
-	state.numwfs = 0;
 	
 	signal_conn_update();
 	return 0;
 }
 
 void FoamControl::on_connect_update() {
-	printf("%xFoamControl::on_connect_update()\n", pthread_self());
+	printf("%x:FoamControl::on_connect_update()\n", pthread_self());
 	
 	// GUI updating is done in parent (a ControlPage)
 	parent.on_connect_update();
 }
 
 void FoamControl::on_message_update() {
-	printf("%xFoamControl::on_message_update()\n", pthread_self());
+	printf("%x:FoamControl::on_message_update()\n", pthread_self());
 	// GUI updating is done in parent (a ControlPage)
 	parent.on_message_update();
 }
 
 void FoamControl::on_connected(bool conn) {
-	printf("%xFoamControl::on_connected(bool=%d)\n", pthread_self(), conn);
+	printf("%x:FoamControl::on_connected(bool=%d)\n", pthread_self(), conn);
 
 	if (!conn) {
 		ok = false;
@@ -132,12 +131,14 @@ void FoamControl::on_connected(bool conn) {
 	protocol->write("GET NUMWFS");
 	protocol->write("GET NUMWFC");
 	protocol->write("GET MODE");
+	protocol->write("GET CALIB");
+
 	signal_conn_update();
 	return;
 }
 
 void FoamControl::on_message(string line) {
-	printf("%xFoamControl::on_message(string=%s)\n", pthread_self(), line.c_str());
+	printf("%x:FoamControl::on_message(string=%s)\n", pthread_self(), line.c_str());
 
 	if (popword(line) != "OK") {
 		ok = false;
@@ -155,8 +156,15 @@ void FoamControl::on_message(string line) {
 			state.numwfc = popint32(line);
 		else if (var == "NUMWFS")
 			state.numwfs = popint32(line);
+		else if (var == "FRAMES")
+			state.numframes = popint32(line);
 		else if (var == "MODE")
 			state.mode = str2mode(popword(line));
+		else if (var == "CALIB") {
+			int n = popint32(line);
+			state.calmodes[n] = "__SENTINEL__";
+			while (n>0) state.calmodes[--n] = popword(line);
+		}
 	}
 	else if (what == "CMD") {
 		// command confirmation hook

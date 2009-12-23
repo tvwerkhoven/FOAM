@@ -32,30 +32,49 @@ using namespace Gtk;
 
 ControlPage::ControlPage(Log &log): 
 log(log), foamctrl(*this), 
-connframe("Connection"), modeframe("Run mode"),
-host("Hostname"), port("Port"), connect("Connect"), disconnect("Disconnect"), 
-hostentry(), portentry(), cspacer(),
-mode_listen("Idle"), mode_open("Open loop"), mode_closed("Closed loop"), shutdown(Stock::STOP), mspacer() {
+connframe("Connection"), host("Hostname"), hostentry(), port("Port"), portentry(), connect("Connect"),
+modeframe("Run mode"), mode_listen("Listen"), mode_open("Open loop"), mode_closed("Closed loop"), shutdown("Shutdown"),
+calibframe("Calibration"), calmode_lbl("Calibration mode: "), calib("Calibrate"),
+statframe("Status"), mode_lbl("Mode: "), mode_entry(), numwfs_lbl("# WFS: "), numwfs_entry(), numwfc_lbl("# WFC: "), numwfc_entry(), numframes_lbl("# Frames: "), numframes_entry() {
 	
-	// register callback functions
-	connect.signal_clicked().connect(sigc::mem_fun(*this, &ControlPage::on_connect_clicked));
-	disconnect.signal_clicked().connect(sigc::mem_fun(*this, &ControlPage::on_disconnect_clicked));
-	
-	shutdown.signal_clicked().connect(sigc::mem_fun(*this, &ControlPage::on_shutdown_clicked));
-	mode_listen.signal_clicked().connect(sigc::mem_fun(*this, &ControlPage::on_mode_listen_clicked));
-	mode_open.signal_clicked().connect(sigc::mem_fun(*this, &ControlPage::on_mode_open_clicked));
-	mode_closed.signal_clicked().connect(sigc::mem_fun(*this, &ControlPage::on_mode_closed_clicked));
+	// request minimum size for entry boxes
+	hostentry.set_size_request(120);
+	hostentry.set_text("localhost");
+	portentry.set_size_request(50);
+	portentry.set_text("1025");
 	
 	// Make shutdown/stop button red
 	shutdown.modify_bg(STATE_NORMAL, Gdk::Color("red"));
 	shutdown.modify_bg(STATE_ACTIVE, Gdk::Color("red"));
 	shutdown.modify_bg(STATE_PRELIGHT, Gdk::Color("red"));
+	shutdown.set_sensitive(false);
+
+	// Disable buttons for now
+	mode_listen.set_sensitive(false);
+	mode_open.set_sensitive(false);
+	mode_closed.set_sensitive(false);
+	shutdown.set_sensitive(false);
 	
-	// request minimum size for entry boxes
-	hostentry.set_size_request(120);
-	hostentry.set_text("sirius1");
-	portentry.set_size_request(50);
-	portentry.set_text("1025");
+	// Default selector
+	calmode_select.append_text("-");
+	calmode_select.set_sensitive(false);
+	calib.set_sensitive(false);
+
+	// Make status entries insensitive
+	mode_entry.set_editable(false);
+	mode_entry.set_size_request(75);
+	numwfs_entry.set_editable(false);
+	numwfs_entry.set_size_request(30);
+	numwfc_entry.set_editable(false);
+	numwfc_entry.set_size_request(30);
+	numframes_entry.set_editable(false);
+	numframes_entry.set_size_request(75);
+	
+	// Init values
+	mode_entry.set_text(foamctrl.get_mode_str());
+	numwfs_entry.set_text(format("%d", foamctrl.get_numwfs()));
+	numwfc_entry.set_text(format("%d", foamctrl.get_numwfc()));
+	numframes_entry.set_text(format("%d", foamctrl.get_numframes()));	
 	
 	// Connection row (hostname, port, connect button)
 	connbox.set_spacing(4);	
@@ -64,10 +83,6 @@ mode_listen("Idle"), mode_open("Open loop"), mode_closed("Closed loop"), shutdow
 	connbox.pack_start(port, PACK_SHRINK);
 	connbox.pack_start(portentry, PACK_SHRINK);
 	connbox.pack_start(connect, PACK_SHRINK);
-	connbox.pack_start(disconnect, PACK_SHRINK);
-	connbox.pack_end(cspacer);
-	connect.show();
-	disconnect.hide();
 	connframe.add(connbox);
 
 	// Runmode row (listen, open, closed, shutdown)
@@ -76,35 +91,63 @@ mode_listen("Idle"), mode_open("Open loop"), mode_closed("Closed loop"), shutdow
 	modebox.pack_start(mode_open, PACK_SHRINK);
 	modebox.pack_start(mode_closed, PACK_SHRINK);
 	modebox.pack_start(shutdown, PACK_SHRINK);
-	modebox.pack_end(mspacer);
 	modeframe.add(modebox);
-	shutdown.set_sensitive(false);
+	
+	// Calibration row
+	calibbox.set_spacing(4);
+	calibbox.pack_start(calmode_lbl, PACK_SHRINK);
+	calibbox.pack_start(calmode_select, PACK_SHRINK);
+	calibbox.pack_start(calib, PACK_SHRINK);
+	calibframe.add(calibbox);
+	
+	// Status row (mode, # wfs, # wfc, # frames)
+	statbox.set_spacing(4);
+	statbox.pack_start(mode_lbl, PACK_SHRINK);
+	statbox.pack_start(mode_entry, PACK_SHRINK);
+	statbox.pack_start(numwfs_lbl, PACK_SHRINK);
+	statbox.pack_start(numwfs_entry, PACK_SHRINK);
+	statbox.pack_start(numwfc_lbl, PACK_SHRINK);
+	statbox.pack_start(numwfc_entry, PACK_SHRINK);
+	statbox.pack_start(numframes_lbl, PACK_SHRINK);
+	statbox.pack_start(numframes_entry, PACK_SHRINK);
+	statframe.add(statbox);
 	
 	set_spacing(4);
 	pack_start(connframe, PACK_SHRINK);
 	pack_start(modeframe, PACK_SHRINK);
+	pack_start(calibframe, PACK_SHRINK);
+	pack_start(statframe, PACK_SHRINK);
 	
-	on_connect_update();
-	on_message_update();
+	// register callback functions
+	connect.signal_clicked().connect(sigc::mem_fun(*this, &ControlPage::on_connect_clicked));
+	
+	mode_listen.signal_clicked().connect(sigc::mem_fun(*this, &ControlPage::on_mode_listen_clicked));
+	mode_open.signal_clicked().connect(sigc::mem_fun(*this, &ControlPage::on_mode_open_clicked));
+	mode_closed.signal_clicked().connect(sigc::mem_fun(*this, &ControlPage::on_mode_closed_clicked));
+	shutdown.signal_clicked().connect(sigc::mem_fun(*this, &ControlPage::on_shutdown_clicked));
+	
+	calib.signal_clicked().connect(sigc::mem_fun(*this, &ControlPage::on_calib_clicked));	
+	
+	show_all_children();
 }
 
 ControlPage::~ControlPage() {
 }
 
 void ControlPage::on_connect_clicked() {
-	printf("%x:ControlPage::on_connect_clicked()\n", pthread_self());
-	log.add(Log::NORMAL, "Trying to connect to " + hostentry.get_text() + ":" + portentry.get_text());
-	foamctrl.connect(hostentry.get_text(), portentry.get_text());
-}
-
-void ControlPage::on_disconnect_clicked() {
-	printf("%dControlPage::on_disconnect_clicked()\n", pthread_self());
-	log.add(Log::NORMAL, "Trying to disconnect");
-	foamctrl.disconnect();
+	printf("%dControlPage::on_connect_clicked()\n", pthread_self());
+	if (foamctrl.is_connected()) {
+		log.add(Log::NORMAL, "Trying to disconnect");
+		foamctrl.disconnect();
+	}
+	else {
+		log.add(Log::NORMAL, "Trying to connect to " + hostentry.get_text() + ":" + portentry.get_text());
+		foamctrl.connect(hostentry.get_text(), portentry.get_text());
+	}
 }
 
 void ControlPage::on_mode_listen_clicked() {
-	printf("%dControlPage::on_mode_listen_clicked()\n", pthread_self());
+	printf("%x:ControlPage::on_mode_listen_clicked()\n", pthread_self());
 	log.add(Log::NORMAL, "Setting mode listen...");
 	foamctrl.set_mode(AO_MODE_LISTEN);
 }
@@ -116,55 +159,80 @@ void ControlPage::on_mode_closed_clicked() {
 }
 
 void ControlPage::on_mode_open_clicked() {
-	printf("%dControlPage::on_mode_open_clicked()\n", pthread_self());
+	printf("%x:ControlPage::on_mode_open_clicked()\n", pthread_self());
 	log.add(Log::NORMAL, "Setting mode open...");
 	foamctrl.set_mode(AO_MODE_OPEN);
 }
 
 void ControlPage::on_shutdown_clicked() {
-	printf("%dControlPage::on_shutdown_clicked()\n", pthread_self());
+	printf("%x:ControlPage::on_shutdown_clicked()\n", pthread_self());
 	log.add(Log::NORMAL, "Trying to shutdown");
 	foamctrl.shutdown();
+}
+
+void ControlPage::on_calib_clicked() {
+	printf("%x:ControlPage::on_calmode_changed()\n", pthread_self());
+	log.add(Log::NORMAL, "Trying to calibrate");
+	foamctrl.calibrate(calmode_select.get_active_text());
 }
 
 void ControlPage::on_connect_update() {
 	printf("%x:ControlPage::on_connect_update()\n", pthread_self());
 	if (foamctrl.is_connected()) {
 		printf("%x:ControlPage::on_connect_update() is conn\n", pthread_self());
+		connect.set_label("Disconnect");
+
 		mode_listen.set_sensitive(true);
 		mode_open.set_sensitive(true);
 		mode_closed.set_sensitive(true);
 		shutdown.set_sensitive(true);
-		connect.hide();
-		disconnect.show();
-		log.add(Log::OK, "Connected to " + foamctrl.gethost() + ":" + foamctrl.getport());
+		
+		calmode_select.set_sensitive(true);
+		calib.set_sensitive(true);
+		
+		log.add(Log::OK, "Connected to " + foamctrl.getpeername());
 	}
 	else {
 		printf("%x:ControlPage::on_connect_update() is not conn\n", pthread_self());
+		connect.set_label("Connect");
+
 		mode_listen.set_sensitive(false);
 		mode_open.set_sensitive(false);
 		mode_closed.set_sensitive(false);
 		shutdown.set_sensitive(false);
-		disconnect.hide();
-		connect.show();
+		
+		calmode_select.set_sensitive(false);
+		calib.set_sensitive(false);
+		
 		log.add(Log::OK, "Disconnected");
 	}
 }
 
 void ControlPage::on_message_update() {
 	printf("%x:ControlPage::on_message_update()\n", pthread_self());
-	if (!foamctrl.is_ok()) {
-		log.add(Log::ERROR, "Got error: " + foamctrl.get_errormsg());
-	}
-	else {
-		// reset buttons
-		mode_listen.set_sensitive(true);
-		mode_open.set_sensitive(true);
-		mode_closed.set_sensitive(true);
-		// press correct button
-		if (foamctrl.get_mode() == AO_MODE_LISTEN) mode_listen.set_sensitive(false);
-		else if (foamctrl.get_mode() == AO_MODE_OPEN) mode_open.set_sensitive(false);
-		else if (foamctrl.get_mode() == AO_MODE_CLOSED) mode_closed.set_sensitive(false);
-	}
+	
+	// reset buttons
+	mode_listen.set_sensitive(true);
+	mode_open.set_sensitive(true);
+	mode_closed.set_sensitive(true);
+	calib.set_sensitive(true);
+	// press correct button
+	if (foamctrl.get_mode() == AO_MODE_LISTEN) mode_listen.set_sensitive(false);
+	else if (foamctrl.get_mode() == AO_MODE_OPEN) mode_open.set_sensitive(false);
+	else if (foamctrl.get_mode() == AO_MODE_CLOSED) mode_closed.set_sensitive(false);
+	else if (foamctrl.get_mode() == AO_MODE_CAL) calib.set_sensitive(false);
+
+	// set values in status box
+	mode_entry.set_text(foamctrl.get_mode_str());
+	numwfs_entry.set_text(format("%d", foamctrl.get_numwfs()));
+	numwfc_entry.set_text(format("%d", foamctrl.get_numwfc()));
+	numframes_entry.set_text(format("%d", foamctrl.get_numframes()));
+	
+	// set values in calibmode select box
+	calmode_select.clear_items();
+	string *modetmp = foamctrl.get_calmodes();
+	while (*modetmp != "__SENTINEL__")
+		calmode_select.prepend_text(*modetmp++);
+	calmode_select.set_active_text(*--modetmp);
 }
 
