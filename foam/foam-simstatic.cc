@@ -133,9 +133,9 @@ int modCalibrate(foamctrl *ptc) {
 
 	if (ptc->calmode == CAL_SUBAPSEL) {
 		io->msg(IO_DEB2, __FILE__ "::modCalibrate CAL_SUBAPSEL");
-		usleep(1.0 * 1000000);
+		usleep((useconds_t) 1.0 * 1000000);
 		ptc->wfs[0]->calibrate();
-		usleep(1.0 * 1000000);
+		usleep((useconds_t) 1.0 * 1000000);
 	}
 		
 	return EXIT_SUCCESS;
