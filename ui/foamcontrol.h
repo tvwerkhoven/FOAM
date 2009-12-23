@@ -50,7 +50,6 @@ class FoamControl {
 	} state;
 	
 	bool ok;
-	bool connected;
 	std::string errormsg;
 	
 	void on_message(std::string line);
@@ -80,14 +79,14 @@ public:
 	std::string gethost() { return host; }
 	int get_numwfs();
 	int get_numwfc();
-	//aomode_t get_mode() { return mode; }
+	aomode_t get_mode() { return state.mode; }
 	
 	// set-like commands
 	void set_mode(aomode_t mode);
 	void shutdown() { protocol->write("shutdown"); }
 	
 	bool is_ok() { return ok; }
-	bool is_connected() { return connected; }
+	bool is_connected() { return protocol->is_connected(); }
 	std::string get_errormsg() { return errormsg; }
 	
 	Glib::Dispatcher signal_conn_update;

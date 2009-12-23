@@ -35,14 +35,14 @@ log(log), foamctrl(*this),
 connframe("Connection"), modeframe("Run mode"),
 host("Hostname"), port("Port"), connect("Connect"), disconnect("Disconnect"), 
 hostentry(), portentry(), cspacer(),
-mode_idle("Idle"), mode_open("Open loop"), mode_closed("Closed loop"), shutdown(Stock::STOP), mspacer() {
+mode_listen("Idle"), mode_open("Open loop"), mode_closed("Closed loop"), shutdown(Stock::STOP), mspacer() {
 	
 	// register callback functions
 	connect.signal_clicked().connect(sigc::mem_fun(*this, &ControlPage::on_connect_clicked));
 	disconnect.signal_clicked().connect(sigc::mem_fun(*this, &ControlPage::on_disconnect_clicked));
 	
 	shutdown.signal_clicked().connect(sigc::mem_fun(*this, &ControlPage::on_shutdown_clicked));
-	mode_idle.signal_clicked().connect(sigc::mem_fun(*this, &ControlPage::on_mode_idle_clicked));
+	mode_listen.signal_clicked().connect(sigc::mem_fun(*this, &ControlPage::on_mode_listen_clicked));
 	mode_open.signal_clicked().connect(sigc::mem_fun(*this, &ControlPage::on_mode_open_clicked));
 	mode_closed.signal_clicked().connect(sigc::mem_fun(*this, &ControlPage::on_mode_closed_clicked));
 	
@@ -70,9 +70,9 @@ mode_idle("Idle"), mode_open("Open loop"), mode_closed("Closed loop"), shutdown(
 	disconnect.hide();
 	connframe.add(connbox);
 
-	// Runmode row (idle, open, closed, shutdown)
+	// Runmode row (listen, open, closed, shutdown)
 	modebox.set_spacing(4);
-	modebox.pack_start(mode_idle, PACK_SHRINK);
+	modebox.pack_start(mode_listen, PACK_SHRINK);
 	modebox.pack_start(mode_open, PACK_SHRINK);
 	modebox.pack_start(mode_closed, PACK_SHRINK);
 	modebox.pack_start(shutdown, PACK_SHRINK);
@@ -92,7 +92,7 @@ ControlPage::~ControlPage() {
 }
 
 void ControlPage::on_connect_clicked() {
-	printf("%d:ControlPage::on_connect_clicked()\n", pthread_self());
+	printf("%x:ControlPage::on_connect_clicked()\n", pthread_self());
 	log.add(Log::NORMAL, "Trying to connect to " + hostentry.get_text() + ":" + portentry.get_text());
 	foamctrl.connect(hostentry.get_text(), portentry.get_text());
 }
@@ -103,9 +103,9 @@ void ControlPage::on_disconnect_clicked() {
 	foamctrl.disconnect();
 }
 
-void ControlPage::on_mode_idle_clicked() {
-	printf("%dControlPage::on_mode_idle_clicked()\n", pthread_self());
-	log.add(Log::NORMAL, "Setting mode idle...");
+void ControlPage::on_mode_listen_clicked() {
+	printf("%dControlPage::on_mode_listen_clicked()\n", pthread_self());
+	log.add(Log::NORMAL, "Setting mode listen...");
 	foamctrl.set_mode(AO_MODE_LISTEN);
 }
 
@@ -128,10 +128,10 @@ void ControlPage::on_shutdown_clicked() {
 }
 
 void ControlPage::on_connect_update() {
-	printf("%d:ControlPage::on_connect_update()\n", pthread_self());
+	printf("%x:ControlPage::on_connect_update()\n", pthread_self());
 	if (foamctrl.is_connected()) {
-		printf("%d:ControlPage::on_connect_update() is conn\n", pthread_self());
-		mode_idle.set_sensitive(true);
+		printf("%x:ControlPage::on_connect_update() is conn\n", pthread_self());
+		mode_listen.set_sensitive(true);
 		mode_open.set_sensitive(true);
 		mode_closed.set_sensitive(true);
 		shutdown.set_sensitive(true);
@@ -140,8 +140,8 @@ void ControlPage::on_connect_update() {
 		log.add(Log::OK, "Connected to " + foamctrl.gethost() + ":" + foamctrl.getport());
 	}
 	else {
-		printf("%d:ControlPage::on_connect_update() is not conn\n", pthread_self());
-		mode_idle.set_sensitive(false);
+		printf("%x:ControlPage::on_connect_update() is not conn\n", pthread_self());
+		mode_listen.set_sensitive(false);
 		mode_open.set_sensitive(false);
 		mode_closed.set_sensitive(false);
 		shutdown.set_sensitive(false);
@@ -152,7 +152,19 @@ void ControlPage::on_connect_update() {
 }
 
 void ControlPage::on_message_update() {
-	printf("%d:ControlPage::on_message_update()\n", pthread_self());
-	
+	printf("%x:ControlPage::on_message_update()\n", pthread_self());
+	if (!foamctrl.is_ok()) {
+		log.add(Log::ERROR, "Got error: " + foamctrl.get_errormsg());
+	}
+	else {
+		// reset buttons
+		mode_listen.set_sensitive(true);
+		mode_open.set_sensitive(true);
+		mode_closed.set_sensitive(true);
+		// press correct button
+		if (foamctrl.get_mode() == AO_MODE_LISTEN) mode_listen.set_sensitive(false);
+		else if (foamctrl.get_mode() == AO_MODE_OPEN) mode_open.set_sensitive(false);
+		else if (foamctrl.get_mode() == AO_MODE_CLOSED) mode_closed.set_sensitive(false);
+	}
 }
 

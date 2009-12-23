@@ -51,7 +51,7 @@ class ControlPage: public VBox {
 	HBox cspacer;
 	
 	HBox modebox;
-	Button mode_idle;
+	Button mode_listen;
 	Button mode_open;
 	Button mode_closed;
 	Button shutdown;
@@ -61,7 +61,7 @@ class ControlPage: public VBox {
 	void on_disconnect_clicked();
 	
 	void on_shutdown_clicked();
-	void on_mode_idle_clicked();
+	void on_mode_listen_clicked();
 	void on_mode_open_clicked();
 	void on_mode_closed_clicked();
 	
