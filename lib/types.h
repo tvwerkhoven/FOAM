@@ -138,6 +138,31 @@ typedef enum { // aomode_t
 	AO_MODE_SHUTDOWN //!< Set to this mode for the worker thread to finish
 } aomode_t;
 
+static string mode2str(aomode_t m) {
+	switch (m) {
+		case AO_MODE_OPEN: return "OPEN";
+		case AO_MODE_CLOSED: return "CLOSED";
+		case AO_MODE_CAL: return "CALIB";
+		case AO_MODE_LISTEN: return "LISTEN";
+		case AO_MODE_UNDEF: return "UNDEF";
+		case AO_MODE_SHUTDOWN: return "SHUTDOWN";
+		default: return "UNKNOWN";
+	}
+}
+
+static aomode_t str2mode(string m) {
+	// Convert to uppercase
+	transform(m.begin(), m.end(), m.begin(), ::toupper);
+
+	if (m == "OPEN") return AO_MODE_OPEN;
+	else if (m == "CLOSED") return AO_MODE_CLOSED;
+	else if (m == "CALIB") return AO_MODE_CAL;
+	else if (m == "LISTEN") return AO_MODE_LISTEN;
+	else if (m == "UNDEF") return AO_MODE_UNDEF;
+	else if (m == "SHUTDOWN") return AO_MODE_SHUTDOWN;
+	else return AO_MODE_UNDEF;
+}
+
 /*! 
  @brief This enum is used to distinguish between various datatypes for processing.
  
@@ -173,4 +198,4 @@ typedef enum { // axes_t
 	AO_AXES_Y		//!< Scan Y direction only
 } axes_t;
 
-#endif /* __TYPES_H__ */
+#endif // __TYPES_H__ 

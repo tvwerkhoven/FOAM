@@ -444,6 +444,9 @@ void modeListen() {
 				// we want to shutdown the program, return modeListen
 				return;
 				break;
+			default:
+				io->msg(IO_DEB1, __FILE__ "::modeListen() UNKNOWN!");
+				break;
 		}
 	}
 }
@@ -461,10 +464,11 @@ static void on_connect(Connection *connection, bool status) {
 }
 
 static void on_message(Connection *connection, std::string line) {
-  io->msg(IO_DEB1, "Got %db: '%s'.", line.length(), line.c_str());
+  io->msg(IO_DEB1, __FILE__ "::Got %db: '%s'.", line.length(), line.c_str());
 	string cmd = popword(line);
+  io->msg(IO_DEB1, __FILE__ "::cmd = %s", cmd);
 	
-	if (cmd == "help") {
+	if (cmd == "HELP") {
 		connection->write("OK CMD HELP");
 		string orig = line;
 		string topic = popword(line);
@@ -472,23 +476,23 @@ static void on_message(Connection *connection, std::string line) {
 			if (modMessage(ptc, connection, "help", orig))
 				connection->write("ERR CMD HELP :TOPIC UNKNOWN");
   }
-  else if (cmd == "exit" || cmd == "quit" || cmd == "bye") {
+  else if (cmd == "EXIT" || cmd == "QUIT" || cmd == "BYE") {
 		connection->write("OK CMD EXIT");
     connection->server->broadcast("OK CLIENT DISCONNECTED");
     connection->close();
   }
-  else if (cmd == "shutdown") {
+  else if (cmd == "SHUTDOWN") {
 		connection->write("OK CMD SHUTDOWN");
 		ptc->mode = AO_MODE_SHUTDOWN;
 		pthread_cond_signal(&mode_cond); // signal a change to the threads
   }
-  else if (cmd == "broadcast") {
+  else if (cmd == "BROADCAST") {
 		connection->write("OK CMD BROADCAST");
 		connection->server->broadcast(format("OK BROADCAST %s :FROM %s", 
 																				 line.c_str(),
 																				 connection->getpeername().c_str()));
 	}
-  else if (cmd == "verbosity") {
+  else if (cmd == "VERBOSITY") {
 		string var = popword(line);
 		if (var == "+") io->incVerb();
 		else if (var == "-") io->decVerb();
@@ -496,24 +500,27 @@ static void on_message(Connection *connection, std::string line) {
 		
 		connection->server->broadcast(format("OK VERBOSITY %d", io->getVerb()));
 	}
-  else if (cmd == "get") {
+  else if (cmd == "GET") {
     string var = popword(line);
-		if (var == "frames") connection->write(format("OK VAR FRAMES %d", ptc->frames));
+		if (var == "FRAMES") connection->write(format("OK VAR FRAMES %d", ptc->frames));
+		else if (var == "NUMWFS") connection->write(format("OK VAR NUMWFS %d", ptc->wfs_count));
+		else if (var == "NUMWFC") connection->write(format("OK VAR NUMWFC %d", ptc->wfc_count));
+		else if (var == "MODE") connection->write(format("OK VAR MODE %s", mode2str(ptc->mode)));
 		else connection->write("ERR GET :VAR UNKNOWN");
 	}
-  else if (cmd == "mode") {
+  else if (cmd == "MODE") {
     string mode = popword(line);
-		if (mode == "closed") {
+		if (mode == mode2str(AO_MODE_CLOSED)) {
 			connection->write("OK CMD MODE CLOSED");
 			ptc->mode = AO_MODE_CLOSED;
 			pthread_cond_signal(&mode_cond); // signal a change to the main thread
 		}
-		else if (mode == "open") {
+		else if (mode == mode2str(AO_MODE_OPEN)) {
 			connection->write("OK CMD MODE OPEN");
 			ptc->mode = AO_MODE_OPEN;
 			pthread_cond_signal(&mode_cond); // signal a change to the main thread
 		}
-		else if (mode == "listen") {
+		else if (mode == mode2str(AO_MODE_LISTEN)) {
 			connection->write("OK CMD MODE LISTEN");
 			ptc->mode = AO_MODE_LISTEN;
 			pthread_cond_signal(&mode_cond); // signal a change to the main thread
@@ -542,7 +549,7 @@ static int showhelp(Connection *connection, string topic, string rest) {
 		// pass it along to modMessage() as well
 		modMessage(ptc, connection, "help", rest);
 	}		
-	else if (topic == "mode") {
+	else if (topic == "MODE") {
 		connection->write(\
 ":mode <mode>:            Close or open the AO-loop.\n"
 ":  mode=open:            opens the loop and only records what's happening with\n"
@@ -551,11 +558,11 @@ static int showhelp(Connection *connection, string topic, string rest) {
 ":                        correcting the wavefront as fast as possible.\n"
 ":  mode=listen:          stops looping and waits for input from the users.");
 	}
-	else if (topic == "broadcast") {
+	else if (topic == "BROADCAST") {
 		connection->write(\
 ":broadcast <mode>:       broadcast a message to all clients.");
 	}
-	else if (topic == "get") {
+	else if (topic == "GET") {
 		connection->write(\
 											":get <var>:              read a system variable.\n"
 											":  frames:               number of frames processed");
