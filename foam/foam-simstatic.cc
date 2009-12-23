@@ -113,7 +113,7 @@ int modClosedInit(foamctrl *ptc) {
 int modClosedLoop(foamctrl *ptc) {
 	io->msg(IO_DEB2, __FILE__ "::modClosedLoop(foamctrl *ptc)");
 
-	usleep(1000);
+	usleep(1000000);
 	return EXIT_SUCCESS;
 }
 
@@ -133,21 +133,23 @@ int modCalibrate(foamctrl *ptc) {
 
 	if (ptc->calmode == CAL_SUBAPSEL) {
 		io->msg(IO_DEB2, __FILE__ "::modCalibrate CAL_SUBAPSEL");
+		usleep(1.0 * 1000000);
 		ptc->wfs[0]->calibrate();
+		usleep(1.0 * 1000000);
 	}
 		
 	return EXIT_SUCCESS;
 }
 
 int modMessage(foamctrl *ptc, Connection *connection, string cmd, string line) {
-	if (cmd == "help") {
+	if (cmd == "HELP") {
 		string topic = popword(line);
 		if (topic.size() == 0) {
 			connection->write(\
 												":==== simstat help ==========================\n"
 												":calib <mode>:           Calibrate AO system.");
 		}
-		else if (topic == "calib") {
+		else if (topic == "CALIB") {
 			connection->write(\
 												":calib <mode>:           Calibrate AO system.\n"
 												":  mode=sasel:			     Select subapertures.");
@@ -156,10 +158,16 @@ int modMessage(foamctrl *ptc, Connection *connection, string cmd, string line) {
 			return -1;
 		}
 	}
-	else if (cmd == "calib") {
+	else if (cmd == "GET") {
+		string what = popword(line);
+		if (what == "CALIB") {
+			connection->write("OK VAR CALIB 1 SASEL");
+		}
+	}
+	else if (cmd == "CALIB") {
 		string calmode = popword(line);
-		if (calmode == "sasel") {
-			connection->server->broadcast("OK CMD CALIB SUBAPSEL");
+		if (calmode == "SASEL") {
+			connection->write("OK CMD CALIB SUBAPSEL");
 			ptc->calmode = CAL_SUBAPSEL;
 			ptc->mode = AO_MODE_CAL;
 			pthread_cond_signal(&mode_cond); // signal a change to the main thread
