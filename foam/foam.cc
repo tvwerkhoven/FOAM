@@ -399,6 +399,8 @@ void modeClosed() {
 void modeCal() {
 	io->msg(IO_INFO, "Starting Calibration");
 	
+	protocol->broadcast("OK MODE CALIB");
+	
 	// this links to a module
 	if (modCalibrate(ptc) != EXIT_SUCCESS) {
 		io->msg(IO_WARN, "modCalibrate failed.");
@@ -407,8 +409,9 @@ void modeCal() {
 		return;
 	}
 	
-	io->msg(IO_INFO, "Calibration loop done, switching to listen mode.");
 	protocol->broadcast("OK CALIB");
+	
+	io->msg(IO_INFO, "Calibration loop done, switching to listen mode.");
 	ptc->mode = AO_MODE_LISTEN;
 	
 	return;
@@ -466,14 +469,13 @@ static void on_connect(Connection *connection, bool status) {
 static void on_message(Connection *connection, std::string line) {
   io->msg(IO_DEB1, __FILE__ "::Got %db: '%s'.", line.length(), line.c_str());
 	string cmd = popword(line);
-  io->msg(IO_DEB1, __FILE__ "::cmd = %s", cmd);
+	string orig = line;
 	
 	if (cmd == "HELP") {
 		connection->write("OK CMD HELP");
-		string orig = line;
 		string topic = popword(line);
     if (showhelp(connection, topic, line))
-			if (modMessage(ptc, connection, "help", orig))
+			if (modMessage(ptc, connection, "HELP", orig))
 				connection->write("ERR CMD HELP :TOPIC UNKNOWN");
   }
   else if (cmd == "EXIT" || cmd == "QUIT" || cmd == "BYE") {
@@ -505,8 +507,9 @@ static void on_message(Connection *connection, std::string line) {
 		if (var == "FRAMES") connection->write(format("OK VAR FRAMES %d", ptc->frames));
 		else if (var == "NUMWFS") connection->write(format("OK VAR NUMWFS %d", ptc->wfs_count));
 		else if (var == "NUMWFC") connection->write(format("OK VAR NUMWFC %d", ptc->wfc_count));
-		else if (var == "MODE") connection->write(format("OK VAR MODE %s", mode2str(ptc->mode)));
-		else connection->write("ERR GET :VAR UNKNOWN");
+		else if (var == "MODE") connection->write(format("OK VAR MODE %s", mode2str(ptc->mode).c_str()));
+		else if (modMessage(ptc, connection, "GET", orig))
+			connection->write("ERR GET :VAR UNKNOWN");
 	}
   else if (cmd == "MODE") {
     string mode = popword(line);
