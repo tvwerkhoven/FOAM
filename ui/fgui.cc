@@ -29,8 +29,9 @@
 
 #include "autoconfig.h"
 
-#include "about.h"
 #include "fgui.h"
+#include "about.h"
+#include "widgets.h"
 #include "log.h"
 #include "logview.h"
 #include "protocol.h"
@@ -42,140 +43,100 @@ extern Gtk::Tooltips *tooltips;
 using namespace std;
 using namespace Gtk;
 
-class ConnectDialog: public Dialog {
-	FoamControl &foamctrl;
-	
-	Label host;
-	Label port;
-	Entry hostentry;
-	Entry portentry;
-	
-	void on_ok() {
-		printf("ConnectDialog::on_ok()\n");
-		foamctrl.connect(hostentry.get_text(), portentry.get_text());
-		
-		hide();
-	}
-	
-	void on_cancel() {
-		printf("ConnectDialog::on_cancel()\n");
-		hide();
-	}
-	
-public:
-	ConnectDialog(FoamControl &foamctrl): foamctrl(foamctrl), host("Hostname"), port("Port"), hostentry(), portentry() {
-		set_title("Connect");
-		set_modal();
-		
-		add_button(Gtk::Stock::OK, 1)->signal_clicked().connect(sigc::mem_fun(*this, &ConnectDialog::on_ok));
-		add_button(Gtk::Stock::CANCEL, 0)->signal_clicked().connect(sigc::mem_fun(*this, &ConnectDialog::on_cancel));
-		
-		get_vbox()->add(host);
-		get_vbox()->add(port);
-		
-		show_all_children();
-	}
-};
+void ConnectDialog::on_ok() {
+	printf("ConnectDialog::on_ok()\n");
+	foamctrl.connect(host.get_text(), port.get_text());
+	hide();
+}
 
-class MainMenu: public MenuBar {
-	MenuItem file;
-	MenuItem help;
-	
-	Menu filemenu;
-	Menu helpmenu;
-	
-	SeparatorMenuItem sep1;
-	SeparatorMenuItem sep2;
-	
-public:
-	ImageMenuItem connect;
-	ImageMenuItem quit;
-	
-	ImageMenuItem about;
-	
-	MainMenu(Window &window):
-	file("File"), help("Help"),
-	connect(Stock::CONNECT), quit(Stock::QUIT),
-	about(Stock::ABOUT) {
-		// properties
-		
-		filemenu.set_accel_group(window.get_accel_group());
-		helpmenu.set_accel_group(window.get_accel_group());
-		
-		// layout
-		
-		filemenu.append(connect);
-		filemenu.append(sep1);
-		filemenu.append(quit);
-		file.set_submenu(filemenu);
-		
-		helpmenu.append(about);
-		help.set_submenu(helpmenu);
-		
-		add(file);
-		add(help);
-	}
-};
+void ConnectDialog::on_cancel() {
+	printf("ConnectDialog::on_cancel()\n");
+	hide();
+}
 
-class MainWindow: public Window {
-	VBox vbox;
-	AboutFOAMGui aboutdialog;
-	Notebook notebook;
-	Statusbar statusbar;
-	
-	Log log;
-	
-	LogPage logpage;
-	ControlPage controlpage;
-	
-	void on_about_activate() {
-		aboutdialog.present();
-	}
-	
-	void on_quit_activate() {
-		Main::quit();
-	}	
-	
-	void on_connect_activate() {
-		printf("MainWindow::on_connect_activate()\n");
-	}	
-	
-public:	
-	MainMenu menubar;
-	
-	MainWindow():
-	logpage(log), controlpage(log), menubar(*this) {
-		log.add(Log::NORMAL, "FOAM Control (" PACKAGE_NAME " version " PACKAGE_VERSION " built " __DATE__ " " __TIME__ ")");
-		log.add(Log::NORMAL, "Copyright (c) 2009 Tim van Werkhoven (T.I.M.vanWerkhoven@xs4all.nl)\n");
+ConnectDialog::ConnectDialog(FoamControl &foamctrl): 
+foamctrl(foamctrl), host("Hostname"), port("Port")
+{
+	set_title("Connect");
+	set_modal();
 		
-		// widget properties
-		set_title("FOAM Control");
-		set_default_size(600, 400);
-		set_gravity(Gdk::GRAVITY_STATIC);
-		
-		vbox.set_spacing(4);
-		vbox.pack_start(menubar, PACK_SHRINK);
-		
-		// signals
-		menubar.connect.signal_activate().connect(sigc::mem_fun(*this, &MainWindow::on_connect_activate));
-		menubar.quit.signal_activate().connect(sigc::mem_fun(*this, &MainWindow::on_quit_activate));
-		menubar.about.signal_activate().connect(sigc::mem_fun(*this, &MainWindow::on_about_activate));
-		
-		notebook.append_page(controlpage, "_Control", "Control", true);
-		notebook.append_page(logpage, "_Log", "Log", true);
-		
-		vbox.pack_start(notebook);
-		
-		add(vbox);
-		
-		show_all_children();
-		
-		log.add(Log::OK, "FOAM Control up and running");
-	}
+	add_button(Gtk::Stock::OK, 1)->signal_clicked().connect(sigc::mem_fun(*this, &ConnectDialog::on_ok));
+	add_button(Gtk::Stock::CANCEL, 0)->signal_clicked().connect(sigc::mem_fun(*this, &ConnectDialog::on_cancel));
 	
-	~MainWindow() {
-	}
-};
+	get_vbox()->add(host);
+	get_vbox()->add(port);
+	
+	show_all_children();
+}
+
+MainMenu::MainMenu(Window &window):
+file("File"), help("Help"),
+connect(Stock::CONNECT), quit(Stock::QUIT), about(Stock::ABOUT) 
+{
+	// properties
+	filemenu.set_accel_group(window.get_accel_group());
+	helpmenu.set_accel_group(window.get_accel_group());
+	
+	filemenu.append(connect);
+	filemenu.append(sep1);
+	filemenu.append(quit);
+	file.set_submenu(filemenu);
+	
+	helpmenu.append(about);
+	help.set_submenu(helpmenu);
+	
+	add(file);
+	add(help);
+}
+
+
+void MainWindow::on_about_activate() {
+	printf("MainWindow::on_about_activate()\n");
+	aboutdialog.present();
+}
+	
+void MainWindow::on_quit_activate() {
+	printf("MainWindow::on_quit_activate()\n");
+	Main::quit();
+}	
+
+void MainWindow::on_connect_activate() {
+	printf("MainWindow::on_connect_activate()\n");
+	conndialog.present();
+}
+
+MainWindow::MainWindow():
+	log(), foamctrl(this), 
+	aboutdialog(), notebook(), conndialog(foamctrl), 
+	logpage(log), controlpage(log, foamctrl), 
+	menubar(*this) {
+	log.add(Log::NORMAL, "FOAM Control (" PACKAGE_NAME " version " PACKAGE_VERSION " built " __DATE__ " " __TIME__ ")");
+	log.add(Log::NORMAL, "Copyright (c) 2009 Tim van Werkhoven (T.I.M.vanWerkhoven@xs4all.nl)\n");
+	
+	// widget properties
+	set_title("FOAM Control");
+	set_default_size(600, 400);
+	set_gravity(Gdk::GRAVITY_STATIC);
+	
+	vbox.set_spacing(4);
+	vbox.pack_start(menubar, PACK_SHRINK);
+	
+	// signals
+	menubar.connect.signal_activate().connect(sigc::mem_fun(*this, &MainWindow::on_connect_activate));
+	menubar.quit.signal_activate().connect(sigc::mem_fun(*this, &MainWindow::on_quit_activate));
+	menubar.about.signal_activate().connect(sigc::mem_fun(*this, &MainWindow::on_about_activate));
+	
+	notebook.append_page(controlpage, "_Control", "Control", true);
+	notebook.append_page(logpage, "_Log", "Log", true);
+	
+	vbox.pack_start(notebook);
+	
+	add(vbox);
+	
+	show_all_children();
+	
+	log.add(Log::OK, "FOAM Control up and running");
+}
 
 static void signal_handler(int s) {
 	if(s == SIGALRM || s == SIGPIPE)

@@ -30,8 +30,8 @@
 using namespace std;
 using namespace Gtk;
 
-ControlPage::ControlPage(Log &log): 
-log(log), foamctrl(*this), 
+ControlPage::ControlPage(Log &log, FoamControl &foamctrl): 
+log(log), foamctrl(foamctrl),
 connframe("Connection"), host("Hostname"), hostentry(), port("Port"), portentry(), connect("Connect"),
 modeframe("Run mode"), mode_listen("Listen"), mode_open("Open loop"), mode_closed("Closed loop"), shutdown("Shutdown"),
 calibframe("Calibration"), calmode_lbl("Calibration mode: "), calib("Calibrate"),
@@ -71,10 +71,10 @@ statframe("Status"), mode_lbl("Mode: "), mode_entry(), numwfs_lbl("# WFS: "), nu
 	numframes_entry.set_size_request(75);
 	
 	// Init values
-	mode_entry.set_text(foamctrl.get_mode_str());
-	numwfs_entry.set_text(format("%d", foamctrl.get_numwfs()));
-	numwfc_entry.set_text(format("%d", foamctrl.get_numwfc()));
-	numframes_entry.set_text(format("%d", foamctrl.get_numframes()));	
+	mode_entry.set_text("-");
+	numwfs_entry.set_text("-");
+	numwfc_entry.set_text("-");
+	numframes_entry.set_text("-");	
 	
 	// Connection row (hostname, port, connect button)
 	connbox.set_spacing(4);	
@@ -135,7 +135,7 @@ ControlPage::~ControlPage() {
 }
 
 void ControlPage::on_connect_clicked() {
-	printf("%dControlPage::on_connect_clicked()\n", pthread_self());
+	printf("%dControlPage::on_connect_clicked()\n", (int) pthread_self());
 	if (foamctrl.is_connected()) {
 		log.add(Log::NORMAL, "Trying to disconnect");
 		foamctrl.disconnect();
@@ -147,39 +147,39 @@ void ControlPage::on_connect_clicked() {
 }
 
 void ControlPage::on_mode_listen_clicked() {
-	printf("%x:ControlPage::on_mode_listen_clicked()\n", pthread_self());
+	printf("%x:ControlPage::on_mode_listen_clicked()\n", (int) pthread_self());
 	log.add(Log::NORMAL, "Setting mode listen...");
 	foamctrl.set_mode(AO_MODE_LISTEN);
 }
 
 void ControlPage::on_mode_closed_clicked() {
-	printf("%dControlPage::on_mode_closed_clicked()\n", pthread_self());
+	printf("%dControlPage::on_mode_closed_clicked()\n", (int) pthread_self());
 	log.add(Log::NORMAL, "Setting mode closed...");
 	foamctrl.set_mode(AO_MODE_CLOSED);
 }
 
 void ControlPage::on_mode_open_clicked() {
-	printf("%x:ControlPage::on_mode_open_clicked()\n", pthread_self());
+	printf("%x:ControlPage::on_mode_open_clicked()\n", (int) pthread_self());
 	log.add(Log::NORMAL, "Setting mode open...");
 	foamctrl.set_mode(AO_MODE_OPEN);
 }
 
 void ControlPage::on_shutdown_clicked() {
-	printf("%x:ControlPage::on_shutdown_clicked()\n", pthread_self());
+	printf("%x:ControlPage::on_shutdown_clicked()\n", (int) pthread_self());
 	log.add(Log::NORMAL, "Trying to shutdown");
 	foamctrl.shutdown();
 }
 
 void ControlPage::on_calib_clicked() {
-	printf("%x:ControlPage::on_calmode_changed()\n", pthread_self());
+	printf("%x:ControlPage::on_calmode_changed()\n", (int) pthread_self());
 	log.add(Log::NORMAL, "Trying to calibrate");
 	foamctrl.calibrate(calmode_select.get_active_text());
 }
 
 void ControlPage::on_connect_update() {
-	printf("%x:ControlPage::on_connect_update()\n", pthread_self());
+	printf("%x:ControlPage::on_connect_update()\n", (int) pthread_self());
 	if (foamctrl.is_connected()) {
-		printf("%x:ControlPage::on_connect_update() is conn\n", pthread_self());
+		printf("%x:ControlPage::on_connect_update() is conn\n", (int) pthread_self());
 		connect.set_label("Disconnect");
 
 		mode_listen.set_sensitive(true);
@@ -193,7 +193,7 @@ void ControlPage::on_connect_update() {
 		log.add(Log::OK, "Connected to " + foamctrl.getpeername());
 	}
 	else {
-		printf("%x:ControlPage::on_connect_update() is not conn\n", pthread_self());
+		printf("%x:ControlPage::on_connect_update() is not conn\n", (int) pthread_self());
 		connect.set_label("Connect");
 
 		mode_listen.set_sensitive(false);
@@ -209,13 +209,14 @@ void ControlPage::on_connect_update() {
 }
 
 void ControlPage::on_message_update() {
-	printf("%x:ControlPage::on_message_update()\n", pthread_self());
+	printf("%x:ControlPage::on_message_update()\n", (int) pthread_self());
 	
 	// reset buttons
 	mode_listen.set_sensitive(true);
 	mode_open.set_sensitive(true);
 	mode_closed.set_sensitive(true);
 	calib.set_sensitive(true);
+	
 	// press correct button
 	if (foamctrl.get_mode() == AO_MODE_LISTEN) mode_listen.set_sensitive(false);
 	else if (foamctrl.get_mode() == AO_MODE_OPEN) mode_open.set_sensitive(false);

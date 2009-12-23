@@ -25,9 +25,8 @@
 
 #include "foamcontrol.h"
 
-FoamControl::FoamControl(ControlPage &parent): parent(parent) {
-	printf("%x:FoamControl::FoamControl()\n", pthread_self());
-
+FoamControl::FoamControl(MainWindow *parent): parent(parent) {
+	printf("%x:FoamControl::FoamControl()\n", (int) pthread_self());
 	init();
 }
 
@@ -37,7 +36,7 @@ FoamControl::~FoamControl() {
 }
 
 void FoamControl::init() {
-	printf("%x:FoamControl::init()\n", pthread_self());
+	printf("%x:FoamControl::init()\n", (int) pthread_self());
 	protocol = new Protocol::Client();
 	
 	ok = false;
@@ -55,7 +54,7 @@ void FoamControl::init() {
 }
 
 int FoamControl::connect(const string &host, const string &port) {
-	printf("%x:FoamControl::connect(%s, %s)\n", pthread_self(), host.c_str(), port.c_str());
+	printf("%x:FoamControl::connect(%s, %s)\n", (int) pthread_self(), host.c_str(), port.c_str());
 	
 	if (protocol->is_connected()) 
 		return -1;
@@ -71,7 +70,7 @@ int FoamControl::connect(const string &host, const string &port) {
 void FoamControl::set_mode(aomode_t mode) {
 	if (!protocol->is_connected()) return;
 	
-	printf("%x:FoamControl::set_mode(%s)\n", pthread_self(), mode2str(mode).c_str());
+	printf("%x:FoamControl::set_mode(%s)\n", (int) pthread_self(), mode2str(mode).c_str());
 	
 	switch (mode) {
 		case AO_MODE_LISTEN:
@@ -89,12 +88,12 @@ void FoamControl::set_mode(aomode_t mode) {
 }
 
 void FoamControl::calibrate(std::string calmode) {
-	printf("%x:FoamControl::calibrate(%s)\n", pthread_self(), calmode.c_str());
+	printf("%x:FoamControl::calibrate(%s)\n", (int) pthread_self(), calmode.c_str());
 	protocol->write(format("CALIB %s", calmode.c_str()));
 }
 
 int FoamControl::disconnect() {
-	printf("%x:FoamControl::disconnect()\n", pthread_self());
+	printf("%x:FoamControl::disconnect()\n", (int) pthread_self());
 	if (protocol->is_connected())
 		protocol->disconnect();
 	
@@ -103,20 +102,17 @@ int FoamControl::disconnect() {
 }
 
 void FoamControl::on_connect_update() {
-	printf("%x:FoamControl::on_connect_update()\n", pthread_self());
-	
-	// GUI updating is done in parent (a ControlPage)
-	parent.on_connect_update();
+	printf("%x:FoamControl::on_connect_update()\n", (int) pthread_self());
+	//parent.on_connect_update();
 }
 
 void FoamControl::on_message_update() {
-	printf("%x:FoamControl::on_message_update()\n", pthread_self());
-	// GUI updating is done in parent (a ControlPage)
-	parent.on_message_update();
+	printf("%x:FoamControl::on_message_update()\n", (int) pthread_self());
+	//parent.on_message_update();
 }
 
 void FoamControl::on_connected(bool conn) {
-	printf("%x:FoamControl::on_connected(bool=%d)\n", pthread_self(), conn);
+	printf("%x:FoamControl::on_connected(bool=%d)\n", (int) pthread_self(), conn);
 
 	if (!conn) {
 		ok = false;
@@ -138,7 +134,7 @@ void FoamControl::on_connected(bool conn) {
 }
 
 void FoamControl::on_message(string line) {
-	printf("%x:FoamControl::on_message(string=%s)\n", pthread_self(), line.c_str());
+	printf("%x:FoamControl::on_message(string=%s)\n", (int) pthread_self(), line.c_str());
 
 	if (popword(line) != "OK") {
 		ok = false;

@@ -29,14 +29,13 @@
 #include <gtkmm.h>
 
 #include "log.h"
+#include "foamcontrol.h"
 
 using namespace Gtk;
 
-class FoamControl;
-
 class ControlPage: public VBox {
 	Log &log;
-	FoamControl foamctrl;
+	FoamControl &foamctrl;
 	
 	Frame connframe;
 	HBox connbox;
@@ -80,13 +79,11 @@ class ControlPage: public VBox {
 	void on_calib_clicked();
 	
 public:
-	ControlPage(Log &log);
+	ControlPage(Log &log, FoamControl &foamctrl);
 	~ControlPage();
 
 	void on_connect_update();
 	void on_message_update();
 };
-
-#include "foamcontrol.h"
 
 #endif //  __CONTROLVIEW_H__

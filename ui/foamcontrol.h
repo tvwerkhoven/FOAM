@@ -23,8 +23,8 @@
  @brief This is the FOAM control connection class
  */
 
-#ifndef __HAVE_FOAMCONTROL_H__
-#define __HAVE_FOAMCONTROL_H__
+#ifndef __FOAMCONTROL_H__
+#define __FOAMCONTROL_H__
 
 #include <string>
 #include <glibmm/dispatcher.h>
@@ -35,11 +35,9 @@
 
 using namespace std;
 
-class ControlPage;
-
 class FoamControl {
-	ControlPage &parent;
 	Protocol::Client *protocol;
+	class MainWindow *parent;
 	
 	pthread::mutex mutex;
 	
@@ -68,7 +66,7 @@ public:
 		exception(const string reason): runtime_error(reason) {}
 	};
 	
-	FoamControl(ControlPage &parent);
+	FoamControl(class MainWindow *parent);
 	~FoamControl();
 	
 	void init();
@@ -98,6 +96,4 @@ public:
 	Glib::Dispatcher signal_msg_update;
 };
 
-#include "controlview.h"
-
-#endif // __HAVE_FOAMCONTROL_H__
+#endif // __FOAMCONTROL_H__
