@@ -32,16 +32,16 @@ using namespace Gtk;
 
 ControlPage::ControlPage(Log &log, FoamControl &foamctrl): 
 log(log), foamctrl(foamctrl),
-connframe("Connection"), host("Hostname"), hostentry(), port("Port"), portentry(), connect("Connect"),
+connframe("Connection"), host("Hostname"), port("Port"), connect("Connect"),
 modeframe("Run mode"), mode_listen("Listen"), mode_open("Open loop"), mode_closed("Closed loop"), shutdown("Shutdown"),
 calibframe("Calibration"), calmode_lbl("Calibration mode: "), calib("Calibrate"),
-statframe("Status"), mode_lbl("Mode: "), mode_entry(), numwfs_lbl("# WFS: "), numwfs_entry(), numwfc_lbl("# WFC: "), numwfc_entry(), numframes_lbl("# Frames: "), numframes_entry() {
+statframe("Status"), stat_mode("Mode: "), stat_nwfs("# WFS: "), stat_nwfc("# WFC: "), stat_nframes("# Frames: ") {
 	
 	// request minimum size for entry boxes
-	hostentry.set_size_request(120);
-	hostentry.set_text("localhost");
-	portentry.set_size_request(50);
-	portentry.set_text("1025");
+	host.set_size_request(120);
+	host.set_text("localhost");
+	port.set_size_request(50);
+	port.set_text("1025");
 	
 	// Make shutdown/stop button red
 	shutdown.modify_bg(STATE_NORMAL, Gdk::Color("red"));
@@ -61,27 +61,23 @@ statframe("Status"), mode_lbl("Mode: "), mode_entry(), numwfs_lbl("# WFS: "), nu
 	calib.set_sensitive(false);
 
 	// Make status entries insensitive
-	mode_entry.set_editable(false);
-	mode_entry.set_size_request(75);
-	numwfs_entry.set_editable(false);
-	numwfs_entry.set_size_request(30);
-	numwfc_entry.set_editable(false);
-	numwfc_entry.set_size_request(30);
-	numframes_entry.set_editable(false);
-	numframes_entry.set_size_request(75);
-	
-	// Init values
-	mode_entry.set_text("-");
-	numwfs_entry.set_text("-");
-	numwfc_entry.set_text("-");
-	numframes_entry.set_text("-");	
-	
+	stat_mode.set_editable(false);
+	stat_mode.set_size_request(75);
+	stat_mode.set_text("-");
+	stat_nwfs.set_editable(false);
+	stat_nwfs.set_size_request(30);
+	stat_nwfs.set_text("-");
+	stat_nwfc.set_editable(false);
+	stat_nwfc.set_size_request(30);
+	stat_nwfc.set_text("-");
+	stat_nframes.set_editable(false);
+	stat_nframes.set_size_request(75);
+	stat_nframes.set_text("-");
+		
 	// Connection row (hostname, port, connect button)
 	connbox.set_spacing(4);	
 	connbox.pack_start(host, PACK_SHRINK);
-	connbox.pack_start(hostentry, PACK_SHRINK);
 	connbox.pack_start(port, PACK_SHRINK);
-	connbox.pack_start(portentry, PACK_SHRINK);
 	connbox.pack_start(connect, PACK_SHRINK);
 	connframe.add(connbox);
 
@@ -102,14 +98,10 @@ statframe("Status"), mode_lbl("Mode: "), mode_entry(), numwfs_lbl("# WFS: "), nu
 	
 	// Status row (mode, # wfs, # wfc, # frames)
 	statbox.set_spacing(4);
-	statbox.pack_start(mode_lbl, PACK_SHRINK);
-	statbox.pack_start(mode_entry, PACK_SHRINK);
-	statbox.pack_start(numwfs_lbl, PACK_SHRINK);
-	statbox.pack_start(numwfs_entry, PACK_SHRINK);
-	statbox.pack_start(numwfc_lbl, PACK_SHRINK);
-	statbox.pack_start(numwfc_entry, PACK_SHRINK);
-	statbox.pack_start(numframes_lbl, PACK_SHRINK);
-	statbox.pack_start(numframes_entry, PACK_SHRINK);
+	statbox.pack_start(stat_mode, PACK_SHRINK);
+	statbox.pack_start(stat_nwfs, PACK_SHRINK);
+	statbox.pack_start(stat_nwfc, PACK_SHRINK);
+	statbox.pack_start(stat_nframes, PACK_SHRINK);
 	statframe.add(statbox);
 	
 	set_spacing(4);
@@ -141,8 +133,8 @@ void ControlPage::on_connect_clicked() {
 		foamctrl.disconnect();
 	}
 	else {
-		log.add(Log::NORMAL, "Trying to connect to " + hostentry.get_text() + ":" + portentry.get_text());
-		foamctrl.connect(hostentry.get_text(), portentry.get_text());
+		log.add(Log::NORMAL, "Trying to connect to " + host.get_text() + ":" + port.get_text());
+		foamctrl.connect(host.get_text(), port.get_text());
 	}
 }
 
@@ -224,16 +216,17 @@ void ControlPage::on_message_update() {
 	else if (foamctrl.get_mode() == AO_MODE_CAL) calib.set_sensitive(false);
 
 	// set values in status box
-	mode_entry.set_text(foamctrl.get_mode_str());
-	numwfs_entry.set_text(format("%d", foamctrl.get_numwfs()));
-	numwfc_entry.set_text(format("%d", foamctrl.get_numwfc()));
-	numframes_entry.set_text(format("%d", foamctrl.get_numframes()));
+	stat_mode.set_text(foamctrl.get_mode_str());
+	stat_nwfs.set_text(format("%d", foamctrl.get_numwfs()));
+	stat_nwfc.set_text(format("%d", foamctrl.get_numwfc()));
+	stat_nframes.set_text(format("%d", foamctrl.get_numframes()));
 	
 	// set values in calibmode select box
 	calmode_select.clear_items();
 	string *modetmp = foamctrl.get_calmodes();
-	while (*modetmp != "__SENTINEL__")
+	while (*modetmp != "__SENTINEL__") {
 		calmode_select.prepend_text(*modetmp++);
+	}
 	calmode_select.set_active_text(*--modetmp);
 }
 

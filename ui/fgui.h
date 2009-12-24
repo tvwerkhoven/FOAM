@@ -29,8 +29,8 @@
 #include <gtkmm.h>
 
 #include "about.h"
-#include "log.h"
 #include "widgets.h"
+#include "log.h"
 #include "logview.h"
 #include "foamcontrol.h"
 #include "controlview.h"
@@ -40,6 +40,7 @@ using namespace Gtk;
 class ConnectDialog: public Dialog {
 	FoamControl &foamctrl;
 	
+	Label label;
 	LabeledEntry host;
 	LabeledEntry port;
 	
@@ -90,6 +91,9 @@ class MainWindow: public Window {
 	
 public:	
 	MainMenu menubar;
+	
+	void on_ctrl_connect_update();
+	void on_ctrl_message_update();	
 	
 	MainWindow();
 	~MainWindow() {};

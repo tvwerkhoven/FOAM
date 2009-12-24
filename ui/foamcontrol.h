@@ -37,7 +37,8 @@ using namespace std;
 
 class FoamControl {
 	Protocol::Client *protocol;
-	class MainWindow *parent;
+	class MainWindow *mainwindow;
+	class ControlPage *controlpage;
 	
 	pthread::mutex mutex;
 	
@@ -66,7 +67,7 @@ public:
 		exception(const string reason): runtime_error(reason) {}
 	};
 	
-	FoamControl(class MainWindow *parent);
+	FoamControl(MainWindow *mainwindow, ControlPage *controlpage);
 	~FoamControl();
 	
 	void init();
@@ -95,5 +96,6 @@ public:
 	Glib::Dispatcher signal_conn_update;
 	Glib::Dispatcher signal_msg_update;
 };
+
 
 #endif // __FOAMCONTROL_H__

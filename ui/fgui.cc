@@ -55,14 +55,15 @@ void ConnectDialog::on_cancel() {
 }
 
 ConnectDialog::ConnectDialog(FoamControl &foamctrl): 
-foamctrl(foamctrl), host("Hostname"), port("Port")
+foamctrl(foamctrl), label("Connect to a remote host"), host("Hostname"), port("Port")
 {
 	set_title("Connect");
 	set_modal();
 		
-	add_button(Gtk::Stock::OK, 1)->signal_clicked().connect(sigc::mem_fun(*this, &ConnectDialog::on_ok));
+	add_button(Gtk::Stock::CONNECT, 1)->signal_clicked().connect(sigc::mem_fun(*this, &ConnectDialog::on_ok));
 	add_button(Gtk::Stock::CANCEL, 0)->signal_clicked().connect(sigc::mem_fun(*this, &ConnectDialog::on_cancel));
 	
+	get_vbox()->add(label);
 	get_vbox()->add(host);
 	get_vbox()->add(port);
 	
@@ -105,8 +106,24 @@ void MainWindow::on_connect_activate() {
 	conndialog.present();
 }
 
+void MainWindow::on_ctrl_connect_update() {
+	printf("MainWindow::on_ctrl_connect_update()\n");
+	if (foamctrl.is_connected()) {
+		//img = image_new_from_stock(gtk.STOCK_REFRESH, gtk.ICON_SIZE_MENU)
+		//item.set_image(img)
+		menubar.connect.set_sensitive(false);
+	}
+	else {
+		menubar.connect.set_sensitive(true);
+	}
+}
+
+void MainWindow::on_ctrl_message_update() {
+	printf("MainWindow::on_ctrl_message_update()\n");
+}
+
 MainWindow::MainWindow():
-	log(), foamctrl(this), 
+	log(), foamctrl(this, &controlpage), 
 	aboutdialog(), notebook(), conndialog(foamctrl), 
 	logpage(log), controlpage(log, foamctrl), 
 	menubar(*this) {

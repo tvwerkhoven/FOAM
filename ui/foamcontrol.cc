@@ -24,8 +24,13 @@
  */
 
 #include "foamcontrol.h"
+#include "fgui.h"
+#include "controlview.h"
 
-FoamControl::FoamControl(MainWindow *parent): parent(parent) {
+using namespace Gtk;
+
+FoamControl::FoamControl(MainWindow *mainwindow, ControlPage *controlpage): 
+mainwindow(mainwindow), controlpage(controlpage) {
 	printf("%x:FoamControl::FoamControl()\n", (int) pthread_self());
 	init();
 }
@@ -103,12 +108,14 @@ int FoamControl::disconnect() {
 
 void FoamControl::on_connect_update() {
 	printf("%x:FoamControl::on_connect_update()\n", (int) pthread_self());
-	//parent.on_connect_update();
+	mainwindow->on_ctrl_connect_update();
+	controlpage->on_connect_update();
 }
 
 void FoamControl::on_message_update() {
 	printf("%x:FoamControl::on_message_update()\n", (int) pthread_self());
-	//parent.on_message_update();
+	mainwindow->on_ctrl_message_update();
+	controlpage->on_message_update();
 }
 
 void FoamControl::on_connected(bool conn) {

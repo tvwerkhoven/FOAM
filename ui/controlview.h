@@ -28,6 +28,7 @@
 
 #include <gtkmm.h>
 
+#include "widgets.h"
 #include "log.h"
 #include "foamcontrol.h"
 
@@ -39,10 +40,8 @@ class ControlPage: public VBox {
 	
 	Frame connframe;
 	HBox connbox;
-	Label host;
-	Entry hostentry;
-	Label port;
-	Entry portentry;
+	LabeledEntry host;
+	LabeledEntry port;
 	Button connect;
 	
 	Frame modeframe;
@@ -60,14 +59,10 @@ class ControlPage: public VBox {
 
 	Frame statframe;
 	HBox statbox;
-	Label mode_lbl;
-	Entry mode_entry;
-	Label numwfs_lbl;
-	Entry numwfs_entry;
-	Label numwfc_lbl;
-	Entry numwfc_entry;
-	Label numframes_lbl;
-	Entry numframes_entry;
+	LabeledEntry stat_mode;
+	LabeledEntry stat_nwfs;
+	LabeledEntry stat_nwfc;
+	LabeledEntry stat_nframes;
 
 	void on_connect_clicked();
 	
