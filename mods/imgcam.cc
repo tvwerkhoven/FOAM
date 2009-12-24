@@ -49,7 +49,7 @@ class ImgCamera: public Camera {
 		// Copy image from img to frame and add some noise etc
 		io->msg(IO_DEB2, "ImgCamera::update()");
 		if(blocking)
-			usleep(interval * 1000000);
+			usleep((int) interval * 1000000);
 
 		uint16_t *p = frame;
 

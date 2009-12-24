@@ -16,7 +16,7 @@
 
 Io *io = new Io();
 
-int main(int argc, char *argv[]) {
+int main() {
 	int ret;
 	
 	// ########################################################################
@@ -84,7 +84,7 @@ int main(int argc, char *argv[]) {
 			
 		if (diff != 0) printf("ERR: img not equal! diff = %ld, (%ld vs %ld).\n", diff, s1, s2);
 		
-		printf("Got %dx%dx%d, sum=%llu", fitsimg->res.x, fitsimg->res.y, fitsimg->bpp, fitsimg->sum);
+		printf("Got %dx%dx%d, sum=%llu", fitsimg->res.x, fitsimg->res.y, fitsimg->bpp, (long long unsigned int) fitsimg->sum);
 		printf(" (%ld, %ld, diff=%ld), range=%d--%d\n", s1, s2, diff, fitsimg->range[0], fitsimg->range[1]);
 	}
 				
@@ -115,7 +115,7 @@ int main(int argc, char *argv[]) {
 		
 		if (diff != 0) printf("ERR: img not equal! diff = %ld, (%ld vs %ld).\n", diff, s1, s2);
 		
-		printf("Got %dx%dx%d, sum=%llu",fitsimg->res.x, fitsimg->res.y, fitsimg->bpp, fitsimg->sum);
+		printf("Got %dx%dx%d, sum=%llu",fitsimg->res.x, fitsimg->res.y, fitsimg->bpp, (long long unsigned int) fitsimg->sum);
 		printf(" (%ld, %ld, diff=%ld), range=%d--%d\n", s1, s2, diff, fitsimg->range[0], fitsimg->range[1]);
 	}
 

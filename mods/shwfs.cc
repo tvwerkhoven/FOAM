@@ -65,7 +65,7 @@ class Shwfs: public Wfs {
 	int ns;
 	
 	template <class T>
-	uint32_t _cog(T *img, int xpos, int ypos, int w, int h, int stride, int samini, fcoord_t& cog) {
+	uint32_t _cog(T *img, int xpos, int ypos, int w, int h, int stride, uint32_t samini, fcoord_t& cog) {
 		uint32_t fi, csum = 0;
 		cog.x = cog.y = 0.0;
 		img += ypos*stride + xpos;
