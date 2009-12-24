@@ -152,7 +152,7 @@ int modMessage(foamctrl *ptc, Connection *connection, string cmd, string line) {
 		else if (topic == "CALIB") {
 			connection->write(\
 												":calib <mode>:           Calibrate AO system.\n"
-												":  mode=sasel:			     Select subapertures.");
+												":  mode=subapsel:        Select subapertures.");
 		}
 		else {
 			return -1;
@@ -161,12 +161,12 @@ int modMessage(foamctrl *ptc, Connection *connection, string cmd, string line) {
 	else if (cmd == "GET") {
 		string what = popword(line);
 		if (what == "CALIB") {
-			connection->write("OK VAR CALIB 1 SASEL");
+			connection->write("OK VAR CALIB 2 SUBAPSEL INVALID");
 		}
 	}
 	else if (cmd == "CALIB") {
 		string calmode = popword(line);
-		if (calmode == "SASEL") {
+		if (calmode == "SUBAPSEL") {
 			connection->write("OK CMD CALIB SUBAPSEL");
 			ptc->calmode = CAL_SUBAPSEL;
 			ptc->mode = AO_MODE_CAL;
