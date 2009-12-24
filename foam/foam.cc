@@ -418,8 +418,8 @@ void modeCal() {
 }
 
 void modeListen() {
+	io->msg(IO_DEB1, __FILE__ "::modeListen()");
 	
-	io->msg(IO_DEB1, __FILE__ "::modeListen() begin");				
 	while (true) {
 		switch (ptc->mode) {
 			case AO_MODE_OPEN:
@@ -435,7 +435,7 @@ void modeListen() {
 				modeCal();
 				break;
 			case AO_MODE_LISTEN:
-				io->msg(IO_DEB1, __FILE__ "::modeListen() AO_MODE_LISTEN");				
+				io->msg(IO_INFO, "Entering listen loop.");
 				// We wait until the mode changed
 				protocol->broadcast("OK MODE LISTEN");
 				pthread_mutex_lock(&mode_mutex);
