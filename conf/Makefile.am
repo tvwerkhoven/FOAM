@@ -1,2 +1,4 @@
-# Include these files in the dist, but don't install them
-EXTRA_DIST = *.cfg
+# Install these configuration files
+
+foamconfdir = $(sysconfdir)/foam
+nobase_dist_foamconf_DATA = foam*.cfg simstat/foam*cfg

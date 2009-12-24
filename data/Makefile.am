@@ -1,12 +1,12 @@
 # Install the relevant configuration files to a subdir of the datadir
-foamconfdir = $(FOAMCONFDIR)
-dist_foamconf_DATA = ""
+foamdatadir = $(FOAMDATADIR)
+dist_foamdata_DATA =
 
 ### STATIC SIMULATION MODE ###
 ##############################
 if SIMSTAT
 
-dist_foamconf_DATA += simstatic-irr.pgm 
+dist_foamdata_DATA += simstatic*.pgm simstatic*.fits
 
 endif SIMSTAT
 ### END STATIC SIMULATION MODE ###

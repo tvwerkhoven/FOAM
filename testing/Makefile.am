@@ -18,17 +18,17 @@ AM_CXXFLAGS = -pipe -Wall -Wextra \
 
 AM_LDFLAGS = $(COMMON_LIBS)
 
-foamtestdir = $(bindir)/foam-test
-foamtest_PROGRAMS = 
+# foamtestdir = $(bindir)/foam-test
+noinst_PROGRAMS = 
 
 if HWDEBUG
 # only do this if we want hardware debugging 
 # install the test programs in a foam-test subdir
-foamtest_PROGRAMS += 
+noinst_PROGRAMS += 
 endif HWDEBUG
 
 if DEBUG
-foamtest_PROGRAMS += imgio-test imgio-convert-test io-test protocol-test
+noinst_PROGRAMS += imgio-test imgio-convert-test io-test protocol-test
 
 io_test_SOURCES = io-test.cc
 io_test_LDADD = $(LIBSIU_DIR)/libio.a

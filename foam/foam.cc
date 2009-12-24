@@ -220,7 +220,7 @@ int main(int argc, char *argv[]) {
                   \\::/  /        /:/  /        /:/  /   \n\
                    \\/__/         \\/__/         \\/__/ \n");
 
-	io->msg(IO_INFO, "This is FOAM (version %s, built %s %s)\n", PACKAGE_VERSION, __DATE__, __TIME__);
+	io->msg(IO_INFO, "This is FOAM (version %s, built %s %s)", PACKAGE_VERSION, __DATE__, __TIME__);
 	io->msg(IO_INFO, "Starting at %s", date);
 	io->msg(IO_INFO, "Copyright (c) 2007--2009 Tim van Werkhoven (T.I.M.vanWerkhoven@xs4all.nl)");
 	

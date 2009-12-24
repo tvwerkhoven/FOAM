@@ -31,9 +31,7 @@ AC_PROG_INSTALL
 AC_PROG_RANLIB
 
 # These are the configuration- and data-directories
-FOAMCONFDIR=$datadir/foam
-FOAMDATADIR=$datadir
-AC_SUBST(FOAMCONFDIR)
+FOAMDATADIR=$datadir/foam
 AC_SUBST(FOAMDATADIR)
 
 # These libraries are crucial for all targets
