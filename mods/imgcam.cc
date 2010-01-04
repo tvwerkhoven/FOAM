@@ -73,6 +73,13 @@ public:
 		if (type != IMGCAM_TYPE) throw exception("Type should be " IMGCAM_TYPE " for this class.");
 		
 		string file = config.getstring("imagefile");
+		if (file.length()) {
+			if (file[0] != '/') file = FOAM_DATADIR "/" + file;
+		}
+		else {
+			throw exception("'imagefile' not set in configuration file!");
+		}
+		io->msg(IO_DEB2, "ImgCamera::ImgCamera(): imagefile = %s", file.c_str());
 		noise = config.getdouble("noise", 10.0);
 		interval = config.getdouble("interval", 0.25);
 		exposure = config.getdouble("exposure", 1.0);
