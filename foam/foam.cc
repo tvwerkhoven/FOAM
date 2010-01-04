@@ -139,7 +139,7 @@ int main(int argc, char *argv[]) {
 	// PARSE CONFIGURATION // 
 	/***********************/
 	int r, option_index = 0;
-	string conffile;
+	string conffile = FOAM_DEFAULTCONF;
 	
 	static struct option const long_options[] = {
 		{"config", required_argument, NULL, 'c'},
@@ -193,6 +193,9 @@ int main(int argc, char *argv[]) {
 		io->msg(IO_ERR, "No configuration file given.");
 		show_help(argv[0], true);
 		return -1;
+	}
+	else if (conffile == FOAM_DEFAULTCONF) {
+		io->msg(IO_WARN, "Using default configuration file '%s'.", conffile.c_str());
 	}
 	
 	// Init control and configuration using the config file
