@@ -12,8 +12,7 @@ AM_CPPFLAGS = \
 
 # This is used to get the config directory as a define (see top-level Makefile.am)
 # TODO: check this
-AM_CPPFLAGS += -DFOAM_CONFDIR=\"$(FOAMCONFDIR)\" \
-		-DFOAM_DATADIR=\"$(FOAMDATADIR)\" \
+AM_CPPFLAGS +=-DFOAM_DATADIR=\"$(FOAMDATADIR)\" \
 		$(COMMON_CFLAGS)
 
 if DEBUG
@@ -39,4 +38,8 @@ bin_PROGRAMS = foam-gui
 foam_gui_CPPFLAGS = $(GUI_CFLAGS) $(AM_CPPFLAGS)
 foam_gui_SOURCES = fgui.cc log.cc logview.cc about.cc foamcontrol.cc controlview.cc widgets.cc
 foam_gui_SOURCES += fgui.h log.h logview.h about.h foamcontrol.h controlview.h widgets.h
+
+foamdatadir = $(FOAMDATADIR)
+nobase_dist_foamdata_DATA = FOAM-logo.svg
+
 endif GUI
