@@ -30,9 +30,11 @@ AC_PROG_MAKE_SET
 AC_PROG_INSTALL
 AC_PROG_RANLIB
 
-# FOAM datadir
+# FOAM data & configuration directory
 FOAMDATADIR=$datadir/foam
+FOAMCONFDIR=$sysconfdir/foam
 AC_SUBST(FOAMDATADIR)
+AC_SUBST(FOAMCONFDIR)
 
 # These libraries are crucial for all targets
 AC_SEARCH_LIBS([sin],
