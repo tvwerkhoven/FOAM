@@ -1,5 +1,5 @@
-#ifndef __LOG_H__
-#define __LOG_H__
+#ifndef HAVE_LOG_H
+#define HAVE_LOG_H
 
 #include <sys/time.h>
 #include <gtkmm.h>
@@ -42,4 +42,4 @@ class Log {
 	void add(enum severity severity, const Glib::ustring &message);
 };
 
-#endif // __LOG_H__
+#endif // HAVE_LOG_H

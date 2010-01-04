@@ -19,8 +19,8 @@
  along with FOAM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef __FOAMCTRL_h__
-#define __FOAMCTRL_h__
+#ifndef HAVE_FOAMCTRL_H
+#define HAVE_FOAMCTRL_H
 
 #include <time.h>
 #include "wfs.h"
@@ -104,4 +104,4 @@ class foamctrl {
 	fwheel_t *filter;							//!< FW entities
 };
 
-#endif // __FOAMCTRL_h__
+#endif // HAVE_FOAMCTRL_H

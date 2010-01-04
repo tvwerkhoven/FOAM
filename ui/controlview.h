@@ -23,8 +23,8 @@
  @brief This is the FOAM connection control pane
  */
 
-#ifndef __CONTROLVIEW_H__
-#define __CONTROLVIEW_H__
+#ifndef HAVE_CONTROLVIEW_H
+#define HAVE_CONTROLVIEW_H
 
 #include <gtkmm.h>
 
@@ -81,4 +81,4 @@ public:
 	void on_message_update();
 };
 
-#endif //  __CONTROLVIEW_H__
+#endif //  HAVE_CONTROLVIEW_H

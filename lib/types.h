@@ -27,8 +27,8 @@
  as well as some structs to track network connections to the CS.
  */
 
-#ifndef __TYPES_H__
-#define __TYPES_H__
+#ifndef HAVE_TYPES_H
+#define HAVE_TYPES_H
 
 // INCLUDES //
 /************/
@@ -198,4 +198,4 @@ typedef enum { // axes_t
 	AO_AXES_Y		//!< Scan Y direction only
 } axes_t;
 
-#endif // __TYPES_H__ 
+#endif // HAVE_TYPES_H 

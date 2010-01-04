@@ -19,8 +19,8 @@
  along with FOAM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef __WFS_H__
-#define __WFS_H__
+#ifndef HAVE_WFS_H
+#define HAVE_WFS_H
 
 #include <fstream>
 
@@ -69,4 +69,4 @@ class Wfs {
 	virtual ~Wfs() {}
 };
 
-#endif // __WFS_H__
+#endif // HAVE_WFS_H

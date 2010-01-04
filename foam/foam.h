@@ -26,8 +26,8 @@
 
 */
 
-#ifndef __FOAM_H__
-#define __FOAM_H__
+#ifndef HAVE_FOAM_H
+#define HAVE_FOAM_H
 
 #include <stdio.h>
 #include <math.h>
@@ -303,4 +303,4 @@ int stopFOAM();
  */
 void catchSIGINT(int);
 
-#endif // __FOAM_H__
+#endif // HAVE_FOAM_H

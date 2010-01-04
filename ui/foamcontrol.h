@@ -23,8 +23,8 @@
  @brief This is the FOAM control connection class
  */
 
-#ifndef __FOAMCONTROL_H__
-#define __FOAMCONTROL_H__
+#ifndef HAVE_FOAMCONTROL_H
+#define HAVE_FOAMCONTROL_H
 
 #include <string>
 #include <glibmm/dispatcher.h>
@@ -98,4 +98,4 @@ public:
 };
 
 
-#endif // __FOAMCONTROL_H__
+#endif // HAVE_FOAMCONTROL_H
