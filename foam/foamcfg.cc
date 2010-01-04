@@ -61,7 +61,7 @@ int foamcfg::parse(string &file) {
 	pidfile = cfgfile->getstring("pidfile", "/tmp/foam.pid");
 	
 	// Datadir
-	datadir = cfgfile->getstring("datadir", ".");
+	datadir = cfgfile->getstring("datadir", FOAM_DATADIR);
 	if (datadir == ".") io->msg(IO_WARN, "datadir not set, using current directory.");
 	else io->msg(IO_DEB1, "Datadir: '%s'.", datadir.c_str());
 	
@@ -80,9 +80,7 @@ int foamcfg::parse(string &file) {
 	// Logfile settings
 	logfile = cfgfile->getstring("logfile", "");
 	if (logfile.length()) {
-		io->msg(IO_DEB1, "Use logfile: '%s'.", logfile.c_str());
 		if (logfile[0] != '/') logfile = datadir + "/" + logfile;
-		io->msg(IO_DEB1, "Use logfile: '%s'.", logfile.c_str());
 		io->setLogfile(logfile);
 	}
 	
