@@ -19,8 +19,8 @@
  
  */
 
-#ifndef __CAM_H__
-#define __CAM_H__
+#ifndef HAVE_CAM_H
+#define HAVE_CAM_H
 
 #include <fstream>
 
@@ -105,4 +105,4 @@ public:
 };
 
 
-#endif /* __CAM_H__ */
+#endif /* HAVE_CAM_H */

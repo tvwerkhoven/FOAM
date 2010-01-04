@@ -19,8 +19,8 @@
  along with FOAM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef __FOAMCFG_H__
-#define __FOAMCFG_H__
+#ifndef HAVE_FOAMCFG_H
+#define HAVE_FOAMCFG_H
 
 #include "types.h"
 #include "config.h"
@@ -61,4 +61,4 @@ class foamcfg {
 	int nthreads;						//!< stores the number of threads in use
 };
 
-#endif // __FOAMCFG_H__
+#endif // HAVE_FOAMCFG_H

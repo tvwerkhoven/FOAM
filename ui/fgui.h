@@ -23,8 +23,8 @@
  @brief This is the FOAM control GUI header
  */
 
-#ifndef __FGUI_H__
-#define __FGUI_H__
+#ifndef HAVE_FGUI_H
+#define HAVE_FGUI_H
 
 #include <gtkmm.h>
 
@@ -99,4 +99,4 @@ public:
 	~MainWindow() {};
 };
 
-#endif // __FGUI_H__
+#endif // HAVE_FGUI_H

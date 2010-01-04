@@ -19,8 +19,8 @@
  along with FOAM.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __WFC_H__
-#define __WFC_H__
+#ifndef HAVE_WFC_H
+#define HAVE_WFC_H
 
 #include <string>
 #include <stdint.h>
@@ -54,4 +54,4 @@ class Wfc {
 	virtual ~Wfc() {}
 };
 
-#endif // __WFC_H__
+#endif // HAVE_WFC_H

@@ -23,8 +23,8 @@
 
 */
 
-#ifndef FOAM_PRIME_SIMSTATIC
-#define FOAM_PRIME_SIMSTATIC
+#ifndef HAVE_FOAM_SIMSTATIC_H
+#define HAVE_FOAM_SIMSTATIC_H
 
 #define FOAM_CONFIG_PRE "foam-simstat"
 
@@ -37,5 +37,5 @@
 #include "types.h"
 
 
-#endif // #ifndef FOAM_PRIME_SIMSTATIC
+#endif // HAVE_FOAM_SIMSTATIC_H
 

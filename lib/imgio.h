@@ -1,5 +1,5 @@
-#ifndef __IMGIO_H__
-#define __IMGIO_H__
+#ifndef HAVE_IMGIO_H
+#define HAVE_IMGIO_H
 
 #include <string>
 #include "types.h"
@@ -57,4 +57,4 @@ public:
 
 int readNumber(FILE *fd);
 
-#endif
+#endif // HAVE_IMGIO_H

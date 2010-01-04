@@ -315,4 +315,4 @@ class DelayedAdjustment {
 };
 
 
-#endif
+#endif // HAVE_WIDGETS_H
