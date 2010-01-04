@@ -12,8 +12,7 @@ AM_CPPFLAGS = \
 
 # This is used to get the config directory as a define (see top-level Makefile.am)
 # TODO: check this
-AM_CPPFLAGS += -DFOAM_CONFDIR=\"$(FOAMCONFDIR)\" \
-		-DFOAM_DATADIR=\"$(FOAMDATADIR)\" \
+AM_CPPFLAGS += -DFOAM_DATADIR=\"$(FOAMDATADIR)\" \
 		$(COMMON_CFLAGS)
 
 # GSL flags
@@ -44,7 +43,8 @@ FRAME_HDR = foam.h foamctrl.h foamcfg.h config.h wfc.h wfs.h
 ##################
 
 bin_PROGRAMS = foam-dummy
-foam_dummy_CPPFLAGS = -DFOAM_DEBUG=1 $(AM_CPPFLAGS)
+foam_dummy_CPPFLAGS = -DFOAM_DEFAULTCONF=\"$(FOAMCONFDIR)/foam-dummy.cfg\" \
+		-DFOAM_DEBUG=1 $(AM_CPPFLAGS)
 foam_dummy_SOURCES = foam-dummy.cc $(FRAME_SRC) 
 foam_dummy_SOURCES += $(FRAME_HDR)
 
@@ -69,8 +69,7 @@ foam_simstat_SOURCES += foam-simstatic.h \
 		$(MODS_DIR)/cam.h
 
 # Some CPP flags (include the primemod header, and configure some options)
-foam_simstat_CPPFLAGS = -DFOAM_SIMSTAT_DISPLAY=1 \
- 		-DFOAM_MODULES_DISLAY_SHSUPPORT=1 \
+foam_simstat_CPPFLAGS = -DFOAM_DEFAULTCONF=\"$(FOAMCONFDIR)/foam-simstat.cfg\" \
 		$(SIMSTAT_CFLAGS) $(AM_CPPFLAGS)
 
 # specific flags and libraries
