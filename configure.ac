@@ -30,7 +30,7 @@ AC_PROG_MAKE_SET
 AC_PROG_INSTALL
 AC_PROG_RANLIB
 
-# These are the configuration- and data-directories
+# FOAM datadir
 FOAMDATADIR=$datadir/foam
 AC_SUBST(FOAMDATADIR)
 
