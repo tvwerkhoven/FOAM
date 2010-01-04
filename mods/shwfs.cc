@@ -314,6 +314,5 @@ class Shwfs: public Wfs {
 };
 
 Wfs *Wfs::create(config &config) {
-	io->msg(IO_DEB2, "Wfs::create(config &config)");
 	return new Shwfs(config);
 }

@@ -92,7 +92,7 @@ public:
 	
 	static Camera *create(config &config);
 	static Camera *create(string conffile) {
-		io->msg(IO_DEB2, "Camera::create(string conffile)");
+		io->msg(IO_DEB2, "Camera::create(conffile=%s)", conffile.c_str());
 		
 		ifstream fin(conffile.c_str(), ifstream::in);
 		if (!fin.is_open()) throw("Could not open configuration file!");

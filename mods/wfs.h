@@ -57,7 +57,7 @@ class Wfs {
 	
 	static Wfs *create(config &config);	//!< Initialize new wavefront sensor
 	static Wfs *create(string conffile) {
-		io->msg(IO_DEB2, "Wfs::create(string conffile)");
+		io->msg(IO_DEB2, "Wfs::create(conffile=%s)", conffile.c_str());
 		
 		ifstream fin(conffile.c_str(), ifstream::in);
 		if (!fin.is_open()) throw("Could not open configuration file!");
