@@ -51,7 +51,8 @@ foamctrl::foamctrl(void) {
 }
 
 foamctrl::foamctrl(string &file) {
-	io->msg(IO_DEB2, "foamctrl::foamctrl(string &file)");
+	io->msg(IO_DEB2, "foamctrl::foamctrl()");
+	
 	starttime = time(NULL); 
 	frames = 0; 
 	wfs_count = wfc_count = fw_count = 0;
@@ -60,7 +61,7 @@ foamctrl::foamctrl(string &file) {
 }
 
 int foamctrl::parse(string &file) {
-	io->msg(IO_DEB2, "foamctrl::parse(string &file)");
+	io->msg(IO_DEB2, "foamctrl::parse()");
 
 	conffile = file;
 	int idx = conffile.find_last_of("/");
@@ -89,13 +90,13 @@ int foamctrl::parse(string &file) {
 		
 		// Get WFS configuration files
 		for (int i=0; i<wfs_count; i++) {
-			io->msg(IO_XNFO, "Configuring wfs %d/%d", i, wfs_count);
+			io->msg(IO_XNFO, "Configuring wfs %d/%d", i+1, wfs_count);
 			wfscfgs[i] = confpath + "/" + cfgfile->getstring(format("wfs[%d].cfg", i));
 		}
 		
 		// Get WFC configuration files
 		for (int i=0; i<wfc_count; i++) {
-			io->msg(IO_XNFO, "Configuring wfc %d/%d", i, wfc_count);
+			io->msg(IO_XNFO, "Configuring wfc %d/%d", i+1, wfc_count);
 			wfccfgs[i] = confpath + "/" + cfgfile->getstring(format("wfc[%d].cfg", i));
 		}
 	
