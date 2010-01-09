@@ -240,9 +240,16 @@ AboutFOAMGui::AboutFOAMGui() {
 	set_website("http://www.phys.uu.nl/~werkhvn/research/foam.html");
 	set_authors(authors);
 	try {
-		logo = Gdk::Pixbuf::create_from_file(FOAM_DATADIR "/FOAM-logo.svg", 200, 200, true);
+		logo = Gdk::Pixbuf::create_from_file(std::string(FOAM_DATADIR) + "/FOAM-logo.png");
 		set_logo(logo);
-	} catch (Glib::FileError &what) { }
+	} 
+	catch (Glib::FileError &e) { 
+		fprintf(stderr, "AboutFOAMGui::AboutFOAMGui() FileError: %s", e.what().c_str()); 
+	}
+	catch (Gdk::PixbufError &e) { 
+		fprintf(stderr, "AboutFOAMGui::AboutFOAMGui() PixbufError: %s", e.what().c_str()); 
+	}
+
 	set_license(GPL);
 	set_wrap_license(false);
 };

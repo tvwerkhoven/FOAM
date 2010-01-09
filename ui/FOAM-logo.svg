@@ -24,12 +24,12 @@
          id="tspan3268"
          style="font-size:27.14570427px;font-style:italic;font-variant:normal;font-weight:normal;font-stretch:normal;text-align:start;line-height:125%;writing-mode:lr-tb;text-anchor:start;font-family:Helvetica Neue;-inkscape-font-specification:Helvetica Neue Italic">FOAM</tspan></text>
     <path
-       d="M 285.71429,363.79074 A 65.714287,65.714287 0 1 1 154.28571,363.79074 A 65.714287,65.714287 0 1 1 285.71429,363.79074 z"
+       d="M 285.71429,363.79074 C 285.71429,400.08374 256.293,429.50503 220,429.50503 C 183.707,429.50503 154.28571,400.08374 154.28571,363.79074 C 154.28571,327.49774 183.707,298.07645 220,298.07645 C 256.293,298.07645 285.71429,327.49774 285.71429,363.79074 L 285.71429,363.79074 z"
        transform="matrix(9.1302257e-2,0,0,8.9202388e-2,1.5797343,673.46227)"
        id="path3270"
        style="opacity:1;fill:none;fill-opacity:1;stroke:#000000;stroke-width:3.92626667;stroke-linecap:round;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1" />
     <path
-       d="M 345.71428,269.50504 A 28.571428,28.571428 0 1 1 288.57142,269.50504 A 28.571428,28.571428 0 1 1 345.71428,269.50504 z"
+       d="M 345.71428,269.50504 C 345.71428,285.28461 332.92242,298.07647 317.14285,298.07647 C 301.36328,298.07647 288.57142,285.28461 288.57142,269.50504 C 288.57142,253.72547 301.36328,240.93361 317.14285,240.93361 C 332.92242,240.93361 345.71428,253.72547 345.71428,269.50504 z"
        transform="matrix(9.1302257e-2,0,0,8.9202388e-2,2.8840522,672.18795)"
        id="path3272"
        style="opacity:1;fill:none;fill-opacity:1;stroke:#000000;stroke-width:1.96313334;stroke-linecap:round;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1" />
