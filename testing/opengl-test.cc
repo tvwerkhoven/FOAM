@@ -241,10 +241,15 @@ protected:
 	
   // member widgets:
   Gtk::VBox m_vbox;
-	Gtk::ScrolledWindow scroll;
-  Simplem_glscene m_glscene;
 	Gtk::HBox m_hbox;
-  Gtk::Button m_zoomin;
+
+	Gtk::ScrolledWindow scroll;
+//	Gtk::Viewport vp;
+//	Gtk::Adjustment h_adj;
+//	Gtk::Adjustment v_adj;
+  Simplem_glscene m_glscene;
+  
+	Gtk::Button m_zoomin;
   Gtk::Button m_zoomout;
 	Gtk::Button m_rotleft;
 	Gtk::Button m_rotright;
@@ -261,6 +266,7 @@ public:
 
 Simple::Simple(): 
 m_vbox(false, 0), m_hbox(false, 0), 
+scroll(),
 m_zoomin("Zoom in"), m_zoomout("Zoom out"), m_rotleft("Rotate left"), m_rotright("Rotate right"), m_quit("Quit") {
   set_title("Simple");
 	
@@ -269,11 +275,12 @@ m_zoomin("Zoom in"), m_zoomout("Zoom out"), m_rotleft("Rotate left"), m_rotright
 	
   add(m_vbox);
 	
-	scroll.set_policy(POLICY_AUTOMATIC, POLICY_AUTOMATIC);
+	scroll.set_policy(POLICY_ALWAYS, POLICY_ALWAYS);
 	scroll.set_size_request(256, 256);
 	scroll.set_double_buffered(false);
-  m_glscene.set_size_request(320, 240);
+  m_glscene.set_size_request(1000, 1000);
 	scroll.add(m_glscene);
+	//vp.add();
 	
   m_vbox.pack_start(scroll);
 	
@@ -293,11 +300,11 @@ m_zoomin("Zoom in"), m_zoomout("Zoom out"), m_rotleft("Rotate left"), m_rotright
 	
 	dispatcher.connect(sigc::mem_fun(&m_glscene, &Simplem_glscene::update_image));
 	
-	m_update = Glib::signal_timeout().connect(sigc::mem_fun(*this, &Simple::on_update), 1000 );
-	m_update2 = Glib::signal_timeout().connect(sigc::mem_fun(*this, &Simple::autorot), 100 );
-
-	
+	//m_update = Glib::signal_timeout().connect(sigc::mem_fun(*this, &Simple::on_update), 1000 );
   show_all();
+	
+	on_update();
+	m_update2 = Glib::signal_timeout().connect(sigc::mem_fun(*this, &Simple::autorot), 100 );
 }
 
 Simple::~Simple() {}
