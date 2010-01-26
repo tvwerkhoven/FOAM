@@ -16,7 +16,7 @@ AM_CXXFLAGS = -pipe -Wall -Wextra \
 		-O3 -ftree-vectorize \
 		-g
 
-AM_LDFLAGS = $(COMMON_LIBS)
+AM_LDFLAGS = $(COMMON_LIBS) $(GUI_LIBS)
 
 # foamtestdir = $(bindir)/foam-test
 noinst_PROGRAMS = 
@@ -28,7 +28,7 @@ noinst_PROGRAMS +=
 endif HWDEBUG
 
 if DEBUG
-noinst_PROGRAMS += imgio-test imgio-convert-test io-test protocol-test
+noinst_PROGRAMS += imgio-test imgio-convert-test io-test protocol-test pixbuf-test opengl-test
 
 io_test_SOURCES = io-test.cc
 io_test_LDADD = $(LIBSIU_DIR)/libio.a
@@ -44,5 +44,13 @@ imgio_convert_test_LDADD = $(LIBSIU_DIR)/libio.a
 protocol_test_SOURCES = protocol-test.cc
 protocol_test_LDADD = $(LIBSIU_DIR)/libprotocol.a \
 		$(LIBSIU_DIR)/libsocket.a
+
+pixbuf_test_SOURCES = pixbuf-test.cc
+pixbuf_test_CPPFLAGS = $(GUI_CFLAGS) $(AM_CPPFLAGS)
+pixbuf_test_LDADD = -lgthread-2.0
+
+opengl_test_SOURCES = opengl-test.cc
+opengl_test_CPPFLAGS = $(GUI_CFLAGS) $(AM_CPPFLAGS)
+opengl_test_LDADD = -lgthread-2.0
 
 endif DEBUG
