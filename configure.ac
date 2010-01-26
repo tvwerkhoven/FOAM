@@ -178,18 +178,28 @@ AM_CONDITIONAL([GUI], [test "$gui" = true])
 ######################
 if test "$opengl" = true ; then
 	AC_MSG_NOTICE([*** OpenGL enabled, checking for extra libs.])
-	AX_CHECK_GL
-	AX_CHECK_GLU
-	AX_CHECK_GLUT
 	
-	OPENGL_CFLAGS+="$GL_CFLAGS $GLU_CFLAGS $GLUT_CFLAGS"
-	OPENGL_LIBS+="$GL_LIBS $GLU_LIBS $GLUT_LIBS"
+	AX_CHECK_GL
+	if test "$no_gl" = yes; then opengl+=" gl"; fi
+	
+	AX_CHECK_GLU
+	if test "$no_glu" = yes; then opengl+=" glu"; fi
+	
+	AX_CHECK_GLUT
+	if test "$no_glut" = yes; then opengl+=" glut"; fi
+
 	if test "$no_gl" = yes || test  "$no_glu" = yes || test "$no_glut" = yes ; then
-		opengl=false
-		AC_MSG_WARN([*** OpenGL not found!])
+		opengl=false;
+		AC_MSG_WARN([OpenGL not found.]);
 	fi
+	
+	PKG_CHECK_MODULES(GLEXTMM, gtkglextmm-1.2, [],
+		[AC_MSG_WARN([OpenGL needs gtkglextmm-1.2.]);opengl=false;openglmissing+=" gtkglextmm-1.2"])
+
+	OPENGL_CFLAGS+="$GL_CFLAGS $GLU_CFLAGS $GLUT_CFLAGS $GLEXTMM_CFLAGS"
+	OPENGL_LIBS+="$GL_LIBS $GLU_LIBS $GLUT_LIBS $GLEXTMM_LIBS"
 else 
-	AC_MSG_NOTICE([*** OpenGL disabled.])
+	AC_MSG_NOTICE([OpenGL disabled.])
 fi
 
 AC_SUBST(OPENGL_LIBS)
@@ -227,6 +237,15 @@ elif test "$gui" = disabled; then
 else
 	AC_MSG_NOTICE([FOAM control GUI:        not available])
 	AC_MSG_NOTICE([FOAM control GUI:        missing:$guimissing])
+fi
+
+if test "$opengl" = true ; then
+	AC_MSG_NOTICE([OpenGL renderer:         available])
+elif test "$opengl" = disabled; then
+	AC_MSG_NOTICE([OpenGL renderer:         disabled])
+else
+	AC_MSG_NOTICE([OpenGL renderer:         not available])
+	AC_MSG_NOTICE([OpenGL renderer:         missing:$openglmissing])
 fi
 
 if test "$debug" = true ; then

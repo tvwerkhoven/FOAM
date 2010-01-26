@@ -28,7 +28,7 @@ noinst_PROGRAMS +=
 endif HWDEBUG
 
 if DEBUG
-noinst_PROGRAMS += imgio-test imgio-convert-test io-test protocol-test pixbuf-test opengl-test
+noinst_PROGRAMS += imgio-test imgio-convert-test io-test protocol-test pixbuf-test 
 
 io_test_SOURCES = io-test.cc
 io_test_LDADD = $(LIBSIU_DIR)/libio.a
@@ -49,8 +49,14 @@ pixbuf_test_SOURCES = pixbuf-test.cc
 pixbuf_test_CPPFLAGS = $(GUI_CFLAGS) $(AM_CPPFLAGS)
 pixbuf_test_LDADD = -lgthread-2.0
 
-opengl_test_SOURCES = opengl-test.cc
-opengl_test_CPPFLAGS = $(GUI_CFLAGS) $(AM_CPPFLAGS)
-opengl_test_LDADD = -lgthread-2.0
+if OPENGL
 
+noinst_PROGRAMS += opengl-test
+
+opengl_test_SOURCES = opengl-test.cc
+opengl_test_CPPFLAGS = $(GUI_CFLAGS) $(OPENGL_CFLAGS) $(AM_CPPFLAGS)
+opengl_test_CFLAGS = $(GUI_CFLAGS) $(OPENGL_CFLAGS) 
+opengl_test_LDADD = $(OPENGL_LIBS) -lgthread-2.0
+
+endif OPENGL
 endif DEBUG
