@@ -116,7 +116,7 @@ void Simplem_glscene::draw() {
 void Simplem_glscene::update_image() {
 //	GLint histogram[256];
 //	int i;
-	fprintf(stderr, "Updating texture...\n");
+//	fprintf(stderr, "Updating texture...\n");
 	
   Glib::RefPtr<Gdk::GL::Window> glwindow = get_gl_window();
 	
@@ -128,7 +128,7 @@ void Simplem_glscene::update_image() {
 	// Bind texture object to TexObj[0]
 	glBindTexture( GL_TEXTURE_2D, TexObj[0] );
 	// Load image as texture
-	glTexImage2D( GL_TEXTURE_2D, 0, GL_LUMINANCE, 640, 480, 0, GL_LUMINANCE, GL_UNSIGNED_BYTE, image);
+	glTexImage2D( GL_TEXTURE_2D, 0, GL_LUMINANCE, 16, 16, 0, GL_LUMINANCE, GL_UNSIGNED_BYTE, image);
 //	glGetHistogram(GL_HISTOGRAM, GL_TRUE, GL_LUMINANCE, GL_UNSIGNED_INT, histogram);
 //	for(i = 0; i < 32; i++)
 //		cout << histogram[i] << " ";
@@ -168,10 +168,10 @@ void Simplem_glscene::on_realize() {
 //	glPixelTransferf(GL_BLUE_SCALE, 128);
 //	glPixelTransferf(GL_ALPHA_SCALE, 512);
 	
-	glTexImage2D( GL_TEXTURE_2D, 0, GL_LUMINANCE, 640, 480, 0, GL_LUMINANCE, GL_UNSIGNED_BYTE, image);
+	glTexImage2D( GL_TEXTURE_2D, 0, GL_LUMINANCE, 16, 16, 0, GL_LUMINANCE, GL_UNSIGNED_BYTE, image);
 //	fprintf(stderr, "result = %d\n", glIsTexture(TexObj[0]));
-	glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR );
-	glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
+	  glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST );
+	  glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST );
 //	glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP );
 //	glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP );
 	
@@ -238,15 +238,22 @@ protected:
 	void on_zoomout();
 	void on_rotleft();
 	void on_rotright();
+	void on_hadj_changed();
+	void on_hadj_valchanged();
+	void on_vadj_changed();
+	void on_vadj_valchanged();
 	
   // member widgets:
   Gtk::VBox m_vbox;
 	Gtk::HBox m_hbox;
 
-	Gtk::ScrolledWindow scroll;
+	Gtk::Table table;
+	Gtk::Adjustment hadj;
+	Gtk::Adjustment vadj;
+	Gtk::HScrollbar hscroll;
+	Gtk::VScrollbar vscroll;
+	
 //	Gtk::Viewport vp;
-//	Gtk::Adjustment h_adj;
-//	Gtk::Adjustment v_adj;
   Simplem_glscene m_glscene;
   
 	Gtk::Button m_zoomin;
@@ -265,8 +272,10 @@ public:
 };
 
 Simple::Simple(): 
-m_vbox(false, 0), m_hbox(false, 0), 
-scroll(),
+m_vbox(false, 0), m_hbox(false, 0),
+hadj(0, 0, 256, 10, 64, 128), vadj(0, 0, 256, 10, 64, 128), 
+hscroll(hadj), vscroll(vadj),
+table(2, 2, false), 
 m_zoomin("Zoom in"), m_zoomout("Zoom out"), m_rotleft("Rotate left"), m_rotright("Rotate right"), m_quit("Quit") {
   set_title("Simple");
 	
@@ -275,14 +284,17 @@ m_zoomin("Zoom in"), m_zoomout("Zoom out"), m_rotleft("Rotate left"), m_rotright
 	
   add(m_vbox);
 	
-	scroll.set_policy(POLICY_ALWAYS, POLICY_ALWAYS);
-	scroll.set_size_request(256, 256);
-	scroll.set_double_buffered(false);
-  m_glscene.set_size_request(1000, 1000);
-	scroll.add(m_glscene);
-	//vp.add();
+  m_glscene.set_size_request(256, 256);
 	
-  m_vbox.pack_start(scroll);
+	table.attach(m_glscene, 0, 1, 0, 1, FILL | EXPAND, FILL | EXPAND, 0, 0);
+	table.attach(hscroll, 0, 1, 1, 2, FILL | EXPAND, FILL, 0, 0);
+	table.attach(vscroll, 1, 2, 0, 1, FILL, FILL | EXPAND, 0, 0);
+	m_vbox.pack_start(table);
+	
+	hadj.signal_changed().connect(sigc::mem_fun(*this, &Simple::on_hadj_changed));
+	hadj.signal_value_changed().connect(sigc::mem_fun(*this, &Simple::on_hadj_valchanged));
+	vadj.signal_changed().connect(sigc::mem_fun(*this, &Simple::on_vadj_changed));
+	vadj.signal_value_changed().connect(sigc::mem_fun(*this, &Simple::on_vadj_valchanged));
 	
 	m_zoomin.signal_clicked().connect(sigc::mem_fun(*this, &Simple::on_zoomin));
 	m_zoomout.signal_clicked().connect(sigc::mem_fun(*this, &Simple::on_zoomout));
@@ -313,6 +325,19 @@ void Simple::on_button_quit_clicked() {
   Gtk::Main::quit();
 }
 
+void Simple::on_hadj_changed() {
+	std::cout << "on_hadj_changed()\n";
+}
+void Simple::on_hadj_valchanged() {
+	std::cout << "on_hadj_valchanged()\n" << hadj.get_value();	
+}
+void Simple::on_vadj_changed() {
+	std::cout << "on_vadj_changed()\n";
+}
+void Simple::on_vadj_valchanged() {
+	std::cout << "on_vadj_valchanged()\n" << vadj.get_value();	
+}
+
 void Simple::on_zoomin() {
 	std::cout << "on_zoomin()\n";
 	m_glscene.zoom *= 1.1;
@@ -327,6 +352,10 @@ void Simple::on_zoomout() {
 
 void Simple::on_rotleft() {
 	std::cout << "on_rotleft()\n";
+
+//	printf("H=%g: %g -- %g (%g, %g)\n", h_adj->get_value(), h_adj->get_lower(), h_adj->get_upper(), h_adj->get_step_increment(), h_adj->get_page_increment());
+//	printf("V=%g: %g -- %g (%g, %g)\n", v_adj->get_value(), v_adj->get_lower(), v_adj->get_upper(), v_adj->get_step_increment(), v_adj->get_page_increment());
+	
 	m_glscene.angle -= 10;
 	if (m_glscene.angle <= 360) m_glscene.angle += 360;
 	dispatcher();
@@ -342,7 +371,7 @@ void Simple::on_rotright() {
 bool Simple::autorot() {
 	m_glscene.angle += 10;
 	if (m_glscene.angle >= 360) m_glscene.angle -= 360;	
-	dispatcher();
+	m_glscene.queue_draw();
 	return true;
 }
 
@@ -351,7 +380,7 @@ bool Simple::on_update() {
 	long i;
 	
 	for (i=0; i<640*480; i++) {
-		m_glscene.image[i] = (GLubyte) (i * 255.0 / (640.*480.));
+		m_glscene.image[i] = (GLubyte) (i * 255.0 / (16.*16.));
 //		if (i % ((640*480)/10) == 0) printf("%ld:%d", i, image[i]);
 	}
 	printf("\n");
