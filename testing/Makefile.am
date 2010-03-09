@@ -56,7 +56,7 @@ noinst_PROGRAMS += opengl-test
 opengl_test_SOURCES = opengl-test.cc
 opengl_test_CPPFLAGS = $(GUI_CFLAGS) $(OPENGL_CFLAGS) $(AM_CPPFLAGS)
 opengl_test_CFLAGS = $(GUI_CFLAGS) $(OPENGL_CFLAGS) 
-opengl_test_LDADD = $(OPENGL_LIBS) -lgthread-2.0
+opengl_test_LDADD = $(OPENGL_LIBS) $(LIBSIU_DIR)/libglviewer.a -lgthread-2.0
 
 endif OPENGL
 endif DEBUG
