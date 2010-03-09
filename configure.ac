@@ -1,12 +1,12 @@
 ## @file configure.ac
 ## @author Tim van Werkhoven (t.i.m.vanwerkhoven@xs4all.nl)
-## Copyright 2007-2009 Tim van Werkhoven (t.i.m.vanwerkhoven@xs4all.nl)
+## Copyright 2007-2010 Tim van Werkhoven (t.i.m.vanwerkhoven@xs4all.nl)
 
 AC_INIT([FOAM], [0.1], [t.i.m.vanwerkhoven@xs4all.nl])
 AC_CONFIG_AUX_DIR([build-aux])
 AM_INIT_AUTOMAKE([FOAM], [0.1], [t.i.m.vanwerkhoven@xs4all.nl])
 AC_PREREQ(2.59)
-AC_COPYRIGHT([Copyright (C) 2007-2009 Tim van Werkhoven <t.i.m.vanwerkhoven@xs4all.nl>])
+AC_COPYRIGHT([Copyright (C) 2007-2010 Tim van Werkhoven <t.i.m.vanwerkhoven@xs4all.nl>])
 AC_REVISION(`git describe`)
 
 AC_CONFIG_SRCDIR(foam/foam.cc)
@@ -93,6 +93,7 @@ AC_ARG_ENABLE([hwdebug],
 ### BUILD OPTIONS ###
 #####################
 
+opengl=disabled
 AC_ARG_WITH([opengl],
 		AC_HELP_STRING([--with-opengl], [use OpenGL instead of SDL]),
 		[test "$withval" = yes && opengl=true])
@@ -180,13 +181,13 @@ if test "$opengl" = true ; then
 	AC_MSG_NOTICE([*** OpenGL enabled, checking for extra libs.])
 	
 	AX_CHECK_GL
-	if test "$no_gl" = yes; then opengl+=" gl"; fi
+	if test "$no_gl" = yes; then openglmissing+=" gl"; fi
 	
 	AX_CHECK_GLU
-	if test "$no_glu" = yes; then opengl+=" glu"; fi
+	if test "$no_glu" = yes; then openglmissing+=" glu"; fi
 	
 	AX_CHECK_GLUT
-	if test "$no_glut" = yes; then opengl+=" glut"; fi
+	if test "$no_glut" = yes; then openglmissing+=" glut"; fi
 
 	if test "$no_gl" = yes || test  "$no_glu" = yes || test "$no_glut" = yes ; then
 		opengl=false;
