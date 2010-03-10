@@ -29,20 +29,8 @@
 
 using namespace Gtk;
 
-FoamControl::FoamControl(MainWindow *mainwindow, ControlPage *controlpage): 
-mainwindow(mainwindow), controlpage(controlpage) {
+FoamControl::FoamControl() {
 	printf("%x:FoamControl::FoamControl()\n", (int) pthread_self());
-	init();
-}
-
-FoamControl::~FoamControl() {
-	if (protocol) 
-		delete protocol;
-}
-
-void FoamControl::init() {
-	printf("%x:FoamControl::init()\n", (int) pthread_self());
-	protocol = new Protocol::Client();
 	
 	ok = false;
 	errormsg = "Not connected";
@@ -52,70 +40,49 @@ void FoamControl::init() {
 	state.numwfc = -1;
 	state.numwfs = -1;
 	state.numframes = 0;
-	
-	// register callbacks
-	signal_conn_update.connect(sigc::mem_fun(*this, &FoamControl::on_connect_update));
-	signal_msg_update.connect(sigc::mem_fun(*this, &FoamControl::on_message_update));
 }
 
 int FoamControl::connect(const string &host, const string &port) {
 	printf("%x:FoamControl::connect(%s, %s)\n", (int) pthread_self(), host.c_str(), port.c_str());
 	
-	if (protocol->is_connected()) 
+	if (protocol.is_connected()) 
 		return -1;
 	
 	// connect a control connection
-	protocol->slot_message = sigc::mem_fun(this, &FoamControl::on_message);
-	protocol->slot_connected = sigc::mem_fun(this, &FoamControl::on_connected);
-	protocol->connect(host, port, "");
+	protocol.slot_message = sigc::mem_fun(this, &FoamControl::on_message);
+	protocol.slot_connected = sigc::mem_fun(this, &FoamControl::on_connected);
+	protocol.connect(host, port, "SYSTEM");
 	
 	return 0;
 }
 
 void FoamControl::set_mode(aomode_t mode) {
-	if (!protocol->is_connected()) return;
+	if (!protocol.is_connected()) return;
 	
 	printf("%x:FoamControl::set_mode(%s)\n", (int) pthread_self(), mode2str(mode).c_str());
 	
 	switch (mode) {
 		case AO_MODE_LISTEN:
-			protocol->write("MODE LISTEN");
+			protocol.write("MODE LISTEN");
 			break;
 		case AO_MODE_OPEN:
-			protocol->write("MODE OPEN");
+			protocol.write("MODE OPEN");
 			break;
 		case AO_MODE_CLOSED:
-			protocol->write("MODE CLOSED");
+			protocol.write("MODE CLOSED");
 			break;
 		default:
 			break;
 	}
 }
 
-void FoamControl::calibrate(std::string calmode) {
-	printf("%x:FoamControl::calibrate(%s)\n", (int) pthread_self(), calmode.c_str());
-	protocol->write(format("CALIB %s", calmode.c_str()));
-}
-
 int FoamControl::disconnect() {
 	printf("%x:FoamControl::disconnect()\n", (int) pthread_self());
-	if (protocol->is_connected())
-		protocol->disconnect();
+	if (protocol.is_connected())
+		protocol.disconnect();
 	
-	signal_conn_update();
+	signal_connect();
 	return 0;
-}
-
-void FoamControl::on_connect_update() {
-	printf("%x:FoamControl::on_connect_update()\n", (int) pthread_self());
-	mainwindow->on_ctrl_connect_update();
-	controlpage->on_connect_update();
-}
-
-void FoamControl::on_message_update() {
-	printf("%x:FoamControl::on_message_update()\n", (int) pthread_self());
-	mainwindow->on_ctrl_message_update();
-	controlpage->on_message_update();
 }
 
 void FoamControl::on_connected(bool conn) {
@@ -124,19 +91,21 @@ void FoamControl::on_connected(bool conn) {
 	if (!conn) {
 		ok = false;
 		errormsg = "Not connected";
-		protocol->disconnect();
-		signal_conn_update();
+		protocol.disconnect();
+		signal_connect();
 		return;
 	}
 	
 	ok = true;
 	
-	protocol->write("GET NUMWFS");
-	protocol->write("GET NUMWFC");
-	protocol->write("GET MODE");
-	protocol->write("GET CALIB");
+	// Get basic system information
+	protocol.write("GET INFO");
+//	protocol.write("GET NUMWFS");
+//	protocol.write("GET NUMWFC");
+//	protocol.write("GET MODE");
+//	protocol.write("GET CALIB");
 
-	signal_conn_update();
+	signal_connect();
 	return;
 }
 
@@ -146,7 +115,7 @@ void FoamControl::on_message(string line) {
 	if (popword(line) != "OK") {
 		ok = false;
 		errormsg = line;
-		signal_msg_update();
+		signal_message();
 		return;
 	}
 	
@@ -183,6 +152,6 @@ void FoamControl::on_message(string line) {
 		errormsg = "Unexpected response '" + what + "'";
 	}
 	
-	signal_msg_update();
+	signal_message();
 }
 

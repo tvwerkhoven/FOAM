@@ -36,13 +36,11 @@
 using namespace std;
 
 class FoamControl {
-	Protocol::Client *protocol;
-	class MainWindow *mainwindow;
-	class ControlPage *controlpage;
+	Protocol::Client protocol;
 	
 	pthread::mutex mutex;
 	
-	// State of the AO system goes here
+	// Basic state of the AO system goes here
 	struct state_t {
 		aomode_t mode;
 		int numwfs;
@@ -58,25 +56,21 @@ class FoamControl {
 	void on_message(string line);
 	void on_connected(bool conn);
 	
-	void on_connect_update();
-	void on_message_update();
-	
 public:
 	class exception: public runtime_error {
 	public:
 		exception(const string reason): runtime_error(reason) {}
 	};
 	
-	FoamControl(MainWindow *mainwindow, ControlPage *controlpage);
-	~FoamControl();
+	FoamControl();
+	~FoamControl() { };
 	
-	void init();
 	int connect(const string &host, const string &port);
 	int disconnect();
 	
 	// get-like commands
-	string getpeername() { return protocol->getpeername(); }
-	string getsockname() { return protocol->getsockname(); }
+	string getpeername() { return protocol.getpeername(); }
+	string getsockname() { return protocol.getsockname(); }
 	int get_numwfs() { return state.numwfs; }
 	int get_numwfc() { return state.numwfc; }
 	int get_numframes() { return state.numframes; }
@@ -86,15 +80,16 @@ public:
 	
 	// set-like commands
 	void set_mode(aomode_t mode);
-	void shutdown() { protocol->write("SHUTDOWN"); }
-	void calibrate(string);
+	void shutdown() { protocol.write("SHUTDOWN"); }
+	void calibrate(string calmode) { protocol.write(format("CALIB %s", calmode.c_str())); }
+
 	
 	bool is_ok() { return ok; }
-	bool is_connected() { return protocol->is_connected(); }
+	bool is_connected() { return protocol.is_connected(); }
 	string get_errormsg() { return errormsg; }
 	
-	Glib::Dispatcher signal_conn_update;
-	Glib::Dispatcher signal_msg_update;
+	Glib::Dispatcher signal_connect;
+	Glib::Dispatcher signal_message;
 };
 
 
