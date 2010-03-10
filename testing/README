@@ -1,5 +1,0 @@
-# Tim van Werkhoven, April 18, 2008
-
-This directory contains some stand-alone tests of FOAM libraries. Ideally,
-every library should have one, but until now only the trickier ones are
-included.
