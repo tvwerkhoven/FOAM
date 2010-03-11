@@ -36,53 +36,16 @@
 
 #include <getopt.h>
 
+#include "foam.h"
 #include "autoconfig.h"
 #include "config.h"
-#include "foam.h"
 #include "types.h"
 #include "io.h"
 #include "protocol.h"
 #include "foamcfg.h"
 #include "foamctrl.h"
 
-
-// GLOBAL VARIABLES //
-/********************/	
-
 using namespace std;
-
-// Global AO and FOAM configuration 
-foamctrl *ptc;
-foamcfg *cs_config;
-
-// Inter-thread communication
-pthread_mutex_t mode_mutex;
-pthread_cond_t mode_cond;
-static pthread_attr_t attr;
-
-// Server network functions
-static Protocol::Server *protocol = 0;
-// Message output and logging 
-Io *io;
-
-// PROTOTYPES //
-/**************/	
-
-// These come from prime modules, these MUST be defined there
-extern void modStopModule(foamctrl *ptc);
-extern int modInitModule(foamctrl *ptc, foamcfg *cs_config);
-extern int modPostInitModule(foamctrl *ptc, foamcfg *cs_config);
-
-extern int modOpenInit(foamctrl *ptc);
-extern int modOpenLoop(foamctrl *ptc);
-extern int modOpenFinish(foamctrl *ptc);
-
-extern int modClosedInit(foamctrl *ptc);
-extern int modClosedLoop(foamctrl *ptc);
-extern int modClosedFinish(foamctrl *ptc);
-
-extern int modCalibrate(foamctrl *ptc);
-extern int modMessage(foamctrl *ptc, Connection *connection, string cmd, string rest);
 
 static void show_version() {
 	printf("FOAM (%s version %s, built %s %s)\n", PACKAGE_NAME, PACKAGE_VERSION, __DATE__, __TIME__);
@@ -106,28 +69,21 @@ static void show_help(char *argv0, bool error = false) {
 		printf("Report bugs to Tim van Werkhoven <T.I.M.vanWerkhoven@xs4all.nl>.\n");
 	}
 }
-	/*! 
-	@brief Initialisation function.
-	
-	\c main() initializes necessary variables, threads, etc. and
-	then runs the AO in open-loop mode, from where the user can decide
-	what to do.\n
-	\n
-	The order in which the program is initialized is as follows:
-	\li Setup thread mutexes
-	\li Setup signal handlers for SIGINT and SIGPIPE
-	\li Run modInitModule() such that the prime modules can initialize
-	\li Start a thread which runs startThread()
-	\li Run modPostInitModule() such that the prime modules can initialize after threading (useful for SDL)
-	\li Let the other thread start sockListen()
-	
-	@return \c EXIT_FAILURE on failure, \c EXIT_SUCESS on successful completion.
-	*/
+
 int main(int argc, char *argv[]) {
-	// INIT VARS // 
-	/*************/
-	io = new Io(4);
-  
+	// Init FOAM class
+	FOAM foam(argc, argv);
+	
+	// Parse configuration
+	foam.
+
+}
+
+FOAM::FOAM(int argc, char *argv[]) :
+io(4)
+{
+	
+	// Setup thread
 	if (pthread_mutex_init(&mode_mutex, NULL) != 0)
 		io->msg(IO_ERR, "pthread_mutex_init failed.");
 	if (pthread_cond_init (&mode_cond, NULL) != 0)
@@ -135,12 +91,11 @@ int main(int argc, char *argv[]) {
 	
 	// we use this to block signals in threads
 	// see http://www.opengroup.org/onlinepubs/009695399/functions/sigprocmask.html
-	static sigset_t signal_mask;
 	
 	// PARSE CONFIGURATION // 
 	/***********************/
 	int r, option_index = 0;
-	string conffile = FOAM_DEFAULTCONF;
+	conffile = FOAM_DEFAULTCONF;
 	
 	static struct option const long_options[] = {
 		{"config", required_argument, NULL, 'c'},
