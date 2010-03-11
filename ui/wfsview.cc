@@ -1,5 +1,5 @@
 /*
- logview.h -- FOAM GUI log viewing pane
+ wfsview.cc -- FOAM GUI wavefront sensor pane
  Copyright (C) 2009--2010 Tim van Werkhoven <t.i.m.vanwerkhoven@xs4all.nl>
  
  This file is part of FOAM.
@@ -17,27 +17,40 @@
  You should have received a copy of the GNU General Public License
  along with FOAM.  If not, see <http://www.gnu.org/licenses/>.
  */
+/*!
+ @file wfsview.cc
+ @author Tim van Werkhoven (t.i.m.vanwerkhoven@xs4all.nl)
+ 
+ @brief This is the FOAM GUI wavefront sensor pane
+ */
 
-#ifndef HAVE_LOGVIEW_H
-#define HAVE_LOGVIEW_H
+#include "wfsview.h"
+#include "widgets.h"
 
-#include <gtkmm.h>
-#include "log.h"
+using namespace std;
+using namespace Gtk;
 
-class LogPage: public Gtk::VBox {
-	Gtk::ScrolledWindow scroll;
-	Gtk::TextView view;
-	Log &log;
+WfsPage::WfsPage(Log &log):
+log(log),
+numwfs("# WFS:")
+{
+	log.add(Log::DEBUG, "WfsPage init.");
+	
+	// The top HBox has some status info:
+	numwfs.set_editable(false);
+	numwfs.set_text("-");
+	
+	status.set_spacing(4);
+	status.pack_start(numwfs, PACK_SHRINK);
+	
+	// Add the status HBox
+	set_spacing(4);
+	pack_start(status, PACK_SHRINK);
+	
+	show_all_children();
+}
 
-	Gtk::HSeparator hsep;
-	Gtk::CheckButton debug;
-
-	void on_view_size_allocate(Gtk::Allocation &);
-	void on_buffer_changed();
-	void on_debug_toggled();
-
-	public:
-	LogPage(Log &log);
-};
-
-#endif // HAVE_LOGVIEW_H
+WfsInfo::WfsInfo(Log &log):
+log(log) {
+	log.add(Log::DEBUG, "WfsInfo init.");
+}

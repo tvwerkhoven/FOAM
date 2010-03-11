@@ -1,3 +1,24 @@
+/*
+ about.cc -- FOAM GUI about window
+ Copyright (C) 2010 Tim van Werkhoven <t.i.m.vanwerkhoven@xs4all.nl>
+ Copyright (C) 2009 Guus Sliepen <guus@sliepen.eu.org>
+ 
+ This file is part of FOAM.
+ 
+ FOAM is free software: you can redistribute it and/or modify
+ it under the terms of the GNU General Public License as published by
+ the Free Software Foundation, either version 2 of the License, or
+ (at your option) any later version.
+ 
+ FOAM is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ GNU General Public License for more details.
+ 
+ You should have received a copy of the GNU General Public License
+ along with FOAM.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 #include <about.h>
 #include "autoconfig.h"
 
@@ -231,10 +252,10 @@ void AboutFOAMGui::on_response(int id) {
 AboutFOAMGui::AboutFOAMGui() {
 
 	authors.push_back("Tim van Werkhoven <T.I.M.vanWerkhoven@xs4all.nl>");
-	authors.push_back("Guus Sliepen <G.Sliepen@astro.uu.nl>");
+	authors.push_back("Guus Sliepen <guus@sliepen.eu.org>");
 
 	set_name("FOAM GUI");
-	set_copyright("Copyright (c) 2009 Tim van Werkhoven");
+	set_copyright("Copyright (c) 2009--2010 Tim van Werkhoven");
 	set_comments("FOAM Control interface");
 	set_version(PACKAGE_VERSION);
 	set_website("http://www.phys.uu.nl/~werkhvn/research/foam.html");

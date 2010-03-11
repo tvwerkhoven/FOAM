@@ -1,11 +1,12 @@
 /*
- Copyright (C) 2008-2009 Tim van Werkhoven (t.i.m.vanwerkhoven@xs4all.nl)
+ foam.cc -- main FOAM framework file, glues everything together
+ Copyright (C) 2008--2010 Tim van Werkhoven <t.i.m.vanwerkhoven@xs4all.nl>
  
  This file is part of FOAM.
  
  FOAM is free software: you can redistribute it and/or modify
  it under the terms of the GNU General Public License as published by
- the Free Software Foundation, either version 3 of the License, or
+ the Free Software Foundation, either version 2 of the License, or
  (at your option) any later version.
  
  FOAM is distributed in the hope that it will be useful,
@@ -15,7 +16,7 @@
  
  You should have received a copy of the GNU General Public License
  along with FOAM.  If not, see <http://www.gnu.org/licenses/>.
-*/
+ */
 /*! 
 	@file foam.cc
 	@author Tim van Werkhoven (t.i.m.vanwerkhoven@xs4all.nl)
@@ -85,8 +86,8 @@ extern int modMessage(foamctrl *ptc, Connection *connection, string cmd, string 
 
 static void show_version() {
 	printf("FOAM (%s version %s, built %s %s)\n", PACKAGE_NAME, PACKAGE_VERSION, __DATE__, __TIME__);
-	printf("Copyright (c) 2007--2009 Tim van Werkhoven (T.I.M.vanWerkhoven@xs4all.nl)\n\n");
-	printf("FOAM comes with ABSOLUTELY NO WARRANTY. This is free software,\n"
+	printf("Copyright (c) 2007--2010 Tim van Werkhoven <T.I.M.vanWerkhoven@xs4all.nl>\n");
+	printf("\nFOAM comes with ABSOLUTELY NO WARRANTY. This is free software,\n"
 				 "and you are welcome to redistribute it under certain conditions;\n"
 				 "see the file COPYING for details.\n");
 }
@@ -102,7 +103,7 @@ static void show_help(char *argv0, bool error = false) {
 					 "  -p, --pidfile=FILE   Write PID to FILE.\n"
 					 "  -h, --help           Display this help message.\n"
 					 "      --version        Display version information.\n\n");
-		printf("Report bugs to Tim van Werkhoven (T.I.M.vanWerkhoven@xs4all.nl).\n");
+		printf("Report bugs to Tim van Werkhoven <T.I.M.vanWerkhoven@xs4all.nl>.\n");
 	}
 }
 	/*! 
@@ -225,7 +226,7 @@ int main(int argc, char *argv[]) {
 
 	io->msg(IO_INFO, "This is FOAM (version %s, built %s %s)", PACKAGE_VERSION, __DATE__, __TIME__);
 	io->msg(IO_INFO, "Starting at %s", date);
-	io->msg(IO_INFO, "Copyright (c) 2007--2009 Tim van Werkhoven (T.I.M.vanWerkhoven@xs4all.nl)");
+	io->msg(IO_INFO, "Copyright (c) 2007--2010 Tim van Werkhoven <T.I.M.vanWerkhoven@xs4all.nl>");
 	
 	// INITIALIZE MODULES //
 	/**********************/
