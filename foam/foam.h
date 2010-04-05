@@ -59,49 +59,84 @@
 #include "protocol.h"
 #include "foamctrl.h"
 
+using namespace std;
+
 typedef Protocol::Server::Connection Connection;
 
 class FOAM {
 private:
-	static sigset_t signal_mask;
+	// Properties set at start
+	bool nodaemon;
+	bool error;
 	string conffile;
+	string execname;
 
+	static sigset_t signal_mask;	
+
+	struct tm *tm_start;
+	struct tm *tm_end;
+		
 protected:
-	// Server network functions
-	Protocol::Server protocol;
-	foamctrl *ptc;
-	foamcfg *cs_config;
-	// Message output and logging 
-	Io io;
-	// Inter-thread communication
+	// Network handling class
+	Protocol::Server *protocol;
+	
+	
+	// Inter-thread communication (networking- & main thread)
 	pthread_mutex_t mode_mutex;
 	pthread_cond_t mode_cond;
 	static pthread_attr_t attr;
 	
-	// was: modMessage();
-	int on_message();
 	int on_connect();
 	
-	int showhelp(string topic, string rest);
+	void show_clihelp(bool);
+	bool show_nethelp(Connection *connection, string topic, string rest);
+	void show_version();
+	void show_welcome();
 	
 public:
 	// was: modInitModule(foamctrl *ptc, foamcfg *cs_config);
-	FOAM::FOAM();
+	FOAM(int argc, char *argv[]);
 	// was: modStopModule(foamctrl *ptc);
-	FOAM::~FOAM();
+	virtual ~FOAM();
 	
+	// AO control & configuration classes
+	foamctrl *ptc;
+	foamcfg *cs_config;	
+	// Message output and logging 
+	Io io;
+		
+	// Was part of main()
+	bool parse_args(int argc, char *argv[]);
+	bool load_config();
+	bool verify();
+	bool set_signals();
+	void daemon();
+	bool listen();
+	
+	// TODO: improve this implementation
+	//void handle_signals(int);
+
+	// was: modInitModule()
+	virtual bool load_modules();
+
+	// was: modMessage();
+	virtual bool on_message(Connection *connection, std::string line);
+
+	bool mode_closed();
 	// was: modClosedInit, Loop, Finish
-	virtual int closedInit();
-	virtual int closedLoop();
-	virtual int closedFinish();
+	virtual bool closed_init();
+	virtual bool closed_loop();
+	virtual bool closed_finish();
 	
+	bool mode_open();
 	// was: modOpenInit, Loop, Finish
-	virtual int openInit();
-	virtual int openLoop();
-	virtual int openFinish();
+	virtual bool open_init();
+	virtual bool open_loop();
+	virtual bool open_finish();
 	
+	bool mode_calib();
 	// was: modCalibrate
-	virtual int calib();
+	virtual bool calib();
 };
 
 #endif // HAVE_FOAM_H
