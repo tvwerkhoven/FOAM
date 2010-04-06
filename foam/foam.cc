@@ -101,6 +101,10 @@ FOAM::~FOAM() {
 	io.msg(IO_INFO, "Stopping FOAM at %s", date);
 	io.msg(IO_INFO, "Ran for %ld seconds, parsed %ld frames (%.1f FPS).", \
 					end-ptc->starttime, ptc->frames, ptc->frames/(float) (end-ptc->starttime));
+
+	delete protocol;
+	delete cs_config;
+	delete ptc;
 }
 
 void FOAM::show_version() {
