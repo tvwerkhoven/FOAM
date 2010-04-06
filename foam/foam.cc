@@ -47,23 +47,6 @@
 
 using namespace std;
 
-void handle_signals(int) {
-	// it could be a good idea to reset signal handler, as noted 
-	// on http://www.cs.cf.ac.uk/Dave/C/node24.html , but it is
-	// currently disabled. This means that after a failed ^C,
-	// this signal goes back to its default action.
-	
-	// signal(SIGINT, catchSIGINT);
-	
-	// TODO: fix this
-	// stop the framework
-	//ptc->mode = AO_MODE_SHUTDOWN;
-	//pthread_cond_signal(&mode_cond); // broadcast change to main thread
-	//io.msg(IO_WARN, "Got SIGINT, shutting down...");
-	
-	fprintf(stderr, "Got SIGINT, shutting down...\n");
-	exit(0);
-}
 
 
 FOAM::FOAM(int argc, char *argv[]):
@@ -78,8 +61,6 @@ io(4)
 		error = true;
 		return;
 	}
-	
-	set_signals();
 	
 }
 
@@ -244,28 +225,6 @@ bool FOAM::load_config() {
 	if (cs_config->error()) return io.msg(IO_ERR, "Coult not parse control configuration");	
 	ptc = new foamctrl(io, conffile);
 	if (ptc->error()) return io.msg(IO_ERR, "Coult not parse AO configuration");
-	
-	return true;
-}
-
-bool FOAM::set_signals() {
-	// we use this to block signals in threads
-	// see http://www.opengroup.org/onlinepubs/009695399/functions/sigprocmask.html
-	struct sigaction act;
-	static sigset_t signal_mask;
-	
-	sigemptyset(&signal_mask);
-	sigaddset(&signal_mask, SIGINT); // 'user' stuff
-	sigaddset(&signal_mask, SIGTERM);
-	sigaddset(&signal_mask, SIGPIPE);
-	
-	sigaddset(&signal_mask, SIGSEGV); // 'bad' stuff, try to do a clean exit
-	sigaddset(&signal_mask, SIGBUS);
-	
-	act.sa_handler = handle_signals;
-	act.sa_flags = 0;               // No special flags
-	act.sa_mask = signal_mask;      // Use this mask
-	sigaction(SIGINT, &act, NULL);
 	
 	return true;
 }

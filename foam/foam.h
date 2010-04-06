@@ -44,7 +44,6 @@
 #include <syslog.h> 				// used for syslogging
 #include <stdarg.h>
 #include <pthread.h> 				// threads
-#include <signal.h> 				// signal handlers
 #include <time.h> 					// needed by libevent/event.h
 #include <fcntl.h>
 #include <gsl/gsl_linalg.h> 		// this is for SVD / matrix datatype
@@ -70,8 +69,6 @@ private:
 	bool error;
 	string conffile;
 	string execname;
-
-	//static sigset_t signal_mask;	
 
 	struct tm *tm_start;
 	struct tm *tm_end;
@@ -110,13 +107,9 @@ public:
 	bool parse_args(int argc, char *argv[]);
 	bool load_config();
 	bool verify();
-	bool set_signals();
 	void daemon();
 	bool listen();
 	
-	// TODO: improve this implementation
-	//void handle_signals(int);
-
 	// was: modInitModule()
 	virtual bool load_modules() = 0;
 
