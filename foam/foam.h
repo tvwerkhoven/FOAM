@@ -63,7 +63,7 @@ using namespace std;
 
 typedef Protocol::Server::Connection Connection;
 
-class FOAM {
+class FOAM : public sigc::trackable {
 private:
 	// Properties set at start
 	bool nodaemon;
@@ -71,7 +71,7 @@ private:
 	string conffile;
 	string execname;
 
-	static sigset_t signal_mask;	
+	//static sigset_t signal_mask;	
 
 	struct tm *tm_start;
 	struct tm *tm_end;
@@ -86,7 +86,7 @@ protected:
 	pthread_cond_t mode_cond;
 	static pthread_attr_t attr;
 	
-	int on_connect();
+	void on_connect(Connection *connection, bool status);
 	
 	void show_clihelp(bool);
 	bool show_nethelp(Connection *connection, string topic, string rest);
@@ -97,7 +97,7 @@ public:
 	// was: modInitModule(foamctrl *ptc, foamcfg *cs_config);
 	FOAM(int argc, char *argv[]);
 	// was: modStopModule(foamctrl *ptc);
-	virtual ~FOAM();
+	virtual ~FOAM() = 0;
 	
 	// AO control & configuration classes
 	foamctrl *ptc;
@@ -106,6 +106,7 @@ public:
 	Io io;
 		
 	// Was part of main()
+	bool init();
 	bool parse_args(int argc, char *argv[]);
 	bool load_config();
 	bool verify();
@@ -117,26 +118,26 @@ public:
 	//void handle_signals(int);
 
 	// was: modInitModule()
-	virtual bool load_modules();
+	virtual bool load_modules() = 0;
 
 	// was: modMessage();
-	virtual bool on_message(Connection *connection, std::string line);
+	void on_message(Connection *connection, std::string line);
 
 	bool mode_closed();
 	// was: modClosedInit, Loop, Finish
-	virtual bool closed_init();
-	virtual bool closed_loop();
-	virtual bool closed_finish();
+	virtual bool closed_init() = 0;
+	virtual bool closed_loop() = 0;
+	virtual bool closed_finish() = 0;
 	
 	bool mode_open();
 	// was: modOpenInit, Loop, Finish
-	virtual bool open_init();
-	virtual bool open_loop();
-	virtual bool open_finish();
+	virtual bool open_init() = 0;
+	virtual bool open_loop() = 0;
+	virtual bool open_finish() = 0;
 	
 	bool mode_calib();
 	// was: modCalibrate
-	virtual bool calib();
+	virtual bool calib() = 0;
 };
 
 #endif // HAVE_FOAM_H

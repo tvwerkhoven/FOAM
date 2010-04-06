@@ -62,6 +62,7 @@ void handle_signals(int) {
 	//io.msg(IO_WARN, "Got SIGINT, shutting down...");
 	
 	fprintf(stderr, "Got SIGINT, shutting down...\n");
+	exit(0);
 }
 
 
@@ -69,7 +70,6 @@ FOAM::FOAM(int argc, char *argv[]):
 nodaemon(false), error(false), conffile(FOAM_DEFAULTCONF), execname(argv[0]),
 io(4)
 {
-	
 	if (!parse_args(argc, argv)) {
 		error = true;
 		return;
@@ -81,6 +81,15 @@ io(4)
 	
 	set_signals();
 	
+}
+
+bool FOAM::init() {
+	if (pthread_mutex_init(&mode_mutex, NULL) != 0)
+		return io.msg(IO_ERR, "pthread_mutex_init failed.");
+	if (pthread_cond_init (&mode_cond, NULL) != 0)
+		return io.msg(IO_ERR, "pthread_cond_init failed.");
+	
+	
 	load_modules();
 	
 	verify();
@@ -88,6 +97,8 @@ io(4)
 	daemon();
 	
 	show_welcome();
+	
+	return true;
 }
 
 FOAM::~FOAM() {
@@ -141,17 +152,17 @@ void FOAM::show_welcome() {
 	char date[64];
 	strftime (date, 64, "%A, %B %d %H:%M:%S, %Y (%Z).", tm_start);	
 	
-	io.msg(IO_NOID|IO_INFO, "      ___           ___           ___           ___     \n\
-					/\\  \\         /\\  \\         /\\  \\         /\\__\\    \n\
-					/::\\  \\       /::\\  \\       /::\\  \\       /::|  |   \n\
-					/:/\\:\\  \\     /:/\\:\\  \\     /:/\\:\\  \\     /:|:|  |   \n\
-					/::\\~\\:\\  \\   /:/  \\:\\  \\   /::\\~\\:\\  \\   /:/|:|__|__ \n\
-					/:/\\:\\ \\:\\__\\ /:/__/ \\:\\__\\ /:/\\:\\ \\:\\__\\ /:/ |::::\\__\\\n\
-					\\/__\\:\\ \\/__/ \\:\\  \\ /:/  / \\/__\\:\\/:/  / \\/__/~~/:/  /\n\
-					\\:\\__\\    \\:\\  /:/  /       \\::/  /        /:/  / \n\
-					\\/__/     \\:\\/:/  /        /:/  /        /:/  /  \n\
-					\\::/  /        /:/  /        /:/  /   \n\
-					\\/__/         \\/__/         \\/__/ \n");
+	io.msg(IO_NOID|IO_INFO,"      ___           ___           ___           ___     \n\
+     /\\  \\         /\\  \\         /\\  \\         /\\__\\    \n\
+    /::\\  \\       /::\\  \\       /::\\  \\       /::|  |   \n\
+   /:/\\:\\  \\     /:/\\:\\  \\     /:/\\:\\  \\     /:|:|  |   \n\
+  /::\\~\\:\\  \\   /:/  \\:\\  \\   /::\\~\\:\\  \\   /:/|:|__|__ \n\
+ /:/\\:\\ \\:\\__\\ /:/__/ \\:\\__\\ /:/\\:\\ \\:\\__\\ /:/ |::::\\__\\\n\
+ \\/__\\:\\ \\/__/ \\:\\  \\ /:/  / \\/__\\:\\/:/  / \\/__/~~/:/  /\n\
+      \\:\\__\\    \\:\\  /:/  /       \\::/  /        /:/  / \n\
+       \\/__/     \\:\\/:/  /        /:/  /        /:/  /  \n\
+                  \\::/  /        /:/  /        /:/  /   \n\
+                   \\/__/         \\/__/         \\/__/ \n");
 	
 	io.msg(IO_INFO, "This is FOAM (version %s, built %s %s)", PACKAGE_VERSION, __DATE__, __TIME__);
 	io.msg(IO_INFO, "Starting at %s", date);
@@ -229,16 +240,19 @@ bool FOAM::load_config() {
 	
 	// Init control and configuration using the config file
 	io.msg(IO_INFO, "Initializing control & AO configuration...");
-  cs_config = new foamcfg(conffile);
+  cs_config = new foamcfg(io, conffile);
 	if (cs_config->error()) return io.msg(IO_ERR, "Coult not parse control configuration");	
-	ptc = new foamctrl(conffile);
+	ptc = new foamctrl(io, conffile);
 	if (ptc->error()) return io.msg(IO_ERR, "Coult not parse AO configuration");
+	
+	return true;
 }
 
 bool FOAM::set_signals() {
 	// we use this to block signals in threads
 	// see http://www.opengroup.org/onlinepubs/009695399/functions/sigprocmask.html
 	struct sigaction act;
+	static sigset_t signal_mask;
 	
 	sigemptyset(&signal_mask);
 	sigaddset(&signal_mask, SIGINT); // 'user' stuff
@@ -267,11 +281,10 @@ bool FOAM::verify() {
 }
 
 void FOAM::daemon() {
-	io.msg(IO_INFO, "Starting daemon at port %s...", \
-	 	cs_config->listenport.c_str());
+	io.msg(IO_INFO, "Starting daemon at port %s...", cs_config->listenport.c_str());
   protocol = new Protocol::Server(cs_config->listenport);
-  protocol->slot_message = sigc::ptr_fun(on_message);
-  protocol->slot_connected = sigc::ptr_fun(on_connect);
+  protocol->slot_message = sigc::mem_fun(this, &FOAM::on_message);
+  protocol->slot_connected = sigc::mem_fun(this, &FOAM::on_connect);
   protocol->listen();
 }
 
@@ -282,15 +295,15 @@ bool FOAM::listen() {
 		switch (ptc->mode) {
 			case AO_MODE_OPEN:
 				io.msg(IO_DEB1, __FILE__ "::listen() AO_MODE_OPEN");
-				modeOpen();
+				mode_open();
 				break;
 			case AO_MODE_CLOSED:
 				io.msg(IO_DEB1, __FILE__ "::listen() AO_MODE_CLOSED");
-				modeClosed();
+				mode_closed();
 				break;
 			case AO_MODE_CAL:
 				io.msg(IO_DEB1, __FILE__ "::listen() AO_MODE_CAL");
-				modeCal();
+				mode_calib();
 				break;
 			case AO_MODE_LISTEN:
 				io.msg(IO_INFO, "Entering listen loop.");
@@ -302,14 +315,15 @@ bool FOAM::listen() {
 				break;
 			case AO_MODE_SHUTDOWN:
 				io.msg(IO_DEB1, __FILE__ "::listen() AO_MODE_SHUTDOWN");
-				return;
+				return true;
 				break;
 			default:
 				io.msg(IO_DEB1, __FILE__ "::listen() UNKNOWN!");
 				break;
 		}
 	}
-	return rc;
+	
+	return false;
 }
 
 bool FOAM::mode_open() {
@@ -318,14 +332,14 @@ bool FOAM::mode_open() {
 	if (ptc->wfs_count == 0) {	// we need wavefront sensors
 		io.msg(IO_WARN, "No WFSs defined, cannot run open loop.");
 		ptc->mode = AO_MODE_LISTEN;
-		return;
+		return false;
 	}
 	
 	// Run the initialisation function of the modules used
 	if (!open_init()) {
 		io.msg(IO_WARN, "FOAM::open_init() failed.");
 		ptc->mode = AO_MODE_LISTEN;
-		return;
+		return false;
 	}
 		
 	protocol->broadcast("OK MODE OPEN");
@@ -334,7 +348,7 @@ bool FOAM::mode_open() {
 		if (!open_loop()) {
 			io.msg(IO_WARN, "FOAM::open_loop() failed");
 			ptc->mode = AO_MODE_LISTEN;
-			return;
+			return false;
 		}
 		ptc->frames++;	// increment the amount of frames parsed
 	}
@@ -342,10 +356,10 @@ bool FOAM::mode_open() {
 	if (!open_finish()) {		// check if we can finish
 		io.msg(IO_WARN, "FOAM::open_finish() failed.");
 		ptc->mode = AO_MODE_LISTEN;
-		return;
+		return false;
 	}
 	
-	return;
+	return true;
 }
 
 bool FOAM::mode_closed() {	
@@ -428,7 +442,7 @@ void FOAM::on_message(Connection *connection, std::string line) {
 		connection->write("OK CMD HELP");
 		string topic = popword(line);
     if (show_nethelp(connection, topic, line))
-			if (modMessage(ptc, connection, "HELP", orig))
+			//if (modMessage(ptc, connection, "HELP", orig))
 				connection->write("ERR CMD HELP :TOPIC UNKNOWN");
   }
   else if (cmd == "EXIT" || cmd == "QUIT" || cmd == "BYE") {
@@ -461,7 +475,7 @@ void FOAM::on_message(Connection *connection, std::string line) {
 		else if (var == "NUMWFS") connection->write(format("OK VAR NUMWFS %d", ptc->wfs_count));
 		else if (var == "NUMWFC") connection->write(format("OK VAR NUMWFC %d", ptc->wfc_count));
 		else if (var == "MODE") connection->write(format("OK VAR MODE %s", mode2str(ptc->mode).c_str()));
-		else if (modMessage(ptc, connection, "GET", orig))
+//		else if (modMessage(ptc, connection, "GET", orig))
 			connection->write("ERR GET :VAR UNKNOWN");
 	}
   else if (cmd == "MODE") {
@@ -486,7 +500,7 @@ void FOAM::on_message(Connection *connection, std::string line) {
 		}
   }
   else {
-    if (modMessage(ptc, connection, cmd, line))
+//    if (modMessage(ptc, connection, cmd, line))
 			connection->write("ERR CMD :UNKNOWN");
   }
 }
@@ -503,7 +517,7 @@ bool FOAM::show_nethelp(Connection *connection, string topic, string rest) {
 ":exit or quit:           disconnect from daemon.\n"
 ":shutdown:               shutdown FOAM.");
 		// pass it along to modMessage() as well
-		modMessage(ptc, connection, "help", rest);
+//		modMessage(ptc, connection, "help", rest);
 	}		
 	else if (topic == "MODE") {
 		connection->write(\
@@ -529,16 +543,6 @@ bool FOAM::show_nethelp(Connection *connection, string topic, string rest) {
 	}
 	return 0;
 }
-
-int main(int argc, char *argv[]) {
-	// Init FOAM class
-	FOAM foam();
-	
-	// Parse configuration
-	foam.parse_args(argc, argv);
-	
-}
-
 
 // DOXYGEN GENERAL DOCUMENTATION //
 /*********************************/

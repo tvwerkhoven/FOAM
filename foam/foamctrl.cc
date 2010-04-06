@@ -25,10 +25,8 @@
 #include "config.h"
 #include "io.h"
 
-extern Io *io;
-
 foamctrl::~foamctrl(void) {
-	io->msg(IO_DEB2, "foamctrl::~foamctrl(void)");
+	io.msg(IO_DEB2, "foamctrl::~foamctrl(void)");
 
 	for (int i=0; i<wfs_count; i++) delete wfs[i];
 	for (int i=0; i<wfc_count; i++) delete wfc[i];
@@ -41,16 +39,20 @@ foamctrl::~foamctrl(void) {
 	delete cfgfile;
 }
 
-foamctrl::foamctrl(void) { 
-	io->msg(IO_DEB2, "foamctrl::foamctrl(void)");
+foamctrl::foamctrl(Io &io): 
+io(io) 
+{ 
+	io.msg(IO_DEB2, "foamctrl::foamctrl(void)");
 	starttime = time(NULL); 
 	frames = 0; 
 	wfs_count = wfc_count = fw_count = 0;
 	err = 0;
 }
 
-foamctrl::foamctrl(string &file) {
-	io->msg(IO_DEB2, "foamctrl::foamctrl()");
+foamctrl::foamctrl(Io &io, string &file): 
+io(io) 
+{
+	io.msg(IO_DEB2, "foamctrl::foamctrl()");
 	
 	starttime = time(NULL); 
 	frames = 0; 
@@ -60,13 +62,13 @@ foamctrl::foamctrl(string &file) {
 }
 
 int foamctrl::parse(string &file) {
-	io->msg(IO_DEB2, "foamctrl::parse()");
+	io.msg(IO_DEB2, "foamctrl::parse()");
 
 	conffile = file;
 	int idx = conffile.find_last_of("/");
 	confpath = conffile.substr(0, idx);
 	
-	io->msg(IO_DEB2, "foamctrl::parse: got file %s and path %s.", conffile.c_str(), confpath.c_str());
+	io.msg(IO_DEB2, "foamctrl::parse: got file %s and path %s.", conffile.c_str(), confpath.c_str());
 
 	cfgfile = new config(conffile);
 	
@@ -89,22 +91,22 @@ int foamctrl::parse(string &file) {
 		
 		// Get WFS configuration files
 		for (int i=0; i<wfs_count; i++) {
-			io->msg(IO_XNFO, "Configuring wfs %d/%d", i+1, wfs_count);
+			io.msg(IO_XNFO, "Configuring wfs %d/%d", i+1, wfs_count);
 			wfscfgs[i] = confpath + "/" + cfgfile->getstring(format("wfs[%d].cfg", i));
 		}
 		
 		// Get WFC configuration files
 		for (int i=0; i<wfc_count; i++) {
-			io->msg(IO_XNFO, "Configuring wfc %d/%d", i+1, wfc_count);
+			io.msg(IO_XNFO, "Configuring wfc %d/%d", i+1, wfc_count);
 			wfccfgs[i] = confpath + "/" + cfgfile->getstring(format("wfc[%d].cfg", i));
 		}
 	
 	} catch (exception &e) {
 		err = 1;
-		return io->msg(IO_ERR, "Could not parse configuration: %s", e.what());
+		return io.msg(IO_ERR, "Could not parse configuration: %s", e.what());
 	}
 	
-	io->msg(IO_INFO, "Successfully parsed control configuration.");
+	io.msg(IO_INFO, "Successfully parsed control configuration.");
 
 	return 0;
 }

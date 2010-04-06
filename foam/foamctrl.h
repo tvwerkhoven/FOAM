@@ -67,12 +67,14 @@ typedef struct {
  Also take a look at wfs_t, wfc_t and fwheel_t.
  */
 class foamctrl {
+private:
 	config *cfgfile;
 	int err;
+	Io &io;
 	
-	public:
-	foamctrl(void);
-	foamctrl(string &file);
+public:
+	foamctrl(Io &io);
+	foamctrl(Io &io, string &file);
 	~foamctrl(void);
 	
 	int parse(string &file);

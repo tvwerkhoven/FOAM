@@ -23,6 +23,7 @@
 
 #include "types.h"
 #include "config.h"
+#include "io.h"
 
 /*!
  @brief Runtime configuration class.
@@ -30,12 +31,14 @@
  This class stores relevant runtime configuration settings.
  */
 class foamcfg {
+private:
 	config *cfgfile;
 	int err;
+	Io &io;
 	
-	public:
-	foamcfg();
-	foamcfg(string &file);
+public:
+	foamcfg(Io &io);
+	foamcfg(Io &io, string &file);
 	~foamcfg();
 	
 	int verify();

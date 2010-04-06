@@ -40,13 +40,13 @@ public:
 		
 	virtual bool closed_init() { printf("FOAM_dummy::closed_init\n"); return true; }
 	virtual bool closed_loop()  { printf("FOAM_dummy::closed_loop\n"); return true; }
-	virtual bool closed_finish()  { printf("FOAM_dummy::closed_finish\n"); return true; }
+	virtual bool closed_finish() { printf("FOAM_dummy::closed_finish\n"); return true; }
 	
-	virtual bool open_init()  { printf("FOAM_dummy::open_init\n"); return true; }
-	virtual bool open_loop()  { printf("FOAM_dummy::open_loop\n"); return true; }
-	virtual bool open_finish()  { printf("FOAM_dummy::open_finish\n"); return true; }
+	virtual bool open_init() { printf("FOAM_dummy::open_init\n"); return true; }
+	virtual bool open_loop() { printf("FOAM_dummy::open_loop\n"); return true; }
+	virtual bool open_finish() { printf("FOAM_dummy::open_finish\n"); return true; }
 	
-	virtual bool calib()  { printf("FOAM_dummy::calib\n"); return true; }
+	virtual bool calib() { printf("FOAM_dummy::calib\n"); return true; }
 };
 
 
@@ -55,6 +55,8 @@ int main(int argc, char *argv[]) {
 	
 	// Init FOAM_dummy class
 	FOAM_dummy foam(argc, argv);
+	
+	foam.init();
 	
 	foam.io.msg(IO_INFO, "Running dummy mode");
 	
