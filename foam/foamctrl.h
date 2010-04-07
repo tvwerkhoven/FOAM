@@ -24,6 +24,7 @@
 #include <time.h>
 #include "wfs.h"
 #include "wfc.h"
+#include "io.h"
 #include "foamcfg.h"
 #include "config.h"
 

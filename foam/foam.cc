@@ -51,8 +51,9 @@ using namespace std;
 
 FOAM::FOAM(int argc, char *argv[]):
 nodaemon(false), error(false), conffile(FOAM_DEFAULTCONF), execname(argv[0]),
-io(4)
+io(IO_DEB2)
 {
+	io.msg(IO_DEB2, "FOAM::FOAM()");
 	if (!parse_args(argc, argv)) {
 		error = true;
 		return;
@@ -65,6 +66,8 @@ io(4)
 }
 
 bool FOAM::init() {
+	io.msg(IO_DEB2, "FOAM::init()");
+	
 	if (pthread_mutex_init(&mode_mutex, NULL) != 0)
 		return io.msg(IO_ERR, "pthread_mutex_init failed.");
 	if (pthread_cond_init (&mode_cond, NULL) != 0)
@@ -83,7 +86,7 @@ bool FOAM::init() {
 }
 
 FOAM::~FOAM() {
-	io.msg(IO_DEB2, __FILE__ "::~FOAM()");
+	io.msg(IO_DEB2, "FOAM::~FOAM()");
 	
 	if (ptc->mode != AO_MODE_SHUTDOWN)
 		io.msg(IO_WARN, "Incorrect shutdown call, not in shutdown mode!");
@@ -131,8 +134,8 @@ void FOAM::show_clihelp(bool error = false) {
 }
 
 void FOAM::show_welcome() {
-	// BEGIN FOAM //
-	/**************/
+	io.msg(IO_DEB2, "FOAM::show_welcome()");
+	
 	tm_start = localtime(&(ptc->starttime));
 	char date[64];
 	strftime (date, 64, "%A, %B %d %H:%M:%S, %Y (%Z).", tm_start);	
@@ -155,6 +158,7 @@ void FOAM::show_welcome() {
 }
 
 bool FOAM::parse_args(int argc, char *argv[]) {
+	io.msg(IO_DEB2, "FOAM::parse_args()");
 	int r, option_index = 0;
 	execname = argv[0];
 	
@@ -213,6 +217,8 @@ bool FOAM::parse_args(int argc, char *argv[]) {
 }
 
 bool FOAM::load_config() {
+	io.msg(IO_DEB2, "FOAM::load_config()");
+	
 	// Load and parse configuration file
 	if (conffile == "") {
 		io.msg(IO_ERR, "No configuration file given.");
@@ -244,7 +250,7 @@ bool FOAM::verify() {
 }
 
 void FOAM::daemon() {
-	io.msg(IO_INFO, "Starting daemon at port %s...", cs_config->listenport.c_str());
+	io.msg(IO_INFO, "Starting daemon at %s:%s...", cs_config->listenip.c_str(), cs_config->listenport.c_str());
   protocol = new Protocol::Server(cs_config->listenport);
   protocol->slot_message = sigc::mem_fun(this, &FOAM::on_message);
   protocol->slot_connected = sigc::mem_fun(this, &FOAM::on_connect);
@@ -252,20 +258,20 @@ void FOAM::daemon() {
 }
 
 bool FOAM::listen() {
-	io.msg(IO_DEB1, __FILE__ "::listen()");
+	io.msg(IO_DEB1, "FOAM::listen()");
 	
 	while (true) {
 		switch (ptc->mode) {
 			case AO_MODE_OPEN:
-				io.msg(IO_DEB1, __FILE__ "::listen() AO_MODE_OPEN");
+				io.msg(IO_DEB1, "FOAM::listen() AO_MODE_OPEN");
 				mode_open();
 				break;
 			case AO_MODE_CLOSED:
-				io.msg(IO_DEB1, __FILE__ "::listen() AO_MODE_CLOSED");
+				io.msg(IO_DEB1, "FOAM::listen() AO_MODE_CLOSED");
 				mode_closed();
 				break;
 			case AO_MODE_CAL:
-				io.msg(IO_DEB1, __FILE__ "::listen() AO_MODE_CAL");
+				io.msg(IO_DEB1, "FOAM::listen() AO_MODE_CAL");
 				mode_calib();
 				break;
 			case AO_MODE_LISTEN:
@@ -277,11 +283,11 @@ bool FOAM::listen() {
 				pthread_mutex_unlock(&mode_mutex);
 				break;
 			case AO_MODE_SHUTDOWN:
-				io.msg(IO_DEB1, __FILE__ "::listen() AO_MODE_SHUTDOWN");
+				io.msg(IO_DEB1, "FOAM::listen() AO_MODE_SHUTDOWN");
 				return true;
 				break;
 			default:
-				io.msg(IO_DEB1, __FILE__ "::listen() UNKNOWN!");
+				io.msg(IO_DEB1, "FOAM::listen() UNKNOWN!");
 				break;
 		}
 	}
@@ -397,7 +403,7 @@ void FOAM::on_connect(Connection *connection, bool status) {
 }
 
 void FOAM::on_message(Connection *connection, std::string line) {
-  io.msg(IO_DEB1, __FILE__ "::Got %db: '%s'.", line.length(), line.c_str());
+  io.msg(IO_DEB1, "FOAM::Got %db: '%s'.", line.length(), line.c_str());
 	string cmd = popword(line);
 	string orig = line;
 	

@@ -77,9 +77,9 @@ int foamctrl::parse(string &file) {
 	
 	// Load AO configuration files now
 	try {
-		wfs_count = cfgfile->getint("wfs_count");
-		wfc_count = cfgfile->getint("wfc_count");
-		fw_count = 0;//cfgfile->getint("fw_count");
+		wfs_count = cfgfile->getint("wfs_count", 0);
+		wfc_count = cfgfile->getint("wfc_count", 0);
+		fw_count = cfgfile->getint("fw_count", 0);
 		
 		// Allocate memory for configuration files
 		wfscfgs = new string[wfs_count];
@@ -106,7 +106,7 @@ int foamctrl::parse(string &file) {
 		return io.msg(IO_ERR, "Could not parse configuration: %s", e.what());
 	}
 	
-	io.msg(IO_INFO, "Successfully parsed control configuration.");
+	io.msg(IO_INFO, "Successfully parsed control config, got #wfs=%d, #wfc=%d, #fw=%d.", wfs_count, wfc_count, fw_count);
 
 	return 0;
 }

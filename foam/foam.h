@@ -62,7 +62,7 @@ using namespace std;
 
 typedef Protocol::Server::Connection Connection;
 
-class FOAM : public sigc::trackable {
+class FOAM {
 private:
 	// Properties set at start
 	bool nodaemon;
@@ -114,7 +114,7 @@ public:
 	virtual bool load_modules() = 0;
 
 	// was: modMessage();
-	void on_message(Connection *connection, std::string line);
+	virtual void on_message(Connection *connection, std::string line);
 
 	bool mode_closed();
 	// was: modClosedInit, Loop, Finish

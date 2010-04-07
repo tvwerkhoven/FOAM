@@ -32,27 +32,25 @@
 
 class FOAM_dummy : public FOAM {
 public:
-	FOAM_dummy(int argc, char *argv[]): FOAM(argc, argv) { printf("FOAM_dummy::FOAM_dummy()\n"); } 
-	virtual ~FOAM_dummy() { printf("FOAM_dummy::~FOAM_dummy\n"); } 
+	FOAM_dummy(int argc, char *argv[]): FOAM(argc, argv) { io.msg(IO_DEB2, "FOAM_dummy::FOAM_dummy()"); } 
+	virtual ~FOAM_dummy() { io.msg(IO_DEB2, "FOAM_dummy::~FOAM_dummy()"); } 
 	
-	virtual bool load_modules() { printf("FOAM_dummy::load_modules\n"); return true; } 
-	virtual bool on_message() { printf("FOAM_dummy::on_message\n"); return true; } 
+	virtual bool load_modules() { io.msg(IO_DEB2, "FOAM_dummy::load_modules()"); return true; } 
+	virtual void on_message(Connection *connection, std::string line) { FOAM::on_message(connection, line); io.msg(IO_DEB2, "FOAM_dummy::on_message()"); } 
 		
-	virtual bool closed_init() { printf("FOAM_dummy::closed_init\n"); return true; }
-	virtual bool closed_loop()  { printf("FOAM_dummy::closed_loop\n"); return true; }
-	virtual bool closed_finish() { printf("FOAM_dummy::closed_finish\n"); return true; }
+	virtual bool closed_init() { io.msg(IO_DEB2, "FOAM_dummy::closed_init()"); return true; }
+	virtual bool closed_loop()  { io.msg(IO_DEB2, "FOAM_dummy::closed_loop()"); return true; }
+	virtual bool closed_finish() { io.msg(IO_DEB2, "FOAM_dummy::closed_finish()"); return true; }
 	
-	virtual bool open_init() { printf("FOAM_dummy::open_init\n"); return true; }
-	virtual bool open_loop() { printf("FOAM_dummy::open_loop\n"); return true; }
-	virtual bool open_finish() { printf("FOAM_dummy::open_finish\n"); return true; }
+	virtual bool open_init() { io.msg(IO_DEB2, "FOAM_dummy::open_init()"); return true; }
+	virtual bool open_loop() { io.msg(IO_DEB2, "FOAM_dummy::open_loop()"); return true; }
+	virtual bool open_finish() { io.msg(IO_DEB2, "FOAM_dummy::open_finish()"); return true; }
 	
-	virtual bool calib() { printf("FOAM_dummy::calib\n"); return true; }
+	virtual bool calib() { io.msg(IO_DEB2, "FOAM_dummy::calib()"); return true; }
 };
 
 
 int main(int argc, char *argv[]) {
-	printf("FOAM_dummy.\n");
-	
 	// Init FOAM_dummy class
 	FOAM_dummy foam(argc, argv);
 	
