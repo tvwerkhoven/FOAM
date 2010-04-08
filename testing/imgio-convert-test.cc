@@ -15,7 +15,6 @@
 #include "io.h"
 #include "format.h"
 
-Io *io = new Io();
 
 int main(int argc, char *argv[]) {
 	int ret;
@@ -26,10 +25,12 @@ int main(int argc, char *argv[]) {
 		return -1;		
 	}
 	
+	Io io;
+	
 	// ########################################################################
 	printf("Loading image.\n");
 
-	Imgio *pgmimg = new Imgio(argv[1], Imgio::PGM);
+	Imgio *pgmimg = new Imgio(io, argv[1], Imgio::PGM);
 	if (pgmimg->loadImg()) {
 		printf("ERR: could not load image.\n");
 		return -1;

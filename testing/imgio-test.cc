@@ -14,10 +14,10 @@
 #include "imgio.h"
 #include "io.h"
 
-Io *io = new Io();
 
 int main() {
 	int ret;
+	Io io;
 	
 	// ########################################################################
 	printf("Generating image.\n");
@@ -32,7 +32,7 @@ int main() {
 	// ########################################################################
 	printf("Save as FITS.\n");
 	
-	Imgio *saveimg = new Imgio();
+	Imgio *saveimg = new Imgio(io);
 	saveimg->data = (void *) img;
 	saveimg->dtype = DATA_UINT16;
 	saveimg->res.x = 256;
@@ -60,7 +60,7 @@ int main() {
 	
 	printf("Load FITS.\n");
 	
-	Imgio *fitsimg = new Imgio("/tmp/" __FILE__ "-fits.fits", Imgio::FITS);
+	Imgio *fitsimg = new Imgio(io, "/tmp/" __FILE__ "-fits.fits", Imgio::FITS);
 
 	if (fitsimg->loadImg()) {
 		printf("ERR: could not load imaage.\n");
@@ -91,7 +91,7 @@ int main() {
 	// ########################################################################
 	printf("Load PGM.\n");	
 
-	Imgio *pgmimg = new Imgio("/tmp/" __FILE__ "-pgm.pgm", Imgio::PGM);
+	Imgio *pgmimg = new Imgio(io, "/tmp/" __FILE__ "-pgm.pgm", Imgio::PGM);
 	if (pgmimg->loadImg()) {
 		printf("ERR: could not load imaage.\n");
 	}
