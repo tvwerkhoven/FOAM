@@ -72,14 +72,19 @@ bool FOAM::init() {
 		return io.msg(IO_ERR, "pthread_mutex_init failed.");
 	if (pthread_cond_init (&mode_cond, NULL) != 0)
 		return io.msg(IO_ERR, "pthread_cond_init failed.");
+
+	// Get networking thread
+	daemon();	
 	
+	// Try to load setup-specific modules 
+	if (!load_modules())
+		return false;
 	
-	load_modules();
+	// Verify setup integrity
+	if (!verify())
+		return false;
 	
-	verify();
-	
-	daemon();
-	
+	// Show banner
 	show_welcome();
 	
 	return true;
@@ -88,12 +93,10 @@ bool FOAM::init() {
 FOAM::~FOAM() {
 	io.msg(IO_DEB2, "FOAM::~FOAM()");
 	
-	if (ptc->mode != AO_MODE_SHUTDOWN)
-		io.msg(IO_WARN, "Incorrect shutdown call, not in shutdown mode!");
-	
+	// Notify shutdown
 	io.msg(IO_WARN, "Shutting down FOAM now");
   protocol->broadcast("WARN :SHUTTING DOWN NOW");
-	
+		
 	// Get the end time to see how long we've run
 	time_t end = time(NULL);
 	struct tm *loctime = localtime(&end);
