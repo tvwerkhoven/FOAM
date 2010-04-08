@@ -29,97 +29,84 @@
  prime module.
  */
 
-// HEADERS //
-/***********/
-
-#include "foam-simstatic.h"
 #include "types.h"
 #include "io.h"
 #include "wfs.h"
 #include "cam.h"
+#include "foam.h"
+#include "foam-simstatic.h"
 
-// We need these for modMessage, see foam.cc
-extern pthread_mutex_t mode_mutex;
-extern pthread_cond_t mode_cond;
 
-extern Io *io;
+bool FOAM_simstatic::load_modules() {
+	io.msg(IO_DEB2, "FOAM_simstatic::load_modules()");
 
-// GLOBALS //
-/***********/
-
-int modInitModule(foamctrl *ptc, foamcfg *cs_config) {
-	io->msg(IO_DEB2, __FILE__ "::modInitModule(foamctrl *ptc, foamcfg *cs_config)");
-
-	io->msg(IO_INFO, "This is the simstatic prime module, enjoy.");
+	io.msg(IO_INFO, "This is the simstatic prime module, enjoy.");
 	
 	// Set up WFS #1 with image camera
-	ptc->wfs[0] = Wfs::create(ptc->wfscfgs[0]);
+	if (ptc->wfs_count != 1)
+		return !io.msg(IO_ERR, "#WFS != 1, cannot continue.");
 	
-	return EXIT_SUCCESS;
-}
-
-int modPostInitModule(foamctrl *ptc, foamcfg *cs_config) {
-	io->msg(IO_DEB2, __FILE__ "::modPostInitModule(foamctrl *ptc, foamcfg *cs_config)");
-	return EXIT_SUCCESS;
-}
-
-void modStopModule(foamctrl *ptc) {
-	io->msg(IO_DEB2, __FILE__ "::modStopModule(foamctrl *ptc)");
+	ptc->wfs[0] = Wfs::create(io, ptc->wfscfgs[0]);
+	//ptc->wfs[0] 
+	//Wfs *tmp = new Wfs(&io, ptc->wfscfgs[0]);
+	
+	return true;
 }
 
 // OPEN LOOP ROUTINES //
 /*********************/
 
-int modOpenInit(foamctrl *ptc) {
-	io->msg(IO_DEB2, __FILE__ "::modOpenInit(foamctrl *ptc)");
+bool FOAM_simstatic::open_init() {
+	io.msg(IO_DEB2, "FOAM_simstatic::open_init()");
 	
 	ptc->wfs[0]->cam->set_mode(Camera::RUNNING);
 	ptc->wfs[0]->cam->init_capture();
 	
-	return EXIT_SUCCESS;
+	return true;
 }
 
-int modOpenLoop(foamctrl *ptc) {
-	io->msg(IO_DEB2, __FILE__ "::modOpenLoop(foamctrl *ptc)");
+bool FOAM_simstatic::open_loop() {
+	io.msg(IO_DEB2, "FOAM_simstatic::open_loop()");
 	
 	//void *tmp;
 	//ptc->wfs[0]->cam->get_image(&tmp);
 	ptc->wfs[0]->measure();
 	
 	usleep(1000000);
-	return EXIT_SUCCESS;
+	
+	return true;
 }
 
-int modOpenFinish(foamctrl *ptc) {
-	io->msg(IO_DEB2, __FILE__ "::modOpenFinish(foamctrl *ptc)");
+bool FOAM_simstatic::open_finish() {
+	io.msg(IO_DEB2, "FOAM_simstatic::open_finish()");
 	
 	ptc->wfs[0]->cam->set_mode(Camera::OFF);
 
-	return EXIT_SUCCESS;
+	return true;
 }
 
 // CLOSED LOOP ROUTINES //
 /************************/
 
-int modClosedInit(foamctrl *ptc) {
-	io->msg(IO_DEB2, __FILE__ "::modClosedInit(foamctrl *ptc)");
+bool FOAM_simstatic::closed_init() {
+	io.msg(IO_DEB2, "FOAM_simstatic::closed_init()");
 	
-	modOpenInit(ptc);
+	open_init();
 	
 	return EXIT_SUCCESS;
 }
 
-int modClosedLoop(foamctrl *ptc) {
-	io->msg(IO_DEB2, __FILE__ "::modClosedLoop(foamctrl *ptc)");
+bool FOAM_simstatic::closed_loop() {
+	io.msg(IO_DEB2, "FOAM_simstatic::closed_loop()");
 
 	usleep(1000000);
 	return EXIT_SUCCESS;
 }
 
-int modClosedFinish(foamctrl *ptc) {
-	io->msg(IO_DEB2, __FILE__ "::modClosedFinish(foamctrl *ptc)");
+bool FOAM_simstatic::closed_finish() {
+	io.msg(IO_DEB2, "FOAM_simstatic::closed_finish()");
 	
-	modOpenFinish(ptc);
+	open_finish();
 
 	return EXIT_SUCCESS;
 }
@@ -127,11 +114,11 @@ int modClosedFinish(foamctrl *ptc) {
 // MISC ROUTINES //
 /*****************/
 
-int modCalibrate(foamctrl *ptc) {
-	io->msg(IO_DEB2, __FILE__ "::modCalibrate(foamctrl *ptc)");
+bool FOAM_simstatic::calib() {
+	io.msg(IO_DEB2, "FOAM_simstatic::calib()");
 
 	if (ptc->calmode == CAL_SUBAPSEL) {
-		io->msg(IO_DEB2, __FILE__ "::modCalibrate CAL_SUBAPSEL");
+		io.msg(IO_DEB2, "FOAM_simstatic::calib CAL_SUBAPSEL");
 		usleep((useconds_t) 1.0 * 1000000);
 		ptc->wfs[0]->calibrate();
 		usleep((useconds_t) 1.0 * 1000000);
@@ -140,7 +127,9 @@ int modCalibrate(foamctrl *ptc) {
 	return EXIT_SUCCESS;
 }
 
-int modMessage(foamctrl *ptc, Connection *connection, string cmd, string line) {
+void FOAM_simstatic::on_message(Connection *connection, std::string line) {
+	string cmd = popword(line);
+	
 	if (cmd == "HELP") {
 		string topic = popword(line);
 		if (topic.size() == 0) {
@@ -154,7 +143,7 @@ int modMessage(foamctrl *ptc, Connection *connection, string cmd, string line) {
 												":  mode=subapsel:        Select subapertures.");
 		}
 		else {
-			return -1;
+			return;
 		}
 	}
 	else if (cmd == "GET") {
@@ -176,9 +165,23 @@ int modMessage(foamctrl *ptc, Connection *connection, string cmd, string line) {
 		}	
 	}
 	else {
-		return -1;
+		return;
 	}
 	
 	// if we end up here, we didn't return 0, so we found a valid command
+	return;
+}
+
+int main(int argc, char *argv[]) {
+	// Init FOAM_simstatic class
+	FOAM_simstatic foam(argc, argv);
+	
+	if (!foam.init())
+		return -1;
+		
+	foam.io.msg(IO_INFO, "Running simstatic mode");
+	
+	foam.listen();
+	
 	return 0;
 }
