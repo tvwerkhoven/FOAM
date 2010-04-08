@@ -3,10 +3,12 @@
 
 #include <string>
 #include "types.h"
-
+#include "io.h"
 
 class Imgio {
 private:
+	Io &io;
+	
 	int loadFits(std::string);
 	int writeFits(std::string);
 	int loadPgm(std::string);
@@ -36,8 +38,8 @@ public:
 	
 	std::string strerr;
 	
-	Imgio(void) { init("", Imgio::UNDEF); }
-	Imgio(std::string f, imgtype_t t) { init(f, t); }
+	Imgio(Io &io): io(io) { init("", Imgio::UNDEF); }
+	Imgio(Io &io, std::string f, imgtype_t t): io(io) { init(f, t); }
 	~Imgio(void);
 	
 	int init(std::string, imgtype_t);

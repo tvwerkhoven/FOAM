@@ -39,13 +39,11 @@
 
 #define SHWFS_TYPE "shwfs"
 
-extern Io *io;
-
 // ROUTINES //
 /************/
 
 class Shwfs: public Wfs {
-	private:
+private:
 	
 	typedef enum {
 		COG=0,
@@ -82,7 +80,7 @@ class Shwfs: public Wfs {
 		}
 		cog.x /= csum;
 		cog.y /= csum;
-		io->msg(IO_DEB2, "Shwfs::_cog(): subap @ %d,%d got cog=%f,%f (sum=%f).", xpos, ypos, cog.x, cog.y, csum);
+		io.msg(IO_DEB2, "Shwfs::_cog(): subap @ %d,%d got cog=%f,%f (sum=%f).", xpos, ypos, cog.x, cog.y, csum);
 		return csum;		
 	}
 	
@@ -95,14 +93,14 @@ class Shwfs: public Wfs {
 		return 0;
 	}
 	
-	int subapSel() {
+	bool subapSel() {
 		uint32_t csum;
 		float savec[2] = {0};
 		fcoord_t cog;
 		int *apmap = new int[subap.x * subap.y];
 		int *apmap2 = new int[subap.x * subap.y];
 		
-		io->msg(IO_DEB2, "Shwfs::subapSel()");
+		io.msg(IO_DEB2, "Shwfs::subapSel()");
 		
 		for (int isy=0; isy < subap.y; isy++)
 			for (int isx=0; isx < subap.x; isx++)
@@ -112,7 +110,7 @@ class Shwfs: public Wfs {
 		
 		// Get image first
 		if (cam->get_dtype() == DATA_UINT16) {
-			io->msg(IO_DEB2, "Shwfs::subapSel() got DATA_UINT16");
+			io.msg(IO_DEB2, "Shwfs::subapSel() got DATA_UINT16");
 			void *tmpimg;
 			cam->get_image(&tmpimg);
 			uint16_t *img = (uint16_t *) tmpimg;
@@ -133,7 +131,7 @@ class Shwfs: public Wfs {
 			}
 		}
 		else if (cam->get_dtype() == DATA_UINT8) {
-			io->msg(IO_DEB2, "Shwfs::subapSel() got DATA_UINT8");
+			io.msg(IO_DEB2, "Shwfs::subapSel() got DATA_UINT8");
 
 			void *tmpimg;
 			cam->get_image(&tmpimg);
@@ -160,8 +158,8 @@ class Shwfs: public Wfs {
 		savec[0] /= ns;
 		savec[1] /= ns;
 		
-		io->msg(IO_XNFO, "Found %d subaps with I > %d.", ns, samini);
-		io->msg(IO_XNFO, "Average position: (%f, %f)", savec[0], savec[1]);
+		io.msg(IO_XNFO, "Found %d subaps with I > %d.", ns, samini);
+		io.msg(IO_XNFO, "Average position: (%f, %f)", savec[0], savec[1]);
 
 		// Find central aperture by minimizing (subap position - average position)
 		int csa = 0;
@@ -173,13 +171,13 @@ class Shwfs: public Wfs {
 									((sapos[i].x - savec[0]) * (sapos[i].x - savec[0]))
 									+ ((sapos[i].y - savec[1]) * (sapos[i].y - savec[1])));
 			if (dist < rmin) {
-				io->msg(IO_XNFO, "Better central position @ (%d, %d)", sapos[i].x, sapos[i].y);
+				io.msg(IO_XNFO, "Better central position @ (%d, %d)", sapos[i].x, sapos[i].y);
 				rmin = dist;
 				csa = i;	// new best guess for central subaperture
 			}
 		}
 		
-		io->msg(IO_XNFO, "Central subaperture #%d at (%d,%d)", csa,
+		io.msg(IO_XNFO, "Central subaperture #%d at (%d,%d)", csa,
 						sapos[csa].x, sapos[csa].y);
 		
 		printGrid(apmap);
@@ -187,12 +185,12 @@ class Shwfs: public Wfs {
 		// Edge erosion: erode the outer -samaxr rings of subapertures
 		for (int r=samaxr; r<0; r++) {
 			int isy, isx;
-			io->msg(IO_XNFO, "Running edge erosion iteration...");
+			io.msg(IO_XNFO, "Running edge erosion iteration...");
 			for (int i=0; i<ns; i++) {
 				// TODO: not safe, may break down:
 				isy = (sapos[i].y / sasize.y);
 				isx = (sapos[i].x / sasize.x);
-				io->msg(IO_DEB1 | IO_NOLF, "Subap %d/%d @ (%d,%d) @ (%d,%d)...", i, ns, isx, isy, sapos[i].x, sapos[i].y);
+				io.msg(IO_DEB1 | IO_NOLF, "Subap %d/%d @ (%d,%d) @ (%d,%d)...", i, ns, isx, isy, sapos[i].x, sapos[i].y);
 				// If this subaperture is on the edge, or it does not have 
 				// neighbours in all directions, cut it out
 				if (isy == 0 || isy > subap.y ||
@@ -203,14 +201,14 @@ class Shwfs: public Wfs {
 						apmap[(isy+1) * subap.x + (isx+0)] == 0) {
 					// Don't use this subaperture
 					apmap2[isy * subap.x + isx] = 0;
-					io->msg(IO_DEB1, " discard.");
+					io.msg(IO_DEB1, " discard.");
 					for (int j=i; j<ns-1; j++)
 						sapos[j] = sapos[j+1];
 					ns--;
 					i--;
 				}
 				else {
-					io->msg(IO_DEB1 | IO_NOID, " keep.\n");
+					io.msg(IO_DEB1 | IO_NOID, " keep.\n");
 					apmap2[isy * subap.x + isx] = 1;
 				}
 			}
@@ -221,15 +219,15 @@ class Shwfs: public Wfs {
 			printGrid(apmap);
 		}
 		
-		io->msg(IO_INFO, "Finally found %d subapertures", ns);
+		io.msg(IO_INFO, "Finally found %d subapertures", ns);
 		
 				
-		return ns;
+		return true;
 	}
 	
-	public:
-	Shwfs(config &config) {
-		io->msg(IO_DEB2, "Shwfs::Shwfs(config &config)");
+public:
+	Shwfs(Io &io, config &config): Wfs(io) {
+		io.msg(IO_DEB2, "Shwfs::Shwfs(config &config)");
 		
 		conffile = config.filename;
 		
@@ -239,7 +237,7 @@ class Shwfs: public Wfs {
 		int idx = conffile.find_last_of("/");
 		string camcfg = config.getstring("camcfg");
 		if (camcfg[0] != '/') camcfg = conffile.substr(0, idx) + "/" + camcfg;
-		cam = Camera::create(camcfg);
+		cam = Camera::create(io, camcfg);
 		
 		name = config.getstring("name");
 		subap.x = config.getint("subapx");
@@ -261,11 +259,11 @@ class Shwfs: public Wfs {
 		// Start in CoG mode
 		mode = COG;
 				
-		io->msg(IO_XNFO, "Shwfs init complete got %dx%d subaps.", subap.x, subap.y);
+		io.msg(IO_XNFO, "Shwfs init complete got %dx%d subaps.", subap.x, subap.y);
 	}
 	
 	~Shwfs() {
-		io->msg(IO_DEB2, "Shwfs::~Shwfs()");
+		io.msg(IO_DEB2, "Shwfs::~Shwfs()");
 		if (cam) delete cam;
 		delete[] trackpos;
 		delete[] sapos;
@@ -274,46 +272,53 @@ class Shwfs: public Wfs {
 	void printGrid(int *map) {
 		for (int isy=0; isy < subap.y; isy++) {
 			for (int isx=0; isx < subap.x; isx++) {
-				if (map[isy * subap.x + isx] == 1) io->msg(IO_XNFO | IO_NOID, "X ");
-				else io->msg(IO_XNFO | IO_NOID, ". ");
+				if (map[isy * subap.x + isx] == 1) io.msg(IO_XNFO | IO_NOID, "X ");
+				else io.msg(IO_XNFO | IO_NOID, ". ");
 			}
-			io->msg(IO_XNFO | IO_NOID, "\n");
+			io.msg(IO_XNFO | IO_NOID, "\n");
 		}
 	}	
 		
-	int measure(void) {
+	bool measure() {
 		void *tmpimg;
 		cam->get_image(&tmpimg);
 		
 		if (cam->get_dtype() == DATA_UINT16) {
 			if (mode == COG) {
-				io->msg(IO_DEB2, "Shwfs::measure() got DATA_UINT16, COG");
+				io.msg(IO_DEB2, "Shwfs::measure() got DATA_UINT16, COG");
 				return _cogframe<uint16_t>((uint16_t *) tmpimg);
 			}
 			else
-				return io->msg(IO_ERR, "Shwfs::measure() unknown wfs mode");
+				return io.msg(IO_ERR, "Shwfs::measure() unknown wfs mode");
 		}
 		else if (cam->get_dtype() == DATA_UINT8) {
 			if (mode == COG) {
-				io->msg(IO_DEB2, "Shwfs::measure() got DATA_UINT8, COG");
+				io.msg(IO_DEB2, "Shwfs::measure() got DATA_UINT8, COG");
 				return _cogframe<uint8_t>((uint8_t *) tmpimg);
 			}
 			else
-				return io->msg(IO_ERR, "Shwfs::measure() unknown wfs mode");
+				return io.msg(IO_ERR, "Shwfs::measure() unknown wfs mode");
 		}
 		else
-			return io->msg(IO_ERR, "Shwfs::measure() unknown datatype");
+			return io.msg(IO_ERR, "Shwfs::measure() unknown datatype");
 		
-		return -1;
+		return false;
 	}
 	
-	int calibrate(void) {
+	bool verify() {
+		io.msg(IO_DEB1, "Shwfs::verify()");
+		return true;
+	}
+	
+	bool calibrate() {
+		io.msg(IO_DEB1, "Shwfs::calibrate()");
 		// For SH WFS: select the subapertures to use for processing
 		return subapSel();
 		// TODO: add calibration for reference coordinates (with pinhole)
 	}
 };
 
-Wfs *Wfs::create(config &config) {
-	return new Shwfs(config);
+Wfs *Wfs::create(Io &io, config &config) {
+	//fprintf(stderr, "!!! Don't use this, Wfs::create(config &config)\n");
+	return new Shwfs(io, config);
 }

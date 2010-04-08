@@ -31,8 +31,6 @@
 #include "io.h"
 #include "cam.h"
 
-extern Io *io;
-
 /*!
  @brief Base camera class. This will be overloaded with the specific camera class.
  @author Tim van Werkhoven (t.i.m.vanwerkhoven@xs4all.nl) and Guus Sliepen (guus@sliepen.org)
@@ -40,6 +38,8 @@ extern Io *io;
  */
 class Camera {
 protected:
+	Io &io;
+	
 	void *image;									//!< Pointer to the image data (can be ringbuffer)
 	void *darkim;									//!< Pointer to a darkfield image
 	void *flatim;									//!< Pointer to a flatfield image
@@ -90,18 +90,19 @@ public:
 	virtual bool capture(int fd) {return false;}
 	virtual bool monitor(void *frame, size_t &size, int &x1, int &y1, int &x2, int &y2, int &scale) {return false;}
 	
-	static Camera *create(config &config);
-	static Camera *create(string conffile) {
-		io->msg(IO_DEB2, "Camera::create(conffile=%s)", conffile.c_str());
+	static Camera *create(Io &io, config &config);
+	static Camera *create(Io &io, string conffile) {
+		io.msg(IO_DEB2, "Camera::create(conffile=%s)", conffile.c_str());
 		
 		ifstream fin(conffile.c_str(), ifstream::in);
 		if (!fin.is_open()) throw("Could not open configuration file!");
 		fin.close();
 		
 		config cfg(conffile);
-		return Camera::create(cfg);
+		return Camera::create(io, cfg);
 	}
 	virtual ~Camera() {};
+	Camera(Io &io): io(io) { ; }
 };
 
 

@@ -29,16 +29,18 @@
 #include "types.h"
 #include "config.h"
 #include "cam.h"
+#include "io.h"
 
 /*!
  @brief Base wavefront-sensor class. This will be overloaded with the specific wfs type
  @author Tim van Werkhoven (t.i.m.vanwerkhoven@xs4all.nl)
  */
 class Wfs {
-	protected:
+protected:
 	string conffile;
+	Io &io;
 	
-	public:
+public:
 	class exception: public std::runtime_error {
 	public:
 		exception(const std::string reason): runtime_error(reason) {}
@@ -50,22 +52,23 @@ class Wfs {
 	
 	Camera *cam;									//!< Camera specific class
 	
-	virtual int verify() { return 0; } //!< Verify settings
-	virtual int calibrate(void) { return 0; } //!< Initialize WFS
-	virtual int measure() { return 0; }
+	virtual bool verify() = 0;		//!< Verify settings
+	virtual bool calibrate() = 0;	//!< Calibrate WFS
+	virtual bool measure() = 0;		//!< Measure abberations
 	
-	static Wfs *create(config &config);	//!< Initialize new wavefront sensor
-	static Wfs *create(string conffile) {
-		io->msg(IO_DEB2, "Wfs::create(conffile=%s)", conffile.c_str());
+	static Wfs *create(Io &io, config &config);	//!< Initialize new wavefront sensor
+	static Wfs *create(Io &io, string conffile) {
+		io.msg(IO_DEB2, "Wfs::create(conffile=%s)", conffile.c_str());
 		
 		ifstream fin(conffile.c_str(), ifstream::in);
 		if (!fin.is_open()) throw("Could not open configuration file!");
 		fin.close();
 		
 		config config(conffile);
-		return Wfs::create(config);
+		return Wfs::create(io, config);
 	};	//!< Initialize new wavefront sensor
 	virtual ~Wfs() {}
+	Wfs(Io &io): io(io) { ; }
 };
 
 #endif // HAVE_WFS_H

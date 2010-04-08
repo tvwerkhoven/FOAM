@@ -26,6 +26,7 @@
 #include "imgio.h"
 #include "cam.h"
 #include "pthread++.h"
+#include "io.h"
 
 #define IMGCAM_TYPE "imgcam"
 
@@ -47,7 +48,7 @@ class ImgCamera: public Camera {
 
 	void update(bool blocking) {
 		// Copy image from img to frame and add some noise etc
-		io->msg(IO_DEB2, "ImgCamera::update()");
+		io.msg(IO_DEB2, "ImgCamera::update()");
 		if(blocking)
 			usleep((int) interval * 1000000);
 
@@ -66,8 +67,8 @@ class ImgCamera: public Camera {
 	}
 	
 public:
-	ImgCamera(config &config) {
-		io->msg(IO_DEB2, "ImgCamera::ImgCamera(config &config)");
+	ImgCamera(Io &io, config &config): Camera(io) {
+		io.msg(IO_DEB2, "ImgCamera::ImgCamera(config &config)");
 		
 		string type = config.getstring("type");
 		if (type != IMGCAM_TYPE) throw exception("Type should be " IMGCAM_TYPE " for this class.");
@@ -79,14 +80,14 @@ public:
 		else {
 			throw exception("'imagefile' not set in configuration file!");
 		}
-		io->msg(IO_DEB2, "ImgCamera::ImgCamera(): imagefile = %s", file.c_str());
+		io.msg(IO_DEB2, "ImgCamera::ImgCamera(): imagefile = %s", file.c_str());
 		noise = config.getdouble("noise", 10.0);
 		interval = config.getdouble("interval", 0.25);
 		exposure = config.getdouble("exposure", 1.0);
 		
 		mode = Camera::OFF;
 		
-		img = new Imgio(file, Imgio::FITS);
+		img = new Imgio(io, file, Imgio::FITS);
 		img->loadImg();
 		
 		res.x = img->getWidth();
@@ -101,13 +102,13 @@ public:
 		
 		update(true);
 
-		io->msg(IO_INFO, "ImgCamera init success, got %dx%dx%d frame, noise=%g, intv=%g, exp=%g.", 
+		io.msg(IO_INFO, "ImgCamera init success, got %dx%dx%d frame, noise=%g, intv=%g, exp=%g.", 
 						res.x, res.y, bpp, noise, interval, exposure);
-		io->msg(IO_INFO, "Range = %d--%d, sum=%lld", img->range[0], img->range[1], img->sum);
+		io.msg(IO_INFO, "Range = %d--%d, sum=%lld", img->range[0], img->range[1], img->sum);
 	}
 
 	~ImgCamera() {
-		io->msg(IO_DEB2, "ImgCamera::~ImgCamera()");
+		io.msg(IO_DEB2, "ImgCamera::~ImgCamera()");
 		delete img;
 	}
 
@@ -213,7 +214,7 @@ public:
 	}
 };
 
-Camera *Camera::create(config &config) {
-	io->msg(IO_DEB2, "Camera::create(config &config)");
-	return new ImgCamera(config);
+Camera *Camera::create(Io &io, config &config) {
+	io.msg(IO_DEB2, "Camera::create(config &config)");
+	return new ImgCamera(io, config);
 }
