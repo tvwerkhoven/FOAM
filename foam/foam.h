@@ -94,7 +94,7 @@ protected:
 	virtual void on_message(Connection *connection, std::string line);
 
 	void show_clihelp(bool);						//!< Show help on command-line syntax.
-	bool show_nethelp(Connection *connection, string topic, string rest); //!< Show help on network command usage
+	int show_nethelp(Connection *connection, string topic, string rest); //!< Show help on network command usage
 	void show_version();								//!< Show version information
 	void show_welcome();								//!< Show welcome banner
 	
@@ -157,7 +157,7 @@ public:
 	 */
 	virtual int open_finish() = 0;
 	
-	bool mode_calib();									//!< Calibration wrapper, calls child routines
+	int mode_calib();									//!< Calibration wrapper, calls child routines
 	/*!
 	 @brief Calibration routine, used to calibrate various system aspects
 	 TODO: document
