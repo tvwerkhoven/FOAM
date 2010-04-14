@@ -309,7 +309,7 @@ int FOAM::mode_open() {
 	}
 	
 	// Run the initialisation function of the modules used
-	if (!open_init()) {
+	if (open_init()) {
 		io.msg(IO_WARN, "FOAM::open_init() failed.");
 		ptc->mode = AO_MODE_LISTEN;
 		return -1;
@@ -318,7 +318,7 @@ int FOAM::mode_open() {
 	protocol->broadcast("OK MODE OPEN");
 	
 	while (ptc->mode == AO_MODE_OPEN) {
-		if (!open_loop()) {
+		if (open_loop()) {
 			io.msg(IO_WARN, "FOAM::open_loop() failed");
 			ptc->mode = AO_MODE_LISTEN;
 			return -1;
@@ -326,7 +326,7 @@ int FOAM::mode_open() {
 		ptc->frames++;	// increment the amount of frames parsed
 	}
 	
-	if (!open_finish()) {		// check if we can finish
+	if (open_finish()) {		// check if we can finish
 		io.msg(IO_WARN, "FOAM::open_finish() failed.");
 		ptc->mode = AO_MODE_LISTEN;
 		return -1;
@@ -346,7 +346,7 @@ int FOAM::mode_closed() {
 	}
 	
 	// Initialize closed loop
-	if (!closed_init()) {
+	if (closed_init()) {
 		io.msg(IO_WARN, "FOAM::closed_init() failed");
 		ptc->mode = AO_MODE_LISTEN;
 		return -1;
@@ -356,7 +356,7 @@ int FOAM::mode_closed() {
 	
 	// Run closed loop
 	while (ptc->mode == AO_MODE_CLOSED) {
-		if (!closed_loop()) {
+		if (closed_loop()) {
 			io.msg(IO_WARN, "FOAM::closed_loop() failed.");
 			ptc->mode = AO_MODE_LISTEN;
 			return -1;
@@ -365,7 +365,7 @@ int FOAM::mode_closed() {
 	}
 	
 	// Finish closed loop
-	if (!closed_finish()) {
+	if (closed_finish()) {
 		io.msg(IO_WARN, "FOAM::closed_finish() failed.");
 		ptc->mode = AO_MODE_LISTEN;
 		return -1;
@@ -380,7 +380,7 @@ int FOAM::mode_calib() {
 	protocol->broadcast("OK MODE CALIB");
 	
 	// Run calibration inside module
-	if (!calib()) {
+	if (calib()) {
 		io.msg(IO_WARN, "FOAM::calib() failed.");
 		protocol->broadcast("ERR CALIB :FAILED");
 		ptc->mode = AO_MODE_LISTEN;
