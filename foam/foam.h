@@ -60,7 +60,7 @@ using namespace std;
 typedef Protocol::Server::Connection Connection;
 
 class FOAM {
-private:
+protected:
 	// Properties set at start
 	bool nodaemon;											//!< Run daemon or not
 	bool error;													//!< Error flag
@@ -69,8 +69,11 @@ private:
 
 	struct tm *tm_start;								//!< Start time
 	struct tm *tm_end;									//!< End time
-		
-protected:
+	
+	struct {
+		bool ok;													//!< Track whether a network command is ok or not
+	} netio;
+
 	Protocol::Server *protocol;					//!< Network control socket
 	
 	pthread_mutex_t mode_mutex;					//!< Network thread <-> main thread mutex
@@ -105,7 +108,9 @@ public:
 	foamctrl *ptc;											//!< AO control
 	foamcfg *cs_config;									//!< FOAM configuration
 	Io io;															//!< Screen diagnostics output
-		
+	
+	bool has_error() { return error; }	//!< Error checking 
+	
 	int init();													//!< Initialize FOAM setup
 	int parse_args(int argc, char *argv[]); //!< Parse command-line arguments
 	int load_config();									//!< Load FOAM configuration (from arguments)

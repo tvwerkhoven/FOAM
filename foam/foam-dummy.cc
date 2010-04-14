@@ -18,9 +18,8 @@
  along with FOAM.  If not, see <http://www.gnu.org/licenses/>.
  */
 /*! 
-	@file FOAM_dummy.c
+	@file foam-dummy.c
 	@author Tim van Werkhoven (t.i.m.vanwerkhoven@xs4all.nl)
-	@date November 30 2007
 
 	@brief This is a dummy module to test the bare FOAM framework capabilities.
 */

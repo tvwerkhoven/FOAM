@@ -127,6 +127,13 @@ int FOAM_simstatic::calib() {
 void FOAM_simstatic::on_message(Connection *connection, std::string line) {
 	io.msg(IO_DEB2, "FOAM_simstatic::on_message(Connection *connection, std::string line)");
 	
+	// Process everything in uppercase internally
+	transform(line.begin(), line.end(), line.begin(), ::toupper);
+	netio.ok = true;
+	
+	// First let the parent process this
+	FOAM::on_message(connection, line);
+	
 	string cmd = popword(line);
 	
 	if (cmd == "HELP") {
@@ -141,14 +148,17 @@ void FOAM_simstatic::on_message(Connection *connection, std::string line) {
 												":calib <mode>:           Calibrate AO system.\n"
 												":  mode=subapsel:        Select subapertures.");
 		}
-		else {
-			return;
+		else if (!netio.ok) {
+			connection->write("ERR CMD HELP :TOPIC UNKOWN");
 		}
 	}
 	else if (cmd == "GET") {
 		string what = popword(line);
 		if (what == "CALIB") {
 			connection->write("OK VAR CALIB 2 SUBAPSEL INVALID");
+		}
+		else if (!netio.ok) {
+			connection->write("ERR GET VAR :VAR UNKOWN");
 		}
 	}
 	else if (cmd == "CALIB") {
@@ -163,20 +173,16 @@ void FOAM_simstatic::on_message(Connection *connection, std::string line) {
 			connection->write("ERR CMD CALIB :MODE UNKNOWN");
 		}	
 	}
-	else {
-		return;
-	}
-	
-	// if we end up here, we didn't return 0, so we found a valid command
-	return;
 }
 
 int main(int argc, char *argv[]) {
-	// Init FOAM_simstatic class
 	FOAM_simstatic foam(argc, argv);
 	
-	if (!foam.init())
-		return -1;
+	if (foam.has_error())
+		return foam.io.msg(IO_INFO, "Initialisation error.");
+	
+	if (foam.init())
+		return foam.io.msg(IO_ERR, "Configuration error.");
 		
 	foam.io.msg(IO_INFO, "Running simstatic mode");
 	

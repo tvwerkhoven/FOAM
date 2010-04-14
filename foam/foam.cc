@@ -54,11 +54,11 @@ nodaemon(false), error(false), conffile(FOAM_DEFAULTCONF), execname(argv[0]),
 io(IO_DEB2)
 {
 	io.msg(IO_DEB2, "FOAM::FOAM()");
-	if (!parse_args(argc, argv)) {
+	if (parse_args(argc, argv)) {
 		error = true;
 		return;
 	}
-	if (!load_config()) {
+	if (load_config()) {
 		error = true;
 		return;
 	}
@@ -78,12 +78,12 @@ int FOAM::init() {
 		daemon();	
 	
 	// Try to load setup-specific modules 
-	if (!load_modules())
-		return -1;
+	if (load_modules())
+		return io.msg(IO_ERR, "Could not load modules, aborting. Check your code.");
 	
 	// Verify setup integrity
-	if (!verify())
-		return -1;
+	if (verify())
+		return io.msg(IO_ERR, "Verification of setup failed, aborting. Check your configuration.");
 	
 	// Show banner
 	show_welcome();
@@ -415,8 +415,7 @@ void FOAM::on_message(Connection *connection, std::string line) {
 		connection->write("OK CMD HELP");
 		string topic = popword(line);
     if (show_nethelp(connection, topic, line))
-			//if (modMessage(ptc, connection, "HELP", orig))
-				connection->write("ERR CMD HELP :TOPIC UNKNOWN");
+			netio.ok = false;
   }
   else if (cmd == "EXIT" || cmd == "QUIT" || cmd == "BYE") {
 		connection->write("OK CMD EXIT");
@@ -448,8 +447,7 @@ void FOAM::on_message(Connection *connection, std::string line) {
 		else if (var == "NUMWFS") connection->write(format("OK VAR NUMWFS %d", ptc->wfs_count));
 		else if (var == "NUMWFC") connection->write(format("OK VAR NUMWFC %d", ptc->wfc_count));
 		else if (var == "MODE") connection->write(format("OK VAR MODE %s", mode2str(ptc->mode).c_str()));
-//		else if (modMessage(ptc, connection, "GET", orig))
-			connection->write("ERR GET :VAR UNKNOWN");
+		else netio.ok = false;
 	}
   else if (cmd == "MODE") {
     string mode = popword(line);
@@ -473,14 +471,14 @@ void FOAM::on_message(Connection *connection, std::string line) {
 		}
   }
   else {
-//    if (modMessage(ptc, connection, cmd, line))
-			connection->write("ERR CMD :UNKNOWN");
+		netio.ok = false;
   }
 }
 
 int FOAM::show_nethelp(Connection *connection, string topic, string rest) {
 	if (topic.size() == 0) {
 		connection->write(\
+":==== FOAM help ==========================\n"
 ":help [command]:         Help (on a certain command, if available).\n"
 ":mode <mode>:            close or open the loop.\n"
 ":get <var>:              read a system variable.\n"
@@ -489,8 +487,6 @@ int FOAM::show_nethelp(Connection *connection, string topic, string rest) {
 ":broadcast <msg>:        send a message to all connected clients.\n"
 ":exit or quit:           disconnect from daemon.\n"
 ":shutdown:               shutdown FOAM.");
-		// pass it along to modMessage() as well
-//		modMessage(ptc, connection, "help", rest);
 	}		
 	else if (topic == "MODE") {
 		connection->write(\
@@ -511,7 +507,7 @@ int FOAM::show_nethelp(Connection *connection, string topic, string rest) {
 											":  frames:               number of frames processed");
 	}
 	else {
-		// Unknown topic, return error
+		// Unknown topic
 		return -1;
 	}
 	return 0;
