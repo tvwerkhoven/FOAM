@@ -221,7 +221,6 @@ private:
 		
 		io.msg(IO_INFO, "Finally found %d subapertures", ns);
 		
-				
 		return ns;
 	}
 	

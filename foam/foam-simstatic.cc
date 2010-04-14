@@ -173,6 +173,9 @@ void FOAM_simstatic::on_message(Connection *connection, std::string line) {
 			connection->write("ERR CMD CALIB :MODE UNKNOWN");
 		}	
 	}
+	else if (!netio.ok) {
+		connection->write("ERR CMD :CMD UNKOWN");
+	}
 }
 
 int main(int argc, char *argv[]) {
