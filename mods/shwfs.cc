@@ -93,7 +93,7 @@ private:
 		return 0;
 	}
 	
-	bool subapSel() {
+	int subapSel() {
 		uint32_t csum;
 		float savec[2] = {0};
 		fcoord_t cog;
@@ -222,7 +222,7 @@ private:
 		io.msg(IO_INFO, "Finally found %d subapertures", ns);
 		
 				
-		return true;
+		return ns;
 	}
 	
 public:
@@ -279,7 +279,7 @@ public:
 		}
 	}	
 		
-	bool measure() {
+	int measure() {
 		void *tmpimg;
 		cam->get_image(&tmpimg);
 		
@@ -302,15 +302,15 @@ public:
 		else
 			return io.msg(IO_ERR, "Shwfs::measure() unknown datatype");
 		
-		return false;
+		return 0;
 	}
 	
-	bool verify() {
+	int verify() {
 		io.msg(IO_DEB1, "Shwfs::verify()");
-		return true;
+		return 0;
 	}
 	
-	bool calibrate() {
+	int calibrate() {
 		io.msg(IO_DEB1, "Shwfs::calibrate()");
 		// For SH WFS: select the subapertures to use for processing
 		return subapSel();

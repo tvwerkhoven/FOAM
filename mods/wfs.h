@@ -52,9 +52,9 @@ public:
 	
 	Camera *cam;									//!< Camera specific class
 	
-	virtual bool verify() = 0;		//!< Verify settings
-	virtual bool calibrate() = 0;	//!< Calibrate WFS
-	virtual bool measure() = 0;		//!< Measure abberations
+	virtual int verify() = 0;			//!< Verify settings
+	virtual int calibrate() = 0;	//!< Calibrate WFS
+	virtual int measure() = 0;		//!< Measure abberations
 	
 	static Wfs *create(Io &io, config &config);	//!< Initialize new wavefront sensor
 	static Wfs *create(Io &io, string conffile) {
