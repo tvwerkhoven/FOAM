@@ -35,18 +35,18 @@ public:
 	FOAM_dummy(int argc, char *argv[]): FOAM(argc, argv) { io.msg(IO_DEB2, "FOAM_dummy::FOAM_dummy()"); } 
 	virtual ~FOAM_dummy() { io.msg(IO_DEB2, "FOAM_dummy::~FOAM_dummy()"); } 
 	
-	virtual bool load_modules() { io.msg(IO_DEB2, "FOAM_dummy::load_modules()"); return true; } 
+	virtual int load_modules() { io.msg(IO_DEB2, "FOAM_dummy::load_modules()"); return 0; } 
 	virtual void on_message(Connection *connection, std::string line) { FOAM::on_message(connection, line); io.msg(IO_DEB2, "FOAM_dummy::on_message()"); } 
 		
-	virtual bool closed_init() { io.msg(IO_DEB2, "FOAM_dummy::closed_init()"); return true; }
-	virtual bool closed_loop()  { io.msg(IO_DEB2, "FOAM_dummy::closed_loop()"); return true; }
-	virtual bool closed_finish() { io.msg(IO_DEB2, "FOAM_dummy::closed_finish()"); return true; }
+	virtual int closed_init() { io.msg(IO_DEB2, "FOAM_dummy::closed_init()"); return 0; }
+	virtual int closed_loop()  { io.msg(IO_DEB2, "FOAM_dummy::closed_loop()"); return 0; }
+	virtual int closed_finish() { io.msg(IO_DEB2, "FOAM_dummy::closed_finish()"); return 0; }
 	
-	virtual bool open_init() { io.msg(IO_DEB2, "FOAM_dummy::open_init()"); return true; }
-	virtual bool open_loop() { io.msg(IO_DEB2, "FOAM_dummy::open_loop()"); return true; }
-	virtual bool open_finish() { io.msg(IO_DEB2, "FOAM_dummy::open_finish()"); return true; }
+	virtual int open_init() { io.msg(IO_DEB2, "FOAM_dummy::open_init()"); return 0; }
+	virtual int open_loop() { io.msg(IO_DEB2, "FOAM_dummy::open_loop()"); return 0; }
+	virtual int open_finish() { io.msg(IO_DEB2, "FOAM_dummy::open_finish()"); return 0; }
 	
-	virtual bool calib() { io.msg(IO_DEB2, "FOAM_dummy::calib()"); return true; }
+	virtual int calib() { io.msg(IO_DEB2, "FOAM_dummy::calib()"); return 0; }
 };
 
 

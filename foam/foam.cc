@@ -65,7 +65,7 @@ io(IO_DEB2)
 	
 }
 
-bool FOAM::init() {
+int FOAM::init() {
 	io.msg(IO_DEB2, "FOAM::init()");
 	
 	if (pthread_mutex_init(&mode_mutex, NULL) != 0)
@@ -73,21 +73,22 @@ bool FOAM::init() {
 	if (pthread_cond_init (&mode_cond, NULL) != 0)
 		return io.msg(IO_ERR, "pthread_cond_init failed.");
 
-	// Get networking thread
-	daemon();	
+	// Start networking thread
+	if (!nodaemon)
+		daemon();	
 	
 	// Try to load setup-specific modules 
 	if (!load_modules())
-		return false;
+		return -1;
 	
 	// Verify setup integrity
 	if (!verify())
-		return false;
+		return -1;
 	
 	// Show banner
 	show_welcome();
 	
-	return true;
+	return 0;
 }
 
 FOAM::~FOAM() {
@@ -128,7 +129,8 @@ void FOAM::show_clihelp(bool error = false) {
 		printf("Usage: %s [option]...\n\n", execname.c_str());
 		printf("  -c, --config=FILE    Read configuration from FILE.\n"
 					 "  -v, --verb[=LEVEL]   Increase verbosity level or set it to LEVEL.\n"
-					 "  -q,                  Decrease verbosity level or set it to LEVEL.\n"
+					 "  -q,                  Decrease verbosity level.\n"
+					 "      --nodaemon       Do not start network daemon.\n"
 					 "  -p, --pidfile=FILE   Write PID to FILE.\n"
 					 "  -h, --help           Display this help message.\n"
 					 "      --version        Display version information.\n\n");
@@ -160,7 +162,7 @@ void FOAM::show_welcome() {
 	io.msg(IO_INFO, "Copyright (c) 2007--2010 Tim van Werkhoven <T.I.M.vanWerkhoven@xs4all.nl>");
 }
 
-bool FOAM::parse_args(int argc, char *argv[]) {
+int FOAM::parse_args(int argc, char *argv[]) {
 	io.msg(IO_DEB2, "FOAM::parse_args()");
 	int r, option_index = 0;
 	execname = argv[0];
@@ -184,10 +186,10 @@ bool FOAM::parse_args(int argc, char *argv[]) {
 				break;
 			case 'h':
 				show_clihelp();
-				return false;
+				return -1;
 			case 1:
 				show_version();
-				return false;
+				return -1;
 			case 'q':
 				io.decVerb();
 				break;
@@ -199,7 +201,7 @@ bool FOAM::parse_args(int argc, char *argv[]) {
 					io.setVerb((int) atoi(optarg));
 				else {
 					show_clihelp(true);
-					return false;
+					return -1;
 				}
 				break;
 			case 'p':
@@ -210,23 +212,23 @@ bool FOAM::parse_args(int argc, char *argv[]) {
 				break;
 			case '?':
 				show_clihelp(true);
-				return false;
+				return -1;
 			default:
 				break;
 		}
 	}
 	
-	return true;
+	return 0;
 }
 
-bool FOAM::load_config() {
+int FOAM::load_config() {
 	io.msg(IO_DEB2, "FOAM::load_config()");
 	
 	// Load and parse configuration file
 	if (conffile == "") {
 		io.msg(IO_ERR, "No configuration file given.");
 		show_clihelp(true);
-		return false;
+		return -1;
 	}
 	else if (conffile == FOAM_DEFAULTCONF) {
 		io.msg(IO_WARN, "Using default configuration file '%s'.", conffile.c_str());
@@ -239,17 +241,16 @@ bool FOAM::load_config() {
 	ptc = new foamctrl(io, conffile);
 	if (ptc->error()) return io.msg(IO_ERR, "Coult not parse AO configuration");
 	
-	return true;
+	return 0;
 }
 
-bool FOAM::verify() {	
+int FOAM::verify() {	
 	// Check final configuration integrity
 	int ret = 0;
 	ret += ptc->verify();
 	ret += cs_config->verify();
 	
-	if (ret) return false;
-	return true;
+	return ret;
 }
 
 void FOAM::daemon() {
@@ -260,7 +261,7 @@ void FOAM::daemon() {
   protocol->listen();
 }
 
-bool FOAM::listen() {
+int FOAM::listen() {
 	io.msg(IO_DEB1, "FOAM::listen()");
 	
 	while (true) {
@@ -287,7 +288,7 @@ bool FOAM::listen() {
 				break;
 			case AO_MODE_SHUTDOWN:
 				io.msg(IO_DEB1, "FOAM::listen() AO_MODE_SHUTDOWN");
-				return true;
+				return 0;
 				break;
 			default:
 				io.msg(IO_DEB1, "FOAM::listen() UNKNOWN!");
@@ -295,23 +296,23 @@ bool FOAM::listen() {
 		}
 	}
 	
-	return false;
+	return -1;
 }
 
-bool FOAM::mode_open() {
+int FOAM::mode_open() {
 	io.msg(IO_INFO, "FOAM::mode_open()");
 
 	if (ptc->wfs_count == 0) {	// we need wavefront sensors
 		io.msg(IO_WARN, "No WFSs defined, cannot run open loop.");
 		ptc->mode = AO_MODE_LISTEN;
-		return false;
+		return -1;
 	}
 	
 	// Run the initialisation function of the modules used
 	if (!open_init()) {
 		io.msg(IO_WARN, "FOAM::open_init() failed.");
 		ptc->mode = AO_MODE_LISTEN;
-		return false;
+		return -1;
 	}
 		
 	protocol->broadcast("OK MODE OPEN");
@@ -320,7 +321,7 @@ bool FOAM::mode_open() {
 		if (!open_loop()) {
 			io.msg(IO_WARN, "FOAM::open_loop() failed");
 			ptc->mode = AO_MODE_LISTEN;
-			return false;
+			return -1;
 		}
 		ptc->frames++;	// increment the amount of frames parsed
 	}
@@ -328,27 +329,27 @@ bool FOAM::mode_open() {
 	if (!open_finish()) {		// check if we can finish
 		io.msg(IO_WARN, "FOAM::open_finish() failed.");
 		ptc->mode = AO_MODE_LISTEN;
-		return false;
+		return -1;
 	}
 	
-	return true;
+	return 0;
 }
 
-bool FOAM::mode_closed() {	
+int FOAM::mode_closed() {	
 	io.msg(IO_INFO, "FOAM::mode_closed()");
 
 	// Pre-loop checks
 	if (ptc->wfs_count == 0) { // we need wave front sensors
 		io.msg(IO_WARN, "No WFSs defined, cannot run closed loop.");
 		ptc->mode = AO_MODE_LISTEN;
-		return false;
+		return -1;
 	}
 	
 	// Initialize closed loop
 	if (!closed_init()) {
 		io.msg(IO_WARN, "FOAM::closed_init() failed");
 		ptc->mode = AO_MODE_LISTEN;
-		return false;
+		return -1;
 	}
 		
 	protocol->broadcast("OK MODE CLOSED");
@@ -358,7 +359,7 @@ bool FOAM::mode_closed() {
 		if (!closed_loop()) {
 			io.msg(IO_WARN, "FOAM::closed_loop() failed.");
 			ptc->mode = AO_MODE_LISTEN;
-			return false;
+			return -1;
 		}		
 		ptc->frames++;
 	}
@@ -367,13 +368,13 @@ bool FOAM::mode_closed() {
 	if (!closed_finish()) {
 		io.msg(IO_WARN, "FOAM::closed_finish() failed.");
 		ptc->mode = AO_MODE_LISTEN;
-		return false;
+		return -1;
 	}
 		
-	return true;
+	return 0;
 }
 
-bool FOAM::mode_calib() {
+int FOAM::mode_calib() {
 	io.msg(IO_INFO, "FOAM::mode_calib()");
 	
 	protocol->broadcast("OK MODE CALIB");
@@ -383,7 +384,7 @@ bool FOAM::mode_calib() {
 		io.msg(IO_WARN, "FOAM::calib() failed.");
 		protocol->broadcast("ERR CALIB :FAILED");
 		ptc->mode = AO_MODE_LISTEN;
-		return false;
+		return -1;
 	}
 	
 	protocol->broadcast("OK CALIB");
@@ -391,7 +392,7 @@ bool FOAM::mode_calib() {
 	io.msg(IO_INFO, "Calibration loop done, switching to listen mode.");
 	ptc->mode = AO_MODE_LISTEN;
 	
-	return true;
+	return 0;
 }
 
 void FOAM::on_connect(Connection *connection, bool status) {
@@ -477,7 +478,7 @@ void FOAM::on_message(Connection *connection, std::string line) {
   }
 }
 
-bool FOAM::show_nethelp(Connection *connection, string topic, string rest) {
+int FOAM::show_nethelp(Connection *connection, string topic, string rest) {
 	if (topic.size() == 0) {
 		connection->write(\
 ":help [command]:         Help (on a certain command, if available).\n"

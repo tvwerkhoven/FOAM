@@ -1,5 +1,5 @@
 /*
- foamctrl.h -- control class for complete AO system
+ foamctrl.h -- control class for the complete AO system
  Copyright (C) 2008--2010 Tim van Werkhoven <t.i.m.vanwerkhoven@xs4all.nl>
  
  This file is part of FOAM.
@@ -29,7 +29,7 @@
 #include "config.h"
 
 /*!
- @brief Struct for filter wheel identification (used by foamctrl)
+ @brief Filter wheel identification struct
  
  This datatype must be used by the user to configure the AO system.
  To do anything useful, FOAM must know what filterwheels you are using,

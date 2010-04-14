@@ -20,13 +20,10 @@
 /*! 
  @file foam-simstatic.c
  @author Tim van Werkhoven (t.i.m.vanwerkhoven@xs4all.nl)
- @date 2008-04-18
- 
  @brief This is a static simulation mode, with just a simple image to work with.
  
- This primemodule can be used to benchmark performance of the AO system if no
- AO hardware (camera, TT, DM) is present. This is branched off of the mcmath
- prime module.
+ This setup can be used to benchmark performance of the AO system if no
+ AO hardware (camera, TT, DM) is present.
  */
 
 #include "types.h"
@@ -37,35 +34,35 @@
 #include "foam-simstatic.h"
 
 
-bool FOAM_simstatic::load_modules() {
+int FOAM_simstatic::load_modules() {
 	io.msg(IO_DEB2, "FOAM_simstatic::load_modules()");
 
 	io.msg(IO_INFO, "This is the simstatic prime module, enjoy.");
 	
 	// Set up WFS #1 with image camera
 	if (ptc->wfs_count != 1)
-		return !io.msg(IO_ERR, "#WFS != 1, cannot continue.");
+		return io.msg(IO_ERR, "#WFS != 1, cannot continue.");
 	
 	ptc->wfs[0] = Wfs::create(io, ptc->wfscfgs[0]);
 	//ptc->wfs[0] 
 	//Wfs *tmp = new Wfs(&io, ptc->wfscfgs[0]);
 	
-	return true;
+	return 0;
 }
 
 // OPEN LOOP ROUTINES //
 /*********************/
 
-bool FOAM_simstatic::open_init() {
+int FOAM_simstatic::open_init() {
 	io.msg(IO_DEB2, "FOAM_simstatic::open_init()");
 	
 	ptc->wfs[0]->cam->set_mode(Camera::RUNNING);
 	ptc->wfs[0]->cam->init_capture();
 	
-	return true;
+	return 0;
 }
 
-bool FOAM_simstatic::open_loop() {
+int FOAM_simstatic::open_loop() {
 	io.msg(IO_DEB2, "FOAM_simstatic::open_loop()");
 	
 	//void *tmp;
@@ -74,21 +71,21 @@ bool FOAM_simstatic::open_loop() {
 	
 	usleep(1000000);
 	
-	return true;
+	return 0;
 }
 
-bool FOAM_simstatic::open_finish() {
+int FOAM_simstatic::open_finish() {
 	io.msg(IO_DEB2, "FOAM_simstatic::open_finish()");
 	
 	ptc->wfs[0]->cam->set_mode(Camera::OFF);
 
-	return true;
+	return 0;
 }
 
 // CLOSED LOOP ROUTINES //
 /************************/
 
-bool FOAM_simstatic::closed_init() {
+int FOAM_simstatic::closed_init() {
 	io.msg(IO_DEB2, "FOAM_simstatic::closed_init()");
 	
 	open_init();
@@ -96,14 +93,14 @@ bool FOAM_simstatic::closed_init() {
 	return EXIT_SUCCESS;
 }
 
-bool FOAM_simstatic::closed_loop() {
+int FOAM_simstatic::closed_loop() {
 	io.msg(IO_DEB2, "FOAM_simstatic::closed_loop()");
 
 	usleep(1000000);
 	return EXIT_SUCCESS;
 }
 
-bool FOAM_simstatic::closed_finish() {
+int FOAM_simstatic::closed_finish() {
 	io.msg(IO_DEB2, "FOAM_simstatic::closed_finish()");
 	
 	open_finish();
@@ -114,7 +111,7 @@ bool FOAM_simstatic::closed_finish() {
 // MISC ROUTINES //
 /*****************/
 
-bool FOAM_simstatic::calib() {
+int FOAM_simstatic::calib() {
 	io.msg(IO_DEB2, "FOAM_simstatic::calib()");
 
 	if (ptc->calmode == CAL_SUBAPSEL) {
@@ -128,6 +125,8 @@ bool FOAM_simstatic::calib() {
 }
 
 void FOAM_simstatic::on_message(Connection *connection, std::string line) {
+	io.msg(IO_DEB2, "FOAM_simstatic::on_message(Connection *connection, std::string line)");
+	
 	string cmd = popword(line);
 	
 	if (cmd == "HELP") {

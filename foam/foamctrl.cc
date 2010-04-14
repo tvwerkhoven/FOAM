@@ -116,7 +116,7 @@ int foamctrl::verify() {
 	for (int n=0; n < wfs_count; n++)
 		ret += (wfs[n])->verify();
 	for (int n=0; n < wfc_count; n++)
-		ret += wfc[n]->verify();
+		ret += (wfc[n])->verify();
 	
 	return ret;
 }

@@ -43,18 +43,18 @@ public:
 	FOAM_simstatic(int argc, char *argv[]): FOAM(argc, argv) { io.msg(IO_DEB2, "FOAM_simstatic::FOAM_simstatic()"); } 
 	virtual ~FOAM_simstatic() { io.msg(IO_DEB2, "FOAM_simstatic::~FOAM_simstatic()"); } 
 	
-	virtual bool load_modules();
+	virtual int load_modules();
 	virtual void on_message(Connection *connection, std::string line);
 	
-	virtual bool closed_init();
-	virtual bool closed_loop();
-	virtual bool closed_finish();
+	virtual int closed_init();
+	virtual int closed_loop();
+	virtual int closed_finish();
 	
-	virtual bool open_init();
-	virtual bool open_loop();
-	virtual bool open_finish();
+	virtual int open_init();
+	virtual int open_loop();
+	virtual int open_finish();
 	
-	virtual bool calib();
+	virtual int calib();
 };
 
 
