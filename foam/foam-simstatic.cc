@@ -28,24 +28,21 @@
 
 #include "types.h"
 #include "io.h"
-#include "wfs.h"
+#include "shwfs.h"
 #include "cam.h"
 #include "foam.h"
 #include "foam-simstatic.h"
 
-
 int FOAM_simstatic::load_modules() {
 	io.msg(IO_DEB2, "FOAM_simstatic::load_modules()");
-
 	io.msg(IO_INFO, "This is the simstatic prime module, enjoy.");
 	
 	// Set up WFS #1 with image camera
 	if (ptc->wfs_count != 1)
 		return io.msg(IO_ERR, "#WFS != 1, cannot continue.");
 	
-	ptc->wfs[0] = Wfs::create(io, ptc->wfscfgs[0]);
-	//ptc->wfs[0] 
-	//Wfs *tmp = new Wfs(&io, ptc->wfscfgs[0]);
+	//ptc->wfs[0] = Wfs::create(io, ptc->wfscfgs[0]);
+	ptc->wfs[0] = new Shwfs(io, ptc->wfscfgs[0]);
 	
 	return 0;
 }
@@ -67,7 +64,7 @@ int FOAM_simstatic::open_loop() {
 	
 	//void *tmp;
 	//ptc->wfs[0]->cam->get_image(&tmp);
-	ptc->wfs[0]->measure();
+	ptc->wfs[0]->measure(0);
 	
 	usleep(1000000);
 	
@@ -117,8 +114,14 @@ int FOAM_simstatic::calib() {
 	if (ptc->calmode == CAL_SUBAPSEL) {
 		io.msg(IO_DEB2, "FOAM_simstatic::calib CAL_SUBAPSEL");
 		usleep((useconds_t) 1.0 * 1000000);
-		ptc->wfs[0]->calibrate();
+		ptc->wfs[0]->calibrate(Shwfs::CAL_SUBAPSEL);
 		usleep((useconds_t) 1.0 * 1000000);
+	}
+	else if (ptc->calmode == CAL_PINHOLE) {
+		io.msg(IO_DEB2, "FOAM_simstatic::calib CAL_PINHOLE");
+		usleep((useconds_t) 1.0 * 1000000);
+		ptc->wfs[0]->calibrate(Shwfs::CAL_PINHOLE);
+		usleep((useconds_t) 1.0 * 1000000);	
 	}
 		
 	return EXIT_SUCCESS;
@@ -166,6 +169,12 @@ void FOAM_simstatic::on_message(Connection *connection, std::string line) {
 		if (calmode == "SUBAPSEL") {
 			connection->write("OK CMD CALIB SUBAPSEL");
 			ptc->calmode = CAL_SUBAPSEL;
+			ptc->mode = AO_MODE_CAL;
+			pthread_cond_signal(&mode_cond); // signal a change to the main thread
+		}
+		else if (calmode == "REF" || calmode == "REFERENCE") {
+			connection->write("OK CMD CALIB REFERENCE");
+			ptc->calmode = CAL_PINHOLE;
 			ptc->mode = AO_MODE_CAL;
 			pthread_cond_signal(&mode_cond); // signal a change to the main thread
 		}
