@@ -32,21 +32,20 @@
  @author Tim van Werkhoven (t.i.m.vanwerkhoven@xs4all.nl)
  */
 class Wfc {
+public:
+	typedef enum {
+		ACT_ADD=0,
+		ACT_SET
+	} wfc_actmode_t;							//!< Mode to use for actuating (set or add)
 	
-	public:
 	string name;									//!< WFC name
-	
-	gain_t gain;									//!< WFC PID gain
 	
 	int nact;											//!< Number of actuators
 	int wfctype;									//!< WFC type/model
 	
-	virtual int verify() { return 0; }
-	virtual int setvolt(gsl_vector_float *ctrl) { return 0; }
-	virtual int setgain(gain_t gain) { return 0; }
-	
-	virtual gain_t getgain() { return gain; }
-	virtual gsl_vector_float* getvolt() { return NULL; }
+	virtual int verify(int) = 0;
+	virtual int actuate(gsl_vector_float *ctrl, int) = 0;
+	virtual int caibrate(int) = 0;
 	
 	static Wfc *create(config &config);	//!< Initialize new wavefront corrector
 	
