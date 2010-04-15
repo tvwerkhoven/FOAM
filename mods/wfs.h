@@ -22,7 +22,6 @@
 #define HAVE_WFS_H
 
 #include <fstream>
-
 #include <string>
 #include <stdint.h>
 #include <sys/types.h>
@@ -46,29 +45,36 @@ public:
 		exception(const std::string reason): runtime_error(reason) {}
 	};
 	
-	string name;									//!< WFS name
-	string camtype;								//!< Camera type/model
-	string wfstype;								//!< WFS type/model
+	string name;												//!< WFS name
+	string camtype;											//!< Camera type/model
+	string wfstype;											//!< WFS type/model
+	config cfg;													//!< WFS configuration class
 	
-	Camera *cam;									//!< Camera specific class
+	struct wavefront {
+		gsl_vector_float *wfamp;					//!< Mode amplitudes
+		enum {
+			MODES_ZERNIKE=0,								//!< Zernike modes
+			MODES_KL,												//!< Karhunen-Loeve modes
+		} wfmode;
+		int nmodes;												//!< Number of modes
+	};
 	
-	virtual int verify() = 0;			//!< Verify settings
-	virtual int calibrate() = 0;	//!< Calibrate WFS
-	virtual int measure() = 0;		//!< Measure abberations
-	
-	static Wfs *create(Io &io, config &config);	//!< Initialize new wavefront sensor
-	static Wfs *create(Io &io, string conffile) {
-		io.msg(IO_DEB2, "Wfs::create(conffile=%s)", conffile.c_str());
+	Camera *cam;												//!< Camera specific class
 		
-		ifstream fin(conffile.c_str(), ifstream::in);
-		if (!fin.is_open()) throw("Could not open configuration file!");
-		fin.close();
-		
-		config config(conffile);
-		return Wfs::create(io, config);
-	};	//!< Initialize new wavefront sensor
+	typedef struct {
+		int prop;
+		void *value;
+	} wfs_prop_t;												//!< WFS property structure
+	
+	virtual int verify(int) = 0;				//!< Verify settings
+	virtual int calibrate(int) = 0;			//!< Calibrate WFS
+	virtual int measure(int) = 0;				//!< Measure abberations
+	virtual int configure(wfs_prop_t *) = 0; //!< Change a WFS setting
+	
 	virtual ~Wfs() {}
-	Wfs(Io &io): io(io) { ; }
+	Wfs(Io &io, string conffile): io(io), cfg(conffile) {
+		io.msg(IO_DEB2, "Wfs(Io &io, string conffile=%s)", conffile.c_str());
+	}
 };
 
 #endif // HAVE_WFS_H
