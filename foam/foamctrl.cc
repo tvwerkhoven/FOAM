@@ -114,9 +114,9 @@ int foamctrl::parse(string &file) {
 int foamctrl::verify() {
 	int ret=0;
 	for (int n=0; n < wfs_count; n++)
-		ret += (wfs[n])->verify();
+		ret += (wfs[n])->verify(0);
 	for (int n=0; n < wfc_count; n++)
-		ret += (wfc[n])->verify();
+		ret += (wfc[n])->verify(0);
 	
 	return ret;
 }
