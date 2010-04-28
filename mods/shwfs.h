@@ -33,12 +33,12 @@
 class Shwfs: public Wfs {
 private:
 	coord_t subap;											//!< Number of subapertures in X and Y
-	coord_t sasize;											//!< Subaperture pixel size
-	coord_t track;											//!< Subaperture tracking window size
+	coord_t sasize;											//!< Subaperture size (pixels)
+	coord_t track;											//!< Subaperture tracking window size (pixels)
 	int samaxr;													//!< Maximum radius to use, or edge erosion subapertures
 	int samini;													//!< Minimum amount of subapertures to use
 	
-	int mode;														//!< Data processing mode (Center of Gravity, Correlation, etc)
+	int mode;													//!< Data processing mode (Center of Gravity, Correlation, etc)
 	
 	fcoord_t *trackpos;
 	coord_t *sapos;
@@ -48,6 +48,7 @@ private:
 	
 	template <class T> uint32_t _cog(T *img, int xpos, int ypos, int w, int h, int stride, uint32_t samini, fcoord_t& cog);
 	template <class T> int _cogframe(T *img);
+	
 	int subapSel();	
 	void printGrid(int *map);
 	

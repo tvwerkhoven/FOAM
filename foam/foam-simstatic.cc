@@ -33,18 +33,102 @@
 #include "foam.h"
 #include "foam-simstatic.h"
 
+#include <map>
+#include <iostream>
+
+class Device {
+public:
+	string name;
+	
+	Device(string name): name(name) { 
+		printf("Device::Device(): Create new device, name=%s\n", name.c_str());
+	}
+	~Device() {
+		printf("Device::~Device()\n");
+	}
+	string getname() { return name; }
+};
+
+class DeviceA : public Device {
+public:
+	DeviceA(string name): Device(name) {
+		printf("DeviceA::DeviceA()\n");
+	}
+	~DeviceA() {
+		printf("DeviceA::~DeviceA()\n");
+	}
+	int measure() { 
+		printf("DeviceA::measure()\n");
+		return 10; 
+	}
+};
+
+class DeviceManager {
+public:
+	typedef map<string, Device*> device_t;
+	device_t devices;
+	
+	// Add a device to the list, get the name from the device to use as key.
+	int add(Device *dev) {
+		string id = dev->getname();
+		if (devices.find(id) != devices.end()) {
+			printf("ID '%s' already exists!\n", id.c_str());
+			return -1;
+		}
+		devices[id] = dev;
+		return 0;
+	}
+	// Get a device from the list. Return NULL if not found.
+	Device* get(string id) {
+		if (devices.find(id) == devices.end()) {
+			printf("ID '%s' does not exist!\n", id.c_str());
+			return NULL;
+		}
+		return devices[id];
+	}
+	// Delete a device from the list. Return -1 if not found.
+	int del(string id) {
+		if (devices.find(id) == devices.end()) {
+			printf("ID '%s' does not exist!\n", id.c_str());
+			return -1;
+		}
+		devices.erase(devices.find(id));
+		return 0;
+	}
+	
+	// Return a list of all devices in the list
+	string getlist() {
+		device_t::iterator it;
+		string devlist = "";
+		for (it=devices.begin() ; it != devices.end(); it++ ) {
+			cout << (*it).first << " => " << (*it).second << endl;
+			devlist += (*it).first + " ";
+		}
+		
+		return devlist;
+	}
+};
+
+
 int FOAM_simstatic::load_modules() {
 	io.msg(IO_DEB2, "FOAM_simstatic::load_modules()");
 	io.msg(IO_INFO, "This is the simstatic prime module, enjoy.");
 	
-	// Set up WFS #1 with image camera
-	if (ptc->wfs_count != 1)
-		return io.msg(IO_ERR, "#WFS != 1, cannot continue.");
+	DeviceManager devices;
 	
-	//ptc->wfs[0] = Wfs::create(io, ptc->wfscfgs[0]);
-	ptc->wfs[0] = new Shwfs(io, ptc->wfscfgs[0]);
+	// Add camera device
+	DeviceA *deva1 = new DeviceA("DEVICEA:1");
+	devices.add((Device *) deva1);
+
+	DeviceA *deva2 = new DeviceA("DEVICEA:2");
+	devices.add((Device *) deva2);
+
+	((DeviceA*) devices.get("DEVICEA:1"))->measure();
 	
-	return 0;
+	printf("list: %s\n", devices.getlist().c_str());
+	
+	//return 0;
+	exit(0);
 }
 
 // OPEN LOOP ROUTINES //
@@ -123,7 +207,12 @@ int FOAM_simstatic::calib() {
 		ptc->wfs[0]->calibrate(Shwfs::CAL_PINHOLE);
 		usleep((useconds_t) 1.0 * 1000000);	
 	}
-		
+	else if (ptc->calmode == CAL_INFL) {
+		io.msg(IO_DEB2, "FOAM_simstatic::calib CAL_PINHOLE");
+		usleep((useconds_t) 1.0 * 1000000);
+		ptc->wfs[0]->calibrate(Shwfs::CAL_PINHOLE);
+		usleep((useconds_t) 1.0 * 1000000);	
+	}		
 	return EXIT_SUCCESS;
 }
 
@@ -149,6 +238,8 @@ void FOAM_simstatic::on_message(Connection *connection, std::string line) {
 		else if (topic == "CALIB") {
 			connection->write(\
 												":calib <mode>:           Calibrate AO system.\n"
+												":  mode=reference:       Measure reference wavefront.\n"
+												":  mode=reference:       Measure reference wavefront.\n"
 												":  mode=subapsel:        Select subapertures.");
 		}
 		else if (!netio.ok) {
@@ -159,6 +250,9 @@ void FOAM_simstatic::on_message(Connection *connection, std::string line) {
 		string what = popword(line);
 		if (what == "CALIB") {
 			connection->write("OK VAR CALIB 2 SUBAPSEL INVALID");
+		}
+		else if (what == "DEVICES") {
+			connection->write("OK VAR DEVICES 1 WFS SHWFS CAM IMGCAM");
 		}
 		else if (!netio.ok) {
 			connection->write("ERR GET VAR :VAR UNKOWN");
