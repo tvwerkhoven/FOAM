@@ -67,7 +67,6 @@ class DeviceManager {
 public:
 	typedef map<string, Device*> device_t;
 	device_t devices;
-	int ndev;
 	
 	// Add a device to the list, get the name from the device to use as key.
 	int add(Device *dev) {
@@ -77,7 +76,6 @@ public:
 			return -1;
 		}
 		devices[id] = dev;
-		ndev++;
 		return 0;
 	}
 	// Get a device from the list. Return NULL if not found.
@@ -95,7 +93,6 @@ public:
 			return -1;
 		}
 		devices.erase(devices.find(id));
-		ndev--;
 		return 0;
 	}
 	
@@ -110,38 +107,25 @@ public:
 		
 		return devlist;
 	}
-	
-	// Return number of devices 
-	int getcount {
-		return ndev;
-	}
-	
-	DeviceManager(): ndev(0) {
-		printf("DeviceManager::DeviceManager()\n");
-	}
-	~DeviceManager() {
-		printf("DeviceManager::~DeviceManager()\n");
-	}
 };
 
-DeviceManager *devices;
 
 int FOAM_simstatic::load_modules() {
 	io.msg(IO_DEB2, "FOAM_simstatic::load_modules()");
 	io.msg(IO_INFO, "This is the simstatic prime module, enjoy.");
-		
-	devices = new DeviceManager;
+	
+	DeviceManager devices;
 	
 	// Add camera device
 	DeviceA *deva1 = new DeviceA("DEVICEA:1");
-	devices->add((Device *) deva1);
+	devices.add((Device *) deva1);
 
 	DeviceA *deva2 = new DeviceA("DEVICEA:2");
-	devices->add((Device *) deva2);
+	devices.add((Device *) deva2);
 
-	((DeviceA*) devices->get("DEVICEA:1"))->measure();
+	((DeviceA*) devices.get("DEVICEA:1"))->measure();
 	
-	printf("list: %s\n", devices->getlist().c_str());
+	printf("list: %s\n", devices.getlist().c_str());
 	
 	//return 0;
 	exit(0);
@@ -209,13 +193,26 @@ int FOAM_simstatic::closed_finish() {
 /*****************/
 
 int FOAM_simstatic::calib() {
-	io.msg(IO_DEB2, "FOAM_simstatic::calib()=%s", ptc->calib.c_str());
+	io.msg(IO_DEB2, "FOAM_simstatic::calib()");
 
-	if (ptc->calib == "INFLUENCE") {
-		io.msg(IO_DEB2, "FOAM_simstatic::calib INFLUENCE");
+	if (ptc->calmode == CAL_SUBAPSEL) {
+		io.msg(IO_DEB2, "FOAM_simstatic::calib CAL_SUBAPSEL");
+		usleep((useconds_t) 1.0 * 1000000);
+		ptc->wfs[0]->calibrate(Shwfs::CAL_SUBAPSEL);
 		usleep((useconds_t) 1.0 * 1000000);
 	}
-
+	else if (ptc->calmode == CAL_PINHOLE) {
+		io.msg(IO_DEB2, "FOAM_simstatic::calib CAL_PINHOLE");
+		usleep((useconds_t) 1.0 * 1000000);
+		ptc->wfs[0]->calibrate(Shwfs::CAL_PINHOLE);
+		usleep((useconds_t) 1.0 * 1000000);	
+	}
+	else if (ptc->calmode == CAL_INFL) {
+		io.msg(IO_DEB2, "FOAM_simstatic::calib CAL_PINHOLE");
+		usleep((useconds_t) 1.0 * 1000000);
+		ptc->wfs[0]->calibrate(Shwfs::CAL_PINHOLE);
+		usleep((useconds_t) 1.0 * 1000000);	
+	}		
 	return EXIT_SUCCESS;
 }
 
@@ -241,7 +238,8 @@ void FOAM_simstatic::on_message(Connection *connection, std::string line) {
 		else if (topic == "CALIB") {
 			connection->write(\
 												":calib <mode>:           Calibrate AO system.\n"
-												":  mode=influence:       Measure wfs-wfc influence.\n"
+												":  mode=reference:       Measure reference wavefront.\n"
+												":  mode=reference:       Measure reference wavefront.\n"
 												":  mode=subapsel:        Select subapertures.");
 		}
 		else if (!netio.ok) {
@@ -251,10 +249,10 @@ void FOAM_simstatic::on_message(Connection *connection, std::string line) {
 	else if (cmd == "GET") {
 		string what = popword(line);
 		if (what == "CALIB") {
-			connection->write("OK VAR CALIB 1 INFLUENCE");
+			connection->write("OK VAR CALIB 2 SUBAPSEL INVALID");
 		}
 		else if (what == "DEVICES") {
-			connection->write("OK VAR DEVICES %d %s", devices->getcount(), devices->getlist());
+			connection->write("OK VAR DEVICES 1 WFS SHWFS CAM IMGCAM");
 		}
 		else if (!netio.ok) {
 			connection->write("ERR GET VAR :VAR UNKOWN");
@@ -262,10 +260,21 @@ void FOAM_simstatic::on_message(Connection *connection, std::string line) {
 	}
 	else if (cmd == "CALIB") {
 		string calmode = popword(line);
-		connection->write("OK CMD CALIB");
-		ptc->calib = calmode;
-		ptc->mode = AO_MODE_CAL;
-		pthread_cond_signal(&mode_cond); // signal a change to the main thread
+		if (calmode == "SUBAPSEL") {
+			connection->write("OK CMD CALIB SUBAPSEL");
+			ptc->calmode = CAL_SUBAPSEL;
+			ptc->mode = AO_MODE_CAL;
+			pthread_cond_signal(&mode_cond); // signal a change to the main thread
+		}
+		else if (calmode == "REF" || calmode == "REFERENCE") {
+			connection->write("OK CMD CALIB REFERENCE");
+			ptc->calmode = CAL_PINHOLE;
+			ptc->mode = AO_MODE_CAL;
+			pthread_cond_signal(&mode_cond); // signal a change to the main thread
+		}
+		else {
+			connection->write("ERR CMD CALIB :MODE UNKNOWN");
+		}	
 	}
 	else if (!netio.ok) {
 		connection->write("ERR CMD :CMD UNKOWN");
