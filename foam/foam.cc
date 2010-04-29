@@ -42,7 +42,6 @@
 #include "types.h"
 #include "io.h"
 #include "protocol.h"
-#include "foamcfg.h"
 #include "foamctrl.h"
 
 using namespace std;
