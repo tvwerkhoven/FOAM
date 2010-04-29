@@ -28,44 +28,11 @@
 #include "foamcfg.h"
 #include "config.h"
 
-/*!
- @brief Filter wheel identification struct
- 
- This datatype must be used by the user to configure the AO system.
- To do anything useful, FOAM must know what filterwheels you are using,
- and therefore you must fill in the (user) fields at the beginning.
- */
-typedef struct {
-	char *name;					//!< (user) Filterwheel name
-	int nfilts;					//!< (user) Number of filters present in this wheel
-	filter_t curfilt;		//!< (foam) Current filter in place
-	filter_t *filters;	//!< (user) All filters present in this wheel
-	int delay;          //!< (user) The time in seconds the filterwheel needs to adjust, which is used in a sleep() call to give the filterwheel time
-	int id;             //!< (user) a unique ID to identify the filterwheel
-} fwheel_t;
-
 
 /*! 
  @brief Stores the control state of the AO system
  
- This struct is used to store several variables indicating the state of the AO system 
- which are shared between the different threads. The thread interfacing with user(s)
- can then read these variables and report them to the user, or change them to influence
- the behaviour.
- 
- The struct should be configured by the user in the prime module c-file for useful operation.
- (user) fields must be configured by the user, (foam) fields should be left untouched,
- although it is generally safe to read these fields.
- 
- The logfrac field is used to stop superfluous logging. See logInfo() and logDebug()
- documentation for details. Errors and warnings are always logged/displayed, as these
- shouldn't occur, and supressing these are generally unwanted.
- 
- The datalog* variables can be used to do miscellaneous logging to, in addition to general
- operational details that are logged to the debug, info and error logfiles. Logging 
- to this file must be taken care of by the prime module, 
- 
- Also take a look at wfs_t, wfc_t and fwheel_t.
+ This struct is used to store several variables indicating the state of the AO system.
  */
 class foamctrl {
 private:
@@ -83,28 +50,26 @@ public:
 	int error() { return err; }
 	
 	string conffile;							//!< Configuration file used
-	string confpath;							//!< Configuration path
+	string confpath;							//!< Configuration path (used for other config files)
+	string pidfile;								//!< file to store PID to (/tmp/foam.pid)
 	
-	aomode_t mode;								//!< AO system mode, default AO_MODE_LISTEN
-	calmode_t calmode;						//!< Calibration mode, default CAL_PINHOLE
-	string calib;									//!< Calibration mode passed to FOAM
+	string listenip;							//!< IP to listen on (0.0.0.0)
+	string listenport;						//!< port to listen on (1025)
 	
-	time_t starttime;							//!< (foam) Starting time
-	time_t lasttime;							//!< (foam) End time
-	long frames;									//!< (foam) Number of frames parsed
-	int logfrac;									//!< (user) Produce verbose info every logfrac frames. Default 1000
-	float fps;										//!< (foam) Current FPS
+	string datadir;								//!< path to data directory (pgm, fits files) (./)
 	
-	int wfs_count;								//!< Number of WFSs in the system, default 0
-	string *wfscfgs;							//!< WFS configuration files
-	Wfs **wfs;										//!< WFS entities
+	string logfile;								//!< file to log info messages to (none)
 	
-	int wfc_count;								//!< Number of WFCs in the system, default 0
-	string *wfccfgs;							//!< WFC configuration files
-	Wfc **wfc;										//!< WFC entities
+	bool use_syslog; 							//!< syslog usage flag (no)
+	string syslog_prepend;				//!< string to prepend to syslogs ("foam")
 	
-	int fw_count;									//!< Number of filterwheels in the system, default 0
-	fwheel_t *filter;							//!< FW entities
+	aomode_t mode;								//!< AO system mode (AO_MODE_LISTEN)
+	calmode_t calmode;						//!< Calibration mode (CAL_PINHOLE)
+	string calib;									//!< Calibration mode passed to FOAM (none)
+	
+	time_t starttime;							//!< FOAM start timestamp
+	time_t lasttime;							//!< Last frame timestamp
+	long frames;									//!< Number of frames parsed
 };
 
 #endif // HAVE_FOAMCTRL_H

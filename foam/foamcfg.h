@@ -58,9 +58,6 @@ public:
 	
 	bool use_syslog; 				//!< syslog usage flag, default no
 	string syslog_prepend;	//!< string to prepend to syslogs, default "foam"
-	
-	pthread_t *threads;			//!< this stores the thread ids of all threads created
-	int nthreads;						//!< stores the number of threads in use
 };
 
 #endif // HAVE_FOAMCFG_H
