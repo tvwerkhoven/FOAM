@@ -19,6 +19,7 @@
  */
 
 #include <time.h>
+#include <syslog.h>
 
 #include "foamctrl.h"
 #include "types.h"
@@ -33,22 +34,21 @@ foamctrl::~foamctrl(void) {
 }
 
 foamctrl::foamctrl(Io &io): 
-io(io),
+err(0), io(io),
 conffile(""), pidfile("/tmp/foam.pid"), 
 listenip("0.0.0.0"), listenport("1025"),
 datadir(FOAM_DATADIR), logfile("foam-log"),
 use_syslog(false), syslog_prepend("foam"), 
 mode(AO_MODE_LISTEN), calmode(CAL_INFL), calib(""),
-starttime(time(NULL)), frames(0), err(0)
+starttime(time(NULL)), frames(0)
 { 
 	io.msg(IO_DEB2, "foamctrl::foamctrl(void)");
 }
 
 foamctrl::foamctrl(Io &io, string &file): 
-io(io),
+err(0), io(io), conffile(file),
 mode(AO_MODE_LISTEN), calmode(CAL_INFL), calib(""),
-starttime(time(NULL)), frames(0), err(0),
-conffile(file)
+starttime(time(NULL)), frames(0)
 {
 	io.msg(IO_DEB2, "foamctrl::foamctrl()");
 	
@@ -61,6 +61,8 @@ int foamctrl::parse(string &file) {
 	int idx = conffile.find_last_of("/");
 	confpath = conffile.substr(0, idx);
 	io.msg(IO_DEB2, "foamctrl::parse: got file %s and path %s.", conffile.c_str(), confpath.c_str());
+	
+	cfgfile = new config(conffile);
 	
 	// PID file
 	pidfile = cfgfile->getstring("pidfile", "/tmp/foam.pid");

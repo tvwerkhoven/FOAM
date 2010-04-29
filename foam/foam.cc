@@ -110,7 +110,6 @@ FOAM::~FOAM() {
 					end-ptc->starttime, ptc->frames, ptc->frames/(float) (end-ptc->starttime));
 
 	delete protocol;
-	delete cs_config;
 	delete ptc;
 }
 
@@ -236,10 +235,8 @@ int FOAM::load_config() {
 	
 	// Init control and configuration using the config file
 	io.msg(IO_INFO, "Initializing control & AO configuration...");
-  cs_config = new foamcfg(io, conffile);
-	if (cs_config->error()) return io.msg(IO_ERR, "Coult not parse control configuration");	
 	ptc = new foamctrl(io, conffile);
-	if (ptc->error()) return io.msg(IO_ERR, "Coult not parse AO configuration");
+	if (ptc->error()) return io.msg(IO_ERR, "Coult not parse FOAM configuration");
 	
 	return 0;
 }
@@ -248,14 +245,13 @@ int FOAM::verify() {
 	// Check final configuration integrity
 	int ret = 0;
 	ret += ptc->verify();
-	ret += cs_config->verify();
 	
 	return ret;
 }
 
 void FOAM::daemon() {
-	io.msg(IO_INFO, "Starting daemon at %s:%s...", cs_config->listenip.c_str(), cs_config->listenport.c_str());
-  protocol = new Protocol::Server(cs_config->listenport);
+	io.msg(IO_INFO, "Starting daemon at %s:%s...", ptc->listenip.c_str(), ptc->listenport.c_str());
+  protocol = new Protocol::Server(ptc->listenport);
   protocol->slot_message = sigc::mem_fun(this, &FOAM::on_message);
   protocol->slot_connected = sigc::mem_fun(this, &FOAM::on_connect);
   protocol->listen();
@@ -302,12 +298,6 @@ int FOAM::listen() {
 int FOAM::mode_open() {
 	io.msg(IO_INFO, "FOAM::mode_open()");
 
-	if (ptc->wfs_count == 0) {	// we need wavefront sensors
-		io.msg(IO_WARN, "No WFSs defined, cannot run open loop.");
-		ptc->mode = AO_MODE_LISTEN;
-		return -1;
-	}
-	
 	// Run the initialisation function of the modules used
 	if (open_init()) {
 		io.msg(IO_WARN, "FOAM::open_init() failed.");
@@ -337,13 +327,6 @@ int FOAM::mode_open() {
 
 int FOAM::mode_closed() {	
 	io.msg(IO_INFO, "FOAM::mode_closed()");
-
-	// Pre-loop checks
-	if (ptc->wfs_count == 0) { // we need wave front sensors
-		io.msg(IO_WARN, "No WFSs defined, cannot run closed loop.");
-		ptc->mode = AO_MODE_LISTEN;
-		return -1;
-	}
 	
 	// Initialize closed loop
 	if (closed_init()) {
@@ -444,8 +427,6 @@ void FOAM::on_message(Connection *connection, std::string line) {
   else if (cmd == "GET") {
     string var = popword(line);
 		if (var == "FRAMES") connection->write(format("OK VAR FRAMES %d", ptc->frames));
-		else if (var == "NUMWFS") connection->write(format("OK VAR NUMWFS %d", ptc->wfs_count));
-		else if (var == "NUMWFC") connection->write(format("OK VAR NUMWFC %d", ptc->wfc_count));
 		else if (var == "MODE") connection->write(format("OK VAR MODE %s", mode2str(ptc->mode).c_str()));
 		else netio.ok = false;
 	}

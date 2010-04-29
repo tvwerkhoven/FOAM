@@ -36,8 +36,8 @@ LDADD = $(LIBSIU_DIR)/libsocket.a \
 		$(LIBSIU_DIR)/libprotocol.a
 
 # Basic framework files which are always needed
-FRAME_SRC = foam.cc foamctrl.cc foamcfg.cc
-FRAME_HDR = foam.h foamctrl.h foamcfg.h config.h wfc.h wfs.h
+FRAME_SRC = foam.cc foamctrl.cc
+FRAME_HDR = foam.h foamctrl.h config.h
 
 ### DUMMY MODE ###
 ##################
