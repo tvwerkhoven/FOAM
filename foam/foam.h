@@ -54,6 +54,7 @@
 #include "config.h"
 #include "protocol.h"
 #include "foamctrl.h"
+#include "devices.h"
 
 using namespace std;
 
@@ -106,6 +107,7 @@ public:
 	virtual ~FOAM() = 0;
 	
 	foamctrl *ptc;											//!< AO control
+	DeviceManager *devices;							//!< Device/hardware management
 	Io io;															//!< Screen diagnostics output
 	
 	bool has_error() { return error; }	//!< Error checking 

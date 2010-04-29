@@ -58,14 +58,12 @@ public:
 };
 
 // Global device list for easier access
-DeviceManager *devices;
+
 
 int FOAM_simstatic::load_modules() {
 	io.msg(IO_DEB2, "FOAM_simstatic::load_modules()");
 	io.msg(IO_INFO, "This is the simstatic prime module, enjoy.");
 		
-	devices = new DeviceManager(io);
-	
 	// Add camera device
 	DeviceA *deva1 = new DeviceA(io, "DEVICEA:1", ptc->listenport);
 	devices->add((Device *) deva1);

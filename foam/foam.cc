@@ -43,16 +43,17 @@
 #include "io.h"
 #include "protocol.h"
 #include "foamctrl.h"
+#include "devices.h"
 
 using namespace std;
-
-
 
 FOAM::FOAM(int argc, char *argv[]):
 nodaemon(false), error(false), conffile(FOAM_DEFAULTCONF), execname(argv[0]),
 io(IO_DEB2)
 {
 	io.msg(IO_DEB2, "FOAM::FOAM()");
+	devices = new DeviceManager(io);
+	
 	if (parse_args(argc, argv)) {
 		error = true;
 		return;
