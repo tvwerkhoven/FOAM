@@ -106,7 +106,6 @@ public:
 	virtual ~FOAM() = 0;
 	
 	foamctrl *ptc;											//!< AO control
-	foamcfg *cs_config;									//!< FOAM configuration
 	Io io;															//!< Screen diagnostics output
 	
 	bool has_error() { return error; }	//!< Error checking 
