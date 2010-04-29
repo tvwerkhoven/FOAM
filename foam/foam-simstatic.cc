@@ -58,26 +58,27 @@ public:
 };
 
 // Global device list for easier access
-
+ImgCamera *imgcam;
 
 int FOAM_simstatic::load_modules() {
 	io.msg(IO_DEB2, "FOAM_simstatic::load_modules()");
 	io.msg(IO_INFO, "This is the simstatic prime module, enjoy.");
 		
-	// Add camera device
-	DeviceA *deva1 = new DeviceA(io, "DEVICEA:1", ptc->listenport);
-	devices->add((Device *) deva1);
-
-	// Add another device
-	DeviceA *deva2 = new DeviceA(io, "DEVICEA:2", ptc->listenport);
-	devices->add((Device *) deva2);
-
-	// Do something
-	((DeviceA*) devices->get("DEVICEA:1"))->measure();
+	// Add ImgCam device
+	
+	imgcam = new ImgCamera(io, "IMGCAM", ptc->listenport, ptc->cfgfile);
+	devices->add((Device *) imgcam);
+	
+//
+//	// Add another device
+//	DeviceA *deva2 = new DeviceA(io, "DEVICEA:2", ptc->listenport);
+//	devices->add((Device *) deva2);
+//
+//	// Do something
+//	((DeviceA*) devices->get("DEVICEA:1"))->measure();
 	
 	io.msg(IO_XNFO, "list: %s", devices->getlist().c_str());
 	
-	delete devices;
 	return 0;
 }
 
@@ -87,6 +88,7 @@ int FOAM_simstatic::load_modules() {
 int FOAM_simstatic::open_init() {
 	io.msg(IO_DEB2, "FOAM_simstatic::open_init()");
 	
+	imgcam->
 	//ptc->devices->get("DEVICEA:1")->calibrate();
 	
 	return 0;

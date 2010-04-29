@@ -67,10 +67,10 @@ class ImgCamera: public Camera {
 	}
 	
 public:
-	ImgCamera(Io &io, config &config): Camera(io) {
-		io.msg(IO_DEB2, "ImgCamera::ImgCamera(config &config)");
+	ImgCamera(Io &io, string name, string port, config *config): Camera(io, name, port) {
+		io.msg(IO_DEB2, "ImgCamera::ImgCamera()");
 		
-		string type = config.getstring("type");
+		string type = config.getstring(name+".type");
 		if (type != IMGCAM_TYPE) throw exception("Type should be " IMGCAM_TYPE " for this class.");
 		
 		string file = config.getstring("imagefile");
@@ -213,8 +213,3 @@ public:
 		return true;
 	}
 };
-
-Camera *Camera::create(Io &io, config &config) {
-	io.msg(IO_DEB2, "Camera::create(config &config)");
-	return new ImgCamera(io, config);
-}

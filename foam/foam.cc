@@ -109,6 +109,7 @@ FOAM::~FOAM() {
 	io.msg(IO_INFO, "Ran for %ld seconds, parsed %ld frames (%.1f FPS).", \
 					end-ptc->starttime, ptc->frames, ptc->frames/(float) (end-ptc->starttime));
 
+	delete devices;
 	delete protocol;
 	delete ptc;
 }

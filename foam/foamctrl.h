@@ -35,7 +35,6 @@
  */
 class foamctrl {
 private:
-	config *cfgfile;
 	int err;
 	Io &io;
 	
@@ -50,6 +49,7 @@ public:
 	
 	string conffile;							//!< Configuration file used
 	string confpath;							//!< Configuration path (used for other config files)
+	config *cfgfile;							//!< Parsed configuration settings
 	string pidfile;								//!< file to store PID to (/tmp/foam.pid)
 	
 	string listenip;							//!< IP to listen on (0.0.0.0)
