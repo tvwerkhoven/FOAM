@@ -26,47 +26,14 @@
  AO hardware (camera, TT, DM) is present.
  */
 
-#include <map>
 #include <iostream>
 
+#include "foam.h"
 #include "types.h"
 #include "io.h"
-#include "shwfs.h"
-#include "cam.h"
-#include "foam.h"
+#include "devices.h"
+
 #include "foam-simstatic.h"
-
-
-class Device {
-protected:
-	Io &io;
-	string name;												//!< Device name
-	string port;												//!< Port to listen on
-	Protocol::Server *protocol;
-	
-public:
-	Device(Io &io, string name, string port): io(io), name(name), port(port) { 
-		io.msg(IO_XNFO, "Device::Device(): Create new device, name=%s", name.c_str());
-		
-		protocol = new Protocol::Server(port, name);
-		io.msg(IO_XNFO, "Device %s listening on port %s.", name.c_str(), port.c_str());
-		protocol->slot_message = sigc::mem_fun(this, &Device::on_message);
-		protocol->slot_connected = sigc::mem_fun(this, &Device::on_connect);
-		protocol->listen();
-	}
-	virtual ~Device() {
-		io.msg(IO_DEB2, "Device::~Device()");
-		delete protocol;
-	}
-	
-	// Should verify the integrity of the device.
-	virtual int verify() { return 0; }
-	// Network IO handling routines
-	virtual void on_message(Connection *conn, std::string line) { ; }
-	virtual void on_connect(Connection *conn, bool status) { ; }
-
-	string getname() { return name; }
-};
 
 class DeviceA : public Device {
 public:
@@ -90,68 +57,7 @@ public:
 	}
 };
 
-class DeviceManager {
-private:
-	Io &io;
-	
-	typedef map<string, Device*> device_t;
-	device_t devices;
-	int ndev;
-	
-public:
-	// Add a device to the list, get the name from the device to use as key.
-	int add(Device *dev) {
-		string id = dev->getname();
-		if (devices.find(id) != devices.end()) {
-			io.msg(IO_ERR, "ID '%s' already exists!", id.c_str());
-			return -1;
-		}
-		devices[id] = dev;
-		ndev++;
-		return 0;
-	}
-	// Get a device from the list. Return NULL if not found.
-	Device* get(string id) {
-		if (devices.find(id) == devices.end()) {
-			io.msg(IO_ERR, "ID '%s' does not exist!", id.c_str());
-			return NULL;
-		}
-		return devices[id];
-	}
-	// Delete a device from the list. Return -1 if not found.
-	int del(string id) {
-		if (devices.find(id) == devices.end()) {
-			io.msg(IO_ERR, "ID '%s' does not exist!", id.c_str());
-			return -1;
-		}
-		devices.erase(devices.find(id));
-		ndev--;
-		return 0;
-	}
-	
-	// Return a list of all devices in the list
-	string getlist() {
-		device_t::iterator it;
-		string devlist = "";
-		for (it=devices.begin() ; it != devices.end(); it++)
-			devlist += (*it).first + " ";
-		
-		return devlist;
-	}
-	
-	// Return number of devices 
-	int getcount() {
-		return ndev;
-	}
-	
-	DeviceManager(Io &io): io(io), ndev(0) {
-		io.msg(IO_DEB2, "DeviceManager::DeviceManager()");
-	}
-	~DeviceManager() {
-		io.msg(IO_DEB2, "DeviceManager::~DeviceManager()");
-	}
-};
-
+// Global device list for easier access
 DeviceManager *devices;
 
 int FOAM_simstatic::load_modules() {
@@ -173,8 +79,8 @@ int FOAM_simstatic::load_modules() {
 	
 	io.msg(IO_XNFO, "list: %s", devices->getlist().c_str());
 	
+	delete devices;
 	return 0;
-	//exit(0);
 }
 
 // OPEN LOOP ROUTINES //
