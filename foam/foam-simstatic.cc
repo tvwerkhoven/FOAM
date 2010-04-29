@@ -37,38 +37,66 @@
 #include <iostream>
 
 class Device {
-public:
-	string name;
+protected:
+	Io &io;
+	string name;												//!< Device name
+	string port;												//!< Port to listen on
+	Protocol::Server *protocol;
 	
-	Device(string name): name(name) { 
-		printf("Device::Device(): Create new device, name=%s\n", name.c_str());
+public:
+	Device(Io &io, string name, string port): io(io), name(name), port(port) { 
+		io.msg(IO_DEB2, "Device::Device(): Create new device, name=%s\n", name.c_str());
+		
+		protocol = new Protocol::Server(port, name);
+		protocol->slot_message = sigc::mem_fun(this, &Device::on_message);
+		protocol->slot_message = sigc::mem_fun(this, &Device::on_connect);
+		protocol->listen();
 	}
-	~Device() {
-		printf("Device::~Device()\n");
+	virtual ~Device() {
+		io.msg(IO_DEB2, "Device::~Device()\n");
+		delete protocol;
 	}
+	
+	// Should verify the integrity of the device.
+	virtual int verify() { return 0; }
+	// Network IO handling routines
+	virtual void on_message(Connection *conn, std::string line) { ; }
+	virtual	void on_connect(Connection *conn, bool status) { ; }
+
 	string getname() { return name; }
 };
 
 class DeviceA : public Device {
 public:
-	DeviceA(string name): Device(name) {
-		printf("DeviceA::DeviceA()\n");
+	DeviceA(Io &io, string name, string port): Device(io, name, port) {
+		io.msg(IO_DEB2, "DeviceA::DeviceA()\n");
 	}
-	~DeviceA() {
-		printf("DeviceA::~DeviceA()\n");
+	virtual ~DeviceA() {
+		io.msg(IO_DEB2, "DeviceA::~DeviceA()\n");
 	}
+	virtual void on_message(Connection *conn, std::string line) {
+		io.msg(IO_DEB2, "DeviceA::on_message(conn, line=%s)\n", line.c_str());
+	}
+	virtual int verify() {
+		io.msg(IO_DEB2, "DeviceA::verify()\n");
+		return 0;
+	}
+	
 	int measure() { 
-		printf("DeviceA::measure()\n");
+		io.msg(IO_DEB2, "DeviceA::measure()\n");
 		return 10; 
 	}
 };
 
 class DeviceManager {
-public:
+private:
+	Io &io;
+	
 	typedef map<string, Device*> device_t;
 	device_t devices;
 	int ndev;
 	
+public:
 	// Add a device to the list, get the name from the device to use as key.
 	int add(Device *dev) {
 		string id = dev->getname();
@@ -83,7 +111,7 @@ public:
 	// Get a device from the list. Return NULL if not found.
 	Device* get(string id) {
 		if (devices.find(id) == devices.end()) {
-			printf("ID '%s' does not exist!\n", id.c_str());
+			io.msg(IO_DEB2, "ID '%s' does not exist!\n", id.c_str());
 			return NULL;
 		}
 		return devices[id];
@@ -91,7 +119,7 @@ public:
 	// Delete a device from the list. Return -1 if not found.
 	int del(string id) {
 		if (devices.find(id) == devices.end()) {
-			printf("ID '%s' does not exist!\n", id.c_str());
+			io.msg(IO_DEB2, "ID '%s' does not exist!\n", id.c_str());
 			return -1;
 		}
 		devices.erase(devices.find(id));
@@ -112,15 +140,15 @@ public:
 	}
 	
 	// Return number of devices 
-	int getcount {
+	int getcount() {
 		return ndev;
 	}
 	
-	DeviceManager(): ndev(0) {
-		printf("DeviceManager::DeviceManager()\n");
+	DeviceManager(Io &io): io(io), ndev(0) {
+		io.msg(IO_DEB2, "DeviceManager::DeviceManager()\n");
 	}
 	~DeviceManager() {
-		printf("DeviceManager::~DeviceManager()\n");
+		io.msg(IO_DEB2, "DeviceManager::~DeviceManager()\n");
 	}
 };
 
@@ -130,18 +158,20 @@ int FOAM_simstatic::load_modules() {
 	io.msg(IO_DEB2, "FOAM_simstatic::load_modules()");
 	io.msg(IO_INFO, "This is the simstatic prime module, enjoy.");
 		
-	devices = new DeviceManager;
+	devices = new DeviceManager(io);
 	
 	// Add camera device
-	DeviceA *deva1 = new DeviceA("DEVICEA:1");
+	DeviceA *deva1 = new DeviceA(io, "DEVICEA:1", ptc->listenport);
 	devices->add((Device *) deva1);
 
-	DeviceA *deva2 = new DeviceA("DEVICEA:2");
+	// Add another device
+	DeviceA *deva2 = new DeviceA(io, "DEVICEA:2", ptc->listenport);
 	devices->add((Device *) deva2);
 
+	// Do something
 	((DeviceA*) devices->get("DEVICEA:1"))->measure();
 	
-	printf("list: %s\n", devices->getlist().c_str());
+	io.msg(IO_XNFO, "list: %s\n", devices->getlist().c_str());
 	
 	//return 0;
 	exit(0);
@@ -153,19 +183,14 @@ int FOAM_simstatic::load_modules() {
 int FOAM_simstatic::open_init() {
 	io.msg(IO_DEB2, "FOAM_simstatic::open_init()");
 	
-	ptc->wfs[0]->cam->set_mode(Camera::RUNNING);
-	ptc->wfs[0]->cam->init_capture();
+	//ptc->devices->get("DEVICEA:1")->calibrate();
 	
 	return 0;
 }
 
 int FOAM_simstatic::open_loop() {
 	io.msg(IO_DEB2, "FOAM_simstatic::open_loop()");
-	
-	//void *tmp;
-	//ptc->wfs[0]->cam->get_image(&tmp);
-	ptc->wfs[0]->measure(0);
-	
+		
 	usleep(1000000);
 	
 	return 0;
@@ -174,7 +199,7 @@ int FOAM_simstatic::open_loop() {
 int FOAM_simstatic::open_finish() {
 	io.msg(IO_DEB2, "FOAM_simstatic::open_finish()");
 	
-	ptc->wfs[0]->cam->set_mode(Camera::OFF);
+//	ptc->wfs[0]->cam->set_mode(Camera::OFF);
 
 	return 0;
 }
@@ -185,6 +210,7 @@ int FOAM_simstatic::open_finish() {
 int FOAM_simstatic::closed_init() {
 	io.msg(IO_DEB2, "FOAM_simstatic::closed_init()");
 	
+	// Run open-loop init first
 	open_init();
 	
 	return EXIT_SUCCESS;
@@ -200,6 +226,7 @@ int FOAM_simstatic::closed_loop() {
 int FOAM_simstatic::closed_finish() {
 	io.msg(IO_DEB2, "FOAM_simstatic::closed_finish()");
 	
+	// Run open-loop finish first
 	open_finish();
 
 	return EXIT_SUCCESS;
@@ -221,9 +248,6 @@ int FOAM_simstatic::calib() {
 
 void FOAM_simstatic::on_message(Connection *connection, std::string line) {
 	io.msg(IO_DEB2, "FOAM_simstatic::on_message(Connection *connection, std::string line)");
-	
-	// Process everything in uppercase internally
-	transform(line.begin(), line.end(), line.begin(), ::toupper);
 	netio.ok = true;
 	
 	// First let the parent process this

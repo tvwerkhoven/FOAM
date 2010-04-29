@@ -390,8 +390,10 @@ void FOAM::on_connect(Connection *connection, bool status) {
 
 void FOAM::on_message(Connection *connection, std::string line) {
   io.msg(IO_DEB1, "FOAM::Got %db: '%s'.", line.length(), line.c_str());
+	
+	// Process everything in uppercase internally
+	transform(line.begin(), line.end(), line.begin(), ::toupper);
 	string cmd = popword(line);
-	string orig = line;
 	
 	if (cmd == "HELP") {
 		connection->write("OK CMD HELP");
