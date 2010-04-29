@@ -87,6 +87,7 @@ public:
 	
 	aomode_t mode;								//!< AO system mode, default AO_MODE_LISTEN
 	calmode_t calmode;						//!< Calibration mode, default CAL_PINHOLE
+	string calib;									//!< Calibration mode passed to FOAM
 	
 	time_t starttime;							//!< (foam) Starting time
 	time_t lasttime;							//!< (foam) End time
