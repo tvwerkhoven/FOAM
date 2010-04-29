@@ -35,7 +35,6 @@ foamcfg::~foamcfg(void) {
 
 foamcfg::foamcfg(Io &io):
 io(io)
-err(0), 
 {
 	io.msg(IO_DEB2, "foamcfg::foamcfg()");
 	err = 0;

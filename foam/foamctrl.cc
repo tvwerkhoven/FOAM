@@ -28,73 +28,95 @@
 foamctrl::~foamctrl(void) {
 	io.msg(IO_DEB2, "foamctrl::~foamctrl(void)");
 
-	if (use_syslog) closelog();
+	for (int i=0; i<wfs_count; i++) delete wfs[i];
+	for (int i=0; i<wfc_count; i++) delete wfc[i];
+	
+	delete[] wfs;
+	delete[] wfc;
+	delete[] filter;
+	delete[] wfscfgs;
+	delete[] wfccfgs;
 	delete cfgfile;
 }
 
 foamctrl::foamctrl(Io &io): 
-io(io),
-conffile(""), pidfile("/tmp/foam.pid"), 
-listenip("0.0.0.0"), listenport("1025"),
-datadir(FOAM_DATADIR), logfile("foam-log"),
-use_syslog(false), syslog_prepend("foam"), 
-mode(AO_MODE_LISTEN), calmode(CAL_INFL), calib(""),
-starttime(time(NULL)), frames(0), err(0)
+io(io) 
 { 
 	io.msg(IO_DEB2, "foamctrl::foamctrl(void)");
+	starttime = time(NULL); 
+	frames = 0; 
+	wfs_count = wfc_count = fw_count = 0;
+	err = 0;
 }
 
 foamctrl::foamctrl(Io &io, string &file): 
-io(io),
-mode(AO_MODE_LISTEN), calmode(CAL_INFL), calib(""),
-starttime(time(NULL)), frames(0), err(0),
-conffile(file)
+io(io) 
 {
 	io.msg(IO_DEB2, "foamctrl::foamctrl()");
 	
+	starttime = time(NULL); 
+	frames = 0; 
+	wfs_count = wfc_count = fw_count = 0;
+	err = 0;
 	parse(file);
 }
 
 int foamctrl::parse(string &file) {
 	io.msg(IO_DEB2, "foamctrl::parse()");
 
+	conffile = file;
 	int idx = conffile.find_last_of("/");
 	confpath = conffile.substr(0, idx);
+	
 	io.msg(IO_DEB2, "foamctrl::parse: got file %s and path %s.", conffile.c_str(), confpath.c_str());
+
+	cfgfile = new config(conffile);
 	
-	// PID file
-	pidfile = cfgfile->getstring("pidfile", "/tmp/foam.pid");
+	mode = AO_MODE_LISTEN;		// start in listen mode
+	calmode = CAL_INFL;
 	
-	// Datadir
-	datadir = cfgfile->getstring("datadir", FOAM_DATADIR);
-	if (datadir == ".") io.msg(IO_WARN, "datadir not set, using current directory.");
-	else io.msg(IO_DEB1, "Datadir: '%s'.", datadir.c_str());
+	// Load AO configuration files now
+	try {
+		wfs_count = cfgfile->getint("wfs_count", 0);
+		wfc_count = cfgfile->getint("wfc_count", 0);
+		fw_count = cfgfile->getint("fw_count", 0);
+		
+		// Allocate memory for configuration files
+		wfscfgs = new string[wfs_count];
+		wfccfgs = new string[wfc_count];
+		
+		wfs = new Wfs*[wfs_count];
+		wfc = new Wfc*[wfc_count];
+		filter = new fwheel_t[fw_count];
+		
+		// Get WFS configuration files
+		for (int i=0; i<wfs_count; i++) {
+			io.msg(IO_XNFO, "Configuring wfs %d/%d", i+1, wfs_count);
+			wfscfgs[i] = confpath + "/" + cfgfile->getstring(format("wfs[%d].cfg", i));
+		}
+		
+		// Get WFC configuration files
+		for (int i=0; i<wfc_count; i++) {
+			io.msg(IO_XNFO, "Configuring wfc %d/%d", i+1, wfc_count);
+			wfccfgs[i] = confpath + "/" + cfgfile->getstring(format("wfc[%d].cfg", i));
+		}
 	
-	// Daemon settings
-	listenip = cfgfile->getstring("listenip", "0.0.0.0");
-	io.msg(IO_DEB1, "IP: '%s'.", listenip.c_str());
-	listenport = cfgfile->getstring("listenport", "1025").c_str();
-	io.msg(IO_DEB1, "Port: '%s'.", listenport.c_str());
-	
-	// Syslog settings
-	use_syslog = cfgfile->getbool("use_syslog", false);
-	syslog_prepend = cfgfile->getstring("syslog_prepend", "foam");
-	io.msg(IO_DEB1, "Use syslog: %d, prefix: '%s'.", use_syslog, syslog_prepend.c_str());
-	if (use_syslog) openlog(syslog_prepend.c_str(), LOG_PID, LOG_USER);
-	
-	// Logfile settings
-	logfile = cfgfile->getstring("logfile", "");
-	if (logfile.length()) {
-		if (logfile[0] != '/') logfile = datadir + "/" + logfile;
-		io.setLogfile(logfile);
+	} catch (exception &e) {
+		err = 1;
+		return io.msg(IO_ERR, "Could not parse configuration: %s", e.what());
 	}
 	
-	io.msg(IO_INFO, "Successfully parsed control config.");
+	io.msg(IO_INFO, "Successfully parsed control config, got #wfs=%d, #wfc=%d, #fw=%d.", wfs_count, wfc_count, fw_count);
+
 	return 0;
 }
 
 int foamctrl::verify() {
 	int ret=0;
+	for (int n=0; n < wfs_count; n++)
+		ret += (wfs[n])->verify(0);
+	for (int n=0; n < wfc_count; n++)
+		ret += (wfc[n])->verify(0);
 	
 	return ret;
 }
