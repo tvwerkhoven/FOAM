@@ -20,6 +20,7 @@
 #include <sys/time.h>
 #include <time.h>
 #include <math.h>
+#include <fcntl.h>
 // TODO: compiling fails when this is removed, warns when present
 #define __STDC_LIMIT_MACROS
 #include <stdint.h>
@@ -102,21 +103,21 @@ int ImgCamera::verify() {
 	return 0;
 }
 
-int ImgCamera::get_image_ptr(void **out) {
-	*out = (void *) image;
-	return 0;
-}
-
-int ImgCamera::thumbnail(uint8_t *out) {
-	update(false);
+int ImgCamera::thumbnail(Connection *connection) {
+	update(true);
 	
 	uint16_t *in = (uint16_t *) image;
-	uint8_t *p = out;
+	
+	uint8_t buffer[32 * 32];
+	uint8_t *out = buffer;
 	
 	for(int y = 0; y < 32; y++)
 		for(int x = 0 ; x < 32; x++)
-			*p++ = in[res.x * y * (res.y / 32) + x * (res.x / 32)] >> (bpp - 8);
-	
+			*out++ = in[res.x * y * (res.y / 32) + x * (res.x / 32)] >> (bpp - 8);
+
+	connection->write("ok thumbnail");
+	connection->write(buffer, sizeof buffer);
+
 	return 0;
 }
 
@@ -145,13 +146,23 @@ int ImgCamera::monitor(void *out, size_t &size, int &x1, int &y1, int &x2, int &
 	return size;							// Number of bytes
 }
 
-int ImgCamera::store(int fd) {
+int ImgCamera::store(Connection *connection) {
+	// Create & open file if necessary
+	if (outfd == 0) {
+		string file;
+		if (file.length() <= 0) file = "./imgcam-dump.raw";
+		outfd = fopen(file.c_str(), "a+");
+	}
+	
 	update(true);
 		
 	size_t size = res.x * res.y * bpp/8;
-	if ((size_t) write(fd, frame, size) != size)
+	if (fwrite(image, size, (size_t) 1, outfd) != 1) {
+		connection->write("err store :could not save frame");
 		return -1;
+	}
 	
+	connection->write("ok store");
 	return 0;
 }
 
@@ -166,12 +177,17 @@ void ImgCamera::on_message(Connection *connection, std::string line) {
 		if (topic.size() == 0) {
 			connection->write(\
 												":==== imgcam help ===========================\n"
-												":info:                   Print device info.");
+												":info                    Print device info.\n"
+												":thumbnail               Get 32x32 thumbnail.\n"
+												":store                   Store frame to <file>.");
 		}
 		else connection->write("err cmd help :help topic unknown");
 	}
-	else if (cmd == "info") {
+	else if (cmd == "info") 
 		connection->write(format("ok info %d %d %d :width height bpp", res.x, res.y, bpp));
-	}
+	else if (cmd == "thumbnail") 
+		thumbnail(connection);
+	else if (cmd == "store") 
+		store(connection);
 	else connection->write("err cmd :cmd unknown");
 }

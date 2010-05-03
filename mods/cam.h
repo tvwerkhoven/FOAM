@@ -49,7 +49,7 @@ public:
 		ERROR
 	} mode_t;
 	
-protected:	
+protected:
 	void *image;									//!< Pointer to the image data (can be ringbuffer)
 	void *darkim;									//!< Pointer to a sum of darkfield images
 	void *flatim;									//!< Pointer to a sum of flatfield images
@@ -68,7 +68,9 @@ protected:
 
 	Camera::mode_t mode;
 	
-public:	
+	FILE *outfd;									//!< FD for storing data to disk
+	
+public:
 	string darkfile;
 	string flatfile;
 	
@@ -89,21 +91,21 @@ public:
 	void set_gain(double value) { gain = value; }
 	void set_offset(double value) { offset = value; }
 
-	// From devices.h
+	// From Devices::
 	virtual int verify() { return 0; }
 	virtual void on_message(Connection *conn, std::string line) { ; }
 	virtual void on_connect(Connection *conn, bool status) { ; }
 
-	virtual int get_image_ptr(void **out) {return -1;}
-	virtual int thumbnail(uint8_t *) {return -1;}
-	virtual int monitor(void *frame, size_t &size, int &x1, int &y1, int &x2, int &y2, int &scale) {return -1;}
-	virtual int store(int fd) {return -1;}
+	// To be implemented in derived class
+	virtual int thumbnail(Connection *) { return -1; }
+	virtual int monitor(void *frame, size_t &size, int &x1, int &y1, int &x2, int &y2, int &scale) { return -1; }
+	virtual int store(Connection *) { return -1; }
 	
 	virtual ~Camera() {};
 	// TODO: how to init res.x(-1), res.y(-1), ?
 	Camera(Io &io, string name, string port): 
 	Device(io, name, port),
-	interval(1.0), exposure(1.0), gain(1.0), offset(0.0), bpp(-1), dtype(DATA_UINT16), mode(Camera::OFF) { ; }
+	interval(1.0), exposure(1.0), gain(1.0), offset(0.0), bpp(-1), dtype(DATA_UINT16), mode(Camera::OFF), outfd(0) { ; }
 };
 
 
