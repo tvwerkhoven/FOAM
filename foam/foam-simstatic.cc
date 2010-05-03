@@ -120,14 +120,14 @@ int FOAM_simstatic::closed_init() {
 	// Run open-loop init first
 	open_init();
 	
-	return EXIT_SUCCESS;
+	return 0;
 }
 
 int FOAM_simstatic::closed_loop() {
 	io.msg(IO_DEB2, "FOAM_simstatic::closed_loop()");
 
 	usleep(1000000);
-	return EXIT_SUCCESS;
+	return 0;
 }
 
 int FOAM_simstatic::closed_finish() {
@@ -136,7 +136,7 @@ int FOAM_simstatic::closed_finish() {
 	// Run open-loop finish first
 	open_finish();
 
-	return EXIT_SUCCESS;
+	return 0;
 }
 
 // MISC ROUTINES //
@@ -148,9 +148,12 @@ int FOAM_simstatic::calib() {
 	if (ptc->calib == "INFLUENCE") {
 		io.msg(IO_DEB2, "FOAM_simstatic::calib INFLUENCE");
 		usleep((useconds_t) 1.0 * 1000000);
+		return 0;
 	}
+	else
+		return -1;
 
-	return EXIT_SUCCESS;
+	return 0;
 }
 
 void FOAM_simstatic::on_message(Connection *connection, std::string line) {
