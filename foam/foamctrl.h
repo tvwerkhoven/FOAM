@@ -63,7 +63,6 @@ public:
 	string syslog_prepend;				//!< string to prepend to syslogs ("foam")
 	
 	aomode_t mode;								//!< AO system mode (AO_MODE_LISTEN)
-	calmode_t calmode;						//!< Calibration mode (CAL_PINHOLE)
 	string calib;									//!< Calibration mode passed to FOAM (none)
 	
 	time_t starttime;							//!< FOAM start timestamp

@@ -498,6 +498,33 @@ int FOAM::show_nethelp(Connection *connection, string topic, string rest) {
 	return 0;
 }
 
+string FOAM::mode2str(aomode_t m) {
+	switch (m) {
+		case AO_MODE_OPEN: return "open";
+		case AO_MODE_CLOSED: return "closed";
+		case AO_MODE_CAL: return "calib";
+		case AO_MODE_LISTEN: return "listen";
+		case AO_MODE_UNDEF: return "undef";
+		case AO_MODE_SHUTDOWN: return "shutdown";
+		default: return "unknown";
+	}
+}
+
+aomode_t FOAM::str2mode(string m) {
+	// Convert to uppercase
+	transform(m.begin(), m.end(), m.begin(), ::toupper);
+	
+	if (m == "open") return AO_MODE_OPEN;
+	else if (m == "closed") return AO_MODE_CLOSED;
+	else if (m == "calib") return AO_MODE_CAL;
+	else if (m == "listen") return AO_MODE_LISTEN;
+	else if (m == "undef") return AO_MODE_UNDEF;
+	else if (m == "shutdown") return AO_MODE_SHUTDOWN;
+	else return AO_MODE_UNDEF;
+}
+
+
+
 // DOXYGEN GENERAL DOCUMENTATION //
 /*********************************/
 

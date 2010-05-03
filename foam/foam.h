@@ -119,6 +119,9 @@ public:
 	void daemon();											//!< Start network daemon
 	int listen();												//!< Start main FOAM control loop
 	
+	string FOAM::mode2str(aomode_t m);
+	aomode_t FOAM::str2mode(string m);
+	
 	/*!
 	 @brief Load setup-specific modules
 	 

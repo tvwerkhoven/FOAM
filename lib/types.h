@@ -68,65 +68,6 @@ typedef struct {
 	float d;		//!< differential gain
 } gain_t;
 
-// DATATYPES //
-/************/
-
-/* 
- * These datatypes can be expanded as you like, but 
- * do not remove things that are already present!
- */
-
-/*!
- @brief Helper enum for ao calibration mode operation.
- 
- You can add your own calibration modes here which you can use to determine
- what kind of calibration a user wants.
- */
-typedef enum { // calmode_t
-	CAL_PINHOLE,	//!< determine reference shifts after inserting a pinhole
-	CAL_INFL,		//!< determine the influence functions for each WFS-WFC pair
-	CAL_LINTEST,		//!< linearity test for WFCs
-	CAL_DARK,
-	CAL_DARKGAIN,
-	CAL_SUBAPSEL,
-	CAL_FLAT
-} calmode_t;
-
-/*!
- @brief Helper enum for WFC types
- 
- This should be enough for now, but can be expanded to include other
- WFCs as well.
- */
-typedef enum { // axes_t
-	WFC_TT=0,		//!< WFC Type for tip-tilt mirrors
-	WFC_DM=1		//!< WFC type for deformable mirrors
-} wfctype_t;
-
-/*!
- @brief Helper enum for WFC types
- 
- This should be enough for now, but can be expanded to include other
- WFCs as well.
- */
-typedef enum { // axes_t
-	WFS_SH=0		//!< WFS Type for Shack-Hartmann
-} wfstype_t;
-
-
-/*!
- @brief Helper enum for filterwheel types
- 
- This should be enough for now, but can be expanded to include other
- filterwheels as well.
- */
-typedef enum { // filter_t
-	FILT_PINHOLE,	//!< Pinhole used for pinhole calibration
-	FILT_OPEN,		//!< Open position, don't filter
-	FILT_CLOSED		//!< Closed, don't let light through
-} filter_t;
-
-
 /*!
  @brief Stores the mode of the AO system.
  */
@@ -138,31 +79,6 @@ typedef enum { // aomode_t
 	AO_MODE_UNDEF,	//!< Undefined mode (default)
 	AO_MODE_SHUTDOWN //!< Set to this mode for the worker thread to finish
 } aomode_t;
-
-static string mode2str(aomode_t m) {
-	switch (m) {
-		case AO_MODE_OPEN: return "open";
-		case AO_MODE_CLOSED: return "closed";
-		case AO_MODE_CAL: return "calib";
-		case AO_MODE_LISTEN: return "listen";
-		case AO_MODE_UNDEF: return "undef";
-		case AO_MODE_SHUTDOWN: return "shutdown";
-		default: return "unknown";
-	}
-}
-
-static aomode_t str2mode(string m) {
-	// Convert to uppercase
-	transform(m.begin(), m.end(), m.begin(), ::toupper);
-
-	if (m == "open") return AO_MODE_OPEN;
-	else if (m == "closed") return AO_MODE_CLOSED;
-	else if (m == "calib") return AO_MODE_CAL;
-	else if (m == "listen") return AO_MODE_LISTEN;
-	else if (m == "undef") return AO_MODE_UNDEF;
-	else if (m == "shutdown") return AO_MODE_SHUTDOWN;
-	else return AO_MODE_UNDEF;
-}
 
 /*! 
  @brief This enum is used to distinguish between various datatypes for processing.
@@ -183,20 +99,5 @@ typedef enum {
 	DATA_INT16,			//!< ID for int16_t
 	DATA_UINT16			//!< ID for uint16_t
 } dtype_t;
-
-/*!
- @brief AO scanning mode enum
- 
- This is used to distinguish between different AO modes. Typically, AO
- corrects both in X and Y direction, but in certain cases it might be
- useful to work only in one of the two, where only contrast in one
- direction is available (i.e. solar limb) as opposed to both directions
- (i.e. sunspot or planet).
- */
-typedef enum { // axes_t
-	AO_AXES_XY=0,		//!< Scan in X and Y direction
-	AO_AXES_X,		//!< Scan X direction only
-	AO_AXES_Y		//!< Scan Y direction only
-} axes_t;
 
 #endif // HAVE_TYPES_H 

@@ -39,7 +39,7 @@ conffile(""), pidfile("/tmp/foam.pid"),
 listenip("0.0.0.0"), listenport("1025"),
 datadir(FOAM_DATADIR), logfile("foam-log"),
 use_syslog(false), syslog_prepend("foam"), 
-mode(AO_MODE_LISTEN), calmode(CAL_INFL), calib(""),
+mode(AO_MODE_LISTEN), calib(""),
 starttime(time(NULL)), frames(0)
 { 
 	io.msg(IO_DEB2, "foamctrl::foamctrl(void)");
@@ -47,7 +47,7 @@ starttime(time(NULL)), frames(0)
 
 foamctrl::foamctrl(Io &io, string &file): 
 err(0), io(io), conffile(file),
-mode(AO_MODE_LISTEN), calmode(CAL_INFL), calib(""),
+mode(AO_MODE_LISTEN), calib(""),
 starttime(time(NULL)), frames(0)
 {
 	io.msg(IO_DEB2, "foamctrl::foamctrl()");
