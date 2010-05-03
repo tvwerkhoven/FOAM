@@ -20,6 +20,7 @@
 #include <sys/time.h>
 #include <time.h>
 #include <math.h>
+// TODO: compiling fails when this is removed, warns when present
 #define __STDC_LIMIT_MACROS
 #include <stdint.h>
 
