@@ -132,7 +132,7 @@ MainWindow::MainWindow():
 	
 	// widget properties
 	set_title("FOAM Control");
-	set_default_size(600, 400);
+	set_default_size(640, 480);
 	set_gravity(Gdk::GRAVITY_STATIC);
 	
 	vbox.set_spacing(4);

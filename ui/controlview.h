@@ -61,10 +61,14 @@ class ControlPage: public VBox {
 	Frame statframe;
 	HBox statbox;
 	LabeledEntry stat_mode;
-	LabeledEntry stat_nwfs;
-	LabeledEntry stat_nwfc;
+	LabeledEntry stat_ndev;
 	LabeledEntry stat_nframes;
+	LabeledEntry stat_lastcmd;
 
+	Frame devframe;
+	HBox devbox;
+	LabeledEntry *dev_devlist;
+	
 	void on_connect_clicked();
 	
 	void on_mode_listen_clicked();

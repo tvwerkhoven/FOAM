@@ -36,7 +36,7 @@ log(log), foamctrl(foamctrl),
 connframe("Connection"), host("Hostname"), port("Port"), connect("Connect"),
 modeframe("Run mode"), mode_listen("Listen"), mode_open("Open loop"), mode_closed("Closed loop"), shutdown("Shutdown"),
 calibframe("Calibration"), calmode_lbl("Calibration mode: "), calib("Calibrate"),
-statframe("Status"), stat_mode("Mode: "), stat_nwfs("# WFS: "), stat_nwfc("# WFC: "), stat_nframes("# Frames: ") {
+statframe("Status"), stat_mode("Mode: "), stat_ndev("# Dev: "), stat_nframes("# Frames: "), stat_lastcmd("Last cmd: ") {
 	
 	// request minimum size for entry boxes
 	host.set_size_request(120);
@@ -64,17 +64,13 @@ statframe("Status"), stat_mode("Mode: "), stat_nwfs("# WFS: "), stat_nwfc("# WFC
 	// Make status entries insensitive
 	stat_mode.set_editable(false);
 	stat_mode.set_size_request(75);
-	stat_mode.set_text("-");
-	stat_nwfs.set_editable(false);
-	stat_nwfs.set_size_request(30);
-	stat_nwfs.set_text("-");
-	stat_nwfc.set_editable(false);
-	stat_nwfc.set_size_request(30);
-	stat_nwfc.set_text("-");
+	stat_ndev.set_editable(false);
+	stat_ndev.set_size_request(30);
 	stat_nframes.set_editable(false);
 	stat_nframes.set_size_request(75);
-	stat_nframes.set_text("-");
-		
+	stat_lastcmd.set_editable(false);
+	stat_lastcmd.set_size_request(100);
+	
 	// Connection row (hostname, port, connect button)
 	connbox.set_spacing(4);	
 	connbox.pack_start(host, PACK_SHRINK);
@@ -97,12 +93,12 @@ statframe("Status"), stat_mode("Mode: "), stat_nwfs("# WFS: "), stat_nwfc("# WFC
 	calibbox.pack_start(calib, PACK_SHRINK);
 	calibframe.add(calibbox);
 	
-	// Status row (mode, # wfs, # wfc, # frames)
+	// Status row (mode, # dev, # frames)
 	statbox.set_spacing(4);
 	statbox.pack_start(stat_mode, PACK_SHRINK);
-	statbox.pack_start(stat_nwfs, PACK_SHRINK);
-	statbox.pack_start(stat_nwfc, PACK_SHRINK);
+	statbox.pack_start(stat_ndev, PACK_SHRINK);
 	statbox.pack_start(stat_nframes, PACK_SHRINK);
+	statbox.pack_start(stat_lastcmd, PACK_SHRINK);
 	statframe.add(statbox);
 	
 	set_spacing(4);
@@ -122,6 +118,8 @@ statframe("Status"), stat_mode("Mode: "), stat_nwfs("# WFS: "), stat_nwfc("# WFC
 	calib.signal_clicked().connect(sigc::mem_fun(*this, &ControlPage::on_calib_clicked));	
 	
 	show_all_children();
+	
+	on_message_update();
 }
 
 ControlPage::~ControlPage() {
@@ -217,19 +215,24 @@ void ControlPage::on_message_update() {
 	else if (foamctrl.get_mode() == AO_MODE_CAL) calib.set_sensitive(false);
 
 	// set values in status box
-	// TODO: update wrt FOAM implementation
 	stat_mode.set_text(foamctrl.get_mode_str());
-	stat_nwfs.set_text(format("%d", foamctrl.get_numdev()));
-	stat_nwfc.set_text(format("%d", foamctrl.get_numdev()));
+	stat_ndev.set_text(format("%d", foamctrl.get_numdev()));
 	stat_nframes.set_text(format("%d", foamctrl.get_numframes()));
+
+	if (foamctrl.is_ok()) 
+		stat_lastcmd.modify_bg(STATE_ACTIVE , Gdk::Color("green"));
+	else
+		stat_lastcmd.modify_bg(STATE_ACTIVE , Gdk::Color("red"));
+	stat_lastcmd.set_text(foamctrl.get_lastreply());
 	
 	// set values in calibmode select box
-	// TODO: this is ugly
 	calmode_select.clear_items();
-	string *modetmp = foamctrl.get_calmodes();
-	while (*modetmp != "__SENTINEL__") {
-		calmode_select.prepend_text(*modetmp++);
-	}
-	calmode_select.set_active_text(*--modetmp);
+	calmode_select.append_text(foamctrl.get_calmode(0));
+	for (int i=1; i<foamctrl.get_numcal(); i++)
+		calmode_select.append_text(foamctrl.get_calmode(i));
+	calmode_select.set_active_text(foamctrl.get_calmode(0));
+	
+	// show devices	
+	// TODO: list devices somehow
 }
 

@@ -70,8 +70,10 @@ private:
 		int numdev;
 		string devices[32];
 		int numframes;
+		int numcal;
 		string calmodes[32];
-		string currcmd;
+		string lastreply;
+		string lastcmd;
 	} state;
 	
 	bool ok;
@@ -99,8 +101,11 @@ public:
 	int get_numframes() { return state.numframes; }
 	aomode_t get_mode() { return state.mode; }
 	string get_mode_str() { return mode2str(state.mode); }
-	string* get_calmodes() { return state.calmodes; }
-	string* get_devices() { return state.devices; }
+	int get_numcal() { return state.numcal; }
+	string get_calmode(int i) { return state.calmodes[i]; }
+	string get_device(int i ) { return state.devices[i]; }
+	string get_lastreply() { return state.lastreply; }
+	string get_lastcmd() { return state.lastcmd; }
 	
 	// set-like commands
 	void set_mode(aomode_t mode);

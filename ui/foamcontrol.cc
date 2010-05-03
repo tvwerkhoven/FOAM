@@ -38,8 +38,13 @@ FoamControl::FoamControl() {
 	
 	// Init variables
 	state.mode = AO_MODE_UNDEF;
-	state.numdev = -1;
+	state.numdev = 0;
+	state.devices[0] = "undef";
 	state.numframes = 0;
+	state.numcal = 0;
+	state.calmodes[0] = "undef";
+	state.lastreply = "undef";
+	state.lastcmd = "undef";
 }
 
 int FoamControl::connect(const string &host, const string &port) {
@@ -99,11 +104,9 @@ void FoamControl::on_connected(bool conn) {
 	ok = true;
 	
 	// Get basic system information
-	protocol.write("get info");
-//	protocol.write("GET NUMWFS");
-//	protocol.write("GET NUMWFC");
-//	protocol.write("GET MODE");
-//	protocol.write("GET CALIB");
+	protocol.write("get mode");
+	protocol.write("get calib");
+	protocol.write("get devices");
 
 	signal_connect();
 	return;
@@ -112,14 +115,16 @@ void FoamControl::on_connected(bool conn) {
 void FoamControl::on_message(string line) {
 	printf("%x:FoamControl::on_message(string=%s)\n", (int) pthread_self(), line.c_str());
 
-	if (popword(line) != "OK") {
+	if (popword(line) != "ok") {
 		ok = false;
-		errormsg = line;
+		state.lastreply = line;
+		printf("%x:FoamControl::on_message(): err\n", (int) pthread_self());
 		signal_message();
 		return;
 	}
 	
 	ok = true;
+	state.lastreply = line;
 	string what = popword(line);
 	
 	if (what == "var") {
@@ -129,20 +134,18 @@ void FoamControl::on_message(string line) {
 		else if (var == "mode")
 			state.mode = str2mode(popword(line));
 		else if (var == "calib") {
-			int n = popint32(line);
-			state.calmodes[n] = "__SENTINEL__";
-			while (n>0) state.calmodes[--n] = popword(line);
+			state.numcal = popint32(line);
+			for (int i=0; i<state.numcal; i++)
+				state.calmodes[i] = popword(line);
 		}
 		else if (var == "devices") {
-			int n = popint32(line);
-			state.numdev = n;
-			state.devices[n] = "__SENTINEL__";
-			while (n>0) state.devices[--n] = popword(line);
+			state.numdev = popint32(line);
+			for (int i=0; i<state.numdev; i++)
+				state.devices[i] = popword(line);
 		}
 	}
 	else if (what == "cmd") {
 		// command confirmation hook
-		state.currcmd = popword(line);
 	}
 	else if (what == "calib") {
 		// post-calibration hook
@@ -154,6 +157,7 @@ void FoamControl::on_message(string line) {
 		errormsg = "Unexpected response '" + what + "'";
 	}
 	
+	printf("%x:FoamControl::on_message(): ok\n", (int) pthread_self());
 	signal_message();
 }
 
