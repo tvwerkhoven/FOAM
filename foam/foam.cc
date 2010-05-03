@@ -511,9 +511,6 @@ string FOAM::mode2str(aomode_t m) {
 }
 
 aomode_t FOAM::str2mode(string m) {
-	// Convert to uppercase
-	transform(m.begin(), m.end(), m.begin(), ::toupper);
-	
 	if (m == "open") return AO_MODE_OPEN;
 	else if (m == "closed") return AO_MODE_CLOSED;
 	else if (m == "calib") return AO_MODE_CAL;
