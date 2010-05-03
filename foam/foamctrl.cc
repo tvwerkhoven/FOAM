@@ -56,11 +56,10 @@ starttime(time(NULL)), frames(0)
 }
 
 int foamctrl::parse(string &file) {
-	io.msg(IO_DEB2, "foamctrl::parse()");
+	io.msg(IO_DEB2, "foamctrl::parse(f=%s)", file.c_str());
 
 	int idx = conffile.find_last_of("/");
 	confpath = conffile.substr(0, idx);
-	io.msg(IO_DEB2, "foamctrl::parse: got file %s and path %s.", conffile.c_str(), confpath.c_str());
 	
 	cfgfile = new config(conffile);
 	
@@ -89,6 +88,8 @@ int foamctrl::parse(string &file) {
 	if (logfile.length()) {
 		if (logfile[0] != '/') logfile = datadir + "/" + logfile;
 		io.setLogfile(logfile);
+		io.msg(IO_DEB1, "Logfile: %s.", logfile.c_str());
+
 	}
 	
 	io.msg(IO_INFO, "Successfully parsed control config.");

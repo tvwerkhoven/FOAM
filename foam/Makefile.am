@@ -58,13 +58,11 @@ bin_PROGRAMS += foam-simstat
 
 foam_simstat_SOURCES = foam-simstatic.cc \
 		$(FRAME_SRC) $(FRAME_HDR) \
-		$(MODS_DIR)/shwfs.cc \
 		$(LIB_DIR)/imgio.cc \
 		$(MODS_DIR)/imgcam.cc
 
 # Header files are part of the sources as well
 foam_simstat_SOURCES += foam-simstatic.h \
-		$(MODS_DIR)/shwfs.h \
 		$(LIB_DIR)/imgio.h \
 		$(MODS_DIR)/cam.h
 
