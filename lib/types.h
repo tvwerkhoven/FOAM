@@ -141,13 +141,13 @@ typedef enum { // aomode_t
 
 static string mode2str(aomode_t m) {
 	switch (m) {
-		case AO_MODE_OPEN: return "OPEN";
-		case AO_MODE_CLOSED: return "CLOSED";
-		case AO_MODE_CAL: return "CALIB";
-		case AO_MODE_LISTEN: return "LISTEN";
-		case AO_MODE_UNDEF: return "UNDEF";
-		case AO_MODE_SHUTDOWN: return "SHUTDOWN";
-		default: return "UNKNOWN";
+		case AO_MODE_OPEN: return "open";
+		case AO_MODE_CLOSED: return "closed";
+		case AO_MODE_CAL: return "calib";
+		case AO_MODE_LISTEN: return "listen";
+		case AO_MODE_UNDEF: return "undef";
+		case AO_MODE_SHUTDOWN: return "shutdown";
+		default: return "unknown";
 	}
 }
 
@@ -155,12 +155,12 @@ static aomode_t str2mode(string m) {
 	// Convert to uppercase
 	transform(m.begin(), m.end(), m.begin(), ::toupper);
 
-	if (m == "OPEN") return AO_MODE_OPEN;
-	else if (m == "CLOSED") return AO_MODE_CLOSED;
-	else if (m == "CALIB") return AO_MODE_CAL;
-	else if (m == "LISTEN") return AO_MODE_LISTEN;
-	else if (m == "UNDEF") return AO_MODE_UNDEF;
-	else if (m == "SHUTDOWN") return AO_MODE_SHUTDOWN;
+	if (m == "open") return AO_MODE_OPEN;
+	else if (m == "closed") return AO_MODE_CLOSED;
+	else if (m == "calib") return AO_MODE_CAL;
+	else if (m == "listen") return AO_MODE_LISTEN;
+	else if (m == "undef") return AO_MODE_UNDEF;
+	else if (m == "shutdown") return AO_MODE_SHUTDOWN;
 	else return AO_MODE_UNDEF;
 }
 

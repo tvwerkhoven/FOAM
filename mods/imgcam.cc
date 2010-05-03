@@ -102,28 +102,6 @@ int ImgCamera::verify() {
 	return 0;
 }
 
-void ImgCamera::on_message(Connection *connection, std::string line) {
-	io.msg(IO_DEB2, "ImgCamera::on_message(Connection *connection, std::string line)");
-	
-	// Process everything in uppercase
-	transform(line.begin(), line.end(), line.begin(), ::toupper);	
-	string cmd = popword(line);
-	
-	if (cmd == "HELP") {
-		string topic = popword(line);
-		if (topic.size() == 0) {
-			connection->write(\
-												":==== imgcam help ===========================\n"
-												":info:                   Print device info.");
-		}
-		else connection->write("ERR CMD HELP :TOPIC UNKOWN");
-	}
-	else if (cmd == "INFO") {
-		connection->write(format("OK INFO %d %d %d :width height bpp", res.x, res.y, bpp));
-	}
-	else connection->write("ERR CMD :CMD UNKOWN");
-}		
-
 int ImgCamera::get_image_ptr(void **out) {
 	*out = (void *) image;
 	return 0;
@@ -175,4 +153,25 @@ int ImgCamera::store(int fd) {
 		return -1;
 	
 	return 0;
+}
+
+void ImgCamera::on_message(Connection *connection, std::string line) {
+	io.msg(IO_DEB2, "ImgCamera::on_message(Connection *connection, std::string line)");
+	
+	// Process everything in uppercase
+	string cmd = popword(line);
+	
+	if (cmd == "help") {
+		string topic = popword(line);
+		if (topic.size() == 0) {
+			connection->write(\
+												":==== imgcam help ===========================\n"
+												":info:                   Print device info.");
+		}
+		else connection->write("err cmd help :help topic unknown");
+	}
+	else if (cmd == "info") {
+		connection->write(format("ok info %d %d %d :width height bpp", res.x, res.y, bpp));
+	}
+	else connection->write("err cmd :cmd unknown");
 }

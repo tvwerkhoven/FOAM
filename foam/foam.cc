@@ -96,7 +96,7 @@ FOAM::~FOAM() {
 	
 	// Notify shutdown
 	io.msg(IO_WARN, "Shutting down FOAM now");
-  protocol->broadcast("WARN :SHUTTING DOWN NOW");
+  protocol->broadcast("warn :shutting down now");
 		
 	// Get the end time to see how long we've run
 	time_t end = time(NULL);
@@ -278,7 +278,7 @@ int FOAM::listen() {
 			case AO_MODE_LISTEN:
 				io.msg(IO_INFO, "Entering listen loop.");
 				// We wait until the mode changed
-				protocol->broadcast("OK MODE LISTEN");
+				protocol->broadcast("ok mode listen");
 				pthread_mutex_lock(&mode_mutex);
 				pthread_cond_wait(&mode_cond, &mode_mutex);
 				pthread_mutex_unlock(&mode_mutex);
@@ -306,7 +306,7 @@ int FOAM::mode_open() {
 		return -1;
 	}
 		
-	protocol->broadcast("OK MODE OPEN");
+	protocol->broadcast("ok mode open");
 	
 	while (ptc->mode == AO_MODE_OPEN) {
 		if (open_loop()) {
@@ -336,7 +336,7 @@ int FOAM::mode_closed() {
 		return -1;
 	}
 		
-	protocol->broadcast("OK MODE CLOSED");
+	protocol->broadcast("ok mode closed");
 	
 	// Run closed loop
 	while (ptc->mode == AO_MODE_CLOSED) {
@@ -361,17 +361,17 @@ int FOAM::mode_closed() {
 int FOAM::mode_calib() {
 	io.msg(IO_INFO, "FOAM::mode_calib()");
 	
-	protocol->broadcast("OK MODE CALIB");
+	protocol->broadcast("ok mode calib");
 	
 	// Run calibration inside module
 	if (calib()) {
 		io.msg(IO_WARN, "FOAM::calib() failed.");
-		protocol->broadcast("ERR CALIB :FAILED");
+		protocol->broadcast("err calib :calibration failed");
 		ptc->mode = AO_MODE_LISTEN;
 		return -1;
 	}
 	
-	protocol->broadcast("OK CALIB");
+	protocol->broadcast("ok calib");
 	
 	io.msg(IO_INFO, "Calibration loop done, switching to listen mode.");
 	ptc->mode = AO_MODE_LISTEN;
@@ -381,11 +381,11 @@ int FOAM::mode_calib() {
 
 void FOAM::on_connect(Connection *connection, bool status) {
   if (status) {
-    connection->write("OK CLIENT CONNECTED");
+    connection->write(":client connected");
     io.msg(IO_DEB1, "Client connected from %s.", connection->getpeername().c_str());
   }
   else {
-    connection->write("OK CLIENT DISCONNECTED");
+    connection->write(":client disconnected");
     io.msg(IO_DEB1, "Client from %s disconnected.", connection->getpeername().c_str());
   }
 }
@@ -393,65 +393,64 @@ void FOAM::on_connect(Connection *connection, bool status) {
 void FOAM::on_message(Connection *connection, std::string line) {
   io.msg(IO_DEB1, "FOAM::Got %db: '%s'.", line.length(), line.c_str());
 	
-	// Process everything in uppercase internally
-	transform(line.begin(), line.end(), line.begin(), ::toupper);
 	string cmd = popword(line);
 	
-	if (cmd == "HELP") {
-		connection->write("OK CMD HELP");
+	if (cmd == "help") {
+		connection->write("ok cmd help");
 		string topic = popword(line);
     if (show_nethelp(connection, topic, line))
 			netio.ok = false;
   }
-  else if (cmd == "EXIT" || cmd == "QUIT" || cmd == "BYE") {
-		connection->write("OK CMD EXIT");
-    connection->server->broadcast("OK CLIENT DISCONNECTED");
+  else if (cmd == "exit" || cmd == "quit" || cmd == "bye") {
+		connection->write("ok cmd exit");
+    connection->server->broadcast("ok client disconnected");
     connection->close();
   }
-  else if (cmd == "SHUTDOWN") {
-		connection->write("OK CMD SHUTDOWN");
+  else if (cmd == "shutdown") {
+		connection->write("ok cmd shutdown");
 		ptc->mode = AO_MODE_SHUTDOWN;
 		pthread_cond_signal(&mode_cond); // signal a change to the threads
   }
-  else if (cmd == "BROADCAST") {
-		connection->write("OK CMD BROADCAST");
-		connection->server->broadcast(format("OK BROADCAST %s :FROM %s", 
+  else if (cmd == "broadcast") {
+		connection->write("ok cmd broadcast");
+		connection->server->broadcast(format("ok broadcast %s :from %s", 
 																				 line.c_str(),
 																				 connection->getpeername().c_str()));
 	}
-  else if (cmd == "VERBOSITY") {
+  else if (cmd == "verb") {
 		string var = popword(line);
 		if (var == "+") io.incVerb();
 		else if (var == "-") io.decVerb();
 		else io.setVerb(var);
 		
-		connection->server->broadcast(format("OK VERBOSITY %d", io.getVerb()));
+		connection->server->broadcast(format("ok verb %d", io.getVerb()));
 	}
-  else if (cmd == "GET") {
+  else if (cmd == "get") {
     string var = popword(line);
-		if (var == "FRAMES") connection->write(format("OK VAR FRAMES %d", ptc->frames));
-		else if (var == "MODE") connection->write(format("OK VAR MODE %s", mode2str(ptc->mode).c_str()));
+		if (var == "frames") connection->write(format("ok var frames %d", ptc->frames));
+		else if (var == "mode") connection->write(format("ok var mode %s", mode2str(ptc->mode).c_str()));
+		else if (var == "devices") connection->write(format("ok var devices %d %s", devices->getcount(), devices->getlist().c_str()));
 		else netio.ok = false;
 	}
-  else if (cmd == "MODE") {
+  else if (cmd == "mode") {
     string mode = popword(line);
 		if (mode == mode2str(AO_MODE_CLOSED)) {
-			connection->write("OK CMD MODE CLOSED");
+			connection->write("ok cmd mode closed");
 			ptc->mode = AO_MODE_CLOSED;
 			pthread_cond_signal(&mode_cond); // signal a change to the main thread
 		}
 		else if (mode == mode2str(AO_MODE_OPEN)) {
-			connection->write("OK CMD MODE OPEN");
+			connection->write("ok cmd mode open");
 			ptc->mode = AO_MODE_OPEN;
 			pthread_cond_signal(&mode_cond); // signal a change to the main thread
 		}
 		else if (mode == mode2str(AO_MODE_LISTEN)) {
-			connection->write("OK CMD MODE LISTEN");
+			connection->write("ok cmd mode listen");
 			ptc->mode = AO_MODE_LISTEN;
 			pthread_cond_signal(&mode_cond); // signal a change to the main thread
 		}
 		else {
-			connection->write("ERR CMD MODE :UNKOWN");
+			connection->write("err cmd mode :mode unkown");
 		}
   }
   else {
@@ -472,7 +471,7 @@ int FOAM::show_nethelp(Connection *connection, string topic, string rest) {
 ":exit or quit:           disconnect from daemon.\n"
 ":shutdown:               shutdown FOAM.");
 	}		
-	else if (topic == "MODE") {
+	else if (topic == "mode") {
 		connection->write(\
 ":mode <mode>:            Close or open the AO-loop.\n"
 ":  mode=open:            opens the loop and only records what's happening with\n"
@@ -481,14 +480,16 @@ int FOAM::show_nethelp(Connection *connection, string topic, string rest) {
 ":                        correcting the wavefront as fast as possible.\n"
 ":  mode=listen:          stops looping and waits for input from the users.");
 	}
-	else if (topic == "BROADCAST") {
+	else if (topic == "broadcast") {
 		connection->write(\
-":broadcast <mode>:       broadcast a message to all clients.");
+":broadcast <msg>:        broadcast a message to all clients.");
 	}
-	else if (topic == "GET") {
+	else if (topic == "get") {
 		connection->write(\
 											":get <var>:              read a system variable.\n"
-											":  frames:               number of frames processed");
+											":  mode:                 current mode of operation.\n"
+											":  devices:              list of devices.\n"
+											":  frames:               number of frames processed.");
 	}
 	else {
 		// Unknown topic

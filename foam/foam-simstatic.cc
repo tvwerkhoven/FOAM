@@ -66,7 +66,7 @@ int FOAM_simstatic::load_modules() {
 	io.msg(IO_INFO, "This is the simstatic prime module, enjoy.");
 		
 	// Add ImgCam device
-	imgcam = new ImgCamera(io, "IMGCAM", ptc->listenport, ptc->cfgfile);
+	imgcam = new ImgCamera(io, "imgcam", ptc->listenport, ptc->cfgfile);
 	devices->add((Device *) imgcam);
 	
 //
@@ -77,7 +77,7 @@ int FOAM_simstatic::load_modules() {
 //	// Do something
 //	((DeviceA*) devices->get("DEVICEA:1"))->measure();
 	
-	io.msg(IO_XNFO, "list: %s", devices->getlist().c_str());
+	// io.msg(IO_XNFO, "list: %s", devices->getlist().c_str());
 	
 	return 0;
 }
@@ -160,48 +160,43 @@ void FOAM_simstatic::on_message(Connection *connection, std::string line) {
 	// First let the parent process this
 	FOAM::on_message(connection, line);
 	
-	// Process everything in uppercase
-	transform(line.begin(), line.end(), line.begin(), ::toupper);	
 	string cmd = popword(line);
 	
-	if (cmd == "HELP") {
+	if (cmd == "help") {
 		string topic = popword(line);
 		if (topic.size() == 0) {
 			connection->write(\
 												":==== simstat help ==========================\n"
 												":calib <mode>:           Calibrate AO system.");
 		}
-		else if (topic == "CALIB") {
+		else if (topic == "calib") {
 			connection->write(\
 												":calib <mode>:           Calibrate AO system.\n"
 												":  mode=influence:       Measure wfs-wfc influence.\n"
 												":  mode=subapsel:        Select subapertures.");
 		}
 		else if (!netio.ok) {
-			connection->write("ERR CMD HELP :TOPIC UNKOWN");
+			connection->write("err cmd help :topic unkown");
 		}
 	}
-	else if (cmd == "GET") {
+	else if (cmd == "get") {
 		string what = popword(line);
-		if (what == "CALIB") {
-			connection->write("OK VAR CALIB 1 INFLUENCE");
-		}
-		else if (what == "DEVICES") {
-			connection->write(format("OK VAR DEVICES %d %s", devices->getcount(), devices->getlist().c_str()));
+		if (what == "calib") {
+			connection->write("ok var calib 1 influence");
 		}
 		else if (!netio.ok) {
-			connection->write("ERR GET VAR :VAR UNKOWN");
+			connection->write("err get var :var unkown");
 		}
 	}
-	else if (cmd == "CALIB") {
+	else if (cmd == "calib") {
 		string calmode = popword(line);
-		connection->write("OK CMD CALIB");
+		connection->write("ok cmd calib");
 		ptc->calib = calmode;
 		ptc->mode = AO_MODE_CAL;
 		pthread_cond_signal(&mode_cond); // signal a change to the main thread
 	}
 	else if (!netio.ok) {
-		connection->write("ERR CMD :CMD UNKOWN");
+		connection->write("err cmd :cmd unkown");
 	}
 }
 
