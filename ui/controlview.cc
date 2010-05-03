@@ -217,12 +217,14 @@ void ControlPage::on_message_update() {
 	else if (foamctrl.get_mode() == AO_MODE_CAL) calib.set_sensitive(false);
 
 	// set values in status box
+	// TODO: update wrt FOAM implementation
 	stat_mode.set_text(foamctrl.get_mode_str());
-	stat_nwfs.set_text(format("%d", foamctrl.get_numwfs()));
-	stat_nwfc.set_text(format("%d", foamctrl.get_numwfc()));
+	stat_nwfs.set_text(format("%d", foamctrl.get_numdev()));
+	stat_nwfc.set_text(format("%d", foamctrl.get_numdev()));
 	stat_nframes.set_text(format("%d", foamctrl.get_numframes()));
 	
 	// set values in calibmode select box
+	// TODO: this is ugly
 	calmode_select.clear_items();
 	string *modetmp = foamctrl.get_calmodes();
 	while (*modetmp != "__SENTINEL__") {

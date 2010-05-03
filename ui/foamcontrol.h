@@ -37,6 +37,29 @@
 using namespace std;
 
 class FoamControl {
+private:
+	string mode2str(aomode_t m) {
+		switch (m) {
+			case AO_MODE_OPEN: return "open";
+			case AO_MODE_CLOSED: return "closed";
+			case AO_MODE_CAL: return "calib";
+			case AO_MODE_LISTEN: return "listen";
+			case AO_MODE_UNDEF: return "undef";
+			case AO_MODE_SHUTDOWN: return "shutdown";
+			default: return "unknown";
+		}
+	}
+	
+	aomode_t str2mode(string m) {
+		if (m == "open") return AO_MODE_OPEN;
+		else if (m == "closed") return AO_MODE_CLOSED;
+		else if (m == "calib") return AO_MODE_CAL;
+		else if (m == "listen") return AO_MODE_LISTEN;
+		else if (m == "undef") return AO_MODE_UNDEF;
+		else if (m == "shutdown") return AO_MODE_SHUTDOWN;
+		else return AO_MODE_UNDEF;
+	}
+	
 	Protocol::Client protocol;
 	
 	pthread::mutex mutex;
@@ -44,10 +67,10 @@ class FoamControl {
 	// Basic state of the AO system goes here
 	struct state_t {
 		aomode_t mode;
-		int numwfs;
-		int numwfc;
+		int numdev;
+		string devices[32];
 		int numframes;
-		string calmodes[16];
+		string calmodes[32];
 		string currcmd;
 	} state;
 	
@@ -72,17 +95,17 @@ public:
 	// get-like commands
 	string getpeername() { return protocol.getpeername(); }
 	string getsockname() { return protocol.getsockname(); }
-	int get_numwfs() { return state.numwfs; }
-	int get_numwfc() { return state.numwfc; }
+	int get_numdev() { return state.numdev; }
 	int get_numframes() { return state.numframes; }
 	aomode_t get_mode() { return state.mode; }
 	string get_mode_str() { return mode2str(state.mode); }
 	string* get_calmodes() { return state.calmodes; }
+	string* get_devices() { return state.devices; }
 	
 	// set-like commands
 	void set_mode(aomode_t mode);
-	void shutdown() { protocol.write("SHUTDOWN"); }
-	void calibrate(string calmode) { protocol.write(format("CALIB %s", calmode.c_str())); }
+	void shutdown() { protocol.write("shutdown"); }
+	void calibrate(string calmode) { protocol.write(format("calib %s", calmode.c_str())); }
 
 	
 	bool is_ok() { return ok; }

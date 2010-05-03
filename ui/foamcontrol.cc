@@ -38,8 +38,7 @@ FoamControl::FoamControl() {
 	
 	// Init variables
 	state.mode = AO_MODE_UNDEF;
-	state.numwfc = -1;
-	state.numwfs = -1;
+	state.numdev = -1;
 	state.numframes = 0;
 }
 
@@ -52,7 +51,7 @@ int FoamControl::connect(const string &host, const string &port) {
 	// connect a control connection
 	protocol.slot_message = sigc::mem_fun(this, &FoamControl::on_message);
 	protocol.slot_connected = sigc::mem_fun(this, &FoamControl::on_connected);
-	protocol.connect(host, port, "SYSTEM");
+	protocol.connect(host, port, "");
 	
 	return 0;
 }
@@ -64,13 +63,13 @@ void FoamControl::set_mode(aomode_t mode) {
 	
 	switch (mode) {
 		case AO_MODE_LISTEN:
-			protocol.write("MODE LISTEN");
+			protocol.write("mode listen");
 			break;
 		case AO_MODE_OPEN:
-			protocol.write("MODE OPEN");
+			protocol.write("mode open");
 			break;
 		case AO_MODE_CLOSED:
-			protocol.write("MODE CLOSED");
+			protocol.write("mode closed");
 			break;
 		default:
 			break;
@@ -100,7 +99,7 @@ void FoamControl::on_connected(bool conn) {
 	ok = true;
 	
 	// Get basic system information
-	protocol.write("GET INFO");
+	protocol.write("get info");
 //	protocol.write("GET NUMWFS");
 //	protocol.write("GET NUMWFC");
 //	protocol.write("GET MODE");
@@ -123,30 +122,32 @@ void FoamControl::on_message(string line) {
 	ok = true;
 	string what = popword(line);
 	
-	if (what == "VAR") {
+	if (what == "var") {
 		string var = popword(line);
-		if (var == "NUMWFC")
-			state.numwfc = popint32(line);
-		else if (var == "NUMWFS")
-			state.numwfs = popint32(line);
-		else if (var == "FRAMES")
+		if (var == "frames")
 			state.numframes = popint32(line);
-		else if (var == "MODE")
+		else if (var == "mode")
 			state.mode = str2mode(popword(line));
-		else if (var == "CALIB") {
+		else if (var == "calib") {
 			int n = popint32(line);
 			state.calmodes[n] = "__SENTINEL__";
 			while (n>0) state.calmodes[--n] = popword(line);
 		}
+		else if (var == "devices") {
+			int n = popint32(line);
+			state.numdev = n;
+			state.devices[n] = "__SENTINEL__";
+			while (n>0) state.devices[--n] = popword(line);
+		}
 	}
-	else if (what == "CMD") {
+	else if (what == "cmd") {
 		// command confirmation hook
 		state.currcmd = popword(line);
 	}
-	else if (what == "CALIB") {
+	else if (what == "calib") {
 		// post-calibration hook
 	}
-	else if (what == "MODE") {
+	else if (what == "mode") {
 		state.mode = str2mode(popword(line));
 	} else {
 		ok = false;

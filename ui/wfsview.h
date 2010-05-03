@@ -47,7 +47,7 @@ class WfsInfo: public HBox {
 
 	struct info_t {
 		int id;
-		wfstype_t type;
+		//wfstype_t type;
 		string name;
 	} info;
 	
