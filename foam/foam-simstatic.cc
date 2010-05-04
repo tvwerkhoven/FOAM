@@ -37,47 +37,21 @@
 #include "foam-simstatic.h"
 
 // Global device list for easier access
-ImgCamera *imgcam;
-
-class DeviceA : public Device {
-public:
-	DeviceA(Io &io, string name, string port): Device(io, name, port) {
-		io.msg(IO_DEB2, "DeviceA::DeviceA()");
-	}
-	virtual ~DeviceA() {
-		io.msg(IO_DEB2, "DeviceA::~DeviceA()");
-	}
-	virtual void on_message(Connection *conn, std::string line) {
-		io.msg(IO_DEB2, "DeviceA::on_message(conn, line=%s)", line.c_str());
-	}
-	virtual int verify() {
-		io.msg(IO_DEB2, "DeviceA::verify()");
-		return 0;
-	}
-	
-	int measure() { 
-		io.msg(IO_DEB2, "DeviceA::measure()");
-		return 10; 
-	}
-};
+ImgCamera *imgcama;
+ImgCamera *imgcamb;
+ImgCamera *imgcamc;
 
 int FOAM_simstatic::load_modules() {
 	io.msg(IO_DEB2, "FOAM_simstatic::load_modules()");
 	io.msg(IO_INFO, "This is the simstatic prime module, enjoy.");
 		
 	// Add ImgCam device
-	imgcam = new ImgCamera(io, "imgcam", ptc->listenport, ptc->cfgfile);
-	devices->add((Device *) imgcam);
-	
-//
-//	// Add another device
-//	DeviceA *deva2 = new DeviceA(io, "DEVICEA:2", ptc->listenport);
-//	devices->add((Device *) deva2);
-//
-//	// Do something
-//	((DeviceA*) devices->get("DEVICEA:1"))->measure();
-	
-	// io.msg(IO_XNFO, "list: %s", devices->getlist().c_str());
+	imgcama = new ImgCamera(io, "imgcamA", ptc->listenport, ptc->cfgfile);
+	devices->add((Device *) imgcama);
+	imgcamb = new ImgCamera(io, "imgcamB", ptc->listenport, ptc->cfgfile);
+	devices->add((Device *) imgcamb);
+	imgcamc = new ImgCamera(io, "imgcamC", ptc->listenport, ptc->cfgfile);
+	devices->add((Device *) imgcamc);
 	
 	return 0;
 }
@@ -88,7 +62,7 @@ int FOAM_simstatic::load_modules() {
 int FOAM_simstatic::open_init() {
 	io.msg(IO_DEB2, "FOAM_simstatic::open_init()");
 	
-	imgcam->set_mode(Camera::RUNNING);
+	imgcama->set_mode(Camera::RUNNING);
 	//ptc->devices->get("DEVICEA:1")->calibrate();
 	
 	return 0;
@@ -98,7 +72,7 @@ int FOAM_simstatic::open_loop() {
 	io.msg(IO_DEB2, "FOAM_simstatic::open_loop()");
 		
 	usleep(1000000);
-	imgcam->set_mode(Camera::RUNNING);
+	imgcama->set_mode(Camera::RUNNING);
 	
 	return 0;
 }
@@ -106,7 +80,7 @@ int FOAM_simstatic::open_loop() {
 int FOAM_simstatic::open_finish() {
 	io.msg(IO_DEB2, "FOAM_simstatic::open_finish()");
 	
-	imgcam->set_mode(Camera::OFF);
+	imgcama->set_mode(Camera::OFF);
 
 	return 0;
 }
