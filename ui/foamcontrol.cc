@@ -25,7 +25,6 @@
  */
 
 #include "foamcontrol.h"
-#include "fgui.h"
 #include "controlview.h"
 
 using namespace Gtk;
@@ -47,7 +46,9 @@ FoamControl::FoamControl() {
 	state.lastcmd = "undef";
 }
 
-int FoamControl::connect(const string &host, const string &port) {
+int FoamControl::connect(const string &h, const string &p) {
+	host = h;
+	port = p;
 	printf("%x:FoamControl::connect(%s, %s)\n", (int) pthread_self(), host.c_str(), port.c_str());
 	
 	if (protocol.is_connected()) 
@@ -142,6 +143,8 @@ void FoamControl::on_message(string line) {
 			state.numdev = popint32(line);
 			for (int i=0; i<state.numdev; i++)
 				state.devices[i] = popword(line);
+			// Signal device update to main GUI thread
+			signal_device();
 		}
 	}
 	else if (what == "cmd") {

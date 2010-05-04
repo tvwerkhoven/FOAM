@@ -34,6 +34,7 @@
 #include "foamcontrol.h"
 
 using namespace Gtk;
+using namespace std;
 
 class ControlPage: public VBox {
 	Log &log;

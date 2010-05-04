@@ -28,6 +28,7 @@
 #define HAVE_FOAMCONTROL_H
 
 #include <string>
+#include <map>
 #include <glibmm/dispatcher.h>
 
 #include "protocol.h"
@@ -88,6 +89,9 @@ public:
 		exception(const string reason): runtime_error(reason) {}
 	};
 	
+	string host;
+	string port;
+	
 	FoamControl();
 	~FoamControl() { };
 	
@@ -119,6 +123,7 @@ public:
 	
 	Glib::Dispatcher signal_connect;
 	Glib::Dispatcher signal_message;
+	Glib::Dispatcher signal_device;
 };
 
 

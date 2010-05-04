@@ -28,9 +28,13 @@
 #include <gtkmm/accelmap.h>
 #include <string.h>
 
+#include <iostream>
+#include <string>
+#include <map>
+
 #include "autoconfig.h"
 
-#include "fgui.h"
+
 #include "about.h"
 #include "widgets.h"
 #include "log.h"
@@ -38,6 +42,7 @@
 #include "protocol.h"
 #include "foamcontrol.h"
 #include "controlview.h"
+#include "fgui.h"
 
 extern Gtk::Tooltips *tooltips;
 
@@ -122,13 +127,29 @@ void MainWindow::on_ctrl_message_update() {
 	controlpage.on_message_update();
 }
 
+void MainWindow::on_ctrl_device_update() {
+	printf("MainWindow::on_ctrl_device_update()\n");
+	
+	for (int i=0; i<foamctrl.get_numdev(); i++) {
+		string devname = foamctrl.get_device(i);
+		if (devlist.find(devname) != devlist.end())
+			continue; // Already exists, skip
+		
+		devlist[devname] = new DevicePage(log, foamctrl, devname);
+		notebook.append_page(*devlist[devname], "_" + devname, devname, true);
+	}
+	
+	show_all_children();
+}
+
+
 MainWindow::MainWindow():
 	log(), foamctrl(), 
 	aboutdialog(), notebook(), conndialog(foamctrl), 
 	logpage(log), controlpage(log, foamctrl), 
 	menubar(*this) {
 	log.add(Log::NORMAL, "FOAM Control (" PACKAGE_NAME " version " PACKAGE_VERSION " built " __DATE__ " " __TIME__ ")");
-	log.add(Log::NORMAL, "Copyright (c) 2009 Tim van Werkhoven (T.I.M.vanWerkhoven@xs4all.nl)\n");
+	log.add(Log::NORMAL, "Copyright (c) 2009 Tim van Werkhoven (T.I.M.vanWerkhoven@xs4all.nl)");
 	
 	// widget properties
 	set_title("FOAM Control");
@@ -146,6 +167,7 @@ MainWindow::MainWindow():
 	
 	foamctrl.signal_connect.connect(sigc::mem_fun(*this, &MainWindow::on_ctrl_connect_update));
 	foamctrl.signal_message.connect(sigc::mem_fun(*this, &MainWindow::on_ctrl_message_update));
+	foamctrl.signal_device.connect(sigc::mem_fun(*this, &MainWindow::on_ctrl_device_update));	
 		
 	
 	notebook.append_page(controlpage, "_Control", "Control", true);

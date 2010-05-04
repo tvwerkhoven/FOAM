@@ -28,6 +28,10 @@
 #ifndef HAVE_FGUI_H
 #define HAVE_FGUI_H
 
+#include <iostream>
+#include <string>
+#include <map>
+
 #include <gtkmm.h>
 
 #include "about.h"
@@ -36,8 +40,10 @@
 #include "logview.h"
 #include "foamcontrol.h"
 #include "controlview.h"
+#include "deviceview.h"
 
 using namespace Gtk;
+using namespace std;
 
 class ConnectDialog: public Dialog {
 	FoamControl &foamctrl;
@@ -86,6 +92,8 @@ class MainWindow: public Window {
 	
 	LogPage logpage;
 	ControlPage controlpage;
+	// TODO: why do I need explicit std:: here??
+	std::map<std::string, DevicePage*> devlist;
 	
 	void on_about_activate();
 	void on_quit_activate();	
@@ -95,7 +103,8 @@ public:
 	MainMenu menubar;
 	
 	void on_ctrl_connect_update();
-	void on_ctrl_message_update();	
+	void on_ctrl_message_update();
+	void on_ctrl_device_update();
 	
 	MainWindow();
 	~MainWindow() {};
