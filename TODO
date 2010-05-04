@@ -5,44 +5,18 @@ We are looking for volunteers to do the following tasks :).
 
 Minor fixes & tweaks
 
-* modsubapsel() / shCogTrack() -> same functions, make more general or wrap 
-  around
+* Abstract modes, internal mode (enum) and description (string) should be 
+	connected better.
 
-* dispsdl -> needs autocontrast to run only once and set bright/contrast, not 
-  each time (see dispgl). Update 2008-07-15: might deprecate dispsdl in favour
-  of dispgl.
+* Review WFC/WFS abstraction, currently implemented inconsistently which 
+  makes some things more difficult than they are.
 
-* 2008-07-15 
-  System header files included are not organised very neatly. These need to
-  be moved to the specific modules actually using them, instead of dumping
-  them in the library header file.
+* Implement savestate such that a complete setup can be resumed.
 
-* 2008-07-16
-  Dark- and flat-fielding routines should have their own separate module,
-  this needs to be written 
-  Improve dark/flat algorithm, raw-dark/(flat-dark) must be multiplied by
-  some factor when working with 8 bit bytes (as we are), but which factor?
-
-* 2008-07-23
-  Integrate open and closed loop, and decide what to do based on the stat
-  of the ptc variable. This works better with calibration as well.
-
-* 2008-08-07 
-  Make a separate thread for the display module. This thread can then display
-  frames with a constant framerate, regardless of the camera speed.
-    
 Major feature upgrades
 
-* Correlation tracking functions for Shack Hartmann sensors.
-
-* 2008-07-15
-  Investigate libevent thread-unsafety. Modify use such that both threads 
-  can communicate with the clients. 
+* Correlation tracking functions for Shack Hartmann sensors
 
 * Adding MCAO capabilities
 
-* General streamlining and optimizations
-
-* Real time linux implementation of FOAM (long term project)
-
-* Porting to C++ (long term project)
+* Real time linux implementation of FOAM

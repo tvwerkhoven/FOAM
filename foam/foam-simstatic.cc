@@ -1,11 +1,12 @@
 /*
- Copyright (C) 2008 Tim van Werkhoven (t.i.m.vanwerkhoven@xs4all.nl)
+ foam-simstatic.cc -- static simulation module
+ Copyright (C) 2008--2010 Tim van Werkhoven <t.i.m.vanwerkhoven@xs4all.nl>
  
  This file is part of FOAM.
  
  FOAM is free software: you can redistribute it and/or modify
  it under the terms of the GNU General Public License as published by
- the Free Software Foundation, either version 3 of the License, or
+ the Free Software Foundation, either version 2 of the License, or
  (at your option) any later version.
  
  FOAM is distributed in the hope that it will be useful,
@@ -15,171 +16,179 @@
  
  You should have received a copy of the GNU General Public License
  along with FOAM.  If not, see <http://www.gnu.org/licenses/>.
-
- $Id$
  */
 /*! 
  @file foam-simstatic.c
  @author Tim van Werkhoven (t.i.m.vanwerkhoven@xs4all.nl)
- @date 2008-04-18
- 
  @brief This is a static simulation mode, with just a simple image to work with.
  
- This primemodule can be used to benchmark performance of the AO system if no
- AO hardware (camera, TT, DM) is present. This is branched off of the mcmath
- prime module.
+ This setup can be used to benchmark performance of the AO system if no
+ AO hardware (camera, TT, DM) is present.
  */
 
-// HEADERS //
-/***********/
+#include <iostream>
 
-#include "foam-simstatic.h"
+#include "foam.h"
 #include "types.h"
 #include "io.h"
-#include "wfs.h"
-#include "cam.h"
+#include "devices.h"
+#include "imgcam.h"
 
-// We need these for modMessage, see foam.cc
-extern pthread_mutex_t mode_mutex;
-extern pthread_cond_t mode_cond;
+#include "foam-simstatic.h"
 
-extern Io *io;
+// Global device list for easier access
+ImgCamera *imgcama;
+ImgCamera *imgcamb;
+ImgCamera *imgcamc;
 
-// GLOBALS //
-/***********/
-
-int modInitModule(foamctrl *ptc, foamcfg *cs_config) {
-	io->msg(IO_DEB2, __FILE__ "::modInitModule(foamctrl *ptc, foamcfg *cs_config)");
-
-	io->msg(IO_INFO, "This is the simstatic prime module, enjoy.");
+int FOAM_simstatic::load_modules() {
+	io.msg(IO_DEB2, "FOAM_simstatic::load_modules()");
+	io.msg(IO_INFO, "This is the simstatic prime module, enjoy.");
+		
+	// Add ImgCam device
+	imgcama = new ImgCamera(io, "imgcamA", ptc->listenport, ptc->cfgfile);
+	devices->add((Device *) imgcama);
+	imgcamb = new ImgCamera(io, "imgcamB", ptc->listenport, ptc->cfgfile);
+	devices->add((Device *) imgcamb);
+	imgcamc = new ImgCamera(io, "imgcamC", ptc->listenport, ptc->cfgfile);
+	devices->add((Device *) imgcamc);
 	
-	// Set up WFS #1 with image camera
-	ptc->wfs[0] = Wfs::create(ptc->wfscfgs[0]);
-	
-	return EXIT_SUCCESS;
-}
-
-int modPostInitModule(foamctrl *ptc, foamcfg *cs_config) {
-	io->msg(IO_DEB2, __FILE__ "::modPostInitModule(foamctrl *ptc, foamcfg *cs_config)");
-	return EXIT_SUCCESS;
-}
-
-void modStopModule(foamctrl *ptc) {
-	io->msg(IO_DEB2, __FILE__ "::modStopModule(foamctrl *ptc)");
+	return 0;
 }
 
 // OPEN LOOP ROUTINES //
 /*********************/
 
-int modOpenInit(foamctrl *ptc) {
-	io->msg(IO_DEB2, __FILE__ "::modOpenInit(foamctrl *ptc)");
+int FOAM_simstatic::open_init() {
+	io.msg(IO_DEB2, "FOAM_simstatic::open_init()");
 	
-	ptc->wfs[0]->cam->set_mode(Camera::RUNNING);
-	ptc->wfs[0]->cam->init_capture();
+	imgcama->set_mode(Camera::RUNNING);
+	//ptc->devices->get("DEVICEA:1")->calibrate();
 	
-	return EXIT_SUCCESS;
+	return 0;
 }
 
-int modOpenLoop(foamctrl *ptc) {
-	io->msg(IO_DEB2, __FILE__ "::modOpenLoop(foamctrl *ptc)");
-	
-	//void *tmp;
-	//ptc->wfs[0]->cam->get_image(&tmp);
-	ptc->wfs[0]->measure();
-	
+int FOAM_simstatic::open_loop() {
+	io.msg(IO_DEB2, "FOAM_simstatic::open_loop()");
+		
 	usleep(1000000);
-	return EXIT_SUCCESS;
+	imgcama->set_mode(Camera::RUNNING);
+	
+	return 0;
 }
 
-int modOpenFinish(foamctrl *ptc) {
-	io->msg(IO_DEB2, __FILE__ "::modOpenFinish(foamctrl *ptc)");
+int FOAM_simstatic::open_finish() {
+	io.msg(IO_DEB2, "FOAM_simstatic::open_finish()");
 	
-	ptc->wfs[0]->cam->set_mode(Camera::OFF);
+	imgcama->set_mode(Camera::OFF);
 
-	return EXIT_SUCCESS;
+	return 0;
 }
 
 // CLOSED LOOP ROUTINES //
 /************************/
 
-int modClosedInit(foamctrl *ptc) {
-	io->msg(IO_DEB2, __FILE__ "::modClosedInit(foamctrl *ptc)");
+int FOAM_simstatic::closed_init() {
+	io.msg(IO_DEB2, "FOAM_simstatic::closed_init()");
 	
-	modOpenInit(ptc);
+	// Run open-loop init first
+	open_init();
 	
-	return EXIT_SUCCESS;
+	return 0;
 }
 
-int modClosedLoop(foamctrl *ptc) {
-	io->msg(IO_DEB2, __FILE__ "::modClosedLoop(foamctrl *ptc)");
+int FOAM_simstatic::closed_loop() {
+	io.msg(IO_DEB2, "FOAM_simstatic::closed_loop()");
 
 	usleep(1000000);
-	return EXIT_SUCCESS;
+	return 0;
 }
 
-int modClosedFinish(foamctrl *ptc) {
-	io->msg(IO_DEB2, __FILE__ "::modClosedFinish(foamctrl *ptc)");
+int FOAM_simstatic::closed_finish() {
+	io.msg(IO_DEB2, "FOAM_simstatic::closed_finish()");
 	
-	modOpenFinish(ptc);
+	// Run open-loop finish first
+	open_finish();
 
-	return EXIT_SUCCESS;
+	return 0;
 }
 
 // MISC ROUTINES //
 /*****************/
 
-int modCalibrate(foamctrl *ptc) {
-	io->msg(IO_DEB2, __FILE__ "::modCalibrate(foamctrl *ptc)");
+int FOAM_simstatic::calib() {
+	io.msg(IO_DEB2, "FOAM_simstatic::calib()=%s", ptc->calib.c_str());
 
-	if (ptc->calmode == CAL_SUBAPSEL) {
-		io->msg(IO_DEB2, __FILE__ "::modCalibrate CAL_SUBAPSEL");
+	if (ptc->calib == "INFLUENCE") {
+		io.msg(IO_DEB2, "FOAM_simstatic::calib INFLUENCE");
 		usleep((useconds_t) 1.0 * 1000000);
-		ptc->wfs[0]->calibrate();
-		usleep((useconds_t) 1.0 * 1000000);
+		return 0;
 	}
-		
-	return EXIT_SUCCESS;
+	else
+		return -1;
+
+	return 0;
 }
 
-int modMessage(foamctrl *ptc, Connection *connection, string cmd, string line) {
-	if (cmd == "HELP") {
+void FOAM_simstatic::on_message(Connection *connection, std::string line) {
+	io.msg(IO_DEB2, "FOAM_simstatic::on_message(Connection *connection, std::string line)");
+	netio.ok = true;
+	
+	// First let the parent process this
+	FOAM::on_message(connection, line);
+	
+	string cmd = popword(line);
+	
+	if (cmd == "help") {
 		string topic = popword(line);
 		if (topic.size() == 0) {
 			connection->write(\
 												":==== simstat help ==========================\n"
 												":calib <mode>:           Calibrate AO system.");
 		}
-		else if (topic == "CALIB") {
+		else if (topic == "calib") {
 			connection->write(\
 												":calib <mode>:           Calibrate AO system.\n"
+												":  mode=influence:       Measure wfs-wfc influence.\n"
 												":  mode=subapsel:        Select subapertures.");
 		}
-		else {
-			return -1;
+		else if (!netio.ok) {
+			connection->write("err cmd help :topic unkown");
 		}
 	}
-	else if (cmd == "GET") {
+	else if (cmd == "get") {
 		string what = popword(line);
-		if (what == "CALIB") {
-			connection->write("OK VAR CALIB 2 SUBAPSEL INVALID");
+		if (what == "calib") {
+			connection->write("ok var calib 1 influence");
+		}
+		else if (!netio.ok) {
+			connection->write("err get var :var unkown");
 		}
 	}
-	else if (cmd == "CALIB") {
+	else if (cmd == "calib") {
 		string calmode = popword(line);
-		if (calmode == "SUBAPSEL") {
-			connection->write("OK CMD CALIB SUBAPSEL");
-			ptc->calmode = CAL_SUBAPSEL;
-			ptc->mode = AO_MODE_CAL;
-			pthread_cond_signal(&mode_cond); // signal a change to the main thread
-		}
-		else {
-			connection->write("ERR CMD CALIB :MODE UNKNOWN");
-		}	
+		connection->write("ok cmd calib");
+		ptc->calib = calmode;
+		ptc->mode = AO_MODE_CAL;
+		pthread_cond_signal(&mode_cond); // signal a change to the main thread
 	}
-	else {
-		return -1;
+	else if (!netio.ok) {
+		connection->write("err cmd :cmd unkown");
 	}
+}
+
+int main(int argc, char *argv[]) {
+	FOAM_simstatic foam(argc, argv);
 	
-	// if we end up here, we didn't return 0, so we found a valid command
+	if (foam.has_error())
+		return foam.io.msg(IO_INFO, "Initialisation error.");
+	
+	if (foam.init())
+		return foam.io.msg(IO_ERR, "Configuration error.");
+		
+	foam.io.msg(IO_INFO, "Running simstatic mode");
+	
+	foam.listen();
+	
 	return 0;
 }

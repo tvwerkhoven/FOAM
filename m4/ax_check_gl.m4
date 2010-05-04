@@ -1,25 +1,3 @@
-# AST_PROG_SED
-# -----------
-# Check for a fully functional sed program that truncates
-# as few characters as possible.  Prefer GNU sed if found.
-AC_DEFUN([AST_PROG_SED],
-[AC_CACHE_CHECK([for a sed that does not truncate output], ac_cv_path_SED,
-    [dnl ac_script should not contain more than 99 commands (for HP-UX sed),
-     dnl but more than about 7000 bytes, to catch a limit in Solaris 8 /usr/ucb/sed.
-     ac_script=s/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb/
-     for ac_i in 1 2 3 4 5 6 7; do
-       ac_script="$ac_script$as_nl$ac_script"
-     done
-     echo "$ac_script" | sed 99q >conftest.sed
-     $as_unset ac_script || ac_script=
-#     _AC_PATH_PROG_FEATURE_CHECK(SED, [sed gsed],
-#       [_AC_FEATURE_CHECK_LENGTH([ac_path_SED], [ac_cv_path_SED],
-#               ["$ac_path_SED" -f conftest.sed])])])
- SED="$ac_cv_path_SED"
- AC_SUBST([SED])dnl
- rm -f conftest.sed
-])# AST_PROG_SED
-
 # -*- mode: autoconf -*-
 #
 # AX_CHECK_GL
@@ -33,7 +11,7 @@ AC_DEFUN([AST_PROG_SED],
 # "OpenGL/gl.h" is found, HAVE_OPENGL_GL_H is defined.  These preprocessor
 # definitions may not be mutually exclusive.
 #
-# version: 2.4
+# version: 2.5
 # author: Braden McDaniel <braden@endoframe.com>
 #
 # This program is free software; you can redistribute it and/or modify
@@ -59,9 +37,8 @@ AC_DEFUN([AST_PROG_SED],
 AC_DEFUN([AX_CHECK_GL],
 [AC_REQUIRE([AC_CANONICAL_HOST])dnl
 AC_REQUIRE([AC_PATH_X])dnl
-#AC_REQUIRE([AC_PROG_SED])dnl
-AC_REQUIRE([AST_PROG_SED])dnl
-AC_REQUIRE([ACX_PTHREAD])dnl
+AC_REQUIRE([AC_PROG_SED])dnl
+AC_REQUIRE([AX_PTHREAD])dnl
 
 AC_LANG_PUSH([C])
 AX_LANG_COMPILER_MS
@@ -78,12 +55,16 @@ AS_IF([test X$no_x != Xyes],
        AS_IF([test -n "$x_libraries"],
              [GL_LIBS="-L$x_libraries -lX11 $GL_LIBS"]))
 
+AC_CHECK_HEADERS([windows.h])
+
 ax_save_CPPFLAGS=$CPPFLAGS
 CPPFLAGS="$GL_CFLAGS $CPPFLAGS"
-AC_CHECK_HEADERS([GL/gl.h OpenGL/gl.h])
+AC_CHECK_HEADERS([GL/gl.h OpenGL/gl.h], , , [
+# if defined(HAVE_WINDOWS_H) && defined(_WIN32)
+#   include <windows.h>
+# endif
+])
 CPPFLAGS=$ax_save_CPPFLAGS
-
-AC_CHECK_HEADERS([windows.h])
 
 m4_define([AX_CHECK_GL_PROGRAM],
           [AC_LANG_PROGRAM([[

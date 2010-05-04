@@ -1,11 +1,12 @@
-/* controlview.h - the FOAM connection control pane
- Copyright (C) 2009 Tim van Werkhoven (t.i.m.vanwerkhoven@xs4all.nl)
+/*
+ controlview.h -- FOAM GUI connection control pane
+ Copyright (C) 2009--2010 Tim van Werkhoven <t.i.m.vanwerkhoven@xs4all.nl>
  
  This file is part of FOAM.
  
  FOAM is free software: you can redistribute it and/or modify
  it under the terms of the GNU General Public License as published by
- the Free Software Foundation, either version 3 of the License, or
+ the Free Software Foundation, either version 2 of the License, or
  (at your option) any later version.
  
  FOAM is distributed in the hope that it will be useful,
@@ -23,8 +24,8 @@
  @brief This is the FOAM connection control pane
  */
 
-#ifndef __CONTROLVIEW_H__
-#define __CONTROLVIEW_H__
+#ifndef HAVE_CONTROLVIEW_H
+#define HAVE_CONTROLVIEW_H
 
 #include <gtkmm.h>
 
@@ -33,6 +34,7 @@
 #include "foamcontrol.h"
 
 using namespace Gtk;
+using namespace std;
 
 class ControlPage: public VBox {
 	Log &log;
@@ -60,10 +62,14 @@ class ControlPage: public VBox {
 	Frame statframe;
 	HBox statbox;
 	LabeledEntry stat_mode;
-	LabeledEntry stat_nwfs;
-	LabeledEntry stat_nwfc;
+	LabeledEntry stat_ndev;
 	LabeledEntry stat_nframes;
+	LabeledEntry stat_lastcmd;
 
+	Frame devframe;
+	HBox devbox;
+	LabeledEntry *dev_devlist;
+	
 	void on_connect_clicked();
 	
 	void on_mode_listen_clicked();
@@ -81,4 +87,4 @@ public:
 	void on_message_update();
 };
 
-#endif //  __CONTROLVIEW_H__
+#endif //  HAVE_CONTROLVIEW_H

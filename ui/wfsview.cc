@@ -1,5 +1,5 @@
 /*
- wfc.h -- a wavefront corrector base class
+ wfsview.cc -- FOAM GUI wavefront sensor pane
  Copyright (C) 2009--2010 Tim van Werkhoven <t.i.m.vanwerkhoven@xs4all.nl>
  
  This file is part of FOAM.
@@ -17,39 +17,40 @@
  You should have received a copy of the GNU General Public License
  along with FOAM.  If not, see <http://www.gnu.org/licenses/>.
  */
-
-#ifndef HAVE_WFC_H
-#define HAVE_WFC_H
-
-#include <string>
-#include <stdint.h>
-#include <sys/types.h>
-#include "types.h"
-#include "config.h"
-
 /*!
- @brief Base wavefront corrector class. This will be overloaded with the specific WFC type
+ @file wfsview.cc
  @author Tim van Werkhoven (t.i.m.vanwerkhoven@xs4all.nl)
+ 
+ @brief This is the FOAM GUI wavefront sensor pane
  */
-class Wfc {
-public:
-	typedef enum {
-		ACT_ADD=0,
-		ACT_SET
-	} wfc_actmode_t;							//!< Mode to use for actuating (set or add)
-	
-	string name;									//!< WFC name
-	
-	int nact;											//!< Number of actuators
-	int wfctype;									//!< WFC type/model
-	
-	virtual int verify(int) = 0;
-	virtual int actuate(gsl_vector_float *ctrl, int) = 0;
-	virtual int caibrate(int) = 0;
-	
-	static Wfc *create(config &config);	//!< Initialize new wavefront corrector
-	
-	virtual ~Wfc() {}
-};
 
-#endif // HAVE_WFC_H
+#include "wfsview.h"
+#include "widgets.h"
+
+using namespace std;
+using namespace Gtk;
+
+WfsPage::WfsPage(Log &log):
+log(log),
+numwfs("# WFS:")
+{
+	log.add(Log::DEBUG, "WfsPage init.");
+	
+	// The top HBox has some status info:
+	numwfs.set_editable(false);
+	numwfs.set_text("-");
+	
+	status.set_spacing(4);
+	status.pack_start(numwfs, PACK_SHRINK);
+	
+	// Add the status HBox
+	set_spacing(4);
+	pack_start(status, PACK_SHRINK);
+	
+	show_all_children();
+}
+
+WfsInfo::WfsInfo(Log &log):
+log(log) {
+	log.add(Log::DEBUG, "WfsInfo init.");
+}

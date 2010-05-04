@@ -1,11 +1,12 @@
 /*
- Copyright (C) 2008 Tim van Werkhoven (t.i.m.vanwerkhoven@xs4all.nl)
+ FOAM_dummy.h -- dummy module
+ Copyright (C) 2008--2010 Tim van Werkhoven <t.i.m.vanwerkhoven@xs4all.nl>
  
  This file is part of FOAM.
  
  FOAM is free software: you can redistribute it and/or modify
  it under the terms of the GNU General Public License as published by
- the Free Software Foundation, either version 3 of the License, or
+ the Free Software Foundation, either version 2 of the License, or
  (at your option) any later version.
  
  FOAM is distributed in the hope that it will be useful,
@@ -19,7 +20,6 @@
 /*! 
 	@file foam-dummy.c
 	@author Tim van Werkhoven (t.i.m.vanwerkhoven@xs4all.nl)
-	@date November 30 2007
 
 	@brief This is a dummy module to test the bare FOAM framework capabilities.
 */
@@ -28,53 +28,36 @@
 /***********/
 
 #include "foam.h"
-#include "io.h"
 
-extern pthread_mutex_t mode_mutex;
-extern pthread_cond_t mode_cond;
-extern Io *io;
-
-int modInitModule(foamctrl *ptc, foamcfg *cs_config) {
-  io->msg(IO_INFO, "Running in dummy mode, don't expect great AO results :)");
-	return EXIT_SUCCESS;
-}
-
-int modPostInitModule(foamctrl *ptc, foamcfg *cs_config) {
-	return EXIT_SUCCESS;
-}
-
-int modOpenInit(foamctrl *ptc) {
-	return EXIT_SUCCESS;
-}
-void modStopModule(foamctrl *ptc) {
-	// placeholder ftw!
-}
-
-int modOpenLoop(foamctrl *ptc) {
-	return EXIT_SUCCESS;
-}
-
-int modOpenFinish(foamctrl *ptc) {
-	return EXIT_SUCCESS;
-}
+class FOAM_dummy : public FOAM {
+public:
+	FOAM_dummy(int argc, char *argv[]): FOAM(argc, argv) { io.msg(IO_DEB2, "FOAM_dummy::FOAM_dummy()"); } 
+	virtual ~FOAM_dummy() { io.msg(IO_DEB2, "FOAM_dummy::~FOAM_dummy()"); } 
+	
+	virtual int load_modules() { io.msg(IO_DEB2, "FOAM_dummy::load_modules()"); return 0; } 
+	virtual void on_message(Connection *connection, std::string line) { FOAM::on_message(connection, line); io.msg(IO_DEB2, "FOAM_dummy::on_message()"); } 
+		
+	virtual int closed_init() { io.msg(IO_DEB2, "FOAM_dummy::closed_init()"); return 0; }
+	virtual int closed_loop()  { io.msg(IO_DEB2, "FOAM_dummy::closed_loop()"); return 0; }
+	virtual int closed_finish() { io.msg(IO_DEB2, "FOAM_dummy::closed_finish()"); return 0; }
+	
+	virtual int open_init() { io.msg(IO_DEB2, "FOAM_dummy::open_init()"); return 0; }
+	virtual int open_loop() { io.msg(IO_DEB2, "FOAM_dummy::open_loop()"); return 0; }
+	virtual int open_finish() { io.msg(IO_DEB2, "FOAM_dummy::open_finish()"); return 0; }
+	
+	virtual int calib() { io.msg(IO_DEB2, "FOAM_dummy::calib()"); return 0; }
+};
 
 
-int modClosedInit(foamctrl *ptc) {
-	return EXIT_SUCCESS;
-}
-
-int modClosedLoop(foamctrl *ptc) {
-	return EXIT_SUCCESS;
-}
-
-int modClosedFinish(foamctrl *ptc) {
-	return EXIT_SUCCESS;
-}
-
-int modCalibrate(foamctrl *ptc) {
-	return EXIT_SUCCESS;
-}
-
-int modMessage(foamctrl *ptc, Connection *connection, string cmd, string rest) {
+int main(int argc, char *argv[]) {
+	// Init FOAM_dummy class
+	FOAM_dummy foam(argc, argv);
+	
+	foam.init();
+	
+	foam.io.msg(IO_INFO, "Running dummy mode");
+	
+	foam.listen();
+	
 	return 0;
 }

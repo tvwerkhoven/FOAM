@@ -1,11 +1,12 @@
 /*
- Copyright (C) 2008-2009 Tim van Werkhoven (t.i.m.vanwerkhoven@xs4all.nl)
+ foam-simstatic.h -- static simulation module header file
+ Copyright (C) 2008--2010 Tim van Werkhoven <t.i.m.vanwerkhoven@xs4all.nl>
  
  This file is part of FOAM.
  
  FOAM is free software: you can redistribute it and/or modify
  it under the terms of the GNU General Public License as published by
- the Free Software Foundation, either version 3 of the License, or
+ the Free Software Foundation, either version 2 of the License, or
  (at your option) any later version.
  
  FOAM is distributed in the hope that it will be useful,
@@ -23,8 +24,8 @@
 
 */
 
-#ifndef FOAM_PRIME_SIMSTATIC
-#define FOAM_PRIME_SIMSTATIC
+#ifndef HAVE_FOAM_SIMSTATIC_H
+#define HAVE_FOAM_SIMSTATIC_H
 
 #define FOAM_CONFIG_PRE "foam-simstat"
 
@@ -35,7 +36,27 @@
 
 #include "foam.h"
 #include "types.h"
+#include "io.h"
+
+class FOAM_simstatic : public FOAM {
+public:
+	FOAM_simstatic(int argc, char *argv[]): FOAM(argc, argv) { io.msg(IO_DEB2, "FOAM_simstatic::FOAM_simstatic()"); } 
+	virtual ~FOAM_simstatic() { io.msg(IO_DEB2, "FOAM_simstatic::~FOAM_simstatic()"); } 
+	
+	virtual int load_modules();
+	virtual void on_message(Connection *connection, std::string line);
+	
+	virtual int closed_init();
+	virtual int closed_loop();
+	virtual int closed_finish();
+	
+	virtual int open_init();
+	virtual int open_loop();
+	virtual int open_finish();
+	
+	virtual int calib();
+};
 
 
-#endif // #ifndef FOAM_PRIME_SIMSTATIC
+#endif // HAVE_FOAM_SIMSTATIC_H
 

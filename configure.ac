@@ -1,12 +1,12 @@
 ## @file configure.ac
 ## @author Tim van Werkhoven (t.i.m.vanwerkhoven@xs4all.nl)
-## Copyright 2007-2009 Tim van Werkhoven (t.i.m.vanwerkhoven@xs4all.nl)
+## Copyright 2007-2010 Tim van Werkhoven (t.i.m.vanwerkhoven@xs4all.nl)
 
 AC_INIT([FOAM], [0.1], [t.i.m.vanwerkhoven@xs4all.nl])
 AC_CONFIG_AUX_DIR([build-aux])
 AM_INIT_AUTOMAKE([FOAM], [0.1], [t.i.m.vanwerkhoven@xs4all.nl])
 AC_PREREQ(2.59)
-AC_COPYRIGHT([Copyright (C) 2007-2009 Tim van Werkhoven <t.i.m.vanwerkhoven@xs4all.nl>])
+AC_COPYRIGHT([Copyright (C) 2007-2010 Tim van Werkhoven <t.i.m.vanwerkhoven@xs4all.nl>])
 AC_REVISION(`git describe`)
 
 AC_CONFIG_SRCDIR(foam/foam.cc)
@@ -30,11 +30,11 @@ AC_PROG_MAKE_SET
 AC_PROG_INSTALL
 AC_PROG_RANLIB
 
-# These are the configuration- and data-directories
-FOAMCONFDIR=$datadir/foam
-FOAMDATADIR=$datadir
-AC_SUBST(FOAMCONFDIR)
+# FOAM data & configuration directory
+FOAMDATADIR=$datadir/foam
+FOAMCONFDIR=$sysconfdir/foam
 AC_SUBST(FOAMDATADIR)
+AC_SUBST(FOAMCONFDIR)
 
 # These libraries are crucial for all targets
 AC_SEARCH_LIBS([sin],
@@ -93,6 +93,7 @@ AC_ARG_ENABLE([hwdebug],
 ### BUILD OPTIONS ###
 #####################
 
+opengl=disabled
 AC_ARG_WITH([opengl],
 		AC_HELP_STRING([--with-opengl], [use OpenGL instead of SDL]),
 		[test "$withval" = yes && opengl=true])
@@ -178,18 +179,28 @@ AM_CONDITIONAL([GUI], [test "$gui" = true])
 ######################
 if test "$opengl" = true ; then
 	AC_MSG_NOTICE([*** OpenGL enabled, checking for extra libs.])
-	AX_CHECK_GL
-	AX_CHECK_GLU
-	AX_CHECK_GLUT
 	
-	OPENGL_CFLAGS+="$GL_CFLAGS $GLU_CFLAGS $GLUT_CFLAGS"
-	OPENGL_LIBS+="$GL_LIBS $GLU_LIBS $GLUT_LIBS"
+	AX_CHECK_GL
+	if test "$no_gl" = yes; then openglmissing+=" gl"; fi
+	
+	AX_CHECK_GLU
+	if test "$no_glu" = yes; then openglmissing+=" glu"; fi
+	
+	AX_CHECK_GLUT
+	if test "$no_glut" = yes; then openglmissing+=" glut"; fi
+
 	if test "$no_gl" = yes || test  "$no_glu" = yes || test "$no_glut" = yes ; then
-		opengl=false
-		AC_MSG_WARN([*** OpenGL not found!])
+		opengl=false;
+		AC_MSG_WARN([OpenGL not found.]);
 	fi
+	
+	PKG_CHECK_MODULES(GLEXTMM, gtkglextmm-1.2, [],
+		[AC_MSG_WARN([OpenGL needs gtkglextmm-1.2.]);opengl=false;openglmissing+=" gtkglextmm-1.2"])
+
+	OPENGL_CFLAGS+="$GL_CFLAGS $GLU_CFLAGS $GLUT_CFLAGS $GLEXTMM_CFLAGS"
+	OPENGL_LIBS+="$GL_LIBS $GLU_LIBS $GLUT_LIBS $GLEXTMM_LIBS"
 else 
-	AC_MSG_NOTICE([*** OpenGL disabled.])
+	AC_MSG_NOTICE([OpenGL disabled.])
 fi
 
 AC_SUBST(OPENGL_LIBS)
@@ -227,6 +238,15 @@ elif test "$gui" = disabled; then
 else
 	AC_MSG_NOTICE([FOAM control GUI:        not available])
 	AC_MSG_NOTICE([FOAM control GUI:        missing:$guimissing])
+fi
+
+if test "$opengl" = true ; then
+	AC_MSG_NOTICE([OpenGL renderer:         available])
+elif test "$opengl" = disabled; then
+	AC_MSG_NOTICE([OpenGL renderer:         disabled])
+else
+	AC_MSG_NOTICE([OpenGL renderer:         not available])
+	AC_MSG_NOTICE([OpenGL renderer:         missing:$openglmissing])
 fi
 
 if test "$debug" = true ; then

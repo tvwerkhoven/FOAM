@@ -12,8 +12,7 @@ AM_CPPFLAGS = \
 
 # This is used to get the config directory as a define (see top-level Makefile.am)
 # TODO: check this
-AM_CPPFLAGS += -DFOAM_CONFDIR=\"$(FOAMCONFDIR)\" \
-		-DFOAM_DATADIR=\"$(FOAMDATADIR)\" \
+AM_CPPFLAGS += -DFOAM_DATADIR=\"$(FOAMDATADIR)\" \
 		$(COMMON_CFLAGS)
 
 # GSL flags
@@ -37,14 +36,15 @@ LDADD = $(LIBSIU_DIR)/libsocket.a \
 		$(LIBSIU_DIR)/libprotocol.a
 
 # Basic framework files which are always needed
-FRAME_SRC = foam.cc foamctrl.cc foamcfg.cc
-FRAME_HDR = foam.h foamctrl.h foamcfg.h config.h wfc.h wfs.h
+FRAME_SRC = foam.cc foamctrl.cc $(LIB_DIR)/devices.cc
+FRAME_HDR = foam.h foamctrl.h config.h $(LIB_DIR)/devices.h
 
 ### DUMMY MODE ###
 ##################
 
 bin_PROGRAMS = foam-dummy
-foam_dummy_CPPFLAGS = -DFOAM_DEBUG=1 $(AM_CPPFLAGS)
+foam_dummy_CPPFLAGS = -DFOAM_DEFAULTCONF=\"$(FOAMCONFDIR)/foam-dummy.cfg\" \
+		-DFOAM_DEBUG=1 $(AM_CPPFLAGS)
 foam_dummy_SOURCES = foam-dummy.cc $(FRAME_SRC) 
 foam_dummy_SOURCES += $(FRAME_HDR)
 
@@ -58,19 +58,16 @@ bin_PROGRAMS += foam-simstat
 
 foam_simstat_SOURCES = foam-simstatic.cc \
 		$(FRAME_SRC) $(FRAME_HDR) \
-		$(MODS_DIR)/shwfs.cc \
 		$(LIB_DIR)/imgio.cc \
 		$(MODS_DIR)/imgcam.cc
 
 # Header files are part of the sources as well
 foam_simstat_SOURCES += foam-simstatic.h \
-		$(MODS_DIR)/shwfs.h \
 		$(LIB_DIR)/imgio.h \
 		$(MODS_DIR)/cam.h
 
 # Some CPP flags (include the primemod header, and configure some options)
-foam_simstat_CPPFLAGS = -DFOAM_SIMSTAT_DISPLAY=1 \
- 		-DFOAM_MODULES_DISLAY_SHSUPPORT=1 \
+foam_simstat_CPPFLAGS = -DFOAM_DEFAULTCONF=\"$(FOAMCONFDIR)/foam-simstat.cfg\" \
 		$(SIMSTAT_CFLAGS) $(AM_CPPFLAGS)
 
 # specific flags and libraries

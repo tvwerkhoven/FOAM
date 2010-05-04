@@ -1,12 +1,12 @@
 /*
  cam.h -- generic camera input/output wrapper
- Copyright (C) 2009 Tim van Werkhoven (t.i.m.vanwerkhoven@xs4all.nl)
+ Copyright (C) 2009--2010 Tim van Werkhoven <t.i.m.vanwerkhoven@xs4all.nl>
  
  This file is part of FOAM.
  
  FOAM is free software: you can redistribute it and/or modify
  it under the terms of the GNU General Public License as published by
- the Free Software Foundation, either version 3 of the License, or
+ the Free Software Foundation, either version 2 of the License, or
  (at your option) any later version.
  
  FOAM is distributed in the hope that it will be useful,
@@ -19,8 +19,8 @@
  
  */
 
-#ifndef __CAM_H__
-#define __CAM_H__
+#ifndef HAVE_CAM_H
+#define HAVE_CAM_H
 
 #include <fstream>
 
@@ -29,23 +29,13 @@
 #include "types.h"
 #include "config.h"
 #include "io.h"
-#include "cam.h"
-
-extern Io *io;
+#include "devices.h"
 
 /*!
  @brief Base camera class. This will be overloaded with the specific camera class.
  @author Tim van Werkhoven (t.i.m.vanwerkhoven@xs4all.nl) and Guus Sliepen (guus@sliepen.org)
- @data // :tim:20091126 
  */
-class Camera {
-protected:
-	void *image;									//!< Pointer to the image data (can be ringbuffer)
-	void *darkim;									//!< Pointer to a darkfield image
-	void *flatim;									//!< Pointer to a flatfield image
-	void *gainim;									//!< Pointer to a flat-dark image
-	int ff;												//!< Number of images summed for dark- or flatfield
-	
+class Camera : public Device {
 public:
 	class exception: public std::runtime_error {
 	public:
@@ -54,55 +44,69 @@ public:
 	
 	typedef enum {
 		OFF = 0,
-		SLAVE = 1,
-		MASTER = 2,
-		RUNNING = 3,
-	} mode;
+		SINGLE,
+		RUNNING,
+		ERROR
+	} mode_t;
 	
+protected:
+	void *image;									//!< Pointer to the image data (can be ringbuffer)
+	void *darkim;									//!< Pointer to a sum of darkfield images
+	void *flatim;									//!< Pointer to a sum of flatfield images
+	void *gainim;									//!< Pointer to a (normalised) 1/(flat-dark) image
+	int ndark;										//!< Number of images summed for darkfield
+	int nflat;										//!< Number of images summed for flatfield
+	
+	double interval;
+	double exposure;
+	double gain;
+	double offset;
+
 	coord_t res;									//!< Camera pixel resolution
 	int bpp;											//!< Camera pixel depth
 	dtype_t dtype;								//!< Camera datatype
+
+	Camera::mode_t mode;
 	
+	FILE *outfd;									//!< FD for storing data to disk
+	
+public:
 	string darkfile;
 	string flatfile;
 	
+	double get_interval() { return interval; }
+	double get_exposure() { return exposure; }
+	double get_gain() { return gain; }
+	int get_width() { return res.x; }
+	int get_height() { return res.y; }
+	coord_t get_res() { return res; }
+	int get_depth() { return bpp; }
+	Camera::mode_t get_mode() { return mode; }
+	dtype_t get_dtype() { return dtype; }
+	double get_offset() { return offset; }
+
+	void set_mode(Camera::mode_t newmode) { mode = newmode; }
+	void set_interval(double value) { interval = value; }
+	void set_exposure(double value) { exposure = value; }
+	void set_gain(double value) { gain = value; }
+	void set_offset(double value) { offset = value; }
+
+	// From Devices::
 	virtual int verify() { return 0; }
+	virtual void on_message(Connection *conn, std::string line) { ; }
+	virtual void on_connect(Connection *conn, bool status) { ; }
+
+	// To be implemented in derived class
+	virtual int thumbnail(Connection *) { return -1; }
+	virtual int monitor(void *frame, size_t &size, int &x1, int &y1, int &x2, int &y2, int &scale) { return -1; }
+	virtual int store(Connection *) { return -1; }
 	
-	virtual double get_exposure() {return 0;}
-	virtual double get_interval() {return 0;}
-	virtual double get_gain() {return 0;}
-	virtual double get_offset() {return 0;}
-	virtual int get_width() {return 0;}
-	virtual int get_height() {return 0;}
-	virtual int get_depth() {return 0;}
-	virtual dtype_t get_dtype() {return dtype;}
-	virtual mode get_mode() {return OFF;}
-	
-	virtual void set_exposure(double) {}
-	virtual void set_interval(double) {}
-	virtual void set_gain(double) {}
-	virtual void set_offset(double) {}
-	virtual void set_mode(mode) {}
-	
-	virtual bool thumbnail(uint8_t *) {return false;}
-	virtual void init_capture() {}
-	virtual bool get_image(void **out) {return false;}
-	virtual bool capture(int fd) {return false;}
-	virtual bool monitor(void *frame, size_t &size, int &x1, int &y1, int &x2, int &y2, int &scale) {return false;}
-	
-	static Camera *create(config &config);
-	static Camera *create(string conffile) {
-		io->msg(IO_DEB2, "Camera::create(string conffile)");
-		
-		ifstream fin(conffile.c_str(), ifstream::in);
-		if (!fin.is_open()) throw("Could not open configuration file!");
-		fin.close();
-		
-		config cfg(conffile);
-		return Camera::create(cfg);
-	}
 	virtual ~Camera() {};
+	// TODO: how to init res.x(-1), res.y(-1), ?
+	Camera(Io &io, string name, string port): 
+	Device(io, name, port),
+	interval(1.0), exposure(1.0), gain(1.0), offset(0.0), bpp(-1), dtype(DATA_UINT16), mode(Camera::OFF), outfd(0) { ; }
 };
 
 
-#endif /* __CAM_H__ */
+#endif /* HAVE_CAM_H */

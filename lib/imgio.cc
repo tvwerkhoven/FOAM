@@ -1,12 +1,12 @@
 /*
  imgio.cc -- image file input/output routines
- Copyright (C) 2008-2009 Tim van Werkhoven (t.i.m.vanwerkhoven@xs4all.nl)
+ Copyright (C) 2008--2010 Tim van Werkhoven <t.i.m.vanwerkhoven@xs4all.nl>
  
  This file is part of FOAM.
  
  FOAM is free software: you can redistribute it and/or modify
  it under the terms of the GNU General Public License as published by
- the Free Software Foundation, either version 3 of the License, or
+ the Free Software Foundation, either version 2 of the License, or
  (at your option) any later version.
  
  FOAM is distributed in the hope that it will be useful,
@@ -34,15 +34,13 @@
 #include "io.h"
 #include "imgio.h"
 
-extern Io *io;
-
-Imgio::~Imgio(void) {
-	io->msg(IO_DEB2, "Imgio::~Imgio(void)");
+Imgio::~Imgio() {
+	io.msg(IO_DEB2, "Imgio::~Imgio(void)");
 	if (data) free(data);
 }
 
 int Imgio::init(std::string fname, imgtype_t imgtype) {
-	io->msg(IO_DEB2, "Imgio::init()");
+	io.msg(IO_DEB2, "Imgio::init()");
 	path = fname;
 	imgt = imgtype;	
 	data = NULL;
@@ -63,13 +61,13 @@ int Imgio::getPixel(int x, int y) {
 int Imgio::loadImg() {
 	if (imgt == Imgio::FITS) return loadFits(path);
 	else if (imgt == Imgio::PGM) return loadPgm(path);
-	else return io->msg(IO_ERR, "Imgio::loadImg(): Unknown datatype");
+	else return io.msg(IO_ERR, "Imgio::loadImg(): Unknown datatype");
 }
 
 int Imgio::writeImg(imgtype_t imgtype, std::string outpath) {
 	if (imgtype == Imgio::FITS) return writeFits(outpath);
 	else if (imgtype == Imgio::PGM) return writePgm(outpath);
-	else return io->msg(IO_ERR, "Imgio::writeImg(): Unknown datatype");
+	else return io.msg(IO_ERR, "Imgio::writeImg(): Unknown datatype");
 }
 
 int Imgio::calcRange() {
@@ -93,7 +91,7 @@ int Imgio::calcRange() {
 			break;
 		}
 		default: {
-			return io->msg(IO_ERR, "Imgio::calcRange(): Unknown datatype");
+			return io.msg(IO_ERR, "Imgio::calcRange(): Unknown datatype");
 		}
 	}
 	return 0;
@@ -110,13 +108,13 @@ int Imgio::loadFits(std::string path) {
 	fits_open_file(&fptr, path.c_str(), READONLY, &stat);
 	if (stat) {
 		fits_get_errstatus(stat, fits_err);
-		return io->msg(IO_ERR, "fits error: %s", fits_err);
+		return io.msg(IO_ERR, "fits error: %s", fits_err);
 	}
 			
 	fits_get_img_param(fptr, 2, &bpp, &naxis, naxes, &stat);
 	if (stat) {
 		fits_get_errstatus(stat, fits_err);
-		return io->msg(IO_ERR, "fits error: %s", fits_err);
+		return io.msg(IO_ERR, "fits error: %s", fits_err);
 	}
 		
 	res.x = naxes[0];
@@ -146,7 +144,7 @@ int Imgio::loadFits(std::string path) {
 			break;
 		}
 		default: {
-			return io->msg(IO_ERR, "Unknown FITS datatype");
+			return io.msg(IO_ERR, "Unknown FITS datatype");
 		}
 	}
 	
@@ -156,7 +154,7 @@ int Imgio::loadFits(std::string path) {
 
 	if (stat) {
 		fits_get_errstatus(stat, fits_err);
-		return io->msg(IO_ERR, "fits error: %s", fits_err);
+		return io.msg(IO_ERR, "fits error: %s", fits_err);
 	}	
 	
 	return stat;
@@ -175,7 +173,7 @@ int Imgio::writeFits(std::string path) {
 	
 	if (stat) {
 		fits_get_errstatus(stat, fits_err);
-		return io->msg(IO_ERR, "fits error: %s", fits_err);
+		return io.msg(IO_ERR, "fits error: %s", fits_err);
 	}
 
 	switch (bpp) {
@@ -192,20 +190,20 @@ int Imgio::writeFits(std::string path) {
 			break;
 		}
 		default: {
-			return io->msg(IO_ERR, "Unknown datatype");
+			return io.msg(IO_ERR, "Unknown datatype");
 		}
 	}
 	
 	if (stat) {
 		fits_get_errstatus(stat, fits_err);
-		return io->msg(IO_ERR, "fits error: %s", fits_err);
+		return io.msg(IO_ERR, "fits error: %s", fits_err);
 	}	
 
 	fits_close_file(fptr, &stat);
 
 	if (stat) {
 		fits_get_errstatus(stat, fits_err);
-		return io->msg(IO_ERR, "fits error: %s", fits_err);
+		return io.msg(IO_ERR, "fits error: %s", fits_err);
 	}	
 	
 	return stat;
@@ -219,12 +217,12 @@ int Imgio::loadPgm(std::string path) {
 	
  	fd = fopen(path.c_str(), "rb");
 	if (!fd)
-		return io->msg(IO_ERR, "Error opening file '%s'.", path.c_str());
+		return io.msg(IO_ERR, "Error opening file '%s'.", path.c_str());
 	
 	// Read magic
 	fread(magic, 2, 1, fd);
 	if (ferror(fd))
-		return io->msg(IO_ERR, "Error reading PGM file.");
+		return io.msg(IO_ERR, "Error reading PGM file.");
 	
 	// Resolution
 	res.x = readNumber(fd);
@@ -232,12 +230,12 @@ int Imgio::loadPgm(std::string path) {
 	long nel = res.x * res.y;
 	
 	if (res.x <= 0 || res.y <= 0)
-		return io->msg(IO_ERR, "Unable to read image width and height");
+		return io.msg(IO_ERR, "Unable to read image width and height");
 
   // Maxval
 	maxval = readNumber(fd);
 	if(maxval <= 0 || maxval > 65536)
-		return io->msg(IO_ERR, "Unsupported PGM format");
+		return io.msg(IO_ERR, "Unsupported PGM format");
 	
 	if (maxval <= 255) {
 		dtype = DATA_UINT8;
@@ -254,7 +252,7 @@ int Imgio::loadPgm(std::string path) {
 	if (!strncmp(magic, "P5", 2)) { // Binary
 		n = fread(data, bpp/8, nel, fd);
 		if (ferror(fd))
-			return io->msg(IO_ERR, "Could not read file.");
+			return io.msg(IO_ERR, "Could not read file.");
 	}
 	else if (!strncmp(magic, "P2", 2)) { // ASCII
 		if (dtype == DATA_UINT8)
@@ -266,7 +264,7 @@ int Imgio::loadPgm(std::string path) {
 			
 	}
 	else
-		return io->msg(IO_ERR, "Unsupported PGM format");
+		return io.msg(IO_ERR, "Unsupported PGM format");
 	
 	calcRange();
 	
@@ -278,7 +276,7 @@ int Imgio::writePgm(std::string path) {
  	fd = fopen(path.c_str(), "wb+");
 	
 	if (dtype != DATA_UINT8 && dtype != DATA_UINT16)
-		return io->msg(IO_ERR, "PGM only supports unsigned 8- or 16-bit integer images.");
+		return io.msg(IO_ERR, "PGM only supports unsigned 8- or 16-bit integer images.");
 	
 	int maxval=0;
 	switch (dtype) {

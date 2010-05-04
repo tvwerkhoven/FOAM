@@ -1,11 +1,12 @@
-/* foamcontrol.cc - FOAM control connection
- Copyright (C) 2009 Tim van Werkhoven (t.i.m.vanwerkhoven@xs4all.nl)
+/*
+ foamcontrol.cc -- FOAM control connection 
+ Copyright (C) 2009--2010 Tim van Werkhoven <t.i.m.vanwerkhoven@xs4all.nl>
  
  This file is part of FOAM.
  
  FOAM is free software: you can redistribute it and/or modify
  it under the terms of the GNU General Public License as published by
- the Free Software Foundation, either version 3 of the License, or
+ the Free Software Foundation, either version 2 of the License, or
  (at your option) any later version.
  
  FOAM is distributed in the hope that it will be useful,
@@ -24,98 +25,70 @@
  */
 
 #include "foamcontrol.h"
-#include "fgui.h"
 #include "controlview.h"
 
 using namespace Gtk;
 
-FoamControl::FoamControl(MainWindow *mainwindow, ControlPage *controlpage): 
-mainwindow(mainwindow), controlpage(controlpage) {
+FoamControl::FoamControl() {
 	printf("%x:FoamControl::FoamControl()\n", (int) pthread_self());
-	init();
-}
-
-FoamControl::~FoamControl() {
-	if (protocol) 
-		delete protocol;
-}
-
-void FoamControl::init() {
-	printf("%x:FoamControl::init()\n", (int) pthread_self());
-	protocol = new Protocol::Client();
 	
 	ok = false;
 	errormsg = "Not connected";
 	
 	// Init variables
 	state.mode = AO_MODE_UNDEF;
-	state.numwfc = -1;
-	state.numwfs = -1;
+	state.numdev = 0;
+	state.devices[0] = "undef";
 	state.numframes = 0;
-	
-	// register callbacks
-	signal_conn_update.connect(sigc::mem_fun(*this, &FoamControl::on_connect_update));
-	signal_msg_update.connect(sigc::mem_fun(*this, &FoamControl::on_message_update));
+	state.numcal = 0;
+	state.calmodes[0] = "undef";
+	state.lastreply = "undef";
+	state.lastcmd = "undef";
 }
 
-int FoamControl::connect(const string &host, const string &port) {
+int FoamControl::connect(const string &h, const string &p) {
+	host = h;
+	port = p;
 	printf("%x:FoamControl::connect(%s, %s)\n", (int) pthread_self(), host.c_str(), port.c_str());
 	
-	if (protocol->is_connected()) 
+	if (protocol.is_connected()) 
 		return -1;
 	
 	// connect a control connection
-	protocol->slot_message = sigc::mem_fun(this, &FoamControl::on_message);
-	protocol->slot_connected = sigc::mem_fun(this, &FoamControl::on_connected);
-	protocol->connect(host, port, "");
+	protocol.slot_message = sigc::mem_fun(this, &FoamControl::on_message);
+	protocol.slot_connected = sigc::mem_fun(this, &FoamControl::on_connected);
+	protocol.connect(host, port, "");
 	
 	return 0;
 }
 
 void FoamControl::set_mode(aomode_t mode) {
-	if (!protocol->is_connected()) return;
+	if (!protocol.is_connected()) return;
 	
 	printf("%x:FoamControl::set_mode(%s)\n", (int) pthread_self(), mode2str(mode).c_str());
 	
 	switch (mode) {
 		case AO_MODE_LISTEN:
-			protocol->write("MODE LISTEN");
+			protocol.write("mode listen");
 			break;
 		case AO_MODE_OPEN:
-			protocol->write("MODE OPEN");
+			protocol.write("mode open");
 			break;
 		case AO_MODE_CLOSED:
-			protocol->write("MODE CLOSED");
+			protocol.write("mode closed");
 			break;
 		default:
 			break;
 	}
 }
 
-void FoamControl::calibrate(std::string calmode) {
-	printf("%x:FoamControl::calibrate(%s)\n", (int) pthread_self(), calmode.c_str());
-	protocol->write(format("CALIB %s", calmode.c_str()));
-}
-
 int FoamControl::disconnect() {
 	printf("%x:FoamControl::disconnect()\n", (int) pthread_self());
-	if (protocol->is_connected())
-		protocol->disconnect();
+	if (protocol.is_connected())
+		protocol.disconnect();
 	
-	signal_conn_update();
+	signal_connect();
 	return 0;
-}
-
-void FoamControl::on_connect_update() {
-	printf("%x:FoamControl::on_connect_update()\n", (int) pthread_self());
-	mainwindow->on_ctrl_connect_update();
-	controlpage->on_connect_update();
-}
-
-void FoamControl::on_message_update() {
-	printf("%x:FoamControl::on_message_update()\n", (int) pthread_self());
-	mainwindow->on_ctrl_message_update();
-	controlpage->on_message_update();
 }
 
 void FoamControl::on_connected(bool conn) {
@@ -124,65 +97,70 @@ void FoamControl::on_connected(bool conn) {
 	if (!conn) {
 		ok = false;
 		errormsg = "Not connected";
-		protocol->disconnect();
-		signal_conn_update();
+		protocol.disconnect();
+		signal_connect();
 		return;
 	}
 	
 	ok = true;
 	
-	protocol->write("GET NUMWFS");
-	protocol->write("GET NUMWFC");
-	protocol->write("GET MODE");
-	protocol->write("GET CALIB");
+	// Get basic system information
+	protocol.write("get mode");
+	protocol.write("get calib");
+	protocol.write("get devices");
 
-	signal_conn_update();
+	signal_connect();
 	return;
 }
 
 void FoamControl::on_message(string line) {
 	printf("%x:FoamControl::on_message(string=%s)\n", (int) pthread_self(), line.c_str());
 
-	if (popword(line) != "OK") {
+	if (popword(line) != "ok") {
 		ok = false;
-		errormsg = line;
-		signal_msg_update();
+		state.lastreply = line;
+		printf("%x:FoamControl::on_message(): err\n", (int) pthread_self());
+		signal_message();
 		return;
 	}
 	
 	ok = true;
+	state.lastreply = line;
 	string what = popword(line);
 	
-	if (what == "VAR") {
+	if (what == "var") {
 		string var = popword(line);
-		if (var == "NUMWFC")
-			state.numwfc = popint32(line);
-		else if (var == "NUMWFS")
-			state.numwfs = popint32(line);
-		else if (var == "FRAMES")
+		if (var == "frames")
 			state.numframes = popint32(line);
-		else if (var == "MODE")
+		else if (var == "mode")
 			state.mode = str2mode(popword(line));
-		else if (var == "CALIB") {
-			int n = popint32(line);
-			state.calmodes[n] = "__SENTINEL__";
-			while (n>0) state.calmodes[--n] = popword(line);
+		else if (var == "calib") {
+			state.numcal = popint32(line);
+			for (int i=0; i<state.numcal; i++)
+				state.calmodes[i] = popword(line);
+		}
+		else if (var == "devices") {
+			state.numdev = popint32(line);
+			for (int i=0; i<state.numdev; i++)
+				state.devices[i] = popword(line);
+			// Signal device update to main GUI thread
+			signal_device();
 		}
 	}
-	else if (what == "CMD") {
+	else if (what == "cmd") {
 		// command confirmation hook
-		state.currcmd = popword(line);
 	}
-	else if (what == "CALIB") {
+	else if (what == "calib") {
 		// post-calibration hook
 	}
-	else if (what == "MODE") {
+	else if (what == "mode") {
 		state.mode = str2mode(popword(line));
 	} else {
 		ok = false;
 		errormsg = "Unexpected response '" + what + "'";
 	}
 	
-	signal_msg_update();
+	printf("%x:FoamControl::on_message(): ok\n", (int) pthread_self());
+	signal_message();
 }
 
