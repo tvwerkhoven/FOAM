@@ -53,7 +53,7 @@ pixbuf_test_LDADD = -lgthread-2.0
 
 if OPENGL
 
-noinst_PROGRAMS += opengl-test camview-test
+noinst_PROGRAMS += opengl-test camview-test camsend-test
 
 opengl_test_SOURCES = opengl-test.cc
 opengl_test_CPPFLAGS = $(GUI_CFLAGS) $(OPENGL_CFLAGS) $(AM_CPPFLAGS)
@@ -63,8 +63,12 @@ opengl_test_LDADD = $(OPENGL_LIBS) $(LIBSIU_DIR)/libglviewer.a -lgthread-2.0
 camview_test_SOURCES = camview-test.cc
 camview_test_CPPFLAGS = $(GUI_CFLAGS) $(OPENGL_CFLAGS) $(AM_CPPFLAGS)
 camview_test_CFLAGS = $(GUI_CFLAGS) $(OPENGL_CFLAGS) 
-camview_test_LDADD = $(OPENGL_LIBS) $(LIBSIU_DIR)/libglviewer.a -lgthread-2.0
+camview_test_LDADD = $(OPENGL_LIBS) $(LIBSIU_DIR)/libglviewer.a -lgthread-2.0 $(LIBSIU_DIR)/libprotocol.a $(LIBSIU_DIR)/libsocket.a
 
+camsend_test_SOURCES = camsend-test.cc
+camsend_test_LDADD = $(LIBSIU_DIR)/libprotocol.a \
+		$(LIBSIU_DIR)/libsocket.a
+		
 endif OPENGL
 
 endif DEBUG
