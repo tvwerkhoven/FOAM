@@ -8,8 +8,8 @@
 using namespace std;
 typedef Protocol::Server::Connection Connection;
 
-static void on_message(Connection *connection, std::string line);
-static void on_connect(Connection *connection, bool status);
+void on_message(Connection *connection, std::string line);
+void on_connect(Connection *connection, bool status);
 
 static void on_client_msg(std::string line);
 
@@ -48,11 +48,11 @@ int main() {
 	return 0;
 }
 
-static void on_connect(Connection *connection, bool status) {
+void on_connect(Connection *connection, bool status) {
 	fprintf(stderr, "serv:on_connected: %d\n", status);
 }
 
-static void on_message(Connection *connection, string line) {
+void on_message(Connection *connection, string line) {
 	fprintf(stderr, "%s:on_message: %s\n", connection->server->name.c_str(), line.c_str());
 	string word;
 	while ((word = popword(line)).length())
@@ -62,6 +62,6 @@ static void on_message(Connection *connection, string line) {
 	connection->write("OK, got it");
 }
 
-static void on_client_msg(std::string line) {
+void on_client_msg(std::string line) {
 	fprintf(stderr, "cli:on_client_msg: %s\n", line.c_str());
 }
