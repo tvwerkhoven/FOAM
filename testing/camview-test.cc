@@ -14,11 +14,15 @@
 #include <gtkglmm.h>
 #include <gdkmm/pixbuf.h>
 #include <gtkmm/accelmap.h>
+#include <sigc++/signal.h>
 
 #include "glviewer.h"
+#include "protocol.h"
+#include "socket.h"
 
 using namespace std;
 using namespace Gtk;
+typedef Protocol::Server::Connection Connection;
 
 // Simple camera viewer class
 // +--------------------
@@ -36,7 +40,7 @@ class CamView: public Gtk::Window {
 	Gtk::CheckMenuItem flipv;
 	Gtk::SeparatorMenuItem tsep1;
 	Gtk::CheckMenuItem fit;
-  Gtk::ImageMenuItem zoom1;
+	Gtk::ImageMenuItem zoom1;
 	Gtk::ImageMenuItem zoomin;
 	Gtk::ImageMenuItem zoomout;
 	Gtk::SeparatorMenuItem tsep2;
@@ -53,6 +57,11 @@ class CamView: public Gtk::Window {
 	Gtk::Button render;
 	Gtk::Button zoom1b;
 	Gtk::Button quit;
+	
+	Glib::Dispatcher signal_camview;
+	Protocol::Server *serv1;
+	void on_message(Connection *connection, std::string line);
+	void on_connect(Connection *connection, bool status);
 
 	void state_update();
 	void on_zoom1_activate();
@@ -60,18 +69,18 @@ class CamView: public Gtk::Window {
 	void on_zoomout_activate();
 	void on_close_activate();
 	
+	void on_update();
 	void on_render_clicked();
 	void on_reset_clicked();
 	void on_quit_clicked();
 	
 public:
-	int w, h, d;
+	int w, h, d, size;
 	uint8_t *data;
 	
-	CamView::CamView();
-	CamView::~CamView();
+	CamView();
+	~CamView();
 };
-
 
 CamView::CamView():
 view("View"), fliph("Flip horizontal"), flipv("Flip vertical"),
@@ -85,8 +94,9 @@ reset("Reset zoom/pan"), render(Stock::REFRESH), zoom1b(Stock::ZOOM_100), quit(S
 	
 	// Setup 
 	w = 200; h = 480; d = 8;
+	size = w*h*d/8;
 	//data = (uint8_t *) malloc(w*h*d/8);
-	data = new uint8_t[w*h*d/8];
+	data = new uint8_t[size];
 	on_render_clicked();
 	
 	set_title("OpenGL CamView window");
@@ -132,7 +142,11 @@ reset("Reset zoom/pan"), render(Stock::REFRESH), zoom1b(Stock::ZOOM_100), quit(S
 	render.signal_clicked().connect(sigc::mem_fun(*this, &CamView::on_render_clicked));
 	zoom1b.signal_clicked().connect(sigc::mem_fun(*this, &CamView::on_zoom1_activate));
 	quit.signal_clicked().connect(sigc::mem_fun(*this, &CamView::on_quit_clicked));
-
+	
+	// Signals
+	
+	signal_camview.connect(sigc::mem_fun(*this, &CamView::on_update));
+	
 	// Layout
 	
 	viewmenu.add(fliph);
@@ -162,8 +176,15 @@ reset("Reset zoom/pan"), render(Stock::REFRESH), zoom1b(Stock::ZOOM_100), quit(S
 	vbox.pack_start(hbox_button, PACK_SHRINK);
 	add(vbox);
 	
-
 	show_all_children();
+	
+	printf("Starting server at port 1234, name CAM.\n");
+	serv1 = new Protocol::Server("1234", "CAM");
+	
+	serv1->slot_message = sigc::mem_fun(this, &CamView::on_message);
+	serv1->slot_connected = sigc::mem_fun(this, &CamView::on_connect);
+	serv1->listen();
+	
 	//glarea.do_update();
 }
 
@@ -210,9 +231,14 @@ void CamView::on_reset_clicked() {
 void CamView::on_render_clicked() {
 	fprintf(stderr, "CamView::on_render_clicked()\n");
 	
-	for (int i=0; i<w*h; i++)
+	for (int i=0; i<size; i++)
 		data[i] = drand48() * 255.0;
 	
+	on_update();
+}
+
+void CamView::on_update() {
+	fprintf(stderr, "CamView::on_update()\n");
 	glarea.linkData((void *) data, d, w, h);
 }
 
@@ -221,6 +247,48 @@ void CamView::on_quit_clicked() {
 	Main::quit();
 }
 
+
+void CamView::on_connect(Connection *connection, bool status) {
+	fprintf(stderr, "CamView:::on_connected: %d\n", status);
+}
+
+void CamView::on_message(Connection *connection, string line) {
+	fprintf(stderr, "%s:on_message: %s\n", connection->server->name.c_str(), line.c_str());
+	string word, cmd;
+	
+	
+	cmd = popword(line);
+	if (cmd == "IMG") {
+		fprintf(stderr, "Getting image...\n");
+		int isize = popint(line);
+		int ix1 = popint(line);
+		int iy1 = popint(line);
+		int ix2 = popint(line);
+		int iy2 = popint(line);
+		int iscale = popint(line);
+		
+		if (size != isize) {
+			size = isize;
+			fprintf(stderr, "Realloc!\n");
+			data = (uint8_t*) realloc(data, size);
+		}
+		
+		w = ix2 - ix1;
+		h = iy2 - iy1;
+		
+		fprintf(stderr, "Reading image s=%d, w=%d, h=%d...\n", size, w, h);
+		connection->read(data, size);
+		signal_camview();
+	}
+	else {
+		fprintf(stderr, "serv:on_message: %s\n", cmd.c_str());
+		while ((word = popword(line)).length())
+			fprintf(stderr, "serv:on_message: %s\n", word.c_str());
+	}
+	
+	fprintf(stderr, "writing back\n");
+	connection->write("OK, got it");
+}
 
 int main(int argc, char** argv) {
 	fprintf(stderr, "::main()\n");
