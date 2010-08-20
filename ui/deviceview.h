@@ -39,7 +39,7 @@ protected:
 	FoamControl &foamctrl;
 	Log &log;
 	
-	DeviceCtrl *devctrl;								//!< Network connection to device
+	virtual DeviceCtrl *devctrl;				//!< Network connection to device
 	string devname;											//!< Device name
 	
 	// GTK stuff
@@ -49,9 +49,10 @@ protected:
 
 public:
 	DevicePage(Log &log, FoamControl &foamctrl, string n);
-	~DevicePage();
+	virtual ~DevicePage();
 	
-	void on_message_update();
+	virtual int init();
+	virtual void on_message_update();
 };
 
 #endif // HAVE_DEVICEVIEW_H

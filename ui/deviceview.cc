@@ -39,20 +39,22 @@ foamctrl(foamctrl), log(log), devname(n), infoframe("Info")  {
 	set_spacing(4);
 	pack_start(infoframe, PACK_SHRINK);
 	
-	// Start device controller
-	devctrl = new DeviceCtrl(foamctrl.host, foamctrl.port, devname);
-
-	// GUI update callback (from protocol thread to GUI thread)
-	devctrl->signal_message.connect(sigc::mem_fun(*this, &DevicePage::on_message_update));
-
-	// Run once for init
-	on_message_update();
-	
 	show_all_children();	
 }
 
 DevicePage::~DevicePage() {
 	
+}
+
+DevicePage::init() {
+	// Start device controller
+	devctrl = new DeviceCtrl(foamctrl.host, foamctrl.port, devname);
+	
+	// GUI update callback (from protocol thread to GUI thread)
+	devctrl->signal_update.connect(sigc::mem_fun(*this, &DevicePage::on_message_update));
+	
+	// Run once for init
+	on_message_update();
 }
 
 void DevicePage::on_message_update() {
