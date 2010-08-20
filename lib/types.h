@@ -80,24 +80,5 @@ typedef enum { // aomode_t
 	AO_MODE_SHUTDOWN //!< Set to this mode for the worker thread to finish
 } aomode_t;
 
-/*! 
- @brief This enum is used to distinguish between various datatypes for processing.
- 
- Instead of using bpp or something else, this more general datatype identification
- also allows identification of foreign datatypes like a GSL matrix or non-integer
- datatypes (which is hard to distinguish between if only using bpp) like floats.
- 
- It is used by functions that accept multiple datatypes, or will be accepting this
- in later versions. This way, routines can work on uint8_t data as well as on
- uint16_t data. The problem arises from the fact that cameras give different
- bitdepth outputs, meaning that routines working on this output need to be able
- to cope with different datatypes.
-*/
-typedef enum {
-	DATA_INT8,			//!< ID for int8_t
-	DATA_UINT8,			//!< ID for uint8_t
-	DATA_INT16,			//!< ID for int16_t
-	DATA_UINT16			//!< ID for uint16_t
-} dtype_t;
 
 #endif // HAVE_TYPES_H 
