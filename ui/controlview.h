@@ -48,16 +48,16 @@ class ControlPage: public VBox {
 	
 	Frame modeframe;
 	HBox modebox;
-	Button mode_listen;
-	Button mode_open;
-	Button mode_closed;
+	ToggleButton mode_listen;
+	ToggleButton mode_open;
+	ToggleButton mode_closed;
 	Button shutdown;
 
 	Frame calibframe;
 	HBox calibbox;
 	Label calmode_lbl;
 	ComboBoxText calmode_select;
-	Button calib;
+	ToggleButton calib;
 
 	Frame statframe;
 	HBox statbox;

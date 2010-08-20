@@ -95,7 +95,8 @@ statframe("Status"), stat_mode("Mode: "), stat_ndev("# Dev: "), stat_nframes("# 
 	
 	// Status row (mode, # dev, # frames)
 	statbox.set_spacing(4);
-	statbox.pack_start(stat_mode, PACK_SHRINK);
+	// TODO: superfluous? can be removed?
+	//statbox.pack_start(stat_mode, PACK_SHRINK);
 	statbox.pack_start(stat_ndev, PACK_SHRINK);
 	statbox.pack_start(stat_nframes, PACK_SHRINK);
 	statbox.pack_start(stat_lastcmd, PACK_SHRINK);
@@ -202,18 +203,27 @@ void ControlPage::on_connect_update() {
 void ControlPage::on_message_update() {
 	printf("%x:ControlPage::on_message_update()\n", (int) pthread_self());
 	
-	// reset buttons
+	// reset mode buttons
 	mode_listen.set_sensitive(true);
+	mode_listen.set_active(false);
 	mode_open.set_sensitive(true);
+	mode_open.set_active(false);
 	mode_closed.set_sensitive(true);
+	mode_closed.set_active(false);
 	calib.set_sensitive(true);
+	calib.set_active(false);
 	
 	// press correct button
-	if (foamctrl.get_mode() == AO_MODE_LISTEN) mode_listen.set_sensitive(false);
-	else if (foamctrl.get_mode() == AO_MODE_OPEN) mode_open.set_sensitive(false);
-	else if (foamctrl.get_mode() == AO_MODE_CLOSED) mode_closed.set_sensitive(false);
-	else if (foamctrl.get_mode() == AO_MODE_CAL) calib.set_sensitive(false);
-
+	ToggleButton *tmp=NULL;
+	if (foamctrl.get_mode() == AO_MODE_LISTEN) tmp = &mode_listen;
+	else if (foamctrl.get_mode() == AO_MODE_OPEN) tmp = &mode_open;
+	else if (foamctrl.get_mode() == AO_MODE_CLOSED) tmp = &mode_closed;
+	else if (foamctrl.get_mode() == AO_MODE_CAL) tmp = &calib;
+	
+	// TODO: need to set to active state here without sending a signal
+	if (tmp)
+		tmp->set_sensitive(false);
+	
 	// set values in status box
 	stat_mode.set_text(foamctrl.get_mode_str());
 	stat_ndev.set_text(format("%d", foamctrl.get_numdev()));
