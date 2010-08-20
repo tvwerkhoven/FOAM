@@ -1,5 +1,5 @@
 /*
- deviceview.h -- generic device viewer
+ devicectrl.h -- generic device control class
  Copyright (C) 2010 Tim van Werkhoven <t.i.m.vanwerkhoven@xs4all.nl>
  
  This file is part of FOAM.
@@ -18,8 +18,8 @@
  along with FOAM.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef HAVE_DEVICEVIEW_H
-#define HAVE_DEVICEVIEW_H
+#ifndef HAVE_DEVICECTRL_H
+#define HAVE_DEVICECTRL_H
 
 #include <glibmm/dispatcher.h>
 #include <gtkmm.h>
@@ -28,30 +28,32 @@
 #include "log.h"
 #include "widgets.h"
 #include "foamcontrol.h"
-#include "devicectrl.h"
 #include "protocol.h"
 
 using namespace Gtk;
 using namespace std;
 
-class DevicePage: public Gtk::VBox {
-protected:
-	FoamControl &foamctrl;
-	Log &log;
-	
-	DeviceCtrl *devctrl;								//!< Network connection to device
-	string devname;											//!< Device name
-	
-	// GTK stuff
-	Frame infoframe;
-	HBox infobox;
-	Label infolabel;
 
-public:
-	DevicePage(Log &log, FoamControl &foamctrl, string n);
-	~DevicePage();
+class DeviceCtrl {
+protected:
+	Protocol::Client protocol;
 	
-	void on_message_update();
+	string host, port, devname;
+	string devinfo;
+	
+	void on_message(string line);
+	void on_connect(bool status);
+	
+public:
+	Glib::Dispatcher signal_message;
+
+	DeviceCtrl(string, string, string);
+	~DeviceCtrl();
+	
+	
+	string getInfo() { return devinfo; }
+	string getName() { return devname; }
 };
 
-#endif // HAVE_DEVICEVIEW_H
+
+#endif // HAVE_DEVICECTRL_H

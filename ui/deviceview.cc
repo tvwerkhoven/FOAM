@@ -27,30 +27,28 @@
 using namespace std;
 using namespace Gtk;
 
-DevicePage::DevicePage(Log &log, FoamControl &foamctrl, string devname): 
-foamctrl(foamctrl), log(log), name(devname), devinfo("undef")  {
+DevicePage::DevicePage(Log &log, FoamControl &foamctrl, string n): 
+foamctrl(foamctrl), log(log), devname(n), infoframe("Info")  {
 	printf("%x:DevicePage::DevicePage()\n", (int) pthread_self());
 		
 	infobox.set_spacing(4);	
 	infobox.pack_start(infolabel, PACK_SHRINK);
-	devframe.add(infobox);
+	infoframe.add(infobox);
 	
 	// Add frames to parent VBox
 	set_spacing(4);
-	pack_start(devframe, PACK_SHRINK);
+	pack_start(infoframe, PACK_SHRINK);
 	
+	// Start device controller
+	devctrl = new DeviceCtrl(foamctrl.host, foamctrl.port, devname);
+
+	// GUI update callback (from protocol thread to GUI thread)
+	devctrl->signal_message.connect(sigc::mem_fun(*this, &DevicePage::on_message_update));
+
+	// Run once for init
 	on_message_update();
-
-	show_all_children();
-
-	// Open control connection
-	protocol.slot_message = sigc::mem_fun(this, &DevicePage::on_message);
-	protocol.slot_connected = sigc::mem_fun(this, &DevicePage::on_connect);
-	printf("%x:DevicePage::DevicePage(): connecting to %s:%s@%s\n", (int) pthread_self(), foamctrl.host.c_str(), foamctrl.port.c_str(), name.c_str());
-	protocol.connect(foamctrl.host, foamctrl.port, name);
 	
-	// GUI update callback
-	signal_message.connect(sigc::mem_fun(*this, &DevicePage::on_message_update));
+	show_all_children();	
 }
 
 DevicePage::~DevicePage() {
@@ -59,29 +57,5 @@ DevicePage::~DevicePage() {
 
 void DevicePage::on_message_update() {
 	printf("%x:DevicePage::on_message_update()\n", (int) pthread_self());
-	infolabel.set_text("Device: " + name + " Info: " + devinfo);
-}
-
-void DevicePage::on_message(string line) {
-	printf("%x:DevicePage::on_message(line=%s)\n", (int) pthread_self(), line.c_str());	
-	
-	if (popword(line) != "ok") {
-		signal_message();
-		return;
-	}
-	
-	string what = popword(line);
-
-	if (what == "info") {
-		devinfo = line;
-	}
-	
-	signal_message();
-}
-
-void DevicePage::on_connect(bool status) {
-	printf("%x:DevicePage::on_message(status=%d)\n", (int) pthread_self(), status);	
-	if (status)
-		protocol.write("info");
-
+	infolabel.set_text("Device: " + devctrl->getName() + " Info: " + devctrl->getInfo());
 }
