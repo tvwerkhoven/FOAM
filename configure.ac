@@ -36,7 +36,7 @@ FOAMCONFDIR=$sysconfdir/foam
 AC_SUBST(FOAMDATADIR)
 AC_SUBST(FOAMCONFDIR)
 
-# These libraries are crucial for all targets
+### These libraries are crucial for all targets
 AC_SEARCH_LIBS([sin],
 		[m],
 		[],
@@ -57,6 +57,14 @@ COMMON_CFLAGS="$SIGC_CFLAGS $GSL_CFLAGS"
 COMMON_LIBS="$SIGC_LIBS $GSL_LIBS"
 AC_SUBST(COMMON_CFLAGS)
 AC_SUBST(COMMON_LIBS)
+
+### Miscellaneous optional libraries
+
+AC_SEARCH_LIBS([ffopen], [cfitsio], 
+	[have_fitsio=true], 
+	[have_fitsio=false])
+
+AM_CONDITIONAL([HAVE_FITSIO], [test "$have_fitsio" = true])
 
 ### BUILD TARGETS ###
 #####################
@@ -92,11 +100,6 @@ AC_ARG_ENABLE([hwdebug],
 
 ### BUILD OPTIONS ###
 #####################
-
-opengl=disabled
-AC_ARG_WITH([opengl],
-		AC_HELP_STRING([--with-opengl], [use OpenGL instead of SDL]),
-		[test "$withval" = yes && opengl=true])
 		
 AC_ARG_WITH([libsiu],
 		AC_HELP_STRING([--with-libsiu], [location of libsiu (def: ./libsiu)]),
@@ -164,8 +167,27 @@ if test "$gui" = true ; then
 	PKG_CHECK_MODULES(GTHREAD, gthread-2.0, [],
 		[AC_MSG_WARN([FOAM GUI needs gthread-2.0.]);gui=false;guimissing+=" gthread-2.0"])
 	
-	GUI_CFLAGS+=" $GTHREAD_CFLAGS $GTKMM_CFLAGS"
-	GUI_LIBS+=" $GTHREAD_LIBS $GTKMM_LIBS"
+	### OpenGL for UI etc.
+
+	AX_CHECK_GL
+	if test "$no_gl" = yes; then guimissing+=" gl"; fi
+
+	AX_CHECK_GLU
+	if test "$no_glu" = yes; then guimissing+=" glu"; fi
+
+	AX_CHECK_GLUT
+	if test "$no_glut" = yes; then guimissing+=" glut"; fi
+
+	if test "$no_gl" = yes || test  "$no_glu" = yes || test "$no_glut" = yes ; then
+		gui=false;
+		AC_MSG_ERROR([OpenGL not found.]);
+	fi
+
+	PKG_CHECK_MODULES(GLEXTMM, gtkglextmm-1.2, [],
+		[AC_MSG_WARN([OpenGL needs gtkglextmm-1.2.]);gui=false;guimissing+=" gtkglextmm-1.2"])
+
+	GUI_CFLAGS+=" $GTHREAD_CFLAGS $GTKMM_CFLAGS $GL_CFLAGS $GLU_CFLAGS $GLUT_CFLAGS $GLEXTMM_CFLAGS"
+	GUI_LIBS+=" $GTHREAD_LIBS $GTKMM_LIBS $GL_LIBS $GLU_LIBS $GLUT_LIBS $GLEXTMM_LIBS"
 else 
 	AC_MSG_NOTICE([*** GUI disabled])
 fi
@@ -174,38 +196,6 @@ AC_SUBST(GUI_CFLAGS)
 AC_SUBST(GUI_LIBS)
 AM_CONDITIONAL([GUI], [test "$gui" = true])
 
-
-### OPENGL FEATURE ### 
-######################
-if test "$opengl" = true ; then
-	AC_MSG_NOTICE([*** OpenGL enabled, checking for extra libs.])
-	
-	AX_CHECK_GL
-	if test "$no_gl" = yes; then openglmissing+=" gl"; fi
-	
-	AX_CHECK_GLU
-	if test "$no_glu" = yes; then openglmissing+=" glu"; fi
-	
-	AX_CHECK_GLUT
-	if test "$no_glut" = yes; then openglmissing+=" glut"; fi
-
-	if test "$no_gl" = yes || test  "$no_glu" = yes || test "$no_glut" = yes ; then
-		opengl=false;
-		AC_MSG_WARN([OpenGL not found.]);
-	fi
-	
-	PKG_CHECK_MODULES(GLEXTMM, gtkglextmm-1.2, [],
-		[AC_MSG_WARN([OpenGL needs gtkglextmm-1.2.]);opengl=false;openglmissing+=" gtkglextmm-1.2"])
-
-	OPENGL_CFLAGS+="$GL_CFLAGS $GLU_CFLAGS $GLUT_CFLAGS $GLEXTMM_CFLAGS"
-	OPENGL_LIBS+="$GL_LIBS $GLU_LIBS $GLUT_LIBS $GLEXTMM_LIBS"
-else 
-	AC_MSG_NOTICE([OpenGL disabled.])
-fi
-
-AC_SUBST(OPENGL_LIBS)
-AC_SUBST(OPENGL_CFLAGS)
-AM_CONDITIONAL([OPENGL], [test "$opengl" = true])
 
 ### END CHECKING FOR LIBS ###
 #############################
