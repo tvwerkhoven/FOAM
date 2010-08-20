@@ -1,335 +1,120 @@
-#include <iostream>
+#ifndef HAVE_CAMERA_H
+#define HAVE_CAMERA_H
 
-#include "camera.h"
-#include "format.h"
+#include <string>
+#include "protocol.h"
+#include "pthread++.h"
+#include <glibmm/dispatcher.h>
 
-#include <arpa/inet.h>
+class Camera {
+	Protocol::Client protocol;
+	Protocol::Client monitorprotocol;
 
-using namespace std;
+	double exposure;
+	double interval;
+	double gain;
+	double offset;
+	int32_t width;
+	int32_t height;
+	int32_t depth;
+	std::string filename;
 
-Camera::Camera(const string &name, const string &host, const string &port): protocol(host, port, ""), monitorprotocol(host, port, ""), name(name), host(host), port(port) {
-	ok = false;
-	state = UNDEFINED;
-	errormsg = "Not connected";
+	volatile enum {
+		OFF,
+		SLAVE,
+		MASTER,
+	} mode;
 
-        exposure = 0;
-        interval = 0;
-        gain = 0;
-        offset = 0;
-        width = 0;
-        height = 0;
-        depth = 0;
-	mode = OFF;
-	r = 1;
-	g = 1;
-	b = 1;
+	bool ok;
+	bool enabled;
+	std::string errormsg;
 
-	monitor.x1 = 0;
-	monitor.y1 = 0;
-	monitor.x2 = 0;
-	monitor.y2 = 0;
-	monitor.scale = 1;
-	monitor.image = 0;
-	monitor.size = 0;
-	monitor.histogram = 0;
+	void on_message(std::string line);
+	void on_monitor_message(std::string line);
+	void on_connected(bool connected);
 
-	protocol.slot_message = sigc::mem_fun(this, &Camera::on_message);
-	protocol.slot_connected = sigc::mem_fun(this, &Camera::on_connected);
-	protocol.connect();
-	monitorprotocol.slot_message = sigc::mem_fun(this, &Camera::on_monitor_message);
-	monitorprotocol.connect();
-}
+	public:
+	class exception: public std::runtime_error {
+		public:
+		exception(const std::string reason): runtime_error(reason) {}
+	};
 
-Camera::~Camera() {
-	set_off();
-}
+	const std::string name;
+	const std::string host;
+	const std::string port;
+	Camera(const std::string &name, const std::string &host, const std::string &port);
+	~Camera();
 
-void Camera::on_connected(bool connected) {
-	if(!connected) {
-		ok = false;
-		errormsg = "Not connected";
-		signal_update();
-		return;
-	}
+	volatile enum state {
+		UNDEFINED = -2,
+		ERROR = -1,
+		READY = 0,
+		WAITING,
+		BURST,
+	} state;
 
-	protocol.write("get exposure");
-	protocol.write("get interval");
-	protocol.write("get gain");
-	protocol.write("get offset");
-	protocol.write("get width");
-	protocol.write("get height");
-	protocol.write("get depth");
-	protocol.write("get mode");
-	protocol.write("get filename");
-	protocol.write("get state");
-}
-
-void Camera::on_message(string line) {
-	if(popword(line) != "OK") {
-		state = ERROR;
-		ok = false;
-		errormsg = popword(line);
-		signal_update();
-		return;
-	}
-
-	ok = true;
-	string what = popword(line);
-
-	if(what == "exposure")
-		exposure = popdouble(line);
-	else if(what == "interval")
-		interval = popdouble(line);
-	else if(what == "gain")
-		gain = popdouble(line);
-	else if(what == "offset")
-		offset = popdouble(line);
-	else if(what == "width")
-		width = popint32(line);
-	else if(what == "height")
-		height = popint32(line);
-	else if(what == "depth")
-		depth = popint32(line);
-	else if(what == "filename")
-		filename = popword(line);
-	else if(what == "state") {
-		string statename = popword(line);
-		if(statename == "ready")
-			state = READY;
-		else if(statename == "waiting")
-			state = WAITING;
-		else if(statename == "burst")
-			state = BURST;
-		else if(statename == "error") {
-			state = ERROR;
-			ok = false;
-		} else {
-			state = UNDEFINED;
-			ok = false;
-			errormsg = "Unexpected state '" + statename + "'";
-		}
-	} else if(what == "mode") {
-		string modename = popword(line);
-		if(modename == "master")
-			mode = MASTER;
-		else if(modename == "slave")
-			mode = SLAVE;
-		else
-			mode = OFF;
-	} else if(what == "thumbnail") {
-		protocol.read(thumbnail, sizeof thumbnail);
-		signal_thumbnail();
-		return;
-	} else if(what == "fits") {
-	} else {
-		//ok = false;
-		//errormsg = "Unexpected response '" + what + "'";
-	}
-
-	signal_update();
-}
-
-void Camera::on_monitor_message(string line) {
-	if(popword(line) != "OK")
-		return;
+	double get_exposure() const;
+	double get_interval() const;
+	double get_gain() const;
+	double get_offset() const;
+	int32_t get_width() const;
+	int32_t get_height() const;
+	int32_t get_depth() const;
+	std::string get_filename() const;
 	
-	if(popword(line) != "image")
-		return;
+	double r, g, b;
+	uint8_t thumbnail[32 * 32];
+	struct {
+		pthread::mutex mutex;
+		void *image;
+		size_t size;
+		int x1;
+		int y1;
+		int x2;
+		int y2;
+		int scale;
+		double dx;
+		double dy;
+		double cx;
+		double cy;
+		double cr;
+		uint32_t *histogram;
+		int depth;
+	} monitor;
 
-	size_t size = popsize(line);
-	int histosize = (1 << depth) * sizeof *monitor.histogram;
-	int x1 = popint(line);
-	int y1 = popint(line);
-	int x2 = popint(line);
-	int y2 = popint(line);
-	int scale = popint(line);
-	double dx = 0.0/0.0;
-	double dy = 0.0/0.0;
-	double cx = 0.0/0.0;
-	double cy = 0.0/0.0;
-	double cr = 0.0/0.0;
-	bool do_histogram = false;
+	void get_thumbnail();
+	bool is_master() const;
+	bool is_slave() const;
+	bool is_off() const;
+	bool is_enabled() const;
 
-	string extra;
+	void set_exposure(double value);
+	void set_interval(double value);
+	void set_gain(double value);
+	void set_offset(double value);
+	void set_master();
+	void set_slave();
+	void set_off();
+	void set_enabled(bool value = true);
+	void set_filename(const std::string &filename);
+	void set_fits(const std::string &fits);
 
-	while(!(extra = popword(line)).empty()) {
-		if(extra == "histogram") {
-			do_histogram = true;
-		} else if(extra == "tiptilt") {
-			dx = popdouble(line);
-			dy = popdouble(line);
-		} else if(extra == "com") {
-			cx = popdouble(line);
-			cy = popdouble(line);
-			cr = popdouble(line);
-		}
-	}
+	void darkburst(int count);
+	void flatburst(int count);
+	void burst(int count, int fsel = 0);
+	void grab(int x1, int y1, int x2, int y2, int scale = 1, bool df_correct = false, int fsel = 0);
 
-	{
-		pthread::mutexholder h(&monitor.mutex);
-		if(size > monitor.size)
-			monitor.image = (uint16_t *)realloc(monitor.image, size);
-		monitor.size = size;
-		monitor.x1 = x1;
-		monitor.y1 = y1;
-		monitor.x2 = x2;
-		monitor.y2 = y2;
-		monitor.scale = scale;
-		monitor.dx = dx;
-		monitor.dy = dy;
-		monitor.cx = cx;
-		monitor.cy = cy;
-		monitor.cr = cr;
-		monitor.depth = depth;
+	enum state get_state() const;
+	bool wait_for_state(enum state desiredstate, bool condition = true);
+	bool wait_for_state() {return wait_for_state(UNDEFINED, false);}
+	bool connect();
+	bool is_ok() const;
+	std::string get_errormsg() const;
 
-		if(do_histogram)
-			monitor.histogram = (uint32_t *)realloc(monitor.histogram, histosize);
-	}
+	Glib::Dispatcher signal_thumbnail;
+	Glib::Dispatcher signal_monitor;
+	Glib::Dispatcher signal_update;
+	
+};
 
-	monitorprotocol.read(monitor.image, monitor.size);
-
-	if(do_histogram)
-		monitorprotocol.read(monitor.histogram, histosize);
-
-	signal_monitor();
-}
-
-void Camera::get_thumbnail() {
-	protocol.write("thumbnail");
-}
-
-double Camera::get_exposure() const {
-	return exposure;
-}
-
-double Camera::get_interval() const {
-	return interval;
-}
-
-double Camera::get_gain() const {
-	return gain;
-}
-
-double Camera::get_offset() const {
-	return offset;
-}
-
-int32_t Camera::get_width() const {
-	return width;
-}
-
-int32_t Camera::get_height() const {
-	return height;
-}
-
-int32_t Camera::get_depth() const {
-	return depth;
-}
-
-std::string Camera::get_filename() const {
-	return filename;
-}
-
-bool Camera::is_master() const {
-	return mode == MASTER;
-}
-
-bool Camera::is_slave() const {
-	return mode == SLAVE;
-}
-
-bool Camera::is_off() const {
-	return mode == OFF;
-}
-
-bool Camera::is_enabled() const {
-	return enabled;
-}
-
-void Camera::set_exposure(double value) {
-	protocol.write(format("set exposure %lf", value));
-}
-
-void Camera::set_interval(double value) {
-	protocol.write(format("set interval %lf", value));
-}
-
-void Camera::set_gain(double value) {
-	protocol.write(format("set gain %lf", value));
-}
-
-void Camera::set_offset(double value) {
-	protocol.write(format("set offset %lf", value));
-}
-
-void Camera::set_master() {
-	protocol.write("set mode master");
-}
-
-void Camera::set_slave() {
-	protocol.write("set mode slave");
-}
-
-void Camera::set_off() {
-	protocol.write("set mode off");
-}
-
-void Camera::set_enabled(bool value) {
-	enabled = value;
-}
-
-void Camera::set_filename(const string &filename) {
-	protocol.write("set filename :" + filename);
-}
-
-void Camera::set_fits(const string &fits) {
-	protocol.write("set fits " + fits);
-}
-
-void Camera::darkburst(int32_t count) {
-	string command = format("dark %d", count);
-	state = UNDEFINED;
-	protocol.write(command);
-}
-
-void Camera::flatburst(int32_t count) {
-	string command = format("flat %d", count);
-	state = UNDEFINED;
-	protocol.write(command);
-}
-
-void Camera::burst(int32_t count, int32_t fsel) {
-	string command = format("burst %d", count);
-	if(fsel > 1)
-		command += format(" select %d", fsel);
-	state = UNDEFINED;
-	protocol.write(command);
-}
-
-enum Camera::state Camera::get_state() const {
-	return state;
-}
-
-bool Camera::wait_for_state(enum state desiredstate, bool condition) {
-	while((ok && state != ERROR) && (state == UNDEFINED || (state == desiredstate) != condition))
-		usleep(100000);
-
-	return (state == desiredstate) == condition;
-}
-
-bool Camera::is_ok() const {
-	return ok;
-}
-
-string Camera::get_errormsg() const {
-	return errormsg;
-}
-
-void Camera::grab(int x1, int y1, int x2, int y2, int scale, bool darkflat, int fsel) {
-	string command = format("grab %d %d %d %d %d histogram", x1, y1, x2, y2, scale);
-	if(darkflat)
-		command += " darkflat";
-	if(fsel)
-		command += format(" select %d", fsel);
-	monitorprotocol.write(command);
-}
+#endif
