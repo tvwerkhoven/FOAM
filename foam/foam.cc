@@ -56,11 +56,11 @@ io(IO_DEB2)
 	
 	if (parse_args(argc, argv)) {
 		error = true;
-		return;
+		exit(-1);
 	}
 	if (load_config()) {
 		error = true;
-		return;
+		exit(-1);
 	}
 	
 }

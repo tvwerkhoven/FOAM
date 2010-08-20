@@ -100,7 +100,7 @@ int FOAM_simstatic::closed_init() {
 int FOAM_simstatic::closed_loop() {
 	io.msg(IO_DEB2, "FOAM_simstatic::closed_loop()");
 
-	usleep(1000000);
+	usleep(10);
 	return 0;
 }
 
