@@ -20,7 +20,7 @@
 
 #include "devicectrl.h"
 
-DeviceCtrl::DeviceCtrl(string h, string p, string n):
+DeviceCtrl::DeviceCtrl(const string h, const string p, const string n):
 	host(h), port(p), devname(n)
 {
 	printf("%x:DeviceCtrl::DeviceCtrl(name=%s)\n", (int) pthread_self(), n.c_str());	
@@ -37,9 +37,13 @@ void DeviceCtrl::on_message(string line) {
 	printf("%x:DeviceCtrl::on_message(line=%s)\n", (int) pthread_self(), line.c_str());	
 	
 	if (popword(line) != "ok") {
-		signal_message();
+		ok = false;
+		errormsg = popword(line);
+		signal_update();
 		return;
 	}
+	
+	ok = true;
 	
 	string what = popword(line);
 	
@@ -47,12 +51,12 @@ void DeviceCtrl::on_message(string line) {
 		devinfo = line;
 	}
 	
-	signal_message();
+	signal_update();
 }
 
-void DeviceCtrl::on_connect(bool status) {
-	printf("%x:DeviceCtrl::on_message(status=%d)\n", (int) pthread_self(), status);	
-	if (status)
+void DeviceCtrl::on_connect(bool connected) {
+	printf("%x:DeviceCtrl::on_message(status=%d)\n", (int) pthread_self(), connected);	
+	if (connected)
 		protocol.write("info");
 	
 }

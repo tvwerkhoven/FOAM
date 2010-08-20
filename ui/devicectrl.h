@@ -22,37 +22,37 @@
 #define HAVE_DEVICECTRL_H
 
 #include <glibmm/dispatcher.h>
-#include <gtkmm.h>
 
 #include "pthread++.h"
-#include "log.h"
-#include "widgets.h"
-#include "foamcontrol.h"
 #include "protocol.h"
 
 using namespace Gtk;
 using namespace std;
 
-
 class DeviceCtrl {
 protected:
 	Protocol::Client protocol;
 	
-	string host, port, devname;
+	const string host, port, devname;
 	string devinfo;
 	
-	void on_message(string line);
-	void on_connect(bool status);
+	virtual void on_message(string line);
+	virtual void on_connect(bool status);
 	
 public:
-	Glib::Dispatcher signal_message;
+	Glib::Dispatcher signal_update;
+	
+	bool ok;
+	string errormsg;
 
-	DeviceCtrl(string, string, string);
+	DeviceCtrl(const string, const string, const string);
 	~DeviceCtrl();
 	
+	bool is_ok() const { return ok; }
+	string get_errormsg() const { return errormsg; }
 	
-	string getInfo() { return devinfo; }
-	string getName() { return devname; }
+	virtual string getInfo() { return devinfo; }
+	virtual string getName() { return devname; }
 };
 
 
