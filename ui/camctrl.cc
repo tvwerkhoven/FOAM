@@ -7,18 +7,22 @@
 
 using namespace std;
 
-Camera::Camera(const string &name, const string &host, const string &port): protocol(host, port, ""), monitorprotocol(host, port, ""), name(name), host(host), port(port) {
+Camera::Camera(const string h, const string p, const string n): 
+	monitorprotocol(host, port, "") 
+{
+		
+	DeviceCtrl::DeviceCtrl(h, p, n);
 	ok = false;
 	state = UNDEFINED;
 	errormsg = "Not connected";
-
-        exposure = 0;
-        interval = 0;
-        gain = 0;
-        offset = 0;
-        width = 0;
-        height = 0;
-        depth = 0;
+	
+	exposure = 0;
+	interval = 0;
+	gain = 0;
+	offset = 0;
+	width = 0;
+	height = 0;
+	depth = 0;
 	mode = OFF;
 	r = 1;
 	g = 1;
@@ -33,9 +37,9 @@ Camera::Camera(const string &name, const string &host, const string &port): prot
 	monitor.size = 0;
 	monitor.histogram = 0;
 
-	protocol.slot_message = sigc::mem_fun(this, &Camera::on_message);
-	protocol.slot_connected = sigc::mem_fun(this, &Camera::on_connected);
-	protocol.connect();
+//	protocol.slot_message = sigc::mem_fun(this, &Camera::on_message);
+//	protocol.slot_connected = sigc::mem_fun(this, &Camera::on_connected);
+//	protocol.connect();
 	monitorprotocol.slot_message = sigc::mem_fun(this, &Camera::on_monitor_message);
 	monitorprotocol.connect();
 }
@@ -44,7 +48,10 @@ Camera::~Camera() {
 	set_off();
 }
 
-void Camera::on_connected(bool connected) {
+void Camera::on_connect(bool connected) {
+	DeviceCtrl::on_connect(connected);
+	
+	printf("Camera::on_connect()");
 	if(!connected) {
 		ok = false;
 		errormsg = "Not connected";
@@ -65,15 +72,13 @@ void Camera::on_connected(bool connected) {
 }
 
 void Camera::on_message(string line) {
-	if(popword(line) != "OK") {
+	DeviceCtrl::on_message(line);
+	
+	if(!ok) {
 		state = ERROR;
-		ok = false;
-		errormsg = popword(line);
-		signal_update();
 		return;
 	}
 
-	ok = true;
 	string what = popword(line);
 
 	if(what == "exposure")
@@ -317,13 +322,13 @@ bool Camera::wait_for_state(enum state desiredstate, bool condition) {
 	return (state == desiredstate) == condition;
 }
 
-bool Camera::is_ok() const {
-	return ok;
-}
-
-string Camera::get_errormsg() const {
-	return errormsg;
-}
+//bool Camera::is_ok() const {
+//	return ok;
+//}
+//
+//string Camera::get_errormsg() const {
+//	return errormsg;
+//}
 
 void Camera::grab(int x1, int y1, int x2, int y2, int scale, bool darkflat, int fsel) {
 	string command = format("grab %d %d %d %d %d histogram", x1, y1, x2, y2, scale);

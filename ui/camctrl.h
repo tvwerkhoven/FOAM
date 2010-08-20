@@ -3,11 +3,13 @@
 
 #include <string>
 #include "protocol.h"
+#include "devicectrl.h"
 #include "pthread++.h"
 #include <glibmm/dispatcher.h>
 
-class Camera {
-	Protocol::Client protocol;
+class CamCtrl: public DeviceCtrl {
+public:
+	//Protocol::Client protocol;
 	Protocol::Client monitorprotocol;
 
 	double exposure;
@@ -25,13 +27,13 @@ class Camera {
 		MASTER,
 	} mode;
 
-	bool ok;
+//	bool ok;
 	bool enabled;
-	std::string errormsg;
+//	std::string errormsg;
 
-	void on_message(std::string line);
+	virtual void on_message(std::string line);
 	void on_monitor_message(std::string line);
-	void on_connected(bool connected);
+	virtual void on_connected(bool connected);
 
 	public:
 	class exception: public std::runtime_error {
@@ -39,10 +41,10 @@ class Camera {
 		exception(const std::string reason): runtime_error(reason) {}
 	};
 
-	const std::string name;
-	const std::string host;
-	const std::string port;
-	Camera(const std::string &name, const std::string &host, const std::string &port);
+//	const std::string name;
+//	const std::string host;
+//	const std::string port;
+	Camera(const std::string name, const std::string host, const std::string port);
 	~Camera();
 
 	volatile enum state {
@@ -108,12 +110,12 @@ class Camera {
 	bool wait_for_state(enum state desiredstate, bool condition = true);
 	bool wait_for_state() {return wait_for_state(UNDEFINED, false);}
 	bool connect();
-	bool is_ok() const;
-	std::string get_errormsg() const;
+//	bool is_ok() const;
+//	std::string get_errormsg() const;
 
 	Glib::Dispatcher signal_thumbnail;
 	Glib::Dispatcher signal_monitor;
-	Glib::Dispatcher signal_update;
+	//Glib::Dispatcher signal_update;
 	
 };
 
