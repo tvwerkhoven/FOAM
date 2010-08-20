@@ -34,7 +34,7 @@ int main() {
 	
 	Imgio *saveimg = new Imgio(io);
 	saveimg->data = (void *) img;
-	saveimg->dtype = DATA_UINT16;
+	saveimg->dtype = Imgio::UINT16;
 	saveimg->res.x = 256;
 	saveimg->res.y = 128;
 	saveimg->bpp = 16;

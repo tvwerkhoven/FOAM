@@ -16,12 +16,12 @@ static void on_client_msg(std::string line);
 int main() {
 	string msg;
 	
-	Protocol::Server serv1("1234", "SYS");
+//	Protocol::Server serv1("1234", "SYS");
 //	Protocol::Server serv2("1234", "WFS1");
 
-	serv1.slot_message = sigc::ptr_fun(on_message);
-	serv1.slot_connected = sigc::ptr_fun(on_connect);
-	serv1.listen();
+//	serv1.slot_message = sigc::ptr_fun(on_message);
+//	serv1.slot_connected = sigc::ptr_fun(on_connect);
+//	serv1.listen();
 
 //	serv2.slot_message = sigc::ptr_fun(on_message);
 //	serv2.slot_connected = sigc::ptr_fun(on_connect);

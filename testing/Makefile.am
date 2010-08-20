@@ -49,26 +49,35 @@ pixbuf_test_SOURCES = pixbuf-test.cc
 pixbuf_test_CPPFLAGS = $(GUI_CFLAGS) $(AM_CPPFLAGS)
 pixbuf_test_LDADD = -lgthread-2.0
 
-### OpenGL programs go here
+### OpenGL programs go here (need GUI libs)
 
-if OPENGL
+if GUI
 
-noinst_PROGRAMS += opengl-test camview-test camsend-test
+noinst_PROGRAMS += opengl-test camview-test 
 
 opengl_test_SOURCES = opengl-test.cc
-opengl_test_CPPFLAGS = $(GUI_CFLAGS) $(OPENGL_CFLAGS) $(AM_CPPFLAGS)
-opengl_test_CFLAGS = $(GUI_CFLAGS) $(OPENGL_CFLAGS) 
-opengl_test_LDADD = $(OPENGL_LIBS) $(LIBSIU_DIR)/libglviewer.a -lgthread-2.0
+opengl_test_CPPFLAGS = $(GUI_CFLAGS) $(AM_CPPFLAGS)
+opengl_test_CFLAGS = $(GUI_CFLAGS)
+opengl_test_LDADD = $(GUI_LIBS) $(LIBSIU_DIR)/libglviewer.a -lgthread-2.0
 
 camview_test_SOURCES = camview-test.cc
-camview_test_CPPFLAGS = $(GUI_CFLAGS) $(OPENGL_CFLAGS) $(AM_CPPFLAGS)
-camview_test_CFLAGS = $(GUI_CFLAGS) $(OPENGL_CFLAGS) 
-camview_test_LDADD = $(OPENGL_LIBS) $(LIBSIU_DIR)/libglviewer.a -lgthread-2.0 $(LIBSIU_DIR)/libprotocol.a $(LIBSIU_DIR)/libsocket.a
+camview_test_CPPFLAGS = $(GUI_CFLAGS) $(AM_CPPFLAGS)
+camview_test_CFLAGS = $(GUI_CFLAGS) 
+camview_test_LDADD = $(GUI_CFLAGS) -lgthread-2.0 \
+		$(LIBSIU_DIR)/libglviewer.a \
+		$(LIBSIU_DIR)/libprotocol.a \
+		$(LIBSIU_DIR)/libsocket.a
+
+endif GUI
+
+if HAVE_FITSIO
+
+noinst_PROGRAMS += camsend-test
 
 camsend_test_SOURCES = camsend-test.cc
 camsend_test_LDADD = $(LIBSIU_DIR)/libprotocol.a \
 		$(LIBSIU_DIR)/libsocket.a
-		
-endif OPENGL
+
+endif HAVE_FITSIO
 
 endif DEBUG
