@@ -61,10 +61,13 @@ void ConnectDialog::on_cancel() {
 }
 
 ConnectDialog::ConnectDialog(FoamControl &foamctrl): 
-foamctrl(foamctrl), label("Connect to a remote host"), host("localhost"), port("1025")
+foamctrl(foamctrl), label("Connect to a remote host"), host("Hostname"), port("Port")
 {
 	set_title("Connect");
 	set_modal();
+	
+	host.set_text("localhost");
+	port.set_text("1025");
 		
 	add_button(Gtk::Stock::CONNECT, 1)->signal_clicked().connect(sigc::mem_fun(*this, &ConnectDialog::on_ok));
 	add_button(Gtk::Stock::CANCEL, 0)->signal_clicked().connect(sigc::mem_fun(*this, &ConnectDialog::on_cancel));
@@ -135,6 +138,7 @@ void MainWindow::on_ctrl_device_update() {
 		if (devlist.find(devname) != devlist.end())
 			continue; // Already exists, skip
 		
+		log.add(Log::OK, "Found new devide '" + devname + "'.");
 		devlist[devname] = new DevicePage(log, foamctrl, devname);
 		notebook.append_page(*devlist[devname], "_" + devname, devname, true);
 	}
@@ -164,12 +168,10 @@ MainWindow::MainWindow():
 	menubar.quit.signal_activate().connect(sigc::mem_fun(*this, &MainWindow::on_quit_activate));
 	menubar.about.signal_activate().connect(sigc::mem_fun(*this, &MainWindow::on_about_activate));
 		
-	
 	foamctrl.signal_connect.connect(sigc::mem_fun(*this, &MainWindow::on_ctrl_connect_update));
 	foamctrl.signal_message.connect(sigc::mem_fun(*this, &MainWindow::on_ctrl_message_update));
 	foamctrl.signal_device.connect(sigc::mem_fun(*this, &MainWindow::on_ctrl_device_update));	
 		
-	
 	notebook.append_page(controlpage, "_Control", "Control", true);
 	notebook.append_page(logpage, "_Log", "Log", true);
 	
