@@ -48,10 +48,10 @@ int FOAM_simstatic::load_modules() {
 	// Add ImgCam device
 	imgcama = new ImgCamera(io, "imgcamA", ptc->listenport, ptc->cfgfile);
 	devices->add((Device *) imgcama);
-	imgcamb = new ImgCamera(io, "imgcamB", ptc->listenport, ptc->cfgfile);
-	devices->add((Device *) imgcamb);
-	imgcamc = new ImgCamera(io, "imgcamC", ptc->listenport, ptc->cfgfile);
-	devices->add((Device *) imgcamc);
+//	imgcamb = new ImgCamera(io, "imgcamB", ptc->listenport, ptc->cfgfile);
+//	devices->add((Device *) imgcamb);
+//	imgcamc = new ImgCamera(io, "imgcamC", ptc->listenport, ptc->cfgfile);
+//	devices->add((Device *) imgcamc);
 	
 	return 0;
 }
