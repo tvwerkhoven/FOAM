@@ -38,6 +38,12 @@
 using namespace std;
 
 class FoamControl {
+public:
+	typedef struct _device_t {
+		string name;
+		string type;		
+	} device_t;
+	
 private:
 	string mode2str(aomode_t m) {
 		switch (m) {
@@ -69,7 +75,7 @@ private:
 	struct state_t {
 		aomode_t mode;
 		int numdev;
-		string devices[32];
+		device_t devices[32];
 		int numframes;
 		int numcal;
 		string calmodes[32];
@@ -107,7 +113,7 @@ public:
 	string get_mode_str() { return mode2str(state.mode); }
 	int get_numcal() { return state.numcal; }
 	string get_calmode(int i) { return state.calmodes[i]; }
-	string get_device(int i ) { return state.devices[i]; }
+	device_t get_device(int i ) { return state.devices[i]; }
 	string get_lastreply() { return state.lastreply; }
 	string get_lastcmd() { return state.lastcmd; }
 	

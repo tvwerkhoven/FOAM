@@ -42,7 +42,12 @@
 #include "protocol.h"
 #include "foamcontrol.h"
 #include "controlview.h"
+
+#include "deviceview.h"
+#include "camview.h"
+
 #include "fgui.h"
+
 
 extern Gtk::Tooltips *tooltips;
 
@@ -134,13 +139,25 @@ void MainWindow::on_ctrl_device_update() {
 	printf("MainWindow::on_ctrl_device_update()\n");
 	
 	for (int i=0; i<foamctrl.get_numdev(); i++) {
-		string devname = foamctrl.get_device(i);
-		if (devlist.find(devname) != devlist.end())
+		FoamControl::device_t dev = foamctrl.get_device(i);
+		if (devlist.find(dev.name) != devlist.end())
 			continue; // Already exists, skip
 		
-		log.add(Log::OK, "Found new devide '" + devname + "'.");
-		devlist[devname] = new DevicePage(log, foamctrl, devname);
-		notebook.append_page(*devlist[devname], "_" + devname, devname, true);
+		log.add(Log::OK, "Found new device '" + dev.name + "' (type=" + dev.type + ").");
+		
+		// Add specific device to the list of devices. Down-cast to generic 'DevicePage' class
+		if (dev.type == "dev") {
+			printf("MainWindow::on_ctrl_device_update() got generic device\n");			
+			devlist[dev.name] = new DevicePage(log, foamctrl, dev.name);
+		}
+		else if (dev.type == "dev.cam.imgcam") {
+			printf("MainWindow::on_ctrl_device_update() got dev.cam.imgcam\n");			
+			CamView *tmp = new CamView(log, foamctrl, dev.name);
+			tmp->init();
+			devlist[dev.name] = (DevicePage *) tmp;
+		}
+		
+		notebook.append_page(*devlist[dev.name], "_" + dev.name, dev.name, true);
 	}
 	
 	show_all_children();
@@ -211,7 +228,8 @@ int main(int argc, char *argv[]) {
 	
 	Glib::thread_init();
 	
-	Main kit(argc, argv);
+	Gtk::Main kit(argc, argv);
+	Gtk::GL::init(argc, argv);
 	
  	MainWindow *window = new MainWindow();
 	Main::run(*window);
