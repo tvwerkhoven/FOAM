@@ -44,8 +44,8 @@ public:
 	// Should verify the integrity of the device.
 	virtual int verify() { return 0; }
 	// Network IO handling routines
-	virtual void on_message(Connection *conn, std::string line) { ; }
-	virtual void on_connect(Connection *conn, bool status) { ; }
+	virtual void on_message(Connection *conn, std::string line) { io.msg(IO_DEB2, "Device::on_message(line='%s')", line.c_str()); }
+	virtual void on_connect(Connection *conn, bool status) { io.msg(IO_DEB2, "Device::on_connect(stat=%d)", (int) status); }
 	
 	string getname() { return name; }
 	string gettype() { return type; }

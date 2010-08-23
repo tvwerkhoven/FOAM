@@ -21,8 +21,9 @@
 #include <time.h>
 #include <math.h>
 #include <fcntl.h>
-// TODO: compiling fails when this is removed, warns when present
+#ifndef __STDC_LIMIT_MACROS
 #define __STDC_LIMIT_MACROS
+#endif
 #include <stdint.h>
 
 #include "config.h"
@@ -166,8 +167,8 @@ int ImgCamera::store(Connection *connection) {
 	return 0;
 }
 
-void ImgCamera::on_message(Connection *connection, std::string line) {
-	io.msg(IO_DEB2, "ImgCamera::on_message(Connection *connection, std::string line)");
+void ImgCamera::on_message(Connection *connection, std::string line) {	
+	Device::on_message(connection, line);
 	
 	// Process everything in uppercase
 	string cmd = popword(line);
