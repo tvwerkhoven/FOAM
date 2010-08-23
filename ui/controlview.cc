@@ -39,9 +39,9 @@ calibframe("Calibration"), calmode_lbl("Calibration mode: "), calib("Calibrate")
 statframe("Status"), stat_mode("Mode: "), stat_ndev("# Dev: "), stat_nframes("# Frames: "), stat_lastcmd("Last cmd: ") {
 	
 	// request minimum size for entry boxes
-	host.set_size_request(120);
+	host.set_width_chars(24);
 	host.set_text("localhost");
-	port.set_size_request(50);
+	port.set_width_chars(5);
 	port.set_text("1025");
 	
 	// Make shutdown/stop button red
@@ -63,13 +63,13 @@ statframe("Status"), stat_mode("Mode: "), stat_ndev("# Dev: "), stat_nframes("# 
 
 	// Make status entries insensitive
 	stat_mode.set_editable(false);
-	stat_mode.set_size_request(75);
+	stat_mode.set_width_chars(8);
 	stat_ndev.set_editable(false);
-	stat_ndev.set_size_request(30);
+	stat_ndev.set_width_chars(2);
 	stat_nframes.set_editable(false);
-	stat_nframes.set_size_request(75);
+	stat_nframes.set_width_chars(6);
 	stat_lastcmd.set_editable(false);
-	stat_lastcmd.set_size_request(100);
+	stat_lastcmd.set_width_chars(32);
 	
 	// Connection row (hostname, port, connect button)
 	connbox.set_spacing(4);	

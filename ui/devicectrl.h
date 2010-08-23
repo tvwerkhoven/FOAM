@@ -21,6 +21,7 @@
 #ifndef HAVE_DEVICECTRL_H
 #define HAVE_DEVICECTRL_H
 
+#include <gtkmm.h>
 #include <glibmm/dispatcher.h>
 
 #include "pthread++.h"
@@ -37,7 +38,7 @@ protected:
 	string devinfo;
 	
 	virtual void on_message(string line);
-	virtual void on_connect(bool status);
+	virtual void on_connected(bool status);
 	
 public:
 	Glib::Dispatcher signal_update;
@@ -46,7 +47,7 @@ public:
 	string errormsg;
 
 	DeviceCtrl(const string, const string, const string);
-	~DeviceCtrl();
+	~DeviceCtrl() { ; }
 	
 	bool is_ok() const { return ok; }
 	string get_errormsg() const { return errormsg; }

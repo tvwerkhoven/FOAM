@@ -31,6 +31,9 @@
 #include "io.h"
 #include "devices.h"
 
+static const string cam_type = "cam";
+
+
 /*!
  @brief Base camera class. This will be overloaded with the specific camera class.
  @author Tim van Werkhoven (t.i.m.vanwerkhoven@xs4all.nl) and Guus Sliepen (guus@sliepen.org)
@@ -103,8 +106,8 @@ public:
 	
 	virtual ~Camera() {};
 	// TODO: how to init res.x(-1), res.y(-1), ?
-	Camera(Io &io, string name, string port): 
-	Device(io, name, port),
+	Camera(Io &io, string name, string type, string port): 
+	Device(io, name, cam_type + "." + type, port),
 	interval(1.0), exposure(1.0), gain(1.0), offset(0.0), bpp(-1), dtype(DATA_UINT16), mode(Camera::OFF), outfd(0) { ; }
 };
 

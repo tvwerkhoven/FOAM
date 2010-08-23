@@ -1,13 +1,35 @@
-#ifndef HAVE_CAMERAMONITOR_H
-#define HAVE_CAMERAMONITOR_H
+/*
+ camview.h -- camera control class
+ Copyright (C) 2010 Tim van Werkhoven <t.i.m.vanwerkhoven@xs4all.nl>
+ Copyright (C) 2010 Guus Sliepen
+ 
+ This file is part of FOAM.
+ 
+ FOAM is free software: you can redistribute it and/or modify
+ it under the terms of the GNU General Public License as published by
+ the Free Software Foundation, either version 2 of the License, or
+ (at your option) any later version.
+ 
+ FOAM is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ GNU General Public License for more details.
+ 
+ You should have received a copy of the GNU General Public License
+ along with FOAM.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+#ifndef HAVE_CAMVIEW_H
+#define HAVE_CAMVIEW_H
 
 #include <gtkmm.h>
 #include <gdkmm/pixbuf.h>
 #include <gtkglmm.h>
-#include <vector>
 
-#include "camera.h"
 #include "widgets.h"
+
+#include "deviceview.h"
+#include "camctrl.h"
 #include "glviewer.h"
 
 class CamView: public DevicePage {
@@ -27,7 +49,7 @@ protected:
 	Button zoomin;
 	Button zoomout;
 	Button zoom100;
-	Button zoomfit;
+	ToggleButton zoomfit;
 
 	// control stuff
 	// Need: darkflat, fsel, tiptilt, capture, thumb, ...?
@@ -79,17 +101,15 @@ protected:
 //	Gtk::CheckMenuItem fsel;
 //	Gtk::CheckMenuItem tiptilt;
 
-	void on_histo_toggled();
-	bool on_histo_clicked(GdkEventButton *);
-	bool on_window_state_event(GdkEventWindowState *event);
-	void on_window_configure_event(GdkEventConfigure *event);
-	void on_zoom1_activate();
+//	bool on_window_state_event(GdkEventWindowState *event);
+//	void on_window_configure_event(GdkEventConfigure *event);
+	void on_zoom100_activate();
 	void on_zoomin_activate();
 	void on_zoomout_activate();
 //	void on_colorsel_activate();
 //	void on_fullscreen_toggled();
-//	void force_update();
-	void do_histo_update();
+	void force_update();
+//	void do_histo_update();
 	void do_update();
 //	void on_close_activate();
 
@@ -100,7 +120,7 @@ protected:
 	int s;
 //	float sx;
 //	float sy;
-	uint32_t *histo;
+//	uint32_t *histo;
 	int depth;
 //	float sxstart;
 //	float systart;
@@ -109,7 +129,7 @@ protected:
 
 	// TODO: what is this for again?
 	Glib::Dispatcher signal_update;
-	void on_update();
+	virtual void on_message_update();
 	bool on_timeout();
 
 	void on_image_realize();
@@ -121,10 +141,10 @@ protected:
 
 public:
 	CamCtrl *camctrl;
-	CamView::CamView(Log &log, FoamControl &foamctrl, string n);
+	CamView(Log &log, FoamControl &foamctrl, string n);
 	~CamView();
 	
 	virtual int init();
 };
 
-#endif
+#endif // HAVE_CAMVIEW_H

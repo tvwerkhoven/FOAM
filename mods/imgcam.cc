@@ -53,11 +53,11 @@ void ImgCamera::update(bool blocking) {
 }
 
 ImgCamera::ImgCamera(Io &io, string name, string port, config *config): 
-Camera(io, name, port) {
+Camera(io, name, imgcam_type, port) {
 	io.msg(IO_DEB2, "ImgCamera::ImgCamera()");
 	
 	string type = config->getstring(name+".type");
-	if (type != IMGCAM_TYPE) throw exception("Type should be '" IMGCAM_TYPE "' for this class.");
+	if (type != imgcam_type) throw exception("Type should be '" + imgcam_type + "' for this class.");
 	
 	string file = config->getstring(name+".imagefile");
 	if (file[0] != '/') file = FOAM_DATADIR "/" + file;

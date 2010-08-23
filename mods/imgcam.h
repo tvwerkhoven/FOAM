@@ -23,7 +23,9 @@
 #include <sys/time.h>
 #include <time.h>
 #include <math.h>
+#ifndef __STDC_LIMIT_MACROS
 #define __STDC_LIMIT_MACROS
+#endif
 #include <stdint.h>
 
 #include "config.h"
@@ -31,7 +33,7 @@
 #include "imgio.h"
 #include "cam.h"
 
-#define IMGCAM_TYPE "imgcam"
+static const string imgcam_type = "imgcam";
 
 using namespace std;
 

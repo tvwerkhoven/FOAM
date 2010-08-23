@@ -1,17 +1,41 @@
+/*
+ camctrl.h -- camera control class
+ Copyright (C) 2010 Tim van Werkhoven <t.i.m.vanwerkhoven@xs4all.nl>
+ Copyright (C) 2010 Guus Sliepen
+ 
+ This file is part of FOAM.
+ 
+ FOAM is free software: you can redistribute it and/or modify
+ it under the terms of the GNU General Public License as published by
+ the Free Software Foundation, either version 2 of the License, or
+ (at your option) any later version.
+ 
+ FOAM is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ GNU General Public License for more details.
+ 
+ You should have received a copy of the GNU General Public License
+ along with FOAM.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 #include <iostream>
-
-#include "camera.h"
-#include "format.h"
-
 #include <arpa/inet.h>
+#include <string>
+
+#include "format.h"
+#include "protocol.h"
+#include "devicectrl.h"
+#include "camctrl.h"
 
 using namespace std;
 
-Camera::Camera(const string h, const string p, const string n): 
-	monitorprotocol(host, port, "") 
+CamCtrl::CamCtrl(const string h, const string p, const string n): 
+	DeviceCtrl(h, p, n),
+	monitorprotocol(h, p, n) 
 {
-		
-	DeviceCtrl::DeviceCtrl(h, p, n);
+	fprintf(stderr, "CamCtrl::CamCtrl()\n");
+	
 	ok = false;
 	state = UNDEFINED;
 	errormsg = "Not connected";
@@ -37,21 +61,22 @@ Camera::Camera(const string h, const string p, const string n):
 	monitor.size = 0;
 	monitor.histogram = 0;
 
-//	protocol.slot_message = sigc::mem_fun(this, &Camera::on_message);
-//	protocol.slot_connected = sigc::mem_fun(this, &Camera::on_connected);
+//	protocol.slot_message = sigc::mem_fun(this, &CamCtrl::on_message);
+//	protocol.slot_connected = sigc::mem_fun(this, &CamCtrl::on_connected);
 //	protocol.connect();
-	monitorprotocol.slot_message = sigc::mem_fun(this, &Camera::on_monitor_message);
+	monitorprotocol.slot_message = sigc::mem_fun(this, &CamCtrl::on_monitor_message);
 	monitorprotocol.connect();
 }
 
-Camera::~Camera() {
+CamCtrl::~CamCtrl() {
 	set_off();
 }
 
-void Camera::on_connect(bool connected) {
-	DeviceCtrl::on_connect(connected);
+void CamCtrl::on_connected(bool connected) {
 	
-	printf("Camera::on_connect()");
+	DeviceCtrl::on_connected(connected);
+	
+	fprintf(stderr, "CamCtrl::on_connected()\n");
 	if(!connected) {
 		ok = false;
 		errormsg = "Not connected";
@@ -71,7 +96,7 @@ void Camera::on_connect(bool connected) {
 	protocol.write("get state");
 }
 
-void Camera::on_message(string line) {
+void CamCtrl::on_message(string line) {
 	DeviceCtrl::on_message(line);
 	
 	if(!ok) {
@@ -134,7 +159,7 @@ void Camera::on_message(string line) {
 	signal_update();
 }
 
-void Camera::on_monitor_message(string line) {
+void CamCtrl::on_monitor_message(string line) {
 	if(popword(line) != "OK")
 		return;
 	
@@ -199,111 +224,111 @@ void Camera::on_monitor_message(string line) {
 	signal_monitor();
 }
 
-void Camera::get_thumbnail() {
+void CamCtrl::get_thumbnail() {
 	protocol.write("thumbnail");
 }
 
-double Camera::get_exposure() const {
+double CamCtrl::get_exposure() const {
 	return exposure;
 }
 
-double Camera::get_interval() const {
+double CamCtrl::get_interval() const {
 	return interval;
 }
 
-double Camera::get_gain() const {
+double CamCtrl::get_gain() const {
 	return gain;
 }
 
-double Camera::get_offset() const {
+double CamCtrl::get_offset() const {
 	return offset;
 }
 
-int32_t Camera::get_width() const {
+int32_t CamCtrl::get_width() const {
 	return width;
 }
 
-int32_t Camera::get_height() const {
+int32_t CamCtrl::get_height() const {
 	return height;
 }
 
-int32_t Camera::get_depth() const {
+int32_t CamCtrl::get_depth() const {
 	return depth;
 }
 
-std::string Camera::get_filename() const {
+std::string CamCtrl::get_filename() const {
 	return filename;
 }
 
-bool Camera::is_master() const {
+bool CamCtrl::is_master() const {
 	return mode == MASTER;
 }
 
-bool Camera::is_slave() const {
+bool CamCtrl::is_slave() const {
 	return mode == SLAVE;
 }
 
-bool Camera::is_off() const {
+bool CamCtrl::is_off() const {
 	return mode == OFF;
 }
 
-bool Camera::is_enabled() const {
+bool CamCtrl::is_enabled() const {
 	return enabled;
 }
 
-void Camera::set_exposure(double value) {
+void CamCtrl::set_exposure(double value) {
 	protocol.write(format("set exposure %lf", value));
 }
 
-void Camera::set_interval(double value) {
+void CamCtrl::set_interval(double value) {
 	protocol.write(format("set interval %lf", value));
 }
 
-void Camera::set_gain(double value) {
+void CamCtrl::set_gain(double value) {
 	protocol.write(format("set gain %lf", value));
 }
 
-void Camera::set_offset(double value) {
+void CamCtrl::set_offset(double value) {
 	protocol.write(format("set offset %lf", value));
 }
 
-void Camera::set_master() {
+void CamCtrl::set_master() {
 	protocol.write("set mode master");
 }
 
-void Camera::set_slave() {
+void CamCtrl::set_slave() {
 	protocol.write("set mode slave");
 }
 
-void Camera::set_off() {
+void CamCtrl::set_off() {
 	protocol.write("set mode off");
 }
 
-void Camera::set_enabled(bool value) {
+void CamCtrl::set_enabled(bool value) {
 	enabled = value;
 }
 
-void Camera::set_filename(const string &filename) {
+void CamCtrl::set_filename(const string &filename) {
 	protocol.write("set filename :" + filename);
 }
 
-void Camera::set_fits(const string &fits) {
+void CamCtrl::set_fits(const string &fits) {
 	protocol.write("set fits " + fits);
 }
 
-void Camera::darkburst(int32_t count) {
+void CamCtrl::darkburst(int32_t count) {
 	string command = format("dark %d", count);
 	state = UNDEFINED;
 	protocol.write(command);
 }
 
-void Camera::flatburst(int32_t count) {
+void CamCtrl::flatburst(int32_t count) {
 	string command = format("flat %d", count);
 	state = UNDEFINED;
 	protocol.write(command);
 }
 
-void Camera::burst(int32_t count, int32_t fsel) {
+void CamCtrl::burst(int32_t count, int32_t fsel) {
 	string command = format("burst %d", count);
 	if(fsel > 1)
 		command += format(" select %d", fsel);
@@ -311,26 +336,26 @@ void Camera::burst(int32_t count, int32_t fsel) {
 	protocol.write(command);
 }
 
-enum Camera::state Camera::get_state() const {
+enum CamCtrl::state CamCtrl::get_state() const {
 	return state;
 }
 
-bool Camera::wait_for_state(enum state desiredstate, bool condition) {
+bool CamCtrl::wait_for_state(enum state desiredstate, bool condition) {
 	while((ok && state != ERROR) && (state == UNDEFINED || (state == desiredstate) != condition))
 		usleep(100000);
 
 	return (state == desiredstate) == condition;
 }
 
-//bool Camera::is_ok() const {
+//bool CamCtrl::is_ok() const {
 //	return ok;
 //}
 //
-//string Camera::get_errormsg() const {
+//string CamCtrl::get_errormsg() const {
 //	return errormsg;
 //}
 
-void Camera::grab(int x1, int y1, int x2, int y2, int scale, bool darkflat, int fsel) {
+void CamCtrl::grab(int x1, int y1, int x2, int y2, int scale, bool darkflat, int fsel) {
 	string command = format("grab %d %d %d %d %d histogram", x1, y1, x2, y2, scale);
 	if(darkflat)
 		command += " darkflat";

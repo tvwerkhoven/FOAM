@@ -21,13 +21,13 @@
 #include "devicectrl.h"
 
 DeviceCtrl::DeviceCtrl(const string h, const string p, const string n):
-	host(h), port(p), devname(n)
+	host(h), port(p), devname(n), devinfo("null")
 {
 	printf("%x:DeviceCtrl::DeviceCtrl(name=%s)\n", (int) pthread_self(), n.c_str());	
 	
 	// Open control connection
 	protocol.slot_message = sigc::mem_fun(this, &DeviceCtrl::on_message);
-	protocol.slot_connected = sigc::mem_fun(this, &DeviceCtrl::on_connect);
+	protocol.slot_connected = sigc::mem_fun(this, &DeviceCtrl::on_connected);
 	printf("%x:DeviceCtrl::DeviceCtrl(): connecting to %s:%s@%s\n", (int) pthread_self(), host.c_str(), port.c_str(), devname.c_str());
 	protocol.connect(host, port, devname);	
 	
@@ -54,8 +54,8 @@ void DeviceCtrl::on_message(string line) {
 	signal_update();
 }
 
-void DeviceCtrl::on_connect(bool connected) {
-	printf("%x:DeviceCtrl::on_message(status=%d)\n", (int) pthread_self(), connected);	
+void DeviceCtrl::on_connected(bool connected) {
+	printf("%x:DeviceCtrl::on_connected(status=%d)\n", (int) pthread_self(), connected);	
 	if (connected)
 		protocol.write("info");
 	

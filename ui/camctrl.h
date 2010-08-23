@@ -1,11 +1,35 @@
-#ifndef HAVE_CAMERA_H
-#define HAVE_CAMERA_H
+/*
+ camctrl.cc -- camera control class
+ Copyright (C) 2010 Tim van Werkhoven <t.i.m.vanwerkhoven@xs4all.nl>
+ Copyright (C) 2010 Guus Sliepen
+ 
+ This file is part of FOAM.
+ 
+ FOAM is free software: you can redistribute it and/or modify
+ it under the terms of the GNU General Public License as published by
+ the Free Software Foundation, either version 2 of the License, or
+ (at your option) any later version.
+ 
+ FOAM is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ GNU General Public License for more details.
+ 
+ You should have received a copy of the GNU General Public License
+ along with FOAM.  If not, see <http://www.gnu.org/licenses/>.
+ */
 
-#include <string>
-#include "protocol.h"
-#include "devicectrl.h"
-#include "pthread++.h"
+#ifndef HAVE_CAMCTRL_H
+#define HAVE_CAMCTRL_H
+
 #include <glibmm/dispatcher.h>
+#include <string>
+
+#include "pthread++.h"
+#include "protocol.h"
+
+#include "devicectrl.h"
+
 
 class CamCtrl: public DeviceCtrl {
 public:
@@ -44,8 +68,8 @@ public:
 //	const std::string name;
 //	const std::string host;
 //	const std::string port;
-	Camera(const std::string name, const std::string host, const std::string port);
-	~Camera();
+	CamCtrl(const std::string name, const std::string host, const std::string port);
+	~CamCtrl();
 
 	volatile enum state {
 		UNDEFINED = -2,
@@ -119,4 +143,4 @@ public:
 	
 };
 
-#endif
+#endif // HAVE_CAMCTRL_H

@@ -46,7 +46,7 @@ DevicePage::~DevicePage() {
 	
 }
 
-DevicePage::init() {
+int DevicePage::init() {
 	// Start device controller
 	devctrl = new DeviceCtrl(foamctrl.host, foamctrl.port, devname);
 	
@@ -55,6 +55,8 @@ DevicePage::init() {
 	
 	// Run once for init
 	on_message_update();
+	
+	return 0;
 }
 
 void DevicePage::on_message_update() {
