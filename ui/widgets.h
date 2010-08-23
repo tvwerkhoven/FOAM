@@ -88,6 +88,10 @@ class LabeledEntry: public Gtk::HBox {
 		entry.set_size_request(size);
 	}
 	
+	void set_width_chars(int n_chars) {
+		entry.set_width_chars(n_chars);
+	}
+	
 	void set_text(const Glib::ustring &text) {
 		entry.set_text(text);
 	}
