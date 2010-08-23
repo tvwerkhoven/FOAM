@@ -33,11 +33,12 @@ class Device {
 protected:
 	Io &io;
 	string name;												//!< Device name
+	string type;												//!< Device type
 	string port;												//!< Port to listen on
 	Protocol::Server *protocol;
 	
 public:
-	Device(Io &io, string name, string port);
+	Device(Io &io, string name, string type, string port);
 	virtual ~Device();
 	
 	// Should verify the integrity of the device.
@@ -47,6 +48,7 @@ public:
 	virtual void on_connect(Connection *conn, bool status) { ; }
 	
 	string getname() { return name; }
+	string gettype() { return type; }
 };
 
 // Keep track of all devices in the system
@@ -67,7 +69,7 @@ public:
 	int del(string id);
 	
 	// Return a list of all devices in the list
-	string getlist();
+	string getlist(bool showtype = true);
 	
 	// Return number of devices 
 	int getcount() { return ndev; }

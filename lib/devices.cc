@@ -21,8 +21,11 @@
 #include "io.h"
 #include "devices.h"
 
-Device::Device(Io &io, string name, string port): io(io), name(name), port(port) { 
-	io.msg(IO_XNFO, "Device::Device(): Create new device, name=%s", name.c_str());
+Device::Device(Io &io, string name, string type, string port): 
+io(io), name(name), type("dev." + type), port(port) 
+{ 
+	io.msg(IO_XNFO, "Device::Device(): Create new device, name=%s, type=%s", 
+				 name.c_str(), type.c_str());
 	
 	protocol = new Protocol::Server(port, name);
 	io.msg(IO_XNFO, "Device %s listening on port %s.", name.c_str(), port.c_str());
@@ -66,11 +69,13 @@ int DeviceManager::del(string id) {
 	return 0;
 }
 
-string DeviceManager::getlist() {
+string DeviceManager::getlist(bool showtype) {
 	device_t::iterator it;
 	string devlist = "";
-	for (it=devices.begin() ; it != devices.end(); it++)
+	for (it=devices.begin() ; it != devices.end(); it++) {
 		devlist += (*it).first + " ";
+		if (showtype) devlist += (*it).second->gettype() + " ";
+	}
 	
 	return devlist;
 }
