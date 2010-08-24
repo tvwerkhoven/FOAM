@@ -46,7 +46,8 @@ using namespace std;
 /*!
  @brief We use this to define integer 2-vectors (resolutions etc)
  */
-typedef struct {
+typedef struct coord_t {
+	coord_t(int _x=0, int _y=0) : x(_x), y(_y) { }
 	int x;			//!< x coordinate
 	int y;			//!< y coordinate
 } coord_t;
@@ -54,7 +55,8 @@ typedef struct {
 /*!
  @brief We use this to define floating point 2-vectors (displacements etc)
  */
-typedef struct {
+typedef struct fcoord_t {
+	fcoord_t(float _x=0, float _y=0) : x(_x), y(_y) { }
 	float x;		//!< x coordinate
 	float y;		//!< y coordinate
 } fcoord_t;
