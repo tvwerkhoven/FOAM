@@ -46,11 +46,11 @@ private:
 	Imgio *img;													//!< Use Imgio utils to load frames
 	uint16_t *frame;										//!< Frame stored here
 	
-	void update(bool blocking);
-
 public:
 	ImgCamera(Io &io, string name, string port, config *config);
 	~ImgCamera();
+	
+	void update(bool blocking);
 	
 	virtual int verify();
 	virtual void on_message(Connection *, std::string);
