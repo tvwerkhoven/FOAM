@@ -46,10 +46,9 @@ static const string wfs_type = "wfs";
  only provides the data processing/interpretation of the camera. The camera
  itself can be accessed through the pointer *cam.
  */
-class Wfs {
+class Wfs: public Device {
 protected:
-	string conffile;
-	Io &io;
+	string conffile;										//!< Configuration file used for this WFS
 	
 public:
 	class exception: public std::runtime_error {
@@ -57,39 +56,32 @@ public:
 		exception(const std::string reason): runtime_error(reason) {}
 	};
 	
-	string name;												//!< WFS name
-	string camtype;											//!< Camera type/model
-	string wfstype;											//!< WFS type/model
-	config cfg;													//!< WFS configuration class
+	string camtype;											//!< Camera type/model TODO: should be enum?
+	string wfstype;											//!< WFS type/model TODO: should be enum?
+	config cfg;													//!< WFS configuration
 	
 	/*!
 	 @brief This holds information on the wavefront
 	 */
 	struct wavefront {
+		wavefront() : wfamp(NULL), nmodes(0) { }
 		gsl_vector_float *wfamp;					//!< Mode amplitudes
+		int nmodes;												//!< Number of modes
 		enum {
 			MODES_ZERNIKE=0,								//!< Zernike modes
 			MODES_KL,												//!< Karhunen-Loeve modes
 		} wfmode;
-		int nmodes;												//!< Number of modes
 	};
 	
 	Camera *cam;												//!< Pointer to the camera class used for this 
 		
-	typedef struct {
-		int prop;
-		void *value;
-	} wfs_prop_t;												//!< WFS property structure
-	
 	virtual int verify(int) = 0;				//!< Verify settings
 	virtual int calibrate(int) = 0;			//!< Calibrate WFS
 	virtual int measure(int) = 0;				//!< Measure abberations
-	virtual int configure(wfs_prop_t *) = 0; //!< Change a WFS setting
 	
 	virtual ~Wfs() {}
-	Wfs(Io &io, string conffile): io(io), cfg(conffile) {
-		io.msg(IO_DEB2, "Wfs(Io &io, string conffile=%s)", conffile.c_str());
-	}
+	Wfs(Io &io, string name, string type, string port, string conffile): 
+	Device(io, name, wfs_type + "." + type, port), cfg(conffile) {	; }
 };
 
 #endif // HAVE_WFS_H

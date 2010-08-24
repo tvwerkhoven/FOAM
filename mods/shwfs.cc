@@ -210,8 +210,11 @@ void Shwfs::printGrid(int *map) {
 // PUBLIC FUNCTIONS //
 /********************/
 
-Shwfs::Shwfs(Io &io, string conffile): Wfs(io, conffile) {
-	io.msg(IO_DEB2, "Shwfs::Shwfs(Io &io, string conffile)");
+
+Shwfs::Shwfs(Io &io, string name, string port, string conffile):
+Wfs(io, name, shwfs_type, port, conffile)
+	{
+	io.msg(IO_DEB2, "Shwfs::Shwfs()");
 		
 	wfstype = cfg.getstring("type");
 	if (wfstype != SHWFS_TYPE) throw exception("Type should be " SHWFS_TYPE " for this class.");

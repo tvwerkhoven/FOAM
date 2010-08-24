@@ -87,11 +87,11 @@ public:
 	int get_height() { return res.y; }
 	coord_t get_res() { return res; }
 	int get_depth() { return bpp; }
-	Camera::mode_t get_mode() { return mode; }
+	mode_t get_mode() { return mode; }
 	dtype_t get_dtype() { return dtype; }
 	double get_offset() { return offset; }
 
-	void set_mode(Camera::mode_t newmode) { mode = newmode; }
+	void set_mode(mode_t newmode) { mode = newmode; }
 	void set_interval(double value) { interval = value; }
 	void set_exposure(double value) { exposure = value; }
 	void set_gain(double value) { gain = value; }
@@ -122,10 +122,10 @@ public:
 	virtual int store(Connection * /* conn */) { return -1; }
 	
 	virtual ~Camera() {};
-	// TODO: how to init res.x(-1), res.y(-1), ?
 	Camera(Io &io, string name, string type, string port): 
 	Device(io, name, cam_type + "." + type, port),
-	interval(1.0), exposure(1.0), gain(1.0), offset(0.0), bpp(-1), dtype(DATA_UINT16), mode(Camera::OFF), outfd(0) { ; }
+	interval(1.0), exposure(1.0), gain(1.0), offset(0.0), res(0,0), bpp(-1), dtype(DATA_UINT16), mode(Camera::OFF), outfd(0) 
+	{ ; }
 };
 
 
