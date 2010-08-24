@@ -111,6 +111,7 @@ public:
 	string getpeername() { return protocol.getpeername(); }
 	string getsockname() { return protocol.getsockname(); }
 	int get_numdev() { return state.numdev; }
+	void set_numdev(int n) { state.numdev = n; }
 	int get_numframes() { return state.numframes; }
 	aomode_t get_mode() { return state.mode; }
 	string get_mode_str() { return mode2str(state.mode); }

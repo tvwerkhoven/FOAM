@@ -138,6 +138,19 @@ void MainWindow::on_ctrl_message_update() {
 void MainWindow::on_ctrl_device_update() {
 	printf("MainWindow::on_ctrl_device_update()\n");
 	
+	//! \todo First remove superfluous devices, might have disappeared (i.e. foamctrl might be empty, in case of a disconnect)
+//	devlist_t::iterator it;
+//	for (it=devlist.begin() ; it != devlist.end(); it++) {
+//		
+//		// Find this device and remove it 
+//		for (int i=0; i<foamctrl.get_numdev(); i++) {
+//			FoamControl::device_t dev = foamctrl.get_device(i);
+//			if (devlist.find(dev.name) == devlist.end()) {
+//				//! \todo Add destructor to DevicePage to remove itself from the Notebook so we don't have to
+//				notebook.remove_page(*(it->second));
+//			}
+//	}
+	
 	for (int i=0; i<foamctrl.get_numdev(); i++) {
 		FoamControl::device_t dev = foamctrl.get_device(i);
 		if (devlist.find(dev.name) != devlist.end())
@@ -188,6 +201,8 @@ MainWindow::MainWindow():
 	foamctrl.signal_connect.connect(sigc::mem_fun(*this, &MainWindow::on_ctrl_connect_update));
 	foamctrl.signal_message.connect(sigc::mem_fun(*this, &MainWindow::on_ctrl_message_update));
 	foamctrl.signal_device.connect(sigc::mem_fun(*this, &MainWindow::on_ctrl_device_update));	
+		
+	controlpage.signal_device.connect(sigc::mem_fun(*this, &MainWindow::on_ctrl_device_update));
 		
 	notebook.append_page(controlpage, "_Control", "Control", true);
 	notebook.append_page(logpage, "_Log", "Log", true);

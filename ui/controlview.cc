@@ -186,16 +186,25 @@ void ControlPage::on_connect_update() {
 	}
 	else {
 		printf("%x:ControlPage::on_connect_update() is not conn\n", (int) pthread_self());
+		
+		// Toggle connect/disconnect button
+		//! \todo could make seperate connect/disconnect buttons and hide/show these?
 		connect.set_label("Connect");
-
+		
+		// Remove devices
+		foamctrl.set_numdev(0);
+		//! \todo Need link to parent window here to remove DevicePages, does this work?
+		signal_device();
+		
+		// Set controls inactive
 		mode_listen.set_sensitive(false);
 		mode_open.set_sensitive(false);
 		mode_closed.set_sensitive(false);
 		shutdown.set_sensitive(false);
-		
 		calmode_select.set_sensitive(false);
 		calib.set_sensitive(false);
 		
+		// Add log stuff
 		log.add(Log::OK, "Disconnected");
 	}
 }

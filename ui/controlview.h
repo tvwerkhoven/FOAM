@@ -88,6 +88,8 @@ public:
 
 	void on_connect_update();
 	void on_message_update();
+	
+	Glib::Dispatcher signal_device;
 };
 
 #endif //  HAVE_CONTROLVIEW_H

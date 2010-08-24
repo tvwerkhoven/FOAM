@@ -81,6 +81,7 @@ public:
 
 
 class MainWindow: public Window {
+private:
 	VBox vbox;
 	
 	Log log;
