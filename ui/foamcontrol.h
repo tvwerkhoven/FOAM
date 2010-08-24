@@ -93,6 +93,7 @@ private:
 	void on_connected(bool conn);
 	
 public:
+	//! \todo Move exception to base class, appears everywhere...
 	class exception: public runtime_error {
 	public:
 		exception(const string reason): runtime_error(reason) {}

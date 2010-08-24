@@ -45,7 +45,13 @@ using namespace std;
 typedef Protocol::Server::Connection Connection;
 
 /*!
- @brief TODO Main FOAM class
+ @brief Main FOAM class
+ 
+ FOAM is the base class that can be derived to specific AO setups. It provides
+ basic necessary functions to facilitate the control software itself, but
+ does not implement anything specifically for AO. A bare example 
+ implementation is provided as foam-dummy to show the idea behind the 
+ framework.
  */
 class FOAM {
 protected:
