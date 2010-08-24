@@ -36,8 +36,8 @@
 using namespace Gtk;
 using namespace std;
 
-/*
- @brief This class gives information on one wavefront sensor
+/*!
+ @brief TODO This class gives information on one wavefront sensor
  
  Each WfsInfo will show a thumbnail, the wfs name and the ID in a HBox.
 */
@@ -60,7 +60,7 @@ public:
 	~WfsInfo() { };
 };
 
-/*
+/*!
  @brief This page gives an overview of all wavefront sensors
  
  This gives an overview of all wavefront sensors, with one global control 

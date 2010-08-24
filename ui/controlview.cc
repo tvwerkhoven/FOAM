@@ -95,7 +95,7 @@ statframe("Status"), stat_mode("Mode: "), stat_ndev("# Dev: "), stat_nframes("# 
 	
 	// Status row (mode, # dev, # frames)
 	statbox.set_spacing(4);
-	// TODO: superfluous? can be removed?
+	//! \todo statbox superfluous? can be removed?
 	//statbox.pack_start(stat_mode, PACK_SHRINK);
 	statbox.pack_start(stat_ndev, PACK_SHRINK);
 	statbox.pack_start(stat_nframes, PACK_SHRINK);
@@ -220,7 +220,7 @@ void ControlPage::on_message_update() {
 	else if (foamctrl.get_mode() == AO_MODE_CLOSED) tmp = &mode_closed;
 	else if (foamctrl.get_mode() == AO_MODE_CAL) tmp = &calib;
 	
-	// TODO: need to set to active state here without sending a signal
+	//! \todo need to set 'tmp' to active state here without sending a signal
 	if (tmp)
 		tmp->set_sensitive(false);
 	
@@ -243,6 +243,6 @@ void ControlPage::on_message_update() {
 	calmode_select.set_active_text(foamctrl.get_calmode(0));
 	
 	// show devices	
-	// TODO: list devices somehow
+	//! \todo list all devices in the system somehow
 }
 

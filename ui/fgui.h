@@ -92,8 +92,7 @@ class MainWindow: public Window {
 	
 	LogPage logpage;
 	ControlPage controlpage;
-	// TODO: why do I need explicit std:: here??
-	std::map<std::string, DevicePage*> devlist;
+	std::map<std::string, DevicePage*> devlist;	//!< \todo why do I need explicit std:: here??
 	
 	void on_about_activate();
 	void on_quit_activate();	

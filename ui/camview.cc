@@ -44,17 +44,17 @@ void CamView::force_update() {
 	glarea.fliph = fliph.get_active();
 	glarea.flipv = flipv.get_active();
 	// Zoom settings
-	// TOOD: zoomfit!
+	//! \todo implement zoomfit in glarea
 	//glarea.fliph = zoomfit.get_active();
 	glarea.do_update();
 }
 
 void CamView::do_update() {
-	// TODO
+	//! \todo improve this
 	glarea.do_update();
 }
 
-// TODO: what is this?
+//! \todo what is this? do we need it?
 bool CamView::on_timeout() {
 	if(waitforupdate && time(NULL) - lastupdate < 5)
 		return true;
@@ -119,7 +119,7 @@ void CamView::on_zoomout_activate() {
 }
 
 CamView::~CamView() {
-	// TODO: store configuration here?
+	//! \todo store (gui) configuration here?
 }
 
 CamView::CamView(Log &log, FoamControl &foamctrl, string n): 
@@ -146,7 +146,7 @@ mean("Mean value"), stddev("Stddev")
 	stddev.set_text("-");
 	stddev.set_width_chars(8);
 
-	// TODO: only works for menus
+	//! \todo AccelMap only works for menus, can we make shortcuts for buttons?
 //	AccelMap::add_entry("<camview>/menu/view/fliph", AccelKey("h").get_key(), Gdk::SHIFT_MASK);
 //	AccelMap::add_entry("<camview>/menu/view/flipv", AccelKey("v").get_key(), Gdk::SHIFT_MASK);
 //	AccelMap::add_entry("<camview>/menu/view/zoomfit", AccelKey("f").get_key(), Gdk::ModifierType(0));

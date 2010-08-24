@@ -29,6 +29,14 @@
 
 #include "foam.h"
 
+/*!
+ @brief FOAM dummy implementation
+ 
+ This FOAM implementation has all virtual functions from the FOAM base 
+ class, but does nothing else than report which function is being called.
+ This class is a simple example of how to implement your own specific
+ AO setup with FOAM.
+ */
 class FOAM_dummy : public FOAM {
 public:
 	FOAM_dummy(int argc, char *argv[]): FOAM(argc, argv) { io.msg(IO_DEB2, "FOAM_dummy::FOAM_dummy()"); } 

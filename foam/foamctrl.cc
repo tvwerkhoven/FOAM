@@ -18,6 +18,13 @@
  along with FOAM.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+/*! 
+ @file foamctrl.cc
+ @author Tim van Werkhoven (t.i.m.vanwerkhoven@xs4all.nl)
+ @brief The FOAM control class, keeps track of logging, networking, terminal 
+ I/O, pidfiles, etc.
+ */
+
 #include <time.h>
 #include <syslog.h>
 

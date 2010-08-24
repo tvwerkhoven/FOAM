@@ -34,6 +34,9 @@
 using namespace Gtk;
 using namespace std;
 
+/*!
+ @brief TODO Generic device viewing class  
+ */
 class DevicePage: public Gtk::VBox {
 protected:
 	// TODO: how to re-use this variable in derived classes? Would like to access it as ImgCam device

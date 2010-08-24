@@ -32,6 +32,9 @@
 #include "camctrl.h"
 #include "glviewer.h"
 
+/*!
+ @brief TODO Camera viewing class  
+ */
 class CamView: public DevicePage {
 protected:
 	Gtk::Frame dispframe;

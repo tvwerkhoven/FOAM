@@ -38,6 +38,13 @@
 #include "types.h"
 #include "io.h"
 
+/*!
+ @brief FOAM static simulation implementation
+ 
+ This FOAM implementation provides a simple static simulation. The WFS camera
+ is fed by an image stored on disk and the shifts calculated that way are 
+ thus static.
+ */
 class FOAM_simstatic : public FOAM {
 public:
 	FOAM_simstatic(int argc, char *argv[]): FOAM(argc, argv) { io.msg(IO_DEB2, "FOAM_simstatic::FOAM_simstatic()"); } 
@@ -56,7 +63,6 @@ public:
 	
 	virtual int calib();
 };
-
 
 #endif // HAVE_FOAM_SIMSTATIC_H
 

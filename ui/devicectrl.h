@@ -30,6 +30,11 @@
 using namespace Gtk;
 using namespace std;
 
+/*!
+ @brief Generic device control class  
+ 
+ @todo Document this class
+ */
 class DeviceCtrl {
 protected:
 	Protocol::Client protocol;

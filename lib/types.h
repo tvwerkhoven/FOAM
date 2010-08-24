@@ -21,12 +21,7 @@
  @file types.h
  @brief This file contains some datatypes used.
  @author Tim van Werkhoven (t.i.m.vanwerkhoven@xs4all.nl)
- @date 2008-07-15 18:06
- 
- This header file contains a lot of structs to hold data used in 
- FOAM. These include things like the state of the AO system (\c foamctrl), 
- as well as some structs to track network connections to the CS.
- */
+*/
 
 #ifndef HAVE_TYPES_H
 #define HAVE_TYPES_H
@@ -72,28 +67,21 @@ typedef struct {
 
 /*!
  @brief Stores the mode of the AO system.
+ 
+ Different AO system modes. See also mode_listen(), mode_open(), mode_calib().
  */
 typedef enum { // aomode_t
-	AO_MODE_OPEN=0,	//!< Open loop mode
-	AO_MODE_CLOSED, //!< Closed loop mode
-	AO_MODE_CAL, 	//!< Calibration mode (in conjunction with calmode_t)
-	AO_MODE_LISTEN,	//!< Listen mode (idle)
-	AO_MODE_UNDEF,	//!< Undefined mode (default)
-	AO_MODE_SHUTDOWN //!< Set to this mode for the worker thread to finish
+	AO_MODE_OPEN=0,		//!< Open loop mode
+	AO_MODE_CLOSED,		//!< Closed loop mode
+	AO_MODE_CAL,			//!< Calibration mode (in conjunction with calmode_t)
+	AO_MODE_LISTEN,		//!< Listen mode (idle)
+	AO_MODE_UNDEF,		//!< Undefined mode (default)
+	AO_MODE_SHUTDOWN	//!< Set to this mode for the worker thread to finish
 } aomode_t;
 
 /*! 
  @brief This enum is used to distinguish between various datatypes for processing.
  
- Instead of using bpp or something else, this more general datatype identification
- also allows identification of foreign datatypes like a GSL matrix or non-integer
- datatypes (which is hard to distinguish between if only using bpp) like floats.
- 
- It is used by functions that accept multiple datatypes, or will be accepting this
- in later versions. This way, routines can work on uint8_t data as well as on
- uint16_t data. The problem arises from the fact that cameras give different
- bitdepth outputs, meaning that routines working on this output need to be able
- to cope with different datatypes.
 */
 typedef enum {
 	DATA_INT8,			//!< ID for int8_t

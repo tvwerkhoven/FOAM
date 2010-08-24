@@ -37,6 +37,9 @@
 
 using namespace std;
 
+/*!
+ @brief TODO Main FOAM control class  
+ */
 class FoamControl {
 public:
 	typedef struct _device_t {

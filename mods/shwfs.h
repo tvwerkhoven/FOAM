@@ -30,6 +30,9 @@
 // CLASS DEFINITION //
 /********************/
 
+/*!
+ @brief TODO Shack-Hartmann wavefront sensor class
+ */
 class Shwfs: public Wfs {
 private:
 	coord_t subap;											//!< Number of subapertures in X and Y

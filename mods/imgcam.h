@@ -37,6 +37,9 @@ static const string imgcam_type = "imgcam";
 
 using namespace std;
 
+/*!
+ @brief TODO Fake camera taking image files as input
+ */
 class ImgCamera: public Camera {
 private:
 	double noise;												//!< Simulated noise intensity

@@ -6,6 +6,9 @@
 #include "types.h"
 #include "io.h"
 
+/*!
+ @brief TODO Image input/output class
+ */
 class Imgio {
 private:
 	Io &io;

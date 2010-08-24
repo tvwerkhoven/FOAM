@@ -15,15 +15,20 @@
  GNU General Public License for more details.
  
  You should have received a copy of the GNU General Public License
- along with FOAM.	If not, see <http://www.gnu.org/licenses/>.
+ along with FOAM.	If not, see <http://www.gnu.org/licenses/>. 
+ */
+/*! 
+ @file cam.h
+ @author Tim van Werkhoven (t.i.m.vanwerkhoven@xs4all.nl) and Guus Sliepen (guus@sliepen.org)
+ @brief Generic camera class.
  
+ This class extends the Device class and provides a base class for cameras. Does not implement anything itself.
  */
 
 #ifndef HAVE_CAM_H
 #define HAVE_CAM_H
 
 #include <fstream>
-
 #include <stdint.h>
 
 #include "types.h"
@@ -33,10 +38,8 @@
 
 static const string cam_type = "cam";
 
-
 /*!
- @brief Base camera class. This will be overloaded with the specific camera class.
- @author Tim van Werkhoven (t.i.m.vanwerkhoven@xs4all.nl) and Guus Sliepen (guus@sliepen.org)
+ @brief Base camera class. This should be overloaded with the specific camera class.
  */
 class Camera : public Device {
 public:
@@ -60,16 +63,16 @@ protected:
 	int ndark;										//!< Number of images summed for darkfield
 	int nflat;										//!< Number of images summed for flatfield
 	
-	double interval;
-	double exposure;
-	double gain;
+	double interval;							//!< Frame time (exposure + readout)
+	double exposure;							//!< Exposure time
+	double gain;									//!< Camera gain
 	double offset;
 
 	coord_t res;									//!< Camera pixel resolution
 	int bpp;											//!< Camera pixel depth
 	dtype_t dtype;								//!< Camera datatype
 
-	Camera::mode_t mode;
+	mode_t mode;									//!< Camera mode (see mode_t)
 	
 	FILE *outfd;									//!< FD for storing data to disk
 	
@@ -99,10 +102,24 @@ public:
 	virtual void on_message(Connection *conn, std::string line) { ; }
 	virtual void on_connect(Connection *conn, bool status) { ; }
 
-	// To be implemented in derived class
-	virtual int thumbnail(Connection *) { return -1; }
-	virtual int monitor(void *frame, size_t &size, int &x1, int &y1, int &x2, int &y2, int &scale) { return -1; }
-	virtual int store(Connection *) { return -1; }
+	/*! 
+	 @brief Get a thumbnail image from the camera 
+	 */
+	virtual int thumbnail(Connection* /* conn */) { return -1; }
+	/*! 
+	 @brief Get a frame from the camera
+	 
+	 Get a frame from the camera, store this in *frame. Can be cropped and/or scaled.
+	 @param [out] *frame Pre-allocated memory to store the frame
+	 @param [out] size The total size copied
+	 @param [in] x1 Crop coordinates
+	 @param [in] x2 Crop coordinates
+	 @param [in] y1 Crop coordinates
+	 @param [in] y2 Crop coordinates
+	 @param [in] scale Take every other 'scale' pixel when transferring a frame, i.e. 1 for all pixels, 2 for half the pixels.
+	 */
+	virtual int monitor(void * /*frame */, size_t &/*size*/, int &/*x1*/, int &/*y1*/, int &/*x2*/, int &/*y2*/, int &/*scale*/) { return -1; }
+	virtual int store(Connection * /* conn */) { return -1; }
 	
 	virtual ~Camera() {};
 	// TODO: how to init res.x(-1), res.y(-1), ?

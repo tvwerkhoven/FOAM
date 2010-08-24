@@ -24,11 +24,7 @@
 	@brief This is the main file for FOAM.
 
 	This is the framework for FOAM, it provides basic functionality and can be 
-	customized through the use of certains `hooks'. These hooks are functions that
-	are called at crucial moments during the adaptive optics controlling such 
-	that the person implementing FOAM on a specific AO setup can customize
-	what FOAM does.
- 
+	customized through deriving this main class to your specific needs. 
 */
 
 // HEADERS //
@@ -97,7 +93,9 @@ FOAM::~FOAM() {
 	// Notify shutdown
 	io.msg(IO_WARN, "Shutting down FOAM now");
   protocol->broadcast("warn :shutting down now");
-		
+	
+	//! \todo disconnect clients gracefully here?			
+	
 	// Get the end time to see how long we've run
 	time_t end = time(NULL);
 	struct tm *loctime = localtime(&end);
@@ -529,13 +527,9 @@ aomode_t FOAM::str2mode(string m) {
 
 ALIASES += authortim="Tim van Werkhoven (T.I.M.vanWerkhoven@phys.uu.nl)"
 ALIASES += license="GPLv2"
-ALIASES += wisdomfile="fftw_wisdom.dat"
 ALIASES += name="FOAM"
 ALIASES += longname="Modular Adaptive Optics Framework"
-ALIASES += uilib="foam_ui_library.*"
-ALIASES += cslib="foam_cs_library.*"
 */
-
 
 /*!	\mainpage FOAM 
 

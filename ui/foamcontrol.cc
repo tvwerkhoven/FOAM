@@ -151,10 +151,10 @@ void FoamControl::on_message(string line) {
 		}
 	}
 	else if (what == "cmd") {
-		// TODO command confirmation hook
+		//! \todo implement "cmd" confirmation hook
 	}
 	else if (what == "calib") {
-		// TODO post-calibration hook
+		//! \todo implement post-calibration hook
 	}
 	else if (what == "mode") {
 		state.mode = str2mode(popword(line));

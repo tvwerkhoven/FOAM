@@ -31,39 +31,39 @@
 /*! 
  @brief Stores the control state of the AO system
  
- This struct is used to store several variables indicating the state of the AO system.
+ This class is used to store several variables indicating the state of the AO system.
  */
 class foamctrl {
 private:
-	int err;
-	Io &io;
+	int err;											//!< Error flag
+	Io &io;												//!< Terminal logging
 	
 public:
 	foamctrl(Io &io);
 	foamctrl(Io &io, string &file);
 	~foamctrl(void);
 	
-	int parse(string &file);
-	int verify();
+	int parse(string &file);			//!< Parse configuration file
+	int verify();									//!< Verify whether settings are sane
 	int error() { return err; }
 	
 	string conffile;							//!< Configuration file used
 	string confpath;							//!< Configuration path (used for other config files)
 	config *cfgfile;							//!< Parsed configuration settings
-	string pidfile;								//!< file to store PID to (/tmp/foam.pid)
+	string pidfile;								//!< file to store PID to (def: /tmp/foam.pid)
 	
-	string listenip;							//!< IP to listen on (0.0.0.0)
-	string listenport;						//!< port to listen on (1025)
+	string listenip;							//!< IP to listen on (def: 0.0.0.0)
+	string listenport;						//!< port to listen on (def: 1025)
 	
-	string datadir;								//!< path to data directory (pgm, fits files) (./)
+	string datadir;								//!< path to data directory (pgm, fits files) (def: FOAM_DATADIR)
 	
-	string logfile;								//!< file to log info messages to (none)
+	string logfile;								//!< file to log info messages to (def: none)
 	
-	bool use_syslog; 							//!< syslog usage flag (no)
-	string syslog_prepend;				//!< string to prepend to syslogs ("foam")
+	bool use_syslog; 							//!< syslog usage flag (def: no)
+	string syslog_prepend;				//!< string to prepend to syslogs (def: "foam")
 	
-	aomode_t mode;								//!< AO system mode (AO_MODE_LISTEN)
-	string calib;									//!< Calibration mode passed to FOAM (none)
+	aomode_t mode;								//!< AO system mode (def: AO_MODE_LISTEN)
+	string calib;									//!< Calibration mode passed to FOAM (def: none)
 	
 	time_t starttime;							//!< FOAM start timestamp
 	time_t lasttime;							//!< Last frame timestamp

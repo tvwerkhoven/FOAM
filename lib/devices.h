@@ -17,6 +17,11 @@
  You should have received a copy of the GNU General Public License
  along with FOAM.  If not, see <http://www.gnu.org/licenses/>.
  */
+/*! 
+ @file devices.h
+ @author Tim van Werkhoven (t.i.m.vanwerkhoven@xs4all.nl)
+ @brief Generic device class, specific hardware controls are derived from this class.
+ */
 
 #ifndef HAVE_DEVICES_H
 #define HAVE_DEVICES_H
@@ -28,51 +33,98 @@
 
 typedef Protocol::Server::Connection Connection;
 
-// Device class to handle devices in a generic fashion
+/*!
+ @brief Device class to handle devices in a generic fashion
+ 
+ In order to accomodate all kinds of hardware devices, this baseclass 
+ provides a template for all sorts of hardware (camera, wavefront sensor,
+ deformable mirrors, etc). Because of its genericity this class does not 
+ implement a lot itself, but rather depends on the derived classes to do
+ the work. Nonetheless, some basic functions (such as network I/O) are
+ provided here. All devices are stored in a DeviceManager class.
+ */
 class Device {
 protected:
 	Io &io;
 	string name;												//!< Device name
 	string type;												//!< Device type
 	string port;												//!< Port to listen on
-	Protocol::Server *protocol;
+	Protocol::Server *protocol;					//!< Network connection for this device
 	
 public:
 	Device(Io &io, string name, string type, string port);
 	virtual ~Device();
 	
-	// Should verify the integrity of the device.
-	virtual int verify() { return 0; }
-	// Network IO handling routines
-	virtual void on_message(Connection *conn, std::string line) { io.msg(IO_DEB2, "Device::on_message(line='%s')", line.c_str()); }
-	virtual void on_connect(Connection *conn, bool status) { io.msg(IO_DEB2, "Device::on_connect(stat=%d)", (int) status); }
+	virtual int verify() { return 0; }	//!< Verify the integrity of the device
+	
+	/*! 
+	 @brief Called when the device receives a message
+	 */
+	virtual void on_message(Connection */*conn*/, std::string line) { 
+		io.msg(IO_DEB2, "Device::on_message(line='%s')", line.c_str()); 
+	}
+	/*! 
+	 @brief Called when something connects to this device
+	 */
+	virtual void on_connect(Connection */*conn*/, bool status) { 
+		io.msg(IO_DEB2, "Device::on_connect(stat=%d)", (int) status); 
+	}
 	
 	string getname() { return name; }
 	string gettype() { return type; }
 };
 
-// Keep track of all devices in the system
+/*!
+ @brief Device manager class to keep track of all devices in the system.
+ 
+ To keep track of the different devices, this DeviceManager stores all
+ in a map (devices).
+ */
 class DeviceManager {
 private:
 	Io &io;
 	
 	typedef map<string, Device*> device_t;
 	device_t devices;
-	int ndev;
+	int ndev;														//!< Number of devices in the system
 	
 public:
-	// Add a device to the list, get the name from the device to use as key.
+	/*! 
+	 @brief Add a device to the list.
+	 
+	 Add a new device to the list. The name of the device (which will be used 
+	 as a key in the devices map) should be unique.
+	 
+	 @param [in] *dev Device to be added. Should be downcasted to the base 'Device' class.
+	 @return 0 on success, -1 if the device name already exists.
+	 */
 	int add(Device *dev);
-	// Get a device from the list. Return NULL if not found.
+	
+	/*!
+	 @brief Get a device from the list.
+	 
+	 @param [in] id The (unique) name of the device.
+	 @return The device requested, NULL if it does not exist.
+	 */
 	Device* get(string id);
-	// Delete a device from the list. Return -1 if not found.
+	
+	/*!
+	 @brief Delete a device from the list.
+	 
+	 @param [in] id The (unique) name of the device.
+	 @return 0 on success, -1 if not found.
+	 */
 	int del(string id);
 	
-	// Return a list of all devices in the list
+	/*!
+	 @brief Return a list of all devices currently registered.
+	 
+	 @param [in] showtype Set to true to return a list of (name type) pairs, otherwise only return a list of names.
+	 @return A list of names of all the devices, seperated by spaces. If showtype is true, the device types will also be returned.
+	 */
 	string getlist(bool showtype = true);
 	
-	// Return number of devices 
-	int getcount() { return ndev; }
+	int getcount() { return ndev; }			//!< Return the number of devices
 	
 	DeviceManager(Io &io);
 	~DeviceManager();

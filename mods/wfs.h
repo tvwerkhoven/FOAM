@@ -17,6 +17,11 @@
  You should have received a copy of the GNU General Public License
  along with FOAM.  If not, see <http://www.gnu.org/licenses/>.
 */
+/*! 
+ @file wfs.h
+ @brief Base wavefront sensor class
+ @author Tim van Werkhoven (t.i.m.vanwerkhoven@xs4all.nl)
+ */
 
 #ifndef HAVE_WFS_H
 #define HAVE_WFS_H
@@ -31,8 +36,14 @@
 #include "io.h"
 
 /*!
- @brief Base wavefront-sensor class. This will be overloaded with the specific wfs type
+ @brief Base wavefront-sensor class. 
  @author Tim van Werkhoven (t.i.m.vanwerkhoven@xs4all.nl)
+ 
+ This class provides a template for the implementation of wavefront sensors 
+ such as a Shack-Hartmann WFS. This class should be implemented with WFS
+ specific routines. The Wfs class is independent of the camera used and
+ only provides the data processing/interpretation of the camera. The camera
+ itself can be accessed through the pointer *cam.
  */
 class Wfs {
 protected:
@@ -50,6 +61,9 @@ public:
 	string wfstype;											//!< WFS type/model
 	config cfg;													//!< WFS configuration class
 	
+	/*!
+	 @brief This holds information on the wavefront
+	 */
 	struct wavefront {
 		gsl_vector_float *wfamp;					//!< Mode amplitudes
 		enum {
@@ -59,7 +73,7 @@ public:
 		int nmodes;												//!< Number of modes
 	};
 	
-	Camera *cam;												//!< Camera specific class
+	Camera *cam;												//!< Pointer to the camera class used for this 
 		
 	typedef struct {
 		int prop;

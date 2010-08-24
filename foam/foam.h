@@ -60,6 +60,9 @@ using namespace std;
 
 typedef Protocol::Server::Connection Connection;
 
+/*!
+ @brief TODO Main FOAM class
+ */
 class FOAM {
 protected:
 	// Properties set at start
@@ -85,6 +88,7 @@ protected:
 	 @brief Run on new connection to FOAM
 	 */
 	void on_connect(Connection *connection, bool status);
+	
 	/*!
 	 @brief Run on new incoming message to FOAM
 	 @param [in] *connection connection the message was received on
@@ -106,11 +110,11 @@ public:
 	FOAM(int argc, char *argv[]);
 	virtual ~FOAM() = 0;
 	
-	foamctrl *ptc;											//!< AO control
+	foamctrl *ptc;											//!< AO control class
 	DeviceManager *devices;							//!< Device/hardware management
-	Io io;															//!< Screen diagnostics output
+	Io io;															//!< Terminal diagnostics output
 	
-	bool has_error() { return error; }	//!< Error checking 
+	bool has_error() { return error; }
 	
 	int init();													//!< Initialize FOAM setup
 	int parse_args(int argc, char *argv[]); //!< Parse command-line arguments
@@ -132,44 +136,83 @@ public:
 	 */
 	virtual int load_modules() = 0;
 
-	int mode_closed();									//!< Closed-loop wrapper, calls child routines.
+	/*!
+	 @brief Closed-loop wrapper, calling child routines.
+	 
+	 This is a bare closed loop routine that mostly calls closed_init() once 
+	 at the start, then runs closed_loop() continuously, and finally runs
+	 closed_finish() at the end.
+	 */
+	int mode_closed();
+	
 	/*!
 	 @brief Closed-loop initialisation routines
-	 TODO: document
+	 
+	 This is called at the start of the closed loop. Should be implemented in 
+	 derived classes. See mode_closed() for details.
 	 */
 	virtual int closed_init() = 0;
+	
 	/*!
 	 @brief Closed-loop body routine
-	 TODO: document
+	 
+	 Called as the main body for the closed loop. Should be implemented in derived
+	 classes. See mode_closed() for details.
 	 */
 	virtual int closed_loop() = 0;
+	
 	/*!
 	 @brief Closed-loop finalising routine
-	 TODO: document
+	 
+	 Called at the end of the closed loop. Should be implemented in derived 
+	 classes. See mode_closed() for details.
 	 */
 	virtual int closed_finish() = 0;
 	
-	int mode_open();										//!< Open-loop wrapper, calls child routines.
+	/*!
+	 @brief Open-loop wrapper, calling child routines.
+	 
+	 This is a bare open loop routine that mostly calls open_init() once 
+	 at the start, then runs open_loop() continuously, and finally runs
+	 open_finish() at the end.
+	 */	
+	int mode_open();
+	
 	/*!
 	 @brief Open-loop initialisation routine
-	 TODO: document
+	 
+	 This is called at the start of the open loop. Should be implemented in 
+	 derived classes. See mode_open() for details.
 	 */
 	virtual int open_init() = 0;
+
 	/*!
 	 @brief Open-loop body routine
-	 TODO: document
+
+	 Called as the main body for the open loop. Should be implemented in derived
+	 classes. See mode_open() for details.
 	 */
 	virtual int open_loop() = 0;
+
 	/*!
 	 @brief Open-loop finalising routine
-	 TODO: document
+
+	 Called at the end of the open loop. Should be implemented in derived 
+	 classes. See mode_open() for details.
 	 */
 	virtual int open_finish() = 0;
 	
-	int mode_calib();									//!< Calibration wrapper, calls child routines
+	/*!
+	 @brief Calibration mode wrapper, calling child routines.
+
+	 This routine is a little different from mode_open() and mode_closed() and 
+	 simply calls calib() which should be implemented in derived classes.
+	 */	
+	int mode_calib();
 	/*!
 	 @brief Calibration routine, used to calibrate various system aspects
-	 TODO: document
+	 
+	 This function should take care of all calibration of the system.
 	 */
 	virtual int calib() = 0;
 };

@@ -27,6 +27,9 @@
 
 #include "pthread++.h"
 
+/*!
+ @brief TODO Logging class
+ */
 class Log {
 	public:
 	enum severity {

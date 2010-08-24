@@ -19,6 +19,11 @@
  along with FOAM.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+/*!
+ @file camctrl.h
+ @brief Camera UI control 
+ */
+
 #ifndef HAVE_CAMCTRL_H
 #define HAVE_CAMCTRL_H
 
@@ -30,7 +35,9 @@
 
 #include "devicectrl.h"
 
-
+/*!
+ @brief TODO Camera control class  
+ */
 class CamCtrl: public DeviceCtrl {
 public:
 	//Protocol::Client protocol;

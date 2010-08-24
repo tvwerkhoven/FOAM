@@ -18,6 +18,12 @@
  along with FOAM.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+/*! 
+ @file devices.cc
+ @author Tim van Werkhoven (t.i.m.vanwerkhoven@xs4all.nl)
+ @brief Generic device class, specific hardware controls are derived from this class.
+ */
+
 #include "io.h"
 #include "devices.h"
 
