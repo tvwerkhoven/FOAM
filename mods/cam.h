@@ -99,8 +99,8 @@ public:
 
 	// From Devices::
 	virtual int verify() { return 0; }
-	virtual void on_message(Connection *conn, std::string line) { ; }
-	virtual void on_connect(Connection *conn, bool status) { ; }
+	virtual void on_message(Connection* /* conn */, std::string /* line */) { ; }
+	virtual void on_connect(Connection* /* conn */, bool /* status */) { ; }
 
 	/*! 
 	 @brief Get a thumbnail image from the camera 

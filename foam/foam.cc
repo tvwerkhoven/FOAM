@@ -223,13 +223,8 @@ int FOAM::load_config() {
 	io.msg(IO_DEB2, "FOAM::load_config()");
 	
 	// Load and parse configuration file
-	if (conffile == "") {
-		io.msg(IO_ERR, "No configuration file given.");
-		show_clihelp(true);
-		return -1;
-	}
-	else if (conffile == FOAM_DEFAULTCONF) {
-		io.msg(IO_WARN, "Using default configuration file '%s'.", conffile.c_str());
+	if (conffile == FOAM_DEFAULTCONF) {
+		io.msg(IO_WARN, "Using default configuration file '%s', might not work", conffile.c_str());
 	}
 	
 	// Init control and configuration using the config file
@@ -256,9 +251,7 @@ void FOAM::daemon() {
   protocol->listen();
 }
 
-int FOAM::listen() {
-	io.msg(IO_DEB1, "FOAM::listen()");
-	
+int FOAM::listen() {	
 	while (true) {
 		switch (ptc->mode) {
 			case AO_MODE_OPEN:
@@ -274,7 +267,7 @@ int FOAM::listen() {
 				mode_calib();
 				break;
 			case AO_MODE_LISTEN:
-				io.msg(IO_INFO, "Entering listen loop.");
+				io.msg(IO_INFO, "FOAM::listen() Entering listen loop.");
 				// We wait until the mode changed
 				protocol->broadcast("ok mode listen");
 				pthread_mutex_lock(&mode_mutex);
@@ -286,7 +279,7 @@ int FOAM::listen() {
 				return 0;
 				break;
 			default:
-				io.msg(IO_DEB1, "FOAM::listen() UNKNOWN!");
+				io.msg(IO_ERR, "FOAM::listen() UNKNOWN!");
 				break;
 		}
 	}
@@ -456,7 +449,7 @@ void FOAM::on_message(Connection *connection, std::string line) {
   }
 }
 
-int FOAM::show_nethelp(Connection *connection, string topic, string rest) {
+int FOAM::show_nethelp(Connection *connection, string topic, string /*rest*/) {
 	if (topic.size() == 0) {
 		connection->write(\
 ":==== FOAM help ==========================\n"

@@ -28,10 +28,6 @@
 
 // INCLUDES //
 /************/
-#include <gsl/gsl_linalg.h> 		// this is for SVD / matrix datatype
-#include <pthread.h>
-#include <string>
-#include "autoconfig.h"
 
 using namespace std;
 

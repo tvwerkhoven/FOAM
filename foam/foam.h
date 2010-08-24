@@ -28,23 +28,7 @@
 
 #include <stdio.h>
 #include <math.h>
-#include <string.h>
-#include <unistd.h>
-#ifndef _GNU_SOURCE				
-#define _GNU_SOURCE						// for vasprintf / asprintf
-#endif
-#include <sys/socket.h>				// networking
-#include <arpa/inet.h>				// networking
-#include <sys/types.h>
-#include <sys/errno.h>
-#include <stdlib.h>
-#include <syslog.h>						// used for syslogging
-#include <stdarg.h>
-#include <pthread.h>					// threads
-#include <time.h>							// needed by libevent/event.h
-#include <fcntl.h>
-#include <gsl/gsl_linalg.h> 	// this is for SVD / matrix datatype
-#include <gsl/gsl_blas.h> 		// this is for SVD
+#include <pthread.h>
 
 #include <string>
 #include <stdexcept>

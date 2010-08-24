@@ -21,13 +21,11 @@
 #ifndef HAVE_DEVICECTRL_H
 #define HAVE_DEVICECTRL_H
 
-#include <gtkmm.h>
 #include <glibmm/dispatcher.h>
 
 #include "pthread++.h"
 #include "protocol.h"
 
-using namespace Gtk;
 using namespace std;
 
 /*!

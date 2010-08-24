@@ -18,7 +18,14 @@
  along with FOAM.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <stdio.h>
+#include <string>
+#include <pthread.h>
+
+#include "protocol.h"
 #include "devicectrl.h"
+
+using namespace std;
 
 DeviceCtrl::DeviceCtrl(const string h, const string p, const string n):
 	host(h), port(p), devname(n), devinfo("null")

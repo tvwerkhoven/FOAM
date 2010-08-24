@@ -49,7 +49,7 @@ Device::~Device() {
 int DeviceManager::add(Device *dev) {
 	string id = dev->getname();
 	if (devices.find(id) != devices.end()) {
-		io.msg(IO_ERR, "ID '%s' already exists!", id.c_str());
+		io.msg(IO_ERR, "Device ID '%s' already exists!", id.c_str());
 		return -1;
 	}
 	devices[id] = dev;
@@ -59,7 +59,7 @@ int DeviceManager::add(Device *dev) {
 
 Device* DeviceManager::get(string id) {
 	if (devices.find(id) == devices.end()) {
-		io.msg(IO_ERR, "ID '%s' does not exist!", id.c_str());
+		io.msg(IO_ERR, "Device ID '%s' does not exist!", id.c_str());
 		return NULL;
 	}
 	return devices[id];
@@ -67,7 +67,7 @@ Device* DeviceManager::get(string id) {
 
 int DeviceManager::del(string id) {
 	if (devices.find(id) == devices.end()) {
-		io.msg(IO_ERR, "ID '%s' does not exist!", id.c_str());
+		io.msg(IO_ERR, "Device ID '%s' does not exist!", id.c_str());
 		return -1;
 	}
 	devices.erase(devices.find(id));

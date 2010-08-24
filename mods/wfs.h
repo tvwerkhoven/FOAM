@@ -26,14 +26,15 @@
 #ifndef HAVE_WFS_H
 #define HAVE_WFS_H
 
-#include <fstream>
 #include <string>
-#include <stdint.h>
-#include <sys/types.h>
+#include <gsl/gsl_vector.h>
+
 #include "types.h"
 #include "config.h"
 #include "cam.h"
 #include "io.h"
+
+static const string wfs_type = "wfs";
 
 /*!
  @brief Base wavefront-sensor class. 

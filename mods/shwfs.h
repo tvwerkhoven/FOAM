@@ -25,7 +25,7 @@
 #include "io.h"
 #include "wfs.h"
 
-#define SHWFS_TYPE "shwfs"
+const string shwfs_type = "shwfs";
 
 // CLASS DEFINITION //
 /********************/
