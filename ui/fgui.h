@@ -93,7 +93,8 @@ private:
 	
 	LogPage logpage;
 	ControlPage controlpage;
-	std::map<std::string, DevicePage*> devlist;	//!< \todo why do I need explicit std:: here??
+	typedef std::map<std::string, DevicePage*> devlist_t; //!< \todo why do I need explicit std:: here??
+	devlist_t devlist;
 	
 	void on_about_activate();
 	void on_quit_activate();	
