@@ -110,3 +110,57 @@ public:
 };
 
 #endif // HAVE_FGUI_H
+
+// GUI DOCUMENTATION //
+/*********************/
+
+/*!	\page FOAM GUI
+ 
+ \section aboutgui About the FOAM GUI
+ 
+ Although FOAM can be controlled over the network by hand, it is easier
+ and in some cases necessary to use a GUI. To this end, the FOAM GUI is
+ supplied together with the framework. This document explains the structure
+ used behind the GUI.
+ 
+ \section guistruct FOAM GUI breakdown
+ 
+ The GUI consists of two parts
+ - The main controls (connect, start, stop, calibrate)
+ - A tab for every device connected to FOAM
+ 
+ The main controls are more or less the same every time, but the device tabs
+ are opened depending on the hardware connected to the specific FOAM
+ implementation you are trying to control. To make the implementation of new
+ hardware easy on the GUI side as well, this has been set up similar to the
+ way devices can be implemented in FOAM.
+ 
+ At the root of the GUI, there is the Gtk::Window MainWindow. This class uses
+ the FoamControl class to connect to FOAM, which is displayed as a tab in a 
+ Gtk::Notebook by a ControlPage class. The FoamControl class inquires what
+ kind of devices are connected to FOAM, and if these are supported by the GUI,
+ they will be added to the interface as a DevicePage at run-time. The 
+ DevicePage then issues a DeviceCtrl class to connect to the specific hardware 
+ part (again, the UI and network IO are seperated). All these DevicePages are 
+ stored in a list devlist which is part of MainWindow. Hierarchically this 
+ goes more or less as follows:
+ 
+ MainWindow
+  \-> FoamControl I/O
+  \-> ControlPage GUI
+  \-> DevicePage
+       \-> DeviceCtrl
+ 
+ To accomodate different types of hardware, specific classes are derived from
+ both DevicePage and DeviceCtrl to tailor the UI and I/O to the specific 
+ hardware. Sometimes these can be doubly derived, such as WfsPage and WfsCtrl.
+ 
+ \section guicallbacks Callbacks
+ 
+ To provide a connection between the UI and network IO, Glib::Dispatcher 
+ instances are used. Every DeviceCtrl has one signal_update where DevicePage
+ can connect callback functions to to respond to updates from FOAM. 
+ Furthremore, FoamControl has three Glib::Dispatchers to notify MainWindow of
+ changes that occured.
+ */
+ 
