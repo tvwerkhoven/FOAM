@@ -110,6 +110,10 @@ FOAM::~FOAM() {
 	delete devices;
 	delete protocol;
 	delete ptc;
+	
+	io.msg(IO_INFO, "Waiting for devices to quit...");
+	//! \bug exiting gives EXC_BAD_ACCESS from protocol.h if quitting too fast.
+	usleep(250000);
 }
 
 void FOAM::show_version() {

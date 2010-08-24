@@ -62,18 +62,17 @@ int FOAM_simstatic::load_modules() {
 int FOAM_simstatic::open_init() {
 	io.msg(IO_DEB2, "FOAM_simstatic::open_init()");
 	
-	//imgcama->set_mode(Camera::RUNNING);
-	ptc->devices->get("imgcamA")->set_mode(Camera::RUNNING);
+	((ImgCamera*) devices->get("imgcamA"))->set_mode(Camera::RUNNING);
 	
 	return 0;
 }
 
 int FOAM_simstatic::open_loop() {
 	io.msg(IO_DEB2, "FOAM_simstatic::open_loop()");
-		
+	static ImgCamera *imgcamA = ((ImgCamera*) devices->get("imgcamA"));
+	
 	usleep(1000000);
-	//imgcama->set_mode(Camera::RUNNING);
-	ptc->devices->get("imgcamA")->set_mode(Camera::RUNNING);
+	imgcamA->update(true);
 	
 	return 0;
 }
@@ -81,7 +80,7 @@ int FOAM_simstatic::open_loop() {
 int FOAM_simstatic::open_finish() {
 	io.msg(IO_DEB2, "FOAM_simstatic::open_finish()");
 	
-	imgcama->set_mode(Camera::OFF);
+	((ImgCamera*) devices->get("imgcamA"))->set_mode(Camera::OFF);
 
 	return 0;
 }
