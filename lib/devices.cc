@@ -27,26 +27,24 @@
 #include "io.h"
 #include "devices.h"
 
-
-// Device class
-
-Device::Device(Io &io, string name, string type, string port, string conffile): 
-io(io), name(name), type("dev." + type), port(port), conffile(conffile), config(conffile), netio(port, name)
+Device::Device(Io &io, string name, string type, string port): 
+io(io), name(name), type("dev." + type), port(port) 
 { 
 	io.msg(IO_XNFO, "Device::Device(): Create new device, name=%s, type=%s", 
 				 name.c_str(), type.c_str());
 	
+	protocol = new Protocol::Server(port, name);
 	io.msg(IO_XNFO, "Device %s listening on port %s.", name.c_str(), port.c_str());
-	netio.slot_message = sigc::mem_fun(this, &Device::on_message);
-	netio.slot_connected = sigc::mem_fun(this, &Device::on_connect);
-	netio.listen();
+	protocol->slot_message = sigc::mem_fun(this, &Device::on_message);
+	protocol->slot_connected = sigc::mem_fun(this, &Device::on_connect);
+	protocol->listen();
 }
 
 Device::~Device() {
 	io.msg(IO_DEB2, "Device::~Device()");
+	
+	delete protocol;
 }
-
-// DeviceManager class
 
 int DeviceManager::add(Device *dev) {
 	string id = dev->getname();

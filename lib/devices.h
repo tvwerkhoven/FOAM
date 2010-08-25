@@ -49,9 +49,7 @@ protected:
 	string name;												//!< Device name
 	string type;												//!< Device type
 	string port;												//!< Port to listen on
-	string conffile;										//!< Configuration file
-	config config;											//!< Interpreted configuration file
-	Protocol::Server netio;							//!< Network connection
+	Protocol::Server *protocol;					//!< Network connection for this device
 	
 public:
 	class exception: public std::runtime_error {
@@ -59,7 +57,7 @@ public:
 		exception(const std::string reason): runtime_error(reason) {}
 	};
 		
-	Device(Io &io, string name, string type, string port, string conffile);
+	Device(Io &io, string name, string type, string port);
 	virtual ~Device();
 	
 	virtual int verify() { return 0; }	//!< Verify the integrity of the device
