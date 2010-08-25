@@ -51,8 +51,8 @@ protected:
 	string conffile;										//!< Configuration file used for this WFS
 	
 public:	
-	string camtype;											//!< Camera type/model TODO: should be enum?
-	string wfstype;											//!< WFS type/model TODO: should be enum?
+	string camtype;											//!< Camera type/model @todo should be enum?
+	string wfstype;											//!< WFS type/model @todo should be enum?
 	config cfg;													//!< WFS configuration
 	
 	/*!

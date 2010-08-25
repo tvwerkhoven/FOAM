@@ -35,14 +35,11 @@ using namespace Gtk;
 using namespace std;
 
 /*!
- @brief TODO Generic device viewing class  
+ @brief Generic device viewing class  
+ @todo Document this
  */
 class DevicePage: public Gtk::VBox {
 protected:
-	// TODO: how to re-use this variable in derived classes? Would like to access it as ImgCam device
-	// 20100823 SOLVED: when creating a new connection, rename it and then store
-	//									a downcasted version to this variable, i.e.
-	//									camctrl = new CamCtrl(); devctrl = (DeviceCtrl *) camctrl;
 	DeviceCtrl *devctrl;								//!< Network connection to device
 	
 	FoamControl &foamctrl;

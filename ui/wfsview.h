@@ -37,9 +37,8 @@ using namespace Gtk;
 using namespace std;
 
 /*!
- @brief TODO This class gives information on one wavefront sensor
- 
- Each WfsInfo will show a thumbnail, the wfs name and the ID in a HBox.
+ @brief This class gives information on one wavefront sensor
+ @todo Document this
 */
 class WfsInfo: public HBox {
 	FoamControl foamcontrol;

@@ -38,7 +38,9 @@ static const string imgcam_type = "imgcam";
 using namespace std;
 
 /*!
- @brief TODO Fake camera taking image files as input
+ @brief Fake camera taking image files as input
+ 
+ @todo Document this
  */
 class ImgCamera: public Camera {
 private:

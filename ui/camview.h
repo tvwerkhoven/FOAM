@@ -33,7 +33,8 @@
 #include "glviewer.h"
 
 /*!
- @brief TODO Camera viewing class  
+ @brief Camera viewing class  
+ @todo Document this
  */
 class CamView: public DevicePage {
 protected:
@@ -44,7 +45,7 @@ protected:
 	
 	// display stuff
 	// Need: flipv, fliph, zoom in out 100, crosshair
-	// Todo: contrast, underover, colorsel, histogram
+	//! @todo contrast, underover, colorsel, histogram
 	HBox disphbox;
 	CheckButton flipv;
 	CheckButton fliph;
@@ -130,7 +131,7 @@ protected:
 //	gdouble xstart;
 //	gdouble ystart;
 
-	// TODO: what is this for again?
+	//! @todo what is this for again?
 	Glib::Dispatcher signal_update;
 	virtual void on_message_update();
 	bool on_timeout();

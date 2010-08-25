@@ -38,7 +38,8 @@
 using namespace std;
 
 /*!
- @brief TODO Main FOAM control class  
+ @brief Main FOAM control class  
+ @todo Document this
  */
 class FoamControl {
 public:

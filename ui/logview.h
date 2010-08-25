@@ -25,7 +25,8 @@
 #include "log.h"
 
 /*!
- @brief TODO Logging display class
+ @brief Logging display class
+ @todo Document this
  */
 class LogPage: public Gtk::VBox {
 	Gtk::ScrolledWindow scroll;

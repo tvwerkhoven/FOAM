@@ -7,7 +7,9 @@
 #include "io.h"
 
 /*!
- @brief TODO Image input/output class
+ @brief Image input/output class
+ 
+ @todo Document this
  */
 class Imgio {
 private:

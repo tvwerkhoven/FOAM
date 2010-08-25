@@ -37,7 +37,8 @@ using namespace Gtk;
 using namespace std;
 
 /*!
- @brief TODO Main FOAM UI class  
+ @brief Main FOAM UI class  
+ @todo Document this
  */
 class ControlPage: public VBox {
 	Log &log;

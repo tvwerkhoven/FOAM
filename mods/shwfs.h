@@ -31,7 +31,9 @@ const string shwfs_type = "shwfs";
 /********************/
 
 /*!
- @brief TODO Shack-Hartmann wavefront sensor class
+ @brief Shack-Hartmann wavefront sensor class
+ 
+ @todo Document this
  */
 class Shwfs: public Wfs {
 private:

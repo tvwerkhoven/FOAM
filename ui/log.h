@@ -28,7 +28,8 @@
 #include "pthread++.h"
 
 /*!
- @brief TODO Logging class
+ @brief Logging class
+ @todo Document this
  */
 class Log {
 	public:
