@@ -29,22 +29,6 @@ const string dummycam_type "dummycam";
 
 using namespace std;
 
-class DummyCamera: public Camera {
-private:
-	void update(bool blocking);
-	
-public:
-	DummyCamera(Io &io, string name, string port, conffile);
-	~DummyCamera() {
-		io->msg(IO_DEB2, "DummyCamera::~DummyCamera()");
-	}
-
-	bool thumbnail(uint8_t *out);
-	bool monitor(void *out, size_t &size, int &x1, int &y1, int &x2, int &y2, int &scale);
-	bool capture();
-	
-};
-
 DummyCamera(Io &io, string name, string port, conffile): 
 Camera(io, name, dummycam_type, port, conffile)
 {

@@ -32,19 +32,19 @@
 #include "types.h"
 #include "io.h"
 #include "devices.h"
-#include "imgcam.h"
+#include "dummycam.h"
 
 #include "foam-simstatic.h"
 
 // Global device list for easier access
-Camera *testcam;
+DummyCamera *testcam;
 
 int FOAM_simstatic::load_modules() {
 	io.msg(IO_DEB2, "FOAM_simstatic::load_modules()");
 	io.msg(IO_INFO, "This is the simstatic prime module, enjoy.");
 		
 	// Add ImgCam device
-	testcam = new Camera(io, "testcam", ptc->listenport, ptc->cfgfile);
+	testcam = new DummyCamera(io, "testcam", ptc->listenport, ptc->cfgfile);
 	devices->add((Device *) testcam);
 //	imgcamb = new ImgCamera(io, "imgcamB", ptc->listenport, ptc->cfgfile);
 //	devices->add((Device *) imgcamb);
@@ -60,14 +60,14 @@ int FOAM_simstatic::load_modules() {
 int FOAM_simstatic::open_init() {
 	io.msg(IO_DEB2, "FOAM_simstatic::open_init()");
 	
-	((Camera*) devices->get("testcam"))->set_mode(Camera::RUNNING);
+	((DummyCamera*) devices->get("testcam"))->set_mode(Camera::RUNNING);
 	
 	return 0;
 }
 
 int FOAM_simstatic::open_loop() {
 	io.msg(IO_DEB2, "FOAM_simstatic::open_loop()");
-	static Camera *tmpcam = ((Camera*) devices->get("testcam"));
+	static DummyCamera *tmpcam = ((DummyCamera*) devices->get("testcam"));
 	static frame
 	
 	usleep(1000000);
@@ -79,7 +79,7 @@ int FOAM_simstatic::open_loop() {
 int FOAM_simstatic::open_finish() {
 	io.msg(IO_DEB2, "FOAM_simstatic::open_finish()");
 	
-	((ImgCamera*) devices->get("testcam"))->set_mode(Camera::OFF);
+	((DummyCamera*) devices->get("testcam"))->set_mode(Camera::OFF);
 
 	return 0;
 }

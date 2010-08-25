@@ -59,11 +59,13 @@ bin_PROGRAMS += foam-simstat
 foam_simstat_SOURCES = foam-simstatic.cc \
 		$(FRAME_SRC) $(FRAME_HDR) \
 		$(LIB_DIR)/imgio.cc \
-		$(MODS_DIR)/imgcam.cc
+		$(MODS_DIR)/imgcam.cc \
+		$(MODS_DIR)/dummycam.cc
 
 # Header files are part of the sources as well
 foam_simstat_SOURCES += foam-simstatic.h \
 		$(LIB_DIR)/imgio.h \
+		$(MODS_DIR)/dummycam.h
 		$(MODS_DIR)/cam.h
 
 # Some CPP flags (include the primemod header, and configure some options)
