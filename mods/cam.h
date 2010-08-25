@@ -43,11 +43,6 @@ static const string cam_type = "cam";
  */
 class Camera : public Device {
 public:
-	class exception: public std::runtime_error {
-	public:
-		exception(const std::string reason): runtime_error(reason) {}
-	};
-	
 	typedef enum {
 		OFF = 0,
 		SINGLE,

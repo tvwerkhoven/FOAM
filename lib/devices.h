@@ -52,6 +52,11 @@ protected:
 	Protocol::Server *protocol;					//!< Network connection for this device
 	
 public:
+	class exception: public std::runtime_error {
+	public:
+		exception(const std::string reason): runtime_error(reason) {}
+	};
+		
 	Device(Io &io, string name, string type, string port);
 	virtual ~Device();
 	

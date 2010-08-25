@@ -50,12 +50,7 @@ class Wfs: public Device {
 protected:
 	string conffile;										//!< Configuration file used for this WFS
 	
-public:
-	class exception: public std::runtime_error {
-	public:
-		exception(const std::string reason): runtime_error(reason) {}
-	};
-	
+public:	
 	string camtype;											//!< Camera type/model TODO: should be enum?
 	string wfstype;											//!< WFS type/model TODO: should be enum?
 	config cfg;													//!< WFS configuration

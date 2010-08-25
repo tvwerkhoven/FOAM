@@ -36,7 +36,9 @@
 #include "devicectrl.h"
 
 /*!
- @brief TODO Camera control class  
+ @brief Camera control class  
+ 
+ @todo Improve docs
  */
 class CamCtrl: public DeviceCtrl {
 public:
@@ -67,10 +69,6 @@ public:
 	virtual void on_connected(bool connected);
 
 	public:
-	class exception: public std::runtime_error {
-		public:
-		exception(const std::string reason): runtime_error(reason) {}
-	};
 
 //	const std::string name;
 //	const std::string host;

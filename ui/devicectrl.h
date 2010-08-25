@@ -44,6 +44,11 @@ protected:
 	virtual void on_connected(bool status);
 	
 public:
+	class exception: public std::runtime_error {
+	public:
+		exception(const std::string reason): runtime_error(reason) {}
+	};
+	
 	Glib::Dispatcher signal_update;
 	
 	bool ok;

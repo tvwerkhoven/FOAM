@@ -32,27 +32,6 @@
 #include "imgio.h"
 #include "imgcam.h"
 
-void ImgCamera::update(bool blocking) {
-	// Copy image from img to frame and add some noise etc
-	io.msg(IO_DEB2, "ImgCamera::update()");
-	if (blocking)
-		usleep((int) interval * 1000000);
-	
-	// Shortcut to image, casted to right type.
-	uint16_t *p = (uint16_t *) image;
-	
-	for(int y = 0; y < res.y; y++) {
-		for(int x = 0; x < res.x; x++) {
-			double value = drand48() * noise + img->getPixel(x, y) * exposure;
-			if (value < 0)
-				value = 0;
-			if (value > UINT16_MAX)
-				value = UINT16_MAX;
-			*p++ = (uint16_t)(value);
-		}
-	}
-}
-
 ImgCamera::ImgCamera(Io &io, string name, string port, config *config): 
 Camera(io, name, imgcam_type, port) {
 	io.msg(IO_DEB2, "ImgCamera::ImgCamera()");
@@ -93,6 +72,27 @@ Camera(io, name, imgcam_type, port) {
 ImgCamera::~ImgCamera() {
 	io.msg(IO_DEB2, "ImgCamera::~ImgCamera()");
 	delete img;
+}
+
+void ImgCamera::update(bool blocking) {
+	// Copy image from img to frame and add some noise etc
+	io.msg(IO_DEB2, "ImgCamera::update()");
+	if (blocking)
+		usleep((int) interval * 1000000);
+	
+	// Shortcut to image, casted to right type.
+	uint16_t *p = (uint16_t *) image;
+	
+	for(int y = 0; y < res.y; y++) {
+		for(int x = 0; x < res.x; x++) {
+			double value = drand48() * noise + img->getPixel(x, y) * exposure;
+			if (value < 0)
+				value = 0;
+			if (value > UINT16_MAX)
+				value = UINT16_MAX;
+			*p++ = (uint16_t)(value);
+		}
+	}
 }
 
 int ImgCamera::verify() { 
