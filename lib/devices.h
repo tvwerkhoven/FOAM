@@ -30,6 +30,7 @@
 
 #include "io.h"
 #include "protocol.h"
+#include "config.h"
 
 typedef Protocol::Server::Connection Connection;
 
@@ -50,7 +51,7 @@ protected:
 	string type;												//!< Device type
 	string port;												//!< Port to listen on
 	string conffile;										//!< Configuration file
-	config config;											//!< Interpreted configuration file
+	config cfg;													//!< Interpreted configuration file
 	Protocol::Server netio;							//!< Network connection
 	
 public:

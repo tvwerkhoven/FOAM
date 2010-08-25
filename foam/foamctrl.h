@@ -22,11 +22,10 @@
 #define HAVE_FOAMCTRL_H
 
 #include <time.h>
-#include "wfs.h"
-#include "wfc.h"
+
 #include "io.h"
 #include "config.h"
-
+#include "types.h"
 
 /*! 
  @brief Stores the control state of the AO system

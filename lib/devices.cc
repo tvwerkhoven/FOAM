@@ -31,7 +31,7 @@
 // Device class
 
 Device::Device(Io &io, string name, string type, string port, string conffile): 
-io(io), name(name), type("dev." + type), port(port), conffile(conffile), config(conffile), netio(port, name)
+io(io), name(name), type("dev." + type), port(port), conffile(conffile), cfg(conffile), netio(port, name)
 { 
 	io.msg(IO_XNFO, "Device::Device(): Create new device, name=%s, type=%s", 
 				 name.c_str(), type.c_str());

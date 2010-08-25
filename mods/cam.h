@@ -46,20 +46,32 @@ static const string cam_type = "cam";
  consists of two parts. One part of the class handles network I/O from outside
  (i.e. from a GUI), this is done with 'netio' in a seperate thread. The other
  part is hardware I/O which is done by a seperate thread through 'handler' in
- the 'camthr' thread.
- */
+ the 'camthr' thread. Graphically:
+ 
+ Device --- netio --        --- netio ---
+      \---- main --- Camera --- cam_thr -
+												  \---- main ----
+ 
+ \li netio gets input from outside (GUIs), reads from shared class
+ \li cam_thr runs standalone, gets input from variables (configuration), 
+		provides hooks through sigc++ slots.
+ \li main thread calls camera functions to read out data/settings, can hook up 
+		to slots to get 'instantaneous' feedback from cam_thr.
+ 
+ */ 
 class Camera : public Device {
 public:
 	typedef enum {
 		OFF = 0,
 		SINGLE,
 		RUNNING,
+		CONFIG,
 		ERROR
 	} mode_t;
 	
 	//!< Data structure for storing frames, taken from filter_control by Guus Sliepen
 	typedef struct frame {
-		void *data;						//!< @todo ???
+		void *data;						//!< Generic data pointer, might be necessary for some hardware
 		void *image;					//!< Pointer to frame data
 		uint32_t *histo;
 		size_t id;
@@ -92,15 +104,15 @@ protected:
 	pthread::cond cam_cond;
 	virtual int cam_init(config cfg);	//!< Initialize camera
 	virtual void cam_handler();		//!< Camera handler
-	virtual void *cam_queue(void *data, void *image, struct timeval *tv = 0); //!< Store frame in buffer, returns oldest frame
+	virtual void *cam_queue(void *data, void *image, struct timeval *tv = 0); //!< Store frame in buffer, returns oldest frame if buffer is full
 	virtual void *cam_capture();	//!< Capture frame
 		
 	frame_t *frames;							//!< Frame ringbuffer
 	size_t nframes;
 	size_t timeouts;
 	
-	double darkexp;								//!< (Equivalent) exposure used for dark frame
-	double flatexp;								//!< (Equivalent) exposure used for flat frame
+	size_t ndark;									//!< Number of frames used in darkframe
+	size_t nflat;									//!< Number of frames used in flatframe
 	frame_t dark;
 	frame_t flat;
 
@@ -124,7 +136,7 @@ public:
 	int get_width() { return res.x; }
 	int get_height() { return res.y; }
 	coord_t get_res() { return res; }
-	int get_depth() { return bpp; }
+	int get_depth() { return depth; }
 	dtype_t get_dtype() { return dtype; }
 
 	mode_t get_mode() { return mode; }
@@ -158,27 +170,24 @@ public:
 	 */
 	virtual int monitor(void * /*frame */, size_t &/*size*/, int &/*x1*/, int &/*y1*/, int &/*x2*/, int &/*y2*/, int &/*scale*/) { return -1; }
 	
-	Camera(Io &io, string name, string type, string port, conffile): 
+	Camera(Io &io, string name, string type, string port, string conffile): 
 	Device(io, name, cam_type + "." + type, port, conffile),
-	interval(1.0), exposure(1.0), gain(1.0), offset(0.0), res(0,0), bpp(-1), dtype(DATA_UINT16), mode(Camera::OFF)
+	nframes(8), timeouts(0), ndark(10), nflat(10), 
+	interval(1.0), exposure(1.0), gain(1.0), offset(0.0), 
+	res(0,0), depth(-1), dtype(DATA_UINT16), 
+	mode(Camera::OFF)
 	{
 		io.msg(IO_DEB2, "Camera::Camera()");
 		
 		// Init cam
 		try {
-			cam_init(config);
-			
+			cam_init(cfg);
 			io.msg(IO_INFO, "Camera::Camera() initialized");
 		}	catch (std::exception &e) {
-			io.msg(IO_ERR, "Could not initialise camera '%s': %s", name, e.what());
+			io.msg(IO_ERR, "Could not initialise camera '%s': %s", name.c_str(), e.what());
 		}
-		
-		// Start handler thread
-		thread.create(sigc::ptr_fun(handler));
 	}
 	virtual ~Camera() {
-		thread.cancel();
-		thread.join();
 	}
 };
 
