@@ -31,6 +31,7 @@
 #include <fstream>
 #include <stdint.h>
 
+#include "pthread++.h"
 #include "types.h"
 #include "config.h"
 #include "io.h"
@@ -40,6 +41,12 @@ static const string cam_type = "cam";
 
 /*!
  @brief Base camera class. This should be overloaded with the specific camera class.
+ 
+ The Camera class is a template for implementing camera software. The class 
+ consists of two parts. One part of the class handles network I/O from outside
+ (i.e. from a GUI), this is done with 'netio' in a seperate thread. The other
+ part is hardware I/O which is done by a seperate thread through 'handler' in
+ the 'camthr' thread.
  */
 class Camera : public Device {
 public:
@@ -50,57 +57,93 @@ public:
 		ERROR
 	} mode_t;
 	
-protected:
-	void *image;									//!< Pointer to the image data (can be ringbuffer)
-	void *darkim;									//!< Pointer to a sum of darkfield images
-	void *flatim;									//!< Pointer to a sum of flatfield images
-	void *gainim;									//!< Pointer to a (normalised) 1/(flat-dark) image
-	int ndark;										//!< Number of images summed for darkfield
-	int nflat;										//!< Number of images summed for flatfield
+	//!< Data structure for storing frames, taken from filter_control by Guus Sliepen
+	typedef struct frame {
+		void *data;						//!< @todo ???
+		void *image;					//!< Pointer to frame data
+		uint32_t *histo;
+		size_t id;
+		struct timeval tv;
+		
+		frame() {
+			data = 0;
+			image = 0;
+			id = 0;
+			histo = 0;
+		}
+		
+		double avg;
+		double rms;
+		
+		double cx;						//!< @todo ???
+		double cy;						//!< @todo ???
+		double cr;						//!< @todo ???
+		
+		double rms1;
+		double rms2;
+		
+		double dx;
+		double dy;
+	} frame_t;
 	
+protected:
+	pthread::thread cam_thr;			//!< Camera hardware thread.
+	pthread::mutex cam_mutex;
+	pthread::cond cam_cond;
+	virtual int cam_init(config cfg);	//!< Initialize camera
+	virtual void cam_handler();		//!< Camera handler
+	virtual void *cam_queue(void *data, void *image, struct timeval *tv = 0); //!< Store frame in buffer, returns oldest frame
+	virtual void *cam_capture();	//!< Capture frame
+		
+	frame_t *frames;							//!< Frame ringbuffer
+	size_t nframes;
+	size_t timeouts;
+	
+	double darkexp;								//!< (Equivalent) exposure used for dark frame
+	double flatexp;								//!< (Equivalent) exposure used for flat frame
+	frame_t dark;
+	frame_t flat;
+
 	double interval;							//!< Frame time (exposure + readout)
 	double exposure;							//!< Exposure time
 	double gain;									//!< Camera gain
 	double offset;
-
+	
 	coord_t res;									//!< Camera pixel resolution
-	int bpp;											//!< Camera pixel depth
+	int depth;										//!< Camera pixel depth
 	dtype_t dtype;								//!< Camera datatype
-
+	
 	mode_t mode;									//!< Camera mode (see mode_t)
 	
-	FILE *outfd;									//!< FD for storing data to disk
-	
 public:
-	string darkfile;
-	string flatfile;
-	
 	double get_interval() { return interval; }
 	double get_exposure() { return exposure; }
 	double get_gain() { return gain; }
+	double get_offset() { return offset; }
+
 	int get_width() { return res.x; }
 	int get_height() { return res.y; }
 	coord_t get_res() { return res; }
 	int get_depth() { return bpp; }
-	mode_t get_mode() { return mode; }
 	dtype_t get_dtype() { return dtype; }
-	double get_offset() { return offset; }
 
-	void set_mode(mode_t newmode) { mode = newmode; }
-	void set_interval(double value) { interval = value; }
-	void set_exposure(double value) { exposure = value; }
-	void set_gain(double value) { gain = value; }
-	void set_offset(double value) { offset = value; }
+	mode_t get_mode() { return mode; }
+
+	//! @todo Tell camera hardware about these changes:
+	virtual void set_mode(mode_t newmode) { mode = newmode; }
+	virtual void set_interval(double value) { interval = value; }
+	virtual void set_exposure(double value) { exposure = value; }
+	virtual void set_gain(double value) { gain = value; }
+	virtual void set_offset(double value) { offset = value; }
 
 	// From Devices::
 	virtual int verify() { return 0; }
 	virtual void on_message(Connection* /* conn */, std::string /* line */) { ; }
-	virtual void on_connect(Connection* /* conn */, bool /* status */) { ; }
 
 	/*! 
 	 @brief Get a thumbnail image from the camera 
 	 */
-	virtual int thumbnail(Connection* /* conn */) { return -1; }
+	virtual int net_thumbnail(Connection* /* conn */) { return -1; }
 	/*! 
 	 @brief Get a frame from the camera
 	 
@@ -114,13 +157,29 @@ public:
 	 @param [in] scale Take every other 'scale' pixel when transferring a frame, i.e. 1 for all pixels, 2 for half the pixels.
 	 */
 	virtual int monitor(void * /*frame */, size_t &/*size*/, int &/*x1*/, int &/*y1*/, int &/*x2*/, int &/*y2*/, int &/*scale*/) { return -1; }
-	virtual int store(Connection * /* conn */) { return -1; }
 	
-	virtual ~Camera() {};
-	Camera(Io &io, string name, string type, string port): 
-	Device(io, name, cam_type + "." + type, port),
-	interval(1.0), exposure(1.0), gain(1.0), offset(0.0), res(0,0), bpp(-1), dtype(DATA_UINT16), mode(Camera::OFF), outfd(0) 
-	{ ; }
+	Camera(Io &io, string name, string type, string port, conffile): 
+	Device(io, name, cam_type + "." + type, port, conffile),
+	interval(1.0), exposure(1.0), gain(1.0), offset(0.0), res(0,0), bpp(-1), dtype(DATA_UINT16), mode(Camera::OFF)
+	{
+		io.msg(IO_DEB2, "Camera::Camera()");
+		
+		// Init cam
+		try {
+			cam_init(config);
+			
+			io.msg(IO_INFO, "Camera::Camera() initialized");
+		}	catch (std::exception &e) {
+			io.msg(IO_ERR, "Could not initialise camera '%s': %s", name, e.what());
+		}
+		
+		// Start handler thread
+		thread.create(sigc::ptr_fun(handler));
+	}
+	virtual ~Camera() {
+		thread.cancel();
+		thread.join();
+	}
 };
 
 
