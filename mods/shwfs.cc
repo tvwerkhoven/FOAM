@@ -30,7 +30,7 @@
 
 #include "config.h"
 #include "types.h"
-#include "cam.h"
+#include "camera.h"
 #include "io.h"
 #include "wfs.h"
 #include "shwfs.h"

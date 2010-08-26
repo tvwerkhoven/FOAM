@@ -30,6 +30,7 @@
 
 #include "io.h"
 #include "protocol.h"
+#include "config.h"
 
 typedef Protocol::Server::Connection Connection;
 
@@ -49,7 +50,13 @@ protected:
 	string name;												//!< Device name
 	string type;												//!< Device type
 	string port;												//!< Port to listen on
+<<<<<<< HEAD
 	Protocol::Server *protocol;					//!< Network connection for this device
+=======
+	string conffile;										//!< Configuration file
+	config cfg;													//!< Interpreted configuration file
+	Protocol::Server netio;							//!< Network connection
+>>>>>>> camupdate
 	
 public:
 	class exception: public std::runtime_error {

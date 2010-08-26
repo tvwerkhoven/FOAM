@@ -27,30 +27,30 @@
  */
 
 #include <iostream>
+#include <string>
 
 #include "foam.h"
 #include "types.h"
 #include "io.h"
 #include "devices.h"
-#include "imgcam.h"
+#include "dummycam.h"
+#include "camera.h"
 
 #include "foam-simstatic.h"
 
 // Global device list for easier access
-ImgCamera *imgcama;
-ImgCamera *imgcamb;
-ImgCamera *imgcamc;
+DummyCamera *testcam;
 
 int FOAM_simstatic::load_modules() {
 	io.msg(IO_DEB2, "FOAM_simstatic::load_modules()");
 	io.msg(IO_INFO, "This is the simstatic prime module, enjoy.");
 		
 	// Add ImgCam device
-	imgcama = new ImgCamera(io, "imgcamA", ptc->listenport, ptc->cfgfile);
-	devices->add((Device *) imgcama);
-//	imgcamb = new ImgCamera(io, "imgcamB", ptc->listenport, ptc->cfgfile);
+	testcam = new DummyCamera(io, "dummycam", ptc->listenport, ptc->conffile);
+	devices->add((Device *) testcam);
+//	imgcamb = new ImgCamera(io, "imgcamB", ptc->listenport, ptc->cfg);
 //	devices->add((Device *) imgcamb);
-//	imgcamc = new ImgCamera(io, "imgcamC", ptc->listenport, ptc->cfgfile);
+//	imgcamc = new ImgCamera(io, "imgcamC", ptc->listenport, ptc->cfg);
 //	devices->add((Device *) imgcamc);
 	
 	return 0;
@@ -62,17 +62,17 @@ int FOAM_simstatic::load_modules() {
 int FOAM_simstatic::open_init() {
 	io.msg(IO_DEB2, "FOAM_simstatic::open_init()");
 	
-	((ImgCamera*) devices->get("imgcamA"))->set_mode(Camera::RUNNING);
+	((DummyCamera*) devices->get("testcam"))->set_mode(Camera::RUNNING);
 	
 	return 0;
 }
 
 int FOAM_simstatic::open_loop() {
 	io.msg(IO_DEB2, "FOAM_simstatic::open_loop()");
-	static ImgCamera *imgcamA = ((ImgCamera*) devices->get("imgcamA"));
+	static DummyCamera *tmpcam = ((DummyCamera*) devices->get("testcam"));
 	
 	usleep(1000000);
-	imgcamA->update(true);
+	Camera::frame_t *frame = tmpcam->get_frame(true);
 	
 	return 0;
 }
@@ -80,7 +80,7 @@ int FOAM_simstatic::open_loop() {
 int FOAM_simstatic::open_finish() {
 	io.msg(IO_DEB2, "FOAM_simstatic::open_finish()");
 	
-	((ImgCamera*) devices->get("imgcamA"))->set_mode(Camera::OFF);
+	((DummyCamera*) devices->get("testcam"))->set_mode(Camera::OFF);
 
 	return 0;
 }

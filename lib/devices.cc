@@ -27,13 +27,18 @@
 #include "io.h"
 #include "devices.h"
 
-Device::Device(Io &io, string name, string type, string port): 
-io(io), name(name), type("dev." + type), port(port) 
+// Device class
+
+Device::Device(Io &io, string n, string t, string p, string cf): 
+io(io), name(n), type("dev." + t), port(p), conffile(cf), cfg(cf, n), netio(p, n)
 { 
 	io.msg(IO_XNFO, "Device::Device(): Create new device, name=%s, type=%s", 
 				 name.c_str(), type.c_str());
 	
-	protocol = new Protocol::Server(port, name);
+	string _type = cfg.getstring("type");
+	if (_type != type) 
+		throw exception("Type should be " + type + " for this Device!");
+	
 	io.msg(IO_XNFO, "Device %s listening on port %s.", name.c_str(), port.c_str());
 	protocol->slot_message = sigc::mem_fun(this, &Device::on_message);
 	protocol->slot_connected = sigc::mem_fun(this, &Device::on_connect);

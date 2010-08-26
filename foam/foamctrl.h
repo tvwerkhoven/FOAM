@@ -22,11 +22,10 @@
 #define HAVE_FOAMCTRL_H
 
 #include <time.h>
-#include "wfs.h"
-#include "wfc.h"
+
 #include "io.h"
 #include "config.h"
-
+#include "types.h"
 
 /*! 
  @brief Stores the control state of the AO system
@@ -49,7 +48,7 @@ public:
 	
 	string conffile;							//!< Configuration file used
 	string confpath;							//!< Configuration path (used for other config files)
-	config *cfgfile;							//!< Parsed configuration settings
+	config *cfg;									//!< Parsed configuration settings
 	string pidfile;								//!< file to store PID to (def: /tmp/foam.pid)
 	
 	string listenip;							//!< IP to listen on (def: 0.0.0.0)

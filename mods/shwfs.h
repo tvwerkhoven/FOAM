@@ -21,7 +21,7 @@
 #ifndef HAVE_SHWFS_H
 #define HAVE_SHWFS_H
 
-#include "cam.h"
+#include "camera.h"
 #include "io.h"
 #include "wfs.h"
 
