@@ -155,21 +155,30 @@ void MainWindow::on_ctrl_device_update() {
 		FoamControl::device_t dev = foamctrl.get_device(i);
 		if (devlist.find(dev.name) != devlist.end())
 			continue; // Already exists, skip
-		
-		log.add(Log::OK, "Found new device '" + dev.name + "' (type=" + dev.type + ").");
-		
-		// Add specific device to the list of devices. Down-cast to generic 'DevicePage' class
-		if (dev.type == "dev") {
-			printf("MainWindow::on_ctrl_device_update() got generic device\n");			
-			devlist[dev.name] = new DevicePage(log, foamctrl, dev.name);
+
+		// First check if type is sane
+		if (dev.type.substr(0,3) != "dev") {
+			fprintf(stderr, "MainWindow::on_ctrl_device_update() Type wrong!\n");
+			continue;
 		}
-		else if (dev.type == "dev.cam.imgcam") {
-			printf("MainWindow::on_ctrl_device_update() got dev.cam.imgcam\n");			
+		// Then add specific devices first, and more general devices later
+		else if (dev.type.substr(0,7) == "dev.cam") {
+			fprintf(stderr, "MainWindow::on_ctrl_device_update() got generic camera device\n");
 			CamView *tmp = new CamView(log, foamctrl, dev.name);
 			tmp->init();
 			devlist[dev.name] = (DevicePage *) tmp;
 		}
-		
+		else if (dev.type.substr(0,3) == "dev") {
+			fprintf(stderr, "MainWindow::on_ctrl_device_update() got generic device\n");			
+			devlist[dev.name] = new DevicePage(log, foamctrl, dev.name);
+		}
+		else {
+			fprintf(stderr, "MainWindow::on_ctrl_device_update() Type unknown!\n");
+			continue;
+		}
+							
+		log.add(Log::OK, "Found new device '" + dev.name + "' (type=" + dev.type + ").");
+							
 		notebook.append_page(*devlist[dev.name], "_" + dev.name, dev.name, true);
 	}
 	
