@@ -234,7 +234,8 @@ int FOAM::load_config() {
 	// Init control and configuration using the config file
 	io.msg(IO_INFO, "Initializing control & AO configuration...");
 	ptc = new foamctrl(io, conffile);
-	if (ptc->error()) return io.msg(IO_ERR, "Coult not parse FOAM configuration");
+	if (ptc->error()) 
+		return io.msg(IO_ERR, "Coult not parse FOAM configuration");
 	
 	return 0;
 }

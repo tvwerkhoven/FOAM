@@ -31,7 +31,7 @@
 #include "config.h"
 #include "io.h"
 #include "imgio.h"
-#include "cam.h"
+#include "camera.h"
 
 static const string imgcam_type = "imgcam";
 

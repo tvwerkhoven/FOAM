@@ -27,12 +27,14 @@
  */
 
 #include <iostream>
+#include <string>
 
 #include "foam.h"
 #include "types.h"
 #include "io.h"
 #include "devices.h"
 #include "dummycam.h"
+#include "camera.h"
 
 #include "foam-simstatic.h"
 
@@ -44,11 +46,11 @@ int FOAM_simstatic::load_modules() {
 	io.msg(IO_INFO, "This is the simstatic prime module, enjoy.");
 		
 	// Add ImgCam device
-	testcam = new DummyCamera(io, "testcam", ptc->listenport, ptc->cfgfile);
+	testcam = new DummyCamera(io, "dummycam", ptc->listenport, ptc->conffile);
 	devices->add((Device *) testcam);
-//	imgcamb = new ImgCamera(io, "imgcamB", ptc->listenport, ptc->cfgfile);
+//	imgcamb = new ImgCamera(io, "imgcamB", ptc->listenport, ptc->cfg);
 //	devices->add((Device *) imgcamb);
-//	imgcamc = new ImgCamera(io, "imgcamC", ptc->listenport, ptc->cfgfile);
+//	imgcamc = new ImgCamera(io, "imgcamC", ptc->listenport, ptc->cfg);
 //	devices->add((Device *) imgcamc);
 	
 	return 0;
@@ -68,10 +70,9 @@ int FOAM_simstatic::open_init() {
 int FOAM_simstatic::open_loop() {
 	io.msg(IO_DEB2, "FOAM_simstatic::open_loop()");
 	static DummyCamera *tmpcam = ((DummyCamera*) devices->get("testcam"));
-	static frame
 	
 	usleep(1000000);
-	void *frame = tmpcam->get_frame(true);
+	Camera::frame_t *frame = tmpcam->get_frame(true);
 	
 	return 0;
 }

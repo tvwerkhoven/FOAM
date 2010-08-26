@@ -31,7 +31,7 @@
 
 #include "types.h"
 #include "config.h"
-#include "cam.h"
+#include "camera.h"
 #include "io.h"
 
 static const string wfs_type = "wfs";

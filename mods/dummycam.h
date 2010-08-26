@@ -24,7 +24,9 @@
 
 #include <stdint.h>
 
+#include "config.h"
 #include "io.h"
+
 #include "camera.h"
 
 using namespace std;
@@ -32,13 +34,18 @@ using namespace std;
 class DummyCamera: public Camera {
 private:
 	void update(bool blocking);
+	double noise;
 	
 public:
-	DummyCamera(Io &io, string name, string port, conffile);
-	~DummyCamera() {
-		io->msg(IO_DEB2, "DummyCamera::~DummyCamera()");
-	}
+	DummyCamera(Io &io, string name, string port, string conffile);
+	~DummyCamera();
 	
+	// From Camera::
+	virtual void cam_handler();		//!< Camera handler
+	virtual void *cam_queue(void *data, void *image, struct timeval *tv = 0); //!< Store frame in buffer, returns oldest frame if buffer is full
+	virtual void on_message(Connection* /* conn */, std::string /* line */) { } ;
+	
+	// Get thumbnail
 	bool thumbnail(uint8_t *out);
 	bool monitor(void *out, size_t &size, int &x1, int &y1, int &x2, int &y2, int &scale);
 	bool capture();
