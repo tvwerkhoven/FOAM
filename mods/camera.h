@@ -104,6 +104,25 @@ public:
 		ERROR
 	} mode_t;
 	
+	string mode2str(const mode_t &m) {
+		if (m == OFF) return "OFF";
+		if (m == WAITING) return "WAITING";
+		if (m == SINGLE) return "SINGLE";
+		if (m == RUNNING) return "RUNNING";
+		if (m == CONFIG) return "CONFIG";
+		if (m == ERROR) return "ERROR";
+		return "";
+	}
+	mode_t str2mode(const string &m) {
+		if (m == "OFF") return OFF;
+		if (m == "WAITING") return WAITING;
+		if (m == "SINGLE") return SINGLE;
+		if (m == "RUNNING") return RUNNING;
+		if (m == "CONFIG") return CONFIG;
+		if (m == "ERROR") return ERROR;
+		return OFF;
+	}
+	
 	//!< Data structure for storing frames, taken from filter_control by Guus Sliepen
 	typedef struct frame {
 		void *data;						//!< Generic data pointer, might be necessary for some hardware
@@ -155,6 +174,13 @@ protected:
 	
 	void calculate_stats(frame *frame);
 	static frame_t *get_frame(size_t id, bool wait = true);
+	bool accumburst(uint32_t *accum, size_t bcount);
+	void statistics(Connection *conn, size_t bcount);		
+	
+	std::string makename(const string &base = filenamebase);
+	void thumbnail(Connection *conn);
+	void grab(Connection *conn, int x1, int y1, int x2, int y2, int scale, bool do_df, bool do_histo);
+	void accumfix();
 
 	frame_t *frames;							//!< Frame ringbuffer
 	uint64_t count;
@@ -203,41 +229,24 @@ public:
 
 	mode_t get_mode() { return mode; }
 	
-	frame_t *get_frame(bool block) {	
-		if (block) {
-			cam_mutex.lock();
-			cam_cond.wait(cam_mutex);
-			cam_mutex.unlock();
-		}
-		return &frames[count % nframes];
-	}
-	
-	
 	// From Devices::
 	virtual int verify() { return 0; }
 	virtual void on_message(Connection*, std::string);
 	
-	void set_exposure(Connection *conn, double value);
-	void set_interval(Connection *conn, double value);
-	void set_gain(Connection *conn, double value);
-	void set_offset(Connection *conn, double value);
-	void set_mode(Connection *conn, string value);
+	double set_exposure(double value);
+	double set_interval(double value);
+	double set_gain(double value);
+	double set_offset(double value);
+	double set_mode(string value);
+protected:
 	void get_fits(Connection *conn);
 	void set_fits(Connection *conn, string line);
-	void set_filename(Connection *conn, string value);
-	void set_outputdir(Connection *conn, string value);
+public:
+	string set_filename(string value);
+	string set_outputdir(string value);
 	
-	std::string makename(const string &base = filenamebase);
-	
-	void thumbnail(Connection *conn);
-	static void grab(Connection *conn, int x1, int y1, int x2, int y2, int scale, bool do_df, bool do_histo);
-	
-	static void accumfix();
-	static void darkburst(Connection *conn, size_t bcount);
-	static void flatburst(Connection *conn, size_t bcount);
-	static bool accumburst(uint32_t *accum, size_t bcount);
-	
-	static void statistics(Connection *conn, size_t bcount);	
+	void darkburst(Connection *conn, size_t bcount);
+	void flatburst(Connection *conn, size_t bcount);
 };
 
 

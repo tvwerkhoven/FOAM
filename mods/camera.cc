@@ -163,23 +163,31 @@ void Camera::on_message(conn *conn, string line) {
 		string what = popword(line);
 		
 		//! @todo what is mode?
-		if(what == "mode")
-			set_mode(conn, popword(line));
-		else if(what == "exposure")
-			set_exposure(conn, popdouble(line));
-		else if(what == "interval")
-			set_interval(conn, popdouble(line));
-		else if(what == "gain")
-			set_gain(conn, popdouble(line));
-		else if(what == "offset")
-			set_offset(conn, popdouble(line));
-		else if(what == "filename")
-			set_filename(conn, popword(line));
-		else if(what == "outputdir")
-			set_outputdir(conn, popword(line));
-		else if(what == "fits")
-			set_fits(conn, line);
-		else
+		if(what == "mode") {
+			set_mode(str2mode(popword(line)));
+		} else if(what == "exposure") {
+			conn->addtag("exposure");
+			set_exposure(popdouble(line));
+		} else if(what == "interval") {
+			conn->addtag("interval");
+			set_interval(popdouble(line));
+		} else if(what == "gain") {
+			conn->addtag("gain");
+			set_gain(popdouble(line));
+		} else if(what == "offset") {
+			conn->addtag("offset");
+			set_offset(popdouble(line));
+		} else if(what == "filename") {
+			conn->addtag("filename");
+			set_filename(popword(line));
+		} else if(what == "outputdir") {
+			conn->addtag("outputdir");
+			if (set_outputdir(conn, popword(line)))
+				conn->write("ERROR :directory not usable");
+		} else if(what == "fits") {
+			set_fits(line);
+			get_fits(conn);
+		} else
 			conn->write("ERROR :Unknown argument " + what);
 	} else if (command == "get") {
 		string what = popword(line);
@@ -220,7 +228,7 @@ void Camera::on_message(conn *conn, string line) {
 			conn->write("ERROR :Unknown argument " + what);
 		}
 	} else if (command == "thumbnail") {
-		thumbnail(conn);
+		get_thumbnail(conn);
 	} else if (command == "grab") {
 		int x1 = popint(line);
 		int y1 = popint(line);
@@ -239,9 +247,11 @@ void Camera::on_message(conn *conn, string line) {
 		
 		grab(conn, x1, y1, x2, y2, scale, do_df, do_histo);
 	} else if(command == "dark") {
-		darkburst(conn, popint(line));
+		if (darkburst(conn, popint(line)))
+			conn->write("ERROR :Error during dark burst");
 	} else if(command == "flat") {
-		flatburst(conn, popint(line));
+		if (flatburst(conn, popint(line)))
+			conn->write("ERROR :Error during flat burst");
 	} else if(command == "statistics") {
 		statistics(conn, popint(line));
 	} else {
@@ -249,65 +259,86 @@ void Camera::on_message(conn *conn, string line) {
 	}
 }
 
-void Camera::set_exposure(Connection *conn, double value) {
+double Camera::set_exposure(double value) {	
 	cam_set_exposure(value);
 	accumfix();
-	conn->addtag("exposure");
 	netio.broadcast(format("OK exposure %lf", exposure), "exposure");
+	return exposure;
 }
 
-void Camera::set_interval(Connection *conn, double value) {
+double Camera::set_interval(double value) {
 	cam_set_interval(value);
-	conn->addtag("interval");
 	netio.broadcast(format("OK interval %lf", interval), "interval");
+	return interval;
 }
 
-void Camera::set_gain(Connection *conn, double value) {
+double Camera::set_gain(double value) {
 	cam_set_gain(value);
-	conn->addtag("gain");
 	netio.broadcast(format("OK gain %lf", gain), "gain");
+	return gain;
 }
 
-void Camera::set_offset(Connection *conn, double value) {
+double Camera::set_offset(double value) {
 	cam_set_offset(value);
-	conn->addtag("offset");
 	netio.broadcast(format("OK offset %lf", offset), "offset");
+	return offset;
 }
 
-void Camera::set_mode(Connection *conn, string value) {
-	get_mode(conn, true);
+mode_t Camera::set_mode(mode_t value) {
+	cam_set_mode(value);
+	netio.broadcast(format("OK mode %s", mode2str(mode)), "mode");
+	return mode;
 }
 
-void Camera::get_fits(Connection *conn) {
-	conn->write("OK fits " + fits_observer + ", " + fits_target + ", :" + fits_comments);
+mode_t Camera::get_mode(Connection *conn = NULL) {
+	if (conn)
+		conn->write("OK mode " + mode2str(mode));
+	return mode;
 }
 
-void Camera::set_fits(Connection *conn, string line) {
-	fits_observer = popword(line, ",");
-	fits_target = popword(line, ",");
-	fits_comments = popword(line);
-	get_fits(conn);
+void Camera::get_fits(Connection *conn = NULL) {
+	if (conn)
+		conn->write("OK fits " + fits_observer + ", " + fits_target + ", :" + fits_comments);
 }
 
-void Camera::set_filename(Connection *conn, string value) {
+void Camera::set_fits(string line) {
+	set_fits_observer(popword(line, ","));
+	set_fits_target(popword(line, ","));
+	set_fits_comments(popword(line));
+}
+
+string Camera::set_fits_observer(string val) {
+	fits_observer = val;
+	return fits_observer;
+}
+
+string Camera::set_fits_target(string val) {
+	fits_target = val;
+	return fits_target;
+}
+
+string Camera::set_fits_comments(string val) {
+	fits_comments = val;
+	return fits_comments;
+}
+
+string Camera::set_filename(string value) {
 	filenamebase = value;
-	conn->addtag("filename");
 	netio.broadcast("OK filename :" + filenamebase, "filename");
+	return filenamebase;
 }
 
-void Camera::set_outputdir(Connection *conn, string value) {
+string Camera::set_outputdir(string value) {
 	// If it's not an absolute path (starting with '/'), prefix ptc->datadir
 	if (value.substr(0,1) != "/")
 		value = ptc->datadir + "/" + value;
 		
-	if(access(value.c_str(), R_OK | W_OK | X_OK)) {
-		conn->write("ERROR :directory not usable");
-		return;
-	}
+	if(access(value.c_str(), R_OK | W_OK | X_OK))
+		return "";
 	
 	outputdir = value;
-	conn->addtag("outputdir");
 	netio.broadcast("OK outputdir :" + outputdir, "outputdir");
+	return outputdir;
 }
 
 string Camera::makename(const string &base = filenamebase) {
@@ -322,8 +353,8 @@ string Camera::makename(const string &base = filenamebase) {
 	return result;
 }
 
-void Camera::thumbnail(Connection *conn) {
-	uint8_t buffer[32 * 32];
+uint8_t *Camera::get_thumbnail(Connection *conn = NULL) {
+	uint8_t buffer = new uint8_t[32 * 32];
 	uint8_t *out = buffer;
 	
 	int step, xoff, yoff;
@@ -355,14 +386,20 @@ void Camera::thumbnail(Connection *conn) {
 		}
 	}
 	
-	conn->write("OK thumbnail");
-	conn->write(buffer, sizeof buffer);
+	if (conn) {
+		conn->write("OK thumbnail");
+		conn->write(buffer, sizeof buffer);
+		delete buffer;
+		return NULL;
+	}
+	
+	return buffer;
 }
 
 
 template <class T> static T clamp(T x, T min, T max) { if (x < min) x = min; if (x > max) x = max; return x; }
 
-static void Camera::grab(Connection *conn, int x1, int y1, int x2, int y2, int scale = 1, bool do_df = false, bool do_histo = false) {
+void Camera::grab(Connection *conn, int x1, int y1, int x2, int y2, int scale = 1, bool do_df = false, bool do_histo = false) {
 	x1 = clamp(x1, 0, res.x);
 	y1 = clamp(y1, 0, res.y);
 	x2 = clamp(x2, 0, res.x / scale);
@@ -454,7 +491,7 @@ static void Camera::grab(Connection *conn, int x1, int y1, int x2, int y2, int s
 	}
 }
 
-static void Camera::accumfix() {
+void Camera::accumfix() {
 	if (exposure != darkexp) {
 		for(size_t i = 0; i < res.x * res.y; i++)
 			dark.image[i] = 0;
@@ -470,7 +507,7 @@ static void Camera::accumfix() {
 	}
 }
 
-static void Camera::darkburst(Connection *conn, size_t bcount) {
+int Camera::darkburst(size_t bcount) {
 	// Update dark count
 	if (bcount > 0)
 		ndark = bcount;
@@ -478,20 +515,21 @@ static void Camera::darkburst(Connection *conn, size_t bcount) {
 	io.msg(IO_DEB1, "Starting dark burst of %zu frames", ndark);
 	
 	//! @todo fix this
-	state = WAITING;
-	get_state(connection, true);
-	set_state(WAITING, true);
+	set_mode(RUNNING);
+//	state = WAITING;
+//	get_state(connection, true);
+//	set_state(WAITING, true);
 	
 	// Allocate memory for darkfield
 	uint32_t *accum = new uint32_t[res.x * res.y];
 	memset(accum, 0, res.x * res.y * sizeof *accum);
 
 	if(!accumburst(accum, ndark))
-		conn->write("ERROR :Error during dark burst");
-	else {
-		darkexp = exposure;
-	}
+		return io.msg(IO_ERR, "Error taking darkframe!");
 	
+	darkexp = exposure;
+
+	//! @todo implement darkflat save
 	//accumsave(dark, "dark", dark_exposure);
 	
 	// Link data to dark
@@ -502,12 +540,13 @@ static void Camera::darkburst(Connection *conn, size_t bcount) {
 	dark.data = dark.image;
 	
 	io.msg(IO_DEB1, "Got new dark.");
+	netio.broadcast(format("OK dark %d", nflat));
 	
-	state = READY;
-	get_state(connection, true);
+	set_mode(OFF);
+	return 0;
 }
 
-static void Camera::flatburst(Connection *conn, size_t bcount) {
+int Camera::flatburst(size_t bcount) {
 	// Update flat count
 	if (bcount > 0)
 		nflat = bcount;
@@ -515,20 +554,21 @@ static void Camera::flatburst(Connection *conn, size_t bcount) {
 	io.msg(IO_DEB1, "Starting flat burst of %zu frames", nflat);
 	
 	//! @todo fix this
-	state = WAITING;
-	get_state(connection, true);
-	set_state(WAITING, true);
+	set_mode(RUNNING);
+	//	state = WAITING;
+	//	get_state(connection, true);
+	//	set_state(WAITING, true);
 	
 	// Allocate memory for flatfield
 	uint32_t *accum = new uint32_t[res.x * res.y];
 	memset(accum, 0, res.x * res.y * sizeof *accum);
 	
 	if(!accumburst(accum, nflat))
-		conn->write("ERROR :Error during flat burst");
-	else {
-		flatexp = exposure;
-	}
+		return io.msg(IO_ERR, "Error taking flatframe!");
 	
+	flatexp = exposure;
+	
+	//! @todo implement flatflat save
 	//accumsave(flat, "flat", flat_exposure);
 	
 	// Link data to flat
@@ -539,9 +579,10 @@ static void Camera::flatburst(Connection *conn, size_t bcount) {
 	flat.data = flat.image;
 	
 	io.msg(IO_DEB1, "Got new flat.");
+	netio.broadcast(format("OK flat %d", nflat));
 	
-	state = READY;
-	get_state(connection, true);
+	set_mode(OFF);
+	return 0;
 }
 
 static bool Camera::accumburst(uint32_t *accum, size_t bcount) {
