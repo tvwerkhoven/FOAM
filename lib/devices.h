@@ -48,6 +48,7 @@ typedef Protocol::Server::Connection Connection;
 class Device {
 protected:
 	Io &io;
+	foamctrl *ptc;
 	string name;												//!< Device name
 	string type;												//!< Device type
 	string port;												//!< Port to listen on

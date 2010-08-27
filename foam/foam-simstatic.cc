@@ -72,7 +72,7 @@ int FOAM_simstatic::open_loop() {
 	static DummyCamera *tmpcam = ((DummyCamera*) devices->get("testcam"));
 	
 	usleep(1000000);
-	Camera::frame_t *frame = tmpcam->get_frame(true);
+	Camera::frame_t *frame = tmpcam->get_last_frame();
 	
 	return 0;
 }

@@ -45,6 +45,8 @@ Camera(io, ptc, name, dummycam_type, port, conffile)
 	dtype = DATA_UINT16;
 	mode = Camera::OFF;
 	
+	set_filename("dummycam-"+name);
+	
 	io.msg(IO_INFO, "DummyCamera init success, got %dx%dx%d frame, noise=%g, intv=%g, exp=%g.", 
 					res.x, res.y, depth, noise, interval, exposure);
 	
@@ -65,7 +67,7 @@ void DummyCamera::update() {
 	
 	gettimeofday(&now, 0);
 	
-	uint16_t *image = (uint16_t *)malloc(width * height * 2);
+	uint16_t *image = (uint16_t *) malloc(res.x * res.y * depth/8);
 	if (!image)
 		throw exception("DummyCamera::update(): Could not allocate memory for framebuffer");	
 
@@ -74,7 +76,7 @@ void DummyCamera::update() {
 	int mul = (1 << depth) - 1;
 	for(size_t y = 0; y < res.y; y++) {
 		for(size_t x = 0; x < res.x; x++) {
-			double value = drand48() * noise + (sin(M_PI * x / width) + 1 + sin((y + offset) * 100));
+			double value = drand48() * noise + (sin(M_PI * x / res.x) + 1 + sin((y + offset) * 100));
 			value *= exposure;
 			if(value < 0)
 				value = 0;
@@ -84,7 +86,7 @@ void DummyCamera::update() {
 		}
 	}
 	
-	void *old = queue(image, image, &now);
+	void *old = cam_queue(image, image, &now);
 	if(old)
 		free(old);
 	
@@ -99,7 +101,7 @@ void DummyCamera::update() {
 		usleep(diff.tv_sec * 1.0e6 + diff.tv_usec);
 }
 
-void DymmyCamera::do_restart() {
+void DummyCamera::do_restart() {
 	io.msg(IO_INFO, "DummyCamera::do_restart()");
 }
 

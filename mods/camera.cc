@@ -30,6 +30,7 @@
 #include <stdint.h>
 #include <math.h>
 #include <unistd.h>
+#include <sys/stat.h>
 
 #include "io.h"
 #include "types.h"
@@ -101,7 +102,7 @@ void Camera::calculate_stats(frame_t *frame) {
 }
 
 void *Camera::cam_queue(void *data, void *image, struct timeval *tv) {
-	pthread::mutexholder h(&mutex);
+	pthread::mutexholder h(&cam_mutex);
 	
 	frame_t *frame = &frames[count % nframes];
 	void *old = frame->data;
@@ -110,14 +111,14 @@ void *Camera::cam_queue(void *data, void *image, struct timeval *tv) {
 	frame->id = count++;
 	
 	if(!frame->histo)
-		frame->histo = new uint32_t[maxval];
+		frame->histo = new uint32_t[get_maxval()];
 	
 	calculate_stats(frame);
 	
 	//! @todo Could still implement this (partially)
-	frame->rms1 = frame->rms2 = 0.0/0.0;
-	frame->cx = frame->cy = frame->cr = 0.0/0.0;
-	frame->dx = frame->dy = 0.0/0.0;
+	frame->rms1 = frame->rms2 = -1;
+	frame->cx = frame->cy = frame->cr = 0;
+	frame->dx = frame->dy = 0;
 	
 	if(tv)
 		frame->tv = *tv;
@@ -131,7 +132,14 @@ void *Camera::cam_queue(void *data, void *image, struct timeval *tv) {
 	return old;
 }
 
-static frame_t *Camera::get_frame(size_t id, bool wait = true) {
+Camera::frame_t *Camera::get_last_frame() {
+	if(count)
+		return &frames[(count - 1) % nframes];
+	else
+		return 0;
+}
+
+Camera::frame_t *Camera::get_frame(size_t id, bool wait) {	
 	if(id >= count) {
 		if(wait) {
 			//! @todo Shouldn't we lock the mutex here first?
@@ -149,8 +157,7 @@ static frame_t *Camera::get_frame(size_t id, bool wait = true) {
 }
 
 // Network IO starts here
-
-void Camera::on_message(conn *conn, string line) {
+void Camera::on_message(Connection *conn, string line) {
 	string command = popword(line);
 	
 	if (command == "quit" || command == "exit") {
@@ -182,8 +189,9 @@ void Camera::on_message(conn *conn, string line) {
 			set_filename(popword(line));
 		} else if(what == "outputdir") {
 			conn->addtag("outputdir");
-			if (set_outputdir(conn, popword(line)))
-				conn->write("ERROR :directory not usable");
+			string dir = popword(line);
+			if (set_outputdir(dir) == "")
+				conn->write("ERROR :directory "+dir+" not usable");
 		} else if(what == "fits") {
 			set_fits(line);
 			get_fits(conn);
@@ -194,7 +202,7 @@ void Camera::on_message(conn *conn, string line) {
 		
 		if(what == "mode") {
 			conn->addtag("mode");
-			get_mode(conn);
+			conn->write("OK mode " + mode2str(mode));
 		} else if(what == "exposure") {
 			conn->addtag("exposure");
 			conn->write(format("OK exposure %lf", exposure));
@@ -208,14 +216,11 @@ void Camera::on_message(conn *conn, string line) {
 			conn->addtag("offset");
 			conn->write(format("OK offset %lf", offset));
 		} else if(what == "width") {
-			conn->write(format("OK width %d", width));
+			conn->write(format("OK width %d", res.x));
 		} else if(what == "height") {
-			conn->write(format("OK height %d", height));
+			conn->write(format("OK height %d", res.y));
 		} else if(what == "depth") {
 			conn->write(format("OK depth %d", depth));
-		} else if(what == "state") {
-			conn->addtag("state");
-			get_state(conn);
 		} else if(what == "filename") {
 			conn->addtag("filename");
 			conn->write("OK filename :" + filenamebase);
@@ -247,15 +252,15 @@ void Camera::on_message(conn *conn, string line) {
 		
 		grab(conn, x1, y1, x2, y2, scale, do_df, do_histo);
 	} else if(command == "dark") {
-		if (darkburst(conn, popint(line)))
+		if (darkburst(popint(line)) )
 			conn->write("ERROR :Error during dark burst");
 	} else if(command == "flat") {
-		if (flatburst(conn, popint(line)))
+		if (flatburst(popint(line)))
 			conn->write("ERROR :Error during flat burst");
 	} else if(command == "statistics") {
 		statistics(conn, popint(line));
 	} else {
-		conn->write("ERROR :Unknown command");
+		conn->write("ERROR :Unknown command: " + command);
 	}
 }
 
@@ -284,15 +289,9 @@ double Camera::set_offset(double value) {
 	return offset;
 }
 
-mode_t Camera::set_mode(mode_t value) {
+Camera::mode_t Camera::set_mode(mode_t value) {
 	cam_set_mode(value);
-	netio.broadcast(format("OK mode %s", mode2str(mode)), "mode");
-	return mode;
-}
-
-mode_t Camera::get_mode(Connection *conn = NULL) {
-	if (conn)
-		conn->write("OK mode " + mode2str(mode));
+	netio.broadcast("OK mode " + mode2str(mode), "mode");
 	return mode;
 }
 
@@ -341,7 +340,7 @@ string Camera::set_outputdir(string value) {
 	return outputdir;
 }
 
-string Camera::makename(const string &base = filenamebase) {
+string Camera::makename(const string &base) {
 	struct timeval tv;
 	struct tm tm;
 	gettimeofday(&tv, 0);
@@ -349,12 +348,13 @@ string Camera::makename(const string &base = filenamebase) {
 	
 	string result = outputdir + format("/%4d-%02d-%02d/", 1900 + tm.tm_year, 1 + tm.tm_mon, tm.tm_mday);
 	mkdir(result.c_str(), 0755);
-	result += base + format("_%08d_%s.fits", tv.tv_sec, id.c_str());
+	//! @todo: add frame ID here somehow
+	result += base + format("_%08d_%s.fits", tv.tv_sec, name.c_str());
 	return result;
 }
 
 uint8_t *Camera::get_thumbnail(Connection *conn = NULL) {
-	uint8_t buffer = new uint8_t[32 * 32];
+	uint8_t *buffer = new uint8_t[32 * 32];
 	uint8_t *out = buffer;
 	
 	int step, xoff, yoff;
@@ -376,12 +376,12 @@ uint8_t *Camera::get_thumbnail(Connection *conn = NULL) {
 				uint8_t *in = (uint8_t *)f->image;
 				for(int y = 0; y < 32; y++)
 					for(int x = 0 ; x < 32; x++)
-						*out++ = in[width * (yoff + y * step) + xoff + x * step] << (8 - depth);
+						*out++ = in[res.x * (yoff + y * step) + xoff + x * step] << (8 - depth);
 			} else if(depth <= 16) {
 				uint16_t *in = (uint16_t *)f->image;
 				for(int y = 0; y < 32; y++)
 					for(int x = 0 ; x < 32; x++)
-						*out++ = in[width * (yoff + y * step) + xoff + x * step] >> (depth - 8);
+						*out++ = in[res.x * (yoff + y * step) + xoff + x * step] >> (depth - 8);
 			}
 		}
 	}
@@ -427,7 +427,7 @@ void Camera::grab(Connection *conn, int x1, int y1, int x2, int y2, int scale = 
 		lookup[i] = 128 + pow(i - maxval / 2, 7.0 / (depth - 1));
 	
 	{
-		pthread::mutexholder h(&mutex);
+		pthread::mutexholder h(&cam_mutex);
 		frame_t *f = get_frame(count);
 		if(!f)
 			return conn->write("ERROR :Could not grab image");
@@ -444,8 +444,8 @@ void Camera::grab(Connection *conn, int x1, int y1, int x2, int y2, int scale = 
 		
 		// zero copy if possible
 		if(!do_df && scale == 1 && x1 == 0 && x2 == (int)res.x && y1 == 0 && y2 == (int)res.y) {
-			connection->write(format("OK image %zu %d %d %d %d %d", size, x1, y1, x2, y2, scale) + extra);
-			connection->write(f->image, size);
+			conn->write(format("OK image %zu %d %d %d %d %d", size, x1, y1, x2, y2, scale) + extra);
+			conn->write(f->image, size);
 			goto finish;
 		}
 		
@@ -472,7 +472,7 @@ void Camera::grab(Connection *conn, int x1, int y1, int x2, int y2, int scale = 
 				for(size_t y = y1 * scale; y < y2 * scale; y += scale)
 					for(size_t x = x1 * scale; x < x2 * scale; x += scale) {
 						size_t o = y * res.x + x;
-						if(df)
+						if(do_df)
 							*p++ = df_correct(in, o);
 						else
 							*p++ = in[o];
@@ -487,21 +487,54 @@ void Camera::grab(Connection *conn, int x1, int y1, int x2, int y2, int scale = 
 		
 	finish:
 		if(f->histo && do_histo)
-			connection->write(f->histo, sizeof *f->histo * maxval);
+			conn->write(f->histo, sizeof *f->histo * maxval);
 	}
 }
 
+const uint8_t Camera::df_correct(const uint8_t *in, size_t offset) {
+	if (!dark.data || !flat.data)
+		return in[offset];
+	
+	uint32_t *darkim = (uint32_t *) dark.image;
+	uint32_t *flatim = (uint32_t *) flat.image;
+	
+	float c = (in[offset] - darkim[offset]) * flatim[offset];
+	if(c < 0)
+		c = 0;
+	else if(c >= (get_maxval()))
+		c = (get_maxval()) - 1;
+	return c;
+}
+
+const uint16_t Camera::df_correct(const uint16_t *in, size_t offset) {
+	if (!dark.data || !flat.data)
+		return in[offset];
+
+	uint32_t *darkim = (uint32_t *) dark.image;
+	uint32_t *flatim = (uint32_t *) flat.image;
+	
+	float c = (in[offset] - darkim[offset]) * flatim[offset];
+	if(c < 0)
+		c = 0;
+	else if(c >= (get_maxval()))
+		c = (get_maxval()) - 1;
+	return c;
+}
+
+
 void Camera::accumfix() {
 	if (exposure != darkexp) {
+		uint32_t *darkim = (uint32_t *) dark.image;
 		for(size_t i = 0; i < res.x * res.y; i++)
-			dark.image[i] = 0;
+			darkim[i] = 0;
 		dark.data = NULL;
 		darkexp = exposure;
 	}
 	
 	if (exposure != flatexp) {
+		uint32_t *flatim = (uint32_t *) flat.image;
 		for(size_t i = 0; i < res.x * res.y; i++)
-			flat.image[i] = 1.0;
+			flatim[i] = 1.0;
 		flat.data = NULL;
 		flatexp = exposure;
 	}
@@ -534,7 +567,7 @@ int Camera::darkburst(size_t bcount) {
 	
 	// Link data to dark
 	if (dark.image) 
-		delete dark.image;
+		delete (uint32_t*) dark.image;
 	
 	dark.image = accum;
 	dark.data = dark.image;
@@ -573,7 +606,7 @@ int Camera::flatburst(size_t bcount) {
 	
 	// Link data to flat
 	if (flat.image) 
-		delete flat.image;
+		delete (uint32_t*) flat.image;
 	
 	flat.image = accum;
 	flat.data = flat.image;
@@ -585,8 +618,8 @@ int Camera::flatburst(size_t bcount) {
 	return 0;
 }
 
-static bool Camera::accumburst(uint32_t *accum, size_t bcount) {
-	pthread::mutexholder h(&mutex);
+bool Camera::accumburst(uint32_t *accum, size_t bcount) {
+	pthread::mutexholder h(&cam_mutex);
 	
 	size_t start = count;
 	size_t rx = 0;
@@ -612,7 +645,7 @@ static bool Camera::accumburst(uint32_t *accum, size_t bcount) {
 	return true;
 }
 
-static void Camera::statistics(Connection *conn, size_t bcount) {
+void Camera::statistics(Connection *conn, size_t bcount) {
 	if (bcount < 1)
 		bcount = 1;
 	
@@ -621,7 +654,7 @@ static void Camera::statistics(Connection *conn, size_t bcount) {
 	size_t rx = 0;
 	
 	{
-		pthread::mutexholder h(&mutex);
+		pthread::mutexholder h(&cam_mutex);
 		size_t start = count;
 		
 		while(rx < bcount) {

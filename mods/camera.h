@@ -83,15 +83,15 @@ static const string cam_type = "cam";
  \li filename
  \li outputdir
  \li fits
+ \li mode
  
  Valid get properties:
  \li All set properties, plus:
  \li width
  \li depth
  \li height
- \li state
- \li 
- 
+
+ @todo What to do with mode & state?
  */ 
 class Camera : public Device {
 public:
@@ -167,31 +167,33 @@ protected:
 	virtual void cam_set_gain(double value) = 0;			//!< Set gain in camera hardware
 	virtual void cam_set_offset(double value) = 0;		//!< Set offset in camera hardware
 	virtual void cam_set_mode(mode_t newmode) = 0;		//!< Set mode for cam_handler()
-
 	virtual void do_restart() = 0;
 
 	void *cam_queue(void *data, void *image, struct timeval *tv = 0); //!< Store frame in buffer, returns oldest frame if buffer is full
 	
-	void calculate_stats(frame *frame);
-	static frame_t *get_frame(size_t id, bool wait = true);
-	bool accumburst(uint32_t *accum, size_t bcount);
-	void statistics(Connection *conn, size_t bcount);		
+	void calculate_stats(frame *frame);								//!< Calculate rms and such
+	bool accumburst(uint32_t *accum, size_t bcount);	//!< For dark/flat acquisition
+	void statistics(Connection *conn, size_t bcount);	//!< Post back statistics
 	
-	std::string makename(const string &base = filenamebase);
-	void thumbnail(Connection *conn);
+	std::string makename(const string &base);					//!< Make filename from outputdir and filenamebase
+	std::string makename() { makename(filenamebase); }
+	uint8_t *get_thumbnail(Connection *conn);					//!< Get 32x32x8 thumnail
 	void grab(Connection *conn, int x1, int y1, int x2, int y2, int scale, bool do_df, bool do_histo);
 	void accumfix();
 
+	const uint8_t df_correct(const uint8_t *in, size_t offset);
+	const uint16_t df_correct(const uint16_t *in, size_t offset);
+	
 	frame_t *frames;							//!< Frame ringbuffer
-	uint64_t count;
-	size_t nframes;
-	uint64_t timeouts;
+	size_t nframes;								//!< Ringbuffer size
+	uint64_t count;								//!< Total number of frames captured
+	uint64_t timeouts;						//!< Number of timeouts that occurred
 	
 	//! @todo incorporate dark/flat into struct or class?
 	size_t ndark;									//!< Number of frames used in darkframe
 	size_t nflat;									//!< Number of frames used in flatframe
-	frame_t dark;
-	frame_t flat;
+	frame_t dark;									//!< Dark frame, dark.image is a sum of ndark frames, type is uint32_t.
+	frame_t flat;									//!< Flat frame, flat.image is a sum of nflat frames, type is uint32_t.
 	double darkexp;								//!< Exposure used for darkexp
 	double flatexp;								//!< Exposure used for flatexp
 
@@ -206,28 +208,32 @@ protected:
 
 	mode_t mode;									//!< Camera mode (see mode_t)
 	
-	static string filenamebase;					//!< Base filename, input for makename()
+	string filenamebase;					//!< Base filename, input for makename()
 	string outputdir;							//!< Output dir for saving files, absolute or relative to ptc->datadir
 	
 	string fits_observer;					//!< FITS header properties for saved files
 	string fits_target;						//!< FITS header properties for saved files
-	string fits_comment;					//!< FITS header properties for saved files
+	string fits_comments;					//!< FITS header properties for saved files
 	
 public:
 	Camera(Io &io, foamctrl *ptc, string name, string type, string port, string conffile);
 	virtual ~Camera();
 
-	double get_interval() { return interval; }
 	double get_exposure() { return exposure; }
+	double get_interval() { return interval; }
 	double get_gain() { return gain; }
+	double get_offset() { return offset; }
+	mode_t get_mode() { return mode; }
+
 	int get_width() { return res.x; }
 	int get_height() { return res.y; }
 	coord_t get_res() { return res; }
 	int get_depth() { return depth; }
 	uint16_t get_maxval() { return (1 << depth); }
 	dtype_t get_dtype() { return dtype; }
-
-	mode_t get_mode() { return mode; }
+	
+	frame_t *get_frame(size_t id, bool wait = true);
+	frame_t *get_last_frame();
 	
 	// From Devices::
 	virtual int verify() { return 0; }
@@ -237,16 +243,19 @@ public:
 	double set_interval(double value);
 	double set_gain(double value);
 	double set_offset(double value);
-	double set_mode(string value);
+	mode_t set_mode(mode_t mode);
 protected:
 	void get_fits(Connection *conn);
-	void set_fits(Connection *conn, string line);
+	void set_fits(string line);
 public:
+	string set_fits_observer(string val);
+	string set_fits_target(string val);
+	string set_fits_comments(string val);
 	string set_filename(string value);
 	string set_outputdir(string value);
 	
-	void darkburst(Connection *conn, size_t bcount);
-	void flatburst(Connection *conn, size_t bcount);
+	int darkburst(size_t bcount);
+	int flatburst(size_t bcount);
 };
 
 

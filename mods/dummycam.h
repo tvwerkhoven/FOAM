@@ -33,7 +33,7 @@ using namespace std;
 
 class DummyCamera: public Camera {
 private:
-	void update(bool blocking);
+	void update();
 	double noise;
 	
 public:
