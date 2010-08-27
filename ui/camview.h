@@ -38,10 +38,21 @@
  */
 class CamView: public DevicePage {
 protected:
+	Gtk::Frame infoframe;
 	Gtk::Frame dispframe;
 	Gtk::Frame ctrlframe;
 	Gtk::Frame camframe;
 	Gtk::Frame histoframe;
+	
+	// Info stuff
+	HBox infohbox;
+	LabeledEntry e_exposure;		//!< For exposure time, RW
+	LabeledEntry e_offset;			//!< For offset, RW
+	LabeledEntry e_interval;		//!< For interval, RW
+	LabeledEntry e_gain;				//!< For gain, RW
+	LabeledEntry e_res;					//!< For resolution, RO
+	LabeledEntry e_mode;				//!< For mode, RO
+	LabeledEntry e_stat;				//!< For status, RO
 	
 	// display stuff
 	// Need: flipv, fliph, zoom in out 100, crosshair
@@ -116,6 +127,7 @@ protected:
 //	void do_histo_update();
 	void do_update();
 //	void on_close_activate();
+	void on_info_change();
 
 	bool waitforupdate;
 	time_t lastupdate;
@@ -125,7 +137,7 @@ protected:
 //	float sx;
 //	float sy;
 //	uint32_t *histo;
-	int depth;
+//	int depth;
 //	float sxstart;
 //	float systart;
 //	gdouble xstart;

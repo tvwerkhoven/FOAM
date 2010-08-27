@@ -54,15 +54,26 @@ public:
 	int32_t depth;
 	std::string filename;
 
-	volatile enum {
-		OFF,
-		SLAVE,
-		MASTER,
-	} mode;
-
-//	bool ok;
+//	volatile enum {
+//		OFF,
+//		SLAVE,
+//		MASTER,
+//	} mode;
+	typedef enum {
+		OFF = 0,
+		WAITING,
+		SINGLE,
+		RUNNING,
+		CONFIG,
+		ERROR,
+		UNDEFINED
+	} mode_t;
+	
+	mode_t mode;
+	
+	bool ok;
 	bool enabled;
-//	std::string errormsg;
+	std::string errormsg;
 
 	virtual void on_message(std::string line);
 	void on_monitor_message(std::string line);
@@ -76,13 +87,13 @@ public:
 	CamCtrl(const std::string name, const std::string host, const std::string port);
 	~CamCtrl();
 
-	volatile enum state {
-		UNDEFINED = -2,
-		ERROR = -1,
-		READY = 0,
-		WAITING,
-		BURST,
-	} state;
+//	volatile enum state {
+//		UNDEFINED = -2,
+//		ERROR = -1,
+//		READY = 0,
+//		WAITING,
+//		BURST,
+//	} state;
 
 	double get_exposure() const;
 	double get_interval() const;
@@ -135,12 +146,12 @@ public:
 	void burst(int count, int fsel = 0);
 	void grab(int x1, int y1, int x2, int y2, int scale = 1, bool df_correct = false, int fsel = 0);
 
-	enum state get_state() const;
-	bool wait_for_state(enum state desiredstate, bool condition = true);
-	bool wait_for_state() {return wait_for_state(UNDEFINED, false);}
+	string get_mode() const;
+//	bool wait_for_state(enum state desiredstate, bool condition = true);
+//	bool wait_for_state() {return wait_for_state(UNDEFINED, false);}
 	bool connect();
-//	bool is_ok() const;
-//	std::string get_errormsg() const;
+	bool is_ok() const;
+	std::string get_errormsg() const;
 
 	Glib::Dispatcher signal_thumbnail;
 	Glib::Dispatcher signal_monitor;

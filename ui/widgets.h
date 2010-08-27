@@ -78,9 +78,9 @@ class LabeledSpinEntry: public Gtk::HBox {
 class LabeledEntry: public Gtk::HBox {
 	Gtk::Label pre;
 	Gtk::Label post;
-	Gtk::Entry entry;
 	
-	public:
+public:
+	Gtk::Entry entry;
 	
 	LabeledEntry(const Glib::ustring &pretext, const Glib::ustring &posttext = "");
 	

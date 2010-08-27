@@ -28,16 +28,16 @@ using namespace std;
 using namespace Gtk;
 
 DevicePage::DevicePage(Log &log, FoamControl &foamctrl, string n): 
-foamctrl(foamctrl), log(log), devname(n), infoframe("Info")  {
+foamctrl(foamctrl), log(log), devname(n)  {
 	printf("%x:DevicePage::DevicePage()\n", (int) pthread_self());
 		
-	infobox.set_spacing(4);	
-	infobox.pack_start(infolabel, PACK_SHRINK);
-	infoframe.add(infobox);
+//	infobox.set_spacing(4);	
+//	infobox.pack_start(infolabel, PACK_SHRINK);
+//	infoframe.add(infobox);
 	
 	// Add frames to parent VBox
 	set_spacing(4);
-	pack_start(infoframe, PACK_SHRINK);
+//	pack_start(infoframe, PACK_SHRINK);
 	
 	show_all_children();	
 }
@@ -61,5 +61,5 @@ int DevicePage::init() {
 
 void DevicePage::on_message_update() {
 	printf("%x:DevicePage::on_message_update()\n", (int) pthread_self());
-	infolabel.set_text("Device: " + devctrl->getName() + " Info: " + devctrl->getInfo());
+	//infolabel.set_text("Device: " + devctrl->getName() + " Info: " + devctrl->getInfo());
 }

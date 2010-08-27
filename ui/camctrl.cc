@@ -42,7 +42,7 @@ CamCtrl::CamCtrl(const string h, const string p, const string n):
 	fprintf(stderr, "CamCtrl::CamCtrl()\n");
 	
 	ok = false;
-	state = UNDEFINED;
+	mode = UNDEFINED;
 	errormsg = "Not connected";
 	
 	exposure = 0;
@@ -78,7 +78,6 @@ CamCtrl::~CamCtrl() {
 }
 
 void CamCtrl::on_connected(bool connected) {
-	
 	DeviceCtrl::on_connected(connected);
 	
 	fprintf(stderr, "CamCtrl::on_connected()\n");
@@ -98,14 +97,13 @@ void CamCtrl::on_connected(bool connected) {
 	protocol.write("get depth");
 	protocol.write("get mode");
 	protocol.write("get filename");
-	protocol.write("get state");
 }
 
 void CamCtrl::on_message(string line) {
 	DeviceCtrl::on_message(line);
 	
 	if(!ok) {
-		state = ERROR;
+		mode = ERROR;
 		return;
 	}
 
@@ -127,38 +125,31 @@ void CamCtrl::on_message(string line) {
 		depth = popint32(line);
 	else if(what == "filename")
 		filename = popword(line);
-	else if(what == "state") {
-		string statename = popword(line);
-		if(statename == "ready")
-			state = READY;
-		else if(statename == "waiting")
-			state = WAITING;
-		else if(statename == "burst")
-			state = BURST;
-		else if(statename == "error") {
-			state = ERROR;
+	else if(what == "mode") {
+		string m = popword(line);
+		
+		if (m == "OFF") mode = OFF;
+		if (m == "WAITING") mode = WAITING;
+		if (m == "SINGLE") mode = SINGLE;
+		if (m == "RUNNING") mode = RUNNING;
+		if (m == "CONFIG") mode = CONFIG;
+		if (m == "ERROR") {
+			mode = ERROR;
 			ok = false;
-		} else {
-			state = UNDEFINED;
-			ok = false;
-			errormsg = "Unexpected state '" + statename + "'";
 		}
-	} else if(what == "mode") {
-		string modename = popword(line);
-		if(modename == "master")
-			mode = MASTER;
-		else if(modename == "slave")
-			mode = SLAVE;
-		else
-			mode = OFF;
+		else {
+			mode = UNDEFINED;
+			ok = false;
+			errormsg = "Unexpected mode '" + m + "'";
+		}	
 	} else if(what == "thumbnail") {
 		protocol.read(thumbnail, sizeof thumbnail);
 		signal_thumbnail();
 		return;
 	} else if(what == "fits") {
 	} else {
-		//ok = false;
-		//errormsg = "Unexpected response '" + what + "'";
+		ok = false;
+		errormsg = "Unexpected response '" + what + "'";
 	}
 
 	signal_update();
@@ -265,12 +256,15 @@ std::string CamCtrl::get_filename() const {
 	return filename;
 }
 
-bool CamCtrl::is_master() const {
-	return mode == MASTER;
-}
-
-bool CamCtrl::is_slave() const {
-	return mode == SLAVE;
+std::string CamCtrl::get_mode() const {
+	if (mode == OFF) return "OFF";
+	if (mode == WAITING) return "WAITING";
+	if (mode == SINGLE) return "SINGLE";
+	if (mode == RUNNING) return "RUNNING";
+	if (mode == CONFIG) return "CONFIG";
+	if (mode == ERROR) return "ERROR";	
+	else 
+		return "UNDEFINED";
 }
 
 bool CamCtrl::is_off() const {
@@ -323,13 +317,13 @@ void CamCtrl::set_fits(const string &fits) {
 
 void CamCtrl::darkburst(int32_t count) {
 	string command = format("dark %d", count);
-	state = UNDEFINED;
+	mode = UNDEFINED;
 	protocol.write(command);
 }
 
 void CamCtrl::flatburst(int32_t count) {
 	string command = format("flat %d", count);
-	state = UNDEFINED;
+	mode = UNDEFINED;
 	protocol.write(command);
 }
 
@@ -337,28 +331,29 @@ void CamCtrl::burst(int32_t count, int32_t fsel) {
 	string command = format("burst %d", count);
 	if(fsel > 1)
 		command += format(" select %d", fsel);
-	state = UNDEFINED;
+	mode = UNDEFINED;
 	protocol.write(command);
 }
 
-enum CamCtrl::state CamCtrl::get_state() const {
-	return state;
-}
-
-bool CamCtrl::wait_for_state(enum state desiredstate, bool condition) {
-	while((ok && state != ERROR) && (state == UNDEFINED || (state == desiredstate) != condition))
-		usleep(100000);
-
-	return (state == desiredstate) == condition;
-}
-
-//bool CamCtrl::is_ok() const {
-//	return ok;
+//enum CamCtrl::state CamCtrl::get_state() const {
+//	return state;
 //}
 //
-//string CamCtrl::get_errormsg() const {
-//	return errormsg;
+//
+//bool CamCtrl::wait_for_state(enum state desiredstate, bool condition) {
+//	while((ok && state != ERROR) && (state == UNDEFINED || (state == desiredstate) != condition))
+//		usleep(100000);
+//
+//	return (state == desiredstate) == condition;
 //}
+
+bool CamCtrl::is_ok() const {
+	return ok;
+}
+
+string CamCtrl::get_errormsg() const {
+	return errormsg;
+}
 
 void CamCtrl::grab(int x1, int y1, int x2, int y2, int scale, bool darkflat, int fsel) {
 	string command = format("grab %d %d %d %d %d histogram", x1, y1, x2, y2, scale);

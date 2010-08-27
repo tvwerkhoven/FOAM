@@ -48,9 +48,9 @@ protected:
 	string devname;											//!< Device name
 	
 	// GTK stuff
-	Frame infoframe;
-	HBox infobox;
-	Label infolabel;
+	//Frame infoframe;
+	//HBox infobox;
+	//Label infolabel;
 
 public:
 	DevicePage(Log &log, FoamControl &foamctrl, string n);

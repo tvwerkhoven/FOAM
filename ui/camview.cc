@@ -101,6 +101,22 @@ bool CamView::on_timeout() {
 
 void CamView::on_message_update() {
 	DevicePage::on_message_update();
+	
+	e_exposure.set_text(format("%g", camctrl->get_exposure()));
+	e_offset.set_text(format("%g", camctrl->get_offset()));
+	e_interval.set_text(format("%g", camctrl->get_interval()));
+	e_gain.set_text(format("%g", camctrl->get_gain()));
+	e_res.set_text(format("%dx%dx%d", camctrl->get_width(), camctrl->get_height(), camctrl->get_depth()));
+	e_mode.set_text(camctrl->get_mode());
+	if (camctrl->is_ok())
+		e_stat.set_text("Ok");
+	else
+		e_stat.set_text("Err: " + camctrl->get_errormsg());
+	
+}
+
+void CamView::on_info_change() {
+	fprintf(stderr, "CamView::on_info_change()\n");
 }
 
 void CamView::on_zoom100_activate() {
@@ -124,10 +140,12 @@ CamView::~CamView() {
 
 CamView::CamView(Log &log, FoamControl &foamctrl, string n): 
 DevicePage(log, foamctrl, n),
+infoframe("Info"),
 dispframe("Display settings"),
 ctrlframe("Camera controls"),
 camframe("Camera"),
 histoframe("Histogram"),
+e_exposure("Exp."), e_offset("Offset"), e_interval("Intv."), e_gain("Gain"), e_res("Res."), e_mode("Mode"), e_stat("Status"),
 flipv("Flip vert."), fliph("Flip hor."), crosshair("Crosshair"), zoomin(Stock::ZOOM_IN), zoomout(Stock::ZOOM_OUT), zoom100(Stock::ZOOM_100), zoomfit(Stock::ZOOM_FIT), refresh(Stock::REFRESH),
 mean("Mean value"), stddev("Stddev")
 {
@@ -137,15 +155,37 @@ mean("Mean value"), stddev("Stddev")
 	waitforupdate = false;
 	s = -1;
 
+	e_exposure.set_text("N/A");
+	e_exposure.set_width_chars(4);
+	e_offset.set_text("N/A");
+	e_offset.set_width_chars(4);
+	e_interval.set_text("N/A");
+	e_interval.set_width_chars(4);
+	e_gain.set_text("N/A");
+	e_gain.set_width_chars(4);
+	e_res.set_text("N/A");
+	e_res.set_width_chars(12);
+	e_res.set_editable(false);
+	e_mode.set_text("N/A");
+	e_mode.set_width_chars(8);
+	e_mode.set_editable(false);
+	e_stat.set_text("N/A");
+	e_stat.set_width_chars(12);
+	e_stat.set_editable(false);
+	
 	fliph.set_active(false);
 	flipv.set_active(false);
 	crosshair.set_active(false);
 	
-	mean.set_text("-");
-	mean.set_width_chars(8);
-	stddev.set_text("-");
-	stddev.set_width_chars(8);
-
+	mean.set_text("N/A");
+	mean.set_width_chars(6);
+	mean.set_alignment(1);
+	mean.set_editable(false);
+	stddev.set_text("N/A");
+	stddev.set_width_chars(6);
+	stddev.set_alignment(1);
+	stddev.set_editable(false);
+	
 	//! \todo AccelMap only works for menus, can we make shortcuts for buttons?
 //	AccelMap::add_entry("<camview>/menu/view/fliph", AccelKey("h").get_key(), Gdk::SHIFT_MASK);
 //	AccelMap::add_entry("<camview>/menu/view/flipv", AccelKey("v").get_key(), Gdk::SHIFT_MASK);
@@ -178,10 +218,6 @@ mean("Mean value"), stddev("Stddev")
 //	fsel.set_accel_path("<camview>/menu/extra/fsel");
 //	tiptilt.set_accel_path("<camview>/menu/extra/tiptilt");
 
-	mean.set_alignment(1);
-	stddev.set_alignment(1);
-	mean.set_editable(false);
-	stddev.set_editable(false);
 
 	// glarea
 	//glarea.linkData((void *) NULL, 8, 0, 0);
@@ -199,6 +235,10 @@ mean("Mean value"), stddev("Stddev")
 //	imageevents.add_events(Gdk::POINTER_MOTION_HINT_MASK);
 	
 	//Glib::signal_timeout().connect(sigc::mem_fun(*this, &CamView::on_timeout), 1000.0/30.0);
+	e_exposure.entry.signal_editing_done().connect(sigc::mem_fun(*this, &CamView::on_info_change));
+	e_offset.entry.signal_editing_done().connect(sigc::mem_fun(*this, &CamView::on_info_change));
+	e_interval.entry.signal_editing_done().connect(sigc::mem_fun(*this, &CamView::on_info_change));
+	e_gain.entry.signal_editing_done().connect(sigc::mem_fun(*this, &CamView::on_info_change));
 
 	fliph.signal_toggled().connect(sigc::mem_fun(*this, &CamView::force_update));
 	flipv.signal_toggled().connect(sigc::mem_fun(*this, &CamView::force_update));
@@ -215,9 +255,16 @@ mean("Mean value"), stddev("Stddev")
 //	fullscreentoggle.signal_toggled().connect(sigc::mem_fun(*this, &CamView::on_fullscreen_toggled));
 //	close.signal_activate().connect(sigc::mem_fun(*this, &CamView::on_close_activate));
 //	colorsel.signal_activate().connect(sigc::mem_fun(*this, &CamView::on_colorsel_activate));
-
 	
 	// layout
+	infohbox.pack_start(e_exposure, PACK_SHRINK);
+	infohbox.pack_start(e_interval, PACK_SHRINK);
+	infohbox.pack_start(e_gain, PACK_SHRINK);
+	infohbox.pack_start(e_res, PACK_SHRINK);
+	infohbox.pack_start(e_mode, PACK_SHRINK);
+	infohbox.pack_start(e_stat, PACK_SHRINK);
+	infoframe.add(infohbox);
+	
 	disphbox.pack_start(flipv, PACK_SHRINK);
 	disphbox.pack_start(fliph, PACK_SHRINK);
 	disphbox.pack_start(zoomfit, PACK_SHRINK);
@@ -236,6 +283,7 @@ mean("Mean value"), stddev("Stddev")
 	histohbox.pack_start(stddev, PACK_SHRINK);
 	histoframe.add(histohbox);
 	
+	pack_start(infoframe, PACK_SHRINK);
 	pack_start(dispframe, PACK_SHRINK);
 	pack_start(ctrlframe, PACK_SHRINK);
 	pack_start(camframe);
@@ -252,7 +300,7 @@ int CamView::init() {
 	// Downcast to generic device control pointer for base class (DevicePage in this case)
 	devctrl = (DeviceCtrl *) camctrl;
 	
-	depth = camctrl->get_depth();
+//	depth = camctrl->get_depth();
 	
 	camctrl->signal_monitor.connect(sigc::mem_fun(*this, &CamView::force_update));
 	camctrl->signal_update.connect(sigc::mem_fun(*this, &CamView::on_message_update));
