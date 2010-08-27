@@ -41,15 +41,14 @@ public:
 	~DummyCamera();
 	
 	// From Camera::
-	virtual void cam_handler();		//!< Camera handler
-	virtual void *cam_queue(void *data, void *image, struct timeval *tv = 0); //!< Store frame in buffer, returns oldest frame if buffer is full
-	virtual void on_message(Connection* /* conn */, std::string /* line */) { } ;
+	void cam_handler();
+	void cam_set_exposure(double value);
+	void cam_set_interval(double value);
+	void cam_set_gain(double value);
+	void cam_set_offset(double value);
+	void cam_set_mode(mode_t newmode);
 	
-	// Get thumbnail
-	bool thumbnail(uint8_t *out);
-	bool monitor(void *out, size_t &size, int &x1, int &y1, int &x2, int &y2, int &scale);
-	bool capture();
-	
+	void do_restart();	
 };
 
 #endif // HAVE_DUMMYCAM_H

@@ -37,6 +37,7 @@
 #include "devices.h"
 
 using namespace std;
+
 static const string cam_type = "cam";
 
 /*!
@@ -142,15 +143,14 @@ protected:
 	
 	// These should be implemented in derived classes:
 	virtual void cam_handler() = 0;										//!< Camera handler
-	virtual void cam_set_exposure(double value) = 0;
-	virtual void cam_set_interval(double value) = 0;
-	virtual void cam_set_gain(double value) = 0;
-	virtual void cam_set_offset(double value) = 0;
-	virtual void cam_set_exposure(double value) = 0;
-	virtual void cam_set_exposure(double value) = 0;
-	virtual void cam_set_exposure(double value) = 0;
-	virtual void cam_set_mode(mode_t newmode) = 0;
-	
+	virtual void cam_set_exposure(double value) = 0;	//!< Set exposure in camera hardware
+	virtual void cam_set_interval(double value) = 0;	//!< Set interval in camera hardware
+	virtual void cam_set_gain(double value) = 0;			//!< Set gain in camera hardware
+	virtual void cam_set_offset(double value) = 0;		//!< Set offset in camera hardware
+	virtual void cam_set_mode(mode_t newmode) = 0;		//!< Set mode for cam_handler()
+
+	virtual void do_restart() = 0;
+
 	void *cam_queue(void *data, void *image, struct timeval *tv = 0); //!< Store frame in buffer, returns oldest frame if buffer is full
 	
 	void calculate_stats(frame *frame);
@@ -180,7 +180,7 @@ protected:
 
 	mode_t mode;									//!< Camera mode (see mode_t)
 	
-	string filenamebase;					//!< Base filename, input for makename()
+	static string filenamebase;					//!< Base filename, input for makename()
 	string outputdir;							//!< Output dir for saving files, absolute or relative to ptc->datadir
 	
 	string fits_observer;					//!< FITS header properties for saved files
@@ -212,7 +212,6 @@ public:
 		return &frames[count % nframes];
 	}
 	
-	virtual void do_restart() = 0;
 	
 	// From Devices::
 	virtual int verify() { return 0; }

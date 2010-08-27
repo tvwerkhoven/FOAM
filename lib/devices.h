@@ -28,6 +28,7 @@
 
 #include <map>
 
+#include "foamctrl.h"
 #include "io.h"
 #include "protocol.h"
 #include "config.h"
@@ -60,7 +61,8 @@ public:
 		exception(const std::string reason): runtime_error(reason) {}
 	};
 		
-	Device(Io&, string, string, string, string);
+	Device(Io&, foamctrl*, string, string, string, string);
+	
 	virtual ~Device();
 	
 	virtual int verify() { return 0; }	//!< Verify the integrity of the device

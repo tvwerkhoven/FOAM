@@ -26,6 +26,7 @@
 
 #include "io.h"
 #include "devices.h"
+#include "foamctrl.h"
 
 // Device class
 

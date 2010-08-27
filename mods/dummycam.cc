@@ -140,21 +140,27 @@ void DummyCamera::cam_handler() {
 void DummyCamera::cam_set_exposure(double value) {
 	pthread::mutexholder h(&cam_mutex);
 	exposure = value;
+	
+	accumfix();
+	netio.broadcast(format("OK exposure %lf", exposure), "exposure");
 }
 
 void DummyCamera::cam_set_interval(double value) {
 	pthread::mutexholder h(&cam_mutex);
 	interval = value;
+	netio.broadcast(format("OK interval %lf", interval), "interval");
 }
 
 void DummyCamera::cam_set_gain(double value) {
 	pthread::mutexholder h(&cam_mutex);
 	gain = value;
+	netio.broadcast(format("OK gain %lf", gain), "gain");
 }
 
 void DummyCamera::cam_set_offset(double value) {
 	pthread::mutexholder h(&cam_mutex);
 	offset = value;
+	netio.broadcast(format("OK offset %lf", offset), "offset");
 }
 
 void DummyCamera::cam_set_mode(mode_t newmode) {
