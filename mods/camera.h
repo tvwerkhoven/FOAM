@@ -96,6 +96,7 @@ class Camera : public Device {
 public:
 	typedef enum {
 		OFF = 0,
+		WAITING,
 		SINGLE,
 		RUNNING,
 		CONFIG,
@@ -136,22 +137,33 @@ protected:
 	pthread::mutex cam_mutex;
 	pthread::cond cam_cond;
 	
-	pthread::cond mode_cond;
+	pthread::cond mode_cond;			//!< Mode change notification
 	pthread::mutex mode_mutex;
 	
-	//virtual int cam_init(config cfg);	//!< Initialize camera
-	virtual void cam_handler() = 0;		//!< Camera handler
-	virtual void *cam_queue(void *data, void *image, struct timeval *tv = 0) = 0; //!< Store frame in buffer, returns oldest frame if buffer is full
-	//virtual void *cam_capture();	//!< Capture frame
+	// These should be implemented in derived classes:
+	virtual void cam_handler() = 0;										//!< Camera handler
+	virtual void cam_set_exposure(double value) = 0;
+	virtual void cam_set_interval(double value) = 0;
+	virtual void cam_set_gain(double value) = 0;
+	virtual void cam_set_offset(double value) = 0;
+	virtual void cam_set_exposure(double value) = 0;
+	virtual void cam_set_exposure(double value) = 0;
+	virtual void cam_set_exposure(double value) = 0;
+	virtual void cam_set_mode(mode_t newmode) = 0;
 	
+	void *cam_queue(void *data, void *image, struct timeval *tv = 0); //!< Store frame in buffer, returns oldest frame if buffer is full
+	
+	void calculate_stats(frame *frame);
+	static frame_t *get_frame(size_t id, bool wait = true);
+
 	frame_t *frames;							//!< Frame ringbuffer
 	uint64_t count;
 	size_t nframes;
 	uint64_t timeouts;
 	
 	//! @todo incorporate dark/flat into struct or class?
-	int ndark;										//!< Number of frames used in darkframe
-	int nflat;										//!< Number of frames used in flatframe
+	size_t ndark;									//!< Number of frames used in darkframe
+	size_t nflat;									//!< Number of frames used in flatframe
 	frame_t dark;
 	frame_t flat;
 	double darkexp;								//!< Exposure used for darkexp
@@ -174,8 +186,6 @@ protected:
 	string fits_observer;					//!< FITS header properties for saved files
 	string fits_target;						//!< FITS header properties for saved files
 	string fits_comment;					//!< FITS header properties for saved files
-	
-	void calculate_stats(frame *frame);
 	
 public:
 	Camera(Io &io, foamctrl *ptc, string name, string type, string port, string conffile);
@@ -201,17 +211,34 @@ public:
 		}
 		return &frames[count % nframes];
 	}
-
-	//! @todo Tell camera hardware about these changes?
-	virtual void set_mode(mode_t newmode) { mode = newmode; }
-	virtual void set_interval(double value) { interval = value; }
-	virtual void set_exposure(double value) { exposure = value; }
-	virtual void set_gain(double value) { gain = value; }
-	virtual void set_offset(double value) { offset = value; }
-
+	
+	virtual void do_restart() = 0;
+	
 	// From Devices::
 	virtual int verify() { return 0; }
 	virtual void on_message(Connection*, std::string);
+	
+	void set_exposure(Connection *conn, double value);
+	void set_interval(Connection *conn, double value);
+	void set_gain(Connection *conn, double value);
+	void set_offset(Connection *conn, double value);
+	void set_mode(Connection *conn, string value);
+	void get_fits(Connection *conn);
+	void set_fits(Connection *conn, string line);
+	void set_filename(Connection *conn, string value);
+	void set_outputdir(Connection *conn, string value);
+	
+	std::string makename(const string &base = filenamebase);
+	
+	void thumbnail(Connection *conn);
+	static void grab(Connection *conn, int x1, int y1, int x2, int y2, int scale, bool do_df, bool do_histo);
+	
+	static void accumfix();
+	static void darkburst(Connection *conn, size_t bcount);
+	static void flatburst(Connection *conn, size_t bcount);
+	static bool accumburst(uint32_t *accum, size_t bcount);
+	
+	static void statistics(Connection *conn, size_t bcount);	
 };
 
 

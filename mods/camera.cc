@@ -70,7 +70,7 @@ Camera::~Camera() {
 	delete frames;
 }
 
-void Camera::calculate_stats(frame *frame) {
+void Camera::calculate_stats(frame_t *frame) {
 	memset(frame->histo, 0, get_maxval() * sizeof *frame->histo);
 	
 	if(depth <= 8) {
@@ -100,7 +100,55 @@ void Camera::calculate_stats(frame *frame) {
 	frame->rms = sqrt(sumsquared - sum * sum) / sum;
 }
 
-// Network IO goes here
+void *Camera::cam_queue(void *data, void *image, struct timeval *tv) {
+	pthread::mutexholder h(&mutex);
+	
+	frame_t *frame = &frames[count % nframes];
+	void *old = frame->data;
+	frame->data = data;
+	frame->image = image;
+	frame->id = count++;
+	
+	if(!frame->histo)
+		frame->histo = new uint32_t[maxval];
+	
+	calculate_stats(frame);
+	
+	//! @todo Could still implement this (partially)
+	frame->rms1 = frame->rms2 = 0.0/0.0;
+	frame->cx = frame->cy = frame->cr = 0.0/0.0;
+	frame->dx = frame->dy = 0.0/0.0;
+	
+	if(tv)
+		frame->tv = *tv;
+	else
+		gettimeofday(&frame->tv, 0);
+	io.msg(IO_DEB1, "\r%8zu %p %p %p %7.3lf %6.3lf", count, frame, data, image, frame->avg, frame->rms);
+	
+	
+	cam_cond.broadcast();
+	
+	return old;
+}
+
+static frame_t *Camera::get_frame(size_t id, bool wait = true) {
+	if(id >= count) {
+		if(wait) {
+			//! @todo Shouldn't we lock the mutex here first?
+			while(id >= count)
+				cam_cond.wait(cam_mutex);
+		} else {
+			return 0;
+		}
+	}
+	
+	if(id < count - nframes || id >= count)
+		return 0;
+	
+	return &frames[id % nframes];
+}
+
+// Network IO starts here
 
 void Camera::on_message(conn *conn, string line) {
 	string command = popword(line);
@@ -199,9 +247,6 @@ void Camera::on_message(conn *conn, string line) {
 	} else {
 		conn->write("ERROR :Unknown command");
 	}
-}
-
-void Camera::do_restart() {
 }
 
 void Camera::set_exposure(Connection *conn, double value) {
@@ -409,7 +454,7 @@ static void Camera::grab(Connection *conn, int x1, int y1, int x2, int y2, int s
 	}
 }
 
-static void accumfix() {
+static void Camera::accumfix() {
 	if (exposure != darkexp) {
 		for(size_t i = 0; i < res.x * res.y; i++)
 			dark.image[i] = 0;
@@ -423,4 +468,136 @@ static void accumfix() {
 		flat.data = NULL;
 		flatexp = exposure;
 	}
+}
+
+static void Camera::darkburst(Connection *conn, size_t bcount) {
+	// Update dark count
+	if (bcount > 0)
+		ndark = bcount;
+		
+	io.msg(IO_DEB1, "Starting dark burst of %zu frames", ndark);
+	
+	//! @todo fix this
+	state = WAITING;
+	get_state(connection, true);
+	set_state(WAITING, true);
+	
+	// Allocate memory for darkfield
+	uint32_t *accum = new uint32_t[res.x * res.y];
+	memset(accum, 0, res.x * res.y * sizeof *accum);
+
+	if(!accumburst(accum, ndark))
+		conn->write("ERROR :Error during dark burst");
+	else {
+		darkexp = exposure;
+	}
+	
+	//accumsave(dark, "dark", dark_exposure);
+	
+	// Link data to dark
+	if (dark.image) 
+		delete dark.image;
+	
+	dark.image = accum;
+	dark.data = dark.image;
+	
+	io.msg(IO_DEB1, "Got new dark.");
+	
+	state = READY;
+	get_state(connection, true);
+}
+
+static void Camera::flatburst(Connection *conn, size_t bcount) {
+	// Update flat count
+	if (bcount > 0)
+		nflat = bcount;
+	
+	io.msg(IO_DEB1, "Starting flat burst of %zu frames", nflat);
+	
+	//! @todo fix this
+	state = WAITING;
+	get_state(connection, true);
+	set_state(WAITING, true);
+	
+	// Allocate memory for flatfield
+	uint32_t *accum = new uint32_t[res.x * res.y];
+	memset(accum, 0, res.x * res.y * sizeof *accum);
+	
+	if(!accumburst(accum, nflat))
+		conn->write("ERROR :Error during flat burst");
+	else {
+		flatexp = exposure;
+	}
+	
+	//accumsave(flat, "flat", flat_exposure);
+	
+	// Link data to flat
+	if (flat.image) 
+		delete flat.image;
+	
+	flat.image = accum;
+	flat.data = flat.image;
+	
+	io.msg(IO_DEB1, "Got new flat.");
+	
+	state = READY;
+	get_state(connection, true);
+}
+
+static bool Camera::accumburst(uint32_t *accum, size_t bcount) {
+	pthread::mutexholder h(&mutex);
+	
+	size_t start = count;
+	size_t rx = 0;
+	
+	while(rx < bcount) {
+		frame_t *f = get_frame(start + rx);
+		if(!f)
+			return false;
+		
+		if(depth <= 8) {
+			uint8_t *image = (uint8_t *)f->image;
+			for(size_t i = 0; i < res.x * res.y; i++)
+				accum[i] += image[i];
+		} else {
+			uint16_t *image = (uint16_t *)f->image;
+			for(size_t i = 0; i < res.x * res.y; i++)
+				accum[i] += image[i];
+		}
+		
+		rx++;
+	}
+	
+	return true;
+}
+
+static void Camera::statistics(Connection *conn, size_t bcount) {
+	if (bcount < 1)
+		bcount = 1;
+	
+	double avg = 0;
+	double rms = 0;
+	size_t rx = 0;
+	
+	{
+		pthread::mutexholder h(&mutex);
+		size_t start = count;
+		
+		while(rx < bcount) {
+			frame_t *f = get_frame(start + rx);
+			if(!f)
+				break;
+			
+			avg += f->avg;
+			rms += f->rms * f->rms;
+			
+			rx++;
+		}
+	}
+	
+	avg /= rx;
+	rms /= rx;
+	rms = sqrt(rms);
+	
+	conn->write(format("OK statistics %lf %lf", avg, rms));
 }
