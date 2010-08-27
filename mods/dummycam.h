@@ -37,7 +37,7 @@ private:
 	double noise;
 	
 public:
-	DummyCamera(Io &io, string name, string port, string conffile);
+	DummyCamera(Io &io, foamctrl *ptc, string name, string port, string conffile);
 	~DummyCamera();
 	
 	// From Camera::

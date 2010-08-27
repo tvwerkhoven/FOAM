@@ -46,7 +46,7 @@ int FOAM_simstatic::load_modules() {
 	io.msg(IO_INFO, "This is the simstatic prime module, enjoy.");
 		
 	// Add ImgCam device
-	testcam = new DummyCamera(io, "dummycam", ptc->listenport, ptc->conffile);
+	testcam = new DummyCamera(io, ptc, "dummycam", ptc->listenport, ptc->conffile);
 	devices->add((Device *) testcam);
 //	imgcamb = new ImgCamera(io, "imgcamB", ptc->listenport, ptc->cfg);
 //	devices->add((Device *) imgcamb);

@@ -143,16 +143,19 @@ protected:
 	virtual void cam_handler() = 0;		//!< Camera handler
 	virtual void *cam_queue(void *data, void *image, struct timeval *tv = 0) = 0; //!< Store frame in buffer, returns oldest frame if buffer is full
 	//virtual void *cam_capture();	//!< Capture frame
-		
+	
 	frame_t *frames;							//!< Frame ringbuffer
 	uint64_t count;
 	size_t nframes;
 	uint64_t timeouts;
 	
+	//! @todo incorporate dark/flat into struct or class?
 	int ndark;										//!< Number of frames used in darkframe
 	int nflat;										//!< Number of frames used in flatframe
 	frame_t dark;
 	frame_t flat;
+	double darkexp;								//!< Exposure used for darkexp
+	double flatexp;								//!< Exposure used for flatexp
 
 	double interval;							//!< Frame time (exposure + readout)
 	double exposure;							//!< Exposure time
@@ -165,10 +168,17 @@ protected:
 
 	mode_t mode;									//!< Camera mode (see mode_t)
 	
+	string filenamebase;					//!< Base filename, input for makename()
+	string outputdir;							//!< Output dir for saving files, absolute or relative to ptc->datadir
+	
+	string fits_observer;					//!< FITS header properties for saved files
+	string fits_target;						//!< FITS header properties for saved files
+	string fits_comment;					//!< FITS header properties for saved files
+	
 	void calculate_stats(frame *frame);
 	
 public:
-	Camera(Io &io, string name, string type, string port, string conffile);
+	Camera(Io &io, foamctrl *ptc, string name, string type, string port, string conffile);
 	virtual ~Camera();
 
 	double get_interval() { return interval; }

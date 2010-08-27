@@ -31,8 +31,8 @@ using namespace std;
 
 const std::string dummycam_type = "dummycam";
 
-DummyCamera::DummyCamera(Io &io, string name, string port, string conffile): 
-Camera(io, name, dummycam_type, port, conffile)
+DummyCamera::DummyCamera(Io &io, foamctrl *ptc, string name, string port, string conffile): 
+Camera(io, ptc, name, dummycam_type, port, conffile)
 {
 	io.msg(IO_DEB2, "DummyCamera::DummyCamera()");
 

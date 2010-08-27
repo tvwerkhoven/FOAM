@@ -29,6 +29,7 @@
 #include <string.h>
 #include <stdint.h>
 #include <math.h>
+#include <unistd.h>
 
 #include "io.h"
 #include "types.h"
@@ -39,8 +40,8 @@
 
 using namespace std;
 
-Camera::Camera(Io &io, string name, string type, string port, string conffile): 
-Device(io, name, cam_type + "." + type, port, conffile),
+Camera::Camera(Io &io, foamctrl *ptc, string name, string type, string port, string conffile): 
+Device(io, ptc, name, cam_type + "." + type, port, conffile),
 nframes(8), timeouts(0), ndark(10), nflat(10), 
 interval(1.0), exposure(1.0), gain(1.0), offset(0.0), 
 res(0,0), depth(-1), dtype(DATA_UINT16),
@@ -200,3 +201,226 @@ void Camera::on_message(conn *conn, string line) {
 	}
 }
 
+void Camera::do_restart() {
+}
+
+void Camera::set_exposure(Connection *conn, double value) {
+	cam_set_exposure(value);
+	accumfix();
+	conn->addtag("exposure");
+	netio.broadcast(format("OK exposure %lf", exposure), "exposure");
+}
+
+void Camera::set_interval(Connection *conn, double value) {
+	cam_set_interval(value);
+	conn->addtag("interval");
+	netio.broadcast(format("OK interval %lf", interval), "interval");
+}
+
+void Camera::set_gain(Connection *conn, double value) {
+	cam_set_gain(value);
+	conn->addtag("gain");
+	netio.broadcast(format("OK gain %lf", gain), "gain");
+}
+
+void Camera::set_offset(Connection *conn, double value) {
+	cam_set_offset(value);
+	conn->addtag("offset");
+	netio.broadcast(format("OK offset %lf", offset), "offset");
+}
+
+void Camera::set_mode(Connection *conn, string value) {
+	get_mode(conn, true);
+}
+
+void Camera::get_fits(Connection *conn) {
+	conn->write("OK fits " + fits_observer + ", " + fits_target + ", :" + fits_comments);
+}
+
+void Camera::set_fits(Connection *conn, string line) {
+	fits_observer = popword(line, ",");
+	fits_target = popword(line, ",");
+	fits_comments = popword(line);
+	get_fits(conn);
+}
+
+void Camera::set_filename(Connection *conn, string value) {
+	filenamebase = value;
+	conn->addtag("filename");
+	netio.broadcast("OK filename :" + filenamebase, "filename");
+}
+
+void Camera::set_outputdir(Connection *conn, string value) {
+	// If it's not an absolute path (starting with '/'), prefix ptc->datadir
+	if (value.substr(0,1) != "/")
+		value = ptc->datadir + "/" + value;
+		
+	if(access(value.c_str(), R_OK | W_OK | X_OK)) {
+		conn->write("ERROR :directory not usable");
+		return;
+	}
+	
+	outputdir = value;
+	conn->addtag("outputdir");
+	netio.broadcast("OK outputdir :" + outputdir, "outputdir");
+}
+
+string Camera::makename(const string &base = filenamebase) {
+	struct timeval tv;
+	struct tm tm;
+	gettimeofday(&tv, 0);
+	gmtime_r(&tv.tv_sec, &tm);
+	
+	string result = outputdir + format("/%4d-%02d-%02d/", 1900 + tm.tm_year, 1 + tm.tm_mon, tm.tm_mday);
+	mkdir(result.c_str(), 0755);
+	result += base + format("_%08d_%s.fits", tv.tv_sec, id.c_str());
+	return result;
+}
+
+void Camera::thumbnail(Connection *conn) {
+	uint8_t buffer[32 * 32];
+	uint8_t *out = buffer;
+	
+	int step, xoff, yoff;
+	
+	if(res.x < res.y)
+		step = res.x / 32;
+	else
+		step = res.y / 32;
+	
+	xoff = (res.x - step * 31) / 2;
+	yoff = (res.y - step * 31) / 2;
+	
+	{
+		//! @todo Speed issue: Image is locked here, might block camera thread.
+		pthread::mutexholder h(&cam_mutex);
+		frame_t *f = get_last_frame();
+		if(f) {
+			if(depth <= 8) {
+				uint8_t *in = (uint8_t *)f->image;
+				for(int y = 0; y < 32; y++)
+					for(int x = 0 ; x < 32; x++)
+						*out++ = in[width * (yoff + y * step) + xoff + x * step] << (8 - depth);
+			} else if(depth <= 16) {
+				uint16_t *in = (uint16_t *)f->image;
+				for(int y = 0; y < 32; y++)
+					for(int x = 0 ; x < 32; x++)
+						*out++ = in[width * (yoff + y * step) + xoff + x * step] >> (depth - 8);
+			}
+		}
+	}
+	
+	conn->write("OK thumbnail");
+	conn->write(buffer, sizeof buffer);
+}
+
+
+template <class T> static T clamp(T x, T min, T max) { if (x < min) x = min; if (x > max) x = max; return x; }
+
+static void Camera::grab(Connection *conn, int x1, int y1, int x2, int y2, int scale = 1, bool do_df = false, bool do_histo = false) {
+	x1 = clamp(x1, 0, res.x);
+	y1 = clamp(y1, 0, res.y);
+	x2 = clamp(x2, 0, res.x / scale);
+	y2 = clamp(y2, 0, res.y / scale);
+//	if(x1 < 0)
+//		x1 = 0;
+//	if(y1 < 0)
+//		y1 = 0;
+//	if(scale < 1)
+//		scale = 1;
+//	//! @todo (int) not necessary here?
+//	if(x2 * scale > (int)res.x)
+//		x2 = res.x / scale;
+//	if(y2 * scale > (int)res.y)
+//		y2 = res.y / scale;
+	
+	bool dxt1 = false;
+	void *buffer;
+	size_t size = (y2 - y1) * (x2 - x1) * (depth <= 8 ? 1 : 2);
+	uint16_t maxval = get_maxval();
+	uint8_t lookup[maxval];
+	for(int i = 0; i < maxval / 2; i++)
+		lookup[i] = pow(i, 7.0 / (depth - 1));
+	for(int i = maxval / 2; i < maxval; i++)
+		lookup[i] = 128 + pow(i - maxval / 2, 7.0 / (depth - 1));
+	
+	{
+		pthread::mutexholder h(&mutex);
+		frame_t *f = get_frame(count);
+		if(!f)
+			return conn->write("ERROR :Could not grab image");
+		
+		string extra;
+		
+		if(f->tv.tv_sec)
+			extra += format(" timestamp %li.%06li", f->tv.tv_sec, f->tv.tv_usec);
+		
+		if(f->histo && do_histo)
+			extra += " histogram";
+		
+		extra += format(" avg %lf rms %lf", f->avg, f->rms);
+		
+		// zero copy if possible
+		if(!do_df && scale == 1 && x1 == 0 && x2 == (int)res.x && y1 == 0 && y2 == (int)res.y) {
+			connection->write(format("OK image %zu %d %d %d %d %d", size, x1, y1, x2, y2, scale) + extra);
+			connection->write(f->image, size);
+			goto finish;
+		}
+		
+		buffer = malloc(size + size/8 + 128);
+		
+		if(!buffer)
+			return conn->write("ERROR :Out of memory");
+		
+		{
+			if(depth <= 8) {
+				uint8_t *in = (uint8_t *)f->image;
+				uint8_t *p = (uint8_t *)buffer;
+				for(size_t y = y1 * scale; y < y2 * scale; y += scale)
+					for(size_t x = x1 * scale; x < x2 * scale; x += scale) {
+						size_t o = y * res.x + x;
+						if(do_df)
+							*p++ = df_correct(in, o);
+						else
+							*p++ = in[o];
+					}
+			} else if(depth <= 16) {
+				uint16_t *in = (uint16_t *)f->image;
+				uint16_t *p = (uint16_t *)buffer;
+				for(size_t y = y1 * scale; y < y2 * scale; y += scale)
+					for(size_t x = x1 * scale; x < x2 * scale; x += scale) {
+						size_t o = y * res.x + x;
+						if(df)
+							*p++ = df_correct(in, o);
+						else
+							*p++ = in[o];
+					}
+			}
+			
+			conn->write(format("OK image %zu %d %d %d %d %d", size, x1, y1, x2, y2, scale) + extra);
+			conn->write(buffer, size);
+		}
+		
+		free(buffer);
+		
+	finish:
+		if(f->histo && do_histo)
+			connection->write(f->histo, sizeof *f->histo * maxval);
+	}
+}
+
+static void accumfix() {
+	if (exposure != darkexp) {
+		for(size_t i = 0; i < res.x * res.y; i++)
+			dark.image[i] = 0;
+		dark.data = NULL;
+		darkexp = exposure;
+	}
+	
+	if (exposure != flatexp) {
+		for(size_t i = 0; i < res.x * res.y; i++)
+			flat.image[i] = 1.0;
+		flat.data = NULL;
+		flatexp = exposure;
+	}
+}

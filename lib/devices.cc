@@ -29,7 +29,7 @@
 
 // Device class
 
-Device::Device(Io &io, string n, string t, string p, string cf): 
+Device::Device(Io &io, foamctrl *ptc, string n, string t, string p, string cf): 
 io(io), name(n), type("dev." + t), port(p), conffile(cf), cfg(cf, n), netio(p, n)
 { 
 	io.msg(IO_XNFO, "Device::Device(): Create new device, name=%s, type=%s", 
