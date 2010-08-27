@@ -60,7 +60,7 @@ public:
 		exception(const std::string reason): runtime_error(reason) {}
 	};
 		
-	Device(Io &io, string name, string type, string port);
+	Device(Io&, string, string, string, string);
 	virtual ~Device();
 	
 	virtual int verify() { return 0; }	//!< Verify the integrity of the device

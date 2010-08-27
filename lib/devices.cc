@@ -40,15 +40,13 @@ io(io), name(n), type("dev." + t), port(p), conffile(cf), cfg(cf, n), netio(p, n
 		throw exception("Type should be " + type + " for this Device!");
 	
 	io.msg(IO_XNFO, "Device %s listening on port %s.", name.c_str(), port.c_str());
-	protocol->slot_message = sigc::mem_fun(this, &Device::on_message);
-	protocol->slot_connected = sigc::mem_fun(this, &Device::on_connect);
-	protocol->listen();
+	netio.slot_message = sigc::mem_fun(this, &Device::on_message);
+	netio.slot_connected = sigc::mem_fun(this, &Device::on_connect);
+	netio.listen();
 }
 
 Device::~Device() {
 	io.msg(IO_DEB2, "Device::~Device()");
-	
-	delete protocol;
 }
 
 int DeviceManager::add(Device *dev) {
