@@ -59,6 +59,38 @@ static const string cam_type = "cam";
  \li main thread calls camera functions to read out data/settings, can hook up 
 		to slots to get 'instantaneous' feedback from cam_thr.
  
+ Camera net IO
+ 
+ Valid commends include
+ 
+ \li quit, bye: disconnect from camera
+ \li restart: restart camera
+ \li set <prop>: set a property (see list below)
+ \li get <prop>: get a property (see list below)
+ \li thumnail: get a 32x32x8 thumbnail
+ \li grab <x1> <y1> <x2> <y2> <scale> [darkflat] [histogram]: grab an image cropped from (x1,y1) to (x2,y2) and scaled down by factor scale. Darkflat and histogram are optional.
+ \li dark [n]: grab <n> darkframes, otherwise take the default <ndark>
+ \li flat [n]: grab <n> flatframes, otherwise take the default <nflat>
+ \li statistics [n]: get statistics over the next n frames.
+ 
+ 
+ Valid set properties:
+ \li exposure
+ \li interval
+ \li gain
+ \li offset
+ \li filename
+ \li outputdir
+ \li fits
+ 
+ Valid get properties:
+ \li All set properties, plus:
+ \li width
+ \li depth
+ \li height
+ \li state
+ \li 
+ 
  */ 
 class Camera : public Device {
 public:

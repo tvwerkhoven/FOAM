@@ -98,3 +98,105 @@ void Camera::calculate_stats(frame *frame) {
 	frame->avg = sum;
 	frame->rms = sqrt(sumsquared - sum * sum) / sum;
 }
+
+// Network IO goes here
+
+void Camera::on_message(conn *conn, string line) {
+	string command = popword(line);
+	
+	if (command == "quit" || command == "exit") {
+		conn->write("OK :Bye!");
+		conn->close();
+	} else if (command == "restart") {
+		conn->write("OK");
+		do_restart();
+	} else if (command == "set") {
+		string what = popword(line);
+		
+		//! @todo what is mode?
+		if(what == "mode")
+			set_mode(conn, popword(line));
+		else if(what == "exposure")
+			set_exposure(conn, popdouble(line));
+		else if(what == "interval")
+			set_interval(conn, popdouble(line));
+		else if(what == "gain")
+			set_gain(conn, popdouble(line));
+		else if(what == "offset")
+			set_offset(conn, popdouble(line));
+		else if(what == "filename")
+			set_filename(conn, popword(line));
+		else if(what == "outputdir")
+			set_outputdir(conn, popword(line));
+		else if(what == "fits")
+			set_fits(conn, line);
+		else
+			conn->write("ERROR :Unknown argument " + what);
+	} else if (command == "get") {
+		string what = popword(line);
+		
+		if(what == "mode") {
+			conn->addtag("mode");
+			get_mode(conn);
+		} else if(what == "exposure") {
+			conn->addtag("exposure");
+			conn->write(format("OK exposure %lf", exposure));
+		} else if(what == "interval") {
+			conn->addtag("interval");
+			conn->write(format("OK interval %lf", interval));
+		} else if(what == "gain") {
+			conn->addtag("gain");
+			conn->write(format("OK gain %lf", gain));
+		} else if(what == "offset") {
+			conn->addtag("offset");
+			conn->write(format("OK offset %lf", offset));
+		} else if(what == "width") {
+			conn->write(format("OK width %d", width));
+		} else if(what == "height") {
+			conn->write(format("OK height %d", height));
+		} else if(what == "depth") {
+			conn->write(format("OK depth %d", depth));
+		} else if(what == "state") {
+			conn->addtag("state");
+			get_state(conn);
+		} else if(what == "filename") {
+			conn->addtag("filename");
+			conn->write("OK filename :" + filenamebase);
+		} else if(what == "outputdir") {
+			conn->addtag("outputdir");
+			conn->write("OK outputdir :" + outputdir);
+		} else if(what == "fits") {
+			get_fits(conn);
+		} else {
+			conn->write("ERROR :Unknown argument " + what);
+		}
+	} else if (command == "thumbnail") {
+		thumbnail(conn);
+	} else if (command == "grab") {
+		int x1 = popint(line);
+		int y1 = popint(line);
+		int x2 = popint(line);
+		int y2 = popint(line);
+		int scale = popint(line);
+		bool do_df = false;
+		bool do_histo = false;
+		string option;
+		while(!(option = popword(line)).empty()) {
+			if(option == "darkflat")
+				do_df = true;
+			else if(option == "histogram")
+				do_histo = true;
+		}
+		
+		grab(conn, x1, y1, x2, y2, scale, do_df, do_histo);
+	} else if(command == "dark") {
+		darkburst(conn, popint(line));
+	} else if(command == "flat") {
+		flatburst(conn, popint(line));
+	} else if(command == "statistics") {
+		statistics(conn, popint(line));
+	} else {
+		conn->write("ERROR :Unknown command");
+	}
+}
+
