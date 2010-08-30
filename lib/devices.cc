@@ -50,6 +50,20 @@ Device::~Device() {
 	io.msg(IO_DEB2, "Device::~Device()");
 }
 
+// DeviceManager class
+
+DeviceManager::DeviceManager(Io &io): io(io), ndev(0) {
+	io.msg(IO_DEB2, "DeviceManager::DeviceManager()");
+}
+
+DeviceManager::~DeviceManager() {
+	io.msg(IO_DEB2, "DeviceManager::~DeviceManager()");
+	device_t::iterator it;
+	for (it=devices.begin() ; it != devices.end(); it++)
+		delete (*it).second;
+	
+}
+
 int DeviceManager::add(Device *dev) {
 	string id = dev->getname();
 	if (devices.find(id) != devices.end()) {
@@ -64,6 +78,7 @@ int DeviceManager::add(Device *dev) {
 Device* DeviceManager::get(string id) {
 	if (devices.find(id) == devices.end()) {
 		io.msg(IO_ERR, "Device ID '%s' does not exist!", id.c_str());
+		throw exception("Device " + id + " does not exist!");
 		return NULL;
 	}
 	return devices[id];
@@ -90,14 +105,4 @@ string DeviceManager::getlist(bool showtype) {
 	return devlist;
 }
 
-DeviceManager::DeviceManager(Io &io): io(io), ndev(0) {
-	io.msg(IO_DEB2, "DeviceManager::DeviceManager()");
-}
 
-DeviceManager::~DeviceManager() {
-	io.msg(IO_DEB2, "DeviceManager::~DeviceManager()");
-	device_t::iterator it;
-	for (it=devices.begin() ; it != devices.end(); it++)
-		delete (*it).second;
-	
-}

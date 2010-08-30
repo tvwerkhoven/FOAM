@@ -100,6 +100,11 @@ private:
 	int ndev;														//!< Number of devices in the system
 	
 public:
+	class exception: public std::runtime_error {
+	public:
+		exception(const std::string reason): runtime_error(reason) {}
+	};
+	
 	/*! 
 	 @brief Add a device to the list.
 	 
