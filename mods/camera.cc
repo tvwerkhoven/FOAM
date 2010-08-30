@@ -158,13 +158,15 @@ Camera::frame_t *Camera::get_frame(size_t id, bool wait) {
 
 // Network IO starts here
 void Camera::on_message(Connection *conn, string line) {
+	io.msg(IO_DEB2, "Camera::on_message(line=%s)", line.c_str());
+	
 	string command = popword(line);
 	
 	if (command == "quit" || command == "exit") {
-		conn->write("OK :Bye!");
+		conn->write("ok :Bye!");
 		conn->close();
 	} else if (command == "restart") {
-		conn->write("OK");
+		conn->write("ok");
 		do_restart();
 	} else if (command == "set") {
 		string what = popword(line);
@@ -191,46 +193,46 @@ void Camera::on_message(Connection *conn, string line) {
 			conn->addtag("outputdir");
 			string dir = popword(line);
 			if (set_outputdir(dir) == "")
-				conn->write("ERROR :directory "+dir+" not usable");
+				conn->write("error :directory "+dir+" not usable");
 		} else if(what == "fits") {
 			set_fits(line);
 			get_fits(conn);
 		} else
-			conn->write("ERROR :Unknown argument " + what);
+			conn->write("error :Unknown argument " + what);
 	} else if (command == "get") {
 		string what = popword(line);
 		
 		if(what == "mode") {
 			conn->addtag("mode");
-			conn->write("OK mode " + mode2str(mode));
+			conn->write("ok mode " + mode2str(mode));
 		} else if(what == "exposure") {
 			conn->addtag("exposure");
-			conn->write(format("OK exposure %lf", exposure));
+			conn->write(format("ok exposure %lf", exposure));
 		} else if(what == "interval") {
 			conn->addtag("interval");
-			conn->write(format("OK interval %lf", interval));
+			conn->write(format("ok interval %lf", interval));
 		} else if(what == "gain") {
 			conn->addtag("gain");
-			conn->write(format("OK gain %lf", gain));
+			conn->write(format("ok gain %lf", gain));
 		} else if(what == "offset") {
 			conn->addtag("offset");
-			conn->write(format("OK offset %lf", offset));
+			conn->write(format("ok offset %lf", offset));
 		} else if(what == "width") {
-			conn->write(format("OK width %d", res.x));
+			conn->write(format("ok width %d", res.x));
 		} else if(what == "height") {
-			conn->write(format("OK height %d", res.y));
+			conn->write(format("ok height %d", res.y));
 		} else if(what == "depth") {
-			conn->write(format("OK depth %d", depth));
+			conn->write(format("ok depth %d", depth));
 		} else if(what == "filename") {
 			conn->addtag("filename");
-			conn->write("OK filename :" + filenamebase);
+			conn->write("ok filename :" + filenamebase);
 		} else if(what == "outputdir") {
 			conn->addtag("outputdir");
-			conn->write("OK outputdir :" + outputdir);
+			conn->write("ok outputdir :" + outputdir);
 		} else if(what == "fits") {
 			get_fits(conn);
 		} else {
-			conn->write("ERROR :Unknown argument " + what);
+			conn->write("error :Unknown argument " + what);
 		}
 	} else if (command == "thumbnail") {
 		get_thumbnail(conn);
@@ -253,51 +255,51 @@ void Camera::on_message(Connection *conn, string line) {
 		grab(conn, x1, y1, x2, y2, scale, do_df, do_histo);
 	} else if(command == "dark") {
 		if (darkburst(popint(line)) )
-			conn->write("ERROR :Error during dark burst");
+			conn->write("error :Error during dark burst");
 	} else if(command == "flat") {
 		if (flatburst(popint(line)))
-			conn->write("ERROR :Error during flat burst");
+			conn->write("error :Error during flat burst");
 	} else if(command == "statistics") {
 		statistics(conn, popint(line));
 	} else {
-		conn->write("ERROR :Unknown command: " + command);
+		conn->write("error :Unknown command: " + command);
 	}
 }
 
 double Camera::set_exposure(double value) {	
 	cam_set_exposure(value);
 	accumfix();
-	netio.broadcast(format("OK exposure %lf", exposure), "exposure");
+	netio.broadcast(format("ok exposure %lf", exposure), "exposure");
 	return exposure;
 }
 
 double Camera::set_interval(double value) {
 	cam_set_interval(value);
-	netio.broadcast(format("OK interval %lf", interval), "interval");
+	netio.broadcast(format("ok interval %lf", interval), "interval");
 	return interval;
 }
 
 double Camera::set_gain(double value) {
 	cam_set_gain(value);
-	netio.broadcast(format("OK gain %lf", gain), "gain");
+	netio.broadcast(format("ok gain %lf", gain), "gain");
 	return gain;
 }
 
 double Camera::set_offset(double value) {
 	cam_set_offset(value);
-	netio.broadcast(format("OK offset %lf", offset), "offset");
+	netio.broadcast(format("ok offset %lf", offset), "offset");
 	return offset;
 }
 
 Camera::mode_t Camera::set_mode(mode_t value) {
 	cam_set_mode(value);
-	netio.broadcast("OK mode " + mode2str(mode), "mode");
+	netio.broadcast("ok mode " + mode2str(mode), "mode");
 	return mode;
 }
 
 void Camera::get_fits(Connection *conn = NULL) {
 	if (conn)
-		conn->write("OK fits " + fits_observer + ", " + fits_target + ", :" + fits_comments);
+		conn->write("ok fits " + fits_observer + ", " + fits_target + ", :" + fits_comments);
 }
 
 void Camera::set_fits(string line) {
@@ -323,7 +325,7 @@ string Camera::set_fits_comments(string val) {
 
 string Camera::set_filename(string value) {
 	filenamebase = value;
-	netio.broadcast("OK filename :" + filenamebase, "filename");
+	netio.broadcast("ok filename :" + filenamebase, "filename");
 	return filenamebase;
 }
 
@@ -336,7 +338,7 @@ string Camera::set_outputdir(string value) {
 		return "";
 	
 	outputdir = value;
-	netio.broadcast("OK outputdir :" + outputdir, "outputdir");
+	netio.broadcast("ok outputdir :" + outputdir, "outputdir");
 	return outputdir;
 }
 
@@ -387,7 +389,7 @@ uint8_t *Camera::get_thumbnail(Connection *conn = NULL) {
 	}
 	
 	if (conn) {
-		conn->write("OK thumbnail");
+		conn->write("ok thumbnail");
 		conn->write(buffer, sizeof buffer);
 		delete buffer;
 		return NULL;
@@ -430,7 +432,7 @@ void Camera::grab(Connection *conn, int x1, int y1, int x2, int y2, int scale = 
 		pthread::mutexholder h(&cam_mutex);
 		frame_t *f = get_frame(count);
 		if(!f)
-			return conn->write("ERROR :Could not grab image");
+			return conn->write("error :Could not grab image");
 		
 		string extra;
 		
@@ -444,7 +446,7 @@ void Camera::grab(Connection *conn, int x1, int y1, int x2, int y2, int scale = 
 		
 		// zero copy if possible
 		if(!do_df && scale == 1 && x1 == 0 && x2 == (int)res.x && y1 == 0 && y2 == (int)res.y) {
-			conn->write(format("OK image %zu %d %d %d %d %d", size, x1, y1, x2, y2, scale) + extra);
+			conn->write(format("ok image %zu %d %d %d %d %d", size, x1, y1, x2, y2, scale) + extra);
 			conn->write(f->image, size);
 			goto finish;
 		}
@@ -452,7 +454,7 @@ void Camera::grab(Connection *conn, int x1, int y1, int x2, int y2, int scale = 
 		buffer = malloc(size + size/8 + 128);
 		
 		if(!buffer)
-			return conn->write("ERROR :Out of memory");
+			return conn->write("error :Out of memory");
 		
 		{
 			if(depth <= 8) {
@@ -479,7 +481,7 @@ void Camera::grab(Connection *conn, int x1, int y1, int x2, int y2, int scale = 
 					}
 			}
 			
-			conn->write(format("OK image %zu %d %d %d %d %d", size, x1, y1, x2, y2, scale) + extra);
+			conn->write(format("ok image %zu %d %d %d %d %d", size, x1, y1, x2, y2, scale) + extra);
 			conn->write(buffer, size);
 		}
 		
@@ -574,7 +576,7 @@ int Camera::darkburst(size_t bcount) {
 	dark.data = dark.image;
 	
 	io.msg(IO_DEB1, "Got new dark.");
-	netio.broadcast(format("OK dark %d", nflat));
+	netio.broadcast(format("ok dark %d", nflat));
 	
 	set_mode(OFF);
 	return 0;
@@ -613,7 +615,7 @@ int Camera::flatburst(size_t bcount) {
 	flat.data = flat.image;
 	
 	io.msg(IO_DEB1, "Got new flat.");
-	netio.broadcast(format("OK flat %d", nflat));
+	netio.broadcast(format("ok flat %d", nflat));
 	
 	set_mode(OFF);
 	return 0;
@@ -674,5 +676,5 @@ void Camera::statistics(Connection *conn, size_t bcount) {
 	rms /= rx;
 	rms = sqrt(rms);
 	
-	conn->write(format("OK statistics %lf %lf", avg, rms));
+	conn->write(format("ok statistics %lf %lf", avg, rms));
 }
