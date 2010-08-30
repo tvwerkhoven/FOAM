@@ -176,7 +176,7 @@ protected:
 	void statistics(Connection *conn, size_t bcount);	//!< Post back statistics
 	
 	std::string makename(const string &base);					//!< Make filename from outputdir and filenamebase
-	std::string makename() { makename(filenamebase); }
+	std::string makename() { return makename(filenamebase); }
 	uint8_t *get_thumbnail(Connection *conn);					//!< Get 32x32x8 thumnail
 	void grab(Connection *conn, int x1, int y1, int x2, int y2, int scale, bool do_df, bool do_histo);
 	void accumfix();

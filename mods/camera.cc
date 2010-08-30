@@ -43,7 +43,7 @@ using namespace std;
 
 Camera::Camera(Io &io, foamctrl *ptc, string name, string type, string port, string conffile): 
 Device(io, ptc, name, cam_type + "." + type, port, conffile),
-nframes(8), timeouts(0), ndark(10), nflat(10), 
+nframes(8), count(0), timeouts(0), ndark(10), nflat(10), 
 interval(1.0), exposure(1.0), gain(1.0), offset(0.0), 
 res(0,0), depth(-1), dtype(DATA_UINT16),
 mode(Camera::OFF)
@@ -68,7 +68,7 @@ mode(Camera::OFF)
 }
 
 Camera::~Camera() {
-	delete frames;
+	delete[] frames;
 }
 
 void Camera::calculate_stats(frame_t *frame) {
@@ -124,7 +124,7 @@ void *Camera::cam_queue(void *data, void *image, struct timeval *tv) {
 		frame->tv = *tv;
 	else
 		gettimeofday(&frame->tv, 0);
-	io.msg(IO_DEB1, "\r%8zu %p %p %p %7.3lf %6.3lf", count, frame, data, image, frame->avg, frame->rms);
+	//io.msg(IO_DEB1, "%lld %p %p %p %7.3lf %6.3lf", count, frame, data, image, frame->avg, frame->rms);
 	
 	
 	cam_cond.broadcast();
@@ -523,18 +523,19 @@ const uint16_t Camera::df_correct(const uint16_t *in, size_t offset) {
 
 
 void Camera::accumfix() {
+	io.msg(IO_DEB2, "Camera::accumfix()");
 	if (exposure != darkexp) {
-		uint32_t *darkim = (uint32_t *) dark.image;
-		for(size_t i = 0; i < res.x * res.y; i++)
-			darkim[i] = 0;
+//		uint32_t *darkim = (uint32_t *) dark.image;
+//		for(size_t i = 0; i < res.x * res.y; i++)
+//			darkim[i] = 0;
 		dark.data = NULL;
 		darkexp = exposure;
 	}
 	
 	if (exposure != flatexp) {
-		uint32_t *flatim = (uint32_t *) flat.image;
-		for(size_t i = 0; i < res.x * res.y; i++)
-			flatim[i] = 1.0;
+//		uint32_t *flatim = (uint32_t *) flat.image;
+//		for(size_t i = 0; i < res.x * res.y; i++)
+//			flatim[i] = 1.0;
 		flat.data = NULL;
 		flatexp = exposure;
 	}
