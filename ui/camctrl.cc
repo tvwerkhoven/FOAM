@@ -57,37 +57,22 @@ CamCtrl::CamCtrl(const string h, const string p, const string n):
 	g = 1;
 	b = 1;
 
-	monitor.x1 = 0;
-	monitor.y1 = 0;
-	monitor.x2 = 0;
-	monitor.y2 = 0;
-	monitor.scale = 1;
-	monitor.image = 0;
-	monitor.size = 0;
-	monitor.histogram = 0;
-
-//	protocol.slot_message = sigc::mem_fun(this, &CamCtrl::on_message);
-//	protocol.slot_connected = sigc::mem_fun(this, &CamCtrl::on_connected);
-//	protocol.connect();
+	protocol.slot_message = sigc::mem_fun(this, &CamCtrl::on_message);
 	monitorprotocol.slot_message = sigc::mem_fun(this, &CamCtrl::on_monitor_message);
 	monitorprotocol.connect();
 }
 
 CamCtrl::~CamCtrl() {
-	set_off();
+	//! @todo turn off
+	fprintf(stderr, "CamCtrl::~CamCtrl()\n");
+	set_mode(OFF);
 }
 
 void CamCtrl::on_connected(bool connected) {
+	fprintf(stderr, "CamCtrl::on_connected()\n");
 	DeviceCtrl::on_connected(connected);
 	
-	fprintf(stderr, "CamCtrl::on_connected()\n");
-	if(!connected) {
-		ok = false;
-		errormsg = "Not connected";
-		signal_update();
-		return;
-	}
-
+	protocol.write("get mode");
 	protocol.write("get exposure");
 	protocol.write("get interval");
 	protocol.write("get gain");
@@ -95,17 +80,19 @@ void CamCtrl::on_connected(bool connected) {
 	protocol.write("get width");
 	protocol.write("get height");
 	protocol.write("get depth");
-	protocol.write("get mode");
 	protocol.write("get filename");
 }
 
 void CamCtrl::on_message(string line) {
+	fprintf(stderr, "CamCtrl::on_message()\n");
 	DeviceCtrl::on_message(line);
+	
 	
 	if(!ok) {
 		mode = ERROR;
 		return;
 	}
+	popword(line);
 
 	string what = popword(line);
 
@@ -129,11 +116,11 @@ void CamCtrl::on_message(string line) {
 		string m = popword(line);
 		
 		if (m == "OFF") mode = OFF;
-		if (m == "WAITING") mode = WAITING;
-		if (m == "SINGLE") mode = SINGLE;
-		if (m == "RUNNING") mode = RUNNING;
-		if (m == "CONFIG") mode = CONFIG;
-		if (m == "ERROR") {
+		else if (m == "WAITING") mode = WAITING;
+		else if (m == "SINGLE") mode = SINGLE;
+		else if (m == "RUNNING") mode = RUNNING;
+		else if (m == "CONFIG") mode = CONFIG;
+		else if (m == "ERROR") {
 			mode = ERROR;
 			ok = false;
 		}
@@ -146,7 +133,6 @@ void CamCtrl::on_message(string line) {
 		protocol.read(thumbnail, sizeof thumbnail);
 		signal_thumbnail();
 		return;
-	} else if(what == "fits") {
 	} else {
 		ok = false;
 		errormsg = "Unexpected response '" + what + "'";
@@ -181,13 +167,6 @@ void CamCtrl::on_monitor_message(string line) {
 	while(!(extra = popword(line)).empty()) {
 		if(extra == "histogram") {
 			do_histogram = true;
-		} else if(extra == "tiptilt") {
-			dx = popdouble(line);
-			dy = popdouble(line);
-		} else if(extra == "com") {
-			cx = popdouble(line);
-			cy = popdouble(line);
-			cr = popdouble(line);
 		}
 	}
 
@@ -256,7 +235,7 @@ std::string CamCtrl::get_filename() const {
 	return filename;
 }
 
-std::string CamCtrl::get_mode() const {
+std::string CamCtrl::get_modestr() const {
 	if (mode == OFF) return "OFF";
 	if (mode == WAITING) return "WAITING";
 	if (mode == SINGLE) return "SINGLE";
@@ -267,12 +246,8 @@ std::string CamCtrl::get_mode() const {
 		return "UNDEFINED";
 }
 
-bool CamCtrl::is_off() const {
-	return mode == OFF;
-}
-
-bool CamCtrl::is_enabled() const {
-	return enabled;
+void CamCtrl::set_mode(const mode_t m) {
+	protocol.write(format("set mode %s", get_modestr().c_str()));
 }
 
 void CamCtrl::set_exposure(double value) {
@@ -289,22 +264,6 @@ void CamCtrl::set_gain(double value) {
 
 void CamCtrl::set_offset(double value) {
 	protocol.write(format("set offset %lf", value));
-}
-
-void CamCtrl::set_master() {
-	protocol.write("set mode master");
-}
-
-void CamCtrl::set_slave() {
-	protocol.write("set mode slave");
-}
-
-void CamCtrl::set_off() {
-	protocol.write("set mode off");
-}
-
-void CamCtrl::set_enabled(bool value) {
-	enabled = value;
 }
 
 void CamCtrl::set_filename(const string &filename) {
@@ -347,19 +306,9 @@ void CamCtrl::burst(int32_t count, int32_t fsel) {
 //	return (state == desiredstate) == condition;
 //}
 
-bool CamCtrl::is_ok() const {
-	return ok;
-}
-
-string CamCtrl::get_errormsg() const {
-	return errormsg;
-}
-
-void CamCtrl::grab(int x1, int y1, int x2, int y2, int scale, bool darkflat, int fsel) {
+void CamCtrl::grab(int x1, int y1, int x2, int y2, int scale, bool darkflat) {
 	string command = format("grab %d %d %d %d %d histogram", x1, y1, x2, y2, scale);
 	if(darkflat)
 		command += " darkflat";
-	if(fsel)
-		command += format(" select %d", fsel);
 	monitorprotocol.write(command);
 }

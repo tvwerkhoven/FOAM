@@ -54,11 +54,6 @@ public:
 	int32_t depth;
 	std::string filename;
 
-//	volatile enum {
-//		OFF,
-//		SLAVE,
-//		MASTER,
-//	} mode;
 	typedef enum {
 		OFF = 0,
 		WAITING,
@@ -68,45 +63,34 @@ public:
 		ERROR,
 		UNDEFINED
 	} mode_t;
-	
 	mode_t mode;
 	
-	bool ok;
-	bool enabled;
-	std::string errormsg;
-
+	// From DeviceCtrl::
 	virtual void on_message(std::string line);
-	void on_monitor_message(std::string line);
 	virtual void on_connected(bool connected);
 
-	public:
-
-//	const std::string name;
-//	const std::string host;
-//	const std::string port;
+	// For monitorprotocol
+	void on_monitor_message(std::string line);
+	void on_monitor_connected(bool connected);
+	
+public:
 	CamCtrl(const std::string name, const std::string host, const std::string port);
 	~CamCtrl();
 
-//	volatile enum state {
-//		UNDEFINED = -2,
-//		ERROR = -1,
-//		READY = 0,
-//		WAITING,
-//		BURST,
-//	} state;
-
-	double get_exposure() const;
-	double get_interval() const;
-	double get_gain() const;
-	double get_offset() const;
-	int32_t get_width() const;
-	int32_t get_height() const;
-	int32_t get_depth() const;
-	std::string get_filename() const;
-	
 	double r, g, b;
 	uint8_t thumbnail[32 * 32];
-	struct {
+	struct monitor {
+		monitor() {
+			image = 0;
+			size = 0;
+			x1 = 0;
+			x2 = 0;
+			y1 = 0;
+			y2 = 0;
+			scale = 1;
+			depth = 0;
+			histogram = 0;
+		}
 		pthread::mutex mutex;
 		void *image;
 		size_t size;
@@ -123,40 +107,40 @@ public:
 		uint32_t *histogram;
 		int depth;
 	} monitor;
-
+	
+	// Get & set settings
+	double get_exposure() const;
+	double get_interval() const;
+	double get_gain() const;
+	double get_offset() const;
+	int32_t get_width() const;
+	int32_t get_height() const;
+	int32_t get_depth() const;
+	std::string get_filename() const;
 	void get_thumbnail();
-	bool is_master() const;
-	bool is_slave() const;
-	bool is_off() const;
-	bool is_enabled() const;
-
+	mode_t get_mode() const { return mode; }
+	std::string get_modestr() const;
+	
 	void set_exposure(double value);
 	void set_interval(double value);
 	void set_gain(double value);
 	void set_offset(double value);
-	void set_master();
-	void set_slave();
-	void set_off();
-	void set_enabled(bool value = true);
 	void set_filename(const std::string &filename);
 	void set_fits(const std::string &fits);
+	void set_mode(const mode_t m);
 
+	// Take images
 	void darkburst(int count);
 	void flatburst(int count);
 	void burst(int count, int fsel = 0);
-	void grab(int x1, int y1, int x2, int y2, int scale = 1, bool df_correct = false, int fsel = 0);
-
-	string get_mode() const;
-//	bool wait_for_state(enum state desiredstate, bool condition = true);
-//	bool wait_for_state() {return wait_for_state(UNDEFINED, false);}
-	bool connect();
-	bool is_ok() const;
-	std::string get_errormsg() const;
-
-	Glib::Dispatcher signal_thumbnail;
-	Glib::Dispatcher signal_monitor;
-	//Glib::Dispatcher signal_update;
+	void grab(int x1, int y1, int x2, int y2, int scale = 1, bool df_correct = false);
 	
+	bool connect();
+
+	// Signal on new thumnail
+	Glib::Dispatcher signal_thumbnail;
+	// Signal on new image
+	Glib::Dispatcher signal_monitor;
 };
 
 #endif // HAVE_CAMCTRL_H

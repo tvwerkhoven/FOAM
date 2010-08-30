@@ -20,8 +20,10 @@
 /*!
  @file fgui.cc
  @author Tim van Werkhoven (t.i.m.vanwerkhoven@xs4all.nl)
- 
  @brief This is the FOAM control GUI
+
+ @todo add timeout to connect() attempt
+ @todo disable buttons when not connected.
  */
 
 #include <gtkmm.h>

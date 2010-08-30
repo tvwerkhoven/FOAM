@@ -28,7 +28,7 @@
 using namespace std;
 
 DeviceCtrl::DeviceCtrl(const string h, const string p, const string n):
-	host(h), port(p), devname(n), devinfo("null")
+	host(h), port(p), devname(n)
 {
 	printf("%x:DeviceCtrl::DeviceCtrl(name=%s)\n", (int) pthread_self(), n.c_str());	
 	
@@ -45,25 +45,24 @@ void DeviceCtrl::on_message(string line) {
 	
 	if (popword(line) != "ok") {
 		ok = false;
-		errormsg = popword(line);
+		errormsg = line;
 		signal_update();
 		return;
 	}
-	
 	ok = true;
-	
-	string what = popword(line);
-	
-	if (what == "info") {
-		devinfo = line;
-	}
 	
 	signal_update();
 }
 
 void DeviceCtrl::on_connected(bool connected) {
 	printf("%x:DeviceCtrl::on_connected(status=%d)\n", (int) pthread_self(), connected);	
+	if (!connected) {
+		ok = false;
+		errormsg = "Not connected";
+		signal_update();
+		return;
+	}
 	if (connected)
-		protocol.write("info");
+		protocol.write("get info");
 	
 }

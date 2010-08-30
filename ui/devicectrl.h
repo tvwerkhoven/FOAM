@@ -38,7 +38,6 @@ protected:
 	Protocol::Client protocol;
 	
 	const string host, port, devname;
-	string devinfo;
 	
 	virtual void on_message(string line);
 	virtual void on_connected(bool status);
@@ -60,7 +59,6 @@ public:
 	bool is_ok() const { return ok; }
 	string get_errormsg() const { return errormsg; }
 	
-	virtual string getInfo() { return devinfo; }
 	virtual string getName() { return devname; }
 };
 

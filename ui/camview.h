@@ -88,36 +88,7 @@ protected:
 	LabeledEntry mean;
 	LabeledEntry stddev;
 
-//	Gtk::MenuBar menubar;
-//	Gtk::MenuItem view;
-//	Gtk::MenuItem extra;
-
-//	Gtk::Menu viewmenu;
-//	Gtk::CheckMenuItem fliph;
-//	Gtk::CheckMenuItem flipv;
-//	Gtk::SeparatorMenuItem tsep1;
-//	Gtk::CheckMenuItem fit;
-//	Gtk::MenuItem zoom1;
-//	Gtk::MenuItem zoomin;
-//	Gtk::MenuItem zoomout;
-//	Gtk::SeparatorMenuItem tsep2;
-//	Gtk::CheckMenuItem histogram;
-//	Gtk::CheckMenuItem contrast;
-//	Gtk::SeparatorMenuItem tsep3;
-//	Gtk::CheckMenuItem underover;
-//	Gtk::CheckMenuItem crosshair;
-//	Gtk::SeparatorMenuItem tsep4;
-//	Gtk::CheckMenuItem fullscreentoggle;
-//	Gtk::ImageMenuItem close;
-
-//	Gtk::Menu extramenu;
-//	Gtk::MenuItem colorsel;
-//	Gtk::CheckMenuItem darkflat;
-//	Gtk::CheckMenuItem fsel;
-//	Gtk::CheckMenuItem tiptilt;
-
-//	bool on_window_state_event(GdkEventWindowState *event);
-//	void on_window_configure_event(GdkEventConfigure *event);
+	// Events
 	void on_zoom100_activate();
 	void on_zoomin_activate();
 	void on_zoomout_activate();
