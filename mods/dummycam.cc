@@ -87,8 +87,10 @@ void DummyCamera::update() {
 	}
 	
 	void *old = cam_queue(image, image, &now);
-	if(old)
-		free(old);
+	if(old) {
+		//io.msg(IO_DEB2, "Got old=%p\n", old);
+		//free((uint16_t *)old);
+	}
 	
 	// Make sure each update() takes at minimum interval seconds:
 	diff.tv_sec = 0;
