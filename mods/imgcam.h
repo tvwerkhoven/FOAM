@@ -33,7 +33,7 @@
 #include "imgio.h"
 #include "camera.h"
 
-static const string imgcam_type = "imgcam";
+const string imgcam_type = "imgcam";
 
 using namespace std;
 
