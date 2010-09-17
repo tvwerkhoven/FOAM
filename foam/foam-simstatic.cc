@@ -131,7 +131,7 @@ int FOAM_simstatic::calib() {
 }
 
 void FOAM_simstatic::on_message(Connection *connection, std::string line) {
-	io.msg(IO_DEB2, "FOAM_simstatic::on_message(Connection *connection, std::string line)");
+	io.msg(IO_DEB2, "FOAM_simstatic::on_message(line=%s)", line.c_str());
 	netio.ok = true;
 	
 	// First let the parent process this
