@@ -162,10 +162,15 @@ protected:
 	
 	// These should be implemented in derived classes:
 	virtual void cam_handler() = 0;										//!< Camera handler
-	virtual void cam_set_exposure(double value) = 0;	//!< Set exposure in camera hardware
-	virtual void cam_set_interval(double value) = 0;	//!< Set interval in camera hardware
-	virtual void cam_set_gain(double value) = 0;			//!< Set gain in camera hardware
-	virtual void cam_set_offset(double value) = 0;		//!< Set offset in camera hardware
+	virtual void cam_set_exposure(double value) = 0;	//!< Set exposure in camera
+	virtual double cam_get_exposure() = 0;						//!< Get exposure from camera
+	virtual void cam_set_interval(double value) = 0;	//!< Set interval in camera
+	virtual double cam_get_interval() = 0;						//!< Get interval from camera
+	virtual void cam_set_gain(double value) = 0;			//!< Set gain in camera
+	virtual double cam_get_gain() = 0;								//!< Get gain from camera
+	virtual void cam_set_offset(double value) = 0;		//!< Set offset in camera
+	virtual double cam_set_offset() = 0;							//!< Get offset from camera
+
 	virtual void cam_set_mode(mode_t newmode) = 0;		//!< Set mode for cam_handler()
 	virtual void do_restart() = 0;
 
