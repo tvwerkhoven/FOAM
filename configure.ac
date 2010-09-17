@@ -30,6 +30,9 @@ AC_PROG_MAKE_SET
 AC_PROG_INSTALL
 AC_PROG_RANLIB
 
+PKG_PROG_PKG_CONFIG
+AC_CANONICAL_HOST
+
 # FOAM data & configuration directory
 FOAMDATADIR=$datadir/foam
 FOAMCONFDIR=$sysconfdir/foam
@@ -48,10 +51,10 @@ AC_SEARCH_LIBS([pthread_create],
 		[FOAM_FATAL=yes;FOAM_MISSING+=" pthread"])
 
 PKG_CHECK_MODULES(SIGC, [sigc++-2.0 >= 2.0], [],
-	[FOAM_FATAL=yes;FOAM_MISSING+=" sigc++-2.0"])
+		[FOAM_FATAL=yes;FOAM_MISSING+=" sigc++-2.0"])
 
 PKG_CHECK_MODULES(GSL, [gsl], [],
-	[FOAM_FATAL=yes;FOAM_MISSING+=" gsl gslcblas"])
+		[FOAM_FATAL=yes;FOAM_MISSING+=" gsl gslcblas"])
 
 COMMON_CFLAGS="$SIGC_CFLAGS $GSL_CFLAGS"
 COMMON_LIBS="$SIGC_LIBS $GSL_LIBS"
@@ -60,11 +63,40 @@ AC_SUBST(COMMON_LIBS)
 
 ### Miscellaneous optional libraries
 
+# cfitsio
 AC_SEARCH_LIBS([ffopen], [cfitsio], 
-	[have_fitsio=true], 
-	[have_fitsio=false])
+		[have_fitsio=true;
+		AM_CONDITIONAL([HAVE_FITSIO], [true])],
+		[have_fitsio=false])
 
-AM_CONDITIONAL([HAVE_FITSIO], [test "$have_fitsio" = true])
+### Hardware libraries
+
+# dc1394
+PKG_CHECK_MODULES(DC1394, [libdc1394-2],
+		[have_dc1394=true],
+		[have_dc1394=false])
+
+# TODO: need to check things for linux and mac here
+if test "$have_dc1394" = true ; then
+	echo $build
+	case "$build" in
+		*-*-linux*)
+		AC_SEARCH_LIBS(raw1394_channel_modify, raw1394,
+				[AM_CONDITIONAL([HAVE_DC1394], [true])],
+				[AC_MSG_WARN(libraw1394 not found or too old (<1.2.0), required for libdc1394.)])
+		;;
+		*-*-darwin*)
+		AC_SEARCH_LIBS(IOMasterPort, IOKit,
+				[AM_CONDITIONAL([HAVE_DC1394], [true])],
+				[AC_MSG_WARN(IOKitLib not found, required for libdc1394.)])
+		;;
+	esac
+fi
+
+# Check for the new version of libraw1394 first since they might have both    # installed and we want to use the newest version
+
+
+
 
 ### BUILD TARGETS ###
 #####################
