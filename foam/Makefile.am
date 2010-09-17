@@ -79,3 +79,34 @@ foam_simstat_LDFLAGS = $(SIMSTAT_LIBS) $(AM_LDFLAGS)
 
 endif SIMSTAT
 ### END STATIC SIMULATION MODE ###
+
+### HW TEST MODE ###
+####################
+
+if HWDEBUG
+# building hardware tests
+
+if HAVE_DC1394
+bin_PROGRAMS += foam-hwtest
+
+foam_hwtest_SOURCES = foam-hwtest.cc \
+		$(FRAME_SRC) $(FRAME_HDR) \
+		$(LIB_DIR)/imgio.cc \
+		$(MODS_DIR)/camera.cc \
+		$(MODS_DIR)/fw1394cam.cc
+
+# Header files are part of the sources as well
+foam_hwtest_SOURCES += foam-hwtest.h \
+		$(LIB_DIR)/imgio.h \
+		$(MODS_DIR)/camera.h \
+		$(MODS_DIR)/fw1394cam.h \
+		$(MODS_DIR)/dc1394++.h
+
+foam_hwtest_CPPFLAGS = -DFOAM_DEFAULTCONF=\"$(FOAMCONFDIR)/foam-hwtest.cfg\" \
+		$(AM_CPPFLAGS)
+foam_hwtest_CXXFLAGS = $(DC1394_CFLAGS) $(AM_CXXFLAGS)
+foam_hwtest_LDFLAGS = $(DC1394_LIBS) $(AM_LDFLAGS)
+endif HAVE_DC1394
+
+endif HWDEBUG
+### END HW TEST MODE ###
