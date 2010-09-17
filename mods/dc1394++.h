@@ -135,22 +135,22 @@ class dc1394 {
 		handle = dc1394_new(); 
 		if(!handle) throw std::runtime_error("Unable to allocate dc1394 structure");
 
-		// Init enumpairs
-		iso_speed_p.insert(ISO_SPEED_100, 100);
-		iso_speed_p.insert(ISO_SPEED_200, 200);
-		iso_speed_p.insert(ISO_SPEED_400, 400);
-		iso_speed_p.insert(ISO_SPEED_800, 800);
-		iso_speed_p.insert(ISO_SPEED_1600, 1600);
-		iso_speed_p.insert(ISO_SPEED_3200, 3200);
+		// Init enumpairs (cast to specific type for clarity)
+		iso_speed_p.insert(ISO_SPEED_100, (int) 100);
+		iso_speed_p.insert(ISO_SPEED_200, (int) 200);
+		iso_speed_p.insert(ISO_SPEED_400, (int) 400);
+		iso_speed_p.insert(ISO_SPEED_800, (int) 800);
+		iso_speed_p.insert(ISO_SPEED_1600, (int) 1600);
+		iso_speed_p.insert(ISO_SPEED_3200, (int) 3200);
 		
-		framerate_p.insert(FRAMERATE_1_875, 1.875);
-		framerate_p.insert(FRAMERATE_3_75, 3.75);
-		framerate_p.insert(FRAMERATE_7_5, 7.5);
-		framerate_p.insert(FRAMERATE_15, 15.);
-		framerate_p.insert(FRAMERATE_30, 30.);
-		framerate_p.insert(FRAMERATE_60, 60.);
-		framerate_p.insert(FRAMERATE_120, 120.);
-		framerate_p.insert(FRAMERATE_240, 240.);
+		framerate_p.insert(FRAMERATE_1_875, (double) 1.875);
+		framerate_p.insert(FRAMERATE_3_75, (double) 3.75);
+		framerate_p.insert(FRAMERATE_7_5, (double) 7.5);
+		framerate_p.insert(FRAMERATE_15, (double) 15.);
+		framerate_p.insert(FRAMERATE_30, (double) 30.);
+		framerate_p.insert(FRAMERATE_60, (double) 60.);
+		framerate_p.insert(FRAMERATE_120, (double) 120.);
+		framerate_p.insert(FRAMERATE_240, (double) 240.);
 
 		video_mode_p.insert(VIDEO_MODE_160x120_YUV444, "VIDEO_MODE_160x120_YUV444");
 		video_mode_p.insert(VIDEO_MODE_320x240_YUV422, "VIDEO_MODE_320x240_YUV422");
@@ -343,7 +343,7 @@ class dc1394 {
 		dc1394camera_t *handle;
 		
 	public:
-		camera(dc1394camera_t *handle, dc1394 *parent): handle(handle), _dc1394(parent) {
+		camera(dc1394camera_t *handle, dc1394 *parent): _dc1394(parent), handle(handle) {
 			// TODO: query available video modes + framerates.
 		}
 		~camera() { dc1394_camera_free(handle); }
@@ -458,14 +458,18 @@ class dc1394 {
 		/* Video functions */
 		void set_framerate(framerate value) { check(dc1394_video_set_framerate(handle, (dc1394framerate_t)value)); }
 		framerate get_framerate() { dc1394framerate_t value; check(dc1394_video_get_framerate(handle, &value)); return (framerate)value; }
-		void set_framerate_f(float fps) { 
-			if (log2(fps/1.875) < 0.0 || log2(fps/1.875) > 7.0)
+		void set_framerate_f(double fps) { 
+			if (!_dc1394->check_framerate(fps))
 				return;
 			
-			check(dc1394_video_set_framerate(handle, (dc1394framerate_t)value)); }
-		framerate get_framerate_f() { dc1394framerate_t value; check(dc1394_video_get_framerate(handle, &value)); return (framerate)value; }
+			check(dc1394_video_set_framerate(handle, (dc1394framerate_t) _dc1394->framerate_p.getenum(fps))); 
+		}
+		double get_framerate_f() { 
+			float fps; 
+			dc1394_framerate_as_float((dc1394framerate_t) get_framerate(), &fps);
+			return fps;
+		}
 		
-		dc1394_framerate_as_float
 		void set_video_mode(video_mode value) { check(dc1394_video_set_mode(handle, (dc1394video_mode_t)value)); }
 		video_mode get_video_mode() { dc1394video_mode_t value; check(dc1394_video_get_mode(handle, &value)); return (video_mode)value; }
 		void set_iso_speed(iso_speed value) { check(dc1394_video_set_iso_speed(handle, (dc1394speed_t)value)); }
