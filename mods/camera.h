@@ -169,7 +169,7 @@ protected:
 	virtual void cam_set_gain(double value) = 0;			//!< Set gain in camera
 	virtual double cam_get_gain() = 0;								//!< Get gain from camera
 	virtual void cam_set_offset(double value) = 0;		//!< Set offset in camera
-	virtual double cam_set_offset() = 0;							//!< Get offset from camera
+	virtual double cam_get_offset() = 0;							//!< Get offset from camera
 
 	virtual void cam_set_mode(mode_t newmode) = 0;		//!< Set mode for cam_handler()
 	virtual void do_restart() = 0;
