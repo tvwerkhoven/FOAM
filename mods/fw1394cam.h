@@ -27,6 +27,7 @@
 #include "config.h"
 #include "io.h"
 
+#include "dc1394++.h"
 #include "camera.h"
 
 const string FW1394cam_type = "FW1394cam";
@@ -35,7 +36,7 @@ using namespace std;
 class FW1394Camera: public Camera {
 private:
 	// 1394-specific hardware instructions
-	dc1394 dc1394;
+	dc1394 _dc1394;
 	dc1394::camera *camera;
 	
 public:
@@ -51,7 +52,7 @@ public:
 	void cam_set_gain(double value);
 	double cam_get_gain();
 	void cam_set_offset(double value);
-	double cam_set_offset();
+	double cam_get_offset();
 	
 	void cam_set_mode(mode_t newmode);
 	void do_restart();
