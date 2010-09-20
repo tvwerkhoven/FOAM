@@ -29,8 +29,6 @@
 
 using namespace std;
 
-const std::string dummycam_type = "dummycam";
-
 DummyCamera::DummyCamera(Io &io, foamctrl *ptc, string name, string port, string conffile): 
 Camera(io, ptc, name, dummycam_type, port, conffile)
 {
@@ -43,7 +41,6 @@ Camera(io, ptc, name, dummycam_type, port, conffile)
 	exposure = 0.3;
 	
 	dtype = DATA_UINT16;
-	mode = Camera::OFF;
 	
 	set_filename("dummycam-"+name);
 	
@@ -51,6 +48,7 @@ Camera(io, ptc, name, dummycam_type, port, conffile)
 					res.x, res.y, depth, noise, interval, exposure);
 	
 	// Start camera thread
+	mode = Camera::RUNNING;
 	cam_thr.create(sigc::mem_fun(*this, &DummyCamera::cam_handler));
 }
 
@@ -146,9 +144,17 @@ void DummyCamera::cam_set_exposure(double value) {
 	exposure = value;
 }
 
+double DummyCamera::cam_get_exposure() {
+	return exposure;
+}
+
 void DummyCamera::cam_set_interval(double value) {
 	pthread::mutexholder h(&cam_mutex);
 	interval = value;
+}
+
+double DummyCamera::cam_get_interval() {
+	return interval;
 }
 
 void DummyCamera::cam_set_gain(double value) {
@@ -156,9 +162,17 @@ void DummyCamera::cam_set_gain(double value) {
 	gain = value;
 }
 
+double DummyCamera::cam_get_gain() {
+	return gain;
+}
+
 void DummyCamera::cam_set_offset(double value) {
 	pthread::mutexholder h(&cam_mutex);
 	offset = value;
+}
+
+double DummyCamera::cam_get_offset() {
+	return offset;
 }
 
 void DummyCamera::cam_set_mode(const mode_t newmode) {

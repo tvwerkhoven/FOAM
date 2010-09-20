@@ -29,6 +29,8 @@
 
 #include "camera.h"
 
+const std::string dummycam_type = "dummycam";
+
 using namespace std;
 
 class DummyCamera: public Camera {
@@ -43,11 +45,16 @@ public:
 	// From Camera::
 	void cam_handler();
 	void cam_set_exposure(double value);
+	double cam_get_exposure();
 	void cam_set_interval(double value);
+	double cam_get_interval();
 	void cam_set_gain(double value);
+	double cam_get_gain();
 	void cam_set_offset(double value);
+	double cam_get_offset();
+
 	void cam_set_mode(mode_t newmode);
-	
+
 	void do_restart();	
 };
 
