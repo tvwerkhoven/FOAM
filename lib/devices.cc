@@ -38,7 +38,7 @@ io(io), ptc(ptc), name(n), type("dev." + t), port(p), conffile(cf), cfg(cf, n), 
 	
 	string _type = cfg.getstring("type");
 	if (_type != type) 
-		throw exception("Type should be " + type + " for this Device!");
+		throw exception("Device::Device(): Type should be " + type + " for this Device!");
 	
 	io.msg(IO_XNFO, "Device %s listening on port %s.", name.c_str(), port.c_str());
 	netio.slot_message = sigc::mem_fun(this, &Device::on_message);
