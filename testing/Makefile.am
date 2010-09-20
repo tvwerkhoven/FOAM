@@ -51,7 +51,7 @@ pixbuf_test_LDADD = -lgthread-2.0
 
 ### OpenGL programs go here (need GUI libs)
 
-if GUI
+if HAVE_OPENGL
 
 noinst_PROGRAMS += opengl-test camview-test 
 
@@ -68,7 +68,7 @@ camview_test_LDADD = $(GUI_CFLAGS) -lgthread-2.0 \
 		$(LIBSIU_DIR)/libprotocol.a \
 		$(LIBSIU_DIR)/libsocket.a
 
-endif GUI
+endif HAVE_OPENGL
 
 if HAVE_FITSIO
 
