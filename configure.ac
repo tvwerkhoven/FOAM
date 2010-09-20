@@ -45,8 +45,6 @@ esac
 AM_CONDITIONAL(HAVE_LINUX, test x$have_linux = xtrue)
 AM_CONDITIONAL(HAVE_MACOSX, test x$have_macosx = xtrue)
 
-
-
 # FOAM data & configuration directory
 FOAMDATADIR=$datadir/foam
 FOAMCONFDIR=$sysconfdir/foam
@@ -94,6 +92,7 @@ PKG_CHECK_MODULES(DC1394, [libdc1394-2],
 if test "$have_dc1394" = true ; then
 	case "$build" in
 		*-*-linux*)
+		# TODO: test this, do we need it?
 		AC_SEARCH_LIBS(raw1394_channel_modify, raw1394,
 				[AM_CONDITIONAL([HAVE_DC1394], [true])],
 				[AC_MSG_WARN(libraw1394 not found or too old (<1.2.0), required for libdc1394.)])
@@ -105,10 +104,6 @@ if test "$have_dc1394" = true ; then
 		;;
 	esac
 fi
-
-# Check for the new version of libraw1394 first since they might have both    # installed and we want to use the newest version
-
-
 
 
 ### BUILD TARGETS ###
@@ -158,8 +153,8 @@ AM_CONDITIONAL([DEBUG], [test "$debug" = true])
 AM_CONDITIONAL([HWDEBUG], [test "$hwdebug" = true])
 AC_SUBST(LIBSIU)
 
-### STATIC SIMULATION MODE ###
-##############################
+### STATIC SIMULATION MODE LIBS ###
+###################################
 if test "$simstat" = true ; then
 	AC_MSG_NOTICE([*** Static simulation enabled, checking for extra libs])
 	simstatmissing=""
@@ -202,10 +197,12 @@ AM_CONDITIONAL([SIMSTAT], [test "$simstat" = true])
 
 ### GUI LIBRARIES ###
 #####################
+opengl=disabled
 if test "$gui" = true ; then
 	AC_MSG_NOTICE([*** GUI enabled, checking for extra libs])
 	guimissing=""
-		
+	opengl=true;
+	
 	PKG_CHECK_MODULES(GTKMM, gtkmm-2.4 >= 2.6, [],
 		[AC_MSG_WARN([FOAM GUI needs gtkmm.]);gui=false;guimissing+=" gtkmm-2.4"])
 	
@@ -224,7 +221,7 @@ if test "$gui" = true ; then
 	if test "$no_glut" = yes; then guimissing+=" glut"; fi
 
 	if test "$no_gl" = yes || test  "$no_glu" = yes || test "$no_glut" = yes ; then
-		gui=false;
+		opengl=false;
 		AC_MSG_ERROR([OpenGL not found.]);
 	fi
 
@@ -239,8 +236,8 @@ fi
 
 AC_SUBST(GUI_CFLAGS)
 AC_SUBST(GUI_LIBS)
-AM_CONDITIONAL([GUI], [test "$gui" = true])
-
+AM_CONDITIONAL([GUI], [test "$opengl" = true])
+AM_CONDITIONAL([HAVE_OPENGL], [test "$opengl" = true])
 
 ### END CHECKING FOR LIBS ###
 #############################
@@ -275,14 +272,14 @@ else
 	AC_MSG_NOTICE([FOAM control GUI:        missing:$guimissing])
 fi
 
-if test "$opengl" = true ; then
-	AC_MSG_NOTICE([OpenGL renderer:         available])
-elif test "$opengl" = disabled; then
-	AC_MSG_NOTICE([OpenGL renderer:         disabled])
-else
-	AC_MSG_NOTICE([OpenGL renderer:         not available])
-	AC_MSG_NOTICE([OpenGL renderer:         missing:$openglmissing])
-fi
+#if test "$opengl" = true ; then
+#	AC_MSG_NOTICE([OpenGL renderer:         available])
+#elif test "$opengl" = disabled; then
+#	AC_MSG_NOTICE([OpenGL renderer:         disabled])
+#else
+#	AC_MSG_NOTICE([OpenGL renderer:         not available])
+#	AC_MSG_NOTICE([OpenGL renderer:         missing:$openglmissing])
+#fi
 
 if test "$debug" = true ; then
 	AC_MSG_NOTICE([Debug targets:           available])
