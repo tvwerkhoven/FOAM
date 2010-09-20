@@ -41,7 +41,7 @@ Camera(io, ptc, name, FW1394cam_type, port, conffile)
 	if(!cameras.size())
 		throw exception("No IIDC cameras found.");
 	if (cameras.size() != 1)
-		io.msg(IO_WARN, "Found multiple IIDC cameras, using the first one.");
+		io.msg(IO_WARN, "FW1394Camera:: Found multiple IIDC cameras, using the first one.");
 	
 	camera = cameras[0];
 	camera->set_transmission(false);
@@ -50,7 +50,7 @@ Camera(io, ptc, name, FW1394cam_type, port, conffile)
 	// Set iso-speed: the transmission speed in megabit per second (1600 and 3200 only for future implementations)
 	int iso_speed = cfg.getint(name+".iso_speed", 400);
 	if (!_dc1394.check_isospeed((int) iso_speed)) {
-		io.msg(IO_WARN, "iso_speed should be 2^n*100 for 0<=n<5! Defaulting to 400.");
+		io.msg(IO_WARN, "FW1394Camera:: iso_speed should be 2^n*100 for 0<=n<5! (was %d) Defaulting to 400.", iso_speed);
 		iso_speed = 400;
 	}
 	camera->set_iso_speed((dc1394::iso_speed) _dc1394.iso_speed_p.getenum((int) iso_speed));
@@ -62,7 +62,7 @@ Camera(io, ptc, name, FW1394cam_type, port, conffile)
 	// Set framerate
 	double fps = cfg.getdouble(name+".framerate", 30.);
 	if (!_dc1394.check_framerate(fps)) {
-		io.msg(IO_WARN, "Framerate should be 2^n*1.875 for 0<=n<7! Defaulting to 15fps.");
+		io.msg(IO_WARN, "FW1394Camera:: Framerate should be 2^n*1.875 for 0<=n<7! (was %g) Defaulting to 15fps.", fps);
 		fps = 15.;
 	}
 	camera->set_framerate((dc1394::framerate) _dc1394.framerate_p.getenum(fps));
@@ -167,6 +167,8 @@ void FW1394Camera::cam_handler() {
 			if (mode == Camera::SINGLE)
 				cam_set_mode(Camera::WAITING);
 		}
+		else
+			usleep(50000);
 	}
 }
 
