@@ -33,6 +33,20 @@ AC_PROG_RANLIB
 PKG_PROG_PKG_CONFIG
 AC_CANONICAL_HOST
 
+# Check build host (might be superfluous?)
+case "$build" in
+	*-*-linux*)
+	have_linux=true
+	;;
+	*-*-darwin*)
+	have_macosx=true
+	;;
+esac
+AM_CONDITIONAL(HAVE_LINUX, test x$have_linux = xtrue)
+AM_CONDITIONAL(HAVE_MACOSX, test x$have_macosx = xtrue)
+
+
+
 # FOAM data & configuration directory
 FOAMDATADIR=$datadir/foam
 FOAMCONFDIR=$sysconfdir/foam
@@ -78,7 +92,6 @@ PKG_CHECK_MODULES(DC1394, [libdc1394-2],
 
 # TODO: need to check things for linux and mac here
 if test "$have_dc1394" = true ; then
-	echo $build
 	case "$build" in
 		*-*-linux*)
 		AC_SEARCH_LIBS(raw1394_channel_modify, raw1394,

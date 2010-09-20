@@ -30,6 +30,10 @@ AM_CXXFLAGS = -pipe -Wall -Wextra \
 
 AM_LDFLAGS = $(COMMON_LIBS)
 
+if HAVE_MACOSX
+AM_LDFLAGS += -framework CoreFoundation -framework Carbon
+endif
+
 LDADD = $(LIBSIU_DIR)/libsocket.a \
 		$(LIBSIU_DIR)/libio.a \
 		$(LIBSIU_DIR)/libconfig.a \
@@ -104,8 +108,10 @@ foam_hwtest_SOURCES += foam-hwtest.h \
 
 foam_hwtest_CPPFLAGS = -DFOAM_DEFAULTCONF=\"$(FOAMCONFDIR)/foam-hwtest.cfg\" \
 		$(AM_CPPFLAGS)
-foam_hwtest_CXXFLAGS = $(DC1394_CFLAGS) $(AM_CXXFLAGS)
-foam_hwtest_LDFLAGS = $(DC1394_LIBS) $(AM_LDFLAGS)
+foam_hwtest_CXXFLAGS = $(AM_CXXFLAGS) $(DC1394_CFLAGS)
+foam_hwtest_LDADD = $(LDADD) \
+		$(DC1394_LIBS)
+
 endif HAVE_DC1394
 
 endif HWDEBUG
