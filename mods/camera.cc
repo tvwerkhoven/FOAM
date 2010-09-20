@@ -50,17 +50,21 @@ mode(Camera::OFF)
 {
 	io.msg(IO_DEB2, "Camera::Camera()");
 	
+	// Set buffer size (default 8 frames)
 	nframes = cfg.getint("nframes", 8);
 	frames = new frame_t[nframes];
 	
+	// Set number of darks & flats to take (default 10)
 	ndark = cfg.getint("ndark", 10);
 	nflat = cfg.getint("nflat", 10);
 	
+	// Set interval, exposure, gain and offset
 	interval = cfg.getdouble("interval", 1.0);
 	exposure = cfg.getdouble("exposure", 1.0);
 	gain = cfg.getdouble("gain", 1.0);
 	offset = cfg.getdouble("offset", 0.0);
 	
+	// Set frame resolution & bitdepth
 	res.x = cfg.getint("width", 512);
 	res.y = cfg.getint("height", 512);
 	depth = cfg.getint("depth", 8);
@@ -125,7 +129,6 @@ void *Camera::cam_queue(void *data, void *image, struct timeval *tv) {
 	else
 		gettimeofday(&frame->tv, 0);
 	//io.msg(IO_DEB1, "%lld %p %p %p %7.3lf %6.3lf", count, frame, data, image, frame->avg, frame->rms);
-	
 	
 	cam_cond.broadcast();
 	
