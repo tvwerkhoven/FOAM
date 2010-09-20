@@ -70,6 +70,7 @@ protected:
 	// Need: darkflat, fsel, tiptilt, capture, thumb, ...?
 	HBox ctrlhbox;
 	Button refresh;
+	ToggleButton capture;
 		
 	// Camera image
 	HBox camhbox;
@@ -92,6 +93,7 @@ protected:
 	void on_zoom100_activate();
 	void on_zoomin_activate();
 	void on_zoomout_activate();
+	void on_capture_update();
 //	void on_colorsel_activate();
 //	void on_fullscreen_toggled();
 	void force_update();

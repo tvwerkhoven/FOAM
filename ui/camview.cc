@@ -46,7 +46,7 @@ ctrlframe("Camera controls"),
 camframe("Camera"),
 histoframe("Histogram"),
 e_exposure("Exp."), e_offset("Offset"), e_interval("Intv."), e_gain("Gain"), e_res("Res."), e_mode("Mode"), e_stat("Status"),
-flipv("Flip vert."), fliph("Flip hor."), crosshair("Crosshair"), zoomin(Stock::ZOOM_IN), zoomout(Stock::ZOOM_OUT), zoom100(Stock::ZOOM_100), zoomfit(Stock::ZOOM_FIT), refresh(Stock::REFRESH),
+flipv("Flip vert."), fliph("Flip hor."), crosshair("Crosshair"), zoomin(Stock::ZOOM_IN), zoomout(Stock::ZOOM_OUT), zoom100(Stock::ZOOM_100), zoomfit(Stock::ZOOM_FIT), refresh(Stock::REFRESH), capture("Capture"),
 mean("Mean value"), stddev("Stddev")
 {
 	fprintf(stderr, "CamView::CamView()\n");
@@ -110,6 +110,8 @@ mean("Mean value"), stddev("Stddev")
 	zoom100.signal_activate().connect(sigc::mem_fun(*this, &CamView::on_zoom100_activate));
 	zoomin.signal_activate().connect(sigc::mem_fun(*this, &CamView::on_zoomin_activate));
 	zoomout.signal_activate().connect(sigc::mem_fun(*this, &CamView::on_zoomout_activate));
+
+	capture.signal_toggled().connect(sigc::mem_fun(*this, &CamView::on_capture_update));
 	//	histogramevents.signal_button_press_event().connect(sigc::mem_fun(*this, &CamView::on_histogram_clicked));
 	//	fullscreentoggle.signal_toggled().connect(sigc::mem_fun(*this, &CamView::on_fullscreen_toggled));
 	//	close.signal_activate().connect(sigc::mem_fun(*this, &CamView::on_close_activate));
@@ -134,6 +136,7 @@ mean("Mean value"), stddev("Stddev")
 	dispframe.add(disphbox);
 	
 	ctrlhbox.pack_start(refresh, PACK_SHRINK);
+	ctrlhbox.pack_start(capture, PACK_SHRINK);
 	ctrlframe.add(ctrlhbox);
 	
 	camhbox.pack_start(glarea);
@@ -260,6 +263,17 @@ void CamView::on_zoomin_activate() {
 void CamView::on_zoomout_activate() {
 	zoomfit.set_active(false);
 	glarea.scalestep(-1.0/3.0);
+}
+
+void CamView::on_capture_update() {
+	if (capture.get_active()) {
+		fprintf(stderr, "CamView::on_capture_update(): Running capture state: %d\n", capture.get_active());		
+		camctrl->set_mode(CamCtrl::RUNNING);
+	}
+	else {
+		fprintf(stderr, "CamView::on_capture_update(): Waiting capture state: %d\n", capture.get_active());
+		camctrl->set_mode(CamCtrl::WAITING);
+	}
 }
 
 int CamView::init() {
