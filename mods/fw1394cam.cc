@@ -46,7 +46,6 @@ Camera(io, ptc, name, FW1394cam_type, port, conffile)
 	camera = cameras[0];
 	camera->set_transmission(false);
 	camera->set_power(true);
-	mode = Camera::OFF;
 	
 	// Set iso-speed: the transmission speed in megabit per second (1600 and 3200 only for future implementations)
 	int iso_speed = cfg.getint(name+".iso_speed", 400);
@@ -72,8 +71,8 @@ Camera(io, ptc, name, FW1394cam_type, port, conffile)
 	camera->set_control_register(0x80c, 0x82040040);
 	// What's this?
 	camera->capture_setup(nframes + 10);
-	camera->set_transmission();
-	
+	mode = Camera::WAITING;
+
 	res.x = cfg.getint(name+".width", 640);
 	res.y = cfg.getint(name+".height", 480);
 	depth = cfg.getint(name+".depth", 8);
@@ -95,6 +94,8 @@ FW1394Camera::~FW1394Camera() {
 	camera->set_transmission(false);
 	camera->capture_stop();
 	camera->set_power(false);	
+	
+	mode = Camera::OFF;
 }
 
 // From Camera::
@@ -150,24 +151,48 @@ void FW1394Camera::cam_handler() {
 #endif
 	
 	while(true) {
-		dc1394::frame *frame = camera->capture_dequeue(dc1394::CAPTURE_POLICY_WAIT);
-		if(!frame) {
-			timeouts++;
-			usleep(50000);
-			continue;
+		if (mode == Camera::RUNNING || mode == Camera::SINGLE) {
+			dc1394::frame *frame = camera->capture_dequeue(dc1394::CAPTURE_POLICY_WAIT);
+			if(!frame) {
+				timeouts++;
+				usleep(50000);
+				continue;
+			}
+			
+			dc1394::frame *oldframe = (dc1394::frame *)cam_queue(frame, frame->image);
+			if (oldframe)
+				camera->capture_enqueue(oldframe);
+			
+			// If we only want one frame, set camera to waiting state
+			if (mode == Camera::SINGLE)
+				cam_set_mode(Camera::WAITING);
 		}
-		
-		dc1394::frame *oldframe = (dc1394::frame *)cam_queue(frame, frame->image);
-		if (oldframe)
-			camera->capture_enqueue(oldframe);
 	}
 }
 
 void FW1394Camera::cam_set_mode(mode_t newmode) {
-	// TODO
 	if (newmode == mode)
 		return;
-	io.msg(IO_WARN, "FW1394::cam_set_mode() not implemented yet.");
+	
+	switch (newmode) {
+		case Camera::RUNNING:
+		case Camera::SINGLE:
+			// Start camera
+			camera->set_transmission(true);
+			mode = newmode;
+			break;
+		case Camera::WAITING:
+			// Stop camera
+			camera->set_transmission(false);
+			mode = newmode;
+			break;
+		case Camera::OFF:
+		case Camera::CONFIG:
+			io.msg(IO_INFO, "FW1394::cam_set_mode(%s) mode not supported.", mode2str(newmode).c_str());
+		default:
+			io.msg(IO_WARN, "FW1394::cam_set_mode(%s) mode unknown.", mode2str(newmode).c_str());
+			break;
+	}
 }
 
 void FW1394Camera::do_restart() {
