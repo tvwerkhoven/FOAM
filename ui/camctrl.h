@@ -119,7 +119,8 @@ public:
 	std::string get_filename() const;
 	void get_thumbnail();
 	mode_t get_mode() const { return mode; }
-	std::string get_modestr() const;
+	std::string get_modestr(const mode_t m) const;
+	std::string get_modestr() { return get_modestr(mode); }
 	
 	void set_exposure(double value);
 	void set_interval(double value);

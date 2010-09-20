@@ -235,19 +235,19 @@ std::string CamCtrl::get_filename() const {
 	return filename;
 }
 
-std::string CamCtrl::get_modestr() const {
-	if (mode == OFF) return "OFF";
-	if (mode == WAITING) return "WAITING";
-	if (mode == SINGLE) return "SINGLE";
-	if (mode == RUNNING) return "RUNNING";
-	if (mode == CONFIG) return "CONFIG";
-	if (mode == ERROR) return "ERROR";	
+std::string CamCtrl::get_modestr(const mode_t m) const {
+	if (m == OFF) return "OFF";
+	if (m == WAITING) return "WAITING";
+	if (m == SINGLE) return "SINGLE";
+	if (m == RUNNING) return "RUNNING";
+	if (m == CONFIG) return "CONFIG";
+	if (m == ERROR) return "ERROR";	
 	else 
 		return "UNDEFINED";
 }
 
 void CamCtrl::set_mode(const mode_t m) {
-	protocol.write(format("set mode %s", get_modestr().c_str()));
+	protocol.write(format("set mode %s", get_modestr(m).c_str()));
 }
 
 void CamCtrl::set_exposure(double value) {
