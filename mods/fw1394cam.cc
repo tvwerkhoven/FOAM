@@ -35,11 +35,6 @@ Camera(io, ptc, name, FW1394cam_type, port, conffile)
 {
 	io.msg(IO_DEB2, "Camera::Camera()");
 	
-	// Verify configuration integrity
-	string type = cfg.getstring(name+".type");
-	if (type != FW1394cam_type) 
-		throw exception("Type should be '" + FW1394cam_type + "' for this class!");
-	
 	// Init hardware
 	std::vector<dc1394::camera *> cameras = _dc1394.find_cameras();
 	
