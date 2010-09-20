@@ -322,15 +322,15 @@ class dc1394 {
 	bool check_framerate(float fps) {
 		// TODO: add check for current mode
 		//if (log2(fps/1.875) < 0.0 || log2(fps/1.875) > 7.0 || (int) log2(fps/1.875) != log2(fps/1.875))
-		if (fps != 1.875 || fps != 3.75 || fps != 7.5 || fps != 15.0 || fps != 30.0 || fps != 60.0 || fps != 120.0 || fps != 240.0) 
-			return false;
-		return true;
+		if (fps == 1.875 || fps == 3.75 || fps == 7.5 || fps == 15.0 || fps == 30.0 || fps == 60.0 || fps == 120.0 || fps == 240.0) 
+			return true;
+		return false;
 	}
 	
 	bool check_isospeed(int speed) {
-		if (speed != 100 || speed != 200 || speed != 400 || speed != 800 || speed != 1600 || speed != 3200)
-			return false;
-		return true;
+		if (speed == 100 || speed == 200 || speed == 400 || speed == 800 || speed == 1600 || speed == 3200)
+			return true;
+		return false;
 	}
 
 	typedef dc1394video_frame_t frame;
