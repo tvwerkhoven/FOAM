@@ -43,7 +43,12 @@ int FOAM_hwtest::load_modules() {
 	io.msg(IO_INFO, "This is FOAM::hwtest.");
 		
 	// Add ImgCam device
-	testcam = new FW1394Camera(io, ptc, "1394testcam", ptc->listenport, ptc->conffile);
+	try {
+		testcam = new FW1394Camera(io, ptc, "1394testcam", ptc->listenport, ptc->conffile);
+	}
+	catch (Device::exception &e) {
+		io.msg(IO_ERR | IO_FATAL, "Could not init FW1394Camera(): %s", e.what());
+	}
 	devices->add((Device *) testcam);
 //	imgcamb = new ImgCamera(io, "imgcamB", ptc->listenport, ptc->cfg);
 //	devices->add((Device *) imgcamb);
