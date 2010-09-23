@@ -144,7 +144,39 @@ double FW1394Camera::cam_get_offset() {
 	return camera->get_feature(dc1394::FEATURE_BRIGHTNESS) - 256;
 }
 
-void FW1394Camera::cam_handler() {
+//void FW1394Camera::cam_handler() {
+//	pthread::setcanceltype(PTHREAD_CANCEL_ASYNCHRONOUS);
+//	// TODO: make this Mac compatible
+//#ifndef __APPLE__
+//	cpu_set_t cpuset;
+//	CPU_ZERO(&cpuset);
+//	CPU_SET(1, &cpuset);
+//	pthread::setaffinity(&cpuset);
+//#endif
+//	
+//	while(true) {
+//		if (mode == Camera::RUNNING || mode == Camera::SINGLE) {
+//			dc1394::frame *frame = camera->capture_dequeue(dc1394::CAPTURE_POLICY_WAIT);
+//			if(!frame) {
+//				timeouts++;
+//				usleep(50000);
+//				continue;
+//			}
+//			
+//			dc1394::frame *oldframe = (dc1394::frame *)cam_queue(frame, frame->image);
+//			if (oldframe)
+//				camera->capture_enqueue(oldframe);
+//			
+//			// If we only want one frame, set camera to waiting state
+//			if (mode == Camera::SINGLE)
+//				cam_set_mode(Camera::WAITING);
+//		}
+//		else
+//			usleep(50000);
+//	}
+//}
+
+void FW1394Camera::cam_handler() { 
 	pthread::setcanceltype(PTHREAD_CANCEL_ASYNCHRONOUS);
 	// TODO: make this Mac compatible
 #ifndef __APPLE__
@@ -154,25 +186,54 @@ void FW1394Camera::cam_handler() {
 	pthread::setaffinity(&cpuset);
 #endif
 	
-	while(true) {
-		if (mode == Camera::RUNNING || mode == Camera::SINGLE) {
-			dc1394::frame *frame = camera->capture_dequeue(dc1394::CAPTURE_POLICY_WAIT);
-			if(!frame) {
-				timeouts++;
-				usleep(50000);
-				continue;
+	while (true) {
+		//! @todo Should mutex lock each time reading mode, or is this ok?
+		switch (mode) {
+			case Camera::RUNNING:
+			{
+				io.msg(IO_DEB1, "FW1394Camera::cam_handler() RUNNING");
+				dc1394::frame *frame = camera->capture_dequeue(dc1394::CAPTURE_POLICY_WAIT);
+				if(!frame) {
+					timeouts++;
+					usleep(50000);
+					continue;
+				}
+				
+				dc1394::frame *oldframe = (dc1394::frame *)cam_queue(frame, frame->image);
+				if (oldframe)
+					camera->capture_enqueue(oldframe);
+				
+				break;
 			}
-			
-			dc1394::frame *oldframe = (dc1394::frame *)cam_queue(frame, frame->image);
-			if (oldframe)
-				camera->capture_enqueue(oldframe);
-			
-			// If we only want one frame, set camera to waiting state
-			if (mode == Camera::SINGLE)
-				cam_set_mode(Camera::WAITING);
+			case Camera::SINGLE:
+			{
+				io.msg(IO_DEB1, "FW1394Camera::cam_handler() SINGLE");
+				io.msg(IO_DEB1, "FW1394Camera::cam_handler() RUNNING");
+				dc1394::frame *frame = camera->capture_dequeue(dc1394::CAPTURE_POLICY_WAIT);
+				if(!frame) {
+					timeouts++;
+					usleep(50000);
+					continue;
+				}
+				
+				dc1394::frame *oldframe = (dc1394::frame *)cam_queue(frame, frame->image);
+				if (oldframe)
+					camera->capture_enqueue(oldframe);
+				
+				mode = Camera::WAITING;
+				break;
+			}
+			case Camera::OFF:
+			case Camera::WAITING:
+			case Camera::CONFIG:
+			default:
+				io.msg(IO_INFO, "FW1394Camera::cam_handler() OFF/WAITING/UNKNOWN.");
+				// We wait until the mode changed
+				mode_mutex.lock();
+				mode_cond.wait(mode_mutex);
+				mode_mutex.unlock();
+				break;
 		}
-		else
-			usleep(50000);
 	}
 }
 
@@ -186,11 +247,13 @@ void FW1394Camera::cam_set_mode(mode_t newmode) {
 			// Start camera
 			camera->set_transmission(true);
 			mode = newmode;
+			mode_cond.broadcast();
 			break;
 		case Camera::WAITING:
 			// Stop camera
 			camera->set_transmission(false);
 			mode = newmode;
+			mode_cond.broadcast();
 			break;
 		case Camera::OFF:
 		case Camera::CONFIG:
