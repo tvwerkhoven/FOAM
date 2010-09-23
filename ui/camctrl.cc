@@ -142,7 +142,7 @@ void CamCtrl::on_message(string line) {
 }
 
 void CamCtrl::on_monitor_message(string line) {
-	if(popword(line) != "OK")
+	if(popword(line) != "ok")
 		return;
 	
 	if(popword(line) != "image")

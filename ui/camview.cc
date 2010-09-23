@@ -238,8 +238,7 @@ void CamView::on_message_update() {
 	else {
 		e_stat.entry.modify_base(STATE_NORMAL, Gdk::Color("red"));
 		e_stat.set_text("Err: " + camctrl->get_errormsg());
-	}
-	
+	}	
 }
 
 void CamView::on_info_change() {
