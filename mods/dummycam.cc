@@ -123,7 +123,6 @@ void DummyCamera::cam_handler() {
 			case Camera::OFF:
 				io.msg(IO_INFO, "DummyCamera::cam_handler() OFF.");
 				// We wait until the mode changed
-				//! @todo Is this correct?
 				mode_mutex.lock();
 				mode_cond.wait(mode_mutex);
 				mode_mutex.unlock();

@@ -145,9 +145,8 @@ Camera::frame_t *Camera::get_last_frame() {
 Camera::frame_t *Camera::get_frame(size_t id, bool wait) {	
 	if(id >= count) {
 		if(wait) {
-			//! @todo Shouldn't we lock the mutex here first?
 			while(id >= count)
-				cam_cond.wait(cam_mutex);
+				cam_cond.wait(cam_mutex);		// This mutex must be locked elsewhere before calling get_frame()
 		} else {
 			return 0;
 		}
