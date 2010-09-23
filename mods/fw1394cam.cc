@@ -33,7 +33,7 @@ using namespace std;
 FW1394Camera::FW1394Camera(Io &io, foamctrl *ptc, string name, string port, string conffile):
 Camera(io, ptc, name, FW1394cam_type, port, conffile) 
 {
-	io.msg(IO_DEB2, "Camera::Camera()");
+	io.msg(IO_DEB2, "FW1394Camera::FW1394Camera()");
 	
 	// Init hardware
 	std::vector<dc1394::camera *> cameras = _dc1394.find_cameras();
@@ -100,8 +100,12 @@ FW1394Camera::~FW1394Camera() {
 
 // From Camera::
 void FW1394Camera::cam_set_exposure(double value) {
+	{
 	pthread::mutexholder h(&cam_mutex);
 	camera->set_feature(dc1394::FEATURE_EXPOSURE, max((uint32_t)(value * 30 * 512), (uint32_t)511));
+	}
+	fprintf(stderr, "FW1394Camera::cam_set_exposure val=%g, discretized=%d\n", value, max((uint32_t)(value * 30 * 512), (uint32_t)511));
+	
 	exposure = cam_get_exposure();
 }
 
