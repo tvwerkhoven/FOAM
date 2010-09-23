@@ -46,7 +46,7 @@ ctrlframe("Camera controls"),
 camframe("Camera"),
 histoframe("Histogram"),
 e_exposure("Exp."), e_offset("Offset"), e_interval("Intv."), e_gain("Gain"), e_res("Res."), e_mode("Mode"), e_stat("Status"),
-flipv("Flip vert."), fliph("Flip hor."), crosshair("Crosshair"), zoomin(Stock::ZOOM_IN), zoomout(Stock::ZOOM_OUT), zoom100(Stock::ZOOM_100), zoomfit(Stock::ZOOM_FIT), refresh(Stock::REFRESH), capture("Capture"),
+flipv("Flip vert."), fliph("Flip hor."), crosshair("Crosshair"), zoomin(Stock::ZOOM_IN), zoomout(Stock::ZOOM_OUT), zoom100(Stock::ZOOM_100), zoomfit(Stock::ZOOM_FIT), capture("Capture"), display("Display"),
 mean("Mean value"), stddev("Stddev")
 {
 	fprintf(stderr, "CamView::CamView()\n");
@@ -112,6 +112,7 @@ mean("Mean value"), stddev("Stddev")
 	zoomout.signal_activate().connect(sigc::mem_fun(*this, &CamView::on_zoomout_activate));
 
 	capture.signal_toggled().connect(sigc::mem_fun(*this, &CamView::on_capture_update));
+	display.signal_toggled().connect(sigc::mem_fun(*this, &CamView::on_display_update));
 	//	histogramevents.signal_button_press_event().connect(sigc::mem_fun(*this, &CamView::on_histogram_clicked));
 	//	fullscreentoggle.signal_toggled().connect(sigc::mem_fun(*this, &CamView::on_fullscreen_toggled));
 	//	close.signal_activate().connect(sigc::mem_fun(*this, &CamView::on_close_activate));
@@ -135,8 +136,9 @@ mean("Mean value"), stddev("Stddev")
 	disphbox.pack_start(zoomout, PACK_SHRINK);
 	dispframe.add(disphbox);
 	
-	ctrlhbox.pack_start(refresh, PACK_SHRINK);
+	//ctrlhbox.pack_start(refresh, PACK_SHRINK);
 	ctrlhbox.pack_start(capture, PACK_SHRINK);
+	ctrlhbox.pack_start(display, PACK_SHRINK);
 	ctrlframe.add(ctrlhbox);
 	
 	camhbox.pack_start(glarea);
@@ -222,6 +224,16 @@ bool CamView::on_timeout() {
 	return true;
 }
 
+void CamView::on_monitor_update() {
+	fprintf(stderr, "CamView::on_monitor_update()\n");
+	// TODO: need mutex here?
+	glarea.linkData((void *) camctrl->monitor.image, camctrl->monitor.depth, camctrl->monitor.x2 - camctrl->monitor.x1, camctrl->monitor.y2 - camctrl->monitor.y1);
+	//force_update();
+	usleep(0.01 * 1000000);
+	on_display_update();
+}
+
+
 void CamView::on_message_update() {
 	DevicePage::on_message_update();
 	
@@ -275,6 +287,13 @@ void CamView::on_capture_update() {
 	}
 }
 
+void CamView::on_display_update() {
+	fprintf(stderr, "CamView::on_display_update(state=%d)\n", display.get_active());		
+	if (display.get_active())
+		camctrl->grab(0, 0, camctrl->get_width(), camctrl->get_height(), 1, false);
+}
+
+
 int CamView::init() {
 	fprintf(stderr, "CamView::init()\n");
 	// Init new camera control connection for this viewer
@@ -284,7 +303,7 @@ int CamView::init() {
 	
 //	depth = camctrl->get_depth();
 	
-	camctrl->signal_monitor.connect(sigc::mem_fun(*this, &CamView::force_update));
+	camctrl->signal_monitor.connect(sigc::mem_fun(*this, &CamView::on_monitor_update));
 	camctrl->signal_update.connect(sigc::mem_fun(*this, &CamView::on_message_update));
 	return 0;
 }

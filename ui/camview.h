@@ -69,8 +69,9 @@ protected:
 	// control stuff
 	// Need: darkflat, fsel, tiptilt, capture, thumb, ...?
 	HBox ctrlhbox;
-	Button refresh;
+	//Button refresh;
 	ToggleButton capture;
+	ToggleButton display;
 		
 	// Camera image
 	HBox camhbox;
@@ -93,7 +94,8 @@ protected:
 	void on_zoom100_activate();
 	void on_zoomin_activate();
 	void on_zoomout_activate();
-	void on_capture_update();
+	void on_capture_update();			//!< Called when capture button is active
+	void on_display_update();			//!< Called when display button is active
 //	void on_colorsel_activate();
 //	void on_fullscreen_toggled();
 	void force_update();
@@ -119,6 +121,7 @@ protected:
 	//! @todo what is this for again?
 	Glib::Dispatcher signal_update;
 	virtual void on_message_update();
+	virtual void on_monitor_update();
 	bool on_timeout();
 
 	void on_image_realize();
