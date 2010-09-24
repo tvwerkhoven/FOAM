@@ -107,9 +107,9 @@ mean("Mean value"), stddev("Stddev")
 	crosshair.signal_toggled().connect(sigc::mem_fun(*this, &CamView::force_update));
 	
 	//	histogram.signal_toggled().connect(sigc::mem_fun(*this, &CamView::on_histogram_toggled));
-	zoom100.signal_activate().connect(sigc::mem_fun(*this, &CamView::on_zoom100_activate));
-	zoomin.signal_activate().connect(sigc::mem_fun(*this, &CamView::on_zoomin_activate));
-	zoomout.signal_activate().connect(sigc::mem_fun(*this, &CamView::on_zoomout_activate));
+	zoom100.signal_clicked().connect(sigc::mem_fun(*this, &CamView::on_zoom100_activate));
+	zoomin.signal_clicked().connect(sigc::mem_fun(*this, &CamView::on_zoomin_activate));
+	zoomout.signal_clicked().connect(sigc::mem_fun(*this, &CamView::on_zoomout_activate));
 
 	capture.signal_toggled().connect(sigc::mem_fun(*this, &CamView::on_capture_update));
 	display.signal_toggled().connect(sigc::mem_fun(*this, &CamView::on_display_update));
@@ -225,11 +225,11 @@ bool CamView::on_timeout() {
 }
 
 void CamView::on_monitor_update() {
-	fprintf(stderr, "CamView::on_monitor_update()\n");
+//	fprintf(stderr, "CamView::on_monitor_update()\n");
 	// TODO: need mutex here?
 	glarea.linkData((void *) camctrl->monitor.image, camctrl->monitor.depth, camctrl->monitor.x2 - camctrl->monitor.x1, camctrl->monitor.y2 - camctrl->monitor.y1);
 	//force_update();
-	usleep(0.01 * 1000000);
+	//	usleep(0.01 * 1000000);
 	on_display_update();
 }
 
@@ -288,7 +288,7 @@ void CamView::on_capture_update() {
 }
 
 void CamView::on_display_update() {
-	fprintf(stderr, "CamView::on_display_update(state=%d)\n", display.get_active());		
+//	fprintf(stderr, "CamView::on_display_update(state=%d)\n", display.get_active());		
 	if (display.get_active())
 		camctrl->grab(0, 0, camctrl->get_width(), camctrl->get_height(), 1, false);
 }
