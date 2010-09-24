@@ -72,6 +72,7 @@ mode(Camera::OFF)
 }
 
 Camera::~Camera() {
+	io.msg(IO_DEB2, "Camera::~Camera()");
 	delete[] frames;
 }
 

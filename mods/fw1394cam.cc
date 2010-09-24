@@ -88,6 +88,7 @@ Camera(io, ptc, name, FW1394cam_type, port, conffile)
 }
 
 FW1394Camera::~FW1394Camera() {
+	io.msg(IO_DEB2, "FW1394Camera::~FW1394Camera()");
 	cam_thr.cancel();
 	cam_thr.join();
 
