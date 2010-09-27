@@ -2,9 +2,15 @@
 #define HAVE_IMGIO_H
 
 #include <string>
+
 #include "types.h"
 #include "io.h"
 
+/*!
+ @brief Image input/output class
+ 
+ @todo Document this
+ */
 class Imgio {
 private:
 	Io &io;
@@ -23,8 +29,25 @@ public:
 	typedef enum {
 		FITS=0,
 		PGM,
+		GSL,
+		AUTO,
 		UNDEF
 	} imgtype_t;
+	
+	// Data formats
+	typedef enum {
+		UINT8=0,
+		INT8,
+		UINT16,
+		INT16,
+		UINT32,
+		INT32,
+		UINT64,
+		INT64,
+		FLOAT32,
+		FLOAT64,
+		DATA_UNDEF
+	} dtype_t;	
 	
 	void *data;
 	coord_t res;

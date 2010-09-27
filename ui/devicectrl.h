@@ -1,5 +1,5 @@
 /*
- deviceview.h -- generic device viewer
+ devicectrl.h -- generic device control class
  Copyright (C) 2010 Tim van Werkhoven <t.i.m.vanwerkhoven@xs4all.nl>
  
  This file is part of FOAM.
@@ -18,46 +18,49 @@
  along with FOAM.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef HAVE_DEVICEVIEW_H
-#define HAVE_DEVICEVIEW_H
+#ifndef HAVE_DEVICECTRL_H
+#define HAVE_DEVICECTRL_H
 
 #include <glibmm/dispatcher.h>
-#include <gtkmm.h>
 
 #include "pthread++.h"
-#include "log.h"
-#include "widgets.h"
-#include "foamcontrol.h"
-#include "devicectrl.h"
 #include "protocol.h"
 
-using namespace Gtk;
 using namespace std;
 
 /*!
- @brief Generic device viewing class  
- @todo Document this
+ @brief Generic device control class  
+ 
+ @todo Document this class
  */
-class DevicePage: public Gtk::VBox {
+class DeviceCtrl {
 protected:
-	DeviceCtrl *devctrl;								//!< Network connection to device
+	Protocol::Client protocol;
 	
-	FoamControl &foamctrl;
-	Log &log;
+	const string host, port, devname;
 	
-	string devname;											//!< Device name
+	virtual void on_message(string line);
+	virtual void on_connected(bool status);
 	
-	// GTK stuff
-	//Frame infoframe;
-	//HBox infobox;
-	//Label infolabel;
-
 public:
-	DevicePage(Log &log, FoamControl &foamctrl, string n);
-	virtual ~DevicePage();
+	class exception: public std::runtime_error {
+	public:
+		exception(const std::string reason): runtime_error(reason) {}
+	};
 	
-	virtual int init();
-	virtual void on_message_update();
+	Glib::Dispatcher signal_update;
+	
+	bool ok;
+	string errormsg;
+
+	DeviceCtrl(const string, const string, const string);
+	~DeviceCtrl() { ; }
+	
+	bool is_ok() const { return ok; }
+	string get_errormsg() const { return errormsg; }
+	
+	virtual string getName() { return devname; }
 };
 
-#endif // HAVE_DEVICEVIEW_H
+
+#endif // HAVE_DEVICECTRL_H

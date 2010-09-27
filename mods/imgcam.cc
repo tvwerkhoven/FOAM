@@ -21,8 +21,9 @@
 #include <time.h>
 #include <math.h>
 #include <fcntl.h>
-// TODO: compiling fails when this is removed, warns when present
+#ifndef __STDC_LIMIT_MACROS
 #define __STDC_LIMIT_MACROS
+#endif
 #include <stdint.h>
 
 #include "config.h"
@@ -31,33 +32,13 @@
 #include "imgio.h"
 #include "imgcam.h"
 
-void ImgCamera::update(bool blocking) {
-	// Copy image from img to frame and add some noise etc
-	io.msg(IO_DEB2, "ImgCamera::update()");
-	if (blocking)
-		usleep((int) interval * 1000000);
-	
-	// Shortcut to image, casted to right type.
-	uint16_t *p = (uint16_t *) image;
-	
-	for(int y = 0; y < res.y; y++) {
-		for(int x = 0; x < res.x; x++) {
-			double value = drand48() * noise + img->getPixel(x, y) * exposure;
-			if (value < 0)
-				value = 0;
-			if (value > UINT16_MAX)
-				value = UINT16_MAX;
-			*p++ = (uint16_t)(value);
-		}
-	}
-}
-
+//! @todo update this to match new Camera prototype Camera(io, ptc, name, imgcam_type, port, conffile)
 ImgCamera::ImgCamera(Io &io, string name, string port, config *config): 
-Camera(io, name, port) {
+Camera(io, name, imgcam_type, port) {
 	io.msg(IO_DEB2, "ImgCamera::ImgCamera()");
 	
 	string type = config->getstring(name+".type");
-	if (type != IMGCAM_TYPE) throw exception("Type should be '" IMGCAM_TYPE "' for this class.");
+	if (type != imgcam_type) throw exception("Type should be '" + imgcam_type + "' for this class.");
 	
 	string file = config->getstring(name+".imagefile");
 	if (file[0] != '/') file = FOAM_DATADIR "/" + file;
@@ -92,6 +73,27 @@ Camera(io, name, port) {
 ImgCamera::~ImgCamera() {
 	io.msg(IO_DEB2, "ImgCamera::~ImgCamera()");
 	delete img;
+}
+
+void ImgCamera::update(bool blocking) {
+	// Copy image from img to frame and add some noise etc
+	io.msg(IO_DEB2, "ImgCamera::update()");
+	if (blocking)
+		usleep((int) interval * 1000000);
+	
+	// Shortcut to image, casted to right type.
+	uint16_t *p = (uint16_t *) image;
+	
+	for(int y = 0; y < res.y; y++) {
+		for(int x = 0; x < res.x; x++) {
+			double value = drand48() * noise + img->getPixel(x, y) * exposure;
+			if (value < 0)
+				value = 0;
+			if (value > UINT16_MAX)
+				value = UINT16_MAX;
+			*p++ = (uint16_t)(value);
+		}
+	}
 }
 
 int ImgCamera::verify() { 
@@ -166,8 +168,8 @@ int ImgCamera::store(Connection *connection) {
 	return 0;
 }
 
-void ImgCamera::on_message(Connection *connection, std::string line) {
-	io.msg(IO_DEB2, "ImgCamera::on_message(Connection *connection, std::string line)");
+void ImgCamera::on_message(Connection *connection, std::string line) {	
+	Device::on_message(connection, line);
 	
 	// Process everything in uppercase
 	string cmd = popword(line);

@@ -21,15 +21,20 @@
 #ifndef HAVE_SHWFS_H
 #define HAVE_SHWFS_H
 
-#include "cam.h"
+#include "camera.h"
 #include "io.h"
 #include "wfs.h"
 
-#define SHWFS_TYPE "shwfs"
+const string shwfs_type = "shwfs";
 
 // CLASS DEFINITION //
 /********************/
 
+/*!
+ @brief Shack-Hartmann wavefront sensor class
+ 
+ @todo Document this
+ */
 class Shwfs: public Wfs {
 private:
 	coord_t subap;											//!< Number of subapertures in X and Y
@@ -38,7 +43,7 @@ private:
 	int samaxr;													//!< Maximum radius to use, or edge erosion subapertures
 	int samini;													//!< Minimum amount of subapertures to use
 	
-	int mode;													//!< Data processing mode (Center of Gravity, Correlation, etc)
+	mode_t mode;												//!< Data processing mode (Center of Gravity, Correlation, etc)
 	
 	fcoord_t *trackpos;
 	coord_t *sapos;
@@ -64,13 +69,12 @@ public:
 		CORR
 	} mode_t;														//!< Different SHWFS operation modes
 	
-	Shwfs(Io &io, string conffile);
+	Shwfs(Io &io, string name, string port, string conffile);
 	~Shwfs();	
 	
 	virtual int verify(int);
 	virtual int calibrate(int);
 	virtual int measure(int);
-	virtual int configure(wfs_prop_t *);
 };
 
 #endif // HAVE_SHWFS_H

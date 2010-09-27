@@ -36,6 +36,10 @@
 using namespace Gtk;
 using namespace std;
 
+/*!
+ @brief Main FOAM UI class  
+ @todo Document this
+ */
 class ControlPage: public VBox {
 	Log &log;
 	FoamControl &foamctrl;
@@ -48,16 +52,16 @@ class ControlPage: public VBox {
 	
 	Frame modeframe;
 	HBox modebox;
-	Button mode_listen;
-	Button mode_open;
-	Button mode_closed;
+	ToggleButton mode_listen;
+	ToggleButton mode_open;
+	ToggleButton mode_closed;
 	Button shutdown;
 
 	Frame calibframe;
 	HBox calibbox;
 	Label calmode_lbl;
 	ComboBoxText calmode_select;
-	Button calib;
+	ToggleButton calib;
 
 	Frame statframe;
 	HBox statbox;
@@ -85,6 +89,8 @@ public:
 
 	void on_connect_update();
 	void on_message_update();
+	
+	Glib::Dispatcher signal_device;
 };
 
 #endif //  HAVE_CONTROLVIEW_H

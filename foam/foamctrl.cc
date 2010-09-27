@@ -18,6 +18,13 @@
  along with FOAM.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+/*! 
+ @file foamctrl.cc
+ @author Tim van Werkhoven (t.i.m.vanwerkhoven@xs4all.nl)
+ @brief The FOAM control class, keeps track of logging, networking, terminal 
+ I/O, pidfiles, etc.
+ */
+
 #include <time.h>
 #include <syslog.h>
 
@@ -30,7 +37,7 @@ foamctrl::~foamctrl(void) {
 	io.msg(IO_DEB2, "foamctrl::~foamctrl(void)");
 
 	if (use_syslog) closelog();
-	delete cfgfile;
+	delete cfg;
 }
 
 foamctrl::foamctrl(Io &io): 
@@ -61,30 +68,30 @@ int foamctrl::parse(string &file) {
 	int idx = conffile.find_last_of("/");
 	confpath = conffile.substr(0, idx);
 	
-	cfgfile = new config(conffile);
+	cfg = new config(conffile);
 	
 	// PID file
-	pidfile = cfgfile->getstring("pidfile", "/tmp/foam.pid");
+	pidfile = cfg->getstring("pidfile", "/tmp/foam.pid");
 	
 	// Datadir
-	datadir = cfgfile->getstring("datadir", FOAM_DATADIR);
+	datadir = cfg->getstring("datadir", FOAM_DATADIR);
 	if (datadir == ".") io.msg(IO_WARN, "datadir not set, using current directory.");
 	else io.msg(IO_DEB1, "Datadir: '%s'.", datadir.c_str());
 	
 	// Daemon settings
-	listenip = cfgfile->getstring("listenip", "0.0.0.0");
+	listenip = cfg->getstring("listenip", "0.0.0.0");
 	io.msg(IO_DEB1, "IP: '%s'.", listenip.c_str());
-	listenport = cfgfile->getstring("listenport", "1025").c_str();
+	listenport = cfg->getstring("listenport", "1025").c_str();
 	io.msg(IO_DEB1, "Port: '%s'.", listenport.c_str());
 	
 	// Syslog settings
-	use_syslog = cfgfile->getbool("use_syslog", false);
-	syslog_prepend = cfgfile->getstring("syslog_prepend", "foam");
+	use_syslog = cfg->getbool("use_syslog", false);
+	syslog_prepend = cfg->getstring("syslog_prepend", "foam");
 	io.msg(IO_DEB1, "Use syslog: %d, prefix: '%s'.", use_syslog, syslog_prepend.c_str());
 	if (use_syslog) openlog(syslog_prepend.c_str(), LOG_PID, LOG_USER);
 	
 	// Logfile settings
-	logfile = cfgfile->getstring("logfile", "");
+	logfile = cfg->getstring("logfile", "");
 	if (logfile.length()) {
 		if (logfile[0] != '/') logfile = datadir + "/" + logfile;
 		io.setLogfile(logfile);

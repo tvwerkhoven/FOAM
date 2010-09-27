@@ -33,11 +33,21 @@
 
 #include "protocol.h"
 #include "pthread++.h"
-#include "types.h"
+#include "foamtypes.h"
 
 using namespace std;
 
+/*!
+ @brief Main FOAM control class  
+ @todo Document this
+ */
 class FoamControl {
+public:
+	typedef struct _device_t {
+		string name;
+		string type;		
+	} device_t;
+	
 private:
 	string mode2str(aomode_t m) {
 		switch (m) {
@@ -69,7 +79,7 @@ private:
 	struct state_t {
 		aomode_t mode;
 		int numdev;
-		string devices[32];
+		device_t devices[32];
 		int numframes;
 		int numcal;
 		string calmodes[32];
@@ -84,6 +94,7 @@ private:
 	void on_connected(bool conn);
 	
 public:
+	//! \todo Move exception to base class, appears everywhere...
 	class exception: public runtime_error {
 	public:
 		exception(const string reason): runtime_error(reason) {}
@@ -102,12 +113,13 @@ public:
 	string getpeername() { return protocol.getpeername(); }
 	string getsockname() { return protocol.getsockname(); }
 	int get_numdev() { return state.numdev; }
+	void set_numdev(int n) { state.numdev = n; }
 	int get_numframes() { return state.numframes; }
 	aomode_t get_mode() { return state.mode; }
 	string get_mode_str() { return mode2str(state.mode); }
 	int get_numcal() { return state.numcal; }
 	string get_calmode(int i) { return state.calmodes[i]; }
-	string get_device(int i ) { return state.devices[i]; }
+	device_t get_device(int i ) { return state.devices[i]; }
 	string get_lastreply() { return state.lastreply; }
 	string get_lastcmd() { return state.lastcmd; }
 	

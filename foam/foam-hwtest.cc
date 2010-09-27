@@ -1,6 +1,6 @@
 /*
- foam-simstatic.cc -- static simulation module
- Copyright (C) 2008--2010 Tim van Werkhoven <t.i.m.vanwerkhoven@xs4all.nl>
+ foam-hwtest.cc -- hardware test module
+ Copyright (C) 2010 Tim van Werkhoven <t.i.m.vanwerkhoven@xs4all.nl>
  
  This file is part of FOAM.
  
@@ -18,13 +18,10 @@
  along with FOAM.  If not, see <http://www.gnu.org/licenses/>.
  */
 /*! 
- @file foam-simstatic.c
+ @file foam-hwtest.c
  @author Tim van Werkhoven (t.i.m.vanwerkhoven@xs4all.nl)
- @brief This is a static simulation mode, with just a simple image to work with.
- 
- This setup can be used to benchmark performance of the AO system if no
- AO hardware (camera, TT, DM) is present.
- */
+ @brief Hardware testing mode, nothing fancy, just a scrapbook of hardware implementations.
+*/
 
 #include <iostream>
 #include <string>
@@ -33,20 +30,25 @@
 #include "types.h"
 #include "io.h"
 #include "devices.h"
-#include "dummycam.h"
 #include "camera.h"
+#include "fw1394cam.h"
 
-#include "foam-simstatic.h"
+#include "foam-hwtest.h"
 
 // Global device list for easier access
-DummyCamera *testcam;
+FW1394Camera *testcam;
 
-int FOAM_simstatic::load_modules() {
-	io.msg(IO_DEB2, "FOAM_simstatic::load_modules()");
-	io.msg(IO_INFO, "This is the simstatic prime module, enjoy.");
+int FOAM_hwtest::load_modules() {
+	io.msg(IO_DEB2, "FOAM_hwtest::load_modules()");
+	io.msg(IO_INFO, "This is FOAM::hwtest.");
 		
 	// Add ImgCam device
-	testcam = new DummyCamera(io, ptc, "dummycam", ptc->listenport, ptc->conffile);
+	try {
+		testcam = new FW1394Camera(io, ptc, "1394testcam", ptc->listenport, ptc->conffile);
+	}
+	catch (Device::exception &e) {
+		io.msg(IO_ERR | IO_FATAL, "Could not init FW1394Camera(): %s", e.what());
+	}
 	devices->add((Device *) testcam);
 //	imgcamb = new ImgCamera(io, "imgcamB", ptc->listenport, ptc->cfg);
 //	devices->add((Device *) imgcamb);
@@ -59,17 +61,17 @@ int FOAM_simstatic::load_modules() {
 // OPEN LOOP ROUTINES //
 /*********************/
 
-int FOAM_simstatic::open_init() {
-	io.msg(IO_DEB2, "FOAM_simstatic::open_init()");
+int FOAM_hwtest::open_init() {
+	io.msg(IO_DEB2, "FOAM_hwtest::open_init()");
 	
-	((DummyCamera*) devices->get("dummycam"))->set_mode(Camera::RUNNING);
+	((FW1394Camera*) devices->get("1394testcam"))->set_mode(Camera::RUNNING);
 	
 	return 0;
 }
 
-int FOAM_simstatic::open_loop() {
-	io.msg(IO_DEB2, "FOAM_simstatic::open_loop()");
-	static DummyCamera *tmpcam = ((DummyCamera*) devices->get("dummycam"));
+int FOAM_hwtest::open_loop() {
+	io.msg(IO_DEB2, "FOAM_hwtest::open_loop()");
+	static FW1394Camera *tmpcam = ((FW1394Camera*) devices->get("1394testcam"));
 	
 	usleep(1000000);
 	Camera::frame_t *frame = tmpcam->get_last_frame();
@@ -77,10 +79,10 @@ int FOAM_simstatic::open_loop() {
 	return 0;
 }
 
-int FOAM_simstatic::open_finish() {
-	io.msg(IO_DEB2, "FOAM_simstatic::open_finish()");
+int FOAM_hwtest::open_finish() {
+	io.msg(IO_DEB2, "FOAM_hwtest::open_finish()");
 	
-	((DummyCamera*) devices->get("dummycam"))->set_mode(Camera::OFF);
+	((FW1394Camera*) devices->get("dummycam"))->set_mode(Camera::OFF);
 
 	return 0;
 }
@@ -88,8 +90,8 @@ int FOAM_simstatic::open_finish() {
 // CLOSED LOOP ROUTINES //
 /************************/
 
-int FOAM_simstatic::closed_init() {
-	io.msg(IO_DEB2, "FOAM_simstatic::closed_init()");
+int FOAM_hwtest::closed_init() {
+	io.msg(IO_DEB2, "FOAM_hwtest::closed_init()");
 	
 	// Run open-loop init first
 	open_init();
@@ -97,15 +99,15 @@ int FOAM_simstatic::closed_init() {
 	return 0;
 }
 
-int FOAM_simstatic::closed_loop() {
-	io.msg(IO_DEB2, "FOAM_simstatic::closed_loop()");
+int FOAM_hwtest::closed_loop() {
+	io.msg(IO_DEB2, "FOAM_hwtest::closed_loop()");
 
 	usleep(10);
 	return 0;
 }
 
-int FOAM_simstatic::closed_finish() {
-	io.msg(IO_DEB2, "FOAM_simstatic::closed_finish()");
+int FOAM_hwtest::closed_finish() {
+	io.msg(IO_DEB2, "FOAM_hwtest::closed_finish()");
 	
 	// Run open-loop finish first
 	open_finish();
@@ -116,11 +118,11 @@ int FOAM_simstatic::closed_finish() {
 // MISC ROUTINES //
 /*****************/
 
-int FOAM_simstatic::calib() {
-	io.msg(IO_DEB2, "FOAM_simstatic::calib()=%s", ptc->calib.c_str());
+int FOAM_hwtest::calib() {
+	io.msg(IO_DEB2, "FOAM_hwtest::calib()=%s", ptc->calib.c_str());
 
 	if (ptc->calib == "INFLUENCE") {
-		io.msg(IO_DEB2, "FOAM_simstatic::calib INFLUENCE");
+		io.msg(IO_DEB2, "FOAM_hwtest::calib INFLUENCE");
 		usleep((useconds_t) 1.0 * 1000000);
 		return 0;
 	}
@@ -130,8 +132,8 @@ int FOAM_simstatic::calib() {
 	return 0;
 }
 
-void FOAM_simstatic::on_message(Connection *connection, std::string line) {
-	io.msg(IO_DEB2, "FOAM_simstatic::on_message(line=%s)", line.c_str());
+void FOAM_hwtest::on_message(Connection *connection, std::string line) {
+	io.msg(IO_DEB2, "FOAM_hwtest::on_message(line=%s)", line.c_str());
 	netio.ok = true;
 	
 	// First let the parent process this
@@ -178,7 +180,7 @@ void FOAM_simstatic::on_message(Connection *connection, std::string line) {
 }
 
 int main(int argc, char *argv[]) {
-	FOAM_simstatic foam(argc, argv);
+	FOAM_hwtest foam(argc, argv);
 	
 	if (foam.has_error())
 		return foam.io.msg(IO_INFO, "Initialisation error.");
@@ -186,7 +188,7 @@ int main(int argc, char *argv[]) {
 	if (foam.init())
 		return foam.io.msg(IO_ERR, "Configuration error.");
 		
-	foam.io.msg(IO_INFO, "Running simstatic mode");
+	foam.io.msg(IO_INFO, "Running hwtest mode");
 	
 	foam.listen();
 	

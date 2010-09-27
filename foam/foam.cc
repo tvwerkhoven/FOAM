@@ -24,11 +24,7 @@
 	@brief This is the main file for FOAM.
 
 	This is the framework for FOAM, it provides basic functionality and can be 
-	customized through the use of certains `hooks'. These hooks are functions that
-	are called at crucial moments during the adaptive optics controlling such 
-	that the person implementing FOAM on a specific AO setup can customize
-	what FOAM does.
- 
+	customized through deriving this main class to your specific needs. 
 */
 
 // HEADERS //
@@ -39,7 +35,7 @@
 #include "foam.h"
 #include "autoconfig.h"
 #include "config.h"
-#include "types.h"
+#include "foamtypes.h"
 #include "io.h"
 #include "protocol.h"
 #include "foamctrl.h"
@@ -56,11 +52,11 @@ io(IO_DEB2)
 	
 	if (parse_args(argc, argv)) {
 		error = true;
-		return;
+		exit(-1);
 	}
 	if (load_config()) {
 		error = true;
-		return;
+		exit(-1);
 	}
 	
 }
@@ -97,7 +93,9 @@ FOAM::~FOAM() {
 	// Notify shutdown
 	io.msg(IO_WARN, "Shutting down FOAM now");
   protocol->broadcast("warn :shutting down now");
-		
+	
+	//! \todo disconnect clients gracefully here?			
+	
 	// Get the end time to see how long we've run
 	time_t end = time(NULL);
 	struct tm *loctime = localtime(&end);
@@ -108,10 +106,6 @@ FOAM::~FOAM() {
 	io.msg(IO_INFO, "Stopping FOAM at %s", date);
 	io.msg(IO_INFO, "Ran for %ld seconds, parsed %ld frames (%.1f FPS).", \
 					end-ptc->starttime, ptc->frames, ptc->frames/(float) (end-ptc->starttime));
-
-	delete devices;
-	delete protocol;
-	delete ptc;
 }
 
 void FOAM::show_version() {
@@ -225,19 +219,15 @@ int FOAM::load_config() {
 	io.msg(IO_DEB2, "FOAM::load_config()");
 	
 	// Load and parse configuration file
-	if (conffile == "") {
-		io.msg(IO_ERR, "No configuration file given.");
-		show_clihelp(true);
-		return -1;
-	}
-	else if (conffile == FOAM_DEFAULTCONF) {
-		io.msg(IO_WARN, "Using default configuration file '%s'.", conffile.c_str());
+	if (conffile == FOAM_DEFAULTCONF) {
+		io.msg(IO_WARN, "Using default configuration file '%s', might not work", conffile.c_str());
 	}
 	
 	// Init control and configuration using the config file
 	io.msg(IO_INFO, "Initializing control & AO configuration...");
 	ptc = new foamctrl(io, conffile);
-	if (ptc->error()) return io.msg(IO_ERR, "Coult not parse FOAM configuration");
+	if (ptc->error()) 
+		return io.msg(IO_ERR, "Coult not parse FOAM configuration");
 	
 	return 0;
 }
@@ -258,9 +248,7 @@ void FOAM::daemon() {
   protocol->listen();
 }
 
-int FOAM::listen() {
-	io.msg(IO_DEB1, "FOAM::listen()");
-	
+int FOAM::listen() {	
 	while (true) {
 		switch (ptc->mode) {
 			case AO_MODE_OPEN:
@@ -276,7 +264,7 @@ int FOAM::listen() {
 				mode_calib();
 				break;
 			case AO_MODE_LISTEN:
-				io.msg(IO_INFO, "Entering listen loop.");
+				io.msg(IO_INFO, "FOAM::listen() Entering listen loop.");
 				// We wait until the mode changed
 				protocol->broadcast("ok mode listen");
 				pthread_mutex_lock(&mode_mutex);
@@ -288,7 +276,7 @@ int FOAM::listen() {
 				return 0;
 				break;
 			default:
-				io.msg(IO_DEB1, "FOAM::listen() UNKNOWN!");
+				io.msg(IO_ERR, "FOAM::listen() UNKNOWN!");
 				break;
 		}
 	}
@@ -458,7 +446,7 @@ void FOAM::on_message(Connection *connection, std::string line) {
   }
 }
 
-int FOAM::show_nethelp(Connection *connection, string topic, string rest) {
+int FOAM::show_nethelp(Connection *connection, string topic, string /*rest*/) {
 	if (topic.size() == 0) {
 		connection->write(\
 ":==== FOAM help ==========================\n"
@@ -529,21 +517,18 @@ aomode_t FOAM::str2mode(string m) {
 
 ALIASES += authortim="Tim van Werkhoven (T.I.M.vanWerkhoven@phys.uu.nl)"
 ALIASES += license="GPLv2"
-ALIASES += wisdomfile="fftw_wisdom.dat"
 ALIASES += name="FOAM"
 ALIASES += longname="Modular Adaptive Optics Framework"
-ALIASES += uilib="foam_ui_library.*"
-ALIASES += cslib="foam_cs_library.*"
 */
-
 
 /*!	\mainpage FOAM 
 
 	\section aboutdoc About this document
 	
-	This is the (developer) documentation for FOAM, the Modular Adaptive Optics Framework 
-	 (yes, FOAM is backwards). It is intended to clarify the
-	code and give some help to people re-using or implementing the code for their specific needs.
+	This is the (developer) documentation for FOAM, the Modular Adaptive 
+	Optics Framework (yes, FOAM is backwards). It is intended to clarify the
+	code and give some help to people re-using or implementing the code for 
+	their specific needs.
 	
 	\section aboutfoam About FOAM
 	
@@ -559,335 +544,85 @@ ALIASES += cslib="foam_cs_library.*"
 	\li Usable - It is controllable over a network by multiple clients simultaneously
 	\li Free - It licensed under the GPL and therefore can be used by anyone.
 	
-	For more information, see the FOAM wiki at http://www.astro.uu.nl/~astrowik/astrowiki/index.php/FOAM or the documentation
-	at http://dotdb.phys.uu.nl/~tim/foam/ . All versions of FOAM are available at the
-	Subversion repository located at http://dotdb.phys.uu.nl/svn/foam/ .
+	For more information, see the FOAM project page at GitHub: http://github.com/tvwerkhoven/FOAM/
 	
 	\section struct FOAM structure
 	
-	In this section, the structure of FOAM will be clarified. First, some key 
-	concepts are explained which are used within FOAM.
+	FOAM uses a base class with the same name that can be derived to specific
+	configurations necessary for the AO system. Such a derived FOAM class can
+	then use various hardware controller classes to allow actual processing. 
+	Also the hardware controller classes are derived from a base 'device' class.
+	All devices together are stored in a DeviceManager class.
 	
-	FOAM uses several concepts, for which it is useful to have names. First of 
-	all, the complete set of files (downloadable from for example http://dotdb.phys.uu.nl/~tim/foam/) 
-	is simply called a \e `distribution', or \e `version' or just \e FOAM.
-	
-	Historically, there was a FOAM Control Software (CS) and a User Interface 
-	(UI), although the latter is not actively being developed as telnet suffices
-	for the moment. This explains the \c `_cs' and \c `_ui' prefix in some filenames.
-	
-	Within the distribution itself (which consists mainly of the Control Software
-	at the moment), there are several different components:
+	See FOAM, Device, DeviceManager for more information.
  
-	\li The \e framework itself, in \c foam_cs.c
-	\li \e Prime \e modules, in \c foam_primemod-*
-	\li \e Modules, in \c foam_modules-*
-	
-	To get a running program, the framework, a prime module and zero or more 
-	modules are combined into one executable. This program is called a 
-	\e `package' and is what performs AO operations.
-	
-	By default a dummy package is supplied, which take the framework
-	and the dummy prime module (which does nothing) which results in the 
-	most basic package possible. A more interesting package, the simulation 
-	package, is also provided. This package simulates a complete AO system 
-	and can be used to test new routines (center-of-gravity tracking, 
-	correlation tracking, load distribution) in a reproducible fashion. 
-
-	There are two simulation prime modules, one is `simdyn', which performs
-	dynamical simulation, meaning the atmosphere, WFCs, WFSs etc are all simulated
-	dynamically, and `simstat', which uses a static WFS image and performs
-	the calculations that a normal AO system would do. The first can be useful
-	to see if the system works at all, and to improve algorithms qualitatively,
-	while the second can be used to benchmark the performance of the system without
-	the need of AO hardware.
-	
+	\todo Improve doc
+ 
 	\subsection struct-frame The Framework
 	
-	The framework itself does very little. It performs some initialization, allocating 
-	memory for control vectors, images and what not. After that it provides a hook for 
-	prime modules to initialize themselves. Immediately after that, it splits in a worker 
-	thread which does the AO calculations, and in a networking thread which listens for 
-	connections on a (TCP) socket. The worker thread starts startThread(), while the
-	other thread starts with sockListen(). Communication between the two threads is done 
-	with the mutexes `mode_mutex' and `mode_cond'.
-	
-	The framework provides the following hooks to prime modules: 
-	\li modStopModule(foamctrl *ptc)
-	\li modInitModule(foamctrl *ptc, foamcfg *cs_config)
-	\li modPostInitModule(foamctrl *ptc, foamcfg *cs_config)
-	\li modOpenInit(foamctrl *ptc)
-	\li modOpenLoop(foamctrl *ptc)
-	\li modOpenFinish(foamctrl *ptc)
-	\li modClosedInit(foamctrl *ptc)
-	\li modClosedLoop(foamctrl *ptc)
-	\li modClosedFinish(foamctrl *ptc)
-	\li modCalibrate(foamctrl *ptc)
-	\li modMessage(foamctrl *ptc, const client_t *client, char *list[], const int count)
-	
-	See the documentation on the specific functions for more details on what these functions
-	can be used for.
-
-	\subsection struct-prime The Prime Modules
-	
-	Prime modules must define the functions defined in the above list. The prime 
-	module should tell what these hooks do, e.g. what happens during open loop, 
-	closed loop and during calibration. These functions can be just placeholders,
-	which can be seen in \c foam_primemod-dummy.c , or more complex functions 
-	which actually do something.
-	
-	Almost always, prime modules link to modules in turn, by simply including 
-	their header files and compiling the source files along with the prime module. 
-	The modules contain the functions which do the hard work, and are divided into 
-	separate files depending on the functionality of the routines. The prime module
-	can thus be seen as a sort of hub connecting the framework with the modules.
-	
-	\subsection struct-mod The Modules
-	
-	Modules provide functions which can be used by other modules or by prime 
-	modules. If a module uses routines from another module, this module depends 
-	on the other module. This is for example the case between the `simdyn' module
-	which needs to read in PGM files and therefore depends on the `img' module.
-	
-	A few default modules are provided with the distribution, and their function
-	can be can be read at the top of the header file associated with the module.
-
-	\subsection threading Threading model
+	The base class itself does very little. Actual functionality should be
+	implemented in the derived class. See the FOAM class for the possibilities
+	to implement functions for your AO configuration.
  
-	As noted before, the framework uses two threads. The main thread is used for
-	networking with the clients, while the AO routines are performed in a different
-	thread which separates from the main thread at the beginning. 
- 
-	These threads are not equal, as the first thread is created at program startup while the
-	second one splits off this thread. This can be important for example when 
-	using SDL on OS X, which requires some initialization code that *is* 
-	automatically run when starting SDL from the main thread, but that is not
-	run when starting SDL from any other thread. Another issue can be OpenGL,
-	which can only be called from one thread, and thus must be initialized in
-	the thread it will be called from.
- 
-	To circumvent possible problems, FOAM provides two initialization routines,
-	one is run at the beginning before any threading, modInitModule(), while
-	the other is run in the thread that will be controlling the AO, 
-	modPostInitModule(). Most configuration consists of things like allocating 
-	memory, setting variables, reading files etc which are thread-safe. Other 
-	things such as OpenGL initialization might not be thread-safe and might 
-	have to be initialized after threading.
- 
-	Another thing to keep in mind is that all functions are called from the AO
-	worker thread, except for the modMessage() function, which is called from
-	the networking thread. This gives some problems when using libevent to
-	send information to clients as libevent is not entirely thread safe
-	(and its thread-safety is unclear as well). Currently, only the networking
-	thread does interaction with the user.
- 
-	\subsection codeskel Code skeleton
- 
-	To provide some insight in the way FOAM functions, consider this code skeleton:
-
-	\code
-main() {
-	modInitModule()				// Initialize modules,
-								// memory, cameras etc.
+	The base class provides the following virtual functions to re-implement in
+	derived classes
 	
-	pthread (startThread())		// Branch into two threads,
-								// one for AO, one for user
-								// I/O
+	\li load_modules()
+	\li open_init()
+	\li open_loop()
+	\li open_finish()
+	\li closed_init()
+	\li closed_loop()
+	\li closed_finish()
+	\li calib()
+	\li on_message()
 	
-	sockListen()				// Read & process user I/O.
-	exit
-}
-
-sockListen() {
-	while (true) {				// In a continuous loop,
-		parseCmd()				// read the user input and
-		modMessage()			// process it.
-	}
-}
-
-startThread() {
-	modPostInitModule()			// After threading, provide
-								// an additional init hook.
-}
-
-listenLoop() {
-	while (ptc->mode != shutdown) { // Run continuously until
-								// shutdown.
-		switch (ptc->mode) {		// Read the mode requested
-								// and switch to that mode.
-			case 'open': modeOpen()
-			case 'closed': modeClosed()
-			case 'calibration': modeCal()
-		}
-	}
-	modStopModule()				// Shutdown the modules.
-}
-
-modeOpen() {
-	modOpenInit()				// Open loop init hook.
-	
-	while (ptc->mode == AO_MODE_OPEN) { 
-								// Loop until mode changes.
-		modOpenLoop()			// Actual work is done here.
-	}
-	
-	modOpenFinish()				// Clean up after open loop.
-}
-
-modeClosed() {
-	modClosedInit()				// Closed loop works the
-								// same as open loop.
-	
-	while (ptc->mode == AO_MODE_CLOSED) {
-		modClosedLoop()
-	}
-	
-	modClosedFinish()
-}
-
-modeCal() {
-	modCalibrate()				// Calibration mode provides
-								// simply one hook.
-}
-	\endcode
- 
-	Note that all hooks (starting with mod*) are run from the AO thread, except for
-	modMessage(), which is run from the networking thread.
+	See the documentation on the specific functions for more details on what 
+	these functions can be used for.
  
 	\section install_sec Installation
 	
-	FOAM currently depends on the following libraries to be present on the system:
-	\li \c libevent used to handle networking with several simultaneous connections,
-	\li \c SDL which is used to display the sensor output,
-	\li \c pthread used to separate functions over thread and distribute load,
-	\li \c libgsl used to do singular value decomposition, link to BLAS and various other matrix/vector operation.
-	
-	For other prime modules, additional libraries may be required. For example,
-	the simdyn prime module also requires:
-	\li \c fftw3 which is used to compute FFT's to simulate the SH lenslet array,
-	\li \c SDL_Image used to read image files files.
-	
-	Furthermore FOAM requires basic things like a hosted compilation environment, 
-	a compiler etc. For a full list of dependencies, see the header files. FOAM 
-	is however supplied with an (auto-)configure script which checks these
-	things and tells you what the capabilities of FOAM on your system will be. If
-	libraries are missing, the configure script will tell you so.
+	FOAM uses the standard compilation process. Run ./configure to check if the
+  necessary libraries are installed and to see if you might need to add some
+	libraries.
 	
 	To install FOAM, follow these simple steps:
-	\li Download a FOAM release from http://dotdb.phys.uu.nl/~tim/foam/ or check out a version of FOAM from http://dotdb.phys.uu.nl/svn/foam/
-	\li Extract the tarball
-	\li For an svn checkout: run `autoreconf -s -i` to the configure script
+	\li Download a FOAM release from http://github.com/tvwerkhoven/FOAM/ (either git pull something, or download a release)
+	\li run `autoreconf -s -i` to the configure script
 	\li Run `./configure --help` to check what options you would like to use
 	\li Run `./configure` (with specific options) to prepare FOAM for building. If some libraries are missing, configure will tell you so
 	\li Run `make install` which makes the various FOAM packages and installs them in $PREFIX
-	\li Run any of the executables (foamcs-*)
-	\li Connect to localhost:10000 (default) with a telnet client
+	\li Run any of the executables built
+	\li Connect to localhost:1025 (default) with a telnet client
 	\li Type `help' to get a list of FOAM commands
 	
-	\subsection config Configure FOAM
-	
-	With simulation, make sure you do \b not copy the FFTW wisdom file 
-	<tt>'fftw_wisdom.dat'</tt> to new machines, this file contains some 
-	simple benchmarking results done by FFTW and are very machine dependent. 
-	FOAM will regenerate the file if necessary, but it cannot detect 
-	`wrong' wisdom files. Copying bad files is worse than deleting, thus
-	if unsure: delete the wisdom file.
-	
-	\section drivers Developing Packages
+	\section drivers Extending FOAM yourself
 
 	As said before, FOAM itself does not do a lot (compile & run 
-	<tt>./foamcs-dummy</tt> to verify), it provides a framework to which modules can be 
-	attached. Fortunately, this approach allows for complex bundles of 
-	modules, or `packages', as explained previously in \ref struct.
+	<tt>./foam-dummy</tt> to verify), it provides a framework to which devices 
+	can be attached. 
 	
-	If you want to use FOAM in a specific setup, you'll probably have to 
-	program some modules yourself. To do this, start with a `prime module' 
-	which \b must contain the functions listed in \ref struct-frame (see 
-	foam_primemod-dummy.c for example). 
-		
-	These functions provide hooks for the package to work with, and if 
-	their meaning is not immediately clear, the documentation provides some 
-	more details on what these functions do. It is also wise to look at the 
-	foamctrl struct which is used throughout FOAM to store data, settings 
-	and other information.
-	
-	Once these functions are defined, you can link the prime module to modules 
-	already supplied with FOAM. Simply do this by including the header files 
-	of the specific modules you want to add. For information on what certain 
-	modules do, look at the documentation of the files. This documentation 
-	tells you what the module does, what functions are available, and what 
-	other modules this module possibly depends on.
-	
-	If the default set of modules is insufficient to build a package in your 
-	situation, you will have to write your own. This scenario is (unfortunately) 
-	very likely, because FOAM does not provide modules to read out all possible 
-	framegrabbers/cameras and cannot drive all possible filter wheels, tip-tilt 
-	mirrors, deformable mirrors etc. If you have written your own module, please 
-	e-mail it to me (Tim van Werkhoven (t.i.m.vanwerkhoven@xs4all.nl)) so I can add it to the complete distribution.
-	
-	\subsection ownmodule Write your own modules
-	
-	A module in FOAM can take any form, but to keep things at least slightly 
-	organised, some conventions apply. These guidelines include:
-	
-	\li separate functionally different routines in different modules,
-	\li Name your modules `foam_modules-\<modulename\>.c' and supply a header file,
-	\li Include doxygen compatible information on the module in general in the C file
-	\li Include doxygen compatible information on the routines in the header file
-	\li Prefix functions that you write with \<modulename\>.
-	\li If necessary, provide a datatype to hold module-specific configuration
+	If you want to use FOAM in a specific setup, you will probably have to 
+	program some software yourself. When doing so, please include Doxygen
+	compatible documentation in the source code like this one.
  
+	\todo Extend this doc
 	
-	These guidelines are also used in the existing modules so you can easily 
-	see what a module does and what functions you have to call to get the module working.
-	For examples, see foam_modules-sh.c and foam_modules-sh.h.
+	\subsection ownmake Adapt the build process
 	
-	\subsection ownmake Adapt the Makefile
-	
-	Once you have a package, you will need to edit Makefile.am in the src/ 
-	directory. But before that, you will need to edit the configure.ac script 
-	in the root directory. This is necessary so that at configure time, users 
-	can decide what packages to build or not to build, using 
-	--enable-\<package\>. In the configure.ac file, you will need to add two 
-	parts:
- 
-	\li Add a check to see if the user wants to build the package or not (see 'TEST FOR USER INPUT')
-	\li Add a few lines to check if extra libraries necessary for the package are present (see 'STATIC SIMULATION MODE')
-	
-	After editing the configure.ac script, the Makefile.am needs to know 
-	that we want to build a new package/executable. For an example on how 
-	to do this, see the few lines following 'STATIC SIMULATION MODE'. 
-	In short: check if the package must be built, if yes, add package to 
-	bin_PROGRAMS, and setup various \c _SOURCES, \c _CFLAGS and \c _LDFLAGS 
-	variables.
-	
+	After writing your own software, you have to make sure it is actually built.
+  To make sure this happens, the most important files are configure.ac and
+	the various Makefile.am. configure.ac is the autoconf template and checks
+	for libraries and other prerequisites you might need. The various Makefile.am
+	are used to build different targets and tell the compilers which source 
+	files to include.
+
 	\section network Networking
 
-	Currently, the following status codes are used, based loosely on the HTTP status codes. All
-	codes are 3 bytes, followed by a space, and end with a single newline. The length of the message
-	can vary.
-	
-	2xx codes are given upon success:
-	\li 200: Successful reception of command, executing immediately,
-	\li 201: Executing immediately command succeeded.
-	
-	4xx codes are errors:
-	\li 400: General error, something is wrong
-	\li 401: Argument is not known
-	\li 402: Command is incomplete (missing argument)
-	\li 403: Command given is not allowed at this stage
-	\li 404: Previously given and acknowledged command failed.
-	
-	\section limit_sec Limitations/bugs
-	
-	There are some limitations to FOAM which are discussed in this section. The list includes:
-
-	\li The subaperture resolution must be a multiple of 4, because of tracking windows
-	\li Commands given to FOAM over the socket/network can be at most 1024 characters,
-	\li At the moment, most modules work with bytes to process data
-	\li On OS X, SDL does not appear to behave nicely, especially during shutdown (this is a problem of the OS X SDL implementation and cannot easily be fixed without using Objective C code)
-	
-	There might be other limitations or bugs, but these are not listed here 
-	because I am not aware of them. If you find some, please let me know (Tim van Werkhoven (t.i.m.vanwerkhoven@xs4all.nl)).
+	The networking language used is stolen from Guus Sliepen's filter_control
+	software. Look in the source code for clues on how it works, or connect
+  to FOAM with telnet to look at it yourself.
+ 
+	\todo Extend this doc
  
 */

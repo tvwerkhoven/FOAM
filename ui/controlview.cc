@@ -39,9 +39,9 @@ calibframe("Calibration"), calmode_lbl("Calibration mode: "), calib("Calibrate")
 statframe("Status"), stat_mode("Mode: "), stat_ndev("# Dev: "), stat_nframes("# Frames: "), stat_lastcmd("Last cmd: ") {
 	
 	// request minimum size for entry boxes
-	host.set_size_request(120);
+	host.set_width_chars(24);
 	host.set_text("localhost");
-	port.set_size_request(50);
+	port.set_width_chars(5);
 	port.set_text("1025");
 	
 	// Make shutdown/stop button red
@@ -63,13 +63,13 @@ statframe("Status"), stat_mode("Mode: "), stat_ndev("# Dev: "), stat_nframes("# 
 
 	// Make status entries insensitive
 	stat_mode.set_editable(false);
-	stat_mode.set_size_request(75);
+	stat_mode.set_width_chars(8);
 	stat_ndev.set_editable(false);
-	stat_ndev.set_size_request(30);
+	stat_ndev.set_width_chars(2);
 	stat_nframes.set_editable(false);
-	stat_nframes.set_size_request(75);
+	stat_nframes.set_width_chars(6);
 	stat_lastcmd.set_editable(false);
-	stat_lastcmd.set_size_request(100);
+	stat_lastcmd.set_width_chars(32);
 	
 	// Connection row (hostname, port, connect button)
 	connbox.set_spacing(4);	
@@ -95,7 +95,8 @@ statframe("Status"), stat_mode("Mode: "), stat_ndev("# Dev: "), stat_nframes("# 
 	
 	// Status row (mode, # dev, # frames)
 	statbox.set_spacing(4);
-	statbox.pack_start(stat_mode, PACK_SHRINK);
+	//! \todo statbox superfluous? can be removed?
+	//statbox.pack_start(stat_mode, PACK_SHRINK);
 	statbox.pack_start(stat_ndev, PACK_SHRINK);
 	statbox.pack_start(stat_nframes, PACK_SHRINK);
 	statbox.pack_start(stat_lastcmd, PACK_SHRINK);
@@ -185,16 +186,25 @@ void ControlPage::on_connect_update() {
 	}
 	else {
 		printf("%x:ControlPage::on_connect_update() is not conn\n", (int) pthread_self());
+		
+		// Toggle connect/disconnect button
+		//! \todo could make seperate connect/disconnect buttons and hide/show these?
 		connect.set_label("Connect");
-
+		
+		// Remove devices
+		foamctrl.set_numdev(0);
+		//! \todo Need link to parent window here to remove DevicePages, does this work?
+		signal_device();
+		
+		// Set controls inactive
 		mode_listen.set_sensitive(false);
 		mode_open.set_sensitive(false);
 		mode_closed.set_sensitive(false);
 		shutdown.set_sensitive(false);
-		
 		calmode_select.set_sensitive(false);
 		calib.set_sensitive(false);
 		
+		// Add log stuff
 		log.add(Log::OK, "Disconnected");
 	}
 }
@@ -202,18 +212,27 @@ void ControlPage::on_connect_update() {
 void ControlPage::on_message_update() {
 	printf("%x:ControlPage::on_message_update()\n", (int) pthread_self());
 	
-	// reset buttons
+	// reset mode buttons
 	mode_listen.set_sensitive(true);
+	mode_listen.set_active(false);
 	mode_open.set_sensitive(true);
+	mode_open.set_active(false);
 	mode_closed.set_sensitive(true);
+	mode_closed.set_active(false);
 	calib.set_sensitive(true);
+	calib.set_active(false);
 	
 	// press correct button
-	if (foamctrl.get_mode() == AO_MODE_LISTEN) mode_listen.set_sensitive(false);
-	else if (foamctrl.get_mode() == AO_MODE_OPEN) mode_open.set_sensitive(false);
-	else if (foamctrl.get_mode() == AO_MODE_CLOSED) mode_closed.set_sensitive(false);
-	else if (foamctrl.get_mode() == AO_MODE_CAL) calib.set_sensitive(false);
-
+	ToggleButton *tmp=NULL;
+	if (foamctrl.get_mode() == AO_MODE_LISTEN) tmp = &mode_listen;
+	else if (foamctrl.get_mode() == AO_MODE_OPEN) tmp = &mode_open;
+	else if (foamctrl.get_mode() == AO_MODE_CLOSED) tmp = &mode_closed;
+	else if (foamctrl.get_mode() == AO_MODE_CAL) tmp = &calib;
+	
+	//! \todo need to set 'tmp' to active state here without sending a signal
+	if (tmp)
+		tmp->set_sensitive(false);
+	
 	// set values in status box
 	stat_mode.set_text(foamctrl.get_mode_str());
 	stat_ndev.set_text(format("%d", foamctrl.get_numdev()));
@@ -233,6 +252,6 @@ void ControlPage::on_message_update() {
 	calmode_select.set_active_text(foamctrl.get_calmode(0));
 	
 	// show devices	
-	// TODO: list devices somehow
+	//! \todo list all devices in the system somehow
 }
 

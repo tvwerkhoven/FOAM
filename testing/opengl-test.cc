@@ -35,8 +35,8 @@ public:
 	void on_render();
 	int w, h, d;
 	uint8_t *data;
-	Simple::Simple();
-	Simple::~Simple();
+	Simple();
+	~Simple();
 };
 
 

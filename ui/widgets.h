@@ -78,14 +78,18 @@ class LabeledSpinEntry: public Gtk::HBox {
 class LabeledEntry: public Gtk::HBox {
 	Gtk::Label pre;
 	Gtk::Label post;
-	Gtk::Entry entry;
 	
-	public:
+public:
+	Gtk::Entry entry;
 	
 	LabeledEntry(const Glib::ustring &pretext, const Glib::ustring &posttext = "");
 	
 	void set_size_request(int size) {
 		entry.set_size_request(size);
+	}
+	
+	void set_width_chars(int n_chars) {
+		entry.set_width_chars(n_chars);
 	}
 	
 	void set_text(const Glib::ustring &text) {

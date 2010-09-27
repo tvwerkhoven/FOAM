@@ -18,62 +18,39 @@
  along with FOAM.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+/*! 
+ @file devices.cc
+ @author Tim van Werkhoven (t.i.m.vanwerkhoven@xs4all.nl)
+ @brief Generic device class, specific hardware controls are derived from this class.
+ */
+
 #include "io.h"
 #include "devices.h"
+#include "foamctrl.h"
 
-Device::Device(Io &io, string name, string port): io(io), name(name), port(port) { 
-	io.msg(IO_XNFO, "Device::Device(): Create new device, name=%s", name.c_str());
+// Device class
+
+Device::Device(Io &io, foamctrl *ptc, string n, string t, string p, string cf): 
+io(io), ptc(ptc), name(n), type("dev." + t), port(p), conffile(cf), cfg(cf, n), netio(p, n)
+{ 
+	io.msg(IO_XNFO, "Device::Device(): Create new device, name=%s, type=%s", 
+				 name.c_str(), type.c_str());
 	
-	protocol = new Protocol::Server(port, name);
+	string _type = cfg.getstring("type");
+	if (_type != type) 
+		throw exception("Device::Device(): Type should be " + type + " for this Device!");
+	
 	io.msg(IO_XNFO, "Device %s listening on port %s.", name.c_str(), port.c_str());
-	protocol->slot_message = sigc::mem_fun(this, &Device::on_message);
-	protocol->slot_connected = sigc::mem_fun(this, &Device::on_connect);
-	protocol->listen();
+	netio.slot_message = sigc::mem_fun(this, &Device::on_message);
+	netio.slot_connected = sigc::mem_fun(this, &Device::on_connect);
+	netio.listen();
 }
 
 Device::~Device() {
 	io.msg(IO_DEB2, "Device::~Device()");
-	
-	delete protocol;
 }
 
-int DeviceManager::add(Device *dev) {
-	string id = dev->getname();
-	if (devices.find(id) != devices.end()) {
-		io.msg(IO_ERR, "ID '%s' already exists!", id.c_str());
-		return -1;
-	}
-	devices[id] = dev;
-	ndev++;
-	return 0;
-}
-
-Device* DeviceManager::get(string id) {
-	if (devices.find(id) == devices.end()) {
-		io.msg(IO_ERR, "ID '%s' does not exist!", id.c_str());
-		return NULL;
-	}
-	return devices[id];
-}
-
-int DeviceManager::del(string id) {
-	if (devices.find(id) == devices.end()) {
-		io.msg(IO_ERR, "ID '%s' does not exist!", id.c_str());
-		return -1;
-	}
-	devices.erase(devices.find(id));
-	ndev--;
-	return 0;
-}
-
-string DeviceManager::getlist() {
-	device_t::iterator it;
-	string devlist = "";
-	for (it=devices.begin() ; it != devices.end(); it++)
-		devlist += (*it).first + " ";
-	
-	return devlist;
-}
+// DeviceManager class
 
 DeviceManager::DeviceManager(Io &io): io(io), ndev(0) {
 	io.msg(IO_DEB2, "DeviceManager::DeviceManager()");
@@ -86,3 +63,46 @@ DeviceManager::~DeviceManager() {
 		delete (*it).second;
 	
 }
+
+int DeviceManager::add(Device *dev) {
+	string id = dev->getname();
+	if (devices.find(id) != devices.end()) {
+		io.msg(IO_ERR, "Device ID '%s' already exists!", id.c_str());
+		return -1;
+	}
+	devices[id] = dev;
+	ndev++;
+	return 0;
+}
+
+Device* DeviceManager::get(string id) {
+	if (devices.find(id) == devices.end()) {
+		io.msg(IO_ERR, "Device ID '%s' does not exist!", id.c_str());
+		throw exception("Device " + id + " does not exist!");
+		return NULL;
+	}
+	return devices[id];
+}
+
+int DeviceManager::del(string id) {
+	if (devices.find(id) == devices.end()) {
+		io.msg(IO_ERR, "Device ID '%s' does not exist!", id.c_str());
+		return -1;
+	}
+	devices.erase(devices.find(id));
+	ndev--;
+	return 0;
+}
+
+string DeviceManager::getlist(bool showtype) {
+	device_t::iterator it;
+	string devlist = "";
+	for (it=devices.begin() ; it != devices.end(); it++) {
+		devlist += (*it).first + " ";
+		if (showtype) devlist += (*it).second->gettype() + " ";
+	}
+	
+	return devlist;
+}
+
+

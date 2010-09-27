@@ -1,5 +1,5 @@
 /*
- foam-simstatic.h -- static simulation module header file
+ foam-hwtest.h -- hardware testing mode
  Copyright (C) 2008--2010 Tim van Werkhoven <t.i.m.vanwerkhoven@xs4all.nl>
  
  This file is part of FOAM.
@@ -18,7 +18,7 @@
  along with FOAM.  If not, see <http://www.gnu.org/licenses/>.
  */
 /*! 
-	@file foam-simstatic.h
+	@file foam-hwtest.h
 	@author Tim van Werkhoven (t.i.m.vanwerkhoven@xs4all.nl)
 	@date 2008-04-18 12:55
 
@@ -39,16 +39,12 @@
 #include "io.h"
 
 /*!
- @brief FOAM static simulation implementation
- 
- This FOAM implementation provides a simple static simulation. The WFS camera
- is fed by an image stored on disk and the shifts calculated that way are 
- thus static.
- */
-class FOAM_simstatic : public FOAM {
+ @brief FOAM hardware test implementation
+*/
+class FOAM_hwtest : public FOAM {
 public:
-	FOAM_simstatic(int argc, char *argv[]): FOAM(argc, argv) { io.msg(IO_DEB2, "FOAM_simstatic::FOAM_simstatic()"); } 
-	virtual ~FOAM_simstatic() { io.msg(IO_DEB2, "FOAM_simstatic::~FOAM_simstatic()"); } 
+	FOAM_hwtest(int argc, char *argv[]): FOAM(argc, argv) { io.msg(IO_DEB2, "FOAM_hwtest::FOAM_hwtest()"); } 
+	virtual ~FOAM_hwtest() { io.msg(IO_DEB2, "FOAM_hwtest::~FOAM_hwtest()"); } 
 	
 	virtual int load_modules();
 	virtual void on_message(Connection *connection, std::string line);

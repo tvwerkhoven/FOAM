@@ -27,6 +27,8 @@
 #include "foamcontrol.h"
 #include "controlview.h"
 
+#include "foamtypes.h"
+
 using namespace Gtk;
 
 FoamControl::FoamControl() {
@@ -38,7 +40,8 @@ FoamControl::FoamControl() {
 	// Init variables
 	state.mode = AO_MODE_UNDEF;
 	state.numdev = 0;
-	state.devices[0] = "undef";
+	state.devices[0].name = "undef";
+	state.devices[0].type = "undef";
 	state.numframes = 0;
 	state.numcal = 0;
 	state.calmodes[0] = "undef";
@@ -141,17 +144,19 @@ void FoamControl::on_message(string line) {
 		}
 		else if (var == "devices") {
 			state.numdev = popint32(line);
-			for (int i=0; i<state.numdev; i++)
-				state.devices[i] = popword(line);
+			for (int i=0; i<state.numdev; i++) {
+				state.devices[i].name = popword(line);
+				state.devices[i].type = popword(line);
+			}
 			// Signal device update to main GUI thread
 			signal_device();
 		}
 	}
 	else if (what == "cmd") {
-		// command confirmation hook
+		//! \todo implement "cmd" confirmation hook
 	}
 	else if (what == "calib") {
-		// post-calibration hook
+		//! \todo implement post-calibration hook
 	}
 	else if (what == "mode") {
 		state.mode = str2mode(popword(line));

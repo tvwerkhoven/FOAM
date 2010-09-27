@@ -24,6 +24,10 @@
 #include <gtkmm.h>
 #include "log.h"
 
+/*!
+ @brief Logging display class
+ @todo Document this
+ */
 class LogPage: public Gtk::VBox {
 	Gtk::ScrolledWindow scroll;
 	Gtk::TextView view;

@@ -23,29 +23,36 @@
 #include <sys/time.h>
 #include <time.h>
 #include <math.h>
+#ifndef __STDC_LIMIT_MACROS
 #define __STDC_LIMIT_MACROS
+#endif
 #include <stdint.h>
 
 #include "config.h"
 #include "io.h"
 #include "imgio.h"
-#include "cam.h"
+#include "camera.h"
 
-#define IMGCAM_TYPE "imgcam"
+const string imgcam_type = "imgcam";
 
 using namespace std;
 
+/*!
+ @brief Fake camera taking image files as input
+ 
+ @todo Document this
+ */
 class ImgCamera: public Camera {
 private:
 	double noise;												//!< Simulated noise intensity
 	Imgio *img;													//!< Use Imgio utils to load frames
 	uint16_t *frame;										//!< Frame stored here
 	
-	void update(bool blocking);
-
 public:
 	ImgCamera(Io &io, string name, string port, config *config);
 	~ImgCamera();
+	
+	void update(bool blocking);
 	
 	virtual int verify();
 	virtual void on_message(Connection *, std::string);

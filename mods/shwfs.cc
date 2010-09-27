@@ -30,7 +30,7 @@
 
 #include "config.h"
 #include "types.h"
-#include "cam.h"
+#include "camera.h"
 #include "io.h"
 #include "wfs.h"
 #include "shwfs.h"
@@ -160,7 +160,7 @@ int Shwfs::subapSel() {
 		int isy, isx;
 		io.msg(IO_XNFO, "Running edge erosion iteration...");
 		for (int i=0; i<ns; i++) {
-			// TODO: not safe, may break down:
+			//! \todo not safe, may break down:
 			isy = (sapos[i].y / sasize.y);
 			isx = (sapos[i].x / sasize.x);
 			io.msg(IO_DEB1 | IO_NOLF, "Subap %d/%d @ (%d,%d) @ (%d,%d)...", i, ns, isx, isy, sapos[i].x, sapos[i].y);
@@ -210,8 +210,11 @@ void Shwfs::printGrid(int *map) {
 // PUBLIC FUNCTIONS //
 /********************/
 
-Shwfs::Shwfs(Io &io, string conffile): Wfs(io, conffile) {
-	io.msg(IO_DEB2, "Shwfs::Shwfs(Io &io, string conffile)");
+
+Shwfs::Shwfs(Io &io, string name, string port, string conffile):
+Wfs(io, name, shwfs_type, port, conffile)
+	{
+	io.msg(IO_DEB2, "Shwfs::Shwfs()");
 		
 	wfstype = cfg.getstring("type");
 	if (wfstype != SHWFS_TYPE) throw exception("Type should be " SHWFS_TYPE " for this class.");
@@ -297,7 +300,7 @@ int Shwfs::calibrate(int op) {
 	}
 	else if (op == Shwfs::CAL_PINHOLE) {
 		io.msg(IO_DEB2, "Shwfs::calibrate(Shwfs::CAL_PINHOLE)");
-		// TODO: add calibration for reference coordinates (with pinhole)
+		//! \todo add calibration for reference coordinates (with pinhole)
 		return 0;
 	}
 	else {
