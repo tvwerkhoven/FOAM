@@ -116,6 +116,9 @@ double FW1394Camera::cam_get_exposure() {
 }
 
 void FW1394Camera::cam_set_interval(double value) {
+	camera->set_framerate((dc1394::framerate) _dc1394.framerate_p.getenum(1/value));
+	
+	1.0 / 1.875 / (1 << (camera->get_framerate() - 32));
 }
 
 double FW1394Camera::cam_get_interval() {
@@ -124,8 +127,10 @@ double FW1394Camera::cam_get_interval() {
 }
 
 void FW1394Camera::cam_set_gain(double value) {
-	pthread::mutexholder h(&cam_mutex);
-	camera->set_feature(dc1394::FEATURE_GAIN, (uint32_t)value);
+	{
+		pthread::mutexholder h(&cam_mutex);
+		camera->set_feature(dc1394::FEATURE_GAIN, (uint32_t)value);
+	}
 	gain = cam_get_gain();
 }
 
@@ -135,8 +140,10 @@ double FW1394Camera::cam_get_gain() {
 }
 
 void FW1394Camera::cam_set_offset(double value) {
-	pthread::mutexholder h(&cam_mutex);
-	camera->set_feature(dc1394::FEATURE_BRIGHTNESS, (uint32_t)value + 256);
+	{
+		pthread::mutexholder h(&cam_mutex);
+		camera->set_feature(dc1394::FEATURE_BRIGHTNESS, (uint32_t)value + 256);
+	}
 	offset = cam_get_offset();
 }
 
