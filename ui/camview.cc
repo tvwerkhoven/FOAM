@@ -46,7 +46,7 @@ ctrlframe("Camera controls"),
 camframe("Camera"),
 histoframe("Histogram"),
 e_exposure("Exp."), e_offset("Offset"), e_interval("Intv."), e_gain("Gain"), e_res("Res."), e_mode("Mode"), e_stat("Status"),
-flipv("Flip vert."), fliph("Flip hor."), crosshair("Crosshair"), zoomin(Stock::ZOOM_IN), zoomout(Stock::ZOOM_OUT), zoom100(Stock::ZOOM_100), zoomfit(Stock::ZOOM_FIT), capture("Capture"), display("Display"),
+flipv("Flip vert."), fliph("Flip hor."), crosshair("Crosshair"), grid("Grid"), zoomin(Stock::ZOOM_IN), zoomout(Stock::ZOOM_OUT), zoom100(Stock::ZOOM_100), zoomfit(Stock::ZOOM_FIT), capture("Capture"), display("Display"),
 mean("Mean value"), stddev("Stddev")
 {
 	fprintf(stderr, "CamView::CamView()\n");
@@ -76,6 +76,7 @@ mean("Mean value"), stddev("Stddev")
 	fliph.set_active(false);
 	flipv.set_active(false);
 	crosshair.set_active(false);
+	grid.set_active(false);
 	
 	mean.set_text("N/A");
 	mean.set_width_chars(6);
@@ -102,6 +103,7 @@ mean("Mean value"), stddev("Stddev")
 	fliph.signal_toggled().connect(sigc::mem_fun(*this, &CamView::force_update));
 	flipv.signal_toggled().connect(sigc::mem_fun(*this, &CamView::force_update));
 	crosshair.signal_toggled().connect(sigc::mem_fun(*this, &CamView::force_update));
+	grid.signal_toggled().connect(sigc::mem_fun(*this, &CamView::force_update));
 	zoomfit.signal_toggled().connect(sigc::mem_fun(*this, &CamView::force_update));
 	//	contrast.signal_toggled().connect(sigc::mem_fun(*this, &CamView::force_update));
 	//	underover.signal_toggled().connect(sigc::mem_fun(*this, &CamView::force_update));
@@ -113,6 +115,10 @@ mean("Mean value"), stddev("Stddev")
 
 	capture.signal_toggled().connect(sigc::mem_fun(*this, &CamView::on_capture_update));
 	display.signal_toggled().connect(sigc::mem_fun(*this, &CamView::on_display_update));
+	
+	// Handle some glarea events as well
+	glarea.view_update.connect(sigc::mem_fun(*this, &CamView::on_glarea_view_update));
+	
 	//	histogramevents.signal_button_press_event().connect(sigc::mem_fun(*this, &CamView::on_histogram_clicked));
 	//	fullscreentoggle.signal_toggled().connect(sigc::mem_fun(*this, &CamView::on_fullscreen_toggled));
 	//	close.signal_activate().connect(sigc::mem_fun(*this, &CamView::on_close_activate));
@@ -131,6 +137,7 @@ mean("Mean value"), stddev("Stddev")
 	disphbox.pack_start(flipv, PACK_SHRINK);
 	disphbox.pack_start(fliph, PACK_SHRINK);
 	disphbox.pack_start(crosshair, PACK_SHRINK);
+	disphbox.pack_start(grid, PACK_SHRINK);
 	disphbox.pack_start(zoomfit, PACK_SHRINK);
 	disphbox.pack_start(zoom100, PACK_SHRINK);
 	disphbox.pack_start(zoomin, PACK_SHRINK);
@@ -163,9 +170,14 @@ CamView::~CamView() {
 	//! \todo store (gui) configuration here?
 }
 
+void CamView::on_glarea_view_update() {
+	// Callback for glarea update on viewstate (zoom, scale, shift)
+	zoomfit.set_active(glarea.getzoomfit());		
+}
+
 void CamView::force_update() {
 	glarea.setcrosshair(crosshair.get_active());
-	//glarea.pager = pager.get_active();
+	glarea.setgrid(grid.get_active());
 	// Flip settings
 	glarea.setfliph(fliph.get_active());
 	glarea.setflipv(flipv.get_active());

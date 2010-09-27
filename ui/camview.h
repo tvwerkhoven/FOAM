@@ -61,6 +61,7 @@ protected:
 	CheckButton flipv;
 	CheckButton fliph;
 	CheckButton crosshair;
+	CheckButton grid;
 	Button zoomin;
 	Button zoomout;
 	Button zoom100;
@@ -96,6 +97,7 @@ protected:
 	void on_zoomout_activate();
 	void on_capture_update();			//!< Called when capture button is active
 	void on_display_update();			//!< Called when display button is active
+	void on_glarea_view_update();	//!< Callback from glarea class
 //	void on_colorsel_activate();
 //	void on_fullscreen_toggled();
 	void force_update();
