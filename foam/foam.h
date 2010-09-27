@@ -34,7 +34,7 @@
 #include <stdexcept>
 
 #include "autoconfig.h"
-#include "types.h"
+#include "foamtypes.h"
 #include "config.h"
 #include "protocol.h"
 #include "foamctrl.h"

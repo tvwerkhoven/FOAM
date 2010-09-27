@@ -35,7 +35,7 @@
 #include "foam.h"
 #include "autoconfig.h"
 #include "config.h"
-#include "types.h"
+#include "foamtypes.h"
 #include "io.h"
 #include "protocol.h"
 #include "foamctrl.h"

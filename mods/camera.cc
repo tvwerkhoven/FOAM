@@ -401,9 +401,6 @@ uint8_t *Camera::get_thumbnail(Connection *conn = NULL) {
 	return buffer;
 }
 
-
-template <class T> static T clamp(T x, T min, T max) { if (x < min) x = min; if (x > max) x = max; return x; }
-
 void Camera::grab(Connection *conn, int x1, int y1, int x2, int y2, int scale = 1, bool do_df = false, bool do_histo = false) {
 	io.msg(IO_DEB2, "Camera::grab(%d, %d, %d, %d, %d, %d, %d)", x1, x2, y1, y2, scale, do_df, do_histo);
 	x1 = clamp(x1, 0, res.x);

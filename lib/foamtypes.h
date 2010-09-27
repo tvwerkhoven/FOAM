@@ -23,43 +23,13 @@
  @author Tim van Werkhoven (t.i.m.vanwerkhoven@xs4all.nl)
 */
 
-#ifndef HAVE_TYPES_H
-#define HAVE_TYPES_H
-
-// INCLUDES //
-/************/
+#ifndef HAVE_FOAMTYPES_H
+#define HAVE_FOAMTYPES_H
 
 using namespace std;
 
 // STRUCTS AND TYPES //
 /*********************/
-
-/*!
- @brief We use this to define integer 2-vectors (resolutions etc)
- */
-typedef struct coord_t {
-	coord_t(int _x=0, int _y=0) : x(_x), y(_y) { }
-	int x;			//!< x coordinate
-	int y;			//!< y coordinate
-} coord_t;
-
-/*!
- @brief We use this to define floating point 2-vectors (displacements etc)
- */
-typedef struct fcoord_t {
-	fcoord_t(float _x=0, float _y=0) : x(_x), y(_y) { }
-	float x;		//!< x coordinate
-	float y;		//!< y coordinate
-} fcoord_t;
-
-/*!
- @brief We use this to store gain information for WFC's
- */
-typedef struct {
-	float p;		//!< proportional gain
-	float i;		//!< integral gain
-	float d;		//!< differential gain
-} gain_t;
 
 /*!
  @brief Stores the mode of the AO system.
@@ -74,16 +44,5 @@ typedef enum { // aomode_t
 	AO_MODE_UNDEF,		//!< Undefined mode (default)
 	AO_MODE_SHUTDOWN	//!< Set to this mode for the worker thread to finish
 } aomode_t;
-
-/*! 
- @brief This enum is used to distinguish between various datatypes for processing.
- 
-*/
-typedef enum {
-	DATA_INT8,			//!< ID for int8_t
-	DATA_UINT8,			//!< ID for uint8_t
-	DATA_INT16,			//!< ID for int16_t
-	DATA_UINT16			//!< ID for uint16_t
-} dtype_t;
 
 #endif // HAVE_TYPES_H 

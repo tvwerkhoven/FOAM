@@ -33,7 +33,7 @@
 
 #include "protocol.h"
 #include "pthread++.h"
-#include "types.h"
+#include "foamtypes.h"
 
 using namespace std;
 

@@ -27,6 +27,8 @@
 #include "foamcontrol.h"
 #include "controlview.h"
 
+#include "foamtypes.h"
+
 using namespace Gtk;
 
 FoamControl::FoamControl() {

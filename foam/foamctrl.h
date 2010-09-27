@@ -25,7 +25,7 @@
 
 #include "io.h"
 #include "config.h"
-#include "types.h"
+#include "foamtypes.h"
 
 /*! 
  @brief Stores the control state of the AO system

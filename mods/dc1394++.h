@@ -29,6 +29,9 @@
 #include <iostream>
 #include <string>
 #include <map>
+#include <math.h>
+
+#include "types.h"
 
 using namespace std;
 
