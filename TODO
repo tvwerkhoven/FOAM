@@ -5,12 +5,6 @@ We are looking for volunteers to do the following tasks :).
 
 Minor fixes & tweaks
 
-* Abstract modes, internal mode (enum) and description (string) should be 
-	connected better.
-
-* Review WFC/WFS abstraction, currently implemented inconsistently which 
-  makes some things more difficult than they are.
-
 * Implement savestate such that a complete setup can be resumed.
 
 Major feature upgrades

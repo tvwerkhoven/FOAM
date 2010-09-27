@@ -129,7 +129,6 @@ void *Camera::cam_queue(void *data, void *image, struct timeval *tv) {
 		frame->tv = *tv;
 	else
 		gettimeofday(&frame->tv, 0);
-	//io.msg(IO_DEB1, "%lld %p %p %p %7.3lf %6.3lf", count, frame, data, image, frame->avg, frame->rms);
 	
 	cam_cond.broadcast();
 	

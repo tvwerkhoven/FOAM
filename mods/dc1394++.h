@@ -321,7 +321,7 @@ class dc1394 {
 	}
 	
 	bool check_framerate(float fps) {
-		// TODO: add check for current mode
+		//! @todo add check for current mode
 		//if (log2(fps/1.875) < 0.0 || log2(fps/1.875) > 7.0 || (int) log2(fps/1.875) != log2(fps/1.875))
 		if (fps == fix_framerate(fps))
 			return true;
@@ -355,7 +355,7 @@ class dc1394 {
 		
 	public:
 		camera(dc1394camera_t *handle, dc1394 *parent): _dc1394(parent), handle(handle) {
-			// TODO: query available video modes + framerates.
+			//! @todo query available video modes + framerates.
 		}
 		~camera() { dc1394_camera_free(handle); }
 

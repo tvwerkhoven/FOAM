@@ -238,7 +238,7 @@ bool CamView::on_timeout() {
 
 void CamView::on_monitor_update() {
 //	fprintf(stderr, "CamView::on_monitor_update()\n");
-	// TODO: need mutex here?
+	//! @todo need mutex here?
 	glarea.linkData((void *) camctrl->monitor.image, camctrl->monitor.depth, camctrl->monitor.x2 - camctrl->monitor.x1, camctrl->monitor.y2 - camctrl->monitor.y1);
 	//force_update();
 	//	usleep(0.01 * 1000000);

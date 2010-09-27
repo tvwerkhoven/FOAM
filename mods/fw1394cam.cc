@@ -156,7 +156,7 @@ double FW1394Camera::cam_get_offset() {
 
 void FW1394Camera::cam_handler() { 
 	pthread::setcanceltype(PTHREAD_CANCEL_ASYNCHRONOUS);
-	// TODO: make this Mac compatible
+	//! @todo make this Mac compatible
 #ifndef __APPLE__
 	cpu_set_t cpuset;
 	CPU_ZERO(&cpuset);
@@ -243,6 +243,6 @@ void FW1394Camera::cam_set_mode(mode_t newmode) {
 }
 
 void FW1394Camera::do_restart() {
-	// TODO
+	//! @todo implement this
 	io.msg(IO_WARN, "FW1394::do_restart() not implemented yet.");
 }
