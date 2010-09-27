@@ -116,9 +116,11 @@ double FW1394Camera::cam_get_exposure() {
 }
 
 void FW1394Camera::cam_set_interval(double value) {
-	camera->set_framerate((dc1394::framerate) _dc1394.framerate_p.getenum(1/value));
-	
-	1.0 / 1.875 / (1 << (camera->get_framerate() - 32));
+	{
+	pthread::mutexholder h(&cam_mutex);
+	camera->set_framerate((dc1394::framerate) _dc1394.framerate_p.getenum(_dc1394.fix_framerate(1/value)));
+	}
+	interval = cam_get_interval();
 }
 
 double FW1394Camera::cam_get_interval() {
@@ -151,38 +153,6 @@ double FW1394Camera::cam_get_offset() {
 	pthread::mutexholder h(&cam_mutex);
 	return camera->get_feature(dc1394::FEATURE_BRIGHTNESS) - 256;
 }
-
-//void FW1394Camera::cam_handler() {
-//	pthread::setcanceltype(PTHREAD_CANCEL_ASYNCHRONOUS);
-//	// TODO: make this Mac compatible
-//#ifndef __APPLE__
-//	cpu_set_t cpuset;
-//	CPU_ZERO(&cpuset);
-//	CPU_SET(1, &cpuset);
-//	pthread::setaffinity(&cpuset);
-//#endif
-//	
-//	while(true) {
-//		if (mode == Camera::RUNNING || mode == Camera::SINGLE) {
-//			dc1394::frame *frame = camera->capture_dequeue(dc1394::CAPTURE_POLICY_WAIT);
-//			if(!frame) {
-//				timeouts++;
-//				usleep(50000);
-//				continue;
-//			}
-//			
-//			dc1394::frame *oldframe = (dc1394::frame *)cam_queue(frame, frame->image);
-//			if (oldframe)
-//				camera->capture_enqueue(oldframe);
-//			
-//			// If we only want one frame, set camera to waiting state
-//			if (mode == Camera::SINGLE)
-//				cam_set_mode(Camera::WAITING);
-//		}
-//		else
-//			usleep(50000);
-//	}
-//}
 
 void FW1394Camera::cam_handler() { 
 	pthread::setcanceltype(PTHREAD_CANCEL_ASYNCHRONOUS);
