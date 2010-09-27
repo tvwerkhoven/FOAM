@@ -50,13 +50,16 @@ static const string cam_type = "cam";
  part is hardware I/O which is done by a seperate thread through 'handler' in
  the 'camthr' thread. Graphically:
  
- Device --- netio --        --- netio ---
-      \---- main --- Camera --- cam_thr -
-												  \---- main ----
+ Device --- netio --        --- netio ----
+      \---- main --- Camera --- cam_thr --
+												  +---- proc_thr -
+												  \----	main -----
  
  \li netio gets input from outside (GUIs), reads from shared class
  \li cam_thr runs standalone, gets input from variables (configuration), 
 		provides hooks through sigc++ slots.
+ \li proc_thr runs some processing over the captured frames from cam_thr if 
+		necessary, responds to cam_cond() broadcasts
  \li main thread calls camera functions to read out data/settings, can hook up 
 		to slots to get 'instantaneous' feedback from cam_thr.
  
@@ -131,31 +134,28 @@ public:
 		size_t id;
 		struct timeval tv;
 		
+		bool proc;						//!< Was the frame processed in time?
+		
 		frame() {
 			data = 0;
 			image = 0;
 			id = 0;
 			histo = 0;
+			proc = false;
 		}
 		
 		double avg;
 		double rms;
-		
-		double cx;						//!< @todo ???
-		double cy;						//!< @todo ???
-		double cr;						//!< @todo ???
-		
-		double rms1;
-		double rms2;
-		
-		double dx;
-		double dy;
 	} frame_t;
 	
 protected:
 	pthread::thread cam_thr;			//!< Camera hardware thread.
-	pthread::mutex cam_mutex;
-	pthread::cond cam_cond;
+	pthread::mutex cam_mutex;			//!< Camera hardware thread mutex (used with cam_cond)
+	pthread::cond cam_cond;				//!< Camera hardware thread cond (for camera updates)
+	
+	pthread::thread proc_thr;			//!< Processing thread (only camera stuff)
+	pthread::mutex proc_mut;			//!< Processing thread (only camera stuff)
+	pthread::cond	proc_cond;			//!< Processing thread (only camera stuff)
 	
 	pthread::cond mode_cond;			//!< Mode change notification
 	pthread::mutex mode_mutex;
@@ -175,7 +175,9 @@ protected:
 	virtual void do_restart() = 0;
 
 	void *cam_queue(void *data, void *image, struct timeval *tv = 0); //!< Store frame in buffer, returns oldest frame if buffer is full
-	
+
+	void cam_proc(void *args);												//!< Process frames (if necessary)
+
 	void calculate_stats(frame *frame);								//!< Calculate rms and such
 	bool accumburst(uint32_t *accum, size_t bcount);	//!< For dark/flat acquisition
 	void statistics(Connection *conn, size_t bcount);	//!< Post back statistics

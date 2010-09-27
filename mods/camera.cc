@@ -117,20 +117,14 @@ void *Camera::cam_queue(void *data, void *image, struct timeval *tv) {
 	
 	if(!frame->histo)
 		frame->histo = new uint32_t[get_maxval()];
-	
-	calculate_stats(frame);
-	
-	//! @todo Could still implement this (partially)
-	frame->rms1 = frame->rms2 = -1;
-	frame->cx = frame->cy = frame->cr = 0;
-	frame->dx = frame->dy = 0;
-	
+			
 	if(tv)
 		frame->tv = *tv;
 	else
 		gettimeofday(&frame->tv, 0);
 	
-	cam_cond.broadcast();
+	// Signal one waiting thread about the new frame
+	cam_cond.signal();
 	
 	return old;
 }
