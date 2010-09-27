@@ -194,11 +194,11 @@ CamView::~CamView() {
 
 void CamView::state_update() {
 	fprintf(stderr, "CamView::state_update()\n");
-	glarea.crosshair = crosshair.get_active();
-	glarea.pager = pager.get_active();
+	glarea.setcrosshair(crosshair.get_active());
+	glarea.setpager(pager.get_active());
 	// Flip settings
-	glarea.fliph = fliph.get_active();
-	glarea.flipv = flipv.get_active();
+	glarea.setfliph(fliph.get_active());
+	glarea.setflipv(flipv.get_active());
 	glarea.do_update();
 }
 

@@ -101,10 +101,10 @@ mean("Mean value"), stddev("Stddev")
 	
 	fliph.signal_toggled().connect(sigc::mem_fun(*this, &CamView::force_update));
 	flipv.signal_toggled().connect(sigc::mem_fun(*this, &CamView::force_update));
+	crosshair.signal_toggled().connect(sigc::mem_fun(*this, &CamView::force_update));
 	zoomfit.signal_toggled().connect(sigc::mem_fun(*this, &CamView::force_update));
 	//	contrast.signal_toggled().connect(sigc::mem_fun(*this, &CamView::force_update));
 	//	underover.signal_toggled().connect(sigc::mem_fun(*this, &CamView::force_update));
-	crosshair.signal_toggled().connect(sigc::mem_fun(*this, &CamView::force_update));
 	
 	//	histogram.signal_toggled().connect(sigc::mem_fun(*this, &CamView::on_histogram_toggled));
 	zoom100.signal_clicked().connect(sigc::mem_fun(*this, &CamView::on_zoom100_activate));
@@ -130,6 +130,7 @@ mean("Mean value"), stddev("Stddev")
 	
 	disphbox.pack_start(flipv, PACK_SHRINK);
 	disphbox.pack_start(fliph, PACK_SHRINK);
+	disphbox.pack_start(crosshair, PACK_SHRINK);
 	disphbox.pack_start(zoomfit, PACK_SHRINK);
 	disphbox.pack_start(zoom100, PACK_SHRINK);
 	disphbox.pack_start(zoomin, PACK_SHRINK);
@@ -163,14 +164,13 @@ CamView::~CamView() {
 }
 
 void CamView::force_update() {
-	glarea.crosshair = crosshair.get_active();
+	glarea.setcrosshair(crosshair.get_active());
 	//glarea.pager = pager.get_active();
 	// Flip settings
-	glarea.fliph = fliph.get_active();
-	glarea.flipv = flipv.get_active();
+	glarea.setfliph(fliph.get_active());
+	glarea.setflipv(flipv.get_active());
 	// Zoom settings
-	//! \todo implement zoomfit in glarea
-	//glarea.zoomfit = zoomfit.get_active();
+	glarea.setzoomfit(zoomfit.get_active());
 	glarea.do_update();
 }
 
