@@ -63,6 +63,11 @@ static const string cam_type = "cam";
  \li main thread calls camera functions to read out data/settings, can hook up 
 		to slots to get 'instantaneous' feedback from cam_thr.
  
+ Capture process
+ 
+ \li cam_thr captures frame (needs to be implemented in cam_handler()), calls cam_queue()
+ \li cam_queue() locks cam_mut
+ 
  Camera net IO
  
  Valid commends include
@@ -150,12 +155,12 @@ public:
 	
 protected:
 	pthread::thread cam_thr;			//!< Camera hardware thread.
-	pthread::mutex cam_mutex;			//!< Camera hardware thread mutex (used with cam_cond)
-	pthread::cond cam_cond;				//!< Camera hardware thread cond (for camera updates)
+	pthread::mutex cam_mutex;			//!< Mutex used to limit access to frame data
+	pthread::cond cam_cond;				//!< Cond used to signal threads about new frames
 	
 	pthread::thread proc_thr;			//!< Processing thread (only camera stuff)
-	pthread::mutex proc_mut;			//!< Processing thread (only camera stuff)
-	pthread::cond	proc_cond;			//!< Processing thread (only camera stuff)
+	pthread::mutex proc_mutex;		//!< Cond/mutexpair used by cam_thr to notify proc_thr
+	pthread::cond	proc_cond;			//!< Cond/mutexpair used by cam_thr to notify proc_thr
 	
 	pthread::cond mode_cond;			//!< Mode change notification
 	pthread::mutex mode_mutex;
@@ -175,8 +180,7 @@ protected:
 	virtual void do_restart() = 0;
 
 	void *cam_queue(void *data, void *image, struct timeval *tv = 0); //!< Store frame in buffer, returns oldest frame if buffer is full
-
-	void cam_proc(void *args);												//!< Process frames (if necessary)
+	void cam_proc();																	//!< Process frames (if necessary)
 
 	void calculate_stats(frame *frame);								//!< Calculate rms and such
 	bool accumburst(uint32_t *accum, size_t bcount);	//!< For dark/flat acquisition
@@ -184,6 +188,8 @@ protected:
 	
 	std::string makename(const string &base);					//!< Make filename from outputdir and filenamebase
 	std::string makename() { return makename(filenamebase); }
+	bool store_frame(frame_t *frame);									//!< Store frame to disk
+	
 	uint8_t *get_thumbnail(Connection *conn);					//!< Get 32x32x8 thumnail
 	void grab(Connection *conn, int x1, int y1, int x2, int y2, int scale, bool do_df, bool do_histo);
 	void accumfix();
@@ -217,8 +223,15 @@ protected:
 	
 	string filenamebase;					//!< Base filename, input for makename()
 	string outputdir;							//!< Output dir for saving files, absolute or relative to ptc->datadir
+	size_t nstore;								//!< Numebr of new frames to store (-1 for unlimited)
+
+	void fits_init_phdu(char *phdu);	//!< Init FITS header unit
+	bool fits_add_card(char *phdu, const string &key, const string &value); //!< Add FITS header card
+	bool fits_add_comment(char *phdu, const string &comment); //!< Add FITS comment
 	
+	string fits_telescope;				//!< FITS header properties for saved files
 	string fits_observer;					//!< FITS header properties for saved files
+	string fits_instrument;				//!< FITS header properties for saved files
 	string fits_target;						//!< FITS header properties for saved files
 	string fits_comments;					//!< FITS header properties for saved files
 	
@@ -247,6 +260,7 @@ public:
 	virtual void on_message(Connection*, std::string);
 	
 	double set_exposure(double value);
+	int set_store(int value);
 	double set_interval(double value);
 	double set_gain(double value);
 	double set_offset(double value);
@@ -260,6 +274,8 @@ public:
 	string set_fits_comments(string val);
 	string set_filename(string value);
 	string set_outputdir(string value);
+	
+	void store_frames(int n=-1) { nstore = n; }
 	
 	int darkburst(size_t bcount);
 	int flatburst(size_t bcount);
