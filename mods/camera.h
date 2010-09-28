@@ -38,7 +38,7 @@
 
 using namespace std;
 
-static const string cam_type = "cam";
+const string cam_type = "cam";
 
 /*!
  @brief Base camera class. This should be overloaded with the specific camera class.

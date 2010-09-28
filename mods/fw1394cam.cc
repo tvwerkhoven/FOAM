@@ -187,7 +187,6 @@ void FW1394Camera::cam_handler() {
 			case Camera::SINGLE:
 			{
 				io.msg(IO_DEB1, "FW1394Camera::cam_handler() SINGLE");
-				io.msg(IO_DEB1, "FW1394Camera::cam_handler() RUNNING");
 				dc1394::frame *frame = camera->capture_dequeue(dc1394::CAPTURE_POLICY_WAIT);
 				if(!frame) {
 					timeouts++;
