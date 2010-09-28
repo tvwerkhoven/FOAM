@@ -124,6 +124,11 @@ AC_ARG_ENABLE([simstat],
 		AC_HELP_STRING([--disable-simstat], [build static simulation mode]),
 		[test "$enableval" = no && simstat=disabled], [])
 
+fullsim=true
+AC_ARG_ENABLE([fullsim],
+		AC_HELP_STRING([--disable-fullsim], [build full simulation mode]),
+		[test "$enableval" = no && fullsim=disabled], [])
+
 debug=true
 AC_ARG_ENABLE([debug],
 		AC_HELP_STRING([--disable-debug], [disable debugging mode]),
@@ -156,37 +161,11 @@ AC_SUBST(LIBSIU)
 ### STATIC SIMULATION MODE LIBS ###
 ###################################
 if test "$simstat" = true ; then
-	AC_MSG_NOTICE([*** Static simulation enabled, checking for extra libs])
+	AC_MSG_NOTICE([*** Static simulation enabled, doesn't need extra libs])
 	simstatmissing=""
-	
-	# Arbitrary version
-	SDL_VERSION=1.2.0
-	AM_PATH_SDL($SDL_VERSION,
-		[],
-		AC_MSG_WARN([This package needs SDL in simstat mode]))
-	
-	AC_SEARCH_LIBS([ffopen], [cfitsio], [SIMSTAT_LIBS+="-lcfitsio "], 
-		[AC_MSG_WARN([This package needs cfitsio in simstat mode.]);
-		simstat=false;
-		simstatmissing+=" cfitsio"])
-
-	AC_SEARCH_LIBS([IMG_Load], [SDL_image], [SIMSTAT_LIBS+="-lSDL_image "], 
-		[AC_MSG_WARN([This package needs SDL_image in simstat mode.]);
-		simstat=false;
-		simstatmissing+=" sdl-image"])
-	
-	AC_SEARCH_LIBS([gdImageCreate], [gd], [SIMSTAT_LIBS+="-lgd "], 
-		[AC_MSG_WARN([This package needs gd in simstat mode.]);
-		simstat=false;
-		simstatmissing+=" gd"])
-	
-	AC_SEARCH_LIBS([gdImagePng], [png], [SIMSTAT_LIBS+="-lpng "], 
-		[AC_MSG_WARN([This package needs png in simstat mode.]);
-		simstat=false;
-		simstatmissing+=" png"])
-	
-	SIMSTAT_CFLAGS+=" $SDL_CFLAGS"
-	SIMSTAT_LIBS+=" $SDL_LIBS"
+		
+	SIMSTAT_CFLAGS=""
+	SIMSTAT_LIBS=""
 else 
 	AC_MSG_NOTICE([*** Static simulation disabled])
 fi
@@ -194,6 +173,26 @@ fi
 AC_SUBST(SIMSTAT_CFLAGS)
 AC_SUBST(SIMSTAT_LIBS)
 AM_CONDITIONAL([SIMSTAT], [test "$simstat" = true])
+
+### FULL SIMULATION MODE LIBS ###
+#################################
+if test "$fullsim" = true ; then
+	AC_MSG_NOTICE([*** Full simulation enabled, checking for extra libs])
+	fullsimmissing=""
+	
+	PKG_CHECK_MODULES(FFTW, fftw3 > 3.2.0, [],
+		[AC_MSG_WARN([FOAM full sim needs fftw3.]);fullsim=false;fullsimmissing+=" fftw3"])
+
+	FULLSIM_CFLAGS+=" $FFTW_CFLAGS"
+	FULLSIM_LIBS+=" $FFTW_LIBS"
+else 
+	AC_MSG_NOTICE([*** Full simulation disabled])
+fi
+
+AC_SUBST(FULLSIM_CFLAGS)
+AC_SUBST(FULLSIM_LIBS)
+AM_CONDITIONAL([FULLSIM], [test "$fullsim" = true])
+
 
 ### GUI LIBRARIES ###
 #####################
