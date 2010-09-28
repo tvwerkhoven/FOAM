@@ -46,7 +46,7 @@ ctrlframe("Camera controls"),
 camframe("Camera"),
 histoframe("Histogram"),
 e_exposure("Exp."), e_offset("Offset"), e_interval("Intv."), e_gain("Gain"), e_res("Res."), e_mode("Mode"), e_stat("Status"),
-flipv("Flip vert."), fliph("Flip hor."), crosshair("Crosshair"), grid("Grid"), zoomin(Stock::ZOOM_IN), zoomout(Stock::ZOOM_OUT), zoom100(Stock::ZOOM_100), zoomfit(Stock::ZOOM_FIT), capture("Capture"), display("Display"),
+flipv("Flip vert."), fliph("Flip hor."), crosshair("Crosshair"), grid("Grid"), zoomin(Stock::ZOOM_IN), zoomout(Stock::ZOOM_OUT), zoom100(Stock::ZOOM_100), zoomfit(Stock::ZOOM_FIT), capture("Capture"), display("Display"), store("Store"),
 mean("Mean value"), stddev("Stddev")
 {
 	fprintf(stderr, "CamView::CamView()\n");
@@ -56,11 +56,11 @@ mean("Mean value"), stddev("Stddev")
 	s = -1;
 	
 	e_exposure.set_text("N/A");
-	e_exposure.set_width_chars(4);
+	e_exposure.set_width_chars(8);
 	e_offset.set_text("N/A");
 	e_offset.set_width_chars(4);
 	e_interval.set_text("N/A");
-	e_interval.set_width_chars(4);
+	e_interval.set_width_chars(8);
 	e_gain.set_text("N/A");
 	e_gain.set_width_chars(4);
 	e_res.set_text("N/A");
@@ -70,13 +70,16 @@ mean("Mean value"), stddev("Stddev")
 	e_mode.set_width_chars(8);
 	e_mode.set_editable(false);
 	e_stat.set_text("N/A");
-	e_stat.set_width_chars(12);
+	e_stat.set_width_chars(20);
 	e_stat.set_editable(false);
 	
 	fliph.set_active(false);
 	flipv.set_active(false);
 	crosshair.set_active(false);
 	grid.set_active(false);
+	
+	store_n.set_text("10");
+	store_n.set_width_chars(4);
 	
 	mean.set_text("N/A");
 	mean.set_width_chars(6);
@@ -115,6 +118,7 @@ mean("Mean value"), stddev("Stddev")
 
 	capture.signal_toggled().connect(sigc::mem_fun(*this, &CamView::on_capture_update));
 	display.signal_toggled().connect(sigc::mem_fun(*this, &CamView::on_display_update));
+	store.signal_toggled().connect(sigc::mem_fun(*this, &CamView::on_store_update));
 	
 	// Handle some glarea events as well
 	glarea.view_update.connect(sigc::mem_fun(*this, &CamView::on_glarea_view_update));
@@ -125,6 +129,7 @@ mean("Mean value"), stddev("Stddev")
 	//	colorsel.signal_activate().connect(sigc::mem_fun(*this, &CamView::on_colorsel_activate));
 	
 	// layout
+	infohbox.set_spacing(4);
 	infohbox.pack_start(e_exposure, PACK_SHRINK);
 	infohbox.pack_start(e_offset, PACK_SHRINK);
 	infohbox.pack_start(e_interval, PACK_SHRINK);
@@ -134,10 +139,12 @@ mean("Mean value"), stddev("Stddev")
 	infohbox.pack_start(e_stat, PACK_SHRINK);
 	infoframe.add(infohbox);
 	
+	disphbox.set_spacing(4);
 	disphbox.pack_start(flipv, PACK_SHRINK);
 	disphbox.pack_start(fliph, PACK_SHRINK);
 	disphbox.pack_start(crosshair, PACK_SHRINK);
 	disphbox.pack_start(grid, PACK_SHRINK);
+	disphbox.pack_start(vsep1, PACK_SHRINK);
 	disphbox.pack_start(zoomfit, PACK_SHRINK);
 	disphbox.pack_start(zoom100, PACK_SHRINK);
 	disphbox.pack_start(zoomin, PACK_SHRINK);
@@ -145,13 +152,17 @@ mean("Mean value"), stddev("Stddev")
 	dispframe.add(disphbox);
 	
 	//ctrlhbox.pack_start(refresh, PACK_SHRINK);
+	ctrlhbox.set_spacing(4);
 	ctrlhbox.pack_start(capture, PACK_SHRINK);
 	ctrlhbox.pack_start(display, PACK_SHRINK);
+	ctrlhbox.pack_start(store, PACK_SHRINK);
+	ctrlhbox.pack_start(store_n, PACK_SHRINK);
 	ctrlframe.add(ctrlhbox);
 	
 	camhbox.pack_start(glarea);
 	camframe.add(camhbox);
 	
+	histohbox.set_spacing(4);
 	histohbox.pack_start(mean, PACK_SHRINK);
 	histohbox.pack_start(stddev, PACK_SHRINK);
 	histoframe.add(histohbox);
@@ -263,6 +274,10 @@ void CamView::on_message_update() {
 		e_stat.entry.modify_base(STATE_NORMAL, Gdk::Color("red"));
 		e_stat.set_text("Err: " + camctrl->get_errormsg());
 	}	
+	
+	store_n.set_text(format("%d", camctrl->nstore));
+	if (camctrl->nstore <= 0)
+		store.set_active(false);
 }
 
 void CamView::on_info_change() {
@@ -300,11 +315,17 @@ void CamView::on_capture_update() {
 }
 
 void CamView::on_display_update() {
-//	fprintf(stderr, "CamView::on_display_update(state=%d)\n", display.get_active());		
 	if (display.get_active())
 		camctrl->grab(0, 0, camctrl->get_width(), camctrl->get_height(), 1, false);
 }
 
+void CamView::on_store_update() {
+	int nstore = atoi(store_n.get_text().c_str());
+	fprintf(stderr, "CamView::on_store_update(state=%d) n=%d\n", store.get_active(), nstore);
+	
+	if (nstore > 0 || nstore == -1)
+		camctrl->store(nstore);
+}
 
 int CamView::init() {
 	fprintf(stderr, "CamView::init()\n");

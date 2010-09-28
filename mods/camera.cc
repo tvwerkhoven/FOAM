@@ -31,6 +31,10 @@
 #include <math.h>
 #include <unistd.h>
 #include <sys/stat.h>
+#ifdef LINUX
+#define _XOPEN_SOURCE 600	// for posix_fadvise()
+#endif
+#include <fcntl.h>
 
 #include "io.h"
 #include "types.h"
@@ -46,7 +50,9 @@ Device(io, ptc, name, cam_type + "." + type, port, conffile),
 nframes(8), count(0), timeouts(0), ndark(10), nflat(10), 
 interval(1.0), exposure(1.0), gain(1.0), offset(0.0), 
 res(0,0), depth(-1), dtype(DATA_UINT16),
-mode(Camera::OFF)
+mode(Camera::OFF),
+filenamebase("FOAM"), outputdir("./"), nstore(0),
+fits_telescope("undef"), fits_observer("undef"), fits_instrument("undef"), fits_target("undef"), fits_comments("undef")
 {
 	io.msg(IO_DEB2, "Camera::Camera()");
 	
@@ -68,12 +74,167 @@ mode(Camera::OFF)
 	res.x = cfg.getint("width", 512);
 	res.y = cfg.getint("height", 512);
 	depth = cfg.getint("depth", 8);
-	
+
+	proc_thr.create(sigc::mem_fun(*this, &Camera::cam_proc));
 }
 
 Camera::~Camera() {
 	io.msg(IO_DEB2, "Camera::~Camera()");
+	proc_thr.cancel();
+	proc_thr.join();
 	delete[] frames;
+}
+
+void Camera::cam_proc() {
+	//! @todo This function is not called?
+	io.msg(IO_DEB2, "Camera::cam_proc()");
+	frame_t *frame;
+	
+	while (true) {
+		// Always wait for cam_cond() broadcasts
+		proc_mutex.lock();
+		io.msg(IO_DEB2, "Camera::cam_proc(): waiting for proc_cond.");
+		proc_cond.wait(proc_mutex);
+		proc_mutex.unlock();
+		
+		// Lock cam_mut before handling the data
+		io.msg(IO_DEB2, "Camera::cam_proc(): waiting for cam_mutex.");
+		pthread::mutexholder h(&cam_mutex);
+		
+		// There is a new frame ready now, process it
+		frame = get_last_frame();
+		
+		calculate_stats(frame);
+
+		if (nstore == -1 || nstore > 0) {
+			nstore--;
+			//! @todo broadcast new nstore around
+			netio.broadcast(format("ok store %d", nstore), "store");
+			store_frame(frame);
+		}
+		
+		// Flag frame as processed
+		frame->proc = true;
+		
+		// Notify all threads waiting for new frames now
+		cam_cond.broadcast();
+	}
+	io.msg(IO_DEB2, "Camera::cam_proc() finish");
+}
+
+void Camera::fits_init_phdu(char *phdu) {
+	memset(phdu, ' ', 2880);
+}
+
+bool Camera::fits_add_card(char *phdu, const string &key, const string &value) {
+	int i;
+	
+	for(i = 0; i < 36; i++) {
+		if(*phdu == ' ' || *phdu == '\0')
+			break;
+		phdu += 80;
+	}
+	
+	if(i >= 36)
+		return false;
+	
+	memcpy(phdu, key.data(), key.size() < 8 ? key.size() : 8);
+	
+	if(value.size()) {
+		phdu[8] = '=';
+		memcpy(phdu + 10, value.data(), value.size() < 70 ? value.size() : 70);
+	}
+	
+	return true;
+}
+
+bool Camera::fits_add_comment(char *phdu, const string &comment) {
+	int i;
+	
+	for(i = 0; i < 35; i++) {
+		if(*phdu == ' ' || *phdu == '\0')
+			break;
+		phdu += 80;
+	}
+	
+	if(i >= 35)
+		return false;
+	
+	memcpy(phdu, "COMMENT", 7);
+	memcpy(phdu + 10, comment.data(), comment.size() < 70 ? comment.size() : 70);
+	
+	return true;
+}
+
+
+bool Camera::store_frame(frame_t *frame) {
+	// Generate path to store file to
+	std::string filename;
+	filename = makename();
+	
+	// Open file
+	int fd = open(filename.c_str(), O_WRONLY | O_CREAT | O_EXCL, 0644);
+	if (fd < 0)
+		return false;
+	
+	// Get time & date
+	struct timeval tv;
+	struct tm tm;
+	gettimeofday(&tv, 0);
+	gmtime_r(&tv.tv_sec, &tm);
+	string date = format("%04d-%02d-%02dT%02d:%02d:%02d", 1900 + tm.tm_year, 1 + tm.tm_mon, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
+	
+	// Init FITS header unit
+	char phdu[2880];
+	
+	fits_init_phdu(phdu);
+	
+	// Add datatype <http://www.eso.org/sci/data-processing/software/esomidas//doc/user/98NOV/vola/node112.html>
+	fits_add_card(phdu, "SIMPLE", "T");
+	if (dtype == DATA_UINT8 || dtype == DATA_INT8)
+		fits_add_card(phdu, "BITPIX", "8");
+	else if (dtype == DATA_UINT16 || dtype == DATA_INT16)
+		fits_add_card(phdu, "BITPIX", "16");
+	else if (dtype == DATA_FLOAT32)
+		fits_add_card(phdu, "BITPIX", "-32");
+	else if (dtype == DATA_FLOAT64)
+		fits_add_card(phdu, "BITPIX", "-64");
+		
+	// Add rest of the metadata
+	fits_add_card(phdu, "NAXIS", "2");
+	fits_add_card(phdu, "NAXIS1", format("%d", res.x));
+	fits_add_card(phdu, "NAXIS2", format("%d", res.y));
+	
+	fits_add_card(phdu, "ORIGIN", "FOAM store");
+	fits_add_card(phdu, "DEVICE", name);
+	fits_add_card(phdu, "TELESCOPE", fits_telescope);
+	fits_add_card(phdu, "INSTRUMENT", fits_instrument);
+	fits_add_card(phdu, "DATE", date);
+	fits_add_card(phdu, "OBSERVER", fits_observer);
+	fits_add_card(phdu, "EXPTIME", format("%lf / [s]", exposure));
+	fits_add_card(phdu, "INTERVAL", format("%lf / [s]", interval));
+	fits_add_card(phdu, "GAIN", format("%lf", gain));
+	fits_add_card(phdu, "OFFSET", format("%lf", offset));
+
+	string comments = fits_comments;
+	
+	while(true) {
+		string comment = popword(comments, ";");
+		if(comment.empty())
+			break;
+		fits_add_comment(phdu, comment);
+	}
+	
+	fits_add_card(phdu, "END", "");
+	
+#ifdef LINUX
+	posix_fadvise(fd, 0, (res.x * res.y * depth/8) + sizeof phdu, POSIX_FADV_DONTNEED); 
+#endif
+	write(fd, phdu, sizeof phdu);
+	write(fd, frame->image, res.x * res.y * depth/8);
+	close(fd);
+	
+	return true;
 }
 
 void Camera::calculate_stats(frame_t *frame) {
@@ -117,20 +278,14 @@ void *Camera::cam_queue(void *data, void *image, struct timeval *tv) {
 	
 	if(!frame->histo)
 		frame->histo = new uint32_t[get_maxval()];
-	
-	calculate_stats(frame);
-	
-	//! @todo Could still implement this (partially)
-	frame->rms1 = frame->rms2 = -1;
-	frame->cx = frame->cy = frame->cr = 0;
-	frame->dx = frame->dy = 0;
-	
+			
 	if(tv)
 		frame->tv = *tv;
 	else
 		gettimeofday(&frame->tv, 0);
 	
-	cam_cond.broadcast();
+	// Signal one waiting thread about the new frame
+	proc_cond.signal();
 	
 	return old;
 }
@@ -255,6 +410,9 @@ void Camera::on_message(Connection *conn, string line) {
 		}
 		
 		grab(conn, x1, y1, x2, y2, scale, do_df, do_histo);
+	} else if(command == "store") {
+		conn->addtag("store");
+		set_store(popint(line));
 	} else if(command == "dark") {
 		if (darkburst(popint(line)) )
 			conn->write("error :Error during dark burst");
@@ -299,6 +457,12 @@ Camera::mode_t Camera::set_mode(mode_t value) {
 	return mode;
 }
 
+int Camera::set_store(int n) {
+	nstore = n;
+	netio.broadcast(format("ok store %d", nstore), "store");
+	return nstore;	
+}
+
 void Camera::get_fits(Connection *conn = NULL) {
 	if (conn)
 		conn->write("ok fits " + fits_observer + ", " + fits_target + ", :" + fits_comments);
@@ -336,15 +500,19 @@ string Camera::set_outputdir(string value) {
 	if (value.substr(0,1) != "/")
 		value = ptc->datadir + "/" + value;
 		
-	if(access(value.c_str(), R_OK | W_OK | X_OK))
-		return "";
+	if (access(value.c_str(), F_OK)) // Does not exist, create
+		if (mkdir(value.c_str(), 0755)) // mkdir() returned !0, error
+			return "";
+	else	// Directory exists, check if readable
+		if (access(value.c_str(), R_OK | W_OK | X_OK))
+			return "";
 	
 	outputdir = value;
 	netio.broadcast("ok outputdir :" + outputdir, "outputdir");
 	return outputdir;
 }
 
-string Camera::makename(const string &base) {
+std::string Camera::makename(const string &base) {
 	struct timeval tv;
 	struct tm tm;
 	gettimeofday(&tv, 0);
@@ -352,8 +520,8 @@ string Camera::makename(const string &base) {
 	
 	string result = outputdir + format("/%4d-%02d-%02d/", 1900 + tm.tm_year, 1 + tm.tm_mon, tm.tm_mday);
 	mkdir(result.c_str(), 0755);
-	//! @todo: add frame ID here somehow
-	result += base + format("_%08d_%s.fits", tv.tv_sec, name.c_str());
+	
+	result += base + format("_%s_%08d.%06d-%08d.fits", name.c_str(), tv.tv_sec, tv.tv_usec, count);
 	return result;
 }
 
@@ -401,7 +569,6 @@ uint8_t *Camera::get_thumbnail(Connection *conn = NULL) {
 }
 
 void Camera::grab(Connection *conn, int x1, int y1, int x2, int y2, int scale = 1, bool do_df = false, bool do_histo = false) {
-	io.msg(IO_DEB2, "Camera::grab(%d, %d, %d, %d, %d, %d, %d)", x1, x2, y1, y2, scale, do_df, do_histo);
 	x1 = clamp(x1, 0, res.x);
 	y1 = clamp(y1, 0, res.y);
 	x2 = clamp(x2, 0, res.x / scale);
@@ -430,7 +597,6 @@ void Camera::grab(Connection *conn, int x1, int y1, int x2, int y2, int scale = 
 	
 	{
 		pthread::mutexholder h(&cam_mutex);
-		io.msg(IO_DEB2, "Camera::grab(): got mutex");
 		frame_t *f = get_frame(count);
 		if(!f)
 			return conn->write("error :Could not grab image");
@@ -447,14 +613,11 @@ void Camera::grab(Connection *conn, int x1, int y1, int x2, int y2, int scale = 
 		
 		// zero copy if possible
 		if(!do_df && scale == 1 && x1 == 0 && x2 == (int)res.x && y1 == 0 && y2 == (int)res.y) {
-			io.msg(IO_DEB2, "Camera::grab(): zero copy");
 			conn->write(format("ok image %zu %d %d %d %d %d", size, x1, y1, x2, y2, scale) + extra);
 			conn->write(f->image, size);
-			io.msg(IO_DEB2, "Camera::grab(): goto finish");
 			goto finish;
 		}
 		
-		io.msg(IO_DEB2, "Camera::grab(): deep copy");
 		buffer = malloc(size + size/8 + 128);
 		
 		if(!buffer)
@@ -484,9 +647,7 @@ void Camera::grab(Connection *conn, int x1, int y1, int x2, int y2, int scale = 
 							*p++ = in[o];
 					}
 			}
-			
-			io.msg(IO_DEB2, "Camera::grab(): writing");
-			
+						
 			conn->write(format("ok image %zu %d %d %d %d %d", size, x1, y1, x2, y2, scale) + extra);
 			conn->write(buffer, size);
 		}
@@ -497,8 +658,6 @@ void Camera::grab(Connection *conn, int x1, int y1, int x2, int y2, int scale = 
 		if(f->histo && do_histo)
 			conn->write(f->histo, sizeof *f->histo * maxval);
 	}
-	io.msg(IO_DEB2, "Camera::grab(): done");
-
 }
 
 const uint8_t Camera::df_correct(const uint8_t *in, size_t offset) {

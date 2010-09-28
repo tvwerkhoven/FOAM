@@ -53,6 +53,8 @@ public:
 	int32_t height;
 	int32_t depth;
 	std::string filename;
+	
+	int32_t nstore;
 
 	typedef enum {
 		OFF = 0,
@@ -99,11 +101,7 @@ public:
 		int x2;
 		int y2;
 		int scale;
-		double dx;
-		double dy;
-		double cx;
-		double cy;
-		double cr;
+
 		uint32_t *histogram;
 		int depth;
 	} monitor;
@@ -135,6 +133,7 @@ public:
 	void flatburst(int count);
 	void burst(int count, int fsel = 0);
 	void grab(int x1, int y1, int x2, int y2, int scale = 1, bool df_correct = false);
+	void store(int nstore);
 	
 	bool connect();
 

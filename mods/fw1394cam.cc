@@ -63,9 +63,10 @@ Camera(io, ptc, name, FW1394cam_type, port, conffile)
 	double fps = cfg.getdouble(name+".framerate", 30.);
 	if (!_dc1394.check_framerate(fps)) {
 		io.msg(IO_WARN, "FW1394Camera:: Framerate should be 2^n*1.875 for 0<=n<7! (was %g) Defaulting to 15fps.", fps);
-		fps = 15.;
+		fps = 30.;
 	}
 	camera->set_framerate((dc1394::framerate) _dc1394.framerate_p.getenum(fps));
+	//camera->set_framerate((dc1394::framerate) dc1394::FRAMERATE_30);
 	
 	// What's this?
 	camera->set_control_register(0x80c, 0x82040040);
