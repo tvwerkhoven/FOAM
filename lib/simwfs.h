@@ -1,5 +1,5 @@
 /*
- simseeing.h -- atmosphere/telescope simulator header
+ simwfs.cc -- simulate a wavefront sensor header
  Copyright (C) 2010 Tim van Werkhoven <t.i.m.vanwerkhoven@xs4all.nl>
  
  This file is part of FOAM.
@@ -18,8 +18,8 @@
  along with FOAM.	If not, see <http://www.gnu.org/licenses/>. 
  */
 
-#ifndef HAVE_SIMSEEING_H
-#define HAVE_SIMSEEING_H
+#ifndef HAVE_SIMWFS_H
+#define HAVE_SIMWFS_H
 
 #include <stdint.h>
 
@@ -28,25 +28,28 @@
 #include "io.h"
 #include "devices.h"
 
-const string dev_type = "simseeing";
+const string dev_type = "simwfs";
 
 /*!
- @brief This class simulates seeing by an atmosphere.
+ @brief This class simulates a wavefront sensor
+ 
+ Given a wavefront, this class images it onto a wavefront sensor (initially 
+ only of the Shack-Hartmann type).
  */
-class SimSeeing : public Device {
+class SimWfs : public Device {
 private:
-	gsl_matrix *wf_data;				//!< This will hold the wavefront data
-	fcoord_t windspeed;					//!< Windspeed in pixels/frame
+	SimSeeing *seeing;					//!< We will get a wavefront from SimSeeing
 	
-	gsl_matrix *wf_crop;				//!< This will hold the cropped wavefront data
-	coord_t crop_pos;						//!< Lower-left position to crop out of wavefront
+	struct shwfs_t {
+		coord_t lensarray;				//!< Number of microlenses
+		float f;									//!< Microlens focal length
+	};
 	
 public:
-	SimSeeing(Io &io, foamctrl *ptc, string name, string type, string port, string conffile);
-	~SimSeeing();
+	SimWfs(Io &io, foamctrl *ptc, string name, string type, string port, string conffile);
+	~SimWfs();
 	
-	gsl_matrix *get_wavefront();
-	gsl_matrix *get_wavefront(int x0, int y0, int x1, int y1);	
+	gsl_matrix *sim_shwfs(gsl_matrix *wavefront);
 }
 
-#endif // HAVE_SIMSEEING_H
+#endif // HAVE_SIMWFS_H
