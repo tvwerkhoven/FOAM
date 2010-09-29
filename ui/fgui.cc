@@ -133,25 +133,41 @@ void MainWindow::on_ctrl_connect_update() {
 }
 
 void MainWindow::on_ctrl_message_update() {
-	printf("MainWindow::on_ctrl_message_update()\n");
+	fprintf(stderr, "MainWindow::on_ctrl_message_update()\n");
 	controlpage.on_message_update();
 }
 
 void MainWindow::on_ctrl_device_update() {
-	printf("MainWindow::on_ctrl_device_update()\n");
+	fprintf(stderr, "MainWindow::on_ctrl_device_update()\n");
+	fprintf(stderr, "MainWindow::on_ctrl_device_update() %d devs: ", foamctrl.get_numdev());
+	for (int i=0; i<foamctrl.get_numdev(); i++) {
+		FoamControl::device_t dev = foamctrl.get_device(i);
+		fprintf(stderr, "%s - %s, ", dev.name.c_str(), dev.type.c_str());
+	}
+	fprintf(stderr, "\n");
 	
-	//! \todo First remove superfluous devices, might have disappeared (i.e. foamctrl might be empty, in case of a disconnect)
-//	devlist_t::iterator it;
-//	for (it=devlist.begin() ; it != devlist.end(); it++) {
-//		
-//		// Find this device and remove it 
-//		for (int i=0; i<foamctrl.get_numdev(); i++) {
-//			FoamControl::device_t dev = foamctrl.get_device(i);
-//			if (devlist.find(dev.name) == devlist.end()) {
-//				//! \todo Add destructor to DevicePage to remove itself from the Notebook so we don't have to
-//				notebook.remove_page(*(it->second));
-//			}
-//	}
+	// We remove devices from the GUI that are not known to foamctrl here. 
+	// We loop over devices in the GUI and if these do not appear in the 
+	// foamctrl list, we remove them.
+	devlist_t::iterator it;
+	for (it=devlist.begin(); it != devlist.end(); it++) {
+		// This GUI device is named it->first, has GUI element it->second.
+		
+		// Find this device and remove it if it does not exist
+		int i=0;
+		for (i=0; i<foamctrl.get_numdev(); i++) {
+			FoamControl::device_t dev = foamctrl.get_device(i);
+			if (dev.name == it->first) // Found it! break here now
+				break;
+			}
+		if (i == foamctrl.get_numdev()) {
+			// If i equals foamctrl.get_numdev(), the device wasn't found, remove it from the GUI
+			//! @todo Add destructor to DevicePage to remove itself from the Notebook so we don't have to
+			notebook.remove_page(*(it->second)); // removes GUI element
+			delete it->second; // remove gui element itself
+			devlist.erase(it); // remove from devlist
+		}	
+	}
 	
 	for (int i=0; i<foamctrl.get_numdev(); i++) {
 		FoamControl::device_t dev = foamctrl.get_device(i);

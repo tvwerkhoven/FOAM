@@ -193,7 +193,7 @@ void ControlPage::on_connect_update() {
 		
 		// Remove devices
 		foamctrl.set_numdev(0);
-		//! \todo Need link to parent window here to remove DevicePages, does this work?
+		// Signal parent to remove DevicePages from GUI
 		signal_device();
 		
 		// Set controls inactive
