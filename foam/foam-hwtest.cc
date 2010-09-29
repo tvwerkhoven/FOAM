@@ -82,7 +82,7 @@ int FOAM_hwtest::open_loop() {
 int FOAM_hwtest::open_finish() {
 	io.msg(IO_DEB2, "FOAM_hwtest::open_finish()");
 	
-	((FW1394Camera*) devices->get("dummycam"))->set_mode(Camera::OFF);
+	((FW1394Camera*) devices->get("1394testcam"))->set_mode(Camera::WAITING);
 
 	return 0;
 }
