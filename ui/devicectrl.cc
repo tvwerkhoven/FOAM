@@ -61,6 +61,7 @@ void DeviceCtrl::on_message(string line) {
 void DeviceCtrl::on_connected(bool connected) {
 	printf("%x:DeviceCtrl::on_connected(status=%d)\n", (int) pthread_self(), connected);	
 	if (!connected) {
+		//! @todo delete devicectrl and deviceview, remove from notebook here
 		ok = false;
 		errormsg = "Not connected";
 		signal_update();
