@@ -35,7 +35,7 @@
 
 using namespace std;
 
-CamCtrl::CamCtrl(const string h, const string p, const string n): 
+CamCtrl::CamCtrl(const string h, const string p, const string n):
 	DeviceCtrl(h, p, n),
 	monitorprotocol(h, p, n) 
 {
@@ -53,6 +53,8 @@ CamCtrl::CamCtrl(const string h, const string p, const string n):
 	height = 0;
 	depth = 0;
 	mode = OFF;
+	nstore = 0;
+	
 	r = 1;
 	g = 1;
 	b = 1;
