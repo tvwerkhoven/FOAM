@@ -28,7 +28,7 @@
 #include "simulcam.h"
 
 SimulCam::SimulCam(Io &io, foamctrl *ptc, string name, string port, string conffile):
-Camera(io, ptc, name, FW1394cam_type, port, conffile)
+Camera(io, ptc, name, SimulCam_type, port, conffile)
 {
 	io.msg(IO_DEB2, "SimulCam::SimulCam()");
 	
@@ -130,7 +130,7 @@ void SimulCam::cam_handler() {
 	}
 }
 
-void SimSeeing::cam_set_mode(mode_t newmode) {
+void SimulCam::cam_set_mode(mode_t newmode) {
 	if (newmode == mode)
 		return;
 	
@@ -155,6 +155,6 @@ void SimSeeing::cam_set_mode(mode_t newmode) {
 	}
 }
 
-void SimSeeing::do_restart() {
+void SimulCam::do_restart() {
 	io.msg(IO_WARN, "SimSeeing::do_restart() not implemented yet.");
 }

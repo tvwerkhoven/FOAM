@@ -101,7 +101,7 @@ const string cam_type = "cam";
 
  @todo What to do with mode & state?
  */ 
-class Camera : public Device {
+class Camera: public Device {
 public:
 	typedef enum {
 		OFF = 0,

@@ -267,6 +267,7 @@ int FOAM::listen() {
 				io.msg(IO_INFO, "FOAM::listen() Entering listen loop.");
 				// We wait until the mode changed
 				protocol->broadcast("ok mode listen");
+				//! @todo migrate to pthread++
 				pthread_mutex_lock(&mode_mutex);
 				pthread_cond_wait(&mode_cond, &mode_mutex);
 				pthread_mutex_unlock(&mode_mutex);

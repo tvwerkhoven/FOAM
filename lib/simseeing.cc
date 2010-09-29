@@ -18,9 +18,15 @@
  along with FOAM.	If not, see <http://www.gnu.org/licenses/>. 
  */
 
+#include <string>
+#include <gsl/gsl_matrix.h>
+
+#include "foamctrl.h"
+#include "io.h"
+#include "simseeing.h"
 
 SimSeeing::SimSeeing(Io &io, foamctrl *ptc, string name, string type, string port, string conffile):
-Device(io, ptc, name, dev_type + "." + type, port, conffile)
+Device(io, ptc, name, simseeing_type + "." + type, port, conffile)
 {
 	io.msg(IO_DEB2, "SimSeeing::SimSeeing()");
 	//! @todo init wavefront here, matrices, read config etc

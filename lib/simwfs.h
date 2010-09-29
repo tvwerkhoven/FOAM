@@ -27,8 +27,9 @@
 #include "config.h"
 #include "io.h"
 #include "devices.h"
+#include "simseeing.h"
 
-const string dev_type = "simwfs";
+const string simwfs_type = "simwfs";
 
 /*!
  @brief This class simulates a wavefront sensor
@@ -50,6 +51,6 @@ public:
 	~SimWfs();
 	
 	gsl_matrix *sim_shwfs(gsl_matrix *wavefront);
-}
+};
 
 #endif // HAVE_SIMWFS_H

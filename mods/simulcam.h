@@ -26,17 +26,15 @@
 
 #include "config.h"
 #include "io.h"
-
 #include "simseeing.h"
-
 #include "camera.h"
 
-const string SimulCam_type = "SimulCam";
 using namespace std;
+
+const string SimulCam_type = "SimulCam";
 
 class SimulCam: public Camera {
 private:
-	
 	SimSeeing *seeing;			//!< This class simulates the atmosphere, telescope and lenslet array
 	
 public:

@@ -18,9 +18,16 @@
  along with FOAM.	If not, see <http://www.gnu.org/licenses/>. 
  */
 
+#include <string>
+
+#include "io.h"
+#include "foamctrl.h"
+#include "simwfs.h"
+
+using namespace std;
 
 SimWfs::SimWfs(Io &io, foamctrl *ptc, string name, string type, string port, string conffile):
-Device(io, ptc, name, dev_type + "." + type, port, conffile)
+Device(io, ptc, name, simwfs_type + "." + type, port, conffile)
 {
 	io.msg(IO_DEB2, "SimWfs::SimWfs()");
 	//! @todo init wavefront sensor, read config, check stuff
