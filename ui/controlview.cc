@@ -127,7 +127,7 @@ ControlPage::~ControlPage() {
 }
 
 void ControlPage::on_connect_clicked() {
-	printf("%dControlPage::on_connect_clicked()\n", (int) pthread_self());
+	printf("%x:ControlPage::on_connect_clicked()\n", (int) pthread_self());
 	if (foamctrl.is_connected()) {
 		log.add(Log::NORMAL, "Trying to disconnect");
 		foamctrl.disconnect();
@@ -145,7 +145,7 @@ void ControlPage::on_mode_listen_clicked() {
 }
 
 void ControlPage::on_mode_closed_clicked() {
-	printf("%dControlPage::on_mode_closed_clicked()\n", (int) pthread_self());
+	printf("%x:ControlPage::on_mode_closed_clicked()\n", (int) pthread_self());
 	log.add(Log::NORMAL, "Setting mode closed...");
 	foamctrl.set_mode(AO_MODE_CLOSED);
 }

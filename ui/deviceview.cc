@@ -43,7 +43,7 @@ foamctrl(foamctrl), log(log), devname(n)  {
 }
 
 DevicePage::~DevicePage() {
-	
+	fprintf(stderr, "DevicePage::~DevicePage()\n");
 }
 
 int DevicePage::init() {

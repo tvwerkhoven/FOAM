@@ -40,6 +40,10 @@ DeviceCtrl::DeviceCtrl(const string h, const string p, const string n):
 	
 }
 
+DeviceCtrl::~DeviceCtrl() {
+	fprintf(stderr, "DeviceCtrl::~DeviceCtrl()\n");
+}
+
 void DeviceCtrl::on_message(string line) {
 	printf("%x:DeviceCtrl::on_message(line=%s)\n", (int) pthread_self(), line.c_str());	
 	

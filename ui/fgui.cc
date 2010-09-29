@@ -118,12 +118,12 @@ void MainWindow::on_quit_activate() {
 }	
 
 void MainWindow::on_connect_activate() {
-	printf("MainWindow::on_connect_activate()\n");
+	fprintf(stderr, "MainWindow::on_connect_activate()\n");
 	conndialog.present();
 }
 
 void MainWindow::on_ctrl_connect_update() {
-	printf("MainWindow::on_ctrl_connect_update()\n");
+	fprintf(stderr, "MainWindow::on_ctrl_connect_update()\n");
 	if (foamctrl.is_connected())
 		menubar.connect.set_sensitive(false);
 	else

@@ -178,6 +178,7 @@ mean("Mean value"), stddev("Stddev")
 }
 
 CamView::~CamView() {
+	fprintf(stderr, "CamView::~CamView()\n");
 	//! \todo store (gui) configuration here?
 }
 
