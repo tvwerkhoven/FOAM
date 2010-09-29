@@ -177,6 +177,7 @@ void MainWindow::on_ctrl_device_update() {
 		// First check if type is sane
 		if (dev.type.substr(0,3) != "dev") {
 			fprintf(stderr, "MainWindow::on_ctrl_device_update() Type wrong!\n");
+			log.add(Log::ERROR, "Device type wrong, should start with 'dev' (was: " + dev.type + ")");
 			continue;
 		}
 		// Then add specific devices first, and more general devices later
@@ -185,17 +186,18 @@ void MainWindow::on_ctrl_device_update() {
 			CamView *tmp = new CamView(log, foamctrl, dev.name);
 			tmp->init();
 			devlist[dev.name] = (DevicePage *) tmp;
+			log.add(Log::OK, "Added new generic camera, type="+dev.type+", name="+dev.name+".");
 		}
 		else if (dev.type.substr(0,3) == "dev") {
 			fprintf(stderr, "MainWindow::on_ctrl_device_update() got generic device\n");			
 			devlist[dev.name] = new DevicePage(log, foamctrl, dev.name);
+			log.add(Log::OK, "Added new generic device, type="+dev.type+", name="+dev.name+".");
 		}
 		else {
 			fprintf(stderr, "MainWindow::on_ctrl_device_update() Type unknown!\n");
+			log.add(Log::WARNING, "Got unknown device type ("+dev.type+"), ignored.");
 			continue;
 		}
-							
-		log.add(Log::OK, "Found new device '" + dev.name + "' (type=" + dev.type + ").");
 							
 		notebook.append_page(*devlist[dev.name], "_" + dev.name, dev.name, true);
 	}
@@ -214,7 +216,7 @@ MainWindow::MainWindow():
 	
 	// widget properties
 	set_title("FOAM Control");
-	set_default_size(640, 480);
+	set_default_size(800, 600);
 	set_gravity(Gdk::GRAVITY_STATIC);
 	
 	vbox.set_spacing(4);
