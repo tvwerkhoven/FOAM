@@ -70,9 +70,8 @@ protected:
 
 	Protocol::Server *protocol;					//!< Network control socket
 	
-	pthread_mutex_t mode_mutex;					//!< Network thread <-> main thread mutex
-	pthread_cond_t mode_cond;
-	static pthread_attr_t attr;
+	pthread::mutex mode_mutex;					//!< Network thread <-> main thread mutex/cond pair
+	pthread::cond mode_cond;						//!< Network thread <-> main thread mutex/cond pair
 	
 	/*!
 	 @brief Run on new connection to FOAM

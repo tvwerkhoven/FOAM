@@ -172,7 +172,7 @@ void FOAM_hwtest::on_message(Connection *connection, std::string line) {
 		connection->write("ok cmd calib");
 		ptc->calib = calmode;
 		ptc->mode = AO_MODE_CAL;
-		pthread_cond_signal(&mode_cond); // signal a change to the main thread
+		mode_cond.signal();						// signal a change to the main thread
 	}
 	else if (!netio.ok) {
 		connection->write("err cmd :cmd unkown");
