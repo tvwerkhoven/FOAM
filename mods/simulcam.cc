@@ -28,10 +28,10 @@
 #include "simulcam.h"
 
 SimulCam::SimulCam(Io &io, foamctrl *ptc, string name, string port, string conffile):
-Camera(io, ptc, name, SimulCam_type, port, conffile)
+Camera(io, ptc, name, SimulCam_type, port, conffile),
+seeing(io, ptc, name + "-seeing", port, conffile)
 {
 	io.msg(IO_DEB2, "SimulCam::SimulCam()");
-	
 	//! @todo init seeing, atmosphere, simulator, etc.
 	
 	cam_thr.create(sigc::mem_fun(*this, &SimulCam::cam_handler));
