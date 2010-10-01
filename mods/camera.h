@@ -34,6 +34,8 @@
 #include "types.h"
 #include "config.h"
 #include "io.h"
+#include "path++.h"
+
 #include "devices.h"
 
 using namespace std;
@@ -186,8 +188,8 @@ protected:
 	bool accumburst(uint32_t *accum, size_t bcount);	//!< For dark/flat acquisition
 	void statistics(Connection *conn, size_t bcount);	//!< Post back statistics
 	
-	std::string makename(const string &base);					//!< Make filename from outputdir and filenamebase
-	std::string makename() { return makename(filenamebase); }
+	Path makename(const Path &base);									//!< Make filename from outputdir and filenamebase
+	Path makename() { return makename(filenamebase); }
 	bool store_frame(frame_t *frame);									//!< Store frame to disk
 	
 	uint8_t *get_thumbnail(Connection *conn);					//!< Get 32x32x8 thumnail
@@ -221,8 +223,8 @@ protected:
 
 	mode_t mode;									//!< Camera mode (see mode_t)
 	
-	string filenamebase;					//!< Base filename, input for makename()
-	string outputdir;							//!< Output dir for saving files, absolute or relative to ptc->datadir
+	Path filenamebase;						//!< Base filename, input for makename()
+	Path outputdir;								//!< Output dir for saving files, absolute or relative to ptc->datadir
 	size_t nstore;								//!< Numebr of new frames to store (-1 for unlimited)
 
 	void fits_init_phdu(char *phdu);	//!< Init FITS header unit
@@ -236,7 +238,7 @@ protected:
 	string fits_comments;					//!< FITS header properties for saved files
 	
 public:
-	Camera(Io &io, foamctrl *ptc, string name, string type, string port, string conffile);
+	Camera(Io &io, foamctrl *ptc, string name, string type, string port, Path &conffile);
 	virtual ~Camera();
 
 	double get_exposure() { return exposure; }

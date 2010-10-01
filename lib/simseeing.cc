@@ -25,7 +25,7 @@
 #include "io.h"
 #include "simseeing.h"
 
-SimSeeing::SimSeeing(Io &io, foamctrl *ptc, string name, string port, string conffile):
+SimSeeing::SimSeeing(Io &io, foamctrl *ptc, string name, string port, Path &conffile):
 Device(io, ptc, name, SimSeeing_type, port, conffile)
 {
 	io.msg(IO_DEB2, "SimSeeing::SimSeeing()");

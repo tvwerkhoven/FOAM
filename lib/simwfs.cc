@@ -26,7 +26,7 @@
 
 using namespace std;
 
-SimWfs::SimWfs(Io &io, foamctrl *ptc, string name, string type, string port, string conffile):
+SimWfs::SimWfs(Io &io, foamctrl *ptc, string name, string type, string port, Path &conffile):
 Device(io, ptc, name, simwfs_type + "." + type, port, conffile)
 {
 	io.msg(IO_DEB2, "SimWfs::SimWfs()");

@@ -30,7 +30,7 @@
 
 using namespace std;
 
-FW1394Camera::FW1394Camera(Io &io, foamctrl *ptc, string name, string port, string conffile):
+FW1394Camera::FW1394Camera(Io &io, foamctrl *ptc, string name, string port, Path &conffile):
 Camera(io, ptc, name, FW1394cam_type, port, conffile) 
 {
 	io.msg(IO_DEB2, "FW1394Camera::FW1394Camera()");
@@ -79,7 +79,6 @@ Camera(io, ptc, name, FW1394cam_type, port, conffile)
 	depth = cfg.getint(name+".depth", 8);
 	dtype = DATA_UINT8;
 	
-
 	exposure = cam_get_exposure(); 
 	interval = cam_get_interval();
 	gain = cam_get_gain();

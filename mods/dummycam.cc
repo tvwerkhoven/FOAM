@@ -23,13 +23,16 @@
 #include <math.h>
 
 #include "pthread++.h"
+#include "config.h"
+#include "path++.h"
+#include "io.h"
 
 #include "camera.h"
 #include "dummycam.h"
 
 using namespace std;
 
-DummyCamera::DummyCamera(Io &io, foamctrl *ptc, string name, string port, string conffile): 
+DummyCamera::DummyCamera(Io &io, foamctrl *ptc, string name, string port, Path &conffile):
 Camera(io, ptc, name, dummycam_type, port, conffile)
 {
 	io.msg(IO_DEB2, "DummyCamera::DummyCamera()");

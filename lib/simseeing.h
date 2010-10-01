@@ -45,7 +45,7 @@ private:
 	coord_t crop_pos;						//!< Lower-left position to crop out of wavefront
 	
 public:
-	SimSeeing(Io &io, foamctrl *ptc, string name, string port, string conffile);
+	SimSeeing(Io &io, foamctrl *ptc, string name, string port, Path &conffile);
 	~SimSeeing();
 	
 	gsl_matrix *get_wavefront();

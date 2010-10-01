@@ -39,19 +39,20 @@
 #include "io.h"
 #include "types.h"
 #include "config.h"
+#include "path++.h"
 
 #include "devices.h"
 #include "camera.h"
 
 using namespace std;
 
-Camera::Camera(Io &io, foamctrl *ptc, string name, string type, string port, string conffile): 
+Camera::Camera(Io &io, foamctrl *ptc, string name, string type, string port, Path &conffile):
 Device(io, ptc, name, cam_type + "." + type, port, conffile),
 nframes(8), count(0), timeouts(0), ndark(10), nflat(10), 
 interval(1.0), exposure(1.0), gain(1.0), offset(0.0), 
 res(0,0), depth(-1), dtype(DATA_UINT16),
 mode(Camera::OFF),
-filenamebase("FOAM"), outputdir("./"), nstore(0),
+filenamebase("FOAM"), outputdir(ptc->datadir), nstore(0),
 fits_telescope("undef"), fits_observer("undef"), fits_instrument("undef"), fits_target("undef"), fits_comments("undef")
 {
 	io.msg(IO_DEB2, "Camera::Camera()");
@@ -168,9 +169,8 @@ bool Camera::fits_add_comment(char *phdu, const string &comment) {
 
 
 bool Camera::store_frame(frame_t *frame) {
-	// Generate path to store file to
-	std::string filename;
-	filename = makename();
+	// Generate path to store file to, based on filenamebase
+	Path filename = makename();
 	
 	// Open file
 	int fd = open(filename.c_str(), O_WRONLY | O_CREAT | O_EXCL, 0644);
@@ -382,10 +382,10 @@ void Camera::on_message(Connection *conn, string line) {
 			conn->write(format("ok depth %d", depth));
 		} else if(what == "filename") {
 			conn->addtag("filename");
-			conn->write("ok filename :" + filenamebase);
+			conn->write("ok filename :" + filenamebase.str());
 		} else if(what == "outputdir") {
 			conn->addtag("outputdir");
-			conn->write("ok outputdir :" + outputdir);
+			conn->write("ok outputdir :" + outputdir.str());
 		} else if(what == "fits") {
 			get_fits(conn);
 		} else {
@@ -491,34 +491,33 @@ string Camera::set_fits_comments(string val) {
 
 string Camera::set_filename(string value) {
 	filenamebase = value;
-	netio.broadcast("ok filename :" + filenamebase, "filename");
-	return filenamebase;
+	netio.broadcast("ok filename :" + filenamebase.str(), "filename");
+	return filenamebase.str();
 }
 
 string Camera::set_outputdir(string value) {
-	// If it's not an absolute path (starting with '/'), prefix ptc->datadir
-	if (value.substr(0,1) != "/")
-		value = ptc->datadir + "/" + value;
-		
-	if (access(value.c_str(), F_OK)) // Does not exist, create
+	// This automatically prefixes ptc->datadir if 'value' is not absolute
+	Path tmp = ptc->datadir + value;
+	
+	if (!tmp.exists()) // Does not exist, create
 		if (mkdir(value.c_str(), 0755)) // mkdir() returned !0, error
 			return "";
 	else	// Directory exists, check if readable
-		if (access(value.c_str(), R_OK | W_OK | X_OK))
+		if (tmp.access(R_OK | W_OK | X_OK))
 			return "";
 	
-	outputdir = value;
-	netio.broadcast("ok outputdir :" + outputdir, "outputdir");
-	return outputdir;
+	outputdir = tmp;
+	netio.broadcast("ok outputdir :" + outputdir.str(), "outputdir");
+	return outputdir.str();
 }
 
-std::string Camera::makename(const string &base) {
+Path Camera::makename(const Path &base) {
 	struct timeval tv;
 	struct tm tm;
 	gettimeofday(&tv, 0);
 	gmtime_r(&tv.tv_sec, &tm);
 	
-	string result = outputdir + format("/%4d-%02d-%02d/", 1900 + tm.tm_year, 1 + tm.tm_mon, tm.tm_mday);
+	Path result = outputdir + format("/%4d-%02d-%02d/", 1900 + tm.tm_year, 1 + tm.tm_mon, tm.tm_mday);
 	mkdir(result.c_str(), 0755);
 	
 	result += base + format("_%s_%08d.%06d-%08d.fits", name.c_str(), tv.tv_sec, tv.tv_usec, count);

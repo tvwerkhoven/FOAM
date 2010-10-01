@@ -47,7 +47,7 @@ private:
 	};
 	
 public:
-	SimWfs(Io &io, foamctrl *ptc, string name, string type, string port, string conffile);
+	SimWfs(Io &io, foamctrl *ptc, string name, string type, string port, Path &conffile);
 	~SimWfs();
 	
 	gsl_matrix *sim_shwfs(gsl_matrix *wavefront);

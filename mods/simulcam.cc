@@ -27,7 +27,7 @@
 #include "camera.h"
 #include "simulcam.h"
 
-SimulCam::SimulCam(Io &io, foamctrl *ptc, string name, string port, string conffile):
+SimulCam::SimulCam(Io &io, foamctrl *ptc, string name, string port, Path &conffile):
 Camera(io, ptc, name, SimulCam_type, port, conffile),
 seeing(io, ptc, name + "-seeing", port, conffile)
 {

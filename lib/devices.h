@@ -28,10 +28,12 @@
 
 #include <map>
 
-#include "foamctrl.h"
 #include "io.h"
 #include "protocol.h"
 #include "config.h"
+#include "path++.h"
+
+#include "foamctrl.h"
 
 typedef Protocol::Server::Connection Connection;
 
@@ -52,7 +54,7 @@ protected:
 	string name;												//!< Device name
 	string type;												//!< Device type
 	string port;												//!< Port to listen on
-	string conffile;										//!< Configuration file
+	Path conffile;											//!< Configuration file
 	config cfg;													//!< Interpreted configuration file
 	Protocol::Server netio;							//!< Network connection
 	
@@ -62,8 +64,7 @@ public:
 		exception(const std::string reason): runtime_error(reason) {}
 	};
 		
-	Device(Io&, foamctrl*, string, string, string, string);
-	
+	Device(Io &io, foamctrl *ptc, string n, string t, string p, Path &conf);
 	virtual ~Device();
 	
 	virtual int verify() { return 0; }	//!< Verify the integrity of the device
