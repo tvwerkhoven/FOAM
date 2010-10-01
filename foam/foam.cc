@@ -155,7 +155,7 @@ void FOAM::show_welcome() {
 int FOAM::parse_args(int argc, char *argv[]) {
 	io.msg(IO_DEB2, "FOAM::parse_args()");
 	int r, option_index = 0;
-	execname = argv[0];
+	execname = Path(argv[0]);
 	
 	static struct option const long_options[] = {
 		{"config", required_argument, NULL, 'c'},
@@ -172,7 +172,7 @@ int FOAM::parse_args(int argc, char *argv[]) {
 			case 0:
 				break;
 			case 'c':
-				conffile = optarg;
+				conffile = string(optarg);
 				break;
 			case 'h':
 				show_clihelp();
@@ -224,6 +224,9 @@ int FOAM::load_config() {
 	ptc = new foamctrl(io, conffile);
 	if (ptc->error()) 
 		return io.msg(IO_ERR, "Coult not parse FOAM configuration");
+
+	ptc->progname = execname.basename();
+	ptc->progdir = execname.dirname();
 	
 	return 0;
 }

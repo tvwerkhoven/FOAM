@@ -29,9 +29,11 @@
 #include <iostream>
 #include <string>
 
-#include "foam.h"
 #include "types.h"
 #include "io.h"
+#include "path++.h"
+
+#include "foam.h"
 #include "devices.h"
 #include "dummycam.h"
 #include "camera.h"

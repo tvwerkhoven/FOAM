@@ -23,6 +23,7 @@
 
 #include <time.h>
 
+#include "path++.h"
 #include "io.h"
 #include "config.h"
 #include "foamtypes.h"
@@ -39,24 +40,27 @@ private:
 	
 public:
 	foamctrl(Io &io);
-	foamctrl(Io &io, string &file);
+	foamctrl(Io &io, Path &file);
 	~foamctrl(void);
 	
-	int parse(string &file);			//!< Parse configuration file
+	int parse();									//!< Parse configuration file
 	int verify();									//!< Verify whether settings are sane
 	int error() { return err; }
 	
-	string conffile;							//!< Configuration file used
-	string confpath;							//!< Configuration path (used for other config files)
+	Path progname;								//!< Name of the program executable (Path(argv[0]).basename())
+	Path progdir;									//!< Path of the program executable (Path(argv[0]).dirname())
+	
+	Path conffile;								//!< Configuration file used
+	Path confpath;								//!< Configuration path (used for other config files)
 	config *cfg;									//!< Parsed configuration settings
-	string pidfile;								//!< file to store PID to (def: /tmp/foam.pid)
+	Path pidfile;									//!< file to store PID to (def: /tmp/foam.pid)
 	
 	string listenip;							//!< IP to listen on (def: 0.0.0.0)
 	string listenport;						//!< port to listen on (def: 1025)
 	
-	string datadir;								//!< path to data directory (pgm, fits files) (def: FOAM_DATADIR)
+	Path datadir;									//!< path to data directory (pgm, fits files) (def: FOAM_DATADIR)
 	
-	string logfile;								//!< file to log info messages to (def: none)
+	Path logfile;									//!< file to log info messages to (def: none)
 	
 	bool use_syslog; 							//!< syslog usage flag (def: no)
 	string syslog_prepend;				//!< string to prepend to syslogs (def: "foam")

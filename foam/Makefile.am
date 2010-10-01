@@ -37,7 +37,9 @@ endif
 LDADD = $(LIBSIU_DIR)/libsocket.a \
 		$(LIBSIU_DIR)/libio.a \
 		$(LIBSIU_DIR)/libconfig.a \
-		$(LIBSIU_DIR)/libprotocol.a
+		$(LIBSIU_DIR)/libprotocol.a \
+		$(LIBSIU_DIR)/libpath.a
+		
 
 # Basic framework files which are always needed
 FRAME_SRC = foam.cc foamctrl.cc $(LIB_DIR)/devices.cc

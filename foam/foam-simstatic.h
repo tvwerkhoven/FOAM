@@ -30,6 +30,7 @@
 #define FOAM_CONFIG_PRE "foam-simstat"
 
 #include "config.h"
+#include "path++.h"
 
 // LIBRARIES //
 /*************/
