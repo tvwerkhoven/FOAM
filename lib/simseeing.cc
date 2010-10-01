@@ -25,11 +25,22 @@
 #include "io.h"
 #include "simseeing.h"
 
-SimSeeing::SimSeeing(Io &io, foamctrl *ptc, string name, string type, string port, string conffile):
-Device(io, ptc, name, simseeing_type + "." + type, port, conffile)
+SimSeeing::SimSeeing(Io &io, foamctrl *ptc, string name, string port, string conffile):
+Device(io, ptc, name, SimSeeing_type, port, conffile)
 {
 	io.msg(IO_DEB2, "SimSeeing::SimSeeing()");
 	//! @todo init wavefront here, matrices, read config etc
+	
+	wf_src = cfg.getstring("wf_file", "auto");
+//	if (wf_src == "auto") {
+//		io.msg(IO_INFO, "SimSeeing::SimSeeing() Auto-generating wavefront.");
+//	}
+//	else {
+//		if (wf_src.substr(0,1) != "/")
+//			if (access(wf_src.c_str(), R_OK))
+//				throw exception("SimSeeing::SimSeeing() cannot read wavefront file " + wf_src + "!");
+//	}
+		
 }
 
 SimSeeing::~SimSeeing() {

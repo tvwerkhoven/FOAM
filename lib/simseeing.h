@@ -30,13 +30,14 @@
 #include "devices.h"
 
 using namespace std;
-const string simseeing_type = "simseeing";
+const string SimSeeing_type = "simseeing";
 
 /*!
  @brief This class simulates seeing by an atmosphere.
  */
 class SimSeeing: public Device {
 private:
+	string wf_src;							//!< Where to get a sample wavefront (filepath or 'auto' for autogeneration)
 	gsl_matrix *wf_data;				//!< This will hold the wavefront data
 	fcoord_t windspeed;					//!< Windspeed in pixels/frame
 	
@@ -44,7 +45,7 @@ private:
 	coord_t crop_pos;						//!< Lower-left position to crop out of wavefront
 	
 public:
-	SimSeeing(Io &io, foamctrl *ptc, string name, string type, string port, string conffile);
+	SimSeeing(Io &io, foamctrl *ptc, string name, string port, string conffile);
 	~SimSeeing();
 	
 	gsl_matrix *get_wavefront();
