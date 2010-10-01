@@ -51,14 +51,14 @@ public:
 	Path progdir;									//!< Path of the program executable (Path(argv[0]).dirname())
 	
 	Path conffile;								//!< Configuration file used
-	Path confpath;								//!< Configuration path (used for other config files)
+	Path confdir;									//!< Configuration dir (used for other config files)
 	config *cfg;									//!< Parsed configuration settings
 	Path pidfile;									//!< file to store PID to (def: /tmp/foam.pid)
 	
 	string listenip;							//!< IP to listen on (def: 0.0.0.0)
 	string listenport;						//!< port to listen on (def: 1025)
 	
-	Path datadir;									//!< path to data directory (pgm, fits files) (def: FOAM_DATADIR)
+	Path datadir;									//!< path to data directory (relative to confdir) (def: FOAM_DATADIR)
 	
 	Path logfile;									//!< file to log info messages to (def: none)
 	

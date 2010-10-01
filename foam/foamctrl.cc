@@ -66,18 +66,21 @@ starttime(time(NULL)), frames(0)
 int foamctrl::parse() {
 	io.msg(IO_DEB2, "foamctrl::parse()");
 
-	confpath = conffile.dirname();
+	// Get absolute path of configuration file (reference for further relative paths
+	confdir = progdir + conffile.dirname();
+	io.msg(IO_DEB1, "Confdir: '%s', file: '%s'", confdir.c_str(), conffile.basename().c_str());
 	cfg = new config(conffile);
 	
-	// Datadir (relative to rundir)
-	datadir = cfg->getstring("datadir", FOAM_DATADIR);
-	if (datadir == ".") io.msg(IO_WARN, "datadir not set, using current directory.");
+	// Datadir (relative to confdir)
+	datadir = confdir + cfg->getstring("datadir", FOAM_DATADIR);
+	if (datadir == confdir + ".") io.msg(IO_WARN, "datadir not set, using current directory.");
 	else io.msg(IO_DEB1, "Datadir: '%s'.", datadir.c_str());
 
-	// PID file (relative to datadir)
+	// PID file (relative to confdir)
 	pidfile = cfg->getstring("pidfile", "/tmp/foam.pid");
 	if (pidfile.isrel())
 		pidfile = datadir + pidfile;
+	io.msg(IO_DEB1, "Pidfile: '%s'.", pidfile.c_str());
 	
 	// Daemon settings
 	listenip = cfg->getstring("listenip", "0.0.0.0");
@@ -99,6 +102,9 @@ int foamctrl::parse() {
 		io.setLogfile(logfile);
 		io.msg(IO_DEB1, "Logfile: %s.", logfile.c_str());
 	}
+	else
+		io.msg(IO_DEB1, "Not logging to disk for now...");
+
 	
 	io.msg(IO_INFO, "Successfully parsed control config.");
 	return 0;
