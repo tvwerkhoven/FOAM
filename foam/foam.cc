@@ -225,9 +225,6 @@ int FOAM::load_config() {
 	if (ptc->error()) 
 		return io.msg(IO_ERR, "Coult not parse FOAM configuration");
 
-	ptc->progname = execname.basename();
-	ptc->progdir = execname.dirname();
-	
 	return 0;
 }
 

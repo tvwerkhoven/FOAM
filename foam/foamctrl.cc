@@ -26,7 +26,9 @@
  */
 
 #include <time.h>
+#include <stdio.h>  /* defines FILENAME_MAX */
 #include <syslog.h>
+#include <unistd.h>
 
 #include "path++.h"
 #include "foamctrl.h"
@@ -59,12 +61,15 @@ mode(AO_MODE_LISTEN), calib(""),
 starttime(time(NULL)), frames(0)
 {
 	io.msg(IO_DEB2, "foamctrl::foamctrl()");
-	
+	io.msg(IO_DEB2, "foamctrl::foamctrl() %s", conffile.c_str());
 	parse();
 }
 
 int foamctrl::parse() {
 	io.msg(IO_DEB2, "foamctrl::parse()");
+	
+	char curdir[FILENAME_MAX];
+	progdir = string(getcwd(curdir, sizeof curdir));
 
 	// Get absolute path of configuration file (reference for further relative paths
 	confdir = progdir + conffile.dirname();

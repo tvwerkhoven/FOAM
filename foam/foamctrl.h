@@ -47,7 +47,7 @@ public:
 	int verify();									//!< Verify whether settings are sane
 	int error() { return err; }
 	
-	Path progname;								//!< Name of the program executable (Path(argv[0]).basename())
+	//Path progname;								//!< Name of the program executable (Path(argv[0]).basename())
 	Path progdir;									//!< Path of the program executable (Path(argv[0]).dirname())
 	
 	Path conffile;								//!< Configuration file used
