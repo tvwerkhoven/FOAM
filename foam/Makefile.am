@@ -64,14 +64,12 @@ bin_PROGRAMS += foam-simstat
 
 foam_simstat_SOURCES = foam-simstatic.cc \
 		$(FRAME_SRC) $(FRAME_HDR) \
-		$(LIB_DIR)/imgio.cc \
 		$(MODS_DIR)/camera.cc \
 		$(MODS_DIR)/dummycam.cc
 #		$(MODS_DIR)/imgcam.cc
 
 # Header files are part of the sources as well
 foam_simstat_SOURCES += foam-simstatic.h \
-		$(LIB_DIR)/imgio.h \
 		$(MODS_DIR)/camera.h \
 		$(MODS_DIR)/dummycam.h
 
@@ -97,13 +95,11 @@ bin_PROGRAMS += foam-hwtest
 
 foam_hwtest_SOURCES = foam-hwtest.cc \
 		$(FRAME_SRC) $(FRAME_HDR) \
-		$(LIB_DIR)/imgio.cc \
 		$(MODS_DIR)/camera.cc \
 		$(MODS_DIR)/fw1394cam.cc
 
 # Header files are part of the sources as well
 foam_hwtest_SOURCES += foam-hwtest.h \
-		$(LIB_DIR)/imgio.h \
 		$(MODS_DIR)/camera.h \
 		$(MODS_DIR)/fw1394cam.h \
 		$(MODS_DIR)/dc1394++.h

@@ -22,10 +22,9 @@
 #include <gsl/gsl_matrix.h>
 
 #include "imgdata.h"
+#include "io.h"
 
 #include "foamctrl.h"
-#include "imgio.h"
-#include "io.h"
 #include "simseeing.h"
 
 /*

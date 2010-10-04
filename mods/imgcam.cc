@@ -28,8 +28,8 @@
 
 #include "config.h"
 #include "io.h"
+#include "imgdata.h"
 
-#include "imgio.h"
 #include "imgcam.h"
 
 //! @todo update this to match new Camera prototype Camera(io, ptc, name, imgcam_type, port, conffile)
@@ -50,11 +50,10 @@ Camera(io, name, imgcam_type, port) {
 	
 	mode = Camera::OFF;
 	
-	img = new Imgio(io, file, Imgio::FITS);
-	img->loadImg();
+	img = new ImgData(io, file, ImgData::FITS);
 	
-	res.x = img->getWidth();
-	res.y = img->getHeight();
+	res.x = img->getwidth();
+	res.y = img->getheight();
 	bpp = 16;
 	dtype = UINT16;
 	
@@ -86,7 +85,7 @@ void ImgCamera::update(bool blocking) {
 	
 	for(int y = 0; y < res.y; y++) {
 		for(int x = 0; x < res.x; x++) {
-			double value = drand48() * noise + img->getPixel(x, y) * exposure;
+			double value = drand48() * noise + img->getpixel(x, y) * exposure;
 			if (value < 0)
 				value = 0;
 			if (value > UINT16_MAX)
