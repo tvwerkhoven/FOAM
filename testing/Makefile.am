@@ -32,22 +32,7 @@ noinst_PROGRAMS +=
 endif HWDEBUG
 
 if DEBUG
-noinst_PROGRAMS += imgio-test imgio-convert-test io-test protocol-test pixbuf-test dc1394-test
-
-io_test_SOURCES = io-test.cc
-io_test_LDADD = $(LIBSIU_DIR)/libio.a
-
-imgio_test_SOURCES = imgio-test.cc \
-		$(LIB_DIR)/imgio.cc $(LIB_DIR)/imgio.h
-imgio_test_LDADD = $(LIBSIU_DIR)/libio.a
-
-imgio_convert_test_SOURCES = imgio-convert-test.cc \
-		$(LIB_DIR)/imgio.cc $(LIB_DIR)/imgio.h
-imgio_convert_test_LDADD = $(LIBSIU_DIR)/libio.a
-
-protocol_test_SOURCES = protocol-test.cc
-protocol_test_LDADD = $(LIBSIU_DIR)/libprotocol.a \
-		$(LIBSIU_DIR)/libsocket.a
+noinst_PROGRAMS += pixbuf-test dc1394-test
 
 pixbuf_test_SOURCES = pixbuf-test.cc
 pixbuf_test_CPPFLAGS = $(GUI_CFLAGS) $(AM_CPPFLAGS)

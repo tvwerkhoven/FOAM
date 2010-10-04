@@ -191,9 +191,8 @@ if test "$fullsim" = true ; then
 	if test "$have_z" = true -a "$have_ics" = true; then
 		have_ics=true
 	else
-		have_ics=false
-		fullsimmissing+=" libics"
 		fullsim=false
+		fullsimmissing+=" libics"
 	fi
 
 	PKG_CHECK_MODULES(FFTW, fftw3 > 3.2.0, [],
