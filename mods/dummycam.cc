@@ -75,8 +75,8 @@ void DummyCamera::update() {
 	uint16_t *p = image;
 	
 	int mul = (1 << depth) - 1;
-	for(size_t y = 0; y < res.y; y++) {
-		for(size_t x = 0; x < res.x; x++) {
+	for(size_t y = 0; y < (size_t) res.y; y++) {
+		for(size_t x = 0; x < (size_t) res.x; x++) {
 			double value = drand48() * noise + (sin(M_PI * x / res.x) + 1 + sin((y + offset) * 100));
 			value *= exposure;
 			if(value < 0)

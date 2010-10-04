@@ -225,7 +225,7 @@ protected:
 	
 	Path filenamebase;						//!< Base filename, input for makename()
 	Path outputdir;								//!< Output dir for saving files, absolute or relative to ptc->datadir
-	size_t nstore;								//!< Numebr of new frames to store (-1 for unlimited)
+	ssize_t nstore;								//!< Numebr of new frames to store (-1 for unlimited)
 
 	void fits_init_phdu(char *phdu);	//!< Init FITS header unit
 	bool fits_add_card(char *phdu, const string &key, const string &value); //!< Add FITS header card

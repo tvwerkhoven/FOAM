@@ -433,7 +433,7 @@ class dc1394 {
 			dc1394framerates_t  framerates;
 			
 			fprintf(fd, "Camera supports %d modes:\n", modes.num);
-			int j;
+			uint32_t j;
 			for (int modei=DC1394_VIDEO_MODE_MIN; modei < DC1394_VIDEO_MODE_MAX; modei++) {
 				for (j=0; j < modes.num; j++) {
 					if (modes.modes[j] == modei) {

@@ -109,7 +109,6 @@ void Camera::cam_proc() {
 
 		if (nstore == -1 || nstore > 0) {
 			nstore--;
-			//! @todo broadcast new nstore around
 			netio.broadcast(format("ok store %d", nstore), "store");
 			store_frame(frame);
 		}
@@ -242,12 +241,12 @@ void Camera::calculate_stats(frame_t *frame) {
 	
 	if(depth <= 8) {
 		uint8_t *image = (uint8_t *)frame->image;
-		for(size_t i = 0; i < res.x * res.y; i++) {
+		for(size_t i = 0; i < (size_t) res.x * res.y; i++) {
 			frame->histo[image[i]]++;
 		}
 	} else {
 		uint16_t *image = (uint16_t *)frame->image;
-		for(size_t i = 0; i < res.x * res.y; i++) {
+		for(size_t i = 0; i < (size_t) res.x * res.y; i++) {
 			frame->histo[image[i]]++;
 		}
 	}
@@ -626,8 +625,8 @@ void Camera::grab(Connection *conn, int x1, int y1, int x2, int y2, int scale = 
 			if(depth <= 8) {
 				uint8_t *in = (uint8_t *)f->image;
 				uint8_t *p = (uint8_t *)buffer;
-				for(size_t y = y1 * scale; y < y2 * scale; y += scale)
-					for(size_t x = x1 * scale; x < x2 * scale; x += scale) {
+				for(size_t y = y1 * scale; y < (size_t) y2 * scale; y += scale)
+					for(size_t x = x1 * scale; x < (size_t) x2 * scale; x += scale) {
 						size_t o = y * res.x + x;
 						if(do_df)
 							*p++ = df_correct(in, o);
@@ -637,8 +636,8 @@ void Camera::grab(Connection *conn, int x1, int y1, int x2, int y2, int scale = 
 			} else if(depth <= 16) {
 				uint16_t *in = (uint16_t *)f->image;
 				uint16_t *p = (uint16_t *)buffer;
-				for(size_t y = y1 * scale; y < y2 * scale; y += scale)
-					for(size_t x = x1 * scale; x < x2 * scale; x += scale) {
+				for(size_t y = y1 * scale; y < (size_t) y2 * scale; y += scale)
+					for(size_t x = x1 * scale; x < (size_t) x2 * scale; x += scale) {
 						size_t o = y * res.x + x;
 						if(do_df)
 							*p++ = df_correct(in, o);
@@ -800,11 +799,11 @@ bool Camera::accumburst(uint32_t *accum, size_t bcount) {
 		
 		if(depth <= 8) {
 			uint8_t *image = (uint8_t *)f->image;
-			for(size_t i = 0; i < res.x * res.y; i++)
+			for(size_t i = 0; i < (size_t) res.x * res.y; i++)
 				accum[i] += image[i];
 		} else {
 			uint16_t *image = (uint16_t *)f->image;
-			for(size_t i = 0; i < res.x * res.y; i++)
+			for(size_t i = 0; i < (size_t) res.x * res.y; i++)
 				accum[i] += image[i];
 		}
 		
