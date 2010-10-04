@@ -21,9 +21,16 @@
 #include <string>
 #include <gsl/gsl_matrix.h>
 
+#include "imgdata.h"
+
 #include "foamctrl.h"
+#include "imgio.h"
 #include "io.h"
 #include "simseeing.h"
+
+/*
+ *  Constructors / destructors
+ */
 
 SimSeeing::SimSeeing(Io &io, foamctrl *ptc, string name, string port, Path &conffile):
 Device(io, ptc, name, SimSeeing_type, port, conffile)
@@ -31,29 +38,65 @@ Device(io, ptc, name, SimSeeing_type, port, conffile)
 	io.msg(IO_DEB2, "SimSeeing::SimSeeing()");
 	//! @todo init wavefront here, matrices, read config etc
 	
-	wf_src = cfg.getstring("wf_file", "auto");
-//	if (wf_src == "auto") {
-//		io.msg(IO_INFO, "SimSeeing::SimSeeing() Auto-generating wavefront.");
-//	}
-//	else {
-//		if (wf_src.substr(0,1) != "/")
-//			if (access(wf_src.c_str(), R_OK))
-//				throw exception("SimSeeing::SimSeeing() cannot read wavefront file " + wf_src + "!");
-//	}
-		
+	wf.type = cfg.getstring("type");
+	if (wf.type != "file" && wf.type != "auto")
+		throw exception("SimSeeing::SimSeeing() type should be either 'auto' or 'file', not '" + wf.type + "'.");
+	
+	if (wf.type == "auto") {
+		io.msg(IO_INFO, "SimSeeing::SimSeeing() Auto-generating wavefront.");
+		wf.r0 = cfg.getdouble("wf_r0", 10.0);
+		wf.data = gen_wavefront();
+	}
+	else {
+		wf.file = ptc->confdir + wf.file;
+		wf.data = load_wavefront();
+	}
+
+	io.msg(IO_DEB2, "SimSeeing::SimSeeing() init done");
 }
 
 SimSeeing::~SimSeeing() {
 	io.msg(IO_DEB2, "SimSeeing::~SimSeeing()");
 }
 
+/*
+ *  Private methods
+ */
+
+gsl_matrix *SimSeeing::gen_wavefront() {
+	io.msg(IO_DEB2, "SimSeeing::gen_wavefront()");
+	
+	return NULL;
+}
+
+gsl_matrix *SimSeeing::load_wavefront() {
+	io.msg(IO_DEB2, "SimSeeing::load_wavefront()");
+	
+	if (!wf.file.r())
+		throw exception("SimSeeing::load_wavefront() cannot read wavefront file: " + wf.file.str() + "!");
+	
+	ImgData wftmp(io, wf.file, ImgData::AUTO);
+	if (wftmp.err) {
+		io.msg(IO_ERR, "SimSeeing::load_wavefront() ImgData returned an error: %d\n", wftmp.err);
+		return NULL;
+	}
+	
+	return wftmp.as_GSL(true);
+}
+
+/*
+ *  Public methods
+ */
+
 gsl_matrix *SimSeeing::get_wavefront() {
 	io.msg(IO_DEB2, "SimSeeing::get_wavefront()");
 	//! @todo look at windspeed etc, get new wavefront using get_wavefront(...)
+	return NULL;
 }
 
 gsl_matrix *SimSeeing::get_wavefront(int x0, int y0, int x1, int y1) {
 	io.msg(IO_DEB2, "SimSeeing::get_wavefront(...)");
 	//! @todo get wavefront crop
+	return NULL;
 }
 
