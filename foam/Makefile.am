@@ -142,6 +142,9 @@ foam_fullsim_SOURCES += foam-fullsim.h \
 		$(LIB_DIR)/simseeing.h \
 		$(LIB_DIR)/simwfs.h
 
+foam_fullsim_LDADD = $(LIBSIU_DIR)/libimgdata.a \
+		$(LDADD)
+
 # Some CPP flags
 foam_fullsim_CPPFLAGS = -DFOAM_DEFAULTCONF=\"$(FOAMCONFDIR)/foam-fullsim.cfg\" \
 		$(FULLSIM_CFLAGS) $(AM_CPPFLAGS)
