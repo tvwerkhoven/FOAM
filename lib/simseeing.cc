@@ -37,9 +37,9 @@ Device(io, ptc, name, SimSeeing_type, port, conffile)
 	io.msg(IO_DEB2, "SimSeeing::SimSeeing()");
 	//! @todo init wavefront here, matrices, read config etc
 	
-	wf.type = cfg.getstring("type");
+	wf.type = cfg.getstring("wf_type");
 	if (wf.type != "file" && wf.type != "auto")
-		throw exception("SimSeeing::SimSeeing() type should be either 'auto' or 'file', not '" + wf.type + "'.");
+		throw exception("SimSeeing::SimSeeing() wf_type should be either 'auto' or 'file', not '" + wf.type + "'.");
 	
 	if (wf.type == "auto") {
 		io.msg(IO_INFO, "SimSeeing::SimSeeing() Auto-generating wavefront.");
@@ -47,6 +47,8 @@ Device(io, ptc, name, SimSeeing_type, port, conffile)
 		wf.data = gen_wavefront();
 	}
 	else {
+		io.msg(IO_INFO, "SimSeeing::SimSeeing() Loading wavefront.");
+		wf.file = cfg.getstring("wf_file");
 		wf.file = ptc->confdir + wf.file;
 		wf.data = load_wavefront();
 	}
@@ -69,7 +71,7 @@ gsl_matrix *SimSeeing::gen_wavefront() {
 }
 
 gsl_matrix *SimSeeing::load_wavefront() {
-	io.msg(IO_DEB2, "SimSeeing::load_wavefront()");
+	io.msg(IO_DEB2, "SimSeeing::load_wavefront(), file=%s", wf.file.c_str());
 	
 	if (!wf.file.r())
 		throw exception("SimSeeing::load_wavefront() cannot read wavefront file: " + wf.file.str() + "!");
