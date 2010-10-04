@@ -43,7 +43,7 @@ Camera(io, ptc, name, dummycam_type, port, conffile)
 	interval = 0.25;
 	exposure = 0.3;
 	
-	dtype = DATA_UINT16;
+	dtype = UINT16;
 	
 	set_filename("dummycam-"+name);
 	

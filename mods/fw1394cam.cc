@@ -77,7 +77,7 @@ Camera(io, ptc, name, FW1394cam_type, port, conffile)
 	res.x = cfg.getint(name+".width", 640);
 	res.y = cfg.getint(name+".height", 480);
 	depth = cfg.getint(name+".depth", 8);
-	dtype = DATA_UINT8;
+	dtype = UINT8;
 	
 	exposure = cam_get_exposure(); 
 	interval = cam_get_interval();

@@ -27,11 +27,10 @@
 
 #include <stdio.h>
 #include <string.h>
-
 #include <fitsio.h>
-
 #include <string>
 
+#include "types.h"
 #include "io.h"
 #include "imgio.h"
 
@@ -54,8 +53,8 @@ int Imgio::init(std::string fname, imgtype_t imgtype) {
 
 int Imgio::getPixel(int x, int y) {
 	if (!data) return -1;
-	if (dtype == Imgio::UINT8) return ((uint8_t *)data)[y * res.x + x];
-	else if (dtype == Imgio::UINT16) return ((uint16_t *)data)[y * res.x + x];
+	if (dtype == UINT8) return ((uint8_t *)data)[y * res.x + x];
+	else if (dtype == UINT16) return ((uint16_t *)data)[y * res.x + x];
 	else return -1;
 }
 
@@ -73,7 +72,7 @@ int Imgio::writeImg(imgtype_t imgtype, std::string outpath) {
 
 int Imgio::calcRange() {
 	switch (dtype) {
-		case Imgio::UINT8: {
+		case UINT8: {
 			uint8_t *tmpdata = (uint8_t *) data;
 			for (int p=0; p < res.x * res.y; p++) {
 				if (tmpdata[p] > range[1]) range[1] = tmpdata[p];
@@ -82,7 +81,7 @@ int Imgio::calcRange() {
 			}
 			break;
 		}
-		case Imgio::UINT16: {
+		case UINT16: {
 			uint16_t *tmpdata = (uint16_t *) data;
 			for (int p=0; p<res.x * res.y; p++) {
 				if (tmpdata[p] > range[1]) range[1] = tmpdata[p];
@@ -133,7 +132,7 @@ int Imgio::loadFits(std::string path) {
 			uint8_t nulval = 0;
 			fits_read_img(fptr, TBYTE, 1, nel, &nulval, \
 					(uint8_t *) data, &anynul, &stat);
-			dtype = Imgio::UINT8;
+			dtype = UINT8;
 			break;
 			
 		}
@@ -141,7 +140,7 @@ int Imgio::loadFits(std::string path) {
 			uint16_t nulval = 0;
 			fits_read_img(fptr, TUSHORT, 1, nel, &nulval, \
 					(uint16_t *) data, &anynul, &stat);					
-			dtype = Imgio::UINT16;
+			dtype = UINT16;
 			break;
 		}
 		default: {
@@ -239,12 +238,12 @@ int Imgio::loadPgm(std::string path) {
 		return io.msg(IO_ERR, "Unsupported PGM format");
 	
 	if (maxval <= 255) {
-		dtype = Imgio::UINT8;
+		dtype = UINT8;
 		bpp = 8;
 		data = malloc(nel * bpp/8);		
 	}
 	else {		
-		dtype = Imgio::UINT16;
+		dtype = UINT16;
 		bpp = 16;
 		data = malloc(nel * bpp/8);		
 	}
@@ -256,7 +255,7 @@ int Imgio::loadPgm(std::string path) {
 			return io.msg(IO_ERR, "Could not read file.");
 	}
 	else if (!strncmp(magic, "P2", 2)) { // ASCII
-		if (dtype == Imgio::UINT8)
+		if (dtype == UINT8)
 			for (int p=0; p < nel; p++)
 				((uint8_t *) data)[p] = readNumber(fd);
 		else
@@ -276,12 +275,12 @@ int Imgio::writePgm(std::string path) {
 	FILE *fd;
  	fd = fopen(path.c_str(), "wb+");
 	
-	if (dtype != Imgio::UINT8 && dtype != Imgio::UINT16)
+	if (dtype != UINT8 && dtype != UINT16)
 		return io.msg(IO_ERR, "PGM only supports unsigned 8- or 16-bit integer images.");
 	
 	int maxval=0;
 	switch (dtype) {
-		case Imgio::UINT8: {
+		case UINT8: {
 			uint8_t *datap = (uint8_t *) data;
 			for (int p=0; p<res.x * res.y; p++)
 				if (datap[p] > maxval) maxval = datap[p];
@@ -289,7 +288,7 @@ int Imgio::writePgm(std::string path) {
 			fwrite(datap, res.x * res.y * bpp/8, 1, fd);
 			break;
 		}
-		case Imgio::UINT16: {
+		case UINT16: {
 			uint16_t *datap = (uint16_t *) data;
 			for (int p=0; p<res.x * res.y; p++)
 				if (datap[p] > maxval) maxval = datap[p];

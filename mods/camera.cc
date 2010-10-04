@@ -50,7 +50,7 @@ Camera::Camera(Io &io, foamctrl *ptc, string name, string type, string port, Pat
 Device(io, ptc, name, cam_type + "." + type, port, conffile),
 nframes(8), count(0), timeouts(0), ndark(10), nflat(10), 
 interval(1.0), exposure(1.0), gain(1.0), offset(0.0), 
-res(0,0), depth(-1), dtype(DATA_UINT16),
+res(0,0), depth(-1), dtype(UINT16),
 mode(Camera::OFF),
 filenamebase("FOAM"), outputdir(ptc->datadir), nstore(0),
 fits_telescope("undef"), fits_observer("undef"), fits_instrument("undef"), fits_target("undef"), fits_comments("undef")
@@ -191,13 +191,13 @@ bool Camera::store_frame(frame_t *frame) {
 	
 	// Add datatype <http://www.eso.org/sci/data-processing/software/esomidas//doc/user/98NOV/vola/node112.html>
 	fits_add_card(phdu, "SIMPLE", "T");
-	if (dtype == DATA_UINT8 || dtype == DATA_INT8)
+	if (dtype == UINT8 || dtype == INT8)
 		fits_add_card(phdu, "BITPIX", "8");
-	else if (dtype == DATA_UINT16 || dtype == DATA_INT16)
+	else if (dtype == UINT16 || dtype == INT16)
 		fits_add_card(phdu, "BITPIX", "16");
-	else if (dtype == DATA_FLOAT32)
+	else if (dtype == FLOAT32)
 		fits_add_card(phdu, "BITPIX", "-32");
-	else if (dtype == DATA_FLOAT64)
+	else if (dtype == FLOAT64)
 		fits_add_card(phdu, "BITPIX", "-64");
 		
 	// Add rest of the metadata

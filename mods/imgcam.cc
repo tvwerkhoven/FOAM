@@ -56,7 +56,7 @@ Camera(io, name, imgcam_type, port) {
 	res.x = img->getWidth();
 	res.y = img->getHeight();
 	bpp = 16;
-	dtype = DATA_UINT16;
+	dtype = UINT16;
 	
 	image = (void *) malloc(res.x * res.y * 2);
 	
