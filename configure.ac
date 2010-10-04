@@ -180,6 +180,22 @@ if test "$fullsim" = true ; then
 	AC_MSG_NOTICE([*** Full simulation enabled, checking for extra libs])
 	fullsimmissing=""
 	
+	AC_SEARCH_LIBS([deflate], [z],
+		[have_z=true],
+		[have_z=false])
+
+	AC_SEARCH_LIBS([IcsOpen], [ics],
+			[have_ics=true],
+			[have_ics=false])
+
+	if test "$have_z" = true -a "$have_ics" = true; then
+		have_ics=true
+	else
+		have_ics=false
+		fullsimmissing+=" libics"
+		fullsim=false
+	fi
+
 	PKG_CHECK_MODULES(FFTW, fftw3 > 3.2.0, [],
 		[AC_MSG_WARN([FOAM full sim needs fftw3.]);fullsim=false;fullsimmissing+=" fftw3"])
 
