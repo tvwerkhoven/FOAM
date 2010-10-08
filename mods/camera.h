@@ -34,11 +34,13 @@
 #include "types.h"
 #include "config.h"
 #include "io.h"
+#include "path++.h"
+
 #include "devices.h"
 
 using namespace std;
 
-static const string cam_type = "cam";
+const string cam_type = "cam";
 
 /*!
  @brief Base camera class. This should be overloaded with the specific camera class.
@@ -50,15 +52,23 @@ static const string cam_type = "cam";
  part is hardware I/O which is done by a seperate thread through 'handler' in
  the 'camthr' thread. Graphically:
  
- Device --- netio --        --- netio ---
-      \---- main --- Camera --- cam_thr -
-												  \---- main ----
+ Device --- netio --        --- netio ----
+      \---- main --- Camera --- cam_thr --
+												  +---- proc_thr -
+												  \----	main -----
  
  \li netio gets input from outside (GUIs), reads from shared class
  \li cam_thr runs standalone, gets input from variables (configuration), 
 		provides hooks through sigc++ slots.
+ \li proc_thr runs some processing over the captured frames from cam_thr if 
+		necessary, responds to cam_cond() broadcasts
  \li main thread calls camera functions to read out data/settings, can hook up 
 		to slots to get 'instantaneous' feedback from cam_thr.
+ 
+ Capture process
+ 
+ \li cam_thr captures frame (needs to be implemented in cam_handler()), calls cam_queue()
+ \li cam_queue() locks cam_mut
  
  Camera net IO
  
@@ -93,7 +103,7 @@ static const string cam_type = "cam";
 
  @todo What to do with mode & state?
  */ 
-class Camera : public Device {
+class Camera: public Device {
 public:
 	typedef enum {
 		OFF = 0,
@@ -131,31 +141,28 @@ public:
 		size_t id;
 		struct timeval tv;
 		
+		bool proc;						//!< Was the frame processed in time?
+		
 		frame() {
 			data = 0;
 			image = 0;
 			id = 0;
 			histo = 0;
+			proc = false;
 		}
 		
 		double avg;
 		double rms;
-		
-		double cx;						//!< @todo ???
-		double cy;						//!< @todo ???
-		double cr;						//!< @todo ???
-		
-		double rms1;
-		double rms2;
-		
-		double dx;
-		double dy;
 	} frame_t;
 	
 protected:
 	pthread::thread cam_thr;			//!< Camera hardware thread.
-	pthread::mutex cam_mutex;
-	pthread::cond cam_cond;
+	pthread::mutex cam_mutex;			//!< Mutex used to limit access to frame data
+	pthread::cond cam_cond;				//!< Cond used to signal threads about new frames
+	
+	pthread::thread proc_thr;			//!< Processing thread (only camera stuff)
+	pthread::mutex proc_mutex;		//!< Cond/mutexpair used by cam_thr to notify proc_thr
+	pthread::cond	proc_cond;			//!< Cond/mutexpair used by cam_thr to notify proc_thr
 	
 	pthread::cond mode_cond;			//!< Mode change notification
 	pthread::mutex mode_mutex;
@@ -175,13 +182,16 @@ protected:
 	virtual void do_restart() = 0;
 
 	void *cam_queue(void *data, void *image, struct timeval *tv = 0); //!< Store frame in buffer, returns oldest frame if buffer is full
-	
+	void cam_proc();																	//!< Process frames (if necessary)
+
 	void calculate_stats(frame *frame);								//!< Calculate rms and such
 	bool accumburst(uint32_t *accum, size_t bcount);	//!< For dark/flat acquisition
 	void statistics(Connection *conn, size_t bcount);	//!< Post back statistics
 	
-	std::string makename(const string &base);					//!< Make filename from outputdir and filenamebase
-	std::string makename() { return makename(filenamebase); }
+	Path makename(const string &base);								//!< Make filename from outputdir and filenamebase
+	Path makename() { return makename(filenamebase); }
+	bool store_frame(frame_t *frame);									//!< Store frame to disk
+	
 	uint8_t *get_thumbnail(Connection *conn);					//!< Get 32x32x8 thumnail
 	void grab(Connection *conn, int x1, int y1, int x2, int y2, int scale, bool do_df, bool do_histo);
 	void accumfix();
@@ -214,14 +224,21 @@ protected:
 	mode_t mode;									//!< Camera mode (see mode_t)
 	
 	string filenamebase;					//!< Base filename, input for makename()
-	string outputdir;							//!< Output dir for saving files, absolute or relative to ptc->datadir
+	Path outputdir;								//!< Output dir for saving files, absolute or relative to ptc->datadir
+	ssize_t nstore;								//!< Numebr of new frames to store (-1 for unlimited)
+
+	void fits_init_phdu(char *phdu);	//!< Init FITS header unit
+	bool fits_add_card(char *phdu, const string &key, const string &value); //!< Add FITS header card
+	bool fits_add_comment(char *phdu, const string &comment); //!< Add FITS comment
 	
+	string fits_telescope;				//!< FITS header properties for saved files
 	string fits_observer;					//!< FITS header properties for saved files
+	string fits_instrument;				//!< FITS header properties for saved files
 	string fits_target;						//!< FITS header properties for saved files
 	string fits_comments;					//!< FITS header properties for saved files
 	
 public:
-	Camera(Io &io, foamctrl *ptc, string name, string type, string port, string conffile);
+	Camera(Io &io, foamctrl *ptc, string name, string type, string port, Path &conffile);
 	virtual ~Camera();
 
 	double get_exposure() { return exposure; }
@@ -245,6 +262,7 @@ public:
 	virtual void on_message(Connection*, std::string);
 	
 	double set_exposure(double value);
+	int set_store(int value);
 	double set_interval(double value);
 	double set_gain(double value);
 	double set_offset(double value);
@@ -258,6 +276,8 @@ public:
 	string set_fits_comments(string val);
 	string set_filename(string value);
 	string set_outputdir(string value);
+	
+	void store_frames(int n=-1) { nstore = n; }
 	
 	int darkburst(size_t bcount);
 	int flatburst(size_t bcount);

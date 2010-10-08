@@ -1,16 +1,4 @@
 Main Todo Items
 ===============
 
-We are looking for volunteers to do the following tasks :).
-
-Minor fixes & tweaks
-
-* Implement savestate such that a complete setup can be resumed.
-
-Major feature upgrades
-
-* Correlation tracking functions for Shack Hartmann sensors
-
-* Adding MCAO capabilities
-
-* Real time linux implementation of FOAM
+See @todo tags in source for up-to-date todo items.

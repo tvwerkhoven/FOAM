@@ -26,6 +26,7 @@
 
 #include "config.h"
 #include "io.h"
+#include "path++.h"
 
 #include "camera.h"
 
@@ -39,7 +40,7 @@ private:
 	double noise;
 	
 public:
-	DummyCamera(Io &io, foamctrl *ptc, string name, string port, string conffile);
+	DummyCamera(Io &io, foamctrl *ptc, string name, string port, Path &conffile);
 	~DummyCamera();
 	
 	// From Camera::

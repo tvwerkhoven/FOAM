@@ -62,6 +62,7 @@ protected:
 	CheckButton fliph;
 	CheckButton crosshair;
 	CheckButton grid;
+	VSeparator vsep1;
 	Button zoomin;
 	Button zoomout;
 	Button zoom100;
@@ -73,6 +74,8 @@ protected:
 	//Button refresh;
 	ToggleButton capture;
 	ToggleButton display;
+	ToggleButton store;
+	Entry store_n;
 		
 	// Camera image
 	HBox camhbox;
@@ -95,8 +98,9 @@ protected:
 	void on_zoom100_activate();
 	void on_zoomin_activate();
 	void on_zoomout_activate();
-	void on_capture_update();			//!< Called when capture button is active
-	void on_display_update();			//!< Called when display button is active
+	void on_capture_update();			//!< Called when capture button is toggled
+	void on_display_update();			//!< Called when display button is toggled
+	void on_store_update();				//!< Called when store button is toggled
 	void on_glarea_view_update();	//!< Callback from glarea class
 //	void on_colorsel_activate();
 //	void on_fullscreen_toggled();

@@ -30,7 +30,7 @@
 
 using namespace std;
 
-FW1394Camera::FW1394Camera(Io &io, foamctrl *ptc, string name, string port, string conffile):
+FW1394Camera::FW1394Camera(Io &io, foamctrl *ptc, string name, string port, Path &conffile):
 Camera(io, ptc, name, FW1394cam_type, port, conffile) 
 {
 	io.msg(IO_DEB2, "FW1394Camera::FW1394Camera()");
@@ -63,9 +63,10 @@ Camera(io, ptc, name, FW1394cam_type, port, conffile)
 	double fps = cfg.getdouble(name+".framerate", 30.);
 	if (!_dc1394.check_framerate(fps)) {
 		io.msg(IO_WARN, "FW1394Camera:: Framerate should be 2^n*1.875 for 0<=n<7! (was %g) Defaulting to 15fps.", fps);
-		fps = 15.;
+		fps = 30.;
 	}
 	camera->set_framerate((dc1394::framerate) _dc1394.framerate_p.getenum(fps));
+	//camera->set_framerate((dc1394::framerate) dc1394::FRAMERATE_30);
 	
 	// What's this?
 	camera->set_control_register(0x80c, 0x82040040);
@@ -76,9 +77,8 @@ Camera(io, ptc, name, FW1394cam_type, port, conffile)
 	res.x = cfg.getint(name+".width", 640);
 	res.y = cfg.getint(name+".height", 480);
 	depth = cfg.getint(name+".depth", 8);
-	dtype = DATA_UINT8;
+	dtype = UINT8;
 	
-
 	exposure = cam_get_exposure(); 
 	interval = cam_get_interval();
 	gain = cam_get_gain();
@@ -186,7 +186,6 @@ void FW1394Camera::cam_handler() {
 			case Camera::SINGLE:
 			{
 				io.msg(IO_DEB1, "FW1394Camera::cam_handler() SINGLE");
-				io.msg(IO_DEB1, "FW1394Camera::cam_handler() RUNNING");
 				dc1394::frame *frame = camera->capture_dequeue(dc1394::CAPTURE_POLICY_WAIT);
 				if(!frame) {
 					timeouts++;
@@ -228,12 +227,12 @@ void FW1394Camera::cam_set_mode(mode_t newmode) {
 			mode_cond.broadcast();
 			break;
 		case Camera::WAITING:
+		case Camera::OFF:
 			// Stop camera
 			camera->set_transmission(false);
 			mode = newmode;
 			mode_cond.broadcast();
 			break;
-		case Camera::OFF:
 		case Camera::CONFIG:
 			io.msg(IO_INFO, "FW1394::cam_set_mode(%s) mode not supported.", mode2str(newmode).c_str());
 		default:

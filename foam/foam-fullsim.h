@@ -1,5 +1,5 @@
 /*
- foam-simstatic.h -- static simulation module header file
+ foam-full.h -- static simulation module header file
  Copyright (C) 2008--2010 Tim van Werkhoven <t.i.m.vanwerkhoven@xs4all.nl>
  
  This file is part of FOAM.
@@ -24,32 +24,30 @@
 
 */
 
-#ifndef HAVE_FOAM_SIMSTATIC_H
-#define HAVE_FOAM_SIMSTATIC_H
+#ifndef HAVE_FOAM_FULLSIM_H
+#define HAVE_FOAM_FULLSIM_H
 
-#define FOAM_CONFIG_PRE "foam-simstat"
+#define FOAM_CONFIG_PRE "foam-fullsim"
 
-#include "config.h"
-#include "path++.h"
 
 // LIBRARIES //
 /*************/
 
+#include "autoconfig.h"
 #include "foam.h"
 #include "types.h"
 #include "io.h"
 
 /*!
- @brief FOAM static simulation implementation
+ @brief FOAM full simulation implementation
  
- This FOAM implementation provides a simple static simulation. The WFS camera
- is fed by an image stored on disk and the shifts calculated that way are 
- thus static.
+ This FOAM implementation provides a complete end-to-end simulation of the 
+ atmosphere, the telescope, the wavefront correctors and -sensors.
  */
-class FOAM_simstatic : public FOAM {
+class FOAM_FullSim : public FOAM {
 public:
-	FOAM_simstatic(int argc, char *argv[]): FOAM(argc, argv) { io.msg(IO_DEB2, "FOAM_simstatic::FOAM_simstatic()"); } 
-	virtual ~FOAM_simstatic() { io.msg(IO_DEB2, "FOAM_simstatic::~FOAM_simstatic()"); } 
+	FOAM_FullSim(int argc, char *argv[]): FOAM(argc, argv) { io.msg(IO_DEB2, "FOAM_FullSim::FOAM_FullSim()"); } 
+	virtual ~FOAM_FullSim() { io.msg(IO_DEB2, "FOAM_FullSim::~FOAM_FullSim()"); } 
 	
 	virtual int load_modules();
 	virtual void on_message(Connection *connection, std::string line);
@@ -65,5 +63,5 @@ public:
 	virtual int calib();
 };
 
-#endif // HAVE_FOAM_SIMSTATIC_H
+#endif // HAVE_FOAM_FULLSIM_H
 

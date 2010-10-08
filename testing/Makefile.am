@@ -18,6 +18,10 @@ AM_CXXFLAGS = -pipe -Wall -Wextra \
 
 AM_LDFLAGS = $(COMMON_LIBS) $(GUI_LIBS)
 
+if HAVE_MACOSX
+AM_LDFLAGS += -framework CoreFoundation -framework Carbon
+endif
+
 # foamtestdir = $(bindir)/foam-test
 noinst_PROGRAMS = 
 
@@ -28,26 +32,15 @@ noinst_PROGRAMS +=
 endif HWDEBUG
 
 if DEBUG
-noinst_PROGRAMS += imgio-test imgio-convert-test io-test protocol-test pixbuf-test 
-
-io_test_SOURCES = io-test.cc
-io_test_LDADD = $(LIBSIU_DIR)/libio.a
-
-imgio_test_SOURCES = imgio-test.cc \
-		$(LIB_DIR)/imgio.cc $(LIB_DIR)/imgio.h
-imgio_test_LDADD = $(LIBSIU_DIR)/libio.a
-
-imgio_convert_test_SOURCES = imgio-convert-test.cc \
-		$(LIB_DIR)/imgio.cc $(LIB_DIR)/imgio.h
-imgio_convert_test_LDADD = $(LIBSIU_DIR)/libio.a
-
-protocol_test_SOURCES = protocol-test.cc
-protocol_test_LDADD = $(LIBSIU_DIR)/libprotocol.a \
-		$(LIBSIU_DIR)/libsocket.a
+noinst_PROGRAMS += pixbuf-test dc1394-test
 
 pixbuf_test_SOURCES = pixbuf-test.cc
 pixbuf_test_CPPFLAGS = $(GUI_CFLAGS) $(AM_CPPFLAGS)
 pixbuf_test_LDADD = -lgthread-2.0
+
+dc1394_test_SOURCES = dc1394-test.cc
+dc1394_test_CXXFLAGS = $(AM_CXXFLAGS) $(DC1394_CFLAGS)
+dc1394_test_LDADD = $(LDADD) $(DC1394_LIBS)
 
 ### OpenGL programs go here (need GUI libs)
 

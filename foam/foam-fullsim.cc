@@ -1,6 +1,6 @@
 /*
- foam-simstatic.cc -- static simulation module
- Copyright (C) 2008--2010 Tim van Werkhoven <t.i.m.vanwerkhoven@xs4all.nl>
+ foam-full.cc -- full simulation module
+ Copyright (C) 2010 Tim van Werkhoven <t.i.m.vanwerkhoven@xs4all.nl>
  
  This file is part of FOAM.
  
@@ -18,60 +18,52 @@
  along with FOAM.  If not, see <http://www.gnu.org/licenses/>.
  */
 /*! 
- @file foam-simstatic.c
+ @file foam-fullsim.c
  @author Tim van Werkhoven (t.i.m.vanwerkhoven@xs4all.nl)
- @brief This is a static simulation mode, with just a simple image to work with.
+ @brief This is a full simulation mode
  
- This setup can be used to benchmark performance of the AO system if no
- AO hardware (camera, TT, DM) is present.
+ This is a full simulation mode, where the complete system from atmosphere to 
+ CCD is taken into account.
  */
 
 #include <iostream>
 #include <string>
 
+#include "foam.h"
 #include "types.h"
 #include "io.h"
-#include "path++.h"
+#include "simulcam.h"
 
-#include "foam.h"
-#include "devices.h"
-#include "dummycam.h"
-#include "camera.h"
-
-#include "foam-simstatic.h"
+#include "foam-fullsim.h"
 
 // Global device list for easier access
-DummyCamera *testcam;
+SimulCam *simcam;
 
-int FOAM_simstatic::load_modules() {
-	io.msg(IO_DEB2, "FOAM_simstatic::load_modules()");
-	io.msg(IO_INFO, "This is the simstatic prime module, enjoy.");
+int FOAM_FullSim::load_modules() {
+	io.msg(IO_DEB2, "FOAM_FullSim::load_modules()");
+	io.msg(IO_INFO, "This is the full simulation mode, enjoy.");
 		
 	// Add ImgCam device
-	testcam = new DummyCamera(io, ptc, "dummycam", ptc->listenport, ptc->conffile);
-	devices->add((Device *) testcam);
-//	imgcamb = new ImgCamera(io, "imgcamB", ptc->listenport, ptc->cfg);
-//	devices->add((Device *) imgcamb);
-//	imgcamc = new ImgCamera(io, "imgcamC", ptc->listenport, ptc->cfg);
-//	devices->add((Device *) imgcamc);
-	
+	simcam = new SimulCam(io, ptc, "simcam", ptc->listenport, ptc->conffile);
+	devices->add((Device *) simcam);
+
 	return 0;
 }
 
 // OPEN LOOP ROUTINES //
 /*********************/
 
-int FOAM_simstatic::open_init() {
-	io.msg(IO_DEB2, "FOAM_simstatic::open_init()");
+int FOAM_FullSim::open_init() {
+	io.msg(IO_DEB2, "FOAM_FullSim::open_init()");
 	
-	((DummyCamera*) devices->get("dummycam"))->set_mode(Camera::RUNNING);
+	((SimulCam*) devices->get("simcam"))->set_mode(Camera::RUNNING);
 	
 	return 0;
 }
 
-int FOAM_simstatic::open_loop() {
-	io.msg(IO_DEB2, "FOAM_simstatic::open_loop()");
-	static DummyCamera *tmpcam = ((DummyCamera*) devices->get("dummycam"));
+int FOAM_FullSim::open_loop() {
+	io.msg(IO_DEB2, "FOAM_FullSim::open_loop()");
+	static SimulCam *tmpcam = ((SimulCam*) devices->get("simcam"));
 	
 	usleep(1000000);
 	Camera::frame_t *frame = tmpcam->get_last_frame();
@@ -79,10 +71,10 @@ int FOAM_simstatic::open_loop() {
 	return 0;
 }
 
-int FOAM_simstatic::open_finish() {
-	io.msg(IO_DEB2, "FOAM_simstatic::open_finish()");
+int FOAM_FullSim::open_finish() {
+	io.msg(IO_DEB2, "FOAM_FullSim::open_finish()");
 	
-	((DummyCamera*) devices->get("dummycam"))->set_mode(Camera::OFF);
+	((SimulCam*) devices->get("simcam"))->set_mode(Camera::OFF);
 
 	return 0;
 }
@@ -90,8 +82,8 @@ int FOAM_simstatic::open_finish() {
 // CLOSED LOOP ROUTINES //
 /************************/
 
-int FOAM_simstatic::closed_init() {
-	io.msg(IO_DEB2, "FOAM_simstatic::closed_init()");
+int FOAM_FullSim::closed_init() {
+	io.msg(IO_DEB2, "FOAM_FullSim::closed_init()");
 	
 	// Run open-loop init first
 	open_init();
@@ -99,15 +91,15 @@ int FOAM_simstatic::closed_init() {
 	return 0;
 }
 
-int FOAM_simstatic::closed_loop() {
-	io.msg(IO_DEB2, "FOAM_simstatic::closed_loop()");
+int FOAM_FullSim::closed_loop() {
+	io.msg(IO_DEB2, "FOAM_FullSim::closed_loop()");
 
 	usleep(10);
 	return 0;
 }
 
-int FOAM_simstatic::closed_finish() {
-	io.msg(IO_DEB2, "FOAM_simstatic::closed_finish()");
+int FOAM_FullSim::closed_finish() {
+	io.msg(IO_DEB2, "FOAM_FullSim::closed_finish()");
 	
 	// Run open-loop finish first
 	open_finish();
@@ -118,11 +110,11 @@ int FOAM_simstatic::closed_finish() {
 // MISC ROUTINES //
 /*****************/
 
-int FOAM_simstatic::calib() {
-	io.msg(IO_DEB2, "FOAM_simstatic::calib()=%s", ptc->calib.c_str());
+int FOAM_FullSim::calib() {
+	io.msg(IO_DEB2, "FOAM_FullSim::calib()=%s", ptc->calib.c_str());
 
 	if (ptc->calib == "INFLUENCE") {
-		io.msg(IO_DEB2, "FOAM_simstatic::calib INFLUENCE");
+		io.msg(IO_DEB2, "FOAM_FullSim::calib INFLUENCE");
 		usleep((useconds_t) 1.0 * 1000000);
 		return 0;
 	}
@@ -132,8 +124,8 @@ int FOAM_simstatic::calib() {
 	return 0;
 }
 
-void FOAM_simstatic::on_message(Connection *connection, std::string line) {
-	io.msg(IO_DEB2, "FOAM_simstatic::on_message(line=%s)", line.c_str());
+void FOAM_FullSim::on_message(Connection *connection, std::string line) {
+	io.msg(IO_DEB2, "FOAM_FullSim::on_message(line=%s)", line.c_str());
 	netio.ok = true;
 	
 	// First let the parent process this
@@ -145,14 +137,13 @@ void FOAM_simstatic::on_message(Connection *connection, std::string line) {
 		string topic = popword(line);
 		if (topic.size() == 0) {
 			connection->write(\
-												":==== simstat help ==========================\n"
+												":==== full sim help =========================\n"
 												":calib <mode>:           Calibrate AO system.");
 		}
 		else if (topic == "calib") {
 			connection->write(\
 												":calib <mode>:           Calibrate AO system.\n"
-												":  mode=influence:       Measure wfs-wfc influence.\n"
-												":  mode=subapsel:        Select subapertures.");
+												":  mode=influence:       Measure wfs-wfc influence.");
 		}
 		else if (!netio.ok) {
 			connection->write("err cmd help :topic unkown");
@@ -180,7 +171,7 @@ void FOAM_simstatic::on_message(Connection *connection, std::string line) {
 }
 
 int main(int argc, char *argv[]) {
-	FOAM_simstatic foam(argc, argv);
+	FOAM_FullSim foam(argc, argv);
 	
 	if (foam.has_error())
 		return foam.io.msg(IO_INFO, "Initialisation error.");
@@ -188,7 +179,7 @@ int main(int argc, char *argv[]) {
 	if (foam.init())
 		return foam.io.msg(IO_ERR, "Configuration error.");
 		
-	foam.io.msg(IO_INFO, "Running simstatic mode");
+	foam.io.msg(IO_INFO, "Running full simulation mode");
 	
 	foam.listen();
 	

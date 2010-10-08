@@ -23,13 +23,16 @@
 #include <math.h>
 
 #include "pthread++.h"
+#include "config.h"
+#include "path++.h"
+#include "io.h"
 
 #include "camera.h"
 #include "dummycam.h"
 
 using namespace std;
 
-DummyCamera::DummyCamera(Io &io, foamctrl *ptc, string name, string port, string conffile): 
+DummyCamera::DummyCamera(Io &io, foamctrl *ptc, string name, string port, Path &conffile):
 Camera(io, ptc, name, dummycam_type, port, conffile)
 {
 	io.msg(IO_DEB2, "DummyCamera::DummyCamera()");
@@ -40,7 +43,7 @@ Camera(io, ptc, name, dummycam_type, port, conffile)
 	interval = 0.25;
 	exposure = 0.3;
 	
-	dtype = DATA_UINT16;
+	dtype = UINT16;
 	
 	set_filename("dummycam-"+name);
 	
@@ -72,8 +75,8 @@ void DummyCamera::update() {
 	uint16_t *p = image;
 	
 	int mul = (1 << depth) - 1;
-	for(size_t y = 0; y < res.y; y++) {
-		for(size_t x = 0; x < res.x; x++) {
+	for(size_t y = 0; y < (size_t) res.y; y++) {
+		for(size_t x = 0; x < (size_t) res.x; x++) {
 			double value = drand48() * noise + (sin(M_PI * x / res.x) + 1 + sin((y + offset) * 100));
 			value *= exposure;
 			if(value < 0)

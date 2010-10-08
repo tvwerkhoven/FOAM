@@ -3,11 +3,6 @@ FOAM - Changelog
 
 To view the Changelog, issue
 
- svn log http://dotdb.phys.uu.nl/svn/foam/
- 
-or use 
+ git log
 
- svn log http://dotdb.phys.uu.nl/svn/foam/trunk/code/src/<file>
-
-to view the changelog of a particular file. Listing the output of the above 
-commands seems superfluous.
+or <http://github.com/tvwerkhoven/FOAM/commits/master/> online.

@@ -26,8 +26,11 @@
  */
 
 #include <time.h>
+#include <stdio.h>  /* defines FILENAME_MAX */
 #include <syslog.h>
+#include <unistd.h>
 
+#include "path++.h"
 #include "foamctrl.h"
 #include "types.h"
 #include "config.h"
@@ -52,31 +55,37 @@ starttime(time(NULL)), frames(0)
 	io.msg(IO_DEB2, "foamctrl::foamctrl(void)");
 }
 
-foamctrl::foamctrl(Io &io, string &file): 
+foamctrl::foamctrl(Io &io, Path &file): 
 err(0), io(io), conffile(file),
 mode(AO_MODE_LISTEN), calib(""),
 starttime(time(NULL)), frames(0)
 {
 	io.msg(IO_DEB2, "foamctrl::foamctrl()");
-	
-	parse(file);
+	io.msg(IO_DEB2, "foamctrl::foamctrl() %s", conffile.c_str());
+	parse();
 }
 
-int foamctrl::parse(string &file) {
-	io.msg(IO_DEB2, "foamctrl::parse(f=%s)", file.c_str());
-
-	int idx = conffile.find_last_of("/");
-	confpath = conffile.substr(0, idx);
+int foamctrl::parse() {
+	io.msg(IO_DEB2, "foamctrl::parse()");
 	
+	char curdir[FILENAME_MAX];
+	progdir = string(getcwd(curdir, sizeof curdir));
+
+	// Get absolute path of configuration file (reference for further relative paths
+	confdir = progdir + conffile.dirname();
+	io.msg(IO_DEB1, "Confdir: '%s', file: '%s'", confdir.c_str(), conffile.basename().c_str());
 	cfg = new config(conffile);
 	
-	// PID file
-	pidfile = cfg->getstring("pidfile", "/tmp/foam.pid");
-	
-	// Datadir
-	datadir = cfg->getstring("datadir", FOAM_DATADIR);
-	if (datadir == ".") io.msg(IO_WARN, "datadir not set, using current directory.");
+	// Datadir (relative to confdir)
+	datadir = confdir + cfg->getstring("datadir", FOAM_DATADIR);
+	if (datadir == confdir + ".") io.msg(IO_WARN, "datadir not set, using current directory.");
 	else io.msg(IO_DEB1, "Datadir: '%s'.", datadir.c_str());
+
+	// PID file (relative to confdir)
+	pidfile = cfg->getstring("pidfile", "/tmp/foam.pid");
+	if (pidfile.isrel())
+		pidfile = datadir + pidfile;
+	io.msg(IO_DEB1, "Pidfile: '%s'.", pidfile.c_str());
 	
 	// Daemon settings
 	listenip = cfg->getstring("listenip", "0.0.0.0");
@@ -93,11 +102,14 @@ int foamctrl::parse(string &file) {
 	// Logfile settings
 	logfile = cfg->getstring("logfile", "");
 	if (logfile.length()) {
-		if (logfile[0] != '/') logfile = datadir + "/" + logfile;
+		// If a log file was given, init the logging to datadir
+		logfile = datadir + logfile;
 		io.setLogfile(logfile);
 		io.msg(IO_DEB1, "Logfile: %s.", logfile.c_str());
-
 	}
+	else
+		io.msg(IO_DEB1, "Not logging to disk for now...");
+
 	
 	io.msg(IO_INFO, "Successfully parsed control config.");
 	return 0;

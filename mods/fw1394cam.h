@@ -40,7 +40,7 @@ private:
 	dc1394::camera *camera;
 	
 public:
-	FW1394Camera(Io &io, foamctrl *ptc, string name, string port, string conffile);
+	FW1394Camera(Io &io, foamctrl *ptc, string name, string port, Path &conffile);
 	~FW1394Camera();
 
 	// From Camera::

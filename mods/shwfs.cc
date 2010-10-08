@@ -82,8 +82,8 @@ int Shwfs::subapSel() {
 	ns = 0;
 	
 	// Get image first
-	if (cam->get_dtype() == DATA_UINT16) {
-		io.msg(IO_DEB2, "Shwfs::subapSel() got DATA_UINT16");
+	if (cam->get_dtype() == UINT16) {
+		io.msg(IO_DEB2, "Shwfs::subapSel() got UINT16");
 		void *tmpimg;
 		cam->get_image(&tmpimg);
 		uint16_t *img = (uint16_t *) tmpimg;
@@ -103,8 +103,8 @@ int Shwfs::subapSel() {
 			}
 		}
 	}
-	else if (cam->get_dtype() == DATA_UINT8) {
-		io.msg(IO_DEB2, "Shwfs::subapSel() got DATA_UINT8");
+	else if (cam->get_dtype() == UINT8) {
+		io.msg(IO_DEB2, "Shwfs::subapSel() got UINT8");
 		
 		void *tmpimg;
 		cam->get_image(&tmpimg);
@@ -260,17 +260,17 @@ int Shwfs::measure(int op) {
 	void *tmpimg;
 	cam->get_image(&tmpimg);
 	
-	if (cam->get_dtype() == DATA_UINT16) {
+	if (cam->get_dtype() == UINT16) {
 		if (mode == Shwfs::COG) {
-			io.msg(IO_DEB2, "Shwfs::measure() got DATA_UINT16, COG");
+			io.msg(IO_DEB2, "Shwfs::measure() got UINT16, COG");
 			return _cogframe<uint16_t>((uint16_t *) tmpimg);
 		}
 		else
 			return io.msg(IO_ERR, "Shwfs::measure() unknown wfs mode");
 	}
-	else if (cam->get_dtype() == DATA_UINT8) {
+	else if (cam->get_dtype() == UINT8) {
 		if (mode == COG) {
-			io.msg(IO_DEB2, "Shwfs::measure() got DATA_UINT8, COG");
+			io.msg(IO_DEB2, "Shwfs::measure() got UINT8, COG");
 			return _cogframe<uint8_t>((uint8_t *) tmpimg);
 		}
 		else

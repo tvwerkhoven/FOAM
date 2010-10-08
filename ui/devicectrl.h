@@ -54,7 +54,7 @@ public:
 	string errormsg;
 
 	DeviceCtrl(const string, const string, const string);
-	~DeviceCtrl() { ; }
+	~DeviceCtrl();
 	
 	bool is_ok() const { return ok; }
 	string get_errormsg() const { return errormsg; }

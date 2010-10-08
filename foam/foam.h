@@ -58,8 +58,8 @@ protected:
 	// Properties set at start
 	bool nodaemon;											//!< Run daemon or not
 	bool error;													//!< Error flag
-	string conffile;										//!< Configuration file to use
-	string execname;										//!< Executable name, i.e. argv[0]
+	Path conffile;											//!< Configuration file to use
+	Path execname;											//!< Executable name, i.e. Path(argv[0])
 
 	struct tm *tm_start;								//!< Start time
 	struct tm *tm_end;									//!< End time
@@ -70,9 +70,8 @@ protected:
 
 	Protocol::Server *protocol;					//!< Network control socket
 	
-	pthread_mutex_t mode_mutex;					//!< Network thread <-> main thread mutex
-	pthread_cond_t mode_cond;
-	static pthread_attr_t attr;
+	pthread::mutex mode_mutex;					//!< Network thread <-> main thread mutex/cond pair
+	pthread::cond mode_cond;						//!< Network thread <-> main thread mutex/cond pair
 	
 	/*!
 	 @brief Run on new connection to FOAM

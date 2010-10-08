@@ -23,10 +23,9 @@ if DEBUG
 AM_CPPFLAGS += -DFOAM_DEBUG=1
 endif DEBUG
 
-AM_CXXFLAGS = -pipe -Wall -Wextra \
+AM_CXXFLAGS = -Wall -Wextra \
 		-Wfatal-errors -Wno-unused-variable \
-		-O3 -ftree-vectorize \
-		-g
+		-O2 -g
 
 AM_LDFLAGS = $(COMMON_LIBS)
 
@@ -37,7 +36,9 @@ endif
 LDADD = $(LIBSIU_DIR)/libsocket.a \
 		$(LIBSIU_DIR)/libio.a \
 		$(LIBSIU_DIR)/libconfig.a \
-		$(LIBSIU_DIR)/libprotocol.a
+		$(LIBSIU_DIR)/libprotocol.a \
+		$(LIBSIU_DIR)/libpath.a
+		
 
 # Basic framework files which are always needed
 FRAME_SRC = foam.cc foamctrl.cc $(LIB_DIR)/devices.cc
@@ -62,18 +63,16 @@ bin_PROGRAMS += foam-simstat
 
 foam_simstat_SOURCES = foam-simstatic.cc \
 		$(FRAME_SRC) $(FRAME_HDR) \
-		$(LIB_DIR)/imgio.cc \
 		$(MODS_DIR)/camera.cc \
 		$(MODS_DIR)/dummycam.cc
 #		$(MODS_DIR)/imgcam.cc
 
 # Header files are part of the sources as well
 foam_simstat_SOURCES += foam-simstatic.h \
-		$(LIB_DIR)/imgio.h \
 		$(MODS_DIR)/camera.h \
 		$(MODS_DIR)/dummycam.h
 
-# Some CPP flags (include the primemod header, and configure some options)
+# Some CPP flags
 foam_simstat_CPPFLAGS = -DFOAM_DEFAULTCONF=\"$(FOAMCONFDIR)/foam-simstat.cfg\" \
 		$(SIMSTAT_CFLAGS) $(AM_CPPFLAGS)
 
@@ -95,13 +94,11 @@ bin_PROGRAMS += foam-hwtest
 
 foam_hwtest_SOURCES = foam-hwtest.cc \
 		$(FRAME_SRC) $(FRAME_HDR) \
-		$(LIB_DIR)/imgio.cc \
 		$(MODS_DIR)/camera.cc \
 		$(MODS_DIR)/fw1394cam.cc
 
 # Header files are part of the sources as well
 foam_hwtest_SOURCES += foam-hwtest.h \
-		$(LIB_DIR)/imgio.h \
 		$(MODS_DIR)/camera.h \
 		$(MODS_DIR)/fw1394cam.h \
 		$(MODS_DIR)/dc1394++.h
@@ -116,3 +113,40 @@ endif HAVE_DC1394
 
 endif HWDEBUG
 ### END HW TEST MODE ###
+
+
+### FULL SIMULATION MODE ###
+############################
+
+if FULLSIM
+# building full simulation mode
+
+bin_PROGRAMS += foam-fullsim
+
+foam_fullsim_SOURCES = foam-fullsim.cc \
+		$(FRAME_SRC) $(FRAME_HDR) \
+		$(MODS_DIR)/camera.cc \
+		$(MODS_DIR)/simulcam.cc \
+		$(LIB_DIR)/simseeing.cc \
+		$(LIB_DIR)/simwfs.cc
+
+# Header files are part of the sources as well
+foam_fullsim_SOURCES += foam-fullsim.h \
+		$(MODS_DIR)/camera.h \
+		$(MODS_DIR)/simulcam.h \
+		$(LIB_DIR)/simseeing.h \
+		$(LIB_DIR)/simwfs.h
+
+foam_fullsim_LDADD = $(LIBSIU_DIR)/libimgdata.a \
+		$(LDADD)
+
+# Some CPP flags
+foam_fullsim_CPPFLAGS = -DFOAM_DEFAULTCONF=\"$(FOAMCONFDIR)/foam-fullsim.cfg\" \
+		$(FULLSIM_CFLAGS) $(AM_CPPFLAGS)
+
+# specific flags and libraries
+foam_fullsim_CXXFLAGS = $(FULLSIM_CFLAGS) $(AM_CXXFLAGS)
+foam_fullsim_LDFLAGS = $(FULLSIM_LIBS) $(AM_LDFLAGS)
+
+endif FULLSIM
+### END FULL SIMULATION MODE ###

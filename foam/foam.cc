@@ -31,15 +31,16 @@
 /***********/
 
 #include <getopt.h>
-
-#include "foam.h"
-#include "autoconfig.h"
 #include "config.h"
-#include "foamtypes.h"
 #include "io.h"
 #include "protocol.h"
+#include "pthread++.h"
+
+#include "foamtypes.h"
 #include "foamctrl.h"
 #include "devices.h"
+#include "autoconfig.h"
+#include "foam.h"
 
 using namespace std;
 
@@ -64,11 +65,6 @@ io(IO_DEB2)
 int FOAM::init() {
 	io.msg(IO_DEB2, "FOAM::init()");
 	
-	if (pthread_mutex_init(&mode_mutex, NULL) != 0)
-		return io.msg(IO_ERR, "pthread_mutex_init failed.");
-	if (pthread_cond_init (&mode_cond, NULL) != 0)
-		return io.msg(IO_ERR, "pthread_cond_init failed.");
-
 	// Start networking thread
 	if (!nodaemon)
 		daemon();	
@@ -159,7 +155,7 @@ void FOAM::show_welcome() {
 int FOAM::parse_args(int argc, char *argv[]) {
 	io.msg(IO_DEB2, "FOAM::parse_args()");
 	int r, option_index = 0;
-	execname = argv[0];
+	execname = Path(argv[0]);
 	
 	static struct option const long_options[] = {
 		{"config", required_argument, NULL, 'c'},
@@ -176,7 +172,7 @@ int FOAM::parse_args(int argc, char *argv[]) {
 			case 0:
 				break;
 			case 'c':
-				conffile = optarg;
+				conffile = string(optarg);
 				break;
 			case 'h':
 				show_clihelp();
@@ -228,7 +224,7 @@ int FOAM::load_config() {
 	ptc = new foamctrl(io, conffile);
 	if (ptc->error()) 
 		return io.msg(IO_ERR, "Coult not parse FOAM configuration");
-	
+
 	return 0;
 }
 
@@ -267,9 +263,9 @@ int FOAM::listen() {
 				io.msg(IO_INFO, "FOAM::listen() Entering listen loop.");
 				// We wait until the mode changed
 				protocol->broadcast("ok mode listen");
-				pthread_mutex_lock(&mode_mutex);
-				pthread_cond_wait(&mode_cond, &mode_mutex);
-				pthread_mutex_unlock(&mode_mutex);
+				mode_mutex.lock();
+				mode_cond.wait(mode_mutex);
+				mode_mutex.unlock();
 				break;
 			case AO_MODE_SHUTDOWN:
 				io.msg(IO_DEB1, "FOAM::listen() AO_MODE_SHUTDOWN");
@@ -397,7 +393,7 @@ void FOAM::on_message(Connection *connection, std::string line) {
   else if (cmd == "shutdown") {
 		connection->write("ok cmd shutdown");
 		ptc->mode = AO_MODE_SHUTDOWN;
-		pthread_cond_signal(&mode_cond); // signal a change to the threads
+		mode_cond.signal();						// signal a change to the threads
   }
   else if (cmd == "broadcast") {
 		connection->write("ok cmd broadcast");
@@ -425,17 +421,17 @@ void FOAM::on_message(Connection *connection, std::string line) {
 		if (mode == mode2str(AO_MODE_CLOSED)) {
 			connection->write("ok cmd mode closed");
 			ptc->mode = AO_MODE_CLOSED;
-			pthread_cond_signal(&mode_cond); // signal a change to the main thread
+			mode_cond.signal();						// signal a change to the threads
 		}
 		else if (mode == mode2str(AO_MODE_OPEN)) {
 			connection->write("ok cmd mode open");
 			ptc->mode = AO_MODE_OPEN;
-			pthread_cond_signal(&mode_cond); // signal a change to the main thread
+			mode_cond.signal();						// signal a change to the threads
 		}
 		else if (mode == mode2str(AO_MODE_LISTEN)) {
 			connection->write("ok cmd mode listen");
 			ptc->mode = AO_MODE_LISTEN;
-			pthread_cond_signal(&mode_cond); // signal a change to the main thread
+			mode_cond.signal();						// signal a change to the threads
 		}
 		else {
 			connection->write("err cmd mode :mode unkown");

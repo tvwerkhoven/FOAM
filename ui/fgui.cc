@@ -118,12 +118,12 @@ void MainWindow::on_quit_activate() {
 }	
 
 void MainWindow::on_connect_activate() {
-	printf("MainWindow::on_connect_activate()\n");
+	fprintf(stderr, "MainWindow::on_connect_activate()\n");
 	conndialog.present();
 }
 
 void MainWindow::on_ctrl_connect_update() {
-	printf("MainWindow::on_ctrl_connect_update()\n");
+	fprintf(stderr, "MainWindow::on_ctrl_connect_update()\n");
 	if (foamctrl.is_connected())
 		menubar.connect.set_sensitive(false);
 	else
@@ -133,25 +133,41 @@ void MainWindow::on_ctrl_connect_update() {
 }
 
 void MainWindow::on_ctrl_message_update() {
-	printf("MainWindow::on_ctrl_message_update()\n");
+	fprintf(stderr, "MainWindow::on_ctrl_message_update()\n");
 	controlpage.on_message_update();
 }
 
 void MainWindow::on_ctrl_device_update() {
-	printf("MainWindow::on_ctrl_device_update()\n");
+	fprintf(stderr, "MainWindow::on_ctrl_device_update()\n");
+	fprintf(stderr, "MainWindow::on_ctrl_device_update() %d devs: ", foamctrl.get_numdev());
+	for (int i=0; i<foamctrl.get_numdev(); i++) {
+		FoamControl::device_t dev = foamctrl.get_device(i);
+		fprintf(stderr, "%s - %s, ", dev.name.c_str(), dev.type.c_str());
+	}
+	fprintf(stderr, "\n");
 	
-	//! \todo First remove superfluous devices, might have disappeared (i.e. foamctrl might be empty, in case of a disconnect)
-//	devlist_t::iterator it;
-//	for (it=devlist.begin() ; it != devlist.end(); it++) {
-//		
-//		// Find this device and remove it 
-//		for (int i=0; i<foamctrl.get_numdev(); i++) {
-//			FoamControl::device_t dev = foamctrl.get_device(i);
-//			if (devlist.find(dev.name) == devlist.end()) {
-//				//! \todo Add destructor to DevicePage to remove itself from the Notebook so we don't have to
-//				notebook.remove_page(*(it->second));
-//			}
-//	}
+	// We remove devices from the GUI that are not known to foamctrl here. 
+	// We loop over devices in the GUI and if these do not appear in the 
+	// foamctrl list, we remove them.
+	devlist_t::iterator it;
+	for (it=devlist.begin(); it != devlist.end(); it++) {
+		// This GUI device is named it->first, has GUI element it->second.
+		
+		// Find this device and remove it if it does not exist
+		int i=0;
+		for (i=0; i<foamctrl.get_numdev(); i++) {
+			FoamControl::device_t dev = foamctrl.get_device(i);
+			if (dev.name == it->first) // Found it! break here now
+				break;
+			}
+		if (i == foamctrl.get_numdev()) {
+			// If i equals foamctrl.get_numdev(), the device wasn't found, remove it from the GUI
+			//! @todo Add destructor to DevicePage to remove itself from the Notebook so we don't have to
+			notebook.remove_page(*(it->second)); // removes GUI element
+			delete it->second; // remove gui element itself
+			devlist.erase(it); // remove from devlist
+		}	
+	}
 	
 	for (int i=0; i<foamctrl.get_numdev(); i++) {
 		FoamControl::device_t dev = foamctrl.get_device(i);
@@ -161,6 +177,7 @@ void MainWindow::on_ctrl_device_update() {
 		// First check if type is sane
 		if (dev.type.substr(0,3) != "dev") {
 			fprintf(stderr, "MainWindow::on_ctrl_device_update() Type wrong!\n");
+			log.add(Log::ERROR, "Device type wrong, should start with 'dev' (was: " + dev.type + ")");
 			continue;
 		}
 		// Then add specific devices first, and more general devices later
@@ -169,17 +186,18 @@ void MainWindow::on_ctrl_device_update() {
 			CamView *tmp = new CamView(log, foamctrl, dev.name);
 			tmp->init();
 			devlist[dev.name] = (DevicePage *) tmp;
+			log.add(Log::OK, "Added new generic camera, type="+dev.type+", name="+dev.name+".");
 		}
 		else if (dev.type.substr(0,3) == "dev") {
 			fprintf(stderr, "MainWindow::on_ctrl_device_update() got generic device\n");			
 			devlist[dev.name] = new DevicePage(log, foamctrl, dev.name);
+			log.add(Log::OK, "Added new generic device, type="+dev.type+", name="+dev.name+".");
 		}
 		else {
 			fprintf(stderr, "MainWindow::on_ctrl_device_update() Type unknown!\n");
+			log.add(Log::WARNING, "Got unknown device type ("+dev.type+"), ignored.");
 			continue;
 		}
-							
-		log.add(Log::OK, "Found new device '" + dev.name + "' (type=" + dev.type + ").");
 							
 		notebook.append_page(*devlist[dev.name], "_" + dev.name, dev.name, true);
 	}
@@ -198,7 +216,7 @@ MainWindow::MainWindow():
 	
 	// widget properties
 	set_title("FOAM Control");
-	set_default_size(640, 480);
+	set_default_size(800, 600);
 	set_gravity(Gdk::GRAVITY_STATIC);
 	
 	vbox.set_spacing(4);

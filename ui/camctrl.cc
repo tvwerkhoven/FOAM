@@ -35,7 +35,7 @@
 
 using namespace std;
 
-CamCtrl::CamCtrl(const string h, const string p, const string n): 
+CamCtrl::CamCtrl(const string h, const string p, const string n):
 	DeviceCtrl(h, p, n),
 	monitorprotocol(h, p, n) 
 {
@@ -53,6 +53,8 @@ CamCtrl::CamCtrl(const string h, const string p, const string n):
 	height = 0;
 	depth = 0;
 	mode = OFF;
+	nstore = 0;
+	
 	r = 1;
 	g = 1;
 	b = 1;
@@ -63,7 +65,6 @@ CamCtrl::CamCtrl(const string h, const string p, const string n):
 }
 
 CamCtrl::~CamCtrl() {
-	//! @todo turn off
 	fprintf(stderr, "CamCtrl::~CamCtrl()\n");
 	set_mode(OFF);
 }
@@ -110,6 +111,8 @@ void CamCtrl::on_message(string line) {
 		height = popint32(line);
 	else if(what == "depth")
 		depth = popint32(line);
+	else if(what == "store")
+		nstore = popint32(line);
 	else if(what == "filename")
 		filename = popword(line);
 	else if(what == "mode") {
@@ -155,11 +158,6 @@ void CamCtrl::on_monitor_message(string line) {
 	int x2 = popint(line);
 	int y2 = popint(line);
 	int scale = popint(line);
-	double dx = 0.0/0.0;
-	double dy = 0.0/0.0;
-	double cx = 0.0/0.0;
-	double cy = 0.0/0.0;
-	double cr = 0.0/0.0;
 	bool do_histogram = false;
 
 	string extra;
@@ -180,11 +178,6 @@ void CamCtrl::on_monitor_message(string line) {
 		monitor.x2 = x2;
 		monitor.y2 = y2;
 		monitor.scale = scale;
-		monitor.dx = dx;
-		monitor.dy = dy;
-		monitor.cx = cx;
-		monitor.cy = cy;
-		monitor.cr = cr;
 		monitor.depth = depth;
 
 		if(do_histogram)
@@ -305,6 +298,10 @@ void CamCtrl::burst(int32_t count, int32_t fsel) {
 //
 //	return (state == desiredstate) == condition;
 //}
+
+void CamCtrl::store(int nstore) {
+	protocol.write(format("store %d", nstore));
+}
 
 void CamCtrl::grab(int x1, int y1, int x2, int y2, int scale, bool darkflat) {
 	string command = format("grab %d %d %d %d %d histogram", x1, y1, x2, y2, scale);

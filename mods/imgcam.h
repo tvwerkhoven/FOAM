@@ -30,7 +30,8 @@
 
 #include "config.h"
 #include "io.h"
-#include "imgio.h"
+#include "imgdata.h"
+
 #include "camera.h"
 
 const string imgcam_type = "imgcam";
@@ -45,7 +46,7 @@ using namespace std;
 class ImgCamera: public Camera {
 private:
 	double noise;												//!< Simulated noise intensity
-	Imgio *img;													//!< Use Imgio utils to load frames
+	ImgData *img;												//!< Use ImgData utils to load frames
 	uint16_t *frame;										//!< Frame stored here
 	
 public:
