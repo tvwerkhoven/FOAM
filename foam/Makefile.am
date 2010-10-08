@@ -23,10 +23,9 @@ if DEBUG
 AM_CPPFLAGS += -DFOAM_DEBUG=1
 endif DEBUG
 
-AM_CXXFLAGS = -pipe -Wall -Wextra \
+AM_CXXFLAGS = -Wall -Wextra \
 		-Wfatal-errors -Wno-unused-variable \
-		-O3 -ftree-vectorize \
-		-g
+		-O2 -g
 
 AM_LDFLAGS = $(COMMON_LIBS)
 
