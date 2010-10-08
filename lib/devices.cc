@@ -31,19 +31,37 @@
 // Device class
 
 Device::Device(Io &io, foamctrl *ptc, string n, string t, string p, Path &conf): 
-io(io), ptc(ptc), name(n), type("dev." + t), port(p), conffile(conf), cfg(conf, n), netio(p, n)
+io(io), ptc(ptc), name(n), type("dev." + t), port(p), conffile(conf), netio(p, n)
 { 
+	init();
+}
+
+Device::Device(Io &io, foamctrl *ptc, string n, string t, string p): 
+io(io), ptc(ptc), name(n), type("dev." + t), port(p), conffile(""), netio(p, n)
+{ 
+	init();
+}
+
+bool Device::init() {
 	io.msg(IO_XNFO, "Device::Device(): Create new device, name=%s, type=%s", 
 				 name.c_str(), type.c_str());
 	
-	string _type = cfg.getstring("type");
-	if (_type != type) 
-		throw exception("Device::Device(): Type should be " + type + " for this Device!");
+	// Only parse config file if we have one
+	if (conffile.isset()) {
+		cfg.parse(conffile, name);
 	
+		string _type = cfg.getstring("type");
+		if (_type != type) 
+			throw exception("Device::Device(): Type should be " + type + " for this Device!");
+	}
+
+	//! @todo Make this optional, not all Devices need netio (i.e. if port == "", do not start netio, needs change in protocol.cc)
 	io.msg(IO_XNFO, "Device %s listening on port %s.", name.c_str(), port.c_str());
 	netio.slot_message = sigc::mem_fun(this, &Device::on_message);
 	netio.slot_connected = sigc::mem_fun(this, &Device::on_connect);
 	netio.listen();
+	
+	return true;
 }
 
 Device::~Device() {

@@ -57,6 +57,8 @@ protected:
 	Path conffile;											//!< Configuration file
 	config cfg;													//!< Interpreted configuration file
 	Protocol::Server netio;							//!< Network connection
+
+	bool init();												//!< Initialisation (common for all constructors)
 	
 public:
 	class exception: public std::runtime_error {
@@ -65,7 +67,9 @@ public:
 	};
 		
 	Device(Io &io, foamctrl *ptc, string n, string t, string p, Path &conf);
+	Device(Io &io, foamctrl *ptc, string n, string t, string p);
 	virtual ~Device();
+	
 	
 	virtual int verify() { return 0; }	//!< Verify the integrity of the device
 	
