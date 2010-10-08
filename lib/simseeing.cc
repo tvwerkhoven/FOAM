@@ -23,6 +23,7 @@
 
 #include "imgdata.h"
 #include "io.h"
+#include "types.h"
 
 #include "foamctrl.h"
 #include "simseeing.h"
@@ -32,28 +33,10 @@
  */
 
 SimSeeing::SimSeeing(Io &io, foamctrl *ptc, string name, string port, Path &conffile):
-Device(io, ptc, name, SimSeeing_type, port, conffile)
+Device(io, ptc, name, SimSeeing_type, port, conffile),
+file(""), croppos(0,0), cropsize(0,0), windspeed(0,0)
 {
-	io.msg(IO_DEB2, "SimSeeing::SimSeeing()");
-	//! @todo init wavefront here, matrices, read config etc
-	
-	wf.type = cfg.getstring("wf_type");
-	if (wf.type != "file" && wf.type != "auto")
-		throw exception("SimSeeing::SimSeeing() wf_type should be either 'auto' or 'file', not '" + wf.type + "'.");
-	
-	if (wf.type == "auto") {
-		io.msg(IO_INFO, "SimSeeing::SimSeeing() Auto-generating wavefront.");
-		wf.r0 = cfg.getdouble("wf_r0", 10.0);
-		wf.data = gen_wavefront();
-	}
-	else {
-		io.msg(IO_INFO, "SimSeeing::SimSeeing() Loading wavefront.");
-		wf.file = cfg.getstring("wf_file");
-		wf.file = ptc->confdir + wf.file;
-		wf.data = load_wavefront();
-	}
-
-	io.msg(IO_DEB2, "SimSeeing::SimSeeing() init done");
+	io.msg(IO_DEB2, "SimSeeing::SimSeeing()");	
 }
 
 SimSeeing::~SimSeeing() {
@@ -64,23 +47,19 @@ SimSeeing::~SimSeeing() {
  *  Private methods
  */
 
-gsl_matrix *SimSeeing::gen_wavefront() {
-	io.msg(IO_DEB2, "SimSeeing::gen_wavefront()");
-	
-	return NULL;
-}
-
 gsl_matrix *SimSeeing::load_wavefront() {
-	io.msg(IO_DEB2, "SimSeeing::load_wavefront(), file=%s", wf.file.c_str());
+	io.msg(IO_DEB2, "SimSeeing::load_wavefront(), file=%s", file.c_str());
 	
-	if (!wf.file.r())
-		throw exception("SimSeeing::load_wavefront() cannot read wavefront file: " + wf.file.str() + "!");
+	if (!file.r())
+		throw exception("SimSeeing::load_wavefront() cannot read wavefront file: " + file.str() + "!");
 	
-	ImgData wftmp(io, wf.file, ImgData::AUTO);
+	ImgData wftmp(io, file, ImgData::AUTO);
 	if (wftmp.err) {
 		io.msg(IO_ERR, "SimSeeing::load_wavefront() ImgData returned an error: %d\n", wftmp.err);
 		return NULL;
 	}
+	
+	io.msg(IO_ERR, "SimSeeing::load_wavefront() got wavefront: %zux%zux%d\n", wftmp.getwidth(), wftmp.getheight(), wftmp.getbpp());
 	
 	return wftmp.as_GSL(true);
 }
@@ -89,15 +68,46 @@ gsl_matrix *SimSeeing::load_wavefront() {
  *  Public methods
  */
 
-gsl_matrix *SimSeeing::get_wavefront() {
-	io.msg(IO_DEB2, "SimSeeing::get_wavefront()");
-	//! @todo look at windspeed etc, get new wavefront using get_wavefront(...)
-	return NULL;
+bool SimSeeing::setup(Path &f, coord_t size, coord_t wspeed) {
+	io.msg(IO_INFO, "SimSeeing::setup() Loading wavefront.");
+	
+	cropsize = size;
+	windspeed = wspeed;
+	file = f;
+	
+	wfsrc = load_wavefront();
+	
+	if (!wfsrc)
+		return false;
+	
+	if (wfsrc->size1 < cropsize.x || wfsrc->size2 < cropsize.y) {
+		io.msg(IO_WARN, "SimSeeing::setup() wavefront smaller than requested cropsize (%dx%d vs %dx%d), reducing size to wavefront size.", 
+					 wfsrc->size1, wfsrc->size2, cropsize.x, cropsize.y);
+		cropsize.x = wfsrc->size1;
+		cropsize.y = wfsrc->size2;
+	}
+		
+	return true;
 }
 
-gsl_matrix *SimSeeing::get_wavefront(int x0, int y0, int x1, int y1) {
-	io.msg(IO_DEB2, "SimSeeing::get_wavefront(...)");
-	//! @todo get wavefront crop
-	return NULL;
+gsl_matrix *SimSeeing::get_wavefront() {
+	io.msg(IO_DEB2, "SimSeeing::get_wavefront()");
+
+	// Update new crop position
+	croppos.x += windspeed.x;
+	croppos.y += windspeed.y;
+	
+	// Check bounds
+	croppos.x = clamp(croppos.x, (int) 0, (int) wfsrc->size1 - cropsize.x);
+	croppos.y = clamp(croppos.y, (int) 0, (int) wfsrc->size2 - cropsize.y);
+			
+	return get_wavefront(croppos.x, croppos.y, cropsize.x, cropsize.y);
+}
+
+gsl_matrix *SimSeeing::get_wavefront(size_t x0, size_t y0, size_t w, size_t h) {
+	io.msg(IO_DEB2, "SimSeeing::get_wavefront(%zu, %zu, %zu, %zu)", x0, y0, w, h);
+	//_gsl_matrix_view tmp;
+	gsl_matrix *tmp2 = &((gsl_matrix_submatrix(wfsrc, x0, y0, w, h)).matrix);
+	return tmp2;
 }
 

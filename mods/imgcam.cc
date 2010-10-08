@@ -147,6 +147,7 @@ int ImgCamera::monitor(void *out, size_t &size, int &x1, int &y1, int &x2, int &
 	return size;							// Number of bytes
 }
 
+//! @todo rewrite this? use Camera:: method instead?
 int ImgCamera::store(Connection *connection) {
 	// Create & open file if necessary
 	if (outfd == 0) {

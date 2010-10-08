@@ -36,7 +36,7 @@ const string SimulCam_type = "SimulCam";
 class SimulCam: public Camera {
 private:
 	SimSeeing seeing;			//!< This class simulates the atmosphere, telescope and lenslet array
-	
+	SimWfs shwfs;					//!< This class simulates the atmosphere, telescope and lenslet array
 public:
 	SimulCam(Io &io, foamctrl *ptc, string name, string port, Path &conffile);
 	~SimulCam();

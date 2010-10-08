@@ -29,10 +29,23 @@
 
 SimulCam::SimulCam(Io &io, foamctrl *ptc, string name, string port, Path &conffile):
 Camera(io, ptc, name, SimulCam_type, port, conffile),
-seeing(io, ptc, name + "-seeing", port, conffile)
+seeing(io, ptc, name + "-seeing", port, conffile),
+shwfs(io, ptc, name + "-shwfs", port, conffile),
 {
 	io.msg(IO_DEB2, "SimulCam::SimulCam()");
-	//! @todo init seeing, atmosphere, simulator, etc.
+	
+	// Setup seeing parameters
+	coord_t wind;
+	wind.x = cfg.getint("windspeed.x");
+	wind.y = cfg.getint("windspeed.y");
+	Path wffile = ptc->confdir + cfg.getstring("wavefront_file");
+	
+	seeing.setup(wffile, res, wind);		
+	
+	// Setup (SH) wavefront sensor parameters
+	
+	//! @todo implement simwfs here
+	shwfs.setup();
 	
 	cam_thr.create(sigc::mem_fun(*this, &SimulCam::cam_handler));
 }
@@ -102,7 +115,8 @@ void SimulCam::cam_handler() {
 			{
 				io.msg(IO_DEB1, "SimulCam::cam_handler() RUNNING");
 				//! @todo get frame from SimSeeing, pass it to camera.cc:cam_queue()
-				
+				gsl_matrix *wf = seeing.get_wavefront();
+				gsl_matrix *frame = 
 				// cam_queue(frame, frame->image);
 				break;
 			}

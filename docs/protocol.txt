@@ -1,0 +1,65 @@
+# FOAM command protocol
+# Tim van Werkhoven, 20100311
+
+* About
+
+> client to FOAM
+< response to client
+<< broadcast to all clients
+
+General command:
+<prefix> <cmd> [options]
+example:
+SYS GET INFO
+SYS SHUTDOWN
+SYS MODE OPEN
+
+Command ok response:
+<prefix> OK CMD :<cmd sent>
+
+Command error response:
+<prefix> ERR CMD :<cmd sent>
+
+
+* Examples
+
+Getting initial info on the setup:
+> SYS GET INFO
+< SYS OK CMD :GET INFO
+< SYS OK NUMWFS 2
+< SYS OK NUMWFC 0
+< SYS OK MODE OPEN
+< SYS OK CALIB 2 :SUBAPSEL PINHOLE
+< SYS OK WFS 2 :WFS1 WFS2
+< SYS OK WFC 1 :WFC1
+
+Getting help
+> SYS HELP
+< SYS OK CMD :HELP
+< SYS OK HELP :This is a long help message\nPossible span over multiple\nlines
+
+Shutting down
+> SYS SHUTDOWN
+< SYS OK CMD :SHUTDOWN
+<< SYS SHUTDOWN
+
+Changing mode of operation
+> SYS MODE <OPEN|CLOSED|...>
+< SYS OK CMD :MODE <...>
+<< SYS MODE 
+
+Getting info on a WFS module
+> WFS1 GET INFO
+< WFS1 OK CMD :GET INFO
+< WFS1 TYPE SH
+< WFS1 STATUS OFF
+< WFS1 CAM :1024 1024 16
+< WFS1 CMDS 4 :RUN STOP START IDLE
+
+Getting info on a WFC module
+> WFC1 GET INFO
+< WFC1 OK :GET INFO
+< WFC1 TYPE TT
+< WFC1 STATUS OFF
+< WFC1 MODES 2
+< WFC1 CMDS 4 :RUN STOP START IDLE

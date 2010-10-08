@@ -40,4 +40,5 @@ SimWfs::~SimWfs() {
 gsl_matrix *SimWfs::sim_shwfs(gsl_matrix *wavefront) {
 	io.msg(IO_DEB2, "SimWfs::sim_shwfs()");
 	//! @todo Given a wavefront, image it through a system and return the resulting intensity pattern (i.e. an image).
+	return NULL;
 }

@@ -30,6 +30,7 @@
 #include "simseeing.h"
 
 const string simwfs_type = "simwfs";
+const int SIMWFS_MAXLENSES = 128;
 
 /*!
  @brief This class simulates a wavefront sensor
@@ -41,16 +42,25 @@ class SimWfs : public Device {
 private:
 	SimSeeing *seeing;					//!< We will get a wavefront from SimSeeing
 	
-	struct shwfs_t {
-		coord_t lensarray;				//!< Number of microlenses
+	struct sh_lenslet {
+		coord_t pos;
+		coord_t size;
+		sh_lenslet(): pos(0,0), size(0,0) { ; }
+	} sh_lenslet_t;
+	
+	struct shwfs {
+		int nmla;									//!< Number of microlenses
+		sh_lenslet_t mla[SIMWFS_MAXLENSES]; //!< Microlens array positions
 		float f;									//!< Microlens focal length
-	};
+	} shwfs_t;
 	
 public:
 	SimWfs(Io &io, foamctrl *ptc, string name, string type, string port, Path &conffile);
 	~SimWfs();
 	
 	gsl_matrix *sim_shwfs(gsl_matrix *wavefront);
+	bool setup(...); //! @todo implement setup routine
+	shwfs_t gen_mla_grid(...) //! @todo implement this routine (should be in shwfs.cc probably?)
 };
 
 #endif // HAVE_SIMWFS_H
