@@ -53,8 +53,8 @@ public:
 	~SimSeeing();
 	
 	bool setup(Path &f, coord_t size, coord_t wspeed);
-	gsl_matrix *get_wavefront();
-	gsl_matrix *get_wavefront(size_t x0, size_t y0, size_t w, size_t h);
+	gsl_matrix_view get_wavefront();
+	gsl_matrix_view get_wavefront(size_t x0, size_t y0, size_t w, size_t h);
 };
 
 #endif // HAVE_SIMSEEING_H

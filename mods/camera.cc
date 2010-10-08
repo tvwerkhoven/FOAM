@@ -49,6 +49,7 @@ using namespace std;
 Camera::Camera(Io &io, foamctrl *ptc, string name, string type, string port, Path &conffile):
 Device(io, ptc, name, cam_type + "." + type, port, conffile),
 nframes(8), count(0), timeouts(0), ndark(10), nflat(10), 
+darkexp(1.0), flatexp(1.0),
 interval(1.0), exposure(1.0), gain(1.0), offset(0.0), 
 res(0,0), depth(-1), dtype(UINT16),
 mode(Camera::OFF),
@@ -87,12 +88,11 @@ Camera::~Camera() {
 }
 
 void Camera::cam_proc() {
-	//! @todo This function is not called?
 	io.msg(IO_DEB2, "Camera::cam_proc()");
 	frame_t *frame;
 	
 	while (true) {
-		// Always wait for cam_cond() broadcasts
+		// Always wait for proc_cond broadcasts
 		proc_mutex.lock();
 		io.msg(IO_DEB2, "Camera::cam_proc(): waiting for proc_cond.");
 		proc_cond.wait(proc_mutex);
@@ -109,8 +109,8 @@ void Camera::cam_proc() {
 
 		if (nstore == -1 || nstore > 0) {
 			nstore--;
-			netio.broadcast(format("ok store %d", nstore), "store");
-			store_frame(frame);
+			if (store_frame(frame))
+				netio.broadcast(format("ok store %d", nstore), "store");
 		}
 		
 		// Flag frame as processed
@@ -170,6 +170,7 @@ bool Camera::fits_add_comment(char *phdu, const string &comment) {
 bool Camera::store_frame(frame_t *frame) {
 	// Generate path to store file to, based on filenamebase
 	Path filename = makename();
+	io.msg(IO_DEB1, "Camera::store_frame(%p) to %s", frame, filename.c_str());
 	
 	// Open file
 	int fd = open(filename.c_str(), O_WRONLY | O_CREAT | O_EXCL, 0644);
@@ -270,7 +271,9 @@ void *Camera::cam_queue(void *data, void *image, struct timeval *tv) {
 	pthread::mutexholder h(&cam_mutex);
 	
 	frame_t *frame = &frames[count % nframes];
+	// Store the old data
 	void *old = frame->data;
+	// (over)write with new data
 	frame->data = data;
 	frame->image = image;
 	frame->id = count++;
@@ -329,7 +332,8 @@ void Camera::on_message(Connection *conn, string line) {
 		
 		//! @todo what is mode?
 		if(what == "mode") {
-			set_mode(str2mode(popword(line)));
+			string mode_str = popword(line);
+			set_mode(str2mode(mode_str));
 		} else if(what == "exposure") {
 			conn->addtag("exposure");
 			set_exposure(popdouble(line));
@@ -381,7 +385,7 @@ void Camera::on_message(Connection *conn, string line) {
 			conn->write(format("ok depth %d", depth));
 		} else if(what == "filename") {
 			conn->addtag("filename");
-			conn->write("ok filename :" + filenamebase.str());
+			conn->write("ok filename :" + filenamebase);
 		} else if(what == "outputdir") {
 			conn->addtag("outputdir");
 			conn->write("ok outputdir :" + outputdir.str());
@@ -490,8 +494,8 @@ string Camera::set_fits_comments(string val) {
 
 string Camera::set_filename(string value) {
 	filenamebase = value;
-	netio.broadcast("ok filename :" + filenamebase.str(), "filename");
-	return filenamebase.str();
+	netio.broadcast("ok filename :" + filenamebase, "filename");
+	return filenamebase;
 }
 
 string Camera::set_outputdir(string value) {
@@ -510,16 +514,16 @@ string Camera::set_outputdir(string value) {
 	return outputdir.str();
 }
 
-Path Camera::makename(const Path &base) {
+Path Camera::makename(const string &base) {
 	struct timeval tv;
 	struct tm tm;
 	gettimeofday(&tv, 0);
 	gmtime_r(&tv.tv_sec, &tm);
 	
-	Path result = outputdir + format("/%4d-%02d-%02d/", 1900 + tm.tm_year, 1 + tm.tm_mon, tm.tm_mday);
+	Path result = outputdir + format("%4d-%02d-%02d/", 1900 + tm.tm_year, 1 + tm.tm_mon, tm.tm_mday);
 	mkdir(result.c_str(), 0755);
 	
-	result += base + format("_%s_%08d.%06d-%08d.fits", name.c_str(), tv.tv_sec, tv.tv_usec, count);
+	result += (base + format("_%s_%08d.%06d-%08d.fits", name.c_str(), tv.tv_sec, tv.tv_usec, count));
 	return result;
 }
 

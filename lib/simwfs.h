@@ -26,11 +26,12 @@
 #include "types.h"
 #include "config.h"
 #include "io.h"
+
 #include "devices.h"
+#include "shwfs.h"
 #include "simseeing.h"
 
 const string simwfs_type = "simwfs";
-const int SIMWFS_MAXLENSES = 128;
 
 /*!
  @brief This class simulates a wavefront sensor
@@ -40,27 +41,36 @@ const int SIMWFS_MAXLENSES = 128;
  */
 class SimWfs : public Device {
 private:
-	SimSeeing *seeing;					//!< We will get a wavefront from SimSeeing
-	
-	struct sh_lenslet {
-		coord_t pos;
-		coord_t size;
-		sh_lenslet(): pos(0,0), size(0,0) { ; }
-	} sh_lenslet_t;
-	
-	struct shwfs {
+	typedef struct shwfs {
 		int nmla;									//!< Number of microlenses
-		sh_lenslet_t mla[SIMWFS_MAXLENSES]; //!< Microlens array positions
+		Shwfs::sh_simg_t mla[shwfs_maxlenses]; //!< Microlens array positions
 		float f;									//!< Microlens focal length
 	} shwfs_t;
 	
+	shwfs_t mla;								//!< Microlens array of simulated WFS
+	
+	uint8_t *frame_out;					//!< Data used to store output frame (realloc'ed if necessary)
+	size_t out_size;						//!< Size of output frame
+	
+	
 public:
-	SimWfs(Io &io, foamctrl *ptc, string name, string type, string port, Path &conffile);
+	SimWfs(Io &io, foamctrl *ptc, string name, string port, Path &conffile);
 	~SimWfs();
 	
-	gsl_matrix *sim_shwfs(gsl_matrix *wavefront);
-	bool setup(...); //! @todo implement setup routine
-	shwfs_t gen_mla_grid(...) //! @todo implement this routine (should be in shwfs.cc probably?)
+	uint8_t *sim_shwfs(gsl_matrix *wavefront);
+	bool setup(SimSeeing *ref);	//!< Setup SimWfs instance (i.e. from SimulCam)
+	
+	/*! @brief Generate subaperture/subimage (sa/si) positions for a given configuration.
+	
+	@param [in] res Resolution of the sa pattern (before scaling) [pixels]
+	@param [in] size size of the sa's [pixels]
+	@param [in] pitch pitch of the sa's [pixels]
+	@param [in] xoff the horizontal position offset of odd rows [fraction of pitch]
+	@param [in] disp global displacement of the sa positions [pixels]
+	@param [out] *pattern the calculated subaperture pattern
+	@return number of subapertures found
+	 */
+	Shwfs::sh_simg_t *gen_mla_grid(coord_t res, coord_t size, coord_t pitch, int xoff, coord_t disp, int &nsubap);
 };
 
 #endif // HAVE_SIMWFS_H

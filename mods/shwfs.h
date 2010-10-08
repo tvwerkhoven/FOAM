@@ -26,6 +26,7 @@
 #include "wfs.h"
 
 const string shwfs_type = "shwfs";
+const int shwfs_maxlenses = 128;
 
 // CLASS DEFINITION //
 /********************/
@@ -33,15 +34,39 @@ const string shwfs_type = "shwfs";
 /*!
  @brief Shack-Hartmann wavefront sensor class
  
+ Note the difference between subapertures (i.e. the physical microlenses 
+ usually used in SHWFS) and subimages (i.e. the images formed by the 
+ microlenses on the CCD). It is the subimages we are interested in when
+ processing the CCD data.
+ 
  @todo Document this
  */
 class Shwfs: public Wfs {
+public:
+	// Public datatypes
+	typedef enum {
+		CAL_SUBAPSEL=0,
+		CAL_PINHOLE
+	} wfs_cal_t;												//!< Different calibration methods
+	
+	typedef enum {
+		COG=0,
+		CORR
+	} mode_t;														//!< Different SHWFS operation modes
+	
+	typedef struct sh_subimg {
+		coord_t pos;											//!< Centroid position of this subimg
+		coord_t llpos;										//!< Lower-left position of this subimg (pos - size/2)
+		coord_t size;											//!< Subaperture size (pixels)
+		coord_t track;										//!< Subaperture tracking window size
+		sh_subimg(): pos(0,0), size(0,0), track(0,0) { ; }
+	} sh_simg_t; //!< Subimage definition on CCD
+
 private:
-	coord_t subap;											//!< Number of subapertures in X and Y
-	coord_t sasize;											//!< Subaperture size (pixels)
-	coord_t track;											//!< Subaperture tracking window size (pixels)
-	int samaxr;													//!< Maximum radius to use, or edge erosion subapertures
-	int samini;													//!< Minimum amount of subapertures to use
+	sh_simg_t mla[shwfs_maxlenses];			//!< Subimages coordinates & sizes
+	
+	int simaxr;													//!< Maximum radius to use, or edge erosion subimages
+	int simini;													//!< Minimum intensity in
 	
 	mode_t mode;												//!< Data processing mode (Center of Gravity, Correlation, etc)
 	
@@ -58,16 +83,6 @@ private:
 	void printGrid(int *map);
 	
 public:
-	// Public datatypes
-	typedef enum {
-		CAL_SUBAPSEL=0,
-		CAL_PINHOLE
-	} wfs_cal_t;												//!< Different calibration methods
-	
-	typedef enum {
-		COG=0,
-		CORR
-	} mode_t;														//!< Different SHWFS operation modes
 	
 	Shwfs(Io &io, string name, string port, string conffile);
 	~Shwfs();	

@@ -188,7 +188,7 @@ protected:
 	bool accumburst(uint32_t *accum, size_t bcount);	//!< For dark/flat acquisition
 	void statistics(Connection *conn, size_t bcount);	//!< Post back statistics
 	
-	Path makename(const Path &base);									//!< Make filename from outputdir and filenamebase
+	Path makename(const string &base);								//!< Make filename from outputdir and filenamebase
 	Path makename() { return makename(filenamebase); }
 	bool store_frame(frame_t *frame);									//!< Store frame to disk
 	
@@ -223,7 +223,7 @@ protected:
 
 	mode_t mode;									//!< Camera mode (see mode_t)
 	
-	Path filenamebase;						//!< Base filename, input for makename()
+	string filenamebase;					//!< Base filename, input for makename()
 	Path outputdir;								//!< Output dir for saving files, absolute or relative to ptc->datadir
 	ssize_t nstore;								//!< Numebr of new frames to store (-1 for unlimited)
 

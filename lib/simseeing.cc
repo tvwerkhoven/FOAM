@@ -33,14 +33,15 @@
  */
 
 SimSeeing::SimSeeing(Io &io, foamctrl *ptc, string name, string port, Path &conffile):
-Device(io, ptc, name, SimSeeing_type, port, conffile),
-file(""), croppos(0,0), cropsize(0,0), windspeed(0,0)
+Device(io, ptc, name, SimSeeing_type, port),
+file(""), croppos(0,0), cropsize(0,0), windspeed(10,10)
 {
 	io.msg(IO_DEB2, "SimSeeing::SimSeeing()");	
 }
 
 SimSeeing::~SimSeeing() {
 	io.msg(IO_DEB2, "SimSeeing::~SimSeeing()");
+	gsl_matrix_free(wfsrc);
 }
 
 /*
@@ -55,12 +56,13 @@ gsl_matrix *SimSeeing::load_wavefront() {
 	
 	ImgData wftmp(io, file, ImgData::AUTO);
 	if (wftmp.err) {
-		io.msg(IO_ERR, "SimSeeing::load_wavefront() ImgData returned an error: %d\n", wftmp.err);
+		io.msg(IO_ERR, "SimSeeing::load_wavefront() ImgData returned an error: %d", wftmp.err);
 		return NULL;
 	}
 	
-	io.msg(IO_ERR, "SimSeeing::load_wavefront() got wavefront: %zux%zux%d\n", wftmp.getwidth(), wftmp.getheight(), wftmp.getbpp());
+	io.msg(IO_XNFO, "SimSeeing::load_wavefront() got wavefront: %zux%zux%d", wftmp.getwidth(), wftmp.getheight(), wftmp.getbpp());
 	
+	// We own the data now, we need to free it as well
 	return wftmp.as_GSL(true);
 }
 
@@ -75,6 +77,7 @@ bool SimSeeing::setup(Path &f, coord_t size, coord_t wspeed) {
 	windspeed = wspeed;
 	file = f;
 	
+	// Data is alloced in load_wavefront(), ImgData.as_GSL() only once, does not need to be freed
 	wfsrc = load_wavefront();
 	
 	if (!wfsrc)
@@ -90,12 +93,12 @@ bool SimSeeing::setup(Path &f, coord_t size, coord_t wspeed) {
 	return true;
 }
 
-gsl_matrix *SimSeeing::get_wavefront() {
+gsl_matrix_view SimSeeing::get_wavefront() {
 	io.msg(IO_DEB2, "SimSeeing::get_wavefront()");
 
 	// Update new crop position
-	croppos.x += windspeed.x;
-	croppos.y += windspeed.y;
+	croppos.x += (drand48()-0.5) * windspeed.x;
+	croppos.y += (drand48()-0.5) * windspeed.y;
 	
 	// Check bounds
 	croppos.x = clamp(croppos.x, (int) 0, (int) wfsrc->size1 - cropsize.x);
@@ -104,10 +107,9 @@ gsl_matrix *SimSeeing::get_wavefront() {
 	return get_wavefront(croppos.x, croppos.y, cropsize.x, cropsize.y);
 }
 
-gsl_matrix *SimSeeing::get_wavefront(size_t x0, size_t y0, size_t w, size_t h) {
+gsl_matrix_view SimSeeing::get_wavefront(size_t x0, size_t y0, size_t w, size_t h) {
 	io.msg(IO_DEB2, "SimSeeing::get_wavefront(%zu, %zu, %zu, %zu)", x0, y0, w, h);
-	//_gsl_matrix_view tmp;
-	gsl_matrix *tmp2 = &((gsl_matrix_submatrix(wfsrc, x0, y0, w, h)).matrix);
-	return tmp2;
+	gsl_matrix_view tmp = gsl_matrix_submatrix(wfsrc, x0, y0, w, h);
+	return tmp;
 }
 

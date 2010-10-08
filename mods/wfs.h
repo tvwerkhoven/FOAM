@@ -47,24 +47,18 @@ static const string wfs_type = "wfs";
  itself can be accessed through the pointer *cam.
  */
 class Wfs: public Device {
-protected:
-	string conffile;										//!< Configuration file used for this WFS
-	
 public:	
-	string camtype;											//!< Camera type/model @todo should be enum?
-	string wfstype;											//!< WFS type/model @todo should be enum?
-	config cfg;													//!< WFS configuration
 	
 	/*!
 	 @brief This holds information on the wavefront
 	 */
 	struct wavefront {
-		wavefront() : wfamp(NULL), nmodes(0) { }
+		wavefront() : wfamp(NULL), nmodes(0) { ; }
 		gsl_vector_float *wfamp;					//!< Mode amplitudes
 		int nmodes;												//!< Number of modes
 		enum {
-			MODES_ZERNIKE=0,								//!< Zernike modes
-			MODES_KL,												//!< Karhunen-Loeve modes
+			ZERNIKE=0,											//!< Zernike modes
+			KL,															//!< Karhunen-Loeve modes
 		} wfmode;
 	};
 	
@@ -75,8 +69,8 @@ public:
 	virtual int measure(int) = 0;				//!< Measure abberations
 	
 	virtual ~Wfs() {}
-	Wfs(Io &io, string name, string type, string port, string conffile): 
-	Device(io, name, wfs_type + "." + type, port), cfg(conffile) {	; }
+	Wfs(Io &io, foamctrl *ptc, string name, string type, string port, Path &conffile):
+	Device(io, ptc, name, cam_type + "." + type, port, conffile) {	; }
 };
 
 #endif // HAVE_WFS_H

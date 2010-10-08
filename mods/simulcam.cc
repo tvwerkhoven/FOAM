@@ -18,6 +18,7 @@
  along with FOAM.	If not, see <http://www.gnu.org/licenses/>. 
  */
 
+#include <unistd.h>
 
 #include "io.h"
 #include "config.h"
@@ -26,11 +27,12 @@
 #include "simseeing.h"
 #include "camera.h"
 #include "simulcam.h"
+#include "simseeing.h"
 
 SimulCam::SimulCam(Io &io, foamctrl *ptc, string name, string port, Path &conffile):
 Camera(io, ptc, name, SimulCam_type, port, conffile),
 seeing(io, ptc, name + "-seeing", port, conffile),
-shwfs(io, ptc, name + "-shwfs", port, conffile),
+simwfs(io, ptc, name + "-simwfs", port, conffile)
 {
 	io.msg(IO_DEB2, "SimulCam::SimulCam()");
 	
@@ -43,9 +45,7 @@ shwfs(io, ptc, name + "-shwfs", port, conffile),
 	seeing.setup(wffile, res, wind);		
 	
 	// Setup (SH) wavefront sensor parameters
-	
-	//! @todo implement simwfs here
-	shwfs.setup();
+	simwfs.setup(&seeing);
 	
 	cam_thr.create(sigc::mem_fun(*this, &SimulCam::cam_handler));
 }
@@ -114,19 +114,27 @@ void SimulCam::cam_handler() {
 			case Camera::RUNNING:
 			{
 				io.msg(IO_DEB1, "SimulCam::cam_handler() RUNNING");
-				//! @todo get frame from SimSeeing, pass it to camera.cc:cam_queue()
-				gsl_matrix *wf = seeing.get_wavefront();
-				gsl_matrix *frame = 
-				// cam_queue(frame, frame->image);
+
+				gsl_matrix_view wf = seeing.get_wavefront();
+				io.msg(IO_DEB1, "SimulCam::cam_handler() f@%p, f[0]: %g, f[100]: %g", 
+							 wf.matrix.data, wf.matrix.data[0], wf.matrix.data[100]);
+				uint8_t *frame = simwfs.sim_shwfs(&(wf.matrix));
+				
+				cam_queue(frame, frame);
+
+				usleep(interval * 1000000);
 				break;
 			}
 			case Camera::SINGLE:
 			{
 				io.msg(IO_DEB1, "SimSeeing::cam_handler() SINGLE");
-				//! @todo get frame from SimSeeing, pass it to camera.cc:cam_queue()
+
+				gsl_matrix_view wf = seeing.get_wavefront();
+				uint8_t *frame = simwfs.sim_shwfs(&(wf.matrix));
+				cam_queue(frame, frame);
 				
-				// cam_queue(frame, frame->image);
-				
+				usleep(interval * 1000000);
+
 				mode = Camera::WAITING;
 				break;
 			}
