@@ -150,6 +150,8 @@ AC_ARG_WITH([libsiu],
 		AC_HELP_STRING([--with-libsiu], [location of libsiu (def: ./libsiu)]),
 		[test "$withval" != false && LIBSIU=$withval],
 		[LIBSIU="libsiu"])
+		
+# @todo test LIBSIU presence
 
 ### Set some automake variables ###
 ###################################
