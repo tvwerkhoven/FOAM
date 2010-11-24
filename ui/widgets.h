@@ -26,6 +26,56 @@
 #include <vector>
 #include "format.h"
 
+class SwitchButton: public Button {
+private:
+	void modify_button(Button &button, const Gdk::Color &color) {
+		button.modify_bg(STATE_PRELIGHT, color);
+		button.modify_bg(STATE_NORMAL, color);
+	}	
+public:
+	enum state {
+		OK,
+		READY,
+		WARNING,
+		WAITING,
+		ERROR,
+		OFF
+	} state;							//!< Track state of the button
+	const Gdk::Color col_ok;
+	const Gdk::Color col_warn;
+	const Gdk::Color col_err;
+	
+	void set_state(enum state s) {
+		state = s;
+		switch (s) {
+			case OK:
+			case READY:
+				modify_button(*this, col_ok);
+				break;
+			case WARNING:
+			case WAITING:
+				modify_button(*this, col_warn);
+				break;
+			case OFF:
+			case ERROR:
+				modify_button(*this, col_err);
+				break;
+			default:
+				break;
+		}
+	}
+	enum state get_state() { return state; }
+	
+	SwitchButton(const Glib::ustring &lbl="Button"): 
+	Button(lbl), 
+	col_ok(Gdk::Color("lightgreen")), 
+	col_warn(Gdk::Color("yellow")), 
+	col_err(Gdk::Color("red"))
+	{ 
+		set_state(OK); 
+	}
+};
+
 class LabeledSpinEntry: public Gtk::HBox {
 	Gtk::Label pre;
 	Gtk::Label post;
