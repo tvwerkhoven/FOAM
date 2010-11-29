@@ -145,4 +145,20 @@ public:
 	virtual int init();
 };
 
+
 #endif // HAVE_CAMVIEW_H
+
+
+/*!
+ \page dev_cam Camera devices : CamView & CamCtrl
+ 
+ \section camview_camview CamView
+ 
+ \section camview_camctrl CamCtrl
+ 
+ \section camview_derived Derived classes
+ 
+ The following classes are dervied from the Camera device:
+ - \subpage dev_cam_wfs "Wavefront sensor devices"
+ 
+ */

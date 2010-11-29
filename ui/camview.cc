@@ -248,6 +248,9 @@ bool CamView::on_timeout() {
 	return true;
 }
 
+/*!
+ @brief Display new image from camera
+ */
 void CamView::on_monitor_update() {
 //	fprintf(stderr, "CamView::on_monitor_update()\n");
 	//! @todo need mutex here?
@@ -257,7 +260,9 @@ void CamView::on_monitor_update() {
 	on_display_update();
 }
 
-
+/*!
+ @brief Update GUI when camera reports state changes
+ */
 void CamView::on_message_update() {
 	DevicePage::on_message_update();
 	
@@ -281,6 +286,9 @@ void CamView::on_message_update() {
 		store.set_active(false);
 }
 
+/*!
+ @brief Propagate user changed settings in GUI to camera
+ */
 void CamView::on_info_change() {
 	fprintf(stderr, "CamView::on_info_change()\n");
 	camctrl->set_exposure(strtod(e_exposure.get_text().c_str(), NULL));
@@ -304,25 +312,35 @@ void CamView::on_zoomout_activate() {
 	glarea.scalestep(-1.0/3.0);
 }
 
+/*!
+ @brief (De-)activate camera when user presses 'capture' button.
+ */
 void CamView::on_capture_update() {
-	if (capture.get_active()) {
-		fprintf(stderr, "CamView::on_capture_update(): Running capture state: %d\n", capture.get_active());		
+	if (capture.get_state(SwitchButton::OFF, SwitchButton::WAITING)) {
+		fprintf(stderr, "CamView::on_capture_update(): Starting camera.\n");
 		camctrl->set_mode(CamCtrl::RUNNING);
 	}
 	else {
-		fprintf(stderr, "CamView::on_capture_update(): Waiting capture state: %d\n", capture.get_active());
+		fprintf(stderr, "CamView::on_capture_update(): Stopping camera.\n");
 		camctrl->set_mode(CamCtrl::WAITING);
 	}
 }
 
+/*!
+ @brief (De-)activate camera frame grabbing when user presses 'display' button.
+ */
 void CamView::on_display_update() {
-	if (display.get_active())
+	//! @bug Does not work when activated before capturing frames?
+	if (display.get_state(SwitchButton::OK))
 		camctrl->grab(0, 0, camctrl->get_width(), camctrl->get_height(), 1, false);
 }
 
+/*!
+ @brief User clicked 'store' button, send store command to camera
+ */
 void CamView::on_store_update() {
 	int nstore = atoi(store_n.get_text().c_str());
-	fprintf(stderr, "CamView::on_store_update(state=%d) n=%d\n", store.get_active(), nstore);
+	fprintf(stderr, "CamView::on_store_update() n=%d\n", nstore);
 	
 	if (nstore > 0 || nstore == -1)
 		camctrl->store(nstore);

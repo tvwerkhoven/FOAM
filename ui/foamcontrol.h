@@ -34,12 +34,17 @@
 #include "protocol.h"
 #include "pthread++.h"
 #include "foamtypes.h"
+#include "log.h"
 
 using namespace std;
 
 /*!
- @brief Main FOAM control class  
- @todo Document this
+ @brief Main FOAM control class.
+
+ This class takes care of the base connection to FOAM. It controls common 
+ functions of all FOAM setups and can notify MainWindow when new GUI 
+ components are necessary. It locally keeps track of the remote AO system 
+ setup as well.
  */
 class FoamControl {
 public:
@@ -72,26 +77,26 @@ private:
 	}
 	
 	Protocol::Client protocol;
-	
+	Log &log;												//!< Reference to MainWindow::log
+
 	pthread::mutex mutex;
 	
-	// Basic state of the AO system goes here
 	struct state_t {
-		aomode_t mode;
-		int numdev;
-		device_t devices[32];
+		aomode_t mode;								//!< AO mode (see aomode_t)
+		int numdev;										//!< Number of devices connected
+		device_t devices[32];					//!< List of devices
 		int numframes;
-		int numcal;
-		string calmodes[32];
-		string lastreply;
-		string lastcmd;
-	} state;
+		int numcal;										//!< Number of calibration modes
+		string calmodes[32];					//!< Different calibration modes
+		string lastreply;							//!< Last reply (stored in on_message())
+		string lastcmd;								//!< Last command issued to FOAM
+	} state; //!< Basic state of the remote AO system
 	
 	bool ok;
 	string errormsg;
 	
-	void on_message(string line);
-	void on_connected(bool conn);
+	void on_message(string line);		//!< Callback for new messages from FOAM
+	void on_connected(bool conn);		//!< Callback for new connection to FOAM
 	
 public:
 	//! \todo Move exception to base class, appears everywhere...

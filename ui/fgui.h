@@ -45,6 +45,9 @@
 using namespace Gtk;
 using namespace std;
 
+/*!
+ @brief Pop-up dialog for connecting
+ */
 class ConnectDialog: public Dialog {
 	FoamControl &foamctrl;
 	
@@ -59,6 +62,9 @@ public:
 	~ConnectDialog() {}
 };
 
+/*!
+ @brief Menu for MainWindow window
+ */
 class MainMenu: public MenuBar {
 	MenuItem file;
 	MenuItem help;
@@ -70,31 +76,40 @@ class MainMenu: public MenuBar {
 	SeparatorMenuItem sep2;
 	
 public:
-	ImageMenuItem connect;
-	ImageMenuItem quit;
+	ImageMenuItem connect;	//!< Show ConnectDialog to connect
+	ImageMenuItem quit;			//!< Quit GUI
 	
-	ImageMenuItem about;
+	ImageMenuItem about;		//!< Show AboutFOAMGui
 	
 	MainMenu(Window &window);
 	~MainMenu() {};
 };
 
-
+/*!
+ @brief Main window used in the GUI. Everything starts here.
+ 
+ This is the main window of the FOAM GUI. It starts all other GUI and non-GUI 
+ components.
+ 
+ The most important part are the member foamctrl & controlpage which take care
+ of base connections to FOAM. When required, extra GUI components as tabs of
+ 'notebook' are added with their own control connection.
+ */
 class MainWindow: public Window {
 private:
 	VBox vbox;
 	
-	Log log;
-	FoamControl foamctrl;
+	Log log;								//!< This logs messages (see logpage)
+	FoamControl foamctrl;		//!< This is the base connection to FOAM
 
-	AboutFOAMGui aboutdialog;
-	Notebook notebook;
-	ConnectDialog conndialog;
+	AboutFOAMGui aboutdialog;	//!< About dialog
+	Notebook notebook;			//<! Notebook contains the different control tabs
+	ConnectDialog conndialog; //!< Connect dialog
 	
-	LogPage logpage;
-	ControlPage controlpage;
+	LogPage logpage;				//!< Shows log messages (see log)
+	ControlPage controlpage; //!< Shows base controls (see foamctrl)
 	typedef std::map<std::string, DevicePage*> devlist_t; //!< \todo why do I need explicit std:: here??
-	devlist_t devlist;
+	devlist_t devlist;			//!< A list of devices to keep track of
 	
 	void on_about_activate();
 	void on_quit_activate();	
@@ -103,9 +118,9 @@ private:
 public:	
 	MainMenu menubar;
 	
-	void on_ctrl_connect_update();
-	void on_ctrl_message_update();
-	void on_ctrl_device_update();
+	void on_ctrl_connect_update(); //!< Connects to signal_connect from FoamControl
+	void on_ctrl_message_update(); //!< Connects to signal_message from FoamControl
+	void on_ctrl_device_update(); //!< Connects to signal_device from FoamControl and ControlPage
 	
 	MainWindow();
 	~MainWindow() {};
@@ -116,7 +131,8 @@ public:
 // GUI DOCUMENTATION //
 /*********************/
 
-/*!	\page FOAM GUI
+/*!	
+ \page fgui FOAM GUI
  
  \section aboutgui About the FOAM GUI
  
@@ -147,11 +163,18 @@ public:
  stored in a list devlist which is part of MainWindow. Hierarchically this 
  goes more or less as follows:
  
- MainWindow
-  \-> FoamControl I/O
-  \-> ControlPage GUI
-  \-> DevicePage
-       \-> DeviceCtrl
+ <ul>
+ <li> MainWindow (fgui.cc) </li>
+ <ul>
+ <li> LogPage logging (log.cc and logview.cc) </li>
+ <li> FoamControl I/O (foamcontrol.cc) </li>
+ <li> ControlPage GUI (controlview.cc) </li>
+ <li> DevicePage (deviceview.cc) </li>
+ <ul>
+ <li> DeviceCtrl (devicectrl.cc) </li>
+ </ul>
+ </ul>
+ </ul>
  
  To accomodate different types of hardware, specific classes are derived from
  both DevicePage and DeviceCtrl to tailor the UI and I/O to the specific 
@@ -164,5 +187,19 @@ public:
  can connect callback functions to to respond to updates from FOAM. 
  Furthremore, FoamControl has three Glib::Dispatchers to notify MainWindow of
  changes that occured.
+ 
+ \section devctrl Devices
+ 
+ The main aim of the GUI is to control devices running under FOAM. When 
+ FoamControl connects to an instance of FOAM, it queries which devices are 
+ connected to the system (see FoamControl::on_connected). This is processed
+ by FoamControl::on_message and when new devices are found signal_device() is
+ triggered. 
+ 
+ \section moreinfo More information
+ 
+ More information can be found on these pages:
+ - \subpage dev_cam "Camera devices"
+
  */
  

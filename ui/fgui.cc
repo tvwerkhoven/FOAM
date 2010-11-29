@@ -106,7 +106,6 @@ connect(Stock::CONNECT), quit(Stock::QUIT), about(Stock::ABOUT)
 	add(help);
 }
 
-
 void MainWindow::on_about_activate() {
 	printf("MainWindow::on_about_activate()\n");
 	aboutdialog.present();
