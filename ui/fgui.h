@@ -188,6 +188,55 @@ public:
  Furthremore, FoamControl has three Glib::Dispatchers to notify MainWindow of
  changes that occured.
  
+ \section signals Connection, message and device signals
+ 
+ The general philosophy is: keep as much intact as possible, but reflect the 
+ state of the system accurately. I.e. when not connected: disable the GUI, but 
+ leave the last options intact (i.e. last active state of the GUI). When 
+ connected (or more possibilities are available), enable or update gui 
+ elements. 
+ 
+ In practice this results in the following signal hierarchy:
+ 
+ \subsection Main FOAM I/O
+ 
+ <ul>
+ <li>foamctrl handles I/O for FOAM</li>
+ <ul>
+ <li>on connect: request (device) info, signal_connect()</li>
+ <li>on disconnect: signal_connect()</li>
+ <li>on message: signal_message()</li>
+ <li>on devices: signal_device()</li>
+ </ul>
+ <li>controlview handles the foamctrl GUI</li>
+ <ul>
+ <li>signal_connect() connected: enable GUI</li>
+ <li>signal_connect() disconnected: disable GUI</li>
+ <li>signal_message() update gui</li>
+ <li>signal_device() update gui + notify MainWindow</li>
+ </ul>
+ <li>MainWindow only handles devices</li>
+ <ul>
+ <li>signal_device() update device tabs as necessary</li>
+ <ul>
+ </ul>
+ 
+ \subsection Device I/O
+ 
+ <ul>
+ <li>devicepage handles I/O per device</li>
+ <ul>
+ <li>on connect: request info, signal_connect()</li>
+ <li>on disconnect: update internals, signal_connect()</li>
+ <li>on message: update internals, signal_message()</li>
+ </ul>
+ </ul>
+ 
+ Each GUI page should have several basic functions:
+ - One function for each user interaction callback (i.e. pressing buttons, entering text), these *only* command FOAM
+ - One function for each of the events on_message and on_connect: these reflect the changes in FOAM in the GUI
+ - reset_gui(), enable_gui() and disable_gui() are highly recommended to do exactly these things.
+ 
  \section devctrl Devices
  
  The main aim of the GUI is to control devices running under FOAM. When 
