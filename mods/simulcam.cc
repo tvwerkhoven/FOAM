@@ -164,11 +164,11 @@ void SimulCam::cam_set_mode(mode_t newmode) {
 			mode_cond.broadcast();
 			break;
 		case Camera::WAITING:
+		case Camera::OFF:
 			// Stop camera
 			mode = newmode;
 			mode_cond.broadcast();
 			break;
-		case Camera::OFF:
 		case Camera::CONFIG:
 			io.msg(IO_INFO, "SimSeeing::cam_set_mode(%s) mode not supported.", mode2str(newmode).c_str());
 		default:

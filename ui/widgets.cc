@@ -22,6 +22,36 @@
 using namespace std;
 using namespace Gtk;
 
+
+SwitchButton::SwitchButton(const Glib::ustring &lbl): 
+Button(lbl), 
+col_ok(Gdk::Color("lightgreen")), 
+col_warn(Gdk::Color("yellow")), 
+col_err(Gdk::Color("red"))
+{
+	set_state(OFF); 
+}
+
+void SwitchButton::set_state(enum state s) {
+	state = s;
+	switch (s) {
+		case OK:
+		case READY:
+			modify_button(col_ok);
+			break;
+		case WARNING:
+		case WAITING:
+			modify_button(col_warn);
+			break;
+		case OFF:
+		case ERROR:
+			modify_button(col_err);
+			break;
+		default:
+			break;
+	}
+}
+
 LabeledSpinEntry::LabeledSpinEntry(const Glib::ustring &pretext, const Glib::ustring &posttext, double lower, double upper, double step_increment, double page_increment, guint digits):
 pre(pretext), post(posttext)
 {

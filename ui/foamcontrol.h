@@ -108,11 +108,12 @@ public:
 	string host;
 	string port;
 	
-	FoamControl();
+	FoamControl(Log &log);
 	~FoamControl() { };
 	
 	int connect(const string &host, const string &port);
 	int disconnect();
+	void send_cmd(const string &cmd);
 	
 	// get-like commands
 	string getpeername() { return protocol.getpeername(); }

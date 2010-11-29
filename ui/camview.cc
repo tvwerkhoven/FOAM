@@ -116,9 +116,9 @@ mean("Mean value"), stddev("Stddev")
 	zoomin.signal_clicked().connect(sigc::mem_fun(*this, &CamView::on_zoomin_activate));
 	zoomout.signal_clicked().connect(sigc::mem_fun(*this, &CamView::on_zoomout_activate));
 
-	capture.signal_toggled().connect(sigc::mem_fun(*this, &CamView::on_capture_update));
-	display.signal_toggled().connect(sigc::mem_fun(*this, &CamView::on_display_update));
-	store.signal_toggled().connect(sigc::mem_fun(*this, &CamView::on_store_update));
+	capture.signal_clicked().connect(sigc::mem_fun(*this, &CamView::on_capture_update));
+	display.signal_clicked().connect(sigc::mem_fun(*this, &CamView::on_display_update));
+	store.signal_clicked().connect(sigc::mem_fun(*this, &CamView::on_store_update));
 	
 	// Handle some glarea events as well
 	glarea.view_update.connect(sigc::mem_fun(*this, &CamView::on_glarea_view_update));
@@ -272,6 +272,15 @@ void CamView::on_message_update() {
 	e_gain.set_text(format("%g", camctrl->get_gain()));
 	e_res.set_text(format("%dx%dx%d", camctrl->get_width(), camctrl->get_height(), camctrl->get_depth()));
 	e_mode.set_text(camctrl->get_modestr());
+	if (camctrl->get_mode() == CamCtrl::OFF) 
+		capture.set_state(SwitchButton::READY);
+	else if (camctrl->get_mode() == CamCtrl::WAITING || camctrl->get_mode() == CamCtrl::CONFIG) 
+		capture.set_state(SwitchButton::WAITING);
+	else if (camctrl->get_mode() == CamCtrl::SINGLE || camctrl->get_mode() == CamCtrl::RUNNING) 
+		capture.set_state(SwitchButton::WAITING);
+	else
+		capture.set_state(SwitchButton::ERROR);
+	
 	if (camctrl->is_ok()) {
 		e_stat.entry.modify_base(STATE_NORMAL, Gdk::Color("green"));
 		e_stat.set_text("Ok");
@@ -283,7 +292,10 @@ void CamView::on_message_update() {
 	
 	store_n.set_text(format("%d", camctrl->nstore));
 	if (camctrl->nstore <= 0)
-		store.set_active(false);
+		store.set_state(SwitchButton::READY);
+	else
+		store.set_state(SwitchButton::WAITING);
+
 }
 
 /*!

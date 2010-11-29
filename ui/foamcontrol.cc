@@ -31,7 +31,7 @@
 
 using namespace Gtk;
 
-FoamControl::FoamControl() {
+FoamControl::FoamControl(Log &log): log(log) {
 	printf("%x:FoamControl::FoamControl()\n", (int) pthread_self());
 	
 	ok = false;
@@ -65,26 +65,6 @@ int FoamControl::connect(const string &h, const string &p) {
 	return 0;
 }
 
-void FoamControl::set_mode(aomode_t mode) {
-	if (!protocol.is_connected()) return;
-	
-	printf("%x:FoamControl::set_mode(%s)\n", (int) pthread_self(), mode2str(mode).c_str());
-	
-	switch (mode) {
-		case AO_MODE_LISTEN:
-			protocol.write("mode listen");
-			break;
-		case AO_MODE_OPEN:
-			protocol.write("mode open");
-			break;
-		case AO_MODE_CLOSED:
-			protocol.write("mode closed");
-			break;
-		default:
-			break;
-	}
-}
-
 int FoamControl::disconnect() {
 	printf("%x:FoamControl::disconnect()\n", (int) pthread_self());
 	if (protocol.is_connected())
@@ -92,6 +72,32 @@ int FoamControl::disconnect() {
 	
 	signal_connect();
 	return 0;
+}
+
+void FoamControl::send_cmd(const string &cmd) {
+	state.lastcmd = cmd;
+	protocol.write(cmd);
+	log.add(Log::DEBUG, "sent cmd: " + cmd);
+}
+
+void FoamControl::set_mode(aomode_t mode) {
+	if (!protocol.is_connected()) return;
+	
+	printf("%x:FoamControl::set_mode(%s)\n", (int) pthread_self(), mode2str(mode).c_str());
+	
+	switch (mode) {
+		case AO_MODE_LISTEN:
+			send_cmd("mode listen");
+			break;
+		case AO_MODE_OPEN:
+			send_cmd("mode open");
+			break;
+		case AO_MODE_CLOSED:
+			send_cmd("mode closed");
+			break;
+		default:
+			break;
+	}
 }
 
 void FoamControl::on_connected(bool conn) {
@@ -108,9 +114,9 @@ void FoamControl::on_connected(bool conn) {
 	ok = true;
 	
 	// Get basic system information
-	protocol.write("get mode");
-	protocol.write("get calib");
-	protocol.write("get devices");
+	send_cmd("get mode");
+	send_cmd("get calib");
+	send_cmd("get devices");
 
 	signal_connect();
 	return;

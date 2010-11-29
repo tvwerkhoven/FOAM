@@ -206,7 +206,7 @@ void MainWindow::on_ctrl_device_update() {
 
 
 MainWindow::MainWindow():
-	log(), foamctrl(), 
+	log(), foamctrl(log), 
 	aboutdialog(), notebook(), conndialog(foamctrl), 
 	logpage(log), controlpage(log, foamctrl), 
 	menubar(*this) {

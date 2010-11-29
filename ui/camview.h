@@ -72,9 +72,9 @@ protected:
 	// Need: darkflat, fsel, tiptilt, capture, thumb, ...?
 	HBox ctrlhbox;
 	//Button refresh;
-	ToggleButton capture;
-	ToggleButton display;
-	ToggleButton store;
+	SwitchButton capture;
+	SwitchButton display;
+	SwitchButton store;
 	Entry store_n;
 		
 	// Camera image
