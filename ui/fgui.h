@@ -55,8 +55,8 @@ class ConnectDialog: public Dialog {
 	LabeledEntry host;
 	LabeledEntry port;
 	
-	void on_ok();
-	void on_cancel();
+	void on_ok_clicked();
+	void on_cancel_clicked();
 public:
 	ConnectDialog(FoamControl &foamctrl);
 	~ConnectDialog() {}

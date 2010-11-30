@@ -375,8 +375,6 @@ void FOAM::on_connect(Connection *connection, bool status) {
 }
 
 void FOAM::on_message(Connection *connection, std::string line) {
-  io.msg(IO_DEB1, "FOAM::Got %db: '%s'.", line.length(), line.c_str());
-	
 	string cmd = popword(line);
 	
 	if (cmd == "help") {

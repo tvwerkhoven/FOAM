@@ -27,47 +27,55 @@
 
 using namespace std;
 
-DeviceCtrl::DeviceCtrl(const string h, const string p, const string n):
-	host(h), port(p), devname(n)
+DeviceCtrl::DeviceCtrl(Log &log, const string h, const string p, const string n):
+	log(log), host(h), port(p), devname(n)
 {
 	printf("%x:DeviceCtrl::DeviceCtrl(name=%s)\n", (int) pthread_self(), n.c_str());	
 	
-	// Open control connection
+	// Open control connection, register callbacks
 	protocol.slot_message = sigc::mem_fun(this, &DeviceCtrl::on_message);
 	protocol.slot_connected = sigc::mem_fun(this, &DeviceCtrl::on_connected);
 	printf("%x:DeviceCtrl::DeviceCtrl(): connecting to %s:%s@%s\n", (int) pthread_self(), host.c_str(), port.c_str(), devname.c_str());
-	protocol.connect(host, port, devname);	
-	
+	protocol.connect(host, port, devname);
 }
 
 DeviceCtrl::~DeviceCtrl() {
 	fprintf(stderr, "DeviceCtrl::~DeviceCtrl()\n");
 }
 
-void DeviceCtrl::on_message(string line) {
-	printf("%x:DeviceCtrl::on_message(line=%s)\n", (int) pthread_self(), line.c_str());	
-	
-	if (popword(line) != "ok") {
-		ok = false;
-		errormsg = line;
-		signal_update();
-		return;
-	}
-	ok = true;
-	
-	signal_update();
+void DeviceCtrl::send_cmd(const string &cmd) {
+	lastcmd = cmd;
+	protocol.write(cmd);
+	log.add(Log::DEBUG, devname + ": -> " + cmd);
+	printf("%x:DeviceCtrl::sent cmd: %s\n", (int) pthread_self(), cmd.c_str());
 }
 
-void DeviceCtrl::on_connected(bool connected) {
-	printf("%x:DeviceCtrl::on_connected(status=%d)\n", (int) pthread_self(), connected);	
-	if (!connected) {
+void DeviceCtrl::on_message(string line) {
+	printf("%x:DeviceCtrl::on_message(line=%s)\n", (int) pthread_self(), line.c_str());	
+	string stat = popword(line);
+
+	if (stat != "ok") {
+		ok = false;
+		errormsg = line;
+		log.add(Log::ERROR, devname + ": <- " + stat + " " + line);
+	}
+	else {
+		ok = true;
+		log.add(Log::OK, devname + ": <- " + stat + " " + line);
+	}
+	
+	signal_message();
+}
+
+void DeviceCtrl::on_connected(bool conn) {
+	printf("%x:DeviceCtrl::on_connected(status=%d)\n", (int) pthread_self(), conn);	
+	if (conn)
+		protocol.write("get info");
+	else {
 		//! @todo delete devicectrl and deviceview, remove from notebook here
 		ok = false;
 		errormsg = "Not connected";
-		signal_update();
-		return;
-	}
-	if (connected)
-		protocol.write("get info");
+	}		
 	
+	signal_connect();
 }

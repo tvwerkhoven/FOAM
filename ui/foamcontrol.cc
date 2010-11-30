@@ -68,18 +68,21 @@ int FoamControl::connect(const string &h, const string &p) {
 //!< @bug This does not disable the GUI, after protocol.disconnect, there is no call to on_connected? Does protocol do this at all on disconnect? Solved with on_connected(protocol.is_connected());?
 //!< @todo This should propagate through the whole GUI, also the device tabs
 int FoamControl::disconnect() {
-	printf("%x:FoamControl::disconnect()\n", (int) pthread_self());
-	if (protocol.is_connected())
+	printf("%x:FoamControl::disconnect(conn=%d)\n", (int) pthread_self(), protocol.is_connected());
+	if (protocol.is_connected()) {
 		protocol.disconnect();
+		//!< @todo Is this necessary?
+		on_connected(protocol.is_connected());
+	}
 	
-	signal_connect();
 	return 0;
 }
 
 void FoamControl::send_cmd(const string &cmd) {
 	state.lastcmd = cmd;
 	protocol.write(cmd);
-	log.add(Log::DEBUG, "sent cmd: " + cmd);
+	log.add(Log::DEBUG, "FOAM: -> " + cmd);
+	printf("%x:FoamControl::sent cmd: %s\n", (int) pthread_self(), cmd.c_str());
 }
 
 void FoamControl::set_mode(aomode_t mode) {
@@ -108,7 +111,6 @@ void FoamControl::on_connected(bool conn) {
 	if (!conn) {
 		ok = false;
 		errormsg = "Not connected";
-		protocol.disconnect();
 		signal_connect();
 		return;
 	}
@@ -127,16 +129,21 @@ void FoamControl::on_connected(bool conn) {
 void FoamControl::on_message(string line) {
 	printf("%x:FoamControl::on_message(string=%s)\n", (int) pthread_self(), line.c_str());
 
-	if (popword(line) != "ok") {
+	state.lastreply = line;
+	
+	string stat = popword(line);
+
+	if (stat != "ok") {
 		ok = false;
-		state.lastreply = line;
-		printf("%x:FoamControl::on_message(): err\n", (int) pthread_self());
+		log.add(Log::ERROR, "FOAM: <- " + state.lastreply);
 		signal_message();
 		return;
 	}
 	
+	log.add(Log::OK, "FOAM: <- " + state.lastreply);
+
+	
 	ok = true;
-	state.lastreply = line;
 	string what = popword(line);
 	
 	if (what == "var") {
@@ -172,8 +179,7 @@ void FoamControl::on_message(string line) {
 		ok = false;
 		errormsg = "Unexpected response '" + what + "'";
 	}
-	
-	printf("%x:FoamControl::on_message(): ok\n", (int) pthread_self());
+
 	signal_message();
 }
 

@@ -131,8 +131,8 @@ public:
 	
 	// set-like commands
 	void set_mode(aomode_t mode);
-	void shutdown() { protocol.write("shutdown"); }
-	void calibrate(string calmode) { protocol.write(format("calib %s", calmode.c_str())); }
+	void shutdown() { send_cmd("shutdown"); }
+	void calibrate(string calmode) { send_cmd(format("calib %s", calmode.c_str())); }
 
 	
 	bool is_ok() { return ok; }

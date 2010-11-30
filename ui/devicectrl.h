@@ -25,6 +25,7 @@
 
 #include "pthread++.h"
 #include "protocol.h"
+#include "log.h"
 
 using namespace std;
 
@@ -36,8 +37,14 @@ using namespace std;
 class DeviceCtrl {
 protected:
 	Protocol::Client protocol;
-	
+	Log &log;
+
 	const string host, port, devname;
+	
+	bool ok;
+	string errormsg;
+	string lastreply;										//!< Last reply we got from FOAM
+	string lastcmd;											//!< Last cmd we sent
 	
 	virtual void on_message(string line);
 	virtual void on_connected(bool status);
@@ -48,18 +55,19 @@ public:
 		exception(const std::string reason): runtime_error(reason) {}
 	};
 	
-	Glib::Dispatcher signal_update;
-	
-	bool ok;
-	string errormsg;
-
-	DeviceCtrl(const string, const string, const string);
+	DeviceCtrl(Log &log, const string, const string, const string);
 	~DeviceCtrl();
 	
 	bool is_ok() const { return ok; }
+	bool is_connected() { return protocol.is_connected(); }
+	string get_lastreply() const { return lastreply; }
 	string get_errormsg() const { return errormsg; }
 	
 	virtual string getName() { return devname; }
+	virtual void send_cmd(const string &cmd);
+
+	Glib::Dispatcher signal_connect;
+	Glib::Dispatcher signal_message;
 };
 
 

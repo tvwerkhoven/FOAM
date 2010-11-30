@@ -29,25 +29,24 @@ col_ok(Gdk::Color("lightgreen")),
 col_warn(Gdk::Color("yellow")), 
 col_err(Gdk::Color("red"))
 {
-	set_state(OFF); 
+	set_state(CLEAR); 
 }
 
 void SwitchButton::set_state(enum state s) {
 	state = s;
 	switch (s) {
 		case OK:
-		case READY:
 			modify_button(col_ok);
 			break;
-		case WARNING:
 		case WAITING:
 			modify_button(col_warn);
 			break;
-		case OFF:
 		case ERROR:
 			modify_button(col_err);
 			break;
+		case CLEAR:
 		default:
+			modify_button();
 			break;
 	}
 }

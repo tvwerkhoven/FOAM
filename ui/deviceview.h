@@ -46,18 +46,18 @@ protected:
 	Log &log;
 	
 	string devname;											//!< Device name
-	
-	// GTK stuff
-	//Frame infoframe;
-	//HBox infobox;
-	//Label infolabel;
 
 public:
-	DevicePage(Log &log, FoamControl &foamctrl, string n);
+	DevicePage(Log &log, FoamControl &foamctrl, string n, bool is_parent=false);
 	virtual ~DevicePage();
 	
-	virtual int init();
+	virtual void init();
 	virtual void on_message_update();
+	virtual void on_connect_update();
+	
+	virtual void disable_gui() { ; }		//!< Disable GUI when disconnected
+	virtual void enable_gui() { ; }			//!< Enable GUI when connected
+	virtual void clear_gui() { ; }			//!< Clear GUI on init or reconnect
 };
 
 #endif // HAVE_DEVICEVIEW_H

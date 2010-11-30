@@ -94,41 +94,28 @@ protected:
 	LabeledEntry mean;
 	LabeledEntry stddev;
 
-	// Events
-	void on_zoom100_activate();
-	void on_zoomin_activate();
-	void on_zoomout_activate();
-	void on_capture_update();			//!< Called when capture button is toggled
-	void on_display_update();			//!< Called when display button is toggled
-	void on_store_update();				//!< Called when store button is toggled
-	void on_glarea_view_update();	//!< Callback from glarea class
-//	void on_colorsel_activate();
-//	void on_fullscreen_toggled();
-	void force_update();
-//	void do_histo_update();
-	void do_update();
-//	void on_close_activate();
-	void on_info_change();
-
 	bool waitforupdate;
 	time_t lastupdate;
 	float dx;
 	float dy;
 	int s;
-//	float sx;
-//	float sy;
-//	uint32_t *histo;
-//	int depth;
-//	float sxstart;
-//	float systart;
-//	gdouble xstart;
-//	gdouble ystart;
-
-	//! @todo what is this for again?
-	Glib::Dispatcher signal_update;
-	virtual void on_message_update();
-	virtual void on_monitor_update();
-	bool on_timeout();
+	//	float sx;
+	//	float sy;
+	//	uint32_t *histo;
+	//	int depth;
+	//	float sxstart;
+	//	float systart;
+	//	gdouble xstart;
+	//	gdouble ystart;
+	
+	// User interaction
+	void on_zoom100_activate();
+	void on_zoomin_activate();
+	void on_zoomout_activate();
+	void on_capture_clicked();			//!< Called when capture button is toggled
+	void on_display_clicked();			//!< Called when display button is toggled
+	void on_store_clicked();				//!< Called when store button is toggled
+	void on_info_change();
 
 	void on_image_realize();
 	void on_image_expose_event(GdkEventExpose *event);
@@ -136,13 +123,34 @@ protected:
 	bool on_image_scroll_event(GdkEventScroll *event);
 	bool on_image_motion_event(GdkEventMotion *event);
 	bool on_image_button_event(GdkEventButton *event);
+	
+	// GUI updates
+	void on_glarea_view_update();		//!< Callback from glarea class
+//	void on_colorsel_activate();
+//	void on_fullscreen_toggled();
+	void force_update();
+//	void do_histo_update();
+	void do_update();
+//	void on_close_activate();
+
+	// Overload from DeviceView:
+	virtual void on_message_update();
+	virtual void on_connect_update();
+	
+	virtual void disable_gui();
+	virtual void enable_gui();
+	virtual void clear_gui();
+	
+	// New event capture
+	virtual void on_monitor_update();
+	bool on_timeout();
 
 public:
 	CamCtrl *camctrl;
-	CamView(Log &log, FoamControl &foamctrl, string n);
+	CamView(Log &log, FoamControl &foamctrl, string n, bool is_parent=false);
 	~CamView();
 	
-	virtual int init();
+	virtual void init();
 };
 
 

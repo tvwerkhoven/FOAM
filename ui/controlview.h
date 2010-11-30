@@ -52,16 +52,16 @@ class ControlPage: public VBox {
 	
 	Frame modeframe;
 	HBox modebox;
-	ToggleButton mode_listen;
-	ToggleButton mode_open;
-	ToggleButton mode_closed;
+	SwitchButton mode_listen;
+	SwitchButton mode_open;
+	SwitchButton mode_closed;
 	Button shutdown;
 
 	Frame calibframe;
 	HBox calibbox;
 	Label calmode_lbl;
 	ComboBoxText calmode_select;
-	ToggleButton calib;
+	SwitchButton calib;
 
 	Frame statframe;
 	HBox statbox;
@@ -76,21 +76,24 @@ class ControlPage: public VBox {
 	
 	void on_connect_clicked();					//!< Callback for ControlPage::connect
 	
-	void on_mode_listen_clicked();
-	void on_mode_open_clicked();
-	void on_mode_closed_clicked();
-	void on_shutdown_clicked();
+	void on_mode_listen_clicked();			//!< Callback for ControlPage::mode_listen
+	void on_mode_open_clicked();				//!< Callback for ControlPage::mode_open
+	void on_mode_closed_clicked();			//!< Callback for ControlPage::mode_closed
+	void on_shutdown_clicked();					//!< Callback for ControlPage::shutdown
 
-	void on_calib_clicked();
+	void on_calib_clicked();						//!< Callback for ControlPage::calib
+
+	void enable_gui();									//!< Enable GUI elements
+	void disable_gui();									//!< Disable GUI elements
+	void clear_gui();										//!< Clear GUI elements (reset values)
+
 	
 public:
 	ControlPage(Log &log, FoamControl &foamctrl);
 	~ControlPage();
 
-	void on_connect_update();
-	void on_message_update();
-	
-	Glib::Dispatcher signal_device;
+	void on_connect_update();						//!< Callback for FoamCtrl::signal_connect()
+	void on_message_update();						//!< Callback for FoamCtrl::signal_message()
 };
 
 #endif //  HAVE_CONTROLVIEW_H

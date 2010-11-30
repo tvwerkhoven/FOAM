@@ -56,16 +56,7 @@ extern Gtk::Tooltips *tooltips;
 using namespace std;
 using namespace Gtk;
 
-void ConnectDialog::on_ok() {
-	printf("ConnectDialog::on_ok()\n");
-	foamctrl.connect(host.get_text(), port.get_text());
-	hide();
-}
-
-void ConnectDialog::on_cancel() {
-	printf("ConnectDialog::on_cancel()\n");
-	hide();
-}
+// !!!: ConnectDialog starts here
 
 ConnectDialog::ConnectDialog(FoamControl &foamctrl): 
 foamctrl(foamctrl), label("Connect to a remote host"), host("Hostname"), port("Port")
@@ -76,8 +67,8 @@ foamctrl(foamctrl), label("Connect to a remote host"), host("Hostname"), port("P
 	host.set_text("localhost");
 	port.set_text("1025");
 		
-	add_button(Gtk::Stock::CONNECT, 1)->signal_clicked().connect(sigc::mem_fun(*this, &ConnectDialog::on_ok));
-	add_button(Gtk::Stock::CANCEL, 0)->signal_clicked().connect(sigc::mem_fun(*this, &ConnectDialog::on_cancel));
+	add_button(Gtk::Stock::CONNECT, 1)->signal_clicked().connect(sigc::mem_fun(*this, &ConnectDialog::on_ok_clicked));
+	add_button(Gtk::Stock::CANCEL, 0)->signal_clicked().connect(sigc::mem_fun(*this, &ConnectDialog::on_cancel_clicked));
 	
 	get_vbox()->add(label);
 	get_vbox()->add(host);
@@ -85,6 +76,19 @@ foamctrl(foamctrl), label("Connect to a remote host"), host("Hostname"), port("P
 	
 	show_all_children();
 }
+
+void ConnectDialog::on_ok_clicked() {
+	printf("ConnectDialog::on_ok()\n");
+	foamctrl.connect(host.get_text(), port.get_text());
+	hide();
+}
+
+void ConnectDialog::on_cancel_clicked() {
+	printf("ConnectDialog::on_cancel()\n");
+	hide();
+}
+
+// !!!: MainMenu starts here
 
 MainMenu::MainMenu(Window &window):
 file("File"), help("Help"),
@@ -106,34 +110,84 @@ connect(Stock::CONNECT), quit(Stock::QUIT), about(Stock::ABOUT)
 	add(help);
 }
 
+// !!!: MainWindow starts here
+
+MainWindow::MainWindow():
+	log(), foamctrl(log), 
+	aboutdialog(), notebook(), conndialog(foamctrl), 
+	logpage(log), controlpage(log, foamctrl), 
+	menubar(*this) {
+	log.add(Log::NORMAL, "FOAM Control (" PACKAGE_NAME " version " PACKAGE_VERSION " built " __DATE__ " " __TIME__ ")");
+	log.add(Log::NORMAL, "Copyright (c) 2009 Tim van Werkhoven (T.I.M.vanWerkhoven@xs4all.nl)");
+	
+	// widget properties
+	set_title("FOAM Control");
+	set_default_size(800, 600);
+	set_gravity(Gdk::GRAVITY_STATIC);
+	
+	vbox.set_spacing(4);
+	vbox.pack_start(menubar, PACK_SHRINK);
+	
+	// signals
+	menubar.connect.signal_activate().connect(sigc::mem_fun(*this, &MainWindow::on_connect_activate));
+	menubar.quit.signal_activate().connect(sigc::mem_fun(*this, &MainWindow::on_quit_activate));
+	menubar.about.signal_activate().connect(sigc::mem_fun(*this, &MainWindow::on_about_activate));
+		
+	foamctrl.signal_connect.connect(sigc::mem_fun(*this, &MainWindow::on_ctrl_connect_update));
+	foamctrl.signal_message.connect(sigc::mem_fun(*this, &MainWindow::on_ctrl_message_update));
+	foamctrl.signal_device.connect(sigc::mem_fun(*this, &MainWindow::on_ctrl_device_update));	
+		
+	notebook.append_page(controlpage, "_Control", "Control", true);
+	notebook.append_page(logpage, "_Log", "Log", true);
+	
+	vbox.pack_start(notebook);
+	
+	add(vbox);
+	
+	show_all_children();
+	
+	log.add(Log::OK, "FOAM Control up and running");
+}
+
+// !!!: Generic GUI Functions 
+
+void MainWindow::disable_gui() {
+	menubar.connect.set_sensitive(false);
+}
+
+void MainWindow::enable_gui() {
+	menubar.connect.set_sensitive(true);
+}
+
+// !!!: MainWindow:button/GUI callbacks
+
 void MainWindow::on_about_activate() {
 	printf("MainWindow::on_about_activate()\n");
 	aboutdialog.present();
 }
-	
+
 void MainWindow::on_quit_activate() {
 	printf("MainWindow::on_quit_activate()\n");
 	Main::quit();
-}	
+}      
 
 void MainWindow::on_connect_activate() {
 	fprintf(stderr, "MainWindow::on_connect_activate()\n");
 	conndialog.present();
 }
 
+// !!!: MainWindow:signal callbacks
+
 void MainWindow::on_ctrl_connect_update() {
 	fprintf(stderr, "MainWindow::on_ctrl_connect_update()\n");
 	if (foamctrl.is_connected())
-		menubar.connect.set_sensitive(false);
+		disable_gui();
 	else
-		menubar.connect.set_sensitive(true);
-	
-	controlpage.on_connect_update();
+		enable_gui();
 }
 
 void MainWindow::on_ctrl_message_update() {
 	fprintf(stderr, "MainWindow::on_ctrl_message_update()\n");
-	controlpage.on_message_update();
 }
 
 void MainWindow::on_ctrl_device_update() {
@@ -205,44 +259,7 @@ void MainWindow::on_ctrl_device_update() {
 }
 
 
-MainWindow::MainWindow():
-	log(), foamctrl(log), 
-	aboutdialog(), notebook(), conndialog(foamctrl), 
-	logpage(log), controlpage(log, foamctrl), 
-	menubar(*this) {
-	log.add(Log::NORMAL, "FOAM Control (" PACKAGE_NAME " version " PACKAGE_VERSION " built " __DATE__ " " __TIME__ ")");
-	log.add(Log::NORMAL, "Copyright (c) 2009 Tim van Werkhoven (T.I.M.vanWerkhoven@xs4all.nl)");
-	
-	// widget properties
-	set_title("FOAM Control");
-	set_default_size(800, 600);
-	set_gravity(Gdk::GRAVITY_STATIC);
-	
-	vbox.set_spacing(4);
-	vbox.pack_start(menubar, PACK_SHRINK);
-	
-	// signals
-	menubar.connect.signal_activate().connect(sigc::mem_fun(*this, &MainWindow::on_connect_activate));
-	menubar.quit.signal_activate().connect(sigc::mem_fun(*this, &MainWindow::on_quit_activate));
-	menubar.about.signal_activate().connect(sigc::mem_fun(*this, &MainWindow::on_about_activate));
-		
-	foamctrl.signal_connect.connect(sigc::mem_fun(*this, &MainWindow::on_ctrl_connect_update));
-	foamctrl.signal_message.connect(sigc::mem_fun(*this, &MainWindow::on_ctrl_message_update));
-	foamctrl.signal_device.connect(sigc::mem_fun(*this, &MainWindow::on_ctrl_device_update));	
-		
-	controlpage.signal_device.connect(sigc::mem_fun(*this, &MainWindow::on_ctrl_device_update));
-		
-	notebook.append_page(controlpage, "_Control", "Control", true);
-	notebook.append_page(logpage, "_Log", "Log", true);
-	
-	vbox.pack_start(notebook);
-	
-	add(vbox);
-	
-	show_all_children();
-	
-	log.add(Log::OK, "FOAM Control up and running");
-}
+// !!!: General:Miscellaneous functions
 
 static void signal_handler(int s) {
 	if(s == SIGALRM || s == SIGPIPE)

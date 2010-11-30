@@ -32,14 +32,15 @@
 #include "protocol.h"
 #include "devicectrl.h"
 #include "camctrl.h"
+#include "log.h"
 
 using namespace std;
 
-CamCtrl::CamCtrl(const string h, const string p, const string n):
-	DeviceCtrl(h, p, n),
+CamCtrl::CamCtrl(Log &log, const string h, const string p, const string n):
+	DeviceCtrl(log, h, p, n),
 	monitorprotocol(h, p, n) 
 {
-	fprintf(stderr, "CamCtrl::CamCtrl()\n");
+	fprintf(stderr, "%x:CamCtrl::CamCtrl()\n", (int) pthread_self());
 	
 	ok = false;
 	mode = UNDEFINED;
@@ -59,37 +60,37 @@ CamCtrl::CamCtrl(const string h, const string p, const string n):
 	g = 1;
 	b = 1;
 
-	protocol.slot_message = sigc::mem_fun(this, &CamCtrl::on_message);
 	monitorprotocol.slot_message = sigc::mem_fun(this, &CamCtrl::on_monitor_message);
 	monitorprotocol.connect();
 }
 
 CamCtrl::~CamCtrl() {
-	fprintf(stderr, "CamCtrl::~CamCtrl()\n");
+	fprintf(stderr, "%x:CamCtrl::~CamCtrl()\n", (int) pthread_self());
 	set_mode(OFF);
 }
 
-void CamCtrl::on_connected(bool connected) {
-	fprintf(stderr, "CamCtrl::on_connected()\n");
-	DeviceCtrl::on_connected(connected);
+void CamCtrl::on_connected(bool conn) {
+	fprintf(stderr, "%x:CamCtrl::on_connected(conn=%d)\n", (int) pthread_self(), conn);
+	DeviceCtrl::on_connected(conn);
 	
-	protocol.write("get mode");
-	protocol.write("get exposure");
-	protocol.write("get interval");
-	protocol.write("get gain");
-	protocol.write("get offset");
-	protocol.write("get width");
-	protocol.write("get height");
-	protocol.write("get depth");
-	protocol.write("get filename");
+	if (conn) {
+		send_cmd("get mode");
+		send_cmd("get exposure");
+		send_cmd("get interval");
+		send_cmd("get gain");
+		send_cmd("get offset");
+		send_cmd("get width");
+		send_cmd("get height");
+		send_cmd("get depth");
+		send_cmd("get filename");
+	}
 }
 
 void CamCtrl::on_message(string line) {
-	fprintf(stderr, "CamCtrl::on_message()\n");
+	//fprintf(stderr, "%x:CamCtrl::on_message()\n", (int) pthread_self());
 	DeviceCtrl::on_message(line);
 	
-	
-	if(!ok) {
+	if (!ok) {
 		mode = ERROR;
 		return;
 	}
@@ -141,7 +142,7 @@ void CamCtrl::on_message(string line) {
 		errormsg = "Unexpected response '" + what + "'";
 	}
 
-	signal_update();
+	signal_message();
 }
 
 void CamCtrl::on_monitor_message(string line) {
@@ -194,7 +195,7 @@ void CamCtrl::on_monitor_message(string line) {
 }
 
 void CamCtrl::get_thumbnail() {
-	protocol.write("thumbnail");
+	send_cmd("thumbnail");
 }
 
 double CamCtrl::get_exposure() const {
@@ -241,43 +242,43 @@ std::string CamCtrl::get_modestr(const mode_t m) const {
 }
 
 void CamCtrl::set_mode(const mode_t m) {
-	protocol.write(format("set mode %s", get_modestr(m).c_str()));
+	send_cmd(format("set mode %s", get_modestr(m).c_str()));
 }
 
 void CamCtrl::set_exposure(double value) {
-	protocol.write(format("set exposure %lf", value));
+	send_cmd(format("set exposure %lf", value));
 }
 
 void CamCtrl::set_interval(double value) {
-	protocol.write(format("set interval %lf", value));
+	send_cmd(format("set interval %lf", value));
 }
 
 void CamCtrl::set_gain(double value) {
-	protocol.write(format("set gain %lf", value));
+	send_cmd(format("set gain %lf", value));
 }
 
 void CamCtrl::set_offset(double value) {
-	protocol.write(format("set offset %lf", value));
+	send_cmd(format("set offset %lf", value));
 }
 
 void CamCtrl::set_filename(const string &filename) {
-	protocol.write("set filename :" + filename);
+	send_cmd("set filename :" + filename);
 }
 
 void CamCtrl::set_fits(const string &fits) {
-	protocol.write("set fits " + fits);
+	send_cmd("set fits " + fits);
 }
 
 void CamCtrl::darkburst(int32_t count) {
 	string command = format("dark %d", count);
 	mode = UNDEFINED;
-	protocol.write(command);
+	send_cmd(command);
 }
 
 void CamCtrl::flatburst(int32_t count) {
 	string command = format("flat %d", count);
 	mode = UNDEFINED;
-	protocol.write(command);
+	send_cmd(command);
 }
 
 void CamCtrl::burst(int32_t count, int32_t fsel) {
@@ -285,7 +286,7 @@ void CamCtrl::burst(int32_t count, int32_t fsel) {
 	if(fsel > 1)
 		command += format(" select %d", fsel);
 	mode = UNDEFINED;
-	protocol.write(command);
+	send_cmd(command);
 }
 
 //enum CamCtrl::state CamCtrl::get_state() const {
@@ -301,7 +302,7 @@ void CamCtrl::burst(int32_t count, int32_t fsel) {
 //}
 
 void CamCtrl::store(int nstore) {
-	protocol.write(format("store %d", nstore));
+	send_cmd(format("store %d", nstore));
 }
 
 void CamCtrl::grab(int x1, int y1, int x2, int y2, int scale, bool darkflat) {

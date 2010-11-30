@@ -32,18 +32,21 @@
 class SwitchButton: public Gtk::Button {
 public:
 	enum state {
-		OK,
-		READY,
-		WARNING,
+		OK=1,
 		WAITING,
 		ERROR,
-		OFF
-	};													//!< Various button states, OK=READY, WARNING=WAITING, ERROR=OFF.
+		CLEAR,
+	};													//!< Various button states, OK, WAITING, ERROR, CLEAR.
 private:
 	//<! Change the color of this button
 	void modify_button(const Gdk::Color &color) {
 		this->modify_bg(Gtk::STATE_PRELIGHT, color);
 		this->modify_bg(Gtk::STATE_NORMAL, color);
+	}
+	//!< Reset the button
+	void modify_button() {
+		this->unset_bg(Gtk::STATE_NORMAL);
+		this->unset_bg(Gtk::STATE_PRELIGHT);
 	}
 	enum state state;						//!< Track state of this button.
 public:

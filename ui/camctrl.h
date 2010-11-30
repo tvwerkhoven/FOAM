@@ -76,7 +76,7 @@ public:
 	void on_monitor_connected(bool connected);
 	
 public:
-	CamCtrl(const std::string name, const std::string host, const std::string port);
+	CamCtrl(Log &log, const std::string name, const std::string host, const std::string port);
 	~CamCtrl();
 
 	double r, g, b;

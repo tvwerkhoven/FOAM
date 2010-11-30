@@ -38,7 +38,7 @@
 using namespace std;
 using namespace Gtk;
 
-CamView::CamView(Log &log, FoamControl &foamctrl, string n): 
+CamView::CamView(Log &log, FoamControl &foamctrl, string n, bool is_parent): 
 DevicePage(log, foamctrl, n),
 infoframe("Info"),
 dispframe("Display settings"),
@@ -49,27 +49,21 @@ e_exposure("Exp."), e_offset("Offset"), e_interval("Intv."), e_gain("Gain"), e_r
 flipv("Flip vert."), fliph("Flip hor."), crosshair("Crosshair"), grid("Grid"), zoomin(Stock::ZOOM_IN), zoomout(Stock::ZOOM_OUT), zoom100(Stock::ZOOM_100), zoomfit(Stock::ZOOM_FIT), capture("Capture"), display("Display"), store("Store"),
 mean("Mean value"), stddev("Stddev")
 {
-	fprintf(stderr, "CamView::CamView()\n");
+	fprintf(stderr, "%x:CamView::CamView()\n", (int) pthread_self());
 	
 	lastupdate = 0;
 	waitforupdate = false;
 	s = -1;
 	
-	e_exposure.set_text("N/A");
 	e_exposure.set_width_chars(8);
-	e_offset.set_text("N/A");
 	e_offset.set_width_chars(4);
-	e_interval.set_text("N/A");
 	e_interval.set_width_chars(8);
-	e_gain.set_text("N/A");
 	e_gain.set_width_chars(4);
-	e_res.set_text("N/A");
+	
 	e_res.set_width_chars(12);
 	e_res.set_editable(false);
-	e_mode.set_text("N/A");
 	e_mode.set_width_chars(8);
 	e_mode.set_editable(false);
-	e_stat.set_text("N/A");
 	e_stat.set_width_chars(20);
 	e_stat.set_editable(false);
 	
@@ -78,17 +72,17 @@ mean("Mean value"), stddev("Stddev")
 	crosshair.set_active(false);
 	grid.set_active(false);
 	
-	store_n.set_text("10");
 	store_n.set_width_chars(4);
 	
-	mean.set_text("N/A");
 	mean.set_width_chars(6);
 	mean.set_alignment(1);
 	mean.set_editable(false);
-	stddev.set_text("N/A");
 	stddev.set_width_chars(6);
 	stddev.set_alignment(1);
 	stddev.set_editable(false);
+	
+	clear_gui();
+	disable_gui();
 	
 	//! \todo AccelMap only works for menus, can we make shortcuts for buttons?	
 	
@@ -116,9 +110,9 @@ mean("Mean value"), stddev("Stddev")
 	zoomin.signal_clicked().connect(sigc::mem_fun(*this, &CamView::on_zoomin_activate));
 	zoomout.signal_clicked().connect(sigc::mem_fun(*this, &CamView::on_zoomout_activate));
 
-	capture.signal_clicked().connect(sigc::mem_fun(*this, &CamView::on_capture_update));
-	display.signal_clicked().connect(sigc::mem_fun(*this, &CamView::on_display_update));
-	store.signal_clicked().connect(sigc::mem_fun(*this, &CamView::on_store_update));
+	capture.signal_clicked().connect(sigc::mem_fun(*this, &CamView::on_capture_clicked));
+	display.signal_clicked().connect(sigc::mem_fun(*this, &CamView::on_display_clicked));
+	store.signal_clicked().connect(sigc::mem_fun(*this, &CamView::on_store_clicked));
 	
 	// Handle some glarea events as well
 	glarea.view_update.connect(sigc::mem_fun(*this, &CamView::on_glarea_view_update));
@@ -175,11 +169,93 @@ mean("Mean value"), stddev("Stddev")
 	
 	// finalize
 	show_all_children();
+	
+	if (is_parent)
+		init();
 }
 
 CamView::~CamView() {
-	fprintf(stderr, "CamView::~CamView()\n");
+	fprintf(stderr, "%x:CamView::~CamView()\n", (int) pthread_self());
 	//! \todo store (gui) configuration here?
+}
+
+void CamView::enable_gui() {
+	DevicePage::enable_gui();
+	
+	e_exposure.set_sensitive(true);
+	e_offset.set_sensitive(true);
+	e_interval.set_sensitive(true);
+	e_gain.set_sensitive(true);
+	
+	fliph.set_sensitive(true);
+	flipv.set_sensitive(true);
+	crosshair.set_sensitive(true);
+	grid.set_sensitive(true);
+	
+	capture.set_sensitive(true);
+	display.set_sensitive(true);
+	store.set_sensitive(true);
+	store_n.set_sensitive(true);
+	
+	mean.set_sensitive(true);
+	stddev.set_sensitive(true);
+}
+
+void CamView::disable_gui() {
+	DevicePage::disable_gui();
+	
+	e_exposure.set_sensitive(false);
+	e_offset.set_sensitive(false);
+	e_interval.set_sensitive(false);
+	e_gain.set_sensitive(false);
+	
+	fliph.set_sensitive(false);
+	flipv.set_sensitive(false);
+	crosshair.set_sensitive(false);
+	grid.set_sensitive(false);
+
+	capture.set_sensitive(false);
+	display.set_sensitive(false);
+	store.set_sensitive(false);
+	store_n.set_sensitive(false);
+
+	mean.set_sensitive(false);
+	stddev.set_sensitive(false);
+}
+
+void CamView::clear_gui() {
+	DevicePage::clear_gui();
+	
+	e_exposure.set_text("N/A");
+	e_offset.set_text("N/A");
+	e_interval.set_text("N/A");
+	e_gain.set_text("N/A");
+	e_res.set_text("N/A");
+	e_mode.set_text("N/A");
+	e_stat.set_text("N/A");
+
+	capture.set_state(SwitchButton::CLEAR);
+	display.set_state(SwitchButton::CLEAR);
+	store.set_state(SwitchButton::CLEAR);
+	
+	store_n.set_text("10");
+
+	mean.set_text("N/A");
+	stddev.set_text("N/A");	
+}
+
+void CamView::init() {
+	fprintf(stderr, "%x:CamView::init()\n", (int) pthread_self());
+	// Init new camera control connection for this viewer
+	camctrl = new CamCtrl(log, foamctrl.host, foamctrl.port, devname);
+	// Downcast to generic device control pointer for base class (DevicePage in this case)
+	devctrl = (DeviceCtrl *) camctrl;
+	
+	//	depth = camctrl->get_depth();
+	
+	camctrl->signal_monitor.connect(sigc::mem_fun(*this, &CamView::on_monitor_update));
+	camctrl->signal_message.connect(sigc::mem_fun(*this, &CamView::on_message_update));
+	camctrl->signal_connect.connect(sigc::mem_fun(*this, &CamView::on_connect_update));
 }
 
 void CamView::on_glarea_view_update() {
@@ -208,42 +284,7 @@ bool CamView::on_timeout() {
 	if(waitforupdate && time(NULL) - lastupdate < 5)
 		return true;
 
-	fprintf(stderr, "CamView::on_timeout()\n");
-//	auto frame = get_window();
-//	if(!frame || frame->get_state() == Gdk::WINDOW_STATE_WITHDRAWN || frame->get_state() == Gdk::WINDOW_STATE_ICONIFIED)
-//		return true;
-
-//	int x1, y1, x2, y2;
-//
-//	double cw = camera.get_width();
-//	double ch = camera.get_height();
-//	double ww = image.get_width();
-//	double wh = image.get_height();
-//	double ws = fit.get_active() ? min(ww / cw, wh / ch) : pow(2.0, scale.get_value());
-//	int cs = round(pow(2.0, -scale.get_value()));
-//
-//	// Ensure camera scale results in a texture width divisible by 4
-//	while(cs > 1 && ((int)cw / cs) & 0x3)
-//		cs--;
-//	if(cs < 1)
-//		cs = 1;
-//
-//	int fx = fliph.get_active() ? -1 : 1;
-//	int fy = flipv.get_active() ? -1 : 1;
-//
-//	// Convert window corners to camera coordinates, use 4 pixel safety margin
-//	x1 = (cw - ww / ws - fx * sx * cw) / 2 / cs - 4;
-//	y1 = (ch - wh / ws + fy * sy * ch) / 2 / cs - 4;
-//	x2 = (cw + ww / ws - fx * sx * cw) / 2 / cs + 7;
-//	y2 = (ch + wh / ws + fy * sy * ch) / 2 / cs + 4;
-//
-//	// Align x coordinates to multiples of 4
-//	x1 &= ~0x3;
-//	x2 &= ~0x3;
-//
-//	waitforupdate = true;
-//	lastupdate = time(NULL);
-//	camera.grab(x1, y1, x2, y2, cs, darkflat.get_active(), fsel.get_active() ? 10 : 0);
+	fprintf(stderr, "%x:CamView::on_timeout()\n", (int) pthread_self());
 
 	return true;
 }
@@ -255,9 +296,21 @@ void CamView::on_monitor_update() {
 //	fprintf(stderr, "CamView::on_monitor_update()\n");
 	//! @todo need mutex here?
 	glarea.linkData((void *) camctrl->monitor.image, camctrl->monitor.depth, camctrl->monitor.x2 - camctrl->monitor.x1, camctrl->monitor.y2 - camctrl->monitor.y1);
-	//force_update();
-	//	usleep(0.01 * 1000000);
-	on_display_update();
+
+	
+	// Get new image, simulate the click of 'display'
+	on_display_clicked();
+}
+
+/*!
+ @brief Update GUI when connected or disconnected
+ */
+void CamView::on_connect_update() {
+	fprintf(stderr, "%x:CamView::on_connect_update(conn=%d)\n", (int) pthread_self(), devctrl->is_connected());
+	if (devctrl->is_connected())
+		enable_gui();
+	else
+		disable_gui();
 }
 
 /*!
@@ -275,8 +328,15 @@ void CamView::on_message_update() {
 
 	// Set 'Mode' text entry, change color appropriately
 	e_mode.set_text(camctrl->get_modestr());
+	if (camctrl->get_mode() == CamCtrl::WAITING || camctrl->get_mode() == CamCtrl::OFF)
+		e_mode.entry.modify_base(STATE_NORMAL, Gdk::Color("orange"));
+	else if (camctrl->get_mode() == CamCtrl::SINGLE || camctrl->get_mode() == CamCtrl::RUNNING)
+		e_mode.entry.modify_base(STATE_NORMAL, Gdk::Color("lightgreen"));
+	else
+		e_mode.entry.modify_base(STATE_NORMAL, Gdk::Color("red"));
+	
 	if (camctrl->get_mode() == CamCtrl::OFF) 
-		capture.set_state(SwitchButton::READY);
+		capture.set_state(SwitchButton::OK);
 	else if (camctrl->get_mode() == CamCtrl::WAITING || camctrl->get_mode() == CamCtrl::CONFIG) 
 		capture.set_state(SwitchButton::WAITING);
 	else if (camctrl->get_mode() == CamCtrl::SINGLE || camctrl->get_mode() == CamCtrl::RUNNING) 
@@ -285,7 +345,7 @@ void CamView::on_message_update() {
 		capture.set_state(SwitchButton::ERROR);
 	
 	if (camctrl->is_ok()) {
-		e_stat.entry.modify_base(STATE_NORMAL, Gdk::Color("green"));
+		e_stat.entry.modify_base(STATE_NORMAL, Gdk::Color("lightgreen"));
 		e_stat.set_text("Ok");
 	}
 	else {
@@ -295,7 +355,7 @@ void CamView::on_message_update() {
 	
 	store_n.set_text(format("%d", camctrl->nstore));
 	if (camctrl->nstore <= 0)
-		store.set_state(SwitchButton::READY);
+		store.set_state(SwitchButton::OK);
 	else
 		store.set_state(SwitchButton::WAITING);
 
@@ -305,7 +365,7 @@ void CamView::on_message_update() {
  @brief Propagate user changed settings in GUI to camera
  */
 void CamView::on_info_change() {
-	fprintf(stderr, "CamView::on_info_change()\n");
+	fprintf(stderr, "%x:CamView::on_info_change()\n", (int) pthread_self());
 	camctrl->set_exposure(strtod(e_exposure.get_text().c_str(), NULL));
 	camctrl->set_offset(strtod(e_offset.get_text().c_str(), NULL));
 	camctrl->set_interval(strtod(e_interval.get_text().c_str(), NULL));
@@ -330,21 +390,22 @@ void CamView::on_zoomout_activate() {
 /*!
  @brief (De-)activate camera when user presses 'capture' button.
  */
-void CamView::on_capture_update() {
-	if (capture.get_state(SwitchButton::OFF, SwitchButton::WAITING)) {
-		fprintf(stderr, "CamView::on_capture_update(): Starting camera.\n");
-		camctrl->set_mode(CamCtrl::RUNNING);
+void CamView::on_capture_clicked() {
+	if (camctrl->get_mode() == CamCtrl::RUNNING || 
+			camctrl->get_mode() == CamCtrl::SINGLE) {
+		fprintf(stderr, "%x:CamView::on_capture_update(): Stopping camera.\n", (int) pthread_self());
+		camctrl->set_mode(CamCtrl::WAITING);
 	}
 	else {
-		fprintf(stderr, "CamView::on_capture_update(): Stopping camera.\n");
-		camctrl->set_mode(CamCtrl::WAITING);
+		fprintf(stderr, "%x:CamView::on_capture_update(): Starting camera.\n", (int) pthread_self());
+		camctrl->set_mode(CamCtrl::RUNNING);
 	}
 }
 
 /*!
  @brief (De-)activate camera frame grabbing when user presses 'display' button.
  */
-void CamView::on_display_update() {
+void CamView::on_display_clicked() {
 	//! @bug Does not work when activated before capturing frames?
 	if (display.get_state(SwitchButton::OK))
 		camctrl->grab(0, 0, camctrl->get_width(), camctrl->get_height(), 1, false);
@@ -353,24 +414,10 @@ void CamView::on_display_update() {
 /*!
  @brief User clicked 'store' button, send store command to camera
  */
-void CamView::on_store_update() {
+void CamView::on_store_clicked() {
 	int nstore = atoi(store_n.get_text().c_str());
-	fprintf(stderr, "CamView::on_store_update() n=%d\n", nstore);
+	fprintf(stderr, "%x:CamView::on_store_update() n=%d\n", (int) pthread_self(), nstore);
 	
 	if (nstore > 0 || nstore == -1)
 		camctrl->store(nstore);
-}
-
-int CamView::init() {
-	fprintf(stderr, "CamView::init()\n");
-	// Init new camera control connection for this viewer
-	camctrl = new CamCtrl(foamctrl.host, foamctrl.port, devname);
-	// Downcast to generic device control pointer for base class (DevicePage in this case)
-	devctrl = (DeviceCtrl *) camctrl;
-	
-//	depth = camctrl->get_depth();
-	
-	camctrl->signal_monitor.connect(sigc::mem_fun(*this, &CamView::on_monitor_update));
-	camctrl->signal_update.connect(sigc::mem_fun(*this, &CamView::on_message_update));
-	return 0;
 }
