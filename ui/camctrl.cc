@@ -145,12 +145,13 @@ void CamCtrl::on_message(string line) {
 }
 
 void CamCtrl::on_monitor_message(string line) {
+	// Line has to start with 'ok image'
 	if(popword(line) != "ok")
 		return;
-	
 	if(popword(line) != "image")
 		return;
 
+	// The rest of the line is: <size> <x1> <y1> <x2> <y2> <scale> [histogram]
 	size_t size = popsize(line);
 	int histosize = (1 << depth) * sizeof *monitor.histogram;
 	int x1 = popint(line);

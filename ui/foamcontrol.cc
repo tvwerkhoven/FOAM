@@ -65,6 +65,8 @@ int FoamControl::connect(const string &h, const string &p) {
 	return 0;
 }
 
+//!< @bug This does not disable the GUI, after protocol.disconnect, there is no call to on_connected? Does protocol do this at all on disconnect? Solved with on_connected(protocol.is_connected());?
+//!< @todo This should propagate through the whole GUI, also the device tabs
 int FoamControl::disconnect() {
 	printf("%x:FoamControl::disconnect()\n", (int) pthread_self());
 	if (protocol.is_connected())

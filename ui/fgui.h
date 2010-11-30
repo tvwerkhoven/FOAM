@@ -76,10 +76,10 @@ class MainMenu: public MenuBar {
 	SeparatorMenuItem sep2;
 	
 public:
-	ImageMenuItem connect;	//!< Show ConnectDialog to connect
-	ImageMenuItem quit;			//!< Quit GUI
+	ImageMenuItem connect;							//!< Show ConnectDialog to connect
+	ImageMenuItem quit;									//!< Quit GUI
 	
-	ImageMenuItem about;		//!< Show AboutFOAMGui
+	ImageMenuItem about;								//!< Show AboutFOAMGui
 	
 	MainMenu(Window &window);
 	~MainMenu() {};
@@ -99,28 +99,31 @@ class MainWindow: public Window {
 private:
 	VBox vbox;
 	
-	Log log;								//!< This logs messages (see logpage)
-	FoamControl foamctrl;		//!< This is the base connection to FOAM
+	Log log;														//!< This logs messages (see LogPage and Log)
+	FoamControl foamctrl;								//!< This is the base connection to FOAM
 
-	AboutFOAMGui aboutdialog;	//!< About dialog
-	Notebook notebook;			//<! Notebook contains the different control tabs
-	ConnectDialog conndialog; //!< Connect dialog
+	AboutFOAMGui aboutdialog;						//!< About dialog
+	Notebook notebook;									//<! Notebook contains the different control tabs
+	ConnectDialog conndialog;						//!< Connect dialog
 	
-	LogPage logpage;				//!< Shows log messages (see log)
-	ControlPage controlpage; //!< Shows base controls (see foamctrl)
+	LogPage logpage;										//!< Shows log messages (see LogPage and Log)
+	ControlPage controlpage;						//!< Shows base controls (see FoamCtrl)
 	typedef std::map<std::string, DevicePage*> devlist_t; //!< \todo why do I need explicit std:: here??
-	devlist_t devlist;			//!< A list of devices to keep track of
+	devlist_t devlist;									//!< A list of devices to keep track of
 	
-	void on_about_activate();
-	void on_quit_activate();	
-	void on_connect_activate();
+	void on_about_activate();						//!< MainMenu::about button callback
+	void on_quit_activate();						//!< MainMenu::quit button callback
+	void on_connect_activate();					//!< MainMenu::connect button callback
+	
+	void disable_gui();									//!< Disable GUI elements
+	void enable_gui();									//!< Enable GUI elements
 	
 public:	
 	MainMenu menubar;
 	
-	void on_ctrl_connect_update(); //!< Connects to signal_connect from FoamControl
-	void on_ctrl_message_update(); //!< Connects to signal_message from FoamControl
-	void on_ctrl_device_update(); //!< Connects to signal_device from FoamControl and ControlPage
+	void on_ctrl_connect_update();			//!< Connects to FoamControl::signal_connect()
+	void on_ctrl_message_update();			//!< Connects to FoamControl::signal_message()
+	void on_ctrl_device_update();				//!< Connects to FoamControl::signal_device()
 	
 	MainWindow();
 	~MainWindow() {};

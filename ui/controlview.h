@@ -74,7 +74,7 @@ class ControlPage: public VBox {
 	HBox devbox;
 	LabeledEntry *dev_devlist;
 	
-	void on_connect_clicked();
+	void on_connect_clicked();					//!< Callback for ControlPage::connect
 	
 	void on_mode_listen_clicked();
 	void on_mode_open_clicked();

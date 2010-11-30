@@ -85,7 +85,7 @@ private:
 		aomode_t mode;								//!< AO mode (see aomode_t)
 		int numdev;										//!< Number of devices connected
 		device_t devices[32];					//!< List of devices
-		int numframes;
+		uint64_t numframes;						//!< Number of frames processed
 		int numcal;										//!< Number of calibration modes
 		string calmodes[32];					//!< Different calibration modes
 		string lastreply;							//!< Last reply (stored in on_message())
@@ -120,7 +120,7 @@ public:
 	string getsockname() { return protocol.getsockname(); }
 	int get_numdev() { return state.numdev; }
 	void set_numdev(int n) { state.numdev = n; }
-	int get_numframes() { return state.numframes; }
+	uint64_t get_numframes() { return state.numframes; }
 	aomode_t get_mode() { return state.mode; }
 	string get_mode_str() { return mode2str(state.mode); }
 	int get_numcal() { return state.numcal; }

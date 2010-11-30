@@ -42,9 +42,9 @@
  */
 class CamCtrl: public DeviceCtrl {
 public:
-	//Protocol::Client protocol;
-	Protocol::Client monitorprotocol;
+	Protocol::Client monitorprotocol;		//!< Data channel for images
 
+	// Camera settings
 	double exposure;
 	double interval;
 	double gain;
@@ -81,6 +81,7 @@ public:
 
 	double r, g, b;
 	uint8_t thumbnail[32 * 32];
+	// Camera frame
 	struct monitor {
 		monitor() {
 			image = 0;
@@ -137,9 +138,8 @@ public:
 	
 	bool connect();
 
-	// Signal on new thumnail
+	// Extra signals: new thumnail and new images
 	Glib::Dispatcher signal_thumbnail;
-	// Signal on new image
 	Glib::Dispatcher signal_monitor;
 };
 

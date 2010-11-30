@@ -158,21 +158,21 @@ void MainWindow::on_ctrl_device_update() {
 			FoamControl::device_t dev = foamctrl.get_device(i);
 			if (dev.name == it->first) // Found it! break here now
 				break;
-			}
+		}
 		if (i == foamctrl.get_numdev()) {
 			// If i equals foamctrl.get_numdev(), the device wasn't found, remove it from the GUI
 			//! @todo Add destructor to DevicePage to remove itself from the Notebook so we don't have to
 			notebook.remove_page(*(it->second)); // removes GUI element
 			delete it->second; // remove gui element itself
 			devlist.erase(it); // remove from devlist
-		}	
+		}       
 	}
 	
 	for (int i=0; i<foamctrl.get_numdev(); i++) {
 		FoamControl::device_t dev = foamctrl.get_device(i);
 		if (devlist.find(dev.name) != devlist.end())
 			continue; // Already exists, skip
-
+		
 		// First check if type is sane
 		if (dev.type.substr(0,3) != "dev") {
 			fprintf(stderr, "MainWindow::on_ctrl_device_update() Type wrong!\n");
@@ -188,7 +188,7 @@ void MainWindow::on_ctrl_device_update() {
 			log.add(Log::OK, "Added new generic camera, type="+dev.type+", name="+dev.name+".");
 		}
 		else if (dev.type.substr(0,3) == "dev") {
-			fprintf(stderr, "MainWindow::on_ctrl_device_update() got generic device\n");			
+			fprintf(stderr, "MainWindow::on_ctrl_device_update() got generic device\n");                    
 			devlist[dev.name] = new DevicePage(log, foamctrl, dev.name);
 			log.add(Log::OK, "Added new generic device, type="+dev.type+", name="+dev.name+".");
 		}
@@ -197,7 +197,7 @@ void MainWindow::on_ctrl_device_update() {
 			log.add(Log::WARNING, "Got unknown device type ("+dev.type+"), ignored.");
 			continue;
 		}
-							
+		
 		notebook.append_page(*devlist[dev.name], "_" + dev.name, dev.name, true);
 	}
 	

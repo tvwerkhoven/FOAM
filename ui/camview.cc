@@ -266,11 +266,14 @@ void CamView::on_monitor_update() {
 void CamView::on_message_update() {
 	DevicePage::on_message_update();
 	
+	// Set values in text entries
 	e_exposure.set_text(format("%g", camctrl->get_exposure()));
 	e_offset.set_text(format("%g", camctrl->get_offset()));
 	e_interval.set_text(format("%g", camctrl->get_interval()));
 	e_gain.set_text(format("%g", camctrl->get_gain()));
 	e_res.set_text(format("%dx%dx%d", camctrl->get_width(), camctrl->get_height(), camctrl->get_depth()));
+
+	// Set 'Mode' text entry, change color appropriately
 	e_mode.set_text(camctrl->get_modestr());
 	if (camctrl->get_mode() == CamCtrl::OFF) 
 		capture.set_state(SwitchButton::READY);
