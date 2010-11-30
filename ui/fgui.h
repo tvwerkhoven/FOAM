@@ -166,13 +166,12 @@ public:
  <ul>
  <li> MainWindow (fgui.cc) </li>
  <ul>
- <li> LogPage logging (log.cc and logview.cc) </li>
- <li> FoamControl I/O (foamcontrol.cc) </li>
+ <li> LogPage (logview.cc) </li>
+ <ul><li> Log (log.cc)</li></ul>
  <li> ControlPage GUI (controlview.cc) </li>
+ <ul><li> FoamControl I/O (foamcontrol.cc) </li></ul>
  <li> DevicePage (deviceview.cc) </li>
- <ul>
- <li> DeviceCtrl (devicectrl.cc) </li>
- </ul>
+ <ul><li> DeviceCtrl (devicectrl.cc) </li></ul>
  </ul>
  </ul>
  
@@ -190,7 +189,13 @@ public:
  
  \section signals Connection, message and device signals
  
- The general philosophy is: keep as much intact as possible, but reflect the 
+ To provide a connection between the UI and network IO, Glib::Dispatcher 
+ instances are used. Every DeviceCtrl has one signal_update where DevicePage
+ can connect callback functions to to respond to updates from FOAM. 
+ Furthermore, FoamControl has three Glib::Dispatchers to notify ControlPage & 
+ MainWindow of changes that occured.
+ 
+ With regards to GUI changes, The general philosophy is: keep as much intact as possible, but reflect the 
  state of the system accurately. I.e. when not connected: disable the GUI, but 
  leave the last options intact (i.e. last active state of the GUI). When 
  connected (or more possibilities are available), enable or update gui 
@@ -198,37 +203,41 @@ public:
  
  In practice this results in the following signal hierarchy:
  
- \subsection Main FOAM I/O
+ \subsection foamio Main FOAM I/O
  
  <ul>
- <li>foamctrl handles I/O for FOAM</li>
+ <li>FoamControl handles I/O for to and from FOAM</li>
  <ul>
- <li>on connect: request (device) info, signal_connect()</li>
- <li>on disconnect: signal_connect()</li>
- <li>on message: signal_message()</li>
- <li>on devices: signal_device()</li>
+ <li>on connect: request (device) info, call FoamControl::signal_connect()</li>
+ <li>on disconnect: call FoamControl::signal_connect()</li>
+ <li>on message: call FoamControl::signal_message()</li>
+ <li>on devices: call FoamControl::signal_device()</li>
  </ul>
- <li>controlview handles the foamctrl GUI</li>
+ <li>ControlPage handles the FoamControl GUI</li>
  <ul>
- <li>signal_connect() connected: enable GUI</li>
- <li>signal_connect() disconnected: disable GUI</li>
- <li>signal_message() update gui</li>
- <li>signal_device() update gui + notify MainWindow</li>
+ <li>FoamControl::signal_connect() -> ControlPage::on_connect_update() connected: enable GUI</li>
+ <li>FoamControl::signal_connect() -> ControlPage::on_connect_update() disconnected: disable GUI</li>
+ <li>FoamControl::signal_message() -> ControlPage::on_message_update() update GUI</li>
  </ul>
  <li>MainWindow only handles devices</li>
  <ul>
- <li>signal_device() update device tabs as necessary</li>
- <ul>
+ <li>FoamControl::signal_device() -> MainWindow::on_ctrl_device_update() update device tabs as necessary</li>
+ </ul>
  </ul>
  
- \subsection Device I/O
+ \subsection devio Device I/O
  
  <ul>
- <li>devicepage handles I/O per device</li>
+ <li>DeviceCtrl handles I/O per device</li>
  <ul>
- <li>on connect: request info, signal_connect()</li>
- <li>on disconnect: update internals, signal_connect()</li>
- <li>on message: update internals, signal_message()</li>
+ <li>on connect: request info, DeviceCtrl::signal_connect()</li>
+ <li>on disconnect: update internals, DeviceCtrl::signal_connect()</li>
+ <li>on message: update internals, DeviceCtrl::signal_message()</li>
+ </ul>
+ <li>DevicePage handles processes signals</li>
+ <ul>
+ <li>DeviceCtrl::signal_connect() --> DevicePage::on_connect_update()</li>
+ <li>DeviceCtrl::signal_message() --> DevicePage::on_message_update()</li>
  </ul>
  </ul>
  
