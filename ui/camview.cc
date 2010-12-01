@@ -353,8 +353,8 @@ void CamView::on_message_update() {
 		e_stat.set_text("Err: " + camctrl->get_errormsg());
 	}	
 	
-	store_n.set_text(format("%d", camctrl->nstore));
-	if (camctrl->nstore <= 0)
+	store_n.set_text(format("%d", camctrl->get_nstore()));
+	if (camctrl->get_nstore() <= 0)
 		store.set_state(SwitchButton::OK);
 	else
 		store.set_state(SwitchButton::WAITING);

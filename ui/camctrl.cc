@@ -56,10 +56,6 @@ CamCtrl::CamCtrl(Log &log, const string h, const string p, const string n):
 	mode = OFF;
 	nstore = 0;
 	
-	r = 1;
-	g = 1;
-	b = 1;
-
 	monitorprotocol.slot_message = sigc::mem_fun(this, &CamCtrl::on_monitor_message);
 	monitorprotocol.connect();
 }

@@ -51,20 +51,6 @@
  */
 class CamCtrl: public DeviceCtrl {
 public:
-	Protocol::Client monitorprotocol;		//!< Data channel for images
-
-	// Camera settings
-	double exposure;										//!< Camera exposure
-	double interval;										//!< Camera time between frames (inverse framerate)
-	double gain;												//!< Camera gain
-	double offset;											//!< Camera offset
-	int32_t width;											//!< Camera horizontal number of pixels
-	int32_t height;											//!< Camera vertical number of pixels
-	int32_t depth;											//!< Camera bitdepth
-	std::string filename;								//!< Filename camera will store data to
-	
-	int32_t nstore;											//!< How many upcoming frames will be stored
-
 	typedef enum {
 		OFF = 0,
 		WAITING,
@@ -76,6 +62,20 @@ public:
 	} mode_t;														//!< Camera runmode
 	mode_t mode;
 	
+protected:
+	Protocol::Client monitorprotocol;		//!< Data channel for images
+
+	// Camera settings
+	double exposure;										//!< Camera exposure
+	double interval;										//!< Camera time between frames (inverse framerate)
+	double gain;												//!< Camera gain
+	double offset;											//!< Camera offset
+	int32_t width;											//!< Camera horizontal number of pixels
+	int32_t height;											//!< Camera vertical number of pixels
+	int32_t depth;											//!< Camera bitdepth
+	std::string filename;								//!< Filename camera will store data to
+	int32_t nstore;											//!< How many upcoming frames will be stored
+
 	// From DeviceCtrl::
 	virtual void on_message(std::string line);
 	virtual void on_connected(bool connected);
@@ -88,7 +88,6 @@ public:
 	CamCtrl(Log &log, const std::string name, const std::string host, const std::string port);
 	~CamCtrl();
 
-	double r, g, b;
 	uint8_t thumbnail[32 * 32];
 	// Camera frame
 	struct monitor {
@@ -112,8 +111,8 @@ public:
 		int y2;														//!< Position of this frame wrt the original frame (x1, y2) to (x2, y2)
 		int scale;												//!< Spatial scaling, 1=every pixel, 2=every second pixel, etc.
 
-		uint32_t *histogram;
-		int depth;
+		uint32_t *histogram;							//!< Histogram (optional)
+		int depth;												//!< Depth of this frame
 	} monitor;													//!< Stores frames from the camera. Note that these frames can be cropped and/or scaled wrt the original frame.
 	
 	// Get & set settings
@@ -129,6 +128,7 @@ public:
 	mode_t get_mode() const { return mode; } //!< Get current camera mode
 	std::string get_modestr(const mode_t m) const; //!< Get a mode as a string
 	std::string get_modestr() { return get_modestr(mode); } //!< Get current camera mode as string
+	int32_t get_nstore() { return nstore; } //!< Get number of frames that will be stored
 	
 	void set_exposure(double value);		//!< Set camera exposure
 	void set_interval(double value);		//!< Set time between frames (inverse framerate)
@@ -145,8 +145,6 @@ public:
 	void grab(int x1, int y1, int x2, int y2, int scale = 1, bool df_correct = false); //!< Grab an image from the camera, crop it from (x1, y1) to (x2, y2) and take every 'scale'th pixel. Optically dark & flatfield correct it.
 	void store(int nstore);							//!< Store upcoming nstore frames to disk
 	
-	bool connect();
-
 	Glib::Dispatcher signal_thumbnail;	//!< New thumbnail available
 	Glib::Dispatcher signal_monitor;		//!< New frame (crop) available
 };
