@@ -37,8 +37,10 @@ using namespace Gtk;
 using namespace std;
 
 /*!
- @brief Main FOAM UI class  
- @todo Document this
+ @brief GUI for base connection to FOAM
+ 
+ This is the GUI for the underlying foamctrl, which handles connections to
+ FOAM.
  */
 class ControlPage: public VBox {
 	Log &log;
@@ -71,7 +73,7 @@ class ControlPage: public VBox {
 	LabeledEntry stat_lastcmd;					//!< Displays last cmd to FOAM, updated in ControlPage::on_message_update()
 
 	
-	Frame devframe; //!< @todo improve this
+	Frame devframe;											//!< @todo add/improve this feature
 	HBox devbox;
 	LabeledEntry *dev_devlist;
 	

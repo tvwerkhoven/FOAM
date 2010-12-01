@@ -42,16 +42,16 @@ using namespace std;
  @brief Main FOAM control class.
 
  This class takes care of the base connection to FOAM. It controls common 
- functions of all FOAM setups and can notify MainWindow when new GUI 
- components are necessary. It locally keeps track of the remote AO system 
- setup as well.
+ functions of all FOAM setups allows GUI elements to register callbacks to
+ several signals that notify changes in the system. It locally keeps track 
+ of the remote AO system setup as well.
  */
 class FoamControl {
 public:
 	typedef struct _device_t {
 		string name;
 		string type;		
-	} device_t;
+	} device_t;													//!< Describes hardware devices
 	
 private:
 	string mode2str(aomode_t m) {
@@ -76,35 +76,29 @@ private:
 		else return AO_MODE_UNDEF;
 	}
 	
-	Protocol::Client protocol;
-	Log &log;												//!< Reference to MainWindow::log
+	Protocol::Client protocol;					//!< Connection used to FOAM
+	Log &log;														//!< Reference to MainWindow::log
 
 	pthread::mutex mutex;
 	
 	struct state_t {
-		aomode_t mode;								//!< AO mode (see aomode_t)
-		int numdev;										//!< Number of devices connected
-		device_t devices[32];					//!< List of devices
-		uint64_t numframes;						//!< Number of frames processed
-		int numcal;										//!< Number of calibration modes
-		string calmodes[32];					//!< Different calibration modes
-		string lastreply;							//!< Last reply (stored in on_message())
-		string lastcmd;								//!< Last command issued to FOAM
-	} state; //!< Basic state of the remote AO system
+		aomode_t mode;										//!< AO mode (see aomode_t)
+		int numdev;												//!< Number of devices connected
+		device_t devices[32];							//!< List of devices
+		uint64_t numframes;								//!< Number of frames processed
+		int numcal;												//!< Number of calibration modes
+		string calmodes[32];							//!< Different calibration modes
+		string lastreply;									//!< Last reply (stored in on_message())
+		string lastcmd;										//!< Last command issued to FOAM
+	} state;														//!< Basic state of the remote AO system
 	
-	bool ok;
-	string errormsg;
+	bool ok;														//!< Status of the system
+	string errormsg;										//!< If not ok, this was the error
 	
-	void on_message(string line);		//!< Callback for new messages from FOAM
-	void on_connected(bool conn);		//!< Callback for new connection to FOAM
+	void on_message(string line);				//!< Callback for new messages from FOAM
+	void on_connected(bool conn);				//!< Callback for new connection to FOAM
 	
 public:
-	//! \todo Move exception to base class, appears everywhere...
-	class exception: public runtime_error {
-	public:
-		exception(const string reason): runtime_error(reason) {}
-	};
-	
 	string host;
 	string port;
 	
