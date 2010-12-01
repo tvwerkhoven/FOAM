@@ -84,8 +84,6 @@ mean("Mean value"), stddev("Stddev")
 	clear_gui();
 	disable_gui();
 	
-	//! \todo AccelMap only works for menus, can we make shortcuts for buttons?	
-	
 	// glarea
 	//glarea.linkData((void *) NULL, 8, 0, 0);
 	glarea.set_size_request(256, 256);	
@@ -101,11 +99,8 @@ mean("Mean value"), stddev("Stddev")
 	flipv.signal_toggled().connect(sigc::mem_fun(*this, &CamView::force_update));
 	crosshair.signal_toggled().connect(sigc::mem_fun(*this, &CamView::force_update));
 	grid.signal_toggled().connect(sigc::mem_fun(*this, &CamView::force_update));
-	zoomfit.signal_toggled().connect(sigc::mem_fun(*this, &CamView::force_update));
-	//	contrast.signal_toggled().connect(sigc::mem_fun(*this, &CamView::force_update));
-	//	underover.signal_toggled().connect(sigc::mem_fun(*this, &CamView::force_update));
 	
-	//	histogram.signal_toggled().connect(sigc::mem_fun(*this, &CamView::on_histogram_toggled));
+	zoomfit.signal_toggled().connect(sigc::mem_fun(*this, &CamView::force_update));
 	zoom100.signal_clicked().connect(sigc::mem_fun(*this, &CamView::on_zoom100_activate));
 	zoomin.signal_clicked().connect(sigc::mem_fun(*this, &CamView::on_zoomin_activate));
 	zoomout.signal_clicked().connect(sigc::mem_fun(*this, &CamView::on_zoomout_activate));
@@ -116,12 +111,7 @@ mean("Mean value"), stddev("Stddev")
 	
 	// Handle some glarea events as well
 	glarea.view_update.connect(sigc::mem_fun(*this, &CamView::on_glarea_view_update));
-	
-	//	histogramevents.signal_button_press_event().connect(sigc::mem_fun(*this, &CamView::on_histogram_clicked));
-	//	fullscreentoggle.signal_toggled().connect(sigc::mem_fun(*this, &CamView::on_fullscreen_toggled));
-	//	close.signal_activate().connect(sigc::mem_fun(*this, &CamView::on_close_activate));
-	//	colorsel.signal_activate().connect(sigc::mem_fun(*this, &CamView::on_colorsel_activate));
-	
+		
 	// layout
 	infohbox.set_spacing(4);
 	infohbox.pack_start(e_exposure, PACK_SHRINK);
@@ -175,8 +165,8 @@ mean("Mean value"), stddev("Stddev")
 }
 
 CamView::~CamView() {
+	//!< @todo store (gui) configuration here?
 	fprintf(stderr, "%x:CamView::~CamView()\n", (int) pthread_self());
-	//! \todo store (gui) configuration here?
 }
 
 void CamView::enable_gui() {
@@ -251,8 +241,6 @@ void CamView::init() {
 	// Downcast to generic device control pointer for base class (DevicePage in this case)
 	devctrl = (DeviceCtrl *) camctrl;
 	
-	//	depth = camctrl->get_depth();
-	
 	camctrl->signal_monitor.connect(sigc::mem_fun(*this, &CamView::on_monitor_update));
 	camctrl->signal_message.connect(sigc::mem_fun(*this, &CamView::on_message_update));
 	camctrl->signal_connect.connect(sigc::mem_fun(*this, &CamView::on_connect_update));
@@ -275,11 +263,11 @@ void CamView::force_update() {
 }
 
 void CamView::do_update() {
-	//! \todo improve this
+	//! @todo improve this
 	glarea.do_update();
 }
 
-//! \todo what is this? do we need it?
+//! @todo what is this? do we need it?
 bool CamView::on_timeout() {
 	if(waitforupdate && time(NULL) - lastupdate < 5)
 		return true;
@@ -289,22 +277,15 @@ bool CamView::on_timeout() {
 	return true;
 }
 
-/*!
- @brief Display new image from camera
- */
 void CamView::on_monitor_update() {
 //	fprintf(stderr, "CamView::on_monitor_update()\n");
 	//! @todo need mutex here?
 	glarea.linkData((void *) camctrl->monitor.image, camctrl->monitor.depth, camctrl->monitor.x2 - camctrl->monitor.x1, camctrl->monitor.y2 - camctrl->monitor.y1);
 
-	
 	// Get new image, simulate the click of 'display'
 	on_display_clicked();
 }
 
-/*!
- @brief Update GUI when connected or disconnected
- */
 void CamView::on_connect_update() {
 	fprintf(stderr, "%x:CamView::on_connect_update(conn=%d)\n", (int) pthread_self(), devctrl->is_connected());
 	if (devctrl->is_connected())
@@ -313,9 +294,6 @@ void CamView::on_connect_update() {
 		disable_gui();
 }
 
-/*!
- @brief Update GUI when camera reports state changes
- */
 void CamView::on_message_update() {
 	DevicePage::on_message_update();
 	
@@ -361,9 +339,6 @@ void CamView::on_message_update() {
 
 }
 
-/*!
- @brief Propagate user changed settings in GUI to camera
- */
 void CamView::on_info_change() {
 	fprintf(stderr, "%x:CamView::on_info_change()\n", (int) pthread_self());
 	camctrl->set_exposure(strtod(e_exposure.get_text().c_str(), NULL));
@@ -387,9 +362,6 @@ void CamView::on_zoomout_activate() {
 	glarea.scalestep(-1.0/3.0);
 }
 
-/*!
- @brief (De-)activate camera when user presses 'capture' button.
- */
 void CamView::on_capture_clicked() {
 	if (camctrl->get_mode() == CamCtrl::RUNNING || 
 			camctrl->get_mode() == CamCtrl::SINGLE) {
@@ -402,18 +374,12 @@ void CamView::on_capture_clicked() {
 	}
 }
 
-/*!
- @brief (De-)activate camera frame grabbing when user presses 'display' button.
- */
 void CamView::on_display_clicked() {
 	//! @bug Does not work when activated before capturing frames?
 	if (display.get_state(SwitchButton::OK))
 		camctrl->grab(0, 0, camctrl->get_width(), camctrl->get_height(), 1, false);
 }
 
-/*!
- @brief User clicked 'store' button, send store command to camera
- */
 void CamView::on_store_clicked() {
 	int nstore = atoi(store_n.get_text().c_str());
 	fprintf(stderr, "%x:CamView::on_store_update() n=%d\n", (int) pthread_self(), nstore);
