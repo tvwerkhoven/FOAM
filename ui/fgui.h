@@ -181,15 +181,7 @@ public:
  To accomodate different types of hardware, specific classes are derived from
  both DevicePage and DeviceCtrl to tailor the UI and I/O to the specific 
  hardware. Sometimes these can be doubly derived, such as WfsPage and WfsCtrl.
- 
- \section guicallbacks Callbacks
- 
- To provide a connection between the UI and network IO, Glib::Dispatcher 
- instances are used. Every DeviceCtrl has one signal_update where DevicePage
- can connect callback functions to to respond to updates from FOAM. 
- Furthremore, FoamControl has three Glib::Dispatchers to notify MainWindow of
- changes that occured.
- 
+  
  \section signals Connection, message and device signals
  
  To provide a connection between the UI and network IO, Glib::Dispatcher 
@@ -218,13 +210,15 @@ public:
  </ul>
  <li>ControlPage handles the FoamControl GUI</li>
  <ul>
- <li>FoamControl::signal_connect() -> ControlPage::on_connect_update() connected: enable GUI</li>
- <li>FoamControl::signal_connect() -> ControlPage::on_connect_update() disconnected: disable GUI</li>
- <li>FoamControl::signal_message() -> ControlPage::on_message_update() update GUI</li>
+ <li>ControlPage::on_connect_update() connects to FoamControl::signal_connect() and enables the GUI</li>
+ <li>ControlPage::on_connect_update() connects to FoamControl::signal_connect() and disables the GUI</li>
+ <li>ControlPage::on_message_update() connects to FoamControl::signal_message() and update the GUI</li>
  </ul>
  <li>MainWindow only handles devices</li>
  <ul>
- <li>FoamControl::signal_device() -> MainWindow::on_ctrl_device_update() update device tabs as necessary</li>
+ <li>MainWindow::on_ctrl_device_update() connects to FoamControl::signal_device(), update device tabs as necessary</li>
+ <li>MainWindow::on_ctrl_message_update() connects to FoamControl::signal_message(), placeholder (does nothing)</li>
+ <li>MainWindow::on_ctrl_connect_update() connects to FoamControl::signal_connect(), placeholder (does nothing)</li>
  </ul>
  </ul>
  
@@ -239,23 +233,29 @@ public:
  </ul>
  <li>DevicePage handles processes signals</li>
  <ul>
- <li>DeviceCtrl::signal_connect() --> DevicePage::on_connect_update()</li>
- <li>DeviceCtrl::signal_message() --> DevicePage::on_message_update()</li>
+ <li>DevicePage::on_connect_update() connects to DeviceCtrl::signal_connect() and handles (dis)connection update for the GUI</li>
+ <li>DevicePage::on_message_update() connects to DeviceCtrl::signal_message() and handles GUI updates</li>
  </ul>
  </ul>
  
  Each GUI page should have several basic functions:
- - One function for each user interaction callback (i.e. pressing buttons, entering text), these *only* command FOAM
- - One function for each of the events on_message and on_connect: these reflect the changes in FOAM in the GUI
- - reset_gui(), enable_gui() and disable_gui() are highly recommended to do exactly these things.
+ - One function for each user interaction callback (i.e. pressing buttons, entering text), these *only* send commands to FOAM
+ - One function for each of the events on_message and on_connect: these reflect the changes from FOAM in the GUI
+ - DevicePage::clear_gui(), DevicePage::enable_gui() and DevicePage::disable_gui() are highly recommended to do exactly these things. Skeletons are already implemented in DevicePage.
  
  \section devctrl Devices
  
  The main aim of the GUI is to control devices running under FOAM. When 
  FoamControl connects to an instance of FOAM, it queries which devices are 
  connected to the system (see FoamControl::on_connected). This is processed
- by FoamControl::on_message and when new devices are found signal_device() is
- triggered. 
+ by FoamControl::on_message and when new devices are found 
+ FoamCtrl::signal_device() is triggered.
+ 
+ When a new device is detected, the appropriate GUI class is instantiated and 
+ added to the GUI. The GUI class will start a control connection to the device
+ and handle I/O. The basic classes to achieve this are DevicePage and 
+ DeviceCtrl. These can be overloaded to provide more detailed control over a
+ device.
  
  \section moreinfo More information
  
