@@ -87,7 +87,6 @@ void CamCtrl::on_connected(bool conn) {
 }
 
 void CamCtrl::on_message(string line) {
-	//fprintf(stderr, "%x:CamCtrl::on_message()\n", (int) pthread_self());
 	DeviceCtrl::on_message(line);
 	
 	if (!ok) {
@@ -194,41 +193,15 @@ void CamCtrl::on_monitor_message(string line) {
 	signal_monitor();
 }
 
-void CamCtrl::get_thumbnail() {
-	send_cmd("thumbnail");
-}
-
-double CamCtrl::get_exposure() const {
-	return exposure;
-}
-
-double CamCtrl::get_interval() const {
-	return interval;
-}
-
-double CamCtrl::get_gain() const {
-	return gain;
-}
-
-double CamCtrl::get_offset() const {
-	return offset;
-}
-
-int32_t CamCtrl::get_width() const {
-	return width;
-}
-
-int32_t CamCtrl::get_height() const {
-	return height;
-}
-
-int32_t CamCtrl::get_depth() const {
-	return depth;
-}
-
-std::string CamCtrl::get_filename() const {
-	return filename;
-}
+void CamCtrl::get_thumbnail() { send_cmd("thumbnail"); }
+double CamCtrl::get_exposure() const { return exposure; }
+double CamCtrl::get_interval() const { return interval; }
+double CamCtrl::get_gain() const { return gain; }
+double CamCtrl::get_offset() const { return offset; }
+int32_t CamCtrl::get_width() const { return width; }
+int32_t CamCtrl::get_height() const { return height; }
+int32_t CamCtrl::get_depth() const { return depth; }
+std::string CamCtrl::get_filename() const { return filename; }
 
 std::string CamCtrl::get_modestr(const mode_t m) const {
 	if (m == OFF) return "OFF";
@@ -241,33 +214,13 @@ std::string CamCtrl::get_modestr(const mode_t m) const {
 		return "UNDEFINED";
 }
 
-void CamCtrl::set_mode(const mode_t m) {
-	send_cmd(format("set mode %s", get_modestr(m).c_str()));
-}
-
-void CamCtrl::set_exposure(double value) {
-	send_cmd(format("set exposure %lf", value));
-}
-
-void CamCtrl::set_interval(double value) {
-	send_cmd(format("set interval %lf", value));
-}
-
-void CamCtrl::set_gain(double value) {
-	send_cmd(format("set gain %lf", value));
-}
-
-void CamCtrl::set_offset(double value) {
-	send_cmd(format("set offset %lf", value));
-}
-
-void CamCtrl::set_filename(const string &filename) {
-	send_cmd("set filename :" + filename);
-}
-
-void CamCtrl::set_fits(const string &fits) {
-	send_cmd("set fits " + fits);
-}
+void CamCtrl::set_mode(const mode_t m) { send_cmd(format("set mode %s", get_modestr(m).c_str())); }
+void CamCtrl::set_exposure(double value) { send_cmd(format("set exposure %lf", value)); }
+void CamCtrl::set_interval(double value) { send_cmd(format("set interval %lf", value)); }
+void CamCtrl::set_gain(double value) { send_cmd(format("set gain %lf", value)); }
+void CamCtrl::set_offset(double value) { send_cmd(format("set offset %lf", value)); }
+void CamCtrl::set_filename(const string &filename) { send_cmd("set filename :" + filename); }
+void CamCtrl::set_fits(const string &fits) { send_cmd("set fits " + fits); }
 
 void CamCtrl::darkburst(int32_t count) {
 	string command = format("dark %d", count);
@@ -289,21 +242,7 @@ void CamCtrl::burst(int32_t count, int32_t fsel) {
 	send_cmd(command);
 }
 
-//enum CamCtrl::state CamCtrl::get_state() const {
-//	return state;
-//}
-//
-//
-//bool CamCtrl::wait_for_state(enum state desiredstate, bool condition) {
-//	while((ok && state != ERROR) && (state == UNDEFINED || (state == desiredstate) != condition))
-//		usleep(100000);
-//
-//	return (state == desiredstate) == condition;
-//}
-
-void CamCtrl::store(int nstore) {
-	send_cmd(format("store %d", nstore));
-}
+void CamCtrl::store(int nstore) { send_cmd(format("store %d", nstore)); }
 
 void CamCtrl::grab(int x1, int y1, int x2, int y2, int scale, bool darkflat) {
 	string command = format("grab %d %d %d %d %d histogram", x1, y1, x2, y2, scale);
