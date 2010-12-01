@@ -116,11 +116,11 @@ protected:
 	void force_update();
 	void do_update();
 
+	// Overload from DeviceView:
 	virtual void disable_gui();
 	virtual void enable_gui();
 	virtual void clear_gui();
-	
-	// Overload from DeviceView:
+
 	virtual void on_message_update();
 	virtual void on_connect_update();
 	
