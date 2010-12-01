@@ -58,10 +58,8 @@ void DevicePage::init() {
 
 void DevicePage::on_message_update() {
 	printf("%x:DevicePage::on_message_update()\n", (int) pthread_self());
-	//infolabel.set_text("Device: " + devctrl->getName() + " Info: " + devctrl->getInfo());
 }
 
 void DevicePage::on_connect_update() {
 	printf("%x:DevicePage::on_connect_update()\n", (int) pthread_self());
-	//infolabel.set_text("Device: " + devctrl->getName() + " Info: " + devctrl->getInfo());
 }

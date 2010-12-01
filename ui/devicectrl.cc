@@ -32,7 +32,7 @@ DeviceCtrl::DeviceCtrl(Log &log, const string h, const string p, const string n)
 {
 	printf("%x:DeviceCtrl::DeviceCtrl(name=%s)\n", (int) pthread_self(), n.c_str());	
 	
-	// Open control connection, register callbacks
+	// Open control connection, register basic callbacks
 	protocol.slot_message = sigc::mem_fun(this, &DeviceCtrl::on_message);
 	protocol.slot_connected = sigc::mem_fun(this, &DeviceCtrl::on_connected);
 	printf("%x:DeviceCtrl::DeviceCtrl(): connecting to %s:%s@%s\n", (int) pthread_self(), host.c_str(), port.c_str(), devname.c_str());
@@ -70,9 +70,8 @@ void DeviceCtrl::on_message(string line) {
 void DeviceCtrl::on_connected(bool conn) {
 	printf("%x:DeviceCtrl::on_connected(status=%d)\n", (int) pthread_self(), conn);	
 	if (conn)
-		protocol.write("get info");
+		send_cmd("get info");
 	else {
-		//! @todo delete devicectrl and deviceview, remove from notebook here
 		ok = false;
 		errormsg = "Not connected";
 	}		

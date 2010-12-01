@@ -32,7 +32,11 @@ using namespace std;
 /*!
  @brief Generic device control class  
  
- @todo Document this class
+ This class provides basic functions for control of remote hardware. It opens
+ a network connection and provides hooks for processing data and events. A
+ derived class should add to this, and overload on_message and on_connected.
+ A derived GUI class should register signal_connect and signal_message to
+ be notified when new data is received.
  */
 class DeviceCtrl {
 protected:
@@ -41,13 +45,13 @@ protected:
 
 	const string host, port, devname;
 	
-	bool ok;
-	string errormsg;
+	bool ok;														//!< Hardware status
+	string errormsg;										//!< Error message from hardware
 	string lastreply;										//!< Last reply we got from FOAM
 	string lastcmd;											//!< Last cmd we sent
 	
-	virtual void on_message(string line);
-	virtual void on_connected(bool status);
+	virtual void on_message(string line); //!< New data received from device
+	virtual void on_connected(bool status); //!< Connection to device changed
 	
 public:
 	class exception: public std::runtime_error {
@@ -58,16 +62,16 @@ public:
 	DeviceCtrl(Log &log, const string, const string, const string);
 	~DeviceCtrl();
 	
-	bool is_ok() const { return ok; }
-	bool is_connected() { return protocol.is_connected(); }
-	string get_lastreply() const { return lastreply; }
-	string get_errormsg() const { return errormsg; }
+	bool is_ok() const { return ok; }		//!< Return device status
+	bool is_connected() { return protocol.is_connected(); } //!< Return device connection status
+	string get_lastreply() const { return lastreply; } //!< Return last reply from device
+	string get_errormsg() const { return errormsg; } //!< Get errormessage (if !is_ok()).
 	
-	virtual string getName() { return devname; }
-	virtual void send_cmd(const string &cmd);
+	virtual string getName() { return devname; } //!< Get device name
+	virtual void send_cmd(const string &cmd); //!< Wrapper for sending messages to device
 
-	Glib::Dispatcher signal_connect;
-	Glib::Dispatcher signal_message;
+	Glib::Dispatcher signal_connect;		//!< Signalled when connection changes
+	Glib::Dispatcher signal_message;		//!< Signalled when message received
 };
 
 
