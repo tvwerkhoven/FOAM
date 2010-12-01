@@ -48,29 +48,30 @@ class ControlPage: public VBox {
 	HBox connbox;
 	LabeledEntry host;
 	LabeledEntry port;
-	Button connect;
+	Button connect;											//!< Init connection, ControlPage::on_connect_clicked()
 	
 	Frame modeframe;
 	HBox modebox;
-	SwitchButton mode_listen;
-	SwitchButton mode_open;
-	SwitchButton mode_closed;
-	Button shutdown;
+	SwitchButton mode_listen;						//!< Switch FOAM mode to listen, ControlPage::on_mode_listen_clicked()
+	SwitchButton mode_open;							//!< Switch FOAM mode to open, ControlPage::on_mode_open_clicked()
+	SwitchButton mode_closed;						//!< Switch FOAM mode to closed, ControlPage::on_mode_closed_clicked()
+	Button shutdown;										//!< Shutdown FOAM, ControlPage::on_shutdown_clicked()
 
 	Frame calibframe;
 	HBox calibbox;
 	Label calmode_lbl;
-	ComboBoxText calmode_select;
-	SwitchButton calib;
+	ComboBoxText calmode_select;				//!< Possible calibrations modes in FOAM
+	SwitchButton calib;									//!< Start FOAM calibration mode, ControlPage::on_calib_clicked()
 
 	Frame statframe;
 	HBox statbox;
-	LabeledEntry stat_mode;
-	LabeledEntry stat_ndev;
-	LabeledEntry stat_nframes;
-	LabeledEntry stat_lastcmd;
+	LabeledEntry stat_mode;							//!< Displays current FOAM mode, updated in ControlPage::on_message_update()
+	LabeledEntry stat_ndev;							//!< Displays number of FOAM devices, updated in ControlPage::on_message_update()
+	LabeledEntry stat_nframes;					//!< Displays number of frames captured, updated in ControlPage::on_message_update()
+	LabeledEntry stat_lastcmd;					//!< Displays last cmd to FOAM, updated in ControlPage::on_message_update()
 
-	Frame devframe;
+	
+	Frame devframe; //!< @todo improve this
 	HBox devbox;
 	LabeledEntry *dev_devlist;
 	

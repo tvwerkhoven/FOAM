@@ -142,6 +142,7 @@ void ControlPage::clear_gui() {
 	mode_closed.set_state(SwitchButton::CLEAR);
 	calib.set_state(SwitchButton::CLEAR);
 }
+
 /*!
  @brief Disable GUI elements when we are disconnected
  */
@@ -154,6 +155,7 @@ void ControlPage::disable_gui() {
 	calmode_select.set_sensitive(false);
 	calib.set_sensitive(false);
 }
+
 /*!
  @brief Enable GUI elements when we are connected
  */
