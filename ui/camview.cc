@@ -282,8 +282,9 @@ void CamView::on_monitor_update() {
 	//! @todo need mutex here?
 	glarea.linkData((void *) camctrl->monitor.image, camctrl->monitor.depth, camctrl->monitor.x2 - camctrl->monitor.x1, camctrl->monitor.y2 - camctrl->monitor.y1);
 
-	// Get new image, simulate the click of 'display'
-	on_display_clicked();
+	// Get new image if dispay button is in 'OK'
+	if (display.get_state(SwitchButton::OK))
+		camctrl->grab(0, 0, camctrl->get_width(), camctrl->get_height(), 1, false);
 }
 
 void CamView::on_connect_update() {
@@ -313,12 +314,12 @@ void CamView::on_message_update() {
 	else
 		e_mode.entry.modify_base(STATE_NORMAL, Gdk::Color("red"));
 	
-	if (camctrl->get_mode() == CamCtrl::OFF) 
-		capture.set_state(SwitchButton::OK);
-	else if (camctrl->get_mode() == CamCtrl::WAITING || camctrl->get_mode() == CamCtrl::CONFIG) 
+	if (camctrl->get_mode() == CamCtrl::OFF || camctrl->get_mode() == CamCtrl::WAITING)
+		capture.set_state(SwitchButton::CLEAR);
+	else if (camctrl->get_mode() == CamCtrl::CONFIG) 
 		capture.set_state(SwitchButton::WAITING);
 	else if (camctrl->get_mode() == CamCtrl::SINGLE || camctrl->get_mode() == CamCtrl::RUNNING) 
-		capture.set_state(SwitchButton::WAITING);
+		capture.set_state(SwitchButton::OK);
 	else
 		capture.set_state(SwitchButton::ERROR);
 	
@@ -333,7 +334,7 @@ void CamView::on_message_update() {
 	
 	store_n.set_text(format("%d", camctrl->get_nstore()));
 	if (camctrl->get_nstore() <= 0)
-		store.set_state(SwitchButton::OK);
+		store.set_state(SwitchButton::CLEAR);
 	else
 		store.set_state(SwitchButton::WAITING);
 
@@ -376,8 +377,12 @@ void CamView::on_capture_clicked() {
 
 void CamView::on_display_clicked() {
 	//! @bug Does not work when activated before capturing frames?
-	if (display.get_state(SwitchButton::OK))
+	if (display.get_state(SwitchButton::CLEAR)) {
+		display.set_state(SwitchButton::OK);
 		camctrl->grab(0, 0, camctrl->get_width(), camctrl->get_height(), 1, false);
+	}
+	else
+		display.set_state(SwitchButton::CLEAR);
 }
 
 void CamView::on_store_clicked() {
