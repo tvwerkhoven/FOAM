@@ -149,10 +149,16 @@ public:
 			id = 0;
 			histo = 0;
 			proc = false;
+			avg = 0;
+			rms = 0;
+			min = INT_MAX;
+			max = 0;
 		}
 		
 		double avg;
 		double rms;
+		int min;
+		int max;
 	} frame_t;
 	
 protected:

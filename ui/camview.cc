@@ -31,6 +31,7 @@
 #include <gtkmm/accelmap.h>
 #include <stdlib.h>
 
+#include "types.h"
 #include "camctrl.h"
 #include "glviewer.h"
 #include "camview.h"
@@ -47,7 +48,7 @@ camframe("Camera"),
 histoframe("Histogram"),
 e_exposure("Exp."), e_offset("Offset"), e_interval("Intv."), e_gain("Gain"), e_res("Res."), e_mode("Mode"), e_stat("Status"),
 flipv("Flip vert."), fliph("Flip hor."), crosshair("Crosshair"), grid("Grid"), zoomin(Stock::ZOOM_IN), zoomout(Stock::ZOOM_OUT), zoom100(Stock::ZOOM_100), zoomfit(Stock::ZOOM_FIT), capture("Capture"), display("Display"), store("Store"),
-scale("Scale down", "times"), minval("Display min"), maxval("Display max"), e_avg("Avg."), e_rms("RMS")
+histoalign(0.5, 0.5, 0, 0), minval("Display min"), maxval("Display max"), e_avg("Avg."), e_rms("RMS"), e_datamin("Min"), e_datamax("Max")
 {
 	fprintf(stderr, "%x:CamView::CamView()\n", (int) pthread_self());
 	
@@ -87,16 +88,19 @@ scale("Scale down", "times"), minval("Display min"), maxval("Display max"), e_av
 	maxval.set_range(0, 1 << camctrl->get_depth());
 	maxval.set_digits(0);
 	maxval.set_increments(1, 16);
-	scale.set_range(-3, 3);
-	scale.set_digits(3);
-	scale.set_increments(1.0/3.0, 1.0/3.0);
 	
-	e_avg.set_width_chars(8);
+	e_avg.set_width_chars(6);
 	e_avg.set_alignment(1);
 	e_avg.set_editable(false);
-	e_rms.set_width_chars(8);
+	e_rms.set_width_chars(6);
 	e_rms.set_alignment(1);
 	e_rms.set_editable(false);
+	e_datamin.set_width_chars(5);
+	e_datamin.set_alignment(1);
+	e_datamin.set_editable(false);
+	e_datamax.set_width_chars(5);
+	e_datamax.set_alignment(1);
+	e_datamax.set_editable(false);
 	
 	clear_gui();
 	disable_gui();
@@ -167,14 +171,26 @@ scale("Scale down", "times"), minval("Display min"), maxval("Display max"), e_av
 	
 	histoevents.add(histoimage);
 	histoalign.add(histoevents);
+	
+//	histohbox2.set_spacing(4);
+	histohbox2.pack_start(e_avg, PACK_SHRINK);
+	histohbox2.pack_start(e_rms, PACK_SHRINK);
 
-	histovbox.set_spacing(4);
-	histovbox.pack_start(histoalign, PACK_SHRINK);
-	histovbox.pack_start(e_avg, PACK_SHRINK);
-	histovbox.pack_start(e_rms, PACK_SHRINK);
-	histovbox.pack_start(minval, PACK_SHRINK);
-	histovbox.pack_start(maxval, PACK_SHRINK);
-	histoframe.add(histovbox);
+//	histohbox3.set_spacing(4);
+	histohbox3.pack_start(e_datamin, PACK_SHRINK);
+	histohbox3.pack_start(e_datamax, PACK_SHRINK);
+	
+//	histovbox.set_spacing(4);
+	histovbox.pack_start(histohbox2);
+	histovbox.pack_start(histohbox3);
+	histovbox.pack_start(minval);
+	histovbox.pack_start(maxval);
+
+//	histohbox.set_spacing(4);
+	histohbox.pack_start(histoalign);
+	histohbox.pack_start(histovbox, PACK_SHRINK);
+
+	histoframe.add(histohbox);
 	
 	pack_start(infoframe, PACK_SHRINK);
 	pack_start(dispframe, PACK_SHRINK);
@@ -216,8 +232,8 @@ void CamView::enable_gui() {
 	store.set_sensitive(true);
 	store_n.set_sensitive(true);
 	
-	e_avg.set_sensitive(true);
-	e_rms.set_sensitive(true);
+//	e_avg.set_sensitive(true);
+//	e_rms.set_sensitive(true);
 }
 
 void CamView::disable_gui() {
@@ -238,8 +254,8 @@ void CamView::disable_gui() {
 	store.set_sensitive(false);
 	store_n.set_sensitive(false);
 
-	e_avg.set_sensitive(false);
-	e_rms.set_sensitive(false);
+//	e_avg.set_sensitive(false);
+//	e_rms.set_sensitive(false);
 }
 
 void CamView::clear_gui() {
@@ -258,13 +274,13 @@ void CamView::clear_gui() {
 	store.set_state(SwitchButton::CLEAR);
 	
 	store_n.set_text("10");
-	
-	minval.set_value(0);
-	maxval.set_value(0);
-	scale.set_value(1);
 
 	e_avg.set_text("N/A");
 	e_rms.set_text("N/A");	
+	e_datamin.set_text("N/A");
+	e_datamax.set_text("N/A");
+	minval.set_value(0);
+	maxval.set_value(1 << camctrl->get_depth());
 }
 
 void CamView::init() {
@@ -297,13 +313,16 @@ void CamView::do_update() {
 }
 
 void CamView::do_histo_update() {	
-	int pixels = 0;
-	int max = 1 << camctrl->get_depth();
+	int pixels = 0;											//!< Number of pixels
+	int max = 1 << camctrl->get_depth(); //!< Maximum intensity in image
+	int dmin=max, dmax=0;								//!< Data range
 	double sum = 0;
 	double sumsquared = 0;
 	double rms = max;
-	bool overexposed = false;
+	bool overexposed = false;						//!< Overexposed flag
 	
+	// Analyze histogram data if available. histo is a linear array from 0 to
+	// the maximum intensity and counts pixels for each intensity bin.
 	if (histo) {
 		for (int i = 0; i < max; i++) {
 			pixels += histo[i];
@@ -324,6 +343,8 @@ void CamView::do_histo_update() {
 	e_avg.set_text(format("%.2lf", sum));
 	e_rms.set_text(format("%.3lf", rms));
 	
+	e_datamin.set_text(format("%.3lf", camctrl->monitor.min));
+	e_datamax.set_text(format("%.3lf", camctrl->monitor.max));
 	// Update min/max if necessary
 
 	//<! @todo Add contrast feature
@@ -339,15 +360,15 @@ void CamView::do_histo_update() {
 	
 	const int hscale = 1 + 10 * pixels / max;
 	
-	// Are we overexposed?
-	
+	// Color red if overexposed
 	//!< @todo implement underover
 	//if (overexposed && underover.get_active() && lastupdate & 1)
-	if (overexposed && lastupdate & 1)
+	if (overexposed)
 		histopixbuf->fill(0xff000000);
 	else
 		histopixbuf->fill(0xffffff00);
 	
+	// Draw histogram, make everything white that should not be black.
 	uint8_t *out = (uint8_t *)histopixbuf->get_pixels();
 	
 	if(histo) {
@@ -364,12 +385,9 @@ void CamView::do_histo_update() {
 		}
 	}
 	
-	int x1 = minval.get_value_as_int() * 256 / max;
-	int x2 = maxval.get_value_as_int() * 256 / max;
-	if(x1 > 255)
-		x1 = 255;
-	if(x2 > 255)
-		x2 = 255;
+	// Make vertical bars (red and cyan) at minval and maxval:
+	int x1 = clamp(minval.get_value_as_int() * 256 / max, 0, 255);
+	int x2 = clamp(maxval.get_value_as_int() * 256 / max, 0, 255);
 	
 	for(int y = 0; y < 100; y += 2) {
 		uint8_t *p = out + 3 * (x1 + 256 * y);
@@ -404,6 +422,7 @@ void CamView::on_monitor_update() {
 
 void CamView::force_update() {
 	//! @todo difference between on_monitor_update
+	//! @todo need mutex here?
 	glarea.linkData((void *) camctrl->monitor.image, camctrl->monitor.depth, camctrl->monitor.x2 - camctrl->monitor.x1, camctrl->monitor.y2 - camctrl->monitor.y1);
 	
 	// Do histogram, make local copy if needed

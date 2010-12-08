@@ -82,18 +82,22 @@ protected:
 	HBox camhbox;
 	OpenGLImageViewer glarea;
 	
-	// Histogram stuff
-	VBox histovbox;
+	// Histogram GUI stuff
+	HBox histohbox;
 	Gtk::Alignment histoalign;
 	Gtk::EventBox histoevents;
 	Gtk::Image histoimage;
 	Glib::RefPtr<Gdk::Pixbuf> histopixbuf;
-	LabeledSpinEntry scale;
+
+	VBox histovbox;
 	LabeledSpinEntry minval;
 	LabeledSpinEntry maxval;
-	
+	HBox histohbox2;
 	LabeledEntry e_avg;									//!< Shows avg value
-	LabeledEntry e_rms;									//!< Shows sigma
+	LabeledEntry e_rms;									//!< Shows rms/sigma
+	HBox histohbox3;
+	LabeledEntry e_datamin;							//!< Shows data minimum
+	LabeledEntry e_datamax;							//!< Shows data maximum
 
 	uint32_t *histo;										//!< Local histogram copy for GUI
 	

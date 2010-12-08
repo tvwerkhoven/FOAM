@@ -241,11 +241,15 @@ void Camera::calculate_stats(frame_t *frame) {
 		uint8_t *image = (uint8_t *)frame->image;
 		for(size_t i = 0; i < (size_t) res.x * res.y; i++) {
 			frame->histo[image[i]]++;
+			if (image[i] > frame->max) frame->max = image[i];
+			if (image[i] < frame->min) frame->min = image[i];
 		}
 	} else {
 		uint16_t *image = (uint16_t *)frame->image;
 		for(size_t i = 0; i < (size_t) res.x * res.y; i++) {
 			frame->histo[image[i]]++;
+			if (image[i] > frame->max) frame->max = image[i];
+			if (image[i] < frame->min) frame->min = image[i];
 		}
 	}
 	
@@ -277,7 +281,14 @@ void *Camera::cam_queue(void *data, void *image, struct timeval *tv) {
 	
 	if(!frame->histo)
 		frame->histo = new uint32_t[get_maxval()];
-			
+	
+	// Reset values in frame struct
+	frame->proc = false;
+	frame->avg = 0;
+	frame->rms = 0;
+	frame->min = INT_MAX;
+	frame->max = 0;
+	
 	if(tv)
 		frame->tv = *tv;
 	else
@@ -609,6 +620,7 @@ void Camera::grab(Connection *conn, int x1, int y1, int x2, int y2, int scale = 
 			extra += " histogram";
 		
 		extra += format(" avg %lf rms %lf", f->avg, f->rms);
+		extra += format(" min %d max %d", f->min, f->max);
 		
 		// zero copy if possible
 		if(!do_df && scale == 1 && x1 == 0 && x2 == (int)res.x && y1 == 0 && y2 == (int)res.y) {
