@@ -39,6 +39,8 @@ class SimulCam: public Camera {
 private:
 	SimSeeing seeing;			//!< This class simulates the atmosphere, telescope and lenslet array
 	SimWfs simwfs;				//!< This class simulates the atmosphere, telescope and lenslet array
+	void simul_capture(uint8_t *frame);	//!< Simulate CCD frame capture (exposure, offset, etc.)
+	
 public:
 	SimulCam(Io &io, foamctrl *ptc, string name, string port, Path &conffile);
 	~SimulCam();

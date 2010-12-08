@@ -50,6 +50,12 @@ simwfs(io, ptc, name + "-simwfs", port, conffile)
 	cam_thr.create(sigc::mem_fun(*this, &SimulCam::cam_handler));
 }
 
+void SimulCam::simul_capture(uint8_t *frame) {
+	// Apply offset and exposure here
+	for (size_t p=0; p<res.x*res.y; p++)
+		frame[p] = (uint8_t) clamp((int) ((frame[p] * exposure) + offset), 0, UINT8_MAX);
+}
+
 
 SimulCam::~SimulCam() {
 	//! @todo stop simulator etc.
@@ -118,6 +124,8 @@ void SimulCam::cam_handler() {
 							 wf.matrix.data, wf.matrix.data[100]);
 				uint8_t *frame = simwfs.sim_shwfs(&(wf.matrix));
 				
+				simul_capture(frame);
+				
 				cam_queue(frame, frame);
 
 				usleep(interval * 1000000);
@@ -129,6 +137,9 @@ void SimulCam::cam_handler() {
 
 				gsl_matrix_view wf = seeing.get_wavefront();
 				uint8_t *frame = simwfs.sim_shwfs(&(wf.matrix));
+
+				simul_capture(frame);
+				
 				cam_queue(frame, frame);
 				
 				usleep(interval * 1000000);
