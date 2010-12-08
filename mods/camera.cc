@@ -94,12 +94,10 @@ void Camera::cam_proc() {
 	while (true) {
 		// Always wait for proc_cond broadcasts
 		proc_mutex.lock();
-		io.msg(IO_DEB2, "Camera::cam_proc(): waiting for proc_cond.");
 		proc_cond.wait(proc_mutex);
 		proc_mutex.unlock();
 		
 		// Lock cam_mut before handling the data
-		io.msg(IO_DEB2, "Camera::cam_proc(): waiting for cam_mutex.");
 		pthread::mutexholder h(&cam_mutex);
 		
 		// There is a new frame ready now, process it
@@ -119,7 +117,6 @@ void Camera::cam_proc() {
 		// Notify all threads waiting for new frames now
 		cam_cond.broadcast();
 	}
-	io.msg(IO_DEB2, "Camera::cam_proc() finish");
 }
 
 void Camera::fits_init_phdu(char *phdu) {
@@ -286,8 +283,7 @@ void *Camera::cam_queue(void *data, void *image, struct timeval *tv) {
 	else
 		gettimeofday(&frame->tv, 0);
 	
-	// Signal one waiting thread about the new frame
-	proc_cond.signal();
+	proc_cond.signal();			// Signal one waiting thread about the new frame
 	
 	return old;
 }
@@ -570,7 +566,7 @@ uint8_t *Camera::get_thumbnail(Connection *conn = NULL) {
 	return buffer;
 }
 
-void Camera::grab(Connection *conn, int x1, int y1, int x2, int y2, int scale = 1, bool do_df = false, bool do_histo = false) {
+void Camera::grab(Connection *conn, int x1, int y1, int x2, int y2, int scale = 1, bool do_df = false, bool do_histo = false) {	
 	x1 = clamp(x1, 0, res.x);
 	y1 = clamp(y1, 0, res.y);
 	x2 = clamp(x2, 0, res.x / scale);
@@ -598,10 +594,13 @@ void Camera::grab(Connection *conn, int x1, int y1, int x2, int y2, int scale = 
 		lookup[i] = 128 + pow(i - maxval / 2, 7.0 / (depth - 1));
 	
 	{
+		
 		pthread::mutexholder h(&cam_mutex);
 		frame_t *f = get_frame(count);
 		if(!f)
 			return conn->write("error :Could not grab image");
+		
+		io.msg(IO_DEB2, "Camera::grab() got frame");
 		
 		string extra;
 		

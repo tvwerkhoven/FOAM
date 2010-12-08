@@ -164,8 +164,8 @@ protected:
 	pthread::mutex proc_mutex;		//!< Cond/mutexpair used by cam_thr to notify proc_thr
 	pthread::cond	proc_cond;			//!< Cond/mutexpair used by cam_thr to notify proc_thr
 	
-	pthread::cond mode_cond;			//!< Mode change notification
-	pthread::mutex mode_mutex;
+	pthread::cond mode_cond;			//!< Camera::mode change notification
+	pthread::mutex mode_mutex;		//!< Camera::mode change notification
 	
 	// These should be implemented in derived classes:
 	virtual void cam_handler() = 0;										//!< Camera handler

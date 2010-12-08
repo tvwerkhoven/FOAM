@@ -94,8 +94,6 @@ bool SimSeeing::setup(Path &f, coord_t size, coord_t wspeed) {
 }
 
 gsl_matrix_view SimSeeing::get_wavefront() {
-	io.msg(IO_DEB2, "SimSeeing::get_wavefront()");
-
 	// Update new crop position
 	croppos.x += (drand48()-0.5) * windspeed.x;
 	croppos.y += (drand48()-0.5) * windspeed.y;

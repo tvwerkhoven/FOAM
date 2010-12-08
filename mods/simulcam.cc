@@ -113,11 +113,9 @@ void SimulCam::cam_handler() {
 		switch (mode) {
 			case Camera::RUNNING:
 			{
-				io.msg(IO_DEB1, "SimulCam::cam_handler() RUNNING");
-
 				gsl_matrix_view wf = seeing.get_wavefront();
-				io.msg(IO_DEB1, "SimulCam::cam_handler() f@%p, f[0]: %g, f[100]: %g", 
-							 wf.matrix.data, wf.matrix.data[0], wf.matrix.data[100]);
+				io.msg(IO_DEB1, "SimulCam::cam_handler() RUNNING f@%p, f[100]: %g", 
+							 wf.matrix.data, wf.matrix.data[100]);
 				uint8_t *frame = simwfs.sim_shwfs(&(wf.matrix));
 				
 				cam_queue(frame, frame);
