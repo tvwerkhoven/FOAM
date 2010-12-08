@@ -302,14 +302,15 @@ Camera::frame_t *Camera::get_last_frame() {
 Camera::frame_t *Camera::get_frame(size_t id, bool wait) {	
 	if(id >= count) {
 		if(wait) {
-			while(id >= count)
+			while(id >= count) {
 				cam_cond.wait(cam_mutex);		// This mutex must be locked elsewhere before calling get_frame()
+			}
 		} else {
 			return 0;
 		}
 	}
-	
-	if(id < count - nframes || id >= count)
+
+	if(id + nframes < count || id >= count)
 		return 0;
 	
 	return &frames[id % nframes];
@@ -411,7 +412,6 @@ void Camera::on_message(Connection *conn, string line) {
 			else if(option == "histogram")
 				do_histo = true;
 		}
-		
 		grab(conn, x1, y1, x2, y2, scale, do_df, do_histo);
 	} else if(command == "store") {
 		conn->addtag("store");
