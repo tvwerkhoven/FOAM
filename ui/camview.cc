@@ -47,13 +47,20 @@ camframe("Camera"),
 histoframe("Histogram"),
 e_exposure("Exp."), e_offset("Offset"), e_interval("Intv."), e_gain("Gain"), e_res("Res."), e_mode("Mode"), e_stat("Status"),
 flipv("Flip vert."), fliph("Flip hor."), crosshair("Crosshair"), grid("Grid"), zoomin(Stock::ZOOM_IN), zoomout(Stock::ZOOM_OUT), zoom100(Stock::ZOOM_100), zoomfit(Stock::ZOOM_FIT), capture("Capture"), display("Display"), store("Store"),
-e_avg("Avg."), e_rms("RMS")
+scale("Scale down", "times"), minval("Display min"), maxval("Display max"), e_avg("Avg."), e_rms("RMS")
 {
 	fprintf(stderr, "%x:CamView::CamView()\n", (int) pthread_self());
 	
 	lastupdate = 0;
 	waitforupdate = false;
 	s = -1;
+	
+	// Setup histogram
+	histo = 0;
+	histopixbuf = Gdk::Pixbuf::create(Gdk::COLORSPACE_RGB, false, 8, 256, 100);
+	histopixbuf->fill(0xFFFFFF00);
+	histoimage.set(histopixbuf);
+	histoimage.set_double_buffered(false);
 	
 	e_exposure.set_width_chars(8);
 	e_offset.set_width_chars(4);
@@ -74,10 +81,20 @@ e_avg("Avg."), e_rms("RMS")
 	
 	store_n.set_width_chars(4);
 	
-	e_avg.set_width_chars(6);
+	minval.set_range(0, 1 << camctrl->get_depth());
+	minval.set_digits(0);
+	minval.set_increments(1, 16);
+	maxval.set_range(0, 1 << camctrl->get_depth());
+	maxval.set_digits(0);
+	maxval.set_increments(1, 16);
+	scale.set_range(-3, 3);
+	scale.set_digits(3);
+	scale.set_increments(1.0/3.0, 1.0/3.0);
+	
+	e_avg.set_width_chars(8);
 	e_avg.set_alignment(1);
 	e_avg.set_editable(false);
-	e_rms.set_width_chars(6);
+	e_rms.set_width_chars(8);
 	e_rms.set_alignment(1);
 	e_rms.set_editable(false);
 	
@@ -108,6 +125,8 @@ e_avg("Avg."), e_rms("RMS")
 	capture.signal_clicked().connect(sigc::mem_fun(*this, &CamView::on_capture_clicked));
 	display.signal_clicked().connect(sigc::mem_fun(*this, &CamView::on_display_clicked));
 	store.signal_clicked().connect(sigc::mem_fun(*this, &CamView::on_store_clicked));
+	
+	histoevents.signal_button_press_event().connect(sigc::mem_fun(*this, &CamView::on_histo_clicked));
 	
 	// Handle some glarea events as well
 	glarea.view_update.connect(sigc::mem_fun(*this, &CamView::on_glarea_view_update));
@@ -146,10 +165,16 @@ e_avg("Avg."), e_rms("RMS")
 	camhbox.pack_start(glarea);
 	camframe.add(camhbox);
 	
-	histohbox.set_spacing(4);
-	histohbox.pack_start(e_avg, PACK_SHRINK);
-	histohbox.pack_start(e_rms, PACK_SHRINK);
-	histoframe.add(histohbox);
+	histoevents.add(histoimage);
+	histoalign.add(histoevents);
+
+	histovbox.set_spacing(4);
+	histovbox.pack_start(histoalign, PACK_SHRINK);
+	histovbox.pack_start(e_avg, PACK_SHRINK);
+	histovbox.pack_start(e_rms, PACK_SHRINK);
+	histovbox.pack_start(minval, PACK_SHRINK);
+	histovbox.pack_start(maxval, PACK_SHRINK);
+	histoframe.add(histovbox);
 	
 	pack_start(infoframe, PACK_SHRINK);
 	pack_start(dispframe, PACK_SHRINK);
@@ -159,6 +184,10 @@ e_avg("Avg."), e_rms("RMS")
 	
 	// finalize
 	show_all_children();
+	
+	//!< @todo add histogram toggling
+//	if(!histogram.get_active())
+//		histogramframe.hide();
 	
 	if (is_parent)
 		init();
@@ -229,6 +258,10 @@ void CamView::clear_gui() {
 	store.set_state(SwitchButton::CLEAR);
 	
 	store_n.set_text("10");
+	
+	minval.set_value(0);
+	maxval.set_value(0);
+	scale.set_value(1);
 
 	e_avg.set_text("N/A");
 	e_rms.set_text("N/A");	
@@ -260,14 +293,99 @@ void CamView::force_update() {
 	// Zoom settings
 	glarea.setzoomfit(zoomfit.get_active());
 	glarea.do_update();
+	do_histo_update();
 }
 
-void CamView::do_update() {
-	//! @todo improve this
-	glarea.do_update();
+void CamView::do_histo_update() {	
+	int pixels = 0;
+	int max = 1 << camctrl->get_depth();
+	double sum = 0;
+	double sumsquared = 0;
+	double rms = max;
+	bool overexposed = false;
+	
+	if (histo) {
+		for (int i = 0; i < max; i++) {
+			pixels += histo[i];
+			sum += (double)i * histo[i];
+			sumsquared += (double)(i * i) * histo[i];
+			
+			if (i >= 0.98 * max && histo[i])
+				overexposed = true;
+		}
+		
+		sum /= pixels;
+		sumsquared /= pixels;
+		rms = sqrt(sumsquared - sum * sum) / sum;
+	}
+	
+	minval.set_range(0, 1 << camctrl->get_depth());
+	maxval.set_range(0, 1 << camctrl->get_depth());
+	e_avg.set_text(format("%.2lf", sum));
+	e_rms.set_text(format("%.3lf", rms));
+	
+	// Update min/max if necessary
+
+	//<! @todo Add contrast feature
+//	if (contrast.get_active()) {
+//		minval.set_value(sum - 5 * sum * rms);
+//		maxval.set_value(sum + 5 * sum * rms);
+//	}
+	
+	// Draw the histogram
+	
+	if (!histoframe.is_visible())
+		return;
+	
+	const int hscale = 1 + 10 * pixels / max;
+	
+	// Are we overexposed?
+	
+	//!< @todo implement underover
+	//if (overexposed && underover.get_active() && lastupdate & 1)
+	if (overexposed && lastupdate & 1)
+		histopixbuf->fill(0xff000000);
+	else
+		histopixbuf->fill(0xffffff00);
+	
+	uint8_t *out = (uint8_t *)histopixbuf->get_pixels();
+	
+	if(histo) {
+		for(int i = 0; i < max; i++) {
+			int height = histo[i] * 100 / hscale;
+			if(height > 100)
+				height = 100;
+			for(int y = 100 - height; y < 100; y++) {
+				uint8_t *p = out + 3 * ((i * 256 / max) + 256 * y);
+				p[0] = 0;
+				p[1] = 0;
+				p[2] = 0;
+			}
+		}
+	}
+	
+	int x1 = minval.get_value_as_int() * 256 / max;
+	int x2 = maxval.get_value_as_int() * 256 / max;
+	if(x1 > 255)
+		x1 = 255;
+	if(x2 > 255)
+		x2 = 255;
+	
+	for(int y = 0; y < 100; y += 2) {
+		uint8_t *p = out + 3 * (x1 + 256 * y);
+		p[0] = 255;
+		p[1] = 0;
+		p[2] = 0;
+		p = out + 3 * (x2 + 256 * y);
+		p[0] = 0;
+		p[1] = 255;
+		p[2] = 255;
+	}
+	
+	histoimage.queue_draw();
 }
 
-//! @todo what is this? do we need it?
+//! @todo Implement on_timeout method here
 bool CamView::on_timeout() {
 	if(waitforupdate && time(NULL) - lastupdate < 5)
 		return true;
@@ -280,6 +398,16 @@ bool CamView::on_timeout() {
 void CamView::on_monitor_update() {
 	//! @todo need mutex here?
 	glarea.linkData((void *) camctrl->monitor.image, camctrl->monitor.depth, camctrl->monitor.x2 - camctrl->monitor.x1, camctrl->monitor.y2 - camctrl->monitor.y1);
+	
+	if (camctrl->monitor.histo) {
+		if (!histo)
+			histo = (uint32_t *) malloc((1 << camctrl->get_depth()) * sizeof *histo);
+		memcpy(histo, camctrl->monitor.histo, (1 << camctrl->get_depth()) * sizeof *histo);
+	} 
+	else if (histo) {
+		free(histo);
+		histo = 0;
+	}
 	
 	e_avg.set_text(format("%g", camctrl->monitor.avg));
 	e_rms.set_text(format("%g", camctrl->monitor.rms));
@@ -394,3 +522,29 @@ void CamView::on_store_clicked() {
 	if (nstore > 0 || nstore == -1)
 		camctrl->store(nstore);
 }
+
+bool CamView::on_histo_clicked(GdkEventButton *event) {
+	if (event->type != GDK_BUTTON_PRESS)
+		return false;
+	
+	int shift = camctrl->get_depth() - 8;
+	if (shift < 0)
+		shift = 0;
+	double value = event->x * (1 << shift);
+	
+	if (event->button == 1)
+		minval.set_value(value);
+	if (event->button == 2) {
+		minval.set_value(value - (16 << shift));
+		maxval.set_value(value + (16 << shift));
+	}
+	if (event->button == 3)
+		maxval.set_value(value);
+	
+	//!< @todo contrast
+	//contrast.set_active(false);
+	force_update();
+	
+	return true;
+}
+

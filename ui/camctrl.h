@@ -102,7 +102,7 @@ public:
 			depth = 0;
 			avg=0;
 			rms=0;
-			histogram = 0;
+			histo = 0;
 		}
 		pthread::mutex mutex;							//!< Write-access mutex to image
 		void *image;											//!< Pointer to data
@@ -115,7 +115,7 @@ public:
 
 		double avg;
 		double rms;
-		uint32_t *histogram;							//!< Histogram (optional)
+		uint32_t *histo;									//!< Histogram (optional)
 		int depth;												//!< Depth of this frame
 	} monitor;													//!< Stores frames from the camera. Note that these frames can be cropped and/or scaled wrt the original frame.
 	

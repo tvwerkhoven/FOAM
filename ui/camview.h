@@ -83,10 +83,20 @@ protected:
 	OpenGLImageViewer glarea;
 	
 	// Histogram stuff
-	HBox histohbox;
+	VBox histovbox;
+	Gtk::Alignment histoalign;
+	Gtk::EventBox histoevents;
+	Gtk::Image histoimage;
+	Glib::RefPtr<Gdk::Pixbuf> histopixbuf;
+	LabeledSpinEntry scale;
+	LabeledSpinEntry minval;
+	LabeledSpinEntry maxval;
+	
 	LabeledEntry e_avg;										//!< Shows avg value
 	LabeledEntry e_rms;										//!< Shows sigma
 
+	uint32_t *histo;											//!< Local histogram copy for GUI
+	
 	bool waitforupdate;
 	time_t lastupdate;
 	float dx;
@@ -101,7 +111,10 @@ protected:
 	void on_display_clicked();					//!< (De-)activate camera frame grabbing when user presses CamView::display button.
 	void on_store_clicked();						//!< Called when user clicks CamView::store
 	void on_info_change();							//!< Propagate user changed settings in GUI to camera
-
+	
+	void on_histo_toggled();
+	bool on_histo_clicked(GdkEventButton *);
+	
 	//!< @todo Sort these functions out
 	void on_image_realize();
 	void on_image_expose_event(GdkEventExpose *event);
@@ -111,10 +124,11 @@ protected:
 	bool on_image_button_event(GdkEventButton *event);
 	
 	// GUI updates
-	//!< @todo Sort these functions out
 	void on_glarea_view_update();				//!< Callback from glarea class
-	void force_update();
-	void do_update();
+	//!< @todo Sort these functions out
+	void force_update();								//!< Force full update, also when GUI changes
+	void do_update();										//!< Update glarea frame
+	void do_histo_update();							//!< Update histogram
 
 	// Overload from DeviceView:
 	virtual void disable_gui();
