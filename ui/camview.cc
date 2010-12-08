@@ -262,11 +262,6 @@ void CamView::force_update() {
 	glarea.do_update();
 }
 
-void CamView::do_update() {
-	//! @todo improve this
-	glarea.do_update();
-}
-
 //! @todo what is this? do we need it?
 bool CamView::on_timeout() {
 	if(waitforupdate && time(NULL) - lastupdate < 5)
