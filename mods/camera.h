@@ -201,8 +201,8 @@ protected:
 	
 	frame_t *frames;							//!< Frame ringbuffer
 	size_t nframes;								//!< Ringbuffer size
-	uint64_t count;								//!< Total number of frames captured
-	uint64_t timeouts;						//!< Number of timeouts that occurred
+	size_t count;									//!< Total number of frames captured
+	size_t timeouts;							//!< Number of timeouts that occurred
 	
 	//! @todo incorporate dark/flat into struct or class?
 	size_t ndark;									//!< Number of frames used in darkframe
