@@ -92,10 +92,10 @@ protected:
 	LabeledSpinEntry minval;
 	LabeledSpinEntry maxval;
 	
-	LabeledEntry e_avg;										//!< Shows avg value
-	LabeledEntry e_rms;										//!< Shows sigma
+	LabeledEntry e_avg;									//!< Shows avg value
+	LabeledEntry e_rms;									//!< Shows sigma
 
-	uint32_t *histo;											//!< Local histogram copy for GUI
+	uint32_t *histo;										//!< Local histogram copy for GUI
 	
 	bool waitforupdate;
 	time_t lastupdate;
@@ -126,8 +126,8 @@ protected:
 	// GUI updates
 	void on_glarea_view_update();				//!< Callback from glarea class
 	//!< @todo Sort these functions out
-	void force_update();								//!< Force full update, also when GUI changes
-	void do_update();										//!< Update glarea frame
+	void force_update();								//!< Update full image etc.
+	void do_update();										//!< Update with new GUI input
 	void do_histo_update();							//!< Update histogram
 
 	// Overload from DeviceView:

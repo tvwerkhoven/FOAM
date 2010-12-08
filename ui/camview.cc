@@ -112,12 +112,12 @@ scale("Scale down", "times"), minval("Display min"), maxval("Display max"), e_av
 	e_interval.entry.signal_activate().connect(sigc::mem_fun(*this, &CamView::on_info_change));
 	e_gain.entry.signal_activate().connect(sigc::mem_fun(*this, &CamView::on_info_change));
 	
-	fliph.signal_toggled().connect(sigc::mem_fun(*this, &CamView::force_update));
-	flipv.signal_toggled().connect(sigc::mem_fun(*this, &CamView::force_update));
-	crosshair.signal_toggled().connect(sigc::mem_fun(*this, &CamView::force_update));
-	grid.signal_toggled().connect(sigc::mem_fun(*this, &CamView::force_update));
+	fliph.signal_toggled().connect(sigc::mem_fun(*this, &CamView::do_update));
+	flipv.signal_toggled().connect(sigc::mem_fun(*this, &CamView::do_update));
+	crosshair.signal_toggled().connect(sigc::mem_fun(*this, &CamView::do_update));
+	grid.signal_toggled().connect(sigc::mem_fun(*this, &CamView::do_update));
 	
-	zoomfit.signal_toggled().connect(sigc::mem_fun(*this, &CamView::force_update));
+	zoomfit.signal_toggled().connect(sigc::mem_fun(*this, &CamView::do_update));
 	zoom100.signal_clicked().connect(sigc::mem_fun(*this, &CamView::on_zoom100_activate));
 	zoomin.signal_clicked().connect(sigc::mem_fun(*this, &CamView::on_zoomin_activate));
 	zoomout.signal_clicked().connect(sigc::mem_fun(*this, &CamView::on_zoomout_activate));
@@ -284,7 +284,7 @@ void CamView::on_glarea_view_update() {
 	zoomfit.set_active(glarea.getzoomfit());		
 }
 
-void CamView::force_update() {
+void CamView::do_update() {
 	glarea.setcrosshair(crosshair.get_active());
 	glarea.setgrid(grid.get_active());
 	// Flip settings
@@ -396,9 +396,17 @@ bool CamView::on_timeout() {
 }
 
 void CamView::on_monitor_update() {
-	//! @todo need mutex here?
+	force_update();
+	// Get new image if dispay button is in 'OK'
+	if (display.get_state(SwitchButton::OK))
+		camctrl->grab(0, 0, camctrl->get_width(), camctrl->get_height(), 1, false);
+}
+
+void CamView::force_update() {
+	//! @todo difference between on_monitor_update
 	glarea.linkData((void *) camctrl->monitor.image, camctrl->monitor.depth, camctrl->monitor.x2 - camctrl->monitor.x1, camctrl->monitor.y2 - camctrl->monitor.y1);
 	
+	// Do histogram, make local copy if needed
 	if (camctrl->monitor.histo) {
 		if (!histo)
 			histo = (uint32_t *) malloc((1 << camctrl->get_depth()) * sizeof *histo);
@@ -411,10 +419,8 @@ void CamView::on_monitor_update() {
 	
 	e_avg.set_text(format("%g", camctrl->monitor.avg));
 	e_rms.set_text(format("%g", camctrl->monitor.rms));
-
-	// Get new image if dispay button is in 'OK'
-	if (display.get_state(SwitchButton::OK))
-		camctrl->grab(0, 0, camctrl->get_width(), camctrl->get_height(), 1, false);
+	
+	do_histo_update();
 }
 
 void CamView::on_connect_update() {
@@ -543,7 +549,7 @@ bool CamView::on_histo_clicked(GdkEventButton *event) {
 	
 	//!< @todo contrast
 	//contrast.set_active(false);
-	force_update();
+	do_update();
 	
 	return true;
 }
