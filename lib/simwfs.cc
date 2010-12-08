@@ -61,8 +61,8 @@ uint8_t *SimWfs::sim_shwfs(gsl_matrix *wave_in) {
 		frame_out = (uint8_t *) realloc(frame_out, out_size);
 	}
 	
-	for (int i=0; i<wave_in->size1; i++)
-		for (int j=0; j<wave_in->size2; j++)
+	for (size_t i=0; i<wave_in->size1; i++)
+		for (size_t j=0; j<wave_in->size2; j++)
 			frame_out[i*wave_in->size2 + j] = (uint8_t) ((wave_in->data[i*wave_in->tda + j] - min)*fac);
 	
 	return frame_out;

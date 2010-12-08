@@ -153,26 +153,32 @@ void CamCtrl::on_monitor_message(string line) {
 		return;
 	}
 
-	// The rest of the line is: <size> <x1> <y1> <x2> <y2> <scale> [histogram]
+	// The rest of the line is: <size> <x1> <y1> <x2> <y2> <scale> [histogram] [avg] [rms]
 	size_t size = popsize(line);
-	int histosize = (1 << depth) * sizeof *monitor.histogram;
+	int histosize = (1 << depth) * sizeof *monitor.histo;
 	int x1 = popint(line);
 	int y1 = popint(line);
 	int x2 = popint(line);
 	int y2 = popint(line);
 	int scale = popint(line);
-	bool do_histogram = false;
+	bool do_histo = false;
 	double avg=0, rms=0;
+	int min=INT_MAX, max=0;
 
 	string extra;
-
+	
+	// Extra options might be: histogram, avg, rms, min, max
 	while(!(extra = popword(line)).empty()) {
 		if(extra == "histogram") {
-			do_histogram = true;
+			do_histo = true;
 		} else if(extra == "avg") {
 			avg = popdouble(line);
 		} else if(extra == "rms") {
 			rms = popdouble(line);
+		} else if(extra == "min") {
+			min = popint(line);
+		} else if(extra == "max") {
+			max = popint(line);
 		}
 	}
 
@@ -189,15 +195,17 @@ void CamCtrl::on_monitor_message(string line) {
 		monitor.depth = depth;
 		monitor.avg = avg;
 		monitor.rms = rms;
+		monitor.min = min;
+		monitor.max = max;
 
-		if(do_histogram)
-			monitor.histogram = (uint32_t *)realloc(monitor.histogram, histosize);
+		if(do_histo)
+			monitor.histo = (uint32_t *)realloc(monitor.histo, histosize);
 	}
 
 	monitorprotocol.read(monitor.image, monitor.size);
 
-	if(do_histogram)
-		monitorprotocol.read(monitor.histogram, histosize);
+	if(do_histo)
+		monitorprotocol.read(monitor.histo, histosize);
 
 	signal_monitor();
 }
