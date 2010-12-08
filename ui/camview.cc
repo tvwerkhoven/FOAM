@@ -47,7 +47,7 @@ camframe("Camera"),
 histoframe("Histogram"),
 e_exposure("Exp."), e_offset("Offset"), e_interval("Intv."), e_gain("Gain"), e_res("Res."), e_mode("Mode"), e_stat("Status"),
 flipv("Flip vert."), fliph("Flip hor."), crosshair("Crosshair"), grid("Grid"), zoomin(Stock::ZOOM_IN), zoomout(Stock::ZOOM_OUT), zoom100(Stock::ZOOM_100), zoomfit(Stock::ZOOM_FIT), capture("Capture"), display("Display"), store("Store"),
-mean("Mean value"), stddev("Stddev")
+e_avg("Avg."), e_rms("RMS")
 {
 	fprintf(stderr, "%x:CamView::CamView()\n", (int) pthread_self());
 	
@@ -74,12 +74,12 @@ mean("Mean value"), stddev("Stddev")
 	
 	store_n.set_width_chars(4);
 	
-	mean.set_width_chars(6);
-	mean.set_alignment(1);
-	mean.set_editable(false);
-	stddev.set_width_chars(6);
-	stddev.set_alignment(1);
-	stddev.set_editable(false);
+	e_avg.set_width_chars(6);
+	e_avg.set_alignment(1);
+	e_avg.set_editable(false);
+	e_rms.set_width_chars(6);
+	e_rms.set_alignment(1);
+	e_rms.set_editable(false);
 	
 	clear_gui();
 	disable_gui();
@@ -147,8 +147,8 @@ mean("Mean value"), stddev("Stddev")
 	camframe.add(camhbox);
 	
 	histohbox.set_spacing(4);
-	histohbox.pack_start(mean, PACK_SHRINK);
-	histohbox.pack_start(stddev, PACK_SHRINK);
+	histohbox.pack_start(e_avg, PACK_SHRINK);
+	histohbox.pack_start(e_rms, PACK_SHRINK);
 	histoframe.add(histohbox);
 	
 	pack_start(infoframe, PACK_SHRINK);
@@ -187,8 +187,8 @@ void CamView::enable_gui() {
 	store.set_sensitive(true);
 	store_n.set_sensitive(true);
 	
-	mean.set_sensitive(true);
-	stddev.set_sensitive(true);
+	e_avg.set_sensitive(true);
+	e_rms.set_sensitive(true);
 }
 
 void CamView::disable_gui() {
@@ -209,8 +209,8 @@ void CamView::disable_gui() {
 	store.set_sensitive(false);
 	store_n.set_sensitive(false);
 
-	mean.set_sensitive(false);
-	stddev.set_sensitive(false);
+	e_avg.set_sensitive(false);
+	e_rms.set_sensitive(false);
 }
 
 void CamView::clear_gui() {
@@ -230,8 +230,8 @@ void CamView::clear_gui() {
 	
 	store_n.set_text("10");
 
-	mean.set_text("N/A");
-	stddev.set_text("N/A");	
+	e_avg.set_text("N/A");
+	e_rms.set_text("N/A");	
 }
 
 void CamView::init() {
@@ -278,9 +278,11 @@ bool CamView::on_timeout() {
 }
 
 void CamView::on_monitor_update() {
-//	fprintf(stderr, "CamView::on_monitor_update()\n");
 	//! @todo need mutex here?
 	glarea.linkData((void *) camctrl->monitor.image, camctrl->monitor.depth, camctrl->monitor.x2 - camctrl->monitor.x1, camctrl->monitor.y2 - camctrl->monitor.y1);
+	
+	e_avg.set_text(format("%g", camctrl->monitor.avg));
+	e_rms.set_text(format("%g", camctrl->monitor.rms));
 
 	// Get new image if dispay button is in 'OK'
 	if (display.get_state(SwitchButton::OK))

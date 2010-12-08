@@ -600,8 +600,6 @@ void Camera::grab(Connection *conn, int x1, int y1, int x2, int y2, int scale = 
 		if(!f)
 			return conn->write("error :Could not grab image");
 		
-		io.msg(IO_DEB2, "Camera::grab() got frame");
-		
 		string extra;
 		
 		if(f->tv.tv_sec)

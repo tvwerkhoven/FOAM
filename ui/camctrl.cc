@@ -162,12 +162,17 @@ void CamCtrl::on_monitor_message(string line) {
 	int y2 = popint(line);
 	int scale = popint(line);
 	bool do_histogram = false;
+	double avg=0, rms=0;
 
 	string extra;
 
 	while(!(extra = popword(line)).empty()) {
 		if(extra == "histogram") {
 			do_histogram = true;
+		} else if(extra == "avg") {
+			avg = popdouble(line);
+		} else if(extra == "rms") {
+			rms = popdouble(line);
 		}
 	}
 
@@ -182,6 +187,8 @@ void CamCtrl::on_monitor_message(string line) {
 		monitor.y2 = y2;
 		monitor.scale = scale;
 		monitor.depth = depth;
+		monitor.avg = avg;
+		monitor.rms = rms;
 
 		if(do_histogram)
 			monitor.histogram = (uint32_t *)realloc(monitor.histogram, histosize);

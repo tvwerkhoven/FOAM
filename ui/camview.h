@@ -84,8 +84,8 @@ protected:
 	
 	// Histogram stuff
 	HBox histohbox;
-	LabeledEntry mean;									//!< Shows mean value
-	LabeledEntry stddev;								//!< Shows sigma
+	LabeledEntry e_avg;										//!< Shows avg value
+	LabeledEntry e_rms;										//!< Shows sigma
 
 	bool waitforupdate;
 	time_t lastupdate;

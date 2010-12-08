@@ -100,6 +100,8 @@ public:
 			y2 = 0;
 			scale = 1;
 			depth = 0;
+			avg=0;
+			rms=0;
 			histogram = 0;
 		}
 		pthread::mutex mutex;							//!< Write-access mutex to image
@@ -111,6 +113,8 @@ public:
 		int y2;														//!< Position of this frame wrt the original frame (x1, y2) to (x2, y2)
 		int scale;												//!< Spatial scaling, 1=every pixel, 2=every second pixel, etc.
 
+		double avg;
+		double rms;
 		uint32_t *histogram;							//!< Histogram (optional)
 		int depth;												//!< Depth of this frame
 	} monitor;													//!< Stores frames from the camera. Note that these frames can be cropped and/or scaled wrt the original frame.
