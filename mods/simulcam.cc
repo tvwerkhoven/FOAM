@@ -42,7 +42,7 @@ simwfs(io, ptc, name + "-simwfs", port, conffile)
 	wind.y = cfg.getint("windspeed.y");
 	Path wffile = ptc->confdir + cfg.getstring("wavefront_file");
 	
-	seeing.setup(wffile, res, wind);		
+	seeing.setup(wffile, res, wind, SimSeeing::LINEAR);		
 	
 	// Setup (SH) wavefront sensor parameters
 	simwfs.setup(&seeing);
