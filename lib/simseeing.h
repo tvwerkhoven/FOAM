@@ -36,6 +36,12 @@ const string SimSeeing_type = "simseeing";
  @brief This class simulates seeing by an atmosphere.
  */
 class SimSeeing: public Device {
+public:
+	enum wtype {
+		RANDOM=0,
+		LINEAR
+	};													//!< Possible windtypes: random walk around the wavefront or linearly crop things out see SimSeeing::get_wavefront()
+	
 private:
 	gsl_matrix *wfsrc;					//!< Holds the wavefront data (can be bigger than wfsize)
 	Path file;									//!< If type = 'file', this is the full path
@@ -45,14 +51,16 @@ private:
 	
 	coord_t cropsize;						//!< Size of the wavefront to return
 	coord_t windspeed;					//!< Windspeed in pixels/frame
-
-	gsl_matrix *load_wavefront(); //!< Load wavefront data from disc
+	
+	gsl_matrix *load_wavefront(Path &f); //!< Load wavefront data from disc
 	
 public:
+	enum wtype windtype;				//!< Windtype used for seeing simulation
+	
 	SimSeeing(Io &io, foamctrl *ptc, string name, string port, Path &conffile);
 	~SimSeeing();
 	
-	bool setup(Path &f, coord_t size, coord_t wspeed);
+	bool setup(Path &f, coord_t size=coord_t(128,128), coord_t wspeed=coord_t(16,16), enum wtype t=RANDOM);
 	gsl_matrix_view get_wavefront();
 	gsl_matrix_view get_wavefront(size_t x0, size_t y0, size_t w, size_t h);
 };
