@@ -239,7 +239,7 @@ protected:
 	
 	coord_t res;									//!< Camera pixel resolution
 	int depth;										//!< Camera pixel depth in bits
-	dtype_t dtype;								//!< Camera datatype
+	dtype_t dtype;								//!< Camera datatype @todo do we need this?
 
 	mode_t mode;									//!< Camera mode (see mode_t)
 	

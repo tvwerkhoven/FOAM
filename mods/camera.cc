@@ -166,6 +166,11 @@ bool Camera::fits_add_comment(char *phdu, const string &comment) {
 
 bool Camera::store_frame(frame_t *frame) {
 	// Generate path to store file to, based on filenamebase
+	if (depth != 8 && depth != 16) {
+		io.msg(IO_WARN, "Camera::store_frame() Only 8 and 16 bit images supported!");
+		return false;
+	}
+	
 	Path filename = makename();
 	io.msg(IO_DEB1, "Camera::store_frame(%p) to %s", frame, filename.c_str());
 	
@@ -188,21 +193,17 @@ bool Camera::store_frame(frame_t *frame) {
 	
 	// Add datatype <http://www.eso.org/sci/data-processing/software/esomidas//doc/user/98NOV/vola/node112.html>
 	fits_add_card(phdu, "SIMPLE", "T");
-	if (dtype == UINT8 || dtype == INT8)
-		fits_add_card(phdu, "BITPIX", "8");
-	else if (dtype == UINT16 || dtype == INT16)
+	if (depth == 16)
 		fits_add_card(phdu, "BITPIX", "16");
-	else if (dtype == FLOAT32)
-		fits_add_card(phdu, "BITPIX", "-32");
-	else if (dtype == FLOAT64)
-		fits_add_card(phdu, "BITPIX", "-64");
+	else
+		fits_add_card(phdu, "BITPIX", "8");
 		
 	// Add rest of the metadata
 	fits_add_card(phdu, "NAXIS", "2");
 	fits_add_card(phdu, "NAXIS1", format("%d", res.x));
 	fits_add_card(phdu, "NAXIS2", format("%d", res.y));
 	
-	fits_add_card(phdu, "ORIGIN", "FOAM store");
+	fits_add_card(phdu, "ORIGIN", "FOAM Camera");
 	fits_add_card(phdu, "DEVICE", name);
 	fits_add_card(phdu, "TELESCOPE", fits_telescope);
 	fits_add_card(phdu, "INSTRUMENT", fits_instrument);
