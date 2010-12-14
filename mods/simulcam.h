@@ -29,7 +29,7 @@
 
 #include "camera.h"
 #include "simseeing.h"
-#include "simwfs.h"
+#include "shwfs.h"
 
 using namespace std;
 
@@ -49,7 +49,10 @@ const string SimulCam_type = "SimulCam";
 class SimulCam: public Camera {
 private:
 	SimSeeing seeing;										//!< This class simulates the atmosphere
-	Shwfs &shwfs;												//!< Reference to WFS we simulate (i.e. for configuration)
+	Shwfs *shwfs;												//!< Reference to WFS we simulate (i.e. for configuration)
+	
+	uint8_t *frame_out;									//!< Frame to store simulated image
+	size_t out_size;										//!< Size of frame_out
 	
 	uint8_t *simul_wfs(gsl_matrix *wave_in); //!< Simulate wavefront sensor optics (i.e. MLA)
 	void simul_capture(uint8_t *frame);	//!< Simulate CCD frame capture (exposure, offset, etc.)
