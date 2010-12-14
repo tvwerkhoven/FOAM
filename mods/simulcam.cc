@@ -38,14 +38,32 @@ simwfs(io, ptc, name + "-simwfs", port, conffile)
 	
 	// Setup seeing parameters
 	coord_t wind;
-	wind.x = cfg.getint("windspeed.x");
-	wind.y = cfg.getint("windspeed.y");
+	wind.x = cfg.getint("windspeed.x", 16);
+	wind.y = cfg.getint("windspeed.y", 16);
+	string tmp = cfg.getint("windtype", "linear");
+	enum SimSeeing::windtype wtype
+	if (tmp == "linear")
+		wtype = SimSeeing::LINEAR;
+	else
+		wtype = SimSeeing::RANDOM;
+
 	Path wffile = ptc->confdir + cfg.getstring("wavefront_file");
 	
-	seeing.setup(wffile, res, wind, SimSeeing::LINEAR);		
+	seeing.setup(wffile, res, wind, wtype);		
+	
+	// Setup SH-WFS parameters
+	coord_t sasize;											//!< Subaperture size (per subaperture)
+	sasize.x = cfg.getint("sasize.x", 32);
+	sasize.y = cfg.getint("sasize.y", 32);
+	
+	coord_t sapitch;										//!< Subaperture pixels (per subaperture)
+	sapitch.x = cfg.getint("sapitch.x", 32);
+	sapitch.y = cfg.getint("sapitch.y", 32);
+	
+	int xoff = cfg.getint("offset", 0);
 	
 	// Setup (SH) wavefront sensor parameters
-	simwfs.setup(&seeing);
+	simwfs.setup(&seeing, res, sasize, sapitch);
 	
 	cam_thr.create(sigc::mem_fun(*this, &SimulCam::cam_handler));
 }

@@ -35,6 +35,15 @@ using namespace std;
 
 const string SimulCam_type = "SimulCam";
 
+/*!
+ @brief Simulation class for seeing + camera
+ 
+ SimulCam is derived from Camera. Given a static input wavefront, it simulates
+ a Shack-Hartmann wavefront sensor (i.e. the CCD).
+ 
+ Configuration parameters:
+ - windspeed.x,y: windspeed by which the
+ */
 class SimulCam: public Camera {
 private:
 	SimSeeing seeing;			//!< This class simulates the atmosphere, telescope and lenslet array

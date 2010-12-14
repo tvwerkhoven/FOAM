@@ -41,13 +41,7 @@ const string simwfs_type = "simwfs";
  */
 class SimWfs : public Device {
 private:
-	typedef struct shwfs {
-		int nmla;									//!< Number of microlenses
-		Shwfs::sh_simg_t mla[shwfs_maxlenses]; //!< Microlens array positions
-		float f;									//!< Microlens focal length
-	} shwfs_t;
-	
-	shwfs_t mla;								//!< Microlens array of simulated WFS
+	sh_mla_t mla;								//!< Microlens array of simulated WFS
 	
 	uint8_t *frame_out;					//!< Data used to store output frame (realloc'ed if necessary)
 	size_t out_size;						//!< Size of output frame
@@ -59,18 +53,6 @@ public:
 	
 	uint8_t *sim_shwfs(gsl_matrix *wavefront);
 	bool setup(SimSeeing *ref);	//!< Setup SimWfs instance (i.e. from SimulCam)
-	
-	/*! @brief Generate subaperture/subimage (sa/si) positions for a given configuration.
-	
-	@param [in] res Resolution of the sa pattern (before scaling) [pixels]
-	@param [in] size size of the sa's [pixels]
-	@param [in] pitch pitch of the sa's [pixels]
-	@param [in] xoff the horizontal position offset of odd rows [fraction of pitch]
-	@param [in] disp global displacement of the sa positions [pixels]
-	@param [out] *pattern the calculated subaperture pattern
-	@return number of subapertures found
-	 */
-	Shwfs::sh_simg_t *gen_mla_grid(coord_t res, coord_t size, coord_t pitch, int xoff, coord_t disp, int &nsubap);
 };
 
 #endif // HAVE_SIMWFS_H

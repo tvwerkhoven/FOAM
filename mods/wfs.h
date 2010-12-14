@@ -62,15 +62,17 @@ public:
 		} wfmode;
 	};
 	
-	Camera *cam;												//!< Pointer to the camera class used for this 
+	Camera &cam;												//!< Reference to the camera class used for this 
 		
-	virtual int verify(int) = 0;				//!< Verify settings
-	virtual int calibrate(int) = 0;			//!< Calibrate WFS
-	virtual int measure(int) = 0;				//!< Measure abberations
+//	virtual int verify(int) = 0;				//!< Verify settings
+//	virtual int calibrate(int) = 0;			//!< Calibrate WFS
+//	virtual int measure(int) = 0;				//!< Measure abberations
 	
 	virtual ~Wfs() {}
-	Wfs(Io &io, foamctrl *ptc, string name, string type, string port, Path &conffile):
-	Device(io, ptc, name, cam_type + "." + type, port, conffile) {	; }
+	Wfs(Io &io, foamctrl *ptc, string name, string type, string port, Path conffile, Camera &wfscam):
+	Device(io, ptc, name, wfs_type + "." + type, port, conffile),
+	cam(wfscam)
+	{	; }
 };
 
 #endif // HAVE_WFS_H

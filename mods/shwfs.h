@@ -28,6 +28,8 @@
 const string shwfs_type = "shwfs";
 const int shwfs_maxlenses = 128;
 
+using namespace std;
+
 // CLASS DEFINITION //
 /********************/
 
@@ -45,6 +47,11 @@ class Shwfs: public Wfs {
 public:
 	// Public datatypes
 	typedef enum {
+		SQUARE=0,
+		CIRCULAR,
+	} mlashape_t;
+	
+	typedef enum {
 		CAL_SUBAPSEL=0,
 		CAL_PINHOLE
 	} wfs_cal_t;												//!< Different calibration methods
@@ -59,37 +66,52 @@ public:
 		coord_t llpos;										//!< Lower-left position of this subimg (pos - size/2)
 		coord_t size;											//!< Subaperture size (pixels)
 		coord_t track;										//!< Subaperture tracking window size
-		sh_subimg(): pos(0,0), size(0,0), track(0,0) { ; }
-	} sh_simg_t; //!< Subimage definition on CCD
+		sh_subimg(): pos(0,0), llpos(0,0), size(0,0), track(0,0) { ; }
+	} sh_simg_t;												//!< MLA subimage definition on CCD
+	
+	typedef struct sh_mla {
+		int nsi;													//!< Number of microlenses (subapertures)
+		float f;													//!< Microlens focal length
+		Shwfs::sh_simg_t *ml;							//!< Array of microlens positions
+		sh_mla(): nsi(0), f(-1.0), ml(NULL) { ; }
+	} sh_mla_t;													//!< Microlens array struct
 
 private:
-	sh_simg_t mla[shwfs_maxlenses];			//!< Subimages coordinates & sizes
+	sh_mla_t mla;												//!< Subimages coordinates & sizes
 	
 	int simaxr;													//!< Maximum radius to use, or edge erosion subimages
 	int simini;													//!< Minimum intensity in
 	
 	mode_t mode;												//!< Data processing mode (Center of Gravity, Correlation, etc)
 	
-	fcoord_t *trackpos;
-	coord_t *sapos;
-	coord_t *shifts;
+	//coord_t *shifts;										//!< subap shifts @todo fix this properly
 	
-	int ns;
+	//template <class T> uint32_t _cog(T *img, int xpos, int ypos, int w, int h, int stride, uint32_t simini, fcoord_t& cog);
+	//template <class T> int _cogframe(T *img);
 	
-	template <class T> uint32_t _cog(T *img, int xpos, int ypos, int w, int h, int stride, uint32_t samini, fcoord_t& cog);
-	template <class T> int _cogframe(T *img);
-	
-	int subapSel();	
-	void printGrid(int *map);
+	int mla_subapsel();	
 	
 public:
-	
-	Shwfs(Io &io, string name, string port, string conffile);
+	Shwfs(Io &io, foamctrl *ptc, string name, string port, Path &conffile, Camera &wfscam);
 	~Shwfs();	
 	
-	virtual int verify(int);
-	virtual int calibrate(int);
-	virtual int measure(int);
+	/*! @brief Generate subaperture/subimage (sa/si) positions for a given configuration.
+	 
+	 @param [in] res Resolution of the sa pattern (before scaling) [pixels]
+	 @param [in] size size of the sa's [pixels]
+	 @param [in] pitch pitch of the sa's [pixels]
+	 @param [in] xoff the horizontal position offset of odd rows [fraction of pitch]
+	 @param [in] disp global displacement of the sa positions [pixels]
+	 @param [out] *pattern the calculated subaperture pattern
+	 @return number of subapertures found
+	 */
+	sh_simg_t *gen_mla_grid(coord_t res, coord_t size, coord_t pitch, int xoff, coord_t disp, mlashape_t shape, int &nsubap);
+	
+	bool store_mla_grid(sh_mla_t mla, Path &f, bool overwrite=false);	
+	bool store_mla_grid(Path &f, bool overwrite=false);
+//	virtual int verify(int);
+//	virtual int calibrate(int);
+//	virtual int measure(int);
 };
 
 #endif // HAVE_SHWFS_H
