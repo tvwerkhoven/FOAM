@@ -19,6 +19,7 @@
  */
 
 #include <unistd.h>
+#include <gsl/gsl_matrix.h>
 
 #include "io.h"
 #include "config.h"
@@ -27,16 +28,16 @@
 #include "simseeing.h"
 #include "camera.h"
 #include "simulcam.h"
-#include "simseeing.h"
 
 SimulCam::SimulCam(Io &io, foamctrl *ptc, string name, string port, Path &conffile):
 Camera(io, ptc, name, SimulCam_type, port, conffile),
-seeing(io, ptc, name + "-seeing", port, conffile),
-simwfs(io, ptc, name + "-simwfs", port, conffile)
+seeing(io, ptc, name + "-seeing", port, conffile)
 {
 	io.msg(IO_DEB2, "SimulCam::SimulCam()");
 	
 	// Setup seeing parameters
+	Path wffile = ptc->confdir + cfg.getstring("wavefront_file");
+
 	coord_t wind;
 	wind.x = cfg.getint("windspeed.x", 16);
 	wind.y = cfg.getint("windspeed.y", 16);
@@ -47,31 +48,37 @@ simwfs(io, ptc, name + "-simwfs", port, conffile)
 		windtype = SimSeeing::LINEAR;
 	else
 		windtype = SimSeeing::RANDOM;
-
-	Path wffile = ptc->confdir + cfg.getstring("wavefront_file");
 	
 	seeing.setup(wffile, res, wind, windtype);		
 	
-	// Setup SH-WFS parameters
-	coord_t sasize;											//!< Subaperture size (per subaperture)
-	sasize.x = cfg.getint("sasize.x", 16);
-	sasize.y = cfg.getint("sasize.y", 16);
-	
-	coord_t sapitch;										//!< Subaperture pixels (per subaperture)
-	sapitch.x = cfg.getint("sapitch.x", 32);
-	sapitch.y = cfg.getint("sapitch.y", 32);
-	
-	int xoff = cfg.getint("offset", 0);
-
-	coord_t disp;												//!< Displace subimage pattern by this much
-	disp.x = cfg.getint("disp.x", 0);
-	disp.y = cfg.getint("disp.y", 0);
-	
-	// Setup (SH) wavefront sensor parameters
-	simwfs.setup(&seeing, res, sasize, sapitch, xoff, disp);
-	
 	cam_thr.create(sigc::mem_fun(*this, &SimulCam::cam_handler));
 }
+
+uint8_t *SimulCam::simul_wfs(gsl_matrix *wave_in) {
+	io.msg(IO_DEB2, "SimulCam::simul_wfs()");
+	//! @todo Given a wavefront, image it through a system and return the resulting intensity pattern (i.e. an image).
+	double min=0, max=0, fac;
+	gsl_matrix_minmax(wave_in, &min, &max);
+	fac = 255.0/(max-min);
+	
+	// Apply fourier transform to subimages here
+	
+	//(coord_t res, coord_t size, coord_t pitch, int xoff, coord_t disp, int &nsubap);
+	// Convert frame to uint8_t, scale properly
+	size_t cursize = wave_in->size1 * wave_in->size2  * (sizeof(uint8_t));
+	if (out_size != cursize) {
+		io.msg(IO_DEB2, "SimulCam::simul_wfs() reallocing memory, %zu != %zu", out_size, cursize);
+		out_size = cursize;
+		frame_out = (uint8_t *) realloc(frame_out, out_size);
+	}
+	
+	for (size_t i=0; i<wave_in->size1; i++)
+		for (size_t j=0; j<wave_in->size2; j++)
+			frame_out[i*wave_in->size2 + j] = (uint8_t) ((wave_in->data[i*wave_in->tda + j] - min)*fac);
+	
+	return frame_out;
+}
+
 
 void SimulCam::simul_capture(uint8_t *frame) {
 	// Apply offset and exposure here
@@ -145,7 +152,7 @@ void SimulCam::cam_handler() {
 				gsl_matrix_view wf = seeing.get_wavefront();
 				io.msg(IO_DEB1, "SimulCam::cam_handler() RUNNING f@%p, f[100]: %g", 
 							 wf.matrix.data, wf.matrix.data[100]);
-				uint8_t *frame = simwfs.sim_shwfs(&(wf.matrix));
+				uint8_t *frame = simul_wfs(&(wf.matrix));
 				
 				simul_capture(frame);
 				
@@ -159,7 +166,7 @@ void SimulCam::cam_handler() {
 				io.msg(IO_DEB1, "SimSeeing::cam_handler() SINGLE");
 
 				gsl_matrix_view wf = seeing.get_wavefront();
-				uint8_t *frame = simwfs.sim_shwfs(&(wf.matrix));
+				uint8_t *frame = simul_wfs(&(wf.matrix));
 
 				simul_capture(frame);
 				

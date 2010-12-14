@@ -42,12 +42,16 @@ const string SimulCam_type = "SimulCam";
  a Shack-Hartmann wavefront sensor (i.e. the CCD).
  
  Configuration parameters:
- - windspeed.x,y: windspeed by which the
+ - wavefront_file: static FITS file which shows some wavefront
+ - windspeed.x,y: windspeed by which the wavefront moves
+ - windtype: 'random' or 'linear', method of scanning over the wavefront
  */
 class SimulCam: public Camera {
 private:
-	SimSeeing seeing;			//!< This class simulates the atmosphere, telescope and lenslet array
-	SimWfs simwfs;				//!< This class simulates the atmosphere, telescope and lenslet array
+	SimSeeing seeing;										//!< This class simulates the atmosphere
+	Shwfs &shwfs;												//!< Reference to WFS we simulate (i.e. for configuration)
+	
+	uint8_t *simul_wfs(gsl_matrix *wave_in); //!< Simulate wavefront sensor optics (i.e. MLA)
 	void simul_capture(uint8_t *frame);	//!< Simulate CCD frame capture (exposure, offset, etc.)
 	
 public:
