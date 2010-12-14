@@ -68,7 +68,7 @@
 //	return 0;
 //}
 
-Shwfs::sh_simg_t *Shwfs::gen_mla_grid(coord_t res, coord_t size, coord_t pitch, int xoff, coord_t disp, mlashape_t shape, int &nsubap) {
+Shwfs::sh_simg_t *Shwfs::gen_mla_grid(coord_t res, coord_t size, coord_t pitch, int xoff, coord_t disp, mlashape_t shape, float overlap, int &nsubap) {
 	
 	// How many subapertures would fit in the requested size 'res':
 	int sa_range_y = (int) ((res.y/2)/pitch.x + 1);
@@ -90,7 +90,7 @@ Shwfs::sh_simg_t *Shwfs::gen_mla_grid(coord_t res, coord_t size, coord_t pitch, 
 			sa_c.x -= (sa_y % 2) * xoff * pitch.x;
 			
 			if (shape == CIRCULAR) {
-				if (pow(fabs(sa_c.x) + size.x/2.0, 2) + pow(fabs(sa_c.y) + size.y/2.0, 2) < pow(res.x/2.0, 2)) {
+				if (pow(fabs(sa_c.x) + (overlap-0.5)*size.x, 2) + pow(fabs(sa_c.y) + (overlap-0.5)*size.y, 2) < pow(res.x/2.0, 2)) {
 					//io.msg(IO_DEB2, "Shwfs::gen_mla_grid(): Found subap within bounds.");
 					nsubap++;
 					pattern = (Shwfs::sh_simg_t *) realloc((void *) pattern, nsubap * sizeof (Shwfs::sh_simg_t));
@@ -105,7 +105,7 @@ Shwfs::sh_simg_t *Shwfs::gen_mla_grid(coord_t res, coord_t size, coord_t pitch, 
 			else {
 				// Accept a subimage coordinate (center position) the position + 
 				// half-size the subaperture is within the bounds
-				if ((fabs(sa_c.x + size.x/2) < res.x/2) && (fabs(sa_c.y + size.y/2) < res.y/2)) {
+				if ((fabs(sa_c.x + (overlap-0.5)*size.x) < res.x/2) && (fabs(sa_c.y + (overlap-0.5)*size.y) < res.y/2)) {
 					//io.msg(IO_DEB2, "Shwfs::gen_mla_grid(): Found subap within bounds.");
 					nsubap++;
 					pattern = (Shwfs::sh_simg_t *) realloc((void *) pattern, nsubap * sizeof (Shwfs::sh_simg_t));
@@ -159,6 +159,14 @@ bool Shwfs::store_mla_grid(sh_mla_t mla, Path &f, bool overwrite) {
 	fclose(fd);
 	
 	io.msg(IO_INFO, "Shwfs::store_mla_grid(): Wrote MLA grid to '%s'.", f.c_str());
+	io.msg(IO_XNFO | IO_NOID, "Plot these data in gnuplot with:");
+	io.msg(IO_XNFO | IO_NOID, "set key");
+	io.msg(IO_XNFO | IO_NOID, "set xrange[0:%d]", cam.get_width());
+	io.msg(IO_XNFO | IO_NOID, "set yrange[0:%d]", cam.get_height());	
+	io.msg(IO_XNFO | IO_NOID, "set obj 1 ellipse at first %d, first %d size %d,%d front fs empty lw 0.8",
+				 cam.get_width()/2, cam.get_height()/2, cam.get_width(), cam.get_height());
+	io.msg(IO_XNFO | IO_NOID, "plot 'mla_grid' using 1:2:5:6 title 'subap size' with vectors lt -1 lw 1 heads, 'mla_grid' using 3:4 title 'subap center'");
+	
 	return true;
 }
 
@@ -318,17 +326,23 @@ Wfs(io, ptc, name, shwfs_type, port, conffile, wfscam)
 {
 	io.msg(IO_DEB2, "Shwfs::Shwfs()");
 		
-	coord_t sisize;
+	coord_t sisize;											//!< Subimage size
 	sisize.x = cfg.getint("sisizex", 16);
 	sisize.y = cfg.getint("sisizey", 16);
 
-	coord_t sipitch;
+	coord_t sipitch;										//!< Pitch between subimages
 	sipitch.x = cfg.getint("sipitchx", 32);
 	sipitch.y = cfg.getint("sipitchy", 32);
 	
-	fcoord_t sitrack;
+	fcoord_t sitrack;										//!< Size of track window (relative to sisize)
 	sitrack.x = sisize.x * cfg.getdouble("sitrackx", 0.5);
 	sitrack.y = sisize.y * cfg.getdouble("sitracky", 0.5);
+	
+	coord_t disp;												//!< Displacement of complete pattern
+	disp.x = cfg.getint("dispx", cam.get_width()/2);
+	disp.y = cfg.getint("dispy", cam.get_height()/2);
+	
+	float overlap = cfg.getdouble("overlap", 0.5);
 	
 	simaxr = cfg.getint("simaxr", -1);
 	simini = cfg.getint("simini", 30);
@@ -345,7 +359,7 @@ Wfs(io, ptc, name, shwfs_type, port, conffile, wfscam)
 	mode = Shwfs::COG;
 	
 	// Generate MLA grid
-	mla.ml = gen_mla_grid(cam.get_res(), sisize, sipitch, xoff, coord_t(cam.get_width()/2.,cam.get_height()/2.), shape, mla.nsi);
+	mla.ml = gen_mla_grid(cam.get_res(), sisize, sipitch, xoff, disp, shape, overlap, mla.nsi);
 }
 	
 Shwfs::~Shwfs() {

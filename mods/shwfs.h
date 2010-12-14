@@ -102,10 +102,12 @@ public:
 	 @param [in] pitch pitch of the sa's [pixels]
 	 @param [in] xoff the horizontal position offset of odd rows [fraction of pitch]
 	 @param [in] disp global displacement of the sa positions [pixels]
+	 @param [in] shape shape of the pattern, circular or square (see mlashape_t)
+	 @param [in] overlap how much overlap with aperture needed for inclusion (0--1)
 	 @param [out] *pattern the calculated subaperture pattern
 	 @return number of subapertures found
 	 */
-	sh_simg_t *gen_mla_grid(coord_t res, coord_t size, coord_t pitch, int xoff, coord_t disp, mlashape_t shape, int &nsubap);
+	sh_simg_t *gen_mla_grid(coord_t res, coord_t size, coord_t pitch, int xoff, coord_t disp, mlashape_t shape, float overlap, int &nsubap);
 	
 	bool store_mla_grid(sh_mla_t mla, Path &f, bool overwrite=false);	
 	bool store_mla_grid(Path &f, bool overwrite=false);
