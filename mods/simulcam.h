@@ -53,6 +53,7 @@ private:
 	
 	uint8_t *frame_out;									//!< Frame to store simulated image
 	size_t out_size;										//!< Size of frame_out
+	float telradius;										//!< Telescope radius (fraction of CCD)
 	
 public:
 	SimulCam(Io &io, foamctrl *ptc, string name, string port, Path &conffile);
