@@ -54,13 +54,15 @@ private:
 	uint8_t *frame_out;									//!< Frame to store simulated image
 	size_t out_size;										//!< Size of frame_out
 	
-	uint8_t *simul_wfs(gsl_matrix *wave_in); //!< Simulate wavefront sensor optics (i.e. MLA)
-	void simul_capture(uint8_t *frame);	//!< Simulate CCD frame capture (exposure, offset, etc.)
-	
 public:
 	SimulCam(Io &io, foamctrl *ptc, string name, string port, Path &conffile);
 	~SimulCam();
+
+	uint8_t *simul_wfs(gsl_matrix *wave_in); //!< Simulate wavefront sensor optics (i.e. MLA)
+	void simul_capture(uint8_t *frame);	//!< Simulate CCD frame capture (exposure, offset, etc.)
 	
+	void set_shwfs(Shwfs *ref) { shwfs = ref; } //!< Assign Shwfs object to SimulCam. The parameters of this Shwfs will be used for simulation.
+		
 	// From Camera::
 	void cam_handler();
 	void cam_set_exposure(double value);

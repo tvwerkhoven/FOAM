@@ -109,8 +109,8 @@ public:
 	 */
 	sh_simg_t *gen_mla_grid(coord_t res, coord_t size, coord_t pitch, int xoff, coord_t disp, mlashape_t shape, float overlap, int &nsubap);
 	
-	bool store_mla_grid(sh_mla_t mla, Path &f, bool overwrite=false);	
-	bool store_mla_grid(Path &f, bool overwrite=false);
+	bool store_mla_grid(sh_mla_t mla, Path &f, bool overwrite=false);	//!< Store external MLA grid to disk, as CSV
+	bool store_mla_grid(Path &f, bool overwrite=false);	//!< Store this MLA grid to disk, as CSV
 //	virtual int verify(int);
 //	virtual int calibrate(int);
 //	virtual int measure(int);

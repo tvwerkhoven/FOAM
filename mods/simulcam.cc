@@ -31,7 +31,8 @@
 
 SimulCam::SimulCam(Io &io, foamctrl *ptc, string name, string port, Path &conffile):
 Camera(io, ptc, name, SimulCam_type, port, conffile),
-seeing(io, ptc, name + "-seeing", port, conffile)
+seeing(io, ptc, name + "-seeing", port, conffile),
+shwfs(NULL)
 {
 	io.msg(IO_DEB2, "SimulCam::SimulCam()");
 	
@@ -55,6 +56,9 @@ seeing(io, ptc, name + "-seeing", port, conffile)
 }
 
 uint8_t *SimulCam::simul_wfs(gsl_matrix *wave_in) {
+	if (!shwfs)
+		io.msg(IO_ERR | IO_FATAL, "SimulCam::simul_wfs(): cannot simulate wavefront without Shwfs reference.");
+	
 	io.msg(IO_DEB2, "SimulCam::simul_wfs()");
 	//! @todo Given a wavefront, image it through a system and return the resulting intensity pattern (i.e. an image).
 	double min=0, max=0, fac;
