@@ -52,7 +52,7 @@ bool Device::init() {
 	
 		string _type = cfg.getstring("type");
 		if (_type != type) 
-			throw exception("Device::Device(): Type should be " + type + " for this Device!");
+			throw exception("Device::Device(): Type should be " + type + " for this Device (" + _type + ")!");
 	}
 
 	//! @todo Make this optional, not all Devices need netio (i.e. if port == "", do not start netio, needs change in protocol.cc)

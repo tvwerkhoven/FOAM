@@ -119,6 +119,7 @@ void FOAM::show_clihelp(bool error = false) {
 		printf("Usage: %s [option]...\n\n", execname.c_str());
 		printf("  -c, --config=FILE    Read configuration from FILE.\n"
 					 "  -v, --verb[=LEVEL]   Increase verbosity level or set it to LEVEL.\n"
+					 "      --showthreads     Prefix logging with thread ID.\n"
 					 "  -q,                  Decrease verbosity level.\n"
 					 "      --nodaemon       Do not start network daemon.\n"
 					 "  -p, --pidfile=FILE   Write PID to FILE.\n"
@@ -164,6 +165,7 @@ int FOAM::parse_args(int argc, char *argv[]) {
 		{"verb", required_argument, NULL, 2},
 		{"pidfile", required_argument, NULL, 'p'},
 		{"nodaemon", no_argument, NULL, 3},
+		{"showthreads", no_argument, NULL, 4},
 		{NULL, 0, NULL, 0}
 	};
 	
@@ -171,22 +173,23 @@ int FOAM::parse_args(int argc, char *argv[]) {
 		switch(r) {
 			case 0:
 				break;
-			case 'c':
+			case 'c':												// Configuration file
 				conffile = string(optarg);
 				break;
-			case 'h':
+			case '?':												// Help
+			case 'h':												// Help
 				show_clihelp();
 				return -1;
-			case 1:
+			case 1:													// Version info
 				show_version();
 				return -1;
-			case 'q':
+			case 'q':												// Decrease verbosity
 				io.decVerb();
 				break;
-			case 'v':
+			case 'v':												// Increase verbosity
 				io.incVerb();
 				break;
-			case 2:
+			case 2:													// Set verbosity
 				if(optarg)
 					io.setVerb((int) atoi(optarg));
 				else {
@@ -194,17 +197,17 @@ int FOAM::parse_args(int argc, char *argv[]) {
 					return -1;
 				}
 				break;
-			case 'p':
-				// pidfile placeholder
+			case 'p':												// pidfile placeholder
 				break;
-			case 3:
+			case 3:													// Don't run daemon
 				nodaemon = true;
 				break;
-			case '?':
-				show_clihelp(true);
-				return -1;
-			default:
+			case 4:													// Show threads in logging
+				io.setdefmask(IO_THR);
 				break;
+			default:
+				show_clihelp();
+				return -1;
 		}
 	}
 	
@@ -375,8 +378,6 @@ void FOAM::on_connect(Connection *connection, bool status) {
 }
 
 void FOAM::on_message(Connection *connection, std::string line) {
-  io.msg(IO_DEB1, "FOAM::Got %db: '%s'.", line.length(), line.c_str());
-	
 	string cmd = popword(line);
 	
 	if (cmd == "help") {

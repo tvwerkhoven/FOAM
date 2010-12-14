@@ -37,8 +37,10 @@ using namespace Gtk;
 using namespace std;
 
 /*!
- @brief Main FOAM UI class  
- @todo Document this
+ @brief GUI for base connection to FOAM
+ 
+ This is the GUI for the underlying foamctrl, which handles connections to
+ FOAM.
  */
 class ControlPage: public VBox {
 	Log &log;
@@ -48,49 +50,53 @@ class ControlPage: public VBox {
 	HBox connbox;
 	LabeledEntry host;
 	LabeledEntry port;
-	Button connect;
+	Button connect;											//!< Init connection, ControlPage::on_connect_clicked()
 	
 	Frame modeframe;
 	HBox modebox;
-	ToggleButton mode_listen;
-	ToggleButton mode_open;
-	ToggleButton mode_closed;
-	Button shutdown;
+	SwitchButton mode_listen;						//!< Switch FOAM mode to listen, ControlPage::on_mode_listen_clicked()
+	SwitchButton mode_open;							//!< Switch FOAM mode to open, ControlPage::on_mode_open_clicked()
+	SwitchButton mode_closed;						//!< Switch FOAM mode to closed, ControlPage::on_mode_closed_clicked()
+	Button shutdown;										//!< Shutdown FOAM, ControlPage::on_shutdown_clicked()
 
 	Frame calibframe;
 	HBox calibbox;
 	Label calmode_lbl;
-	ComboBoxText calmode_select;
-	ToggleButton calib;
+	ComboBoxText calmode_select;				//!< Possible calibrations modes in FOAM
+	SwitchButton calib;									//!< Start FOAM calibration mode, ControlPage::on_calib_clicked()
 
 	Frame statframe;
 	HBox statbox;
-	LabeledEntry stat_mode;
-	LabeledEntry stat_ndev;
-	LabeledEntry stat_nframes;
-	LabeledEntry stat_lastcmd;
+	LabeledEntry stat_mode;							//!< Displays current FOAM mode, updated in ControlPage::on_message_update()
+	LabeledEntry stat_ndev;							//!< Displays number of FOAM devices, updated in ControlPage::on_message_update()
+	LabeledEntry stat_nframes;					//!< Displays number of frames captured, updated in ControlPage::on_message_update()
+	LabeledEntry stat_lastcmd;					//!< Displays last cmd to FOAM, updated in ControlPage::on_message_update()
 
-	Frame devframe;
+	
+	Frame devframe;											//!< @todo add/improve this feature
 	HBox devbox;
 	LabeledEntry *dev_devlist;
 	
-	void on_connect_clicked();
+	void on_connect_clicked();					//!< Callback for ControlPage::connect
 	
-	void on_mode_listen_clicked();
-	void on_mode_open_clicked();
-	void on_mode_closed_clicked();
-	void on_shutdown_clicked();
+	void on_mode_listen_clicked();			//!< Callback for ControlPage::mode_listen
+	void on_mode_open_clicked();				//!< Callback for ControlPage::mode_open
+	void on_mode_closed_clicked();			//!< Callback for ControlPage::mode_closed
+	void on_shutdown_clicked();					//!< Callback for ControlPage::shutdown
 
-	void on_calib_clicked();
+	void on_calib_clicked();						//!< Callback for ControlPage::calib
+
+	void enable_gui();									//!< Enable GUI elements
+	void disable_gui();									//!< Disable GUI elements
+	void clear_gui();										//!< Clear GUI elements (reset values)
+
 	
 public:
 	ControlPage(Log &log, FoamControl &foamctrl);
 	~ControlPage();
 
-	void on_connect_update();
-	void on_message_update();
-	
-	Glib::Dispatcher signal_device;
+	void on_connect_update();						//!< Callback for FoamCtrl::signal_connect()
+	void on_message_update();						//!< Callback for FoamCtrl::signal_message()
 };
 
 #endif //  HAVE_CONTROLVIEW_H

@@ -34,7 +34,7 @@
 
 SimSeeing::SimSeeing(Io &io, foamctrl *ptc, string name, string port, Path &conffile):
 Device(io, ptc, name, SimSeeing_type, port),
-file(""), croppos(0,0), cropsize(0,0), windspeed(10,10)
+file(""), croppos(0,0), cropsize(0,0), windspeed(10,10), windtype(LINEAR)
 {
 	io.msg(IO_DEB2, "SimSeeing::SimSeeing()");	
 }
@@ -48,7 +48,8 @@ SimSeeing::~SimSeeing() {
  *  Private methods
  */
 
-gsl_matrix *SimSeeing::load_wavefront() {
+gsl_matrix *SimSeeing::load_wavefront(Path &f) {
+	file = f;
 	io.msg(IO_DEB2, "SimSeeing::load_wavefront(), file=%s", file.c_str());
 	
 	if (!file.r())
@@ -70,39 +71,60 @@ gsl_matrix *SimSeeing::load_wavefront() {
  *  Public methods
  */
 
-bool SimSeeing::setup(Path &f, coord_t size, coord_t wspeed) {
+bool SimSeeing::setup(Path &f, coord_t size, coord_t wspeed, wind_t t) {
 	io.msg(IO_INFO, "SimSeeing::setup() Loading wavefront.");
 	
 	cropsize = size;
 	windspeed = wspeed;
-	file = f;
+	windtype = t;
 	
 	// Data is alloced in load_wavefront(), ImgData.as_GSL() only once, does not need to be freed
-	wfsrc = load_wavefront();
+	wfsrc = load_wavefront(f);
 	
 	if (!wfsrc)
 		return false;
 	
 	if (wfsrc->size1 < cropsize.x || wfsrc->size2 < cropsize.y) {
-		io.msg(IO_WARN, "SimSeeing::setup() wavefront smaller than requested cropsize (%dx%d vs %dx%d), reducing size to wavefront size.", 
+		io.msg(IO_WARN, "SimSeeing::setup() wavefront smaller than requested cropsize (%dx%d vs %dx%d), reducing size to half the wavefront size.", 
 					 wfsrc->size1, wfsrc->size2, cropsize.x, cropsize.y);
-		cropsize.x = wfsrc->size1;
-		cropsize.y = wfsrc->size2;
+		cropsize.x = 0.5*wfsrc->size1;
+		cropsize.y = 0.5*wfsrc->size2;
+	}
+	if (windspeed.x >= cropsize.x || windspeed.y >= cropsize.y) {
+		io.msg(IO_WARN, "SimSeeing::setup() windspeed (%d, %d) bigger than cropsize (%d, %d), reducing to half the cropsize.", 
+					 windspeed.x, windspeed.y, cropsize.x, cropsize.y);
+		windspeed.x = 0.5 * cropsize.x;
+		windspeed.y = 0.5 * cropsize.y;
 	}
 		
 	return true;
 }
 
 gsl_matrix_view SimSeeing::get_wavefront() {
-	io.msg(IO_DEB2, "SimSeeing::get_wavefront()");
+	// Update new crop position (i.e. simulate wind)
+	if (windtype == RANDOM) {
+		croppos.x += (drand48()-0.5) * windspeed.x;
+		croppos.y += (drand48()-0.5) * windspeed.y;
 
-	// Update new crop position
-	croppos.x += (drand48()-0.5) * windspeed.x;
-	croppos.y += (drand48()-0.5) * windspeed.y;
-	
-	// Check bounds
-	croppos.x = clamp(croppos.x, (int) 0, (int) wfsrc->size1 - cropsize.x);
-	croppos.y = clamp(croppos.y, (int) 0, (int) wfsrc->size2 - cropsize.y);
+		// Check bounds
+		croppos.x = clamp(croppos.x, (int) 0, (int) wfsrc->size1 - cropsize.x);
+		croppos.y = clamp(croppos.y, (int) 0, (int) wfsrc->size2 - cropsize.y);
+	}
+	else {
+		// Check bounds, change wind if necessary.
+		if (croppos.x + windspeed.x >= (int) wfsrc->size1 - cropsize.x)
+			windspeed.x *= -1;
+		if (croppos.x + windspeed.x <= 0)
+			windspeed.x *= -1;
+		if (croppos.y + windspeed.y >= (int) wfsrc->size2 - cropsize.y)
+			windspeed.y *= -1;
+		if (croppos.y + windspeed.y <= 0)
+			windspeed.y *= -1;
+		
+		// Apply wind
+		croppos.x += windspeed.x;
+		croppos.y += windspeed.y;
+	}
 			
 	return get_wavefront(croppos.x, croppos.y, cropsize.x, cropsize.y);
 }

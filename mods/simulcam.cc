@@ -19,6 +19,7 @@
  */
 
 #include <unistd.h>
+#include <gsl/gsl_matrix.h>
 
 #include "io.h"
 #include "config.h"
@@ -27,27 +28,69 @@
 #include "simseeing.h"
 #include "camera.h"
 #include "simulcam.h"
-#include "simseeing.h"
 
 SimulCam::SimulCam(Io &io, foamctrl *ptc, string name, string port, Path &conffile):
 Camera(io, ptc, name, SimulCam_type, port, conffile),
 seeing(io, ptc, name + "-seeing", port, conffile),
-simwfs(io, ptc, name + "-simwfs", port, conffile)
+shwfs(NULL), out_size(0), frame_out(NULL)
 {
 	io.msg(IO_DEB2, "SimulCam::SimulCam()");
 	
 	// Setup seeing parameters
-	coord_t wind;
-	wind.x = cfg.getint("windspeed.x");
-	wind.y = cfg.getint("windspeed.y");
 	Path wffile = ptc->confdir + cfg.getstring("wavefront_file");
+
+	coord_t wind;
+	wind.x = cfg.getint("windspeed.x", 16);
+	wind.y = cfg.getint("windspeed.y", 16);
+
+	SimSeeing::wind_t windtype;
+	string windstr = cfg.getstring("windtype", "linear");
+	if (windstr == "linear")
+		windtype = SimSeeing::LINEAR;
+	else
+		windtype = SimSeeing::RANDOM;
 	
-	seeing.setup(wffile, res, wind);		
-	
-	// Setup (SH) wavefront sensor parameters
-	simwfs.setup(&seeing);
+	seeing.setup(wffile, res, wind, windtype);		
 	
 	cam_thr.create(sigc::mem_fun(*this, &SimulCam::cam_handler));
+}
+
+uint8_t *SimulCam::simul_wfs(gsl_matrix *wave_in) {
+	if (!shwfs)
+		io.msg(IO_ERR | IO_FATAL, "SimulCam::simul_wfs(): cannot simulate wavefront without Shwfs reference.");
+	
+	io.msg(IO_DEB2, "SimulCam::simul_wfs()");
+	//! @todo Given a wavefront, image it through a system and return the resulting intensity pattern (i.e. an image).
+	double min=0, max=0, fac;
+	gsl_matrix_minmax(wave_in, &min, &max);
+	fac = 255.0/(max-min);
+	
+	// Apply fourier transform to subimages here
+	for (size_t n=0; n<shwfs->mla.nsi; n++) {
+		io.msg(IO_DEB2, "SimulCam::simul_wfs() FFT @ %d: (%d,%d)", n, shwfs->mla.ml[n].pos.x, shwfs->mla.ml[n].pos.y);
+	}
+	
+	//(coord_t res, coord_t size, coord_t pitch, int xoff, coord_t disp, int &nsubap);
+	// Convert frame to uint8_t, scale properly
+	size_t cursize = wave_in->size1 * wave_in->size2  * (sizeof(uint8_t));
+	if (out_size != cursize) {
+		io.msg(IO_DEB2, "SimulCam::simul_wfs() reallocing memory, %zu != %zu", out_size, cursize);
+		out_size = cursize;
+		frame_out = (uint8_t *) realloc(frame_out, out_size);
+	}
+	
+	for (size_t i=0; i<wave_in->size1; i++)
+		for (size_t j=0; j<wave_in->size2; j++)
+			frame_out[i*wave_in->size2 + j] = (uint8_t) ((wave_in->data[i*wave_in->tda + j] - min)*fac);
+	
+	return frame_out;
+}
+
+
+void SimulCam::simul_capture(uint8_t *frame) {
+	// Apply offset and exposure here
+	for (size_t p=0; p<res.x*res.y; p++)
+		frame[p] = (uint8_t) clamp((int) ((frame[p] * exposure) + offset), 0, UINT8_MAX);
 }
 
 
@@ -113,12 +156,12 @@ void SimulCam::cam_handler() {
 		switch (mode) {
 			case Camera::RUNNING:
 			{
-				io.msg(IO_DEB1, "SimulCam::cam_handler() RUNNING");
-
 				gsl_matrix_view wf = seeing.get_wavefront();
-				io.msg(IO_DEB1, "SimulCam::cam_handler() f@%p, f[0]: %g, f[100]: %g", 
-							 wf.matrix.data, wf.matrix.data[0], wf.matrix.data[100]);
-				uint8_t *frame = simwfs.sim_shwfs(&(wf.matrix));
+				io.msg(IO_DEB1, "SimulCam::cam_handler() RUNNING f@%p, f[100]: %g", 
+							 wf.matrix.data, wf.matrix.data[100]);
+				uint8_t *frame = simul_wfs(&(wf.matrix));
+				
+				simul_capture(frame);
 				
 				cam_queue(frame, frame);
 
@@ -130,7 +173,10 @@ void SimulCam::cam_handler() {
 				io.msg(IO_DEB1, "SimSeeing::cam_handler() SINGLE");
 
 				gsl_matrix_view wf = seeing.get_wavefront();
-				uint8_t *frame = simwfs.sim_shwfs(&(wf.matrix));
+				uint8_t *frame = simul_wfs(&(wf.matrix));
+
+				simul_capture(frame);
+				
 				cam_queue(frame, frame);
 				
 				usleep(interval * 1000000);
@@ -164,11 +210,11 @@ void SimulCam::cam_set_mode(mode_t newmode) {
 			mode_cond.broadcast();
 			break;
 		case Camera::WAITING:
+		case Camera::OFF:
 			// Stop camera
 			mode = newmode;
 			mode_cond.broadcast();
 			break;
-		case Camera::OFF:
 		case Camera::CONFIG:
 			io.msg(IO_INFO, "SimSeeing::cam_set_mode(%s) mode not supported.", mode2str(newmode).c_str());
 		default:

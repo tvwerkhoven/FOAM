@@ -32,14 +32,15 @@
 #include "protocol.h"
 #include "devicectrl.h"
 #include "camctrl.h"
+#include "log.h"
 
 using namespace std;
 
-CamCtrl::CamCtrl(const string h, const string p, const string n):
-	DeviceCtrl(h, p, n),
+CamCtrl::CamCtrl(Log &log, const string h, const string p, const string n):
+	DeviceCtrl(log, h, p, n),
 	monitorprotocol(h, p, n) 
 {
-	fprintf(stderr, "CamCtrl::CamCtrl()\n");
+	fprintf(stderr, "%x:CamCtrl::CamCtrl()\n", (int) pthread_self());
 	
 	ok = false;
 	mode = UNDEFINED;
@@ -55,41 +56,36 @@ CamCtrl::CamCtrl(const string h, const string p, const string n):
 	mode = OFF;
 	nstore = 0;
 	
-	r = 1;
-	g = 1;
-	b = 1;
-
-	protocol.slot_message = sigc::mem_fun(this, &CamCtrl::on_message);
 	monitorprotocol.slot_message = sigc::mem_fun(this, &CamCtrl::on_monitor_message);
 	monitorprotocol.connect();
 }
 
 CamCtrl::~CamCtrl() {
-	fprintf(stderr, "CamCtrl::~CamCtrl()\n");
+	fprintf(stderr, "%x:CamCtrl::~CamCtrl()\n", (int) pthread_self());
 	set_mode(OFF);
 }
 
-void CamCtrl::on_connected(bool connected) {
-	fprintf(stderr, "CamCtrl::on_connected()\n");
-	DeviceCtrl::on_connected(connected);
+void CamCtrl::on_connected(bool conn) {
+	fprintf(stderr, "%x:CamCtrl::on_connected(conn=%d)\n", (int) pthread_self(), conn);
+	DeviceCtrl::on_connected(conn);
 	
-	protocol.write("get mode");
-	protocol.write("get exposure");
-	protocol.write("get interval");
-	protocol.write("get gain");
-	protocol.write("get offset");
-	protocol.write("get width");
-	protocol.write("get height");
-	protocol.write("get depth");
-	protocol.write("get filename");
+	if (conn) {
+		send_cmd("get mode");
+		send_cmd("get exposure");
+		send_cmd("get interval");
+		send_cmd("get gain");
+		send_cmd("get offset");
+		send_cmd("get width");
+		send_cmd("get height");
+		send_cmd("get depth");
+		send_cmd("get filename");
+	}
 }
 
 void CamCtrl::on_message(string line) {
-	fprintf(stderr, "CamCtrl::on_message()\n");
 	DeviceCtrl::on_message(line);
 	
-	
-	if(!ok) {
+	if (!ok) {
 		mode = ERROR;
 		return;
 	}
@@ -141,30 +137,48 @@ void CamCtrl::on_message(string line) {
 		errormsg = "Unexpected response '" + what + "'";
 	}
 
-	signal_update();
+	signal_message();
 }
 
 void CamCtrl::on_monitor_message(string line) {
-	if(popword(line) != "ok")
+	fprintf(stderr, "%x:CamCtrl::on_monitor_message(line=%s)\n", (int) pthread_self(), line.c_str());
+	// Line has to start with 'ok image'
+	//!< @bug If this function returns, there is a problem in camview.cc
+	if(popword(line) != "ok") {
+		log.add(Log::ERROR, "image grab error (err=" + line + ")");
 		return;
-	
-	if(popword(line) != "image")
+	}
+	if(popword(line) != "image") {
+		log.add(Log::ERROR, "no image from grab (err=" + line + ")");
 		return;
+	}
 
+	// The rest of the line is: <size> <x1> <y1> <x2> <y2> <scale> [histogram] [avg] [rms]
 	size_t size = popsize(line);
-	int histosize = (1 << depth) * sizeof *monitor.histogram;
+	int histosize = (1 << depth) * sizeof *monitor.histo;
 	int x1 = popint(line);
 	int y1 = popint(line);
 	int x2 = popint(line);
 	int y2 = popint(line);
 	int scale = popint(line);
-	bool do_histogram = false;
+	bool do_histo = false;
+	double avg=0, rms=0;
+	int min=INT_MAX, max=0;
 
 	string extra;
-
+	
+	// Extra options might be: histogram, avg, rms, min, max
 	while(!(extra = popword(line)).empty()) {
 		if(extra == "histogram") {
-			do_histogram = true;
+			do_histo = true;
+		} else if(extra == "avg") {
+			avg = popdouble(line);
+		} else if(extra == "rms") {
+			rms = popdouble(line);
+		} else if(extra == "min") {
+			min = popint(line);
+		} else if(extra == "max") {
+			max = popint(line);
 		}
 	}
 
@@ -179,54 +193,32 @@ void CamCtrl::on_monitor_message(string line) {
 		monitor.y2 = y2;
 		monitor.scale = scale;
 		monitor.depth = depth;
+		monitor.avg = avg;
+		monitor.rms = rms;
+		monitor.min = min;
+		monitor.max = max;
 
-		if(do_histogram)
-			monitor.histogram = (uint32_t *)realloc(monitor.histogram, histosize);
+		if(do_histo)
+			monitor.histo = (uint32_t *)realloc(monitor.histo, histosize);
 	}
 
 	monitorprotocol.read(monitor.image, monitor.size);
 
-	if(do_histogram)
-		monitorprotocol.read(monitor.histogram, histosize);
+	if(do_histo)
+		monitorprotocol.read(monitor.histo, histosize);
 
 	signal_monitor();
 }
 
-void CamCtrl::get_thumbnail() {
-	protocol.write("thumbnail");
-}
-
-double CamCtrl::get_exposure() const {
-	return exposure;
-}
-
-double CamCtrl::get_interval() const {
-	return interval;
-}
-
-double CamCtrl::get_gain() const {
-	return gain;
-}
-
-double CamCtrl::get_offset() const {
-	return offset;
-}
-
-int32_t CamCtrl::get_width() const {
-	return width;
-}
-
-int32_t CamCtrl::get_height() const {
-	return height;
-}
-
-int32_t CamCtrl::get_depth() const {
-	return depth;
-}
-
-std::string CamCtrl::get_filename() const {
-	return filename;
-}
+void CamCtrl::get_thumbnail() { send_cmd("thumbnail"); }
+double CamCtrl::get_exposure() const { return exposure; }
+double CamCtrl::get_interval() const { return interval; }
+double CamCtrl::get_gain() const { return gain; }
+double CamCtrl::get_offset() const { return offset; }
+int32_t CamCtrl::get_width() const { return width; }
+int32_t CamCtrl::get_height() const { return height; }
+int32_t CamCtrl::get_depth() const { return depth; }
+std::string CamCtrl::get_filename() const { return filename; }
 
 std::string CamCtrl::get_modestr(const mode_t m) const {
 	if (m == OFF) return "OFF";
@@ -239,44 +231,24 @@ std::string CamCtrl::get_modestr(const mode_t m) const {
 		return "UNDEFINED";
 }
 
-void CamCtrl::set_mode(const mode_t m) {
-	protocol.write(format("set mode %s", get_modestr(m).c_str()));
-}
-
-void CamCtrl::set_exposure(double value) {
-	protocol.write(format("set exposure %lf", value));
-}
-
-void CamCtrl::set_interval(double value) {
-	protocol.write(format("set interval %lf", value));
-}
-
-void CamCtrl::set_gain(double value) {
-	protocol.write(format("set gain %lf", value));
-}
-
-void CamCtrl::set_offset(double value) {
-	protocol.write(format("set offset %lf", value));
-}
-
-void CamCtrl::set_filename(const string &filename) {
-	protocol.write("set filename :" + filename);
-}
-
-void CamCtrl::set_fits(const string &fits) {
-	protocol.write("set fits " + fits);
-}
+void CamCtrl::set_mode(const mode_t m) { send_cmd(format("set mode %s", get_modestr(m).c_str())); }
+void CamCtrl::set_exposure(double value) { send_cmd(format("set exposure %lf", value)); }
+void CamCtrl::set_interval(double value) { send_cmd(format("set interval %lf", value)); }
+void CamCtrl::set_gain(double value) { send_cmd(format("set gain %lf", value)); }
+void CamCtrl::set_offset(double value) { send_cmd(format("set offset %lf", value)); }
+void CamCtrl::set_filename(const string &filename) { send_cmd("set filename :" + filename); }
+void CamCtrl::set_fits(const string &fits) { send_cmd("set fits " + fits); }
 
 void CamCtrl::darkburst(int32_t count) {
 	string command = format("dark %d", count);
 	mode = UNDEFINED;
-	protocol.write(command);
+	send_cmd(command);
 }
 
 void CamCtrl::flatburst(int32_t count) {
 	string command = format("flat %d", count);
 	mode = UNDEFINED;
-	protocol.write(command);
+	send_cmd(command);
 }
 
 void CamCtrl::burst(int32_t count, int32_t fsel) {
@@ -284,24 +256,10 @@ void CamCtrl::burst(int32_t count, int32_t fsel) {
 	if(fsel > 1)
 		command += format(" select %d", fsel);
 	mode = UNDEFINED;
-	protocol.write(command);
+	send_cmd(command);
 }
 
-//enum CamCtrl::state CamCtrl::get_state() const {
-//	return state;
-//}
-//
-//
-//bool CamCtrl::wait_for_state(enum state desiredstate, bool condition) {
-//	while((ok && state != ERROR) && (state == UNDEFINED || (state == desiredstate) != condition))
-//		usleep(100000);
-//
-//	return (state == desiredstate) == condition;
-//}
-
-void CamCtrl::store(int nstore) {
-	protocol.write(format("store %d", nstore));
-}
+void CamCtrl::store(int nstore) { send_cmd(format("store %d", nstore)); }
 
 void CamCtrl::grab(int x1, int y1, int x2, int y2, int scale, bool darkflat) {
 	string command = format("grab %d %d %d %d %d histogram", x1, y1, x2, y2, scale);

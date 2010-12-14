@@ -40,28 +40,18 @@ statframe("Status"), stat_mode("Mode: "), stat_ndev("# Dev: "), stat_nframes("# 
 	
 	// request minimum size for entry boxes
 	host.set_width_chars(24);
-	host.set_text("localhost");
 	port.set_width_chars(5);
-	port.set_text("1025");
 	
 	// Make shutdown/stop button red
 	shutdown.modify_bg(STATE_NORMAL, Gdk::Color("red"));
-	shutdown.modify_bg(STATE_ACTIVE, Gdk::Color("red"));
 	shutdown.modify_bg(STATE_PRELIGHT, Gdk::Color("red"));
-	shutdown.set_sensitive(false);
 
-	// Disable buttons for now
-	mode_listen.set_sensitive(false);
-	mode_open.set_sensitive(false);
-	mode_closed.set_sensitive(false);
-	shutdown.set_sensitive(false);
+	stat_mode.set_width_chars(8);
+	stat_ndev.set_width_chars(2);
+	stat_nframes.set_width_chars(6);
+	stat_lastcmd.set_width_chars(32);
 	
-	// Default selector
-	calmode_select.append_text("-");
-	calmode_select.set_sensitive(false);
-	calib.set_sensitive(false);
-
-	// Make status entries insensitive
+	// Make status entries insensitive (always)
 	stat_mode.set_editable(false);
 	stat_mode.set_width_chars(8);
 	stat_ndev.set_editable(false);
@@ -70,6 +60,10 @@ statframe("Status"), stat_mode("Mode: "), stat_ndev("# Dev: "), stat_nframes("# 
 	stat_nframes.set_width_chars(6);
 	stat_lastcmd.set_editable(false);
 	stat_lastcmd.set_width_chars(32);
+	
+	// Disable GUI for now
+	clear_gui();
+	disable_gui();
 	
 	// Connection row (hostname, port, connect button)
 	connbox.set_spacing(4);	
@@ -118,12 +112,61 @@ statframe("Status"), stat_mode("Mode: "), stat_ndev("# Dev: "), stat_nframes("# 
 	
 	calib.signal_clicked().connect(sigc::mem_fun(*this, &ControlPage::on_calib_clicked));	
 	
-	show_all_children();
+	// Register events
+	foamctrl.signal_connect.connect(sigc::mem_fun(*this, &ControlPage::on_connect_update));
+	foamctrl.signal_message.connect(sigc::mem_fun(*this, &ControlPage::on_message_update));
 	
+	// Show GUI & update contents
+	show_all_children();
 	on_message_update();
 }
 
 ControlPage::~ControlPage() {
+}
+
+/*!
+ @brief Clear GUI elements when we disconnect ourselves
+ */
+void ControlPage::clear_gui() {
+	// Reset connection fields
+	host.set_text("localhost");
+	port.set_text("1025");
+	
+	// Default selector
+	calmode_select.clear_items();
+	calmode_select.append_text("-");
+	
+	// Reset buttons
+	mode_listen.set_state(SwitchButton::CLEAR);
+	mode_open.set_state(SwitchButton::CLEAR);
+	mode_closed.set_state(SwitchButton::CLEAR);
+	calib.set_state(SwitchButton::CLEAR);
+}
+
+/*!
+ @brief Disable GUI elements when we are disconnected
+ */
+void ControlPage::disable_gui() {
+	mode_listen.set_sensitive(false);
+	mode_open.set_sensitive(false);
+	mode_closed.set_sensitive(false);
+	shutdown.set_sensitive(false);
+	
+	calmode_select.set_sensitive(false);
+	calib.set_sensitive(false);
+}
+
+/*!
+ @brief Enable GUI elements when we are connected
+ */
+void ControlPage::enable_gui() {
+	mode_listen.set_sensitive(true);
+	mode_open.set_sensitive(true);
+	mode_closed.set_sensitive(true);
+	shutdown.set_sensitive(true);
+
+	calmode_select.set_sensitive(true);
+	calib.set_sensitive(true);
 }
 
 void ControlPage::on_connect_clicked() {
@@ -169,43 +212,16 @@ void ControlPage::on_calib_clicked() {
 }
 
 void ControlPage::on_connect_update() {
-	printf("%x:ControlPage::on_connect_update()\n", (int) pthread_self());
+	printf("%x:ControlPage::on_connect_update(conn=%d)\n", (int) pthread_self(), foamctrl.is_connected());
 	if (foamctrl.is_connected()) {
-		printf("%x:ControlPage::on_connect_update() is conn\n", (int) pthread_self());
-		connect.set_label("Disconnect");
-
-		mode_listen.set_sensitive(true);
-		mode_open.set_sensitive(true);
-		mode_closed.set_sensitive(true);
-		shutdown.set_sensitive(true);
-		
-		calmode_select.set_sensitive(true);
-		calib.set_sensitive(true);
-		
 		log.add(Log::OK, "Connected to " + foamctrl.getpeername());
+		connect.set_label("Disconnect");
+		enable_gui();
 	}
 	else {
-		printf("%x:ControlPage::on_connect_update() is not conn\n", (int) pthread_self());
-		
-		// Toggle connect/disconnect button
-		//! \todo could make seperate connect/disconnect buttons and hide/show these?
-		connect.set_label("Connect");
-		
-		// Remove devices
-		foamctrl.set_numdev(0);
-		// Signal parent to remove DevicePages from GUI
-		signal_device();
-		
-		// Set controls inactive
-		mode_listen.set_sensitive(false);
-		mode_open.set_sensitive(false);
-		mode_closed.set_sensitive(false);
-		shutdown.set_sensitive(false);
-		calmode_select.set_sensitive(false);
-		calib.set_sensitive(false);
-		
-		// Add log stuff
 		log.add(Log::OK, "Disconnected");
+		connect.set_label("Connect");
+		disable_gui();
 	}
 }
 
@@ -213,25 +229,24 @@ void ControlPage::on_message_update() {
 	printf("%x:ControlPage::on_message_update()\n", (int) pthread_self());
 	
 	// reset mode buttons
-	mode_listen.set_sensitive(true);
-	mode_listen.set_active(false);
-	mode_open.set_sensitive(true);
-	mode_open.set_active(false);
-	mode_closed.set_sensitive(true);
-	mode_closed.set_active(false);
-	calib.set_sensitive(true);
-	calib.set_active(false);
+	mode_listen.set_state(SwitchButton::CLEAR);
+	mode_open.set_state(SwitchButton::CLEAR);
+	mode_closed.set_state(SwitchButton::CLEAR);
+	calib.set_state(SwitchButton::CLEAR);
 	
-	// press correct button
-	ToggleButton *tmp=NULL;
+	// Set correct button active
+	SwitchButton *tmp=NULL;
 	if (foamctrl.get_mode() == AO_MODE_LISTEN) tmp = &mode_listen;
 	else if (foamctrl.get_mode() == AO_MODE_OPEN) tmp = &mode_open;
 	else if (foamctrl.get_mode() == AO_MODE_CLOSED) tmp = &mode_closed;
 	else if (foamctrl.get_mode() == AO_MODE_CAL) tmp = &calib;
 	
-	//! \todo need to set 'tmp' to active state here without sending a signal
-	if (tmp)
-		tmp->set_sensitive(false);
+	if (tmp) {
+		if (foamctrl.is_ok())
+			tmp->set_state(SwitchButton::OK);
+		else
+			tmp->set_state(SwitchButton::ERROR);
+	}
 	
 	// set values in status box
 	stat_mode.set_text(foamctrl.get_mode_str());
@@ -239,7 +254,7 @@ void ControlPage::on_message_update() {
 	stat_nframes.set_text(format("%d", foamctrl.get_numframes()));
 
 	if (foamctrl.is_ok()) 
-		stat_lastcmd.modify_bg(STATE_ACTIVE , Gdk::Color("green"));
+		stat_lastcmd.modify_bg(STATE_ACTIVE , Gdk::Color("lightgreen"));
 	else
 		stat_lastcmd.modify_bg(STATE_ACTIVE , Gdk::Color("red"));
 	stat_lastcmd.set_text(foamctrl.get_lastreply());
@@ -250,8 +265,5 @@ void ControlPage::on_message_update() {
 	for (int i=1; i<foamctrl.get_numcal(); i++)
 		calmode_select.append_text(foamctrl.get_calmode(i));
 	calmode_select.set_active_text(foamctrl.get_calmode(0));
-	
-	// show devices	
-	//! \todo list all devices in the system somehow
 }
 

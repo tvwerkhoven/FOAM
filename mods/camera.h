@@ -45,7 +45,6 @@ const string cam_type = "cam";
 /*!
  @brief Base camera class. This should be overloaded with the specific camera class.
 
- 
  The Camera class is a template for implementing camera software. The class 
  consists of two parts. One part of the class handles network I/O from outside
  (i.e. from a GUI), this is done with 'netio' in a seperate thread. The other
@@ -65,14 +64,14 @@ const string cam_type = "cam";
  \li main thread calls camera functions to read out data/settings, can hook up 
 		to slots to get 'instantaneous' feedback from cam_thr.
  
- Capture process
+ \section cam_cap Capture process
  
  \li cam_thr captures frame (needs to be implemented in cam_handler()), calls cam_queue()
  \li cam_queue() locks cam_mut
  
- Camera net IO
+ \section cam_netio Camera net IO
  
- Valid commends include
+ Valid commends include:
  
  \li quit, bye: disconnect from camera
  \li restart: restart camera
@@ -83,7 +82,6 @@ const string cam_type = "cam";
  \li dark [n]: grab <n> darkframes, otherwise take the default <ndark>
  \li flat [n]: grab <n> flatframes, otherwise take the default <nflat>
  \li statistics [n]: get statistics over the next n frames.
- 
  
  Valid set properties:
  \li exposure
@@ -100,7 +98,23 @@ const string cam_type = "cam";
  \li width
  \li depth
  \li height
-
+ 
+ \section cam_cfg Configuration parameters
+ 
+ The Camera class supports the following configuration parameters, with 
+ defaults between brackets:
+ - nframes (8): number of frames in the buffer
+ - ndark (10): number of darkframes to take
+ - nflat (10): number of flatframes to take
+ - interval (1.0): inverse framerate
+ - exposure (1.0): exposure in seconds
+ - gain (1.0): linear CCD gain
+ - offset (0.0): offset to add to frame
+ - width (512): pixel width of CCD
+ - height (512): pixel height of CCD
+ - depth (8): bitdepth of CCD
+ 
+ 
  @todo What to do with mode & state?
  */ 
 class Camera: public Device {
@@ -149,10 +163,16 @@ public:
 			id = 0;
 			histo = 0;
 			proc = false;
+			avg = 0;
+			rms = 0;
+			min = INT_MAX;
+			max = 0;
 		}
 		
 		double avg;
 		double rms;
+		int min;
+		int max;
 	} frame_t;
 	
 protected:
@@ -164,8 +184,8 @@ protected:
 	pthread::mutex proc_mutex;		//!< Cond/mutexpair used by cam_thr to notify proc_thr
 	pthread::cond	proc_cond;			//!< Cond/mutexpair used by cam_thr to notify proc_thr
 	
-	pthread::cond mode_cond;			//!< Mode change notification
-	pthread::mutex mode_mutex;
+	pthread::cond mode_cond;			//!< Camera::mode change notification
+	pthread::mutex mode_mutex;		//!< Camera::mode change notification
 	
 	// These should be implemented in derived classes:
 	virtual void cam_handler() = 0;										//!< Camera handler
@@ -201,8 +221,8 @@ protected:
 	
 	frame_t *frames;							//!< Frame ringbuffer
 	size_t nframes;								//!< Ringbuffer size
-	uint64_t count;								//!< Total number of frames captured
-	uint64_t timeouts;						//!< Number of timeouts that occurred
+	size_t count;									//!< Total number of frames captured
+	size_t timeouts;							//!< Number of timeouts that occurred
 	
 	//! @todo incorporate dark/flat into struct or class?
 	size_t ndark;									//!< Number of frames used in darkframe
@@ -219,7 +239,7 @@ protected:
 	
 	coord_t res;									//!< Camera pixel resolution
 	int depth;										//!< Camera pixel depth in bits
-	dtype_t dtype;								//!< Camera datatype
+	dtype_t dtype;								//!< Camera datatype @todo do we need this?
 
 	mode_t mode;									//!< Camera mode (see mode_t)
 	

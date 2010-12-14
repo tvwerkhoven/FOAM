@@ -33,8 +33,10 @@
 #include "glviewer.h"
 
 /*!
- @brief Camera viewing class  
- @todo Document this
+ @brief Generic camera viewing class
+ 
+ This is the GUI element for CamCtrl, it shows basic controls for generic 
+ cameras and can display frames.
  */
 class CamView: public DevicePage {
 protected:
@@ -46,103 +48,130 @@ protected:
 	
 	// Info stuff
 	HBox infohbox;
-	LabeledEntry e_exposure;		//!< For exposure time, RW
-	LabeledEntry e_offset;			//!< For offset, RW
-	LabeledEntry e_interval;		//!< For interval, RW
-	LabeledEntry e_gain;				//!< For gain, RW
-	LabeledEntry e_res;					//!< For resolution, RO
-	LabeledEntry e_mode;				//!< For mode, RO
-	LabeledEntry e_stat;				//!< For status, RO
+	LabeledEntry e_exposure;						//!< For exposure time, RW
+	LabeledEntry e_offset;							//!< For offset, RW
+	LabeledEntry e_interval;						//!< For interval, RW
+	LabeledEntry e_gain;								//!< For gain, RW
+	LabeledEntry e_res;									//!< For resolution, RO
+	LabeledEntry e_mode;								//!< For mode, RO
+	LabeledEntry e_stat;								//!< For status, RO
 	
-	// display stuff
-	// Need: flipv, fliph, zoom in out 100, crosshair
-	//! @todo contrast, underover, colorsel, histogram
+	// Display stuff
+	//!< @todo contrast, underover, colorsel, histogram
 	HBox disphbox;
-	CheckButton flipv;
-	CheckButton fliph;
-	CheckButton crosshair;
-	CheckButton grid;
+	CheckButton flipv;									//!< Flip image vertically (only GUI)
+	CheckButton fliph;									//!< Flip image horizontally (only GUI)
+	CheckButton crosshair;							//!< Show crosshair
+	CheckButton grid;										//!< Show grid
 	VSeparator vsep1;
-	Button zoomin;
-	Button zoomout;
-	Button zoom100;
-	ToggleButton zoomfit;
+	Button zoomin;											//!< Zoom in, CamView::on_zoomin_activate()
+	Button zoomout;											//!< Zoom out, CamView::on_zoomout_activate()
+	Button zoom100;											//!< Zoom to original size, CamView::on_zoom100_activate()
+	ToggleButton zoomfit;								//!< Zoom to fit to window
 
 	// control stuff
 	// Need: darkflat, fsel, tiptilt, capture, thumb, ...?
 	HBox ctrlhbox;
 	//Button refresh;
-	ToggleButton capture;
-	ToggleButton display;
-	ToggleButton store;
-	Entry store_n;
+	SwitchButton capture;								//!< Start/stop capturing frames, CamView::on_capture_clicked()
+	SwitchButton display;								//!< Start/stop displaying frames, CamView::on_display_clicked()
+	SwitchButton store;									//!< Start/stop storing frames on the camera, CamView::on_store_clicked()
+	Entry store_n;											//!< How many frames to store when clicking CamView:store
 		
 	// Camera image
 	HBox camhbox;
 	OpenGLImageViewer glarea;
 	
-	// Histogram stuff
+	// Histogram GUI stuff
 	HBox histohbox;
-//	Gtk::VBox histogramvbox;
-//	Gtk::Alignment histogramalign;
-//	Gtk::EventBox histogramevents;
-//	Gtk::Image histogramimage;
-//	Glib::RefPtr<Gdk::Pixbuf> histogrampixbuf;
-//	LabeledSpinEntry scale;
-//	LabeledSpinEntry minval;
-//	LabeledSpinEntry maxval;
-	LabeledEntry mean;
-	LabeledEntry stddev;
+	Gtk::Alignment histoalign;
+	Gtk::EventBox histoevents;
+	Gtk::Image histoimage;
+	Glib::RefPtr<Gdk::Pixbuf> histopixbuf;
 
-	// Events
-	void on_zoom100_activate();
-	void on_zoomin_activate();
-	void on_zoomout_activate();
-	void on_capture_update();			//!< Called when capture button is toggled
-	void on_display_update();			//!< Called when display button is toggled
-	void on_store_update();				//!< Called when store button is toggled
-	void on_glarea_view_update();	//!< Callback from glarea class
-//	void on_colorsel_activate();
-//	void on_fullscreen_toggled();
-	void force_update();
-//	void do_histo_update();
-	void do_update();
-//	void on_close_activate();
-	void on_info_change();
+	VBox histovbox;
+	LabeledSpinEntry minval;
+	LabeledSpinEntry maxval;
+	HBox histohbox2;
+	LabeledEntry e_avg;									//!< Shows avg value
+	LabeledEntry e_rms;									//!< Shows rms/sigma
+	HBox histohbox3;
+	LabeledEntry e_datamin;							//!< Shows data minimum
+	LabeledEntry e_datamax;							//!< Shows data maximum
 
+	uint32_t *histo;										//!< Local histogram copy for GUI
+	
 	bool waitforupdate;
 	time_t lastupdate;
 	float dx;
 	float dy;
 	int s;
-//	float sx;
-//	float sy;
-//	uint32_t *histo;
-//	int depth;
-//	float sxstart;
-//	float systart;
-//	gdouble xstart;
-//	gdouble ystart;
-
-	//! @todo what is this for again?
-	Glib::Dispatcher signal_update;
-	virtual void on_message_update();
-	virtual void on_monitor_update();
-	bool on_timeout();
-
+	
+	// User interaction
+	void on_zoom100_activate();					//!< Zoom to original size
+	void on_zoomin_activate();					//!< Zoom in
+	void on_zoomout_activate();					//!< Zoom out
+	void on_capture_clicked();					//!< (De-)activate camera when user presses CamView::capture button.
+	void on_display_clicked();					//!< (De-)activate camera frame grabbing when user presses CamView::display button.
+	void on_store_clicked();						//!< Called when user clicks CamView::store
+	void on_info_change();							//!< Propagate user changed settings in GUI to camera
+	
+	void on_histo_toggled();
+	bool on_histo_clicked(GdkEventButton *);
+	
+	//!< @todo Sort these functions out
 	void on_image_realize();
 	void on_image_expose_event(GdkEventExpose *event);
 	void on_image_configure_event(GdkEventConfigure *event);
 	bool on_image_scroll_event(GdkEventScroll *event);
 	bool on_image_motion_event(GdkEventMotion *event);
 	bool on_image_button_event(GdkEventButton *event);
+	
+	// GUI updates
+	void on_glarea_view_update();				//!< Callback from glarea class
+	//!< @todo Sort these functions out
+	void force_update();								//!< Update full image etc.
+	void do_update();										//!< Update with new GUI input
+	void do_histo_update();							//!< Update histogram
+
+	// Overload from DeviceView:
+	virtual void disable_gui();
+	virtual void enable_gui();
+	virtual void clear_gui();
+
+	virtual void on_message_update();
+	virtual void on_connect_update();
+	
+	// New event capture
+	virtual void on_monitor_update();		//!< Display new image from camera
+	bool on_timeout();
 
 public:
 	CamCtrl *camctrl;
-	CamView(Log &log, FoamControl &foamctrl, string n);
+	CamView(Log &log, FoamControl &foamctrl, string n, bool is_parent=false);
 	~CamView();
 	
-	virtual int init();
+	virtual void init();
 };
 
+
 #endif // HAVE_CAMVIEW_H
+
+
+/*!
+ \page dev_cam Camera devices : CamView & CamCtrl
+ 
+ \section camview_camview CamView
+ 
+ Shows a basic GUI for a generic camera. See CamView
+ 
+ \section camview_camctrl CamCtrl
+ 
+ Controls a generic camera. See CamCtrl.
+ 
+ \section camview_derived Derived classes
+ 
+ The following classes are dervied from the Camera device:
+ - \subpage dev_cam_wfs "Wavefront sensor device"
+ 
+ */

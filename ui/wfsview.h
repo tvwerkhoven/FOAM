@@ -81,3 +81,16 @@ public:
 };
 
 #endif // HAVE_WFSVIEW_H
+
+/*!
+ \page dev_cam_wfs Wavefront sensor devices: WfsView & WfsCtrl
+ 
+ \section wfsview_wfsview WfsView
+ 
+ \section wfsview_wfsctrl WfsCtrl
+ 
+ \section wfsview_derived Derived classes
+ 
+ The following classes are dervied from the Wavefront sensor device:
+ - \subpage dev_cam_wfs_sh "Shack-Hartmann Wavefront sensor devices"
+*/

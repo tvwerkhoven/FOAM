@@ -94,12 +94,10 @@ void Camera::cam_proc() {
 	while (true) {
 		// Always wait for proc_cond broadcasts
 		proc_mutex.lock();
-		io.msg(IO_DEB2, "Camera::cam_proc(): waiting for proc_cond.");
 		proc_cond.wait(proc_mutex);
 		proc_mutex.unlock();
 		
 		// Lock cam_mut before handling the data
-		io.msg(IO_DEB2, "Camera::cam_proc(): waiting for cam_mutex.");
 		pthread::mutexholder h(&cam_mutex);
 		
 		// There is a new frame ready now, process it
@@ -119,7 +117,6 @@ void Camera::cam_proc() {
 		// Notify all threads waiting for new frames now
 		cam_cond.broadcast();
 	}
-	io.msg(IO_DEB2, "Camera::cam_proc() finish");
 }
 
 void Camera::fits_init_phdu(char *phdu) {
@@ -169,6 +166,11 @@ bool Camera::fits_add_comment(char *phdu, const string &comment) {
 
 bool Camera::store_frame(frame_t *frame) {
 	// Generate path to store file to, based on filenamebase
+	if (depth != 8 && depth != 16) {
+		io.msg(IO_WARN, "Camera::store_frame() Only 8 and 16 bit images supported!");
+		return false;
+	}
+	
 	Path filename = makename();
 	io.msg(IO_DEB1, "Camera::store_frame(%p) to %s", frame, filename.c_str());
 	
@@ -191,21 +193,17 @@ bool Camera::store_frame(frame_t *frame) {
 	
 	// Add datatype <http://www.eso.org/sci/data-processing/software/esomidas//doc/user/98NOV/vola/node112.html>
 	fits_add_card(phdu, "SIMPLE", "T");
-	if (dtype == UINT8 || dtype == INT8)
-		fits_add_card(phdu, "BITPIX", "8");
-	else if (dtype == UINT16 || dtype == INT16)
+	if (depth == 16)
 		fits_add_card(phdu, "BITPIX", "16");
-	else if (dtype == FLOAT32)
-		fits_add_card(phdu, "BITPIX", "-32");
-	else if (dtype == FLOAT64)
-		fits_add_card(phdu, "BITPIX", "-64");
+	else
+		fits_add_card(phdu, "BITPIX", "8");
 		
 	// Add rest of the metadata
 	fits_add_card(phdu, "NAXIS", "2");
 	fits_add_card(phdu, "NAXIS1", format("%d", res.x));
 	fits_add_card(phdu, "NAXIS2", format("%d", res.y));
 	
-	fits_add_card(phdu, "ORIGIN", "FOAM store");
+	fits_add_card(phdu, "ORIGIN", "FOAM Camera");
 	fits_add_card(phdu, "DEVICE", name);
 	fits_add_card(phdu, "TELESCOPE", fits_telescope);
 	fits_add_card(phdu, "INSTRUMENT", fits_instrument);
@@ -244,11 +242,15 @@ void Camera::calculate_stats(frame_t *frame) {
 		uint8_t *image = (uint8_t *)frame->image;
 		for(size_t i = 0; i < (size_t) res.x * res.y; i++) {
 			frame->histo[image[i]]++;
+			if (image[i] > frame->max) frame->max = image[i];
+			if (image[i] < frame->min) frame->min = image[i];
 		}
 	} else {
 		uint16_t *image = (uint16_t *)frame->image;
 		for(size_t i = 0; i < (size_t) res.x * res.y; i++) {
 			frame->histo[image[i]]++;
+			if (image[i] > frame->max) frame->max = image[i];
+			if (image[i] < frame->min) frame->min = image[i];
 		}
 	}
 	
@@ -280,14 +282,20 @@ void *Camera::cam_queue(void *data, void *image, struct timeval *tv) {
 	
 	if(!frame->histo)
 		frame->histo = new uint32_t[get_maxval()];
-			
+	
+	// Reset values in frame struct
+	frame->proc = false;
+	frame->avg = 0;
+	frame->rms = 0;
+	frame->min = INT_MAX;
+	frame->max = 0;
+	
 	if(tv)
 		frame->tv = *tv;
 	else
 		gettimeofday(&frame->tv, 0);
 	
-	// Signal one waiting thread about the new frame
-	proc_cond.signal();
+	proc_cond.signal();			// Signal one waiting thread about the new frame
 	
 	return old;
 }
@@ -302,14 +310,15 @@ Camera::frame_t *Camera::get_last_frame() {
 Camera::frame_t *Camera::get_frame(size_t id, bool wait) {	
 	if(id >= count) {
 		if(wait) {
-			while(id >= count)
+			while(id >= count) {
 				cam_cond.wait(cam_mutex);		// This mutex must be locked elsewhere before calling get_frame()
+			}
 		} else {
 			return 0;
 		}
 	}
-	
-	if(id < count - nframes || id >= count)
+
+	if(id + nframes < count || id >= count)
 		return 0;
 	
 	return &frames[id % nframes];
@@ -411,7 +420,6 @@ void Camera::on_message(Connection *conn, string line) {
 			else if(option == "histogram")
 				do_histo = true;
 		}
-		
 		grab(conn, x1, y1, x2, y2, scale, do_df, do_histo);
 	} else if(command == "store") {
 		conn->addtag("store");
@@ -570,7 +578,7 @@ uint8_t *Camera::get_thumbnail(Connection *conn = NULL) {
 	return buffer;
 }
 
-void Camera::grab(Connection *conn, int x1, int y1, int x2, int y2, int scale = 1, bool do_df = false, bool do_histo = false) {
+void Camera::grab(Connection *conn, int x1, int y1, int x2, int y2, int scale = 1, bool do_df = false, bool do_histo = false) {	
 	x1 = clamp(x1, 0, res.x);
 	y1 = clamp(y1, 0, res.y);
 	x2 = clamp(x2, 0, res.x / scale);
@@ -598,6 +606,7 @@ void Camera::grab(Connection *conn, int x1, int y1, int x2, int y2, int scale = 
 		lookup[i] = 128 + pow(i - maxval / 2, 7.0 / (depth - 1));
 	
 	{
+		
 		pthread::mutexholder h(&cam_mutex);
 		frame_t *f = get_frame(count);
 		if(!f)
@@ -612,6 +621,7 @@ void Camera::grab(Connection *conn, int x1, int y1, int x2, int y2, int scale = 
 			extra += " histogram";
 		
 		extra += format(" avg %lf rms %lf", f->avg, f->rms);
+		extra += format(" min %d max %d", f->min, f->max);
 		
 		// zero copy if possible
 		if(!do_df && scale == 1 && x1 == 0 && x2 == (int)res.x && y1 == 0 && y2 == (int)res.y) {

@@ -26,6 +26,43 @@
 #include <vector>
 #include "format.h"
 
+/*!
+ @brief Similar to ToggleButton, but uses color for status indication, which can be updated without generating signals
+ */
+class SwitchButton: public Gtk::Button {
+public:
+	enum state {
+		OK=1,
+		WAITING,
+		ERROR,
+		CLEAR,
+	};													//!< Various button states, OK, WAITING, ERROR, CLEAR.
+private:
+	//<! Change the color of this button
+	void modify_button(const Gdk::Color &color) {
+		this->modify_bg(Gtk::STATE_PRELIGHT, color);
+		this->modify_bg(Gtk::STATE_NORMAL, color);
+	}
+	//!< Reset the button
+	void modify_button() {
+		this->unset_bg(Gtk::STATE_NORMAL);
+		this->unset_bg(Gtk::STATE_PRELIGHT);
+	}
+	enum state state;						//!< Track state of this button.
+public:
+	const Gdk::Color col_ok;		//!< Color to use for 'OK' status
+	const Gdk::Color col_warn;	//!< Color to use for 'WARNING' status
+	const Gdk::Color col_err;		//!< Color to use for 'ERROR' status
+	
+	void set_state(enum state s);
+	enum state get_state() { return state; }	//!< Get the state of this button
+	bool get_state(enum state s1) { return (state == s1); } //!< Convenience function for checking state
+	bool get_state(enum state s1, enum state s2) { return (state == s1 || state == s2); } //!< Convenience function for checking state
+	bool get_state(enum state s1, enum state s2, enum state s3) { return (state == s1 || state == s2 || state == s3); } //!< Convenience function for checking state
+	
+	SwitchButton(const Glib::ustring &lbl="Button");
+};
+
 class LabeledSpinEntry: public Gtk::HBox {
 	Gtk::Label pre;
 	Gtk::Label post;

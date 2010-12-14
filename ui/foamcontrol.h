@@ -34,19 +34,24 @@
 #include "protocol.h"
 #include "pthread++.h"
 #include "foamtypes.h"
+#include "log.h"
 
 using namespace std;
 
 /*!
- @brief Main FOAM control class  
- @todo Document this
+ @brief Main FOAM control class.
+
+ This class takes care of the base connection to FOAM. It controls common 
+ functions of all FOAM setups allows GUI elements to register callbacks to
+ several signals that notify changes in the system. It locally keeps track 
+ of the remote AO system setup as well.
  */
 class FoamControl {
 public:
 	typedef struct _device_t {
 		string name;
 		string type;		
-	} device_t;
+	} device_t;													//!< Describes hardware devices
 	
 private:
 	string mode2str(aomode_t m) {
@@ -71,50 +76,45 @@ private:
 		else return AO_MODE_UNDEF;
 	}
 	
-	Protocol::Client protocol;
-	
+	Protocol::Client protocol;					//!< Connection used to FOAM
+	Log &log;														//!< Reference to MainWindow::log
+
 	pthread::mutex mutex;
 	
-	// Basic state of the AO system goes here
 	struct state_t {
-		aomode_t mode;
-		int numdev;
-		device_t devices[32];
-		int numframes;
-		int numcal;
-		string calmodes[32];
-		string lastreply;
-		string lastcmd;
-	} state;
+		aomode_t mode;										//!< AO mode (see aomode_t)
+		int numdev;												//!< Number of devices connected
+		device_t devices[32];							//!< List of devices
+		uint64_t numframes;								//!< Number of frames processed
+		int numcal;												//!< Number of calibration modes
+		string calmodes[32];							//!< Different calibration modes
+		string lastreply;									//!< Last reply (stored in on_message())
+		string lastcmd;										//!< Last command issued to FOAM
+	} state;														//!< Basic state of the remote AO system
 	
-	bool ok;
-	string errormsg;
+	bool ok;														//!< Status of the system
+	string errormsg;										//!< If not ok, this was the error
 	
-	void on_message(string line);
-	void on_connected(bool conn);
+	void on_message(string line);				//!< Callback for new messages from FOAM
+	void on_connected(bool conn);				//!< Callback for new connection to FOAM
 	
 public:
-	//! \todo Move exception to base class, appears everywhere...
-	class exception: public runtime_error {
-	public:
-		exception(const string reason): runtime_error(reason) {}
-	};
-	
 	string host;
 	string port;
 	
-	FoamControl();
+	FoamControl(Log &log);
 	~FoamControl() { };
 	
 	int connect(const string &host, const string &port);
 	int disconnect();
+	void send_cmd(const string &cmd);
 	
 	// get-like commands
 	string getpeername() { return protocol.getpeername(); }
 	string getsockname() { return protocol.getsockname(); }
 	int get_numdev() { return state.numdev; }
 	void set_numdev(int n) { state.numdev = n; }
-	int get_numframes() { return state.numframes; }
+	uint64_t get_numframes() { return state.numframes; }
 	aomode_t get_mode() { return state.mode; }
 	string get_mode_str() { return mode2str(state.mode); }
 	int get_numcal() { return state.numcal; }
@@ -125,8 +125,8 @@ public:
 	
 	// set-like commands
 	void set_mode(aomode_t mode);
-	void shutdown() { protocol.write("shutdown"); }
-	void calibrate(string calmode) { protocol.write(format("calib %s", calmode.c_str())); }
+	void shutdown() { send_cmd("shutdown"); }
+	void calibrate(string calmode) { send_cmd(format("calib %s", calmode.c_str())); }
 
 	
 	bool is_ok() { return ok; }

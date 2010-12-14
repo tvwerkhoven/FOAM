@@ -27,39 +27,39 @@
 using namespace std;
 using namespace Gtk;
 
-DevicePage::DevicePage(Log &log, FoamControl &foamctrl, string n): 
+DevicePage::DevicePage(Log &log, FoamControl &foamctrl, string n, bool is_parent): 
 foamctrl(foamctrl), log(log), devname(n)  {
 	printf("%x:DevicePage::DevicePage()\n", (int) pthread_self());
 		
-//	infobox.set_spacing(4);	
-//	infobox.pack_start(infolabel, PACK_SHRINK);
-//	infoframe.add(infobox);
-	
 	// Add frames to parent VBox
 	set_spacing(4);
-//	pack_start(infoframe, PACK_SHRINK);
 	
-	show_all_children();	
+	show_all_children();
+	
+	if (is_parent)
+		init();
 }
 
 DevicePage::~DevicePage() {
-	fprintf(stderr, "DevicePage::~DevicePage()\n");
+	fprintf(stderr, "%x:DevicePage::~DevicePage()\n", (int) pthread_self());
 }
 
-int DevicePage::init() {
+void DevicePage::init() {
 	// Start device controller
-	devctrl = new DeviceCtrl(foamctrl.host, foamctrl.port, devname);
+	devctrl = new DeviceCtrl(log, foamctrl.host, foamctrl.port, devname);
 	
 	// GUI update callback (from protocol thread to GUI thread)
-	devctrl->signal_update.connect(sigc::mem_fun(*this, &DevicePage::on_message_update));
+	devctrl->signal_message.connect(sigc::mem_fun(*this, &DevicePage::on_message_update));
+	devctrl->signal_connect.connect(sigc::mem_fun(*this, &DevicePage::on_connect_update));
 	
 	// Run once for init
 	on_message_update();
-	
-	return 0;
 }
 
 void DevicePage::on_message_update() {
 	printf("%x:DevicePage::on_message_update()\n", (int) pthread_self());
-	//infolabel.set_text("Device: " + devctrl->getName() + " Info: " + devctrl->getInfo());
+}
+
+void DevicePage::on_connect_update() {
+	printf("%x:DevicePage::on_connect_update()\n", (int) pthread_self());
 }
