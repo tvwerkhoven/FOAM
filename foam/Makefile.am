@@ -127,15 +127,13 @@ foam_fullsim_SOURCES = foam-fullsim.cc \
 		$(FRAME_SRC) $(FRAME_HDR) \
 		$(MODS_DIR)/camera.cc \
 		$(MODS_DIR)/simulcam.cc \
-		$(LIB_DIR)/simseeing.cc \
-		$(LIB_DIR)/simwfs.cc
+		$(LIB_DIR)/simseeing.cc
 
 # Header files are part of the sources as well
 foam_fullsim_SOURCES += foam-fullsim.h \
 		$(MODS_DIR)/camera.h \
 		$(MODS_DIR)/simulcam.h \
-		$(LIB_DIR)/simseeing.h \
-		$(LIB_DIR)/simwfs.h
+		$(LIB_DIR)/simseeing.h
 
 foam_fullsim_LDADD = $(LIBSIU_DIR)/libimgdata.a \
 		$(LDADD)
