@@ -47,7 +47,7 @@ foamctrl::foamctrl(Io &io):
 err(0), io(io),
 conffile(""), pidfile("/tmp/foam.pid"), 
 listenip("0.0.0.0"), listenport("1025"),
-datadir(FOAM_DATADIR), logfile("foam-log"),
+datadir("/tmp/"), logfile("foam-log"),
 use_syslog(false), syslog_prepend("foam"), 
 mode(AO_MODE_LISTEN), calib(""),
 starttime(time(NULL)), frames(0)
@@ -77,7 +77,7 @@ int foamctrl::parse() {
 	cfg = new config(conffile);
 	
 	// Datadir (relative to confdir)
-	datadir = confdir + cfg->getstring("datadir", FOAM_DATADIR);
+	datadir = confdir + cfg->getstring("datadir", "/tmp/");
 	if (datadir == confdir + ".") io.msg(IO_WARN, "datadir not set, using current directory.");
 	else io.msg(IO_DEB1, "Datadir: '%s'.", datadir.c_str());
 
