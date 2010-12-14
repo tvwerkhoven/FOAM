@@ -34,14 +34,14 @@
 const string simwfs_type = "simwfs";
 
 /*!
- @brief This class simulates a wavefront sensor
+ @brief This class simulates a Shack-Hartmann wavefront sensor
  
  Given a wavefront, this class images it onto a wavefront sensor (initially 
  only of the Shack-Hartmann type).
  */
 class SimWfs : public Device {
 private:
-	sh_mla_t mla;								//!< Microlens array of simulated WFS
+	Shwfs::sh_mla_t mla;								//!< Microlens array of simulated WFS
 	
 	uint8_t *frame_out;					//!< Data used to store output frame (realloc'ed if necessary)
 	size_t out_size;						//!< Size of output frame
@@ -52,7 +52,7 @@ public:
 	~SimWfs();
 	
 	uint8_t *sim_shwfs(gsl_matrix *wavefront);
-	bool setup(SimSeeing *ref);	//!< Setup SimWfs instance (i.e. from SimulCam)
+	bool setup(SimSeeing *ref, coord_t &res, coord_t &sasize, coord_t &sapitch, int xoff, coord_t &disp); //!< Setup SimWfs instance (i.e. from SimulCam)
 };
 
 #endif // HAVE_SIMWFS_H

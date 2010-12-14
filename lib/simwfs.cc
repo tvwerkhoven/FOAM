@@ -44,8 +44,9 @@ SimWfs::~SimWfs() {
 
 bool SimWfs::setup(SimSeeing *ref, coord_t &res, coord_t &sasize, coord_t &sapitch, int xoff, coord_t &disp) {	
 	// Read configuration file here
+	//! @todo do something with SimSeeing ref, load shape from config file
 	int nsubap=0;
-	mla = Shwfs::gen_mla_grid(res, sasize, sapitch, xoff, disp, nsubap);
+	mla = Shwfs::gen_mla_grid(res, sasize, sapitch, xoff, disp, Shwfs::CIRCULAR, nsubap);
 	
 	return true;
 }

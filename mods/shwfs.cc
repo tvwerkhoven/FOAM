@@ -333,12 +333,19 @@ Wfs(io, ptc, name, shwfs_type, port, conffile, wfscam)
 	simaxr = cfg.getint("simaxr", -1);
 	simini = cfg.getint("simini", 30);
 	int xoff = cfg.getint("xoff", 0);
+	
+	Shwfs::mlashape_t shape;
+	string shapestr = cfg.getstring("shape", "circular");
+	if (shapestr == "circular")
+		shape = Shwfs::CIRCULAR;
+	else
+		shape = Shwfs::SQUARE;
 		
 	// Start in CoG mode
 	mode = Shwfs::COG;
 	
 	// Generate MLA grid
-	mla.ml = gen_mla_grid(cam.get_res(), sisize, sipitch, xoff, coord_t(cam.get_width()/2.,cam.get_height()/2.), Shwfs::SQUARE, mla.nsi);
+	mla.ml = gen_mla_grid(cam.get_res(), sisize, sipitch, xoff, coord_t(cam.get_width()/2.,cam.get_height()/2.), shape, mla.nsi);
 }
 	
 Shwfs::~Shwfs() {

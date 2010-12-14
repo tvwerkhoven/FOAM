@@ -71,7 +71,7 @@ gsl_matrix *SimSeeing::load_wavefront(Path &f) {
  *  Public methods
  */
 
-bool SimSeeing::setup(Path &f, coord_t size, coord_t wspeed, enum wtype t) {
+bool SimSeeing::setup(Path &f, coord_t size, coord_t wspeed, wind_t t) {
 	io.msg(IO_INFO, "SimSeeing::setup() Loading wavefront.");
 	
 	cropsize = size;
