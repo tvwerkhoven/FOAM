@@ -32,7 +32,7 @@
 SimulCam::SimulCam(Io &io, foamctrl *ptc, string name, string port, Path &conffile):
 Camera(io, ptc, name, SimulCam_type, port, conffile),
 seeing(io, ptc, name + "-seeing", port, conffile),
-shwfs(NULL)
+shwfs(NULL), out_size(0), frame_out(NULL)
 {
 	io.msg(IO_DEB2, "SimulCam::SimulCam()");
 	
@@ -66,6 +66,9 @@ uint8_t *SimulCam::simul_wfs(gsl_matrix *wave_in) {
 	fac = 255.0/(max-min);
 	
 	// Apply fourier transform to subimages here
+	for (size_t n=0; n<shwfs->mla.nsi; n++) {
+		io.msg(IO_DEB2, "SimulCam::simul_wfs() FFT @ %d: (%d,%d)", n, shwfs->mla.ml[n].pos.x, shwfs->mla.ml[n].pos.y);
+	}
 	
 	//(coord_t res, coord_t size, coord_t pitch, int xoff, coord_t disp, int &nsubap);
 	// Convert frame to uint8_t, scale properly

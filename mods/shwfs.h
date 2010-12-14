@@ -44,6 +44,7 @@ using namespace std;
  @todo Document this
  */
 class Shwfs: public Wfs {
+	friend class SimulCam;
 public:
 	// Public datatypes
 	typedef enum {
