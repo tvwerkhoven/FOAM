@@ -51,14 +51,19 @@ private:
 	SimSeeing seeing;										//!< This class simulates the atmosphere
 	Shwfs *shwfs;												//!< Reference to WFS we simulate (i.e. for configuration)
 	
-	uint8_t *frame_out;									//!< Frame to store simulated image
 	size_t out_size;										//!< Size of frame_out
-	float telradius;										//!< Telescope radius (fraction of CCD)
+	uint8_t *frame_out;									//!< Frame to store simulated image
+
+	double telradius;										//!< Telescope radius (fraction of CCD)
+	gsl_matrix *telapt;									//!< Telescope aperture mask
 	
 public:
 	SimulCam(Io &io, foamctrl *ptc, string name, string port, Path &conffile);
 	~SimulCam();
+	
+	void gen_telapt();									//!< Generate telescope aperture
 
+	gsl_matrix *simul_telescope(gsl_matrix *wave_in); //!< Apply telescope aperture mask
 	uint8_t *simul_wfs(gsl_matrix *wave_in); //!< Simulate wavefront sensor optics (i.e. MLA)
 	void simul_capture(uint8_t *frame);	//!< Simulate CCD frame capture (exposure, offset, etc.)
 	

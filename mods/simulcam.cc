@@ -20,6 +20,7 @@
 
 #include <unistd.h>
 #include <gsl/gsl_matrix.h>
+#include <math.h>
 
 #include "io.h"
 #include "config.h"
@@ -32,7 +33,7 @@
 SimulCam::SimulCam(Io &io, foamctrl *ptc, string name, string port, Path &conffile):
 Camera(io, ptc, name, SimulCam_type, port, conffile),
 seeing(io, ptc, name + "-seeing", port, conffile),
-shwfs(NULL), out_size(0), frame_out(NULL)
+shwfs(NULL), out_size(0), frame_out(NULL), telradius(1.0), telapt(NULL)
 {
 	io.msg(IO_DEB2, "SimulCam::SimulCam()");
 	
@@ -52,14 +53,57 @@ shwfs(NULL), out_size(0), frame_out(NULL)
 	
 	seeing.setup(wffile, res, wind, windtype);		
 	
+	// Get telescope aperture
+	gen_telapt();
+
+	
 	cam_thr.create(sigc::mem_fun(*this, &SimulCam::cam_handler));
 }
 
-uint8_t *SimulCam::simul_telescope(gsl_matrix *wave_in) {
+void SimulCam::gen_telapt() {
+	io.msg(IO_XNFO, "SimulCam::gen_telapt(): init");
+	
+	if (!telapt) {							// Doesn't exist, callocate (all zeros is goed)
+		io.msg(IO_DEB2, "SimulCam::gen_telapt(): calloc");
+		telapt = gsl_matrix_calloc(res.x, res.y);
+	}
+	else if (telapt->size1 != res.x || telapt->size2 != res.y) { // Wrong size, re-allocate
+		io.msg(IO_DEB2, "SimulCam::gen_telapt(): re-calloc");
+		gsl_matrix_free(telapt);
+		telapt = gsl_matrix_calloc(res.x, res.y);
+	}
+	
+	// Calculate aperture size
+	float minradsq = pow(((double) min(telapt->size1, telapt->size2))*telradius/2.0, 2);
+	
+	float pixi, pixj;
+	double sum=0;
+	for (size_t i=0; i<telapt->size1; i++) {
+		for (size_t j=0; j<telapt->size2; j++) {
+			// If a pixel falls within the aperture radius, set it to 1
+			pixi = ((float) i) - telapt->size1/2;
+			pixj = ((float) j) - telapt->size2/2;
+			if (pixi*pixi + pixj*pixj < minradsq) {
+				sum++;
+				gsl_matrix_set (telapt, i, j, 1.0);
+			}
+		}
+	}
+	
+//	for (size_t i=0; i<telapt->size1; i++)
+//		for (size_t j=0; j<telapt->size2; j++)
+//			sum += gsl_matrix_get(telapt, i, j);
+	
+	io.msg(IO_XNFO, "SimulCam::gen_telapt(): done: minradsq=%g, range=%g--%g, sum=%g", 
+				minradsq, gsl_matrix_min(telapt), gsl_matrix_max(telapt), sum);
+
+}
+
+gsl_matrix *SimulCam::simul_telescope(gsl_matrix *im_in) {
+	io.msg(IO_DEB2, "SimulCam::simul_telescope()");
 	// Multiply wavefront with aperture
-	//!< @todo convert this
-	for (i=0; i < simparams->currimgres.x * simparams->currimgres.y; i++)
-	 	if (simparams->apertimg[i] == 0) simparams->currimg[i] = 0;
+	gsl_matrix_mul_elements (im_in, telapt);
+	return im_in;
 }
 
 uint8_t *SimulCam::simul_wfs(gsl_matrix *wave_in) {
@@ -76,6 +120,7 @@ uint8_t *SimulCam::simul_wfs(gsl_matrix *wave_in) {
 	//!< @todo convert this
 	
 	// we take the subaperture, which is shsize.x * .y big, and put it in a larger matrix
+	/*
 	nx = (shwfs->shsize.x * 2);
 	ny = (shwfs->shsize.y * 2);
 	
@@ -250,6 +295,7 @@ uint8_t *SimulCam::simul_wfs(gsl_matrix *wave_in) {
 
 	
 	//(coord_t res, coord_t size, coord_t pitch, int xoff, coord_t disp, int &nsubap);
+	*/
 	// Convert frame to uint8_t, scale properly
 	size_t cursize = wave_in->size1 * wave_in->size2  * (sizeof(uint8_t));
 	if (out_size != cursize) {
@@ -261,7 +307,7 @@ uint8_t *SimulCam::simul_wfs(gsl_matrix *wave_in) {
 	for (size_t i=0; i<wave_in->size1; i++)
 		for (size_t j=0; j<wave_in->size2; j++)
 			frame_out[i*wave_in->size2 + j] = (uint8_t) ((wave_in->data[i*wave_in->tda + j] - min)*fac);
-	
+
 	return frame_out;
 }
 
@@ -338,6 +384,7 @@ void SimulCam::cam_handler() {
 				gsl_matrix_view wf = seeing.get_wavefront();
 				io.msg(IO_DEB1, "SimulCam::cam_handler() RUNNING f@%p, f[100]: %g", 
 							 wf.matrix.data, wf.matrix.data[100]);
+				simul_telescope(&(wf.matrix));
 				uint8_t *frame = simul_wfs(&(wf.matrix));
 				
 				simul_capture(frame);
@@ -349,9 +396,12 @@ void SimulCam::cam_handler() {
 			}
 			case Camera::SINGLE:
 			{
-				io.msg(IO_DEB1, "SimSeeing::cam_handler() SINGLE");
+				io.msg(IO_DEB1, "SimulCam::cam_handler() SINGLE");
 
 				gsl_matrix_view wf = seeing.get_wavefront();
+				
+				simul_telescope(&(wf.matrix));
+				
 				uint8_t *frame = simul_wfs(&(wf.matrix));
 
 				simul_capture(frame);
@@ -367,7 +417,7 @@ void SimulCam::cam_handler() {
 			case Camera::WAITING:
 			case Camera::CONFIG:
 			default:
-				io.msg(IO_INFO, "SimSeeing::cam_handler() OFF/WAITING/UNKNOWN.");
+				io.msg(IO_INFO, "SimulCam::cam_handler() OFF/WAITING/UNKNOWN.");
 				// We wait until the mode changed
 				mode_mutex.lock();
 				mode_cond.wait(mode_mutex);
