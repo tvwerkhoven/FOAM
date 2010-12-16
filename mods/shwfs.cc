@@ -77,6 +77,8 @@ Shwfs::sh_simg_t *Shwfs::gen_mla_grid(coord_t res, coord_t size, coord_t pitch, 
 	nsubap = 0;
 	Shwfs::sh_simg_t *pattern = NULL;
 	
+	float minradsq = pow(((double) min(res.x, res.y))/2.0, 2);
+	
 	coord_t sa_c;
 	// Loop over potential subaperture positions 
 	for (int sa_y=-sa_range_y; sa_y < sa_range_y; sa_y++) {
@@ -90,8 +92,8 @@ Shwfs::sh_simg_t *Shwfs::gen_mla_grid(coord_t res, coord_t size, coord_t pitch, 
 			sa_c.x -= (sa_y % 2) * xoff * pitch.x;
 			
 			if (shape == CIRCULAR) {
-				if (pow(fabs(sa_c.x) + (overlap-0.5)*size.x, 2) + pow(fabs(sa_c.y) + (overlap-0.5)*size.y, 2) < pow(res.x/2.0, 2)) {
-					//io.msg(IO_DEB2, "Shwfs::gen_mla_grid(): Found subap within bounds.");
+				if (pow(fabs(sa_c.x) + (overlap-0.5)*size.x, 2) + pow(fabs(sa_c.y) + (overlap-0.5)*size.y, 2) < minradsq) {
+					io.msg(IO_DEB2, "Shwfs::gen_mla_grid(): Found subap within bounds @ (%d, %d)", sa_c.x, sa_c.y);
 					nsubap++;
 					pattern = (Shwfs::sh_simg_t *) realloc((void *) pattern, nsubap * sizeof (Shwfs::sh_simg_t));
 					pattern[nsubap-1].pos.x = sa_c.x + disp.x;
