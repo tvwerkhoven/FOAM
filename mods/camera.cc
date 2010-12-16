@@ -74,7 +74,7 @@ fits_telescope("undef"), fits_observer("undef"), fits_instrument("undef"), fits_
 	
 	// Set frame resolution & bitdepth
 	res.y = cfg.getint("height", 512);
-	res.x = cfg.getint("width", 512);
+	res.x = cfg.getint("width", 768);
 	depth = cfg.getint("depth", 8);
 
 	io.msg(IO_XNFO, "Camera::Camera(): %dx%dx%d, exp:%g, int:%g, gain:%g, off:%g",
