@@ -128,10 +128,9 @@ uint8_t *SimulCam::simul_wfs(gsl_matrix *wave_in) {
 		sasize = shwfs->mla.ml[n].size;
 		io.msg(IO_DEB2, "SimulCam::simul_wfs() FFT @ %d: (%d,%d)", n, sallpos.x, sallpos.y);
 		
+		// Crop out subaperture from larger frame, store as gsl_matrix_view
 		subap = gsl_matrix_submatrix(wave_in, sallpos.y, sallpos.x, sasize.y, sasize.x);
 		subapm = &(subap.matrix);
-		
-		gsl_matrix_scale (subapm, 0.9);
 		
 		if (workspace->size != sasize.x * sasize.y * 4) {
 			// Re-alloc data if necessary (should be sasize, but this can vary per subap)
