@@ -46,6 +46,7 @@ dc1394_test_SOURCES = dc1394-test.cc
 dc1394_test_CXXFLAGS = $(AM_CXXFLAGS) $(DC1394_CFLAGS)
 dc1394_test_LDADD = $(LDADD) $(DC1394_LIBS)
 
+if FULLSIM
 shwfs_test_SOURCES = shwfs-test.cc \
 		$(MODS_DIR)/shwfs.cc \
 		$(MODS_DIR)/dummycam.cc \
@@ -54,12 +55,15 @@ shwfs_test_SOURCES = shwfs-test.cc \
 		$(LIB_DIR)/devices.cc \
 		$(LIB_DIR)/simseeing.cc \
 		../foam/foamctrl.cc
+shwfs_test_CFLAGS = $(FFTW_CFLAGS)
 shwfs_test_CXXFLAGS = $(AM_CXXFLAGS)
-shwfs_test_LDADD = $(LIBSIU_DIR)/libio.a \
+shwfs_test_LDADD = $(FFTW_LIBS) \
+		$(LIBSIU_DIR)/libio.a \
 		$(LIBSIU_DIR)/libpath.a \
 		$(LIBSIU_DIR)/libprotocol.a \
 		$(LIBSIU_DIR)/libconfig.a \
 		$(LIBSIU_DIR)/libimgdata.a
+endif FULLSIM
 
 ### OpenGL programs go here (need GUI libs)
 

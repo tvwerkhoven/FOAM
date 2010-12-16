@@ -52,7 +52,7 @@ shwfs(NULL), out_size(0), frame_out(NULL), telradius(1.0), telapt(NULL)
 	else
 		windtype = SimSeeing::RANDOM;
 	
-	seeing.setup(wffile, res, wind, windtype);		
+	seeing.setup(wffile, res, wind, windtype);
 	
 	// Get telescope aperture
 	gen_telapt();
@@ -65,11 +65,11 @@ void SimulCam::gen_telapt() {
 	io.msg(IO_XNFO, "SimulCam::gen_telapt(): init");
 	
 	if (!telapt) {							// Doesn't exist, callocate (all zeros is goed)
-		telapt = gsl_matrix_calloc(res.x, res.y);
+		telapt = gsl_matrix_calloc(res.y, res.x);
 	}
 	else if (telapt->size1 != res.x || telapt->size2 != res.y) { // Wrong size, re-allocate
 		gsl_matrix_free(telapt);
-		telapt = gsl_matrix_calloc(res.x, res.y);
+		telapt = gsl_matrix_calloc(res.y, res.x);
 	}
 	
 	// Calculate aperture size
@@ -113,45 +113,38 @@ uint8_t *SimulCam::simul_wfs(gsl_matrix *wave_in) {
 	fac = 255.0/(max-min);
 	
 	// Apply fourier transform to subimages here
-	coord_t sapos = shwfs->mla.ml[0].pos;
+	coord_t sallpos = shwfs->mla.ml[0].llpos;
 	coord_t sasize = shwfs->mla.ml[0].size;
-	fftw_plan shplan = NULL;
+	// Get temporary memory
 	gsl_vector *workspace = gsl_vector_calloc(sasize.x * sasize.y * 4);
-	//fftw_complex
+	// Setup FFTW parameters
+	fftw_complex *shout = (fftw_complex *) fftw_malloc(sasize.y*2 * sasize.x*2 * sizeof(fftw_complex));
+	fftw_plan shplan = fftw_plan_dft_r2c_2d(sasize.y*2, sasize.x*2,
+																					workspace->data, shout, FFTW_MEASURE);
 	
 	for (int n=0; n<shwfs->mla.nsi; n++) {
-		sapos = shwfs->mla.ml[n].pos;
+		sallpos = shwfs->mla.ml[n].llpos;
 		sasize = shwfs->mla.ml[n].size;
-		io.msg(IO_DEB2, "SimulCam::simul_wfs() FFT @ %d: (%d,%d)", n, sapos.x, sapos.y);
+		io.msg(IO_DEB2, "SimulCam::simul_wfs() FFT @ %d: (%d,%d)", n, sallpos.x, sallpos.y);
 		
-		gsl_matrix_view subap = gsl_matrix_submatrix(wave_in, sapos.x, sapos.y, sasize.x, sasize.y);
+		gsl_matrix_view subap = gsl_matrix_submatrix(wave_in, sallpos.y, sallpos.x, sasize.y, sasize.x);
 		gsl_matrix *subapm = &(subap.matrix);
 		
 		gsl_matrix_scale (subapm, 2.0);
 		
-		for (int i=0; i<sasize.x/2; i++)
-			gsl_matrix_set(subapm, i, 0, 0);
-
-		for (int i=sasize.y*0.25; i<sasize.y*0.75; i++)
-			gsl_matrix_set(subapm, 0, i, 0);
-
 		// Re-alloc data if necessary (should be sasize, but this can vary per subap)
 		if (workspace->size != sasize.x * sasize.y * 4) {
+			io.msg(IO_WARN, "SimulCam::simul_wfs() subap sizes unequal, re-allocating. Support might be flaky.");
 			gsl_vector_free(workspace);
 			workspace = gsl_vector_calloc(sasize.x * sasize.y * 4);
 		}
 
-		// Copy data to linear array for FFT
-//		for (size_t i=0; i<sasize.x; i++)
-//			for (size_t j=0; j<sasize.y; j++)
-//				gsl_vector_set(workspace,  gsl_matrix_get(subap, i, j);
+		// Copy data to linear array for FFT, with padding
+		for (int i=0; i<sasize.y; i++)
+			for (int j=0; j<sasize.x; j++)
+				gsl_vector_set(workspace, (i+sasize.y/2)*2*sasize.x + (j+sasize.x), gsl_matrix_get(subapm, i, j));
+		
 
-
-		// Set up FFT plan
-//		if (!shplan)
-//			shplan = fftw_plan_dft_r2c_2d(sasize.x*2, sasize.y*2,
-//																		workspace->data, fftw_complex *out,
-//																		FFTW_MEASURE);
 	}
 		
 		
@@ -441,7 +434,7 @@ void SimulCam::cam_handler() {
 				
 				uint8_t *frame = simul_wfs(&(wf.matrix));
 
-				simul_capture(frame);
+				//simul_capture(frame);
 				
 				cam_queue(frame, frame);
 				

@@ -131,7 +131,7 @@ gsl_matrix_view SimSeeing::get_wavefront() {
 
 gsl_matrix_view SimSeeing::get_wavefront(size_t x0, size_t y0, size_t w, size_t h) {
 	io.msg(IO_DEB2, "SimSeeing::get_wavefront(%zu, %zu, %zu, %zu)", x0, y0, w, h);
-	gsl_matrix_view tmp = gsl_matrix_submatrix(wfsrc, x0, y0, w, h);
+	gsl_matrix_view tmp = gsl_matrix_submatrix(wfsrc, y0, x0, h, w);
 	return tmp;
 }
 
