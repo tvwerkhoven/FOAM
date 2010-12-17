@@ -69,8 +69,8 @@ public:
 //	virtual int measure(int) = 0;				//!< Measure abberations
 	
 	virtual ~Wfs() {}
-	Wfs(Io &io, foamctrl *ptc, string name, string type, string port, Path conffile, Camera &wfscam):
-	Device(io, ptc, name, wfs_type + "." + type, port, conffile),
+	Wfs(Io &io, foamctrl *ptc, string name, string type, string port, Path conffile, Camera &wfscam, bool online=true):
+	Device(io, ptc, name, wfs_type + "." + type, port, conffile, online),
 	cam(wfscam)
 	{	; }
 };

@@ -32,7 +32,7 @@
 
 #include "imgcam.h"
 
-//! @todo update this to match new Camera prototype Camera(io, ptc, name, imgcam_type, port, conffile)
+//! @todo update this to match new Camera prototype Camera(io, ptc, name, imgcam_type, port, conffile, bool online)
 ImgCamera::ImgCamera(Io &io, string name, string port, config *config): 
 Camera(io, name, imgcam_type, port) {
 	io.msg(IO_DEB2, "ImgCamera::ImgCamera()");

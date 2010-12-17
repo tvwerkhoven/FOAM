@@ -32,8 +32,8 @@
 
 using namespace std;
 
-DummyCamera::DummyCamera(Io &io, foamctrl *ptc, string name, string port, Path &conffile):
-Camera(io, ptc, name, dummycam_type, port, conffile)
+DummyCamera::DummyCamera(Io &io, foamctrl *ptc, string name, string port, Path &conffile, bool online):
+Camera(io, ptc, name, dummycam_type, port, conffile, online)
 {
 	io.msg(IO_DEB2, "DummyCamera::DummyCamera()");
 

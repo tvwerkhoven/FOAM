@@ -30,14 +30,14 @@
 
 // Device class
 
-Device::Device(Io &io, foamctrl *ptc, string n, string t, string p, Path &conf): 
-io(io), ptc(ptc), name(n), type("dev." + t), port(p), conffile(conf), netio(p, n)
-{ 
-	init();
-}
+//Device::Device(Io &io, foamctrl *ptc, string n, string t, string p, Path &conf): 
+//io(io), ptc(ptc), name(n), type("dev." + t), port(p), conffile(conf), netio(p, n)
+//{ 
+//	init();
+//}
 
-Device::Device(Io &io, foamctrl *ptc, string n, string t, string p): 
-io(io), ptc(ptc), name(n), type("dev." + t), port(p), conffile(""), netio(p, n)
+Device::Device(Io &io, foamctrl *ptc, string n, string t, string p, Path conf, bool online): 
+io(io), ptc(ptc), name(n), type("dev." + t), port(p), conffile(conf), netio(p, n), online(online)
 { 
 	init();
 }
@@ -55,11 +55,12 @@ bool Device::init() {
 			throw exception("Device::Device(): Type should be " + type + " for this Device (" + _type + ")!");
 	}
 
-	//! @todo Make this optional, not all Devices need netio (i.e. if port == "", do not start netio, needs change in protocol.cc)
 	io.msg(IO_XNFO, "Device %s listening on port %s.", name.c_str(), port.c_str());
-	netio.slot_message = sigc::mem_fun(this, &Device::on_message);
-	netio.slot_connected = sigc::mem_fun(this, &Device::on_connect);
-	netio.listen();
+	if (online) {
+		netio.slot_message = sigc::mem_fun(this, &Device::on_message);
+		netio.slot_connected = sigc::mem_fun(this, &Device::on_connect);
+		netio.listen();
+	}
 	
 	return true;
 }
@@ -112,10 +113,13 @@ int DeviceManager::del(string id) {
 	return 0;
 }
 
-string DeviceManager::getlist(bool showtype) {
+string DeviceManager::getlist(bool showtype, bool showonline) {
 	device_t::iterator it;
 	string devlist = "";
 	for (it=devices.begin() ; it != devices.end(); it++) {
+		// Skip devices that are not online if requested
+		if (!(*it).second->isonline() && showonline)
+			continue;
 		devlist += (*it).first + " ";
 		if (showtype) devlist += (*it).second->gettype() + " ";
 	}

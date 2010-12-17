@@ -60,7 +60,7 @@ private:
 	double noise;												//!< Noise factor for CCD
 	
 public:
-	SimulCam(Io &io, foamctrl *ptc, string name, string port, Path &conffile);
+	SimulCam(Io &io, foamctrl *ptc, string name, string port, Path &conffile, bool online=true);
 	~SimulCam();
 	
 	void gen_telapt();									//!< Generate telescope aperture

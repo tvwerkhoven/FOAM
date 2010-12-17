@@ -40,7 +40,7 @@ private:
 	double noise;
 	
 public:
-	DummyCamera(Io &io, foamctrl *ptc, string name, string port, Path &conffile);
+	DummyCamera(Io &io, foamctrl *ptc, string name, string port, Path &conffile, bool online=true);
 	~DummyCamera();
 	
 	// From Camera::

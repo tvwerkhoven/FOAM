@@ -57,6 +57,7 @@ protected:
 	Path conffile;											//!< Configuration file
 	config cfg;													//!< Interpreted configuration file
 	Protocol::Server netio;							//!< Network connection
+	bool online;												//!< Online or not?
 
 	bool init();												//!< Initialisation (common for all constructors)
 	
@@ -65,9 +66,10 @@ public:
 	public:
 		exception(const std::string reason): runtime_error(reason) {}
 	};
-		
-	Device(Io &io, foamctrl *ptc, string n, string t, string p, Path &conf);
-	Device(Io &io, foamctrl *ptc, string n, string t, string p);
+	
+	Device(Io &io, foamctrl *ptc, string n, string t, string p, Path conf=string(""), bool online=true);
+//	Device(Io &io, foamctrl *ptc, string n, string t, string p, Path &conf);
+//	Device(Io &io, foamctrl *ptc, string n, string t, string p);
 	virtual ~Device();
 	
 	
@@ -86,6 +88,7 @@ public:
 		io.msg(IO_DEB2, "Device::on_connect(stat=%d)", (int) status); 
 	}
 	
+	bool isonline() { return online; }
 	string getname() { return name; }
 	string gettype() { return type; }
 };
@@ -141,9 +144,10 @@ public:
 	 @brief Return a list of all devices currently registered.
 	 
 	 @param [in] showtype Set to true to return a list of (name type) pairs, otherwise only return a list of names.
+	 @param [in] showonline Only show devices that are network-aware (i.e. are listening on the network)
 	 @return A list of names of all the devices, seperated by spaces. If showtype is true, the device types will also be returned.
 	 */
-	string getlist(bool showtype = true);
+	string getlist(bool showtype = true, bool showonline=true);
 	
 	int getcount() { return ndev; }			//!< Return the number of devices
 	

@@ -323,8 +323,8 @@ int Shwfs::mla_subapsel() {
 /********************/
 
 
-Shwfs::Shwfs(Io &io, foamctrl *ptc, string name, string port, Path &conffile, Camera &wfscam):
-Wfs(io, ptc, name, shwfs_type, port, conffile, wfscam)
+Shwfs::Shwfs(Io &io, foamctrl *ptc, string name, string port, Path &conffile, Camera &wfscam, bool online):
+Wfs(io, ptc, name, shwfs_type, port, conffile, wfscam, online)
 {
 	io.msg(IO_DEB2, "Shwfs::Shwfs()");
 		

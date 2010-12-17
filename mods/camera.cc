@@ -46,8 +46,8 @@
 
 using namespace std;
 
-Camera::Camera(Io &io, foamctrl *ptc, string name, string type, string port, Path &conffile):
-Device(io, ptc, name, cam_type + "." + type, port, conffile),
+Camera::Camera(Io &io, foamctrl *ptc, string name, string type, string port, Path &conffile, bool online):
+Device(io, ptc, name, cam_type + "." + type, port, conffile, online),
 nframes(8), count(0), timeouts(0), ndark(10), nflat(10), 
 darkexp(1.0), flatexp(1.0),
 interval(1.0), exposure(1.0), gain(1.0), offset(0.0), 
