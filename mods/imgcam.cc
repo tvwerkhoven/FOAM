@@ -33,37 +33,35 @@
 #include "imgcam.h"
 
 ImgCamera::ImgCamera(Io &io, foamctrl *ptc, string name, string port, Path &conffile, bool online):
-Camera(io, ptc, name, dummycam_type, port, conffile, online)
+Camera(io, ptc, name, imgcam_type, port, conffile, online)
 {
 	io.msg(IO_DEB2, "ImgCamera::ImgCamera()");
 	
-	Path file = config->getstring(name + ".imagefile");
+	Path file = cfg.getstring(name + ".imagefile");
 	if (!file.isabs()) file = ptc->datadir + file;
 	
 	io.msg(IO_DEB2, "imagefile = %s", file.c_str());
-	noise = config->getdouble(name+".noise", 10.0);
-	interval = config->getdouble(name+".interval", 0.25);
-	exposure = config->getdouble(name+".exposure", 1.0);
+	noise = cfg.getdouble(name+".noise", 10.0);
+	interval = cfg.getdouble(name+".interval", 0.25);
+	exposure = cfg.getdouble(name+".exposure", 1.0);
 	
 	mode = Camera::OFF;
 	
 	img = new ImgData(io, file, ImgData::FITS);
+	img->calcstats();
 	
 	res.x = img->getwidth();
 	res.y = img->getheight();
-	bpp = 16;
-	dtype = UINT16;
+	depth = img->getbpp();
 	
-	image = (void *) malloc(res.x * res.y * 2);
+	frame = (uint16_t *) malloc(res.x * res.y * depth/8);
 	
-	if (!image)
-		throw exception("Could not allocate memory for framebuffer");
-	
-	update(true);
+	update();
 	
 	io.msg(IO_INFO, "ImgCamera init success, got %dx%dx%d frame, noise=%g, intv=%g, exp=%g.", 
-				 res.x, res.y, bpp, noise, interval, exposure);
-	io.msg(IO_INFO, "Range = %d--%d, sum=%lld", img->range[0], img->range[1], img->sum);
+				 res.x, res.y, depth, noise, interval, exposure);
+	if (img->stats.init)
+		io.msg(IO_INFO, "Range = %d--%d, sum=%lld", img->stats.min, img->stats.max, img->stats.sum);
 }
 
 ImgCamera::~ImgCamera() {
@@ -71,122 +69,119 @@ ImgCamera::~ImgCamera() {
 	delete img;
 }
 
-void ImgCamera::update(bool blocking) {
-	// Copy image from img to frame and add some noise etc
+void ImgCamera::update() {
 	io.msg(IO_DEB2, "ImgCamera::update()");
-	if (blocking)
-		usleep((int) interval * 1000000);
 	
-	// Shortcut to image, casted to right type.
-	uint16_t *p = (uint16_t *) image;
+	static struct timeval now, next, diff;
 	
-	for(int y = 0; y < res.y; y++) {
-		for(int x = 0; x < res.x; x++) {
+	gettimeofday(&now, 0);
+	
+	uint16_t *p = frame;
+	
+	int mul = (1 << depth) - 1;
+	for(size_t y = 0; y < (size_t) res.y; y++) {
+		for(size_t x = 0; x < (size_t) res.x; x++) {
 			double value = drand48() * noise + img->getpixel(x, y) * exposure;
-			if (value < 0)
+			value *= exposure;
+			if(value < 0)
 				value = 0;
-			if (value > UINT16_MAX)
-				value = UINT16_MAX;
-			*p++ = (uint16_t)(value);
-		}
-	}
-}
-
-int ImgCamera::verify() { 
-	// Verify some camera settings
-	if (res.x <= 0 || 
-			res.y <= 0 ||
-			(bpp != 8 || bpp != 16)) return 1;
-	
-	return 0;
-}
-
-int ImgCamera::thumbnail(Connection *connection) {
-	update(true);
-	
-	uint16_t *in = (uint16_t *) image;
-	
-	uint8_t buffer[32 * 32];
-	uint8_t *out = buffer;
-	
-	for(int y = 0; y < 32; y++)
-		for(int x = 0 ; x < 32; x++)
-			*out++ = in[res.x * y * (res.y / 32) + x * (res.x / 32)] >> (bpp - 8);
-
-	connection->write("ok thumbnail");
-	connection->write(buffer, sizeof buffer);
-
-	return 0;
-}
-
-int ImgCamera::monitor(void *out, size_t &size, int &x1, int &y1, int &x2, int &y2, int &scale) {
-	if(x1 < 0)
-		x1 = 0;
-	if(y1 < 0)
-		y1 = 0;
-	if(scale < 1)
-		scale = 1;
-	if(x2 * scale > res.x)
-		x2 = res.x / scale;
-	if(y2 * scale > res.y)
-		y2 = res.y / scale;
-			
-	uint16_t *data = (uint16_t *) image;
-	uint16_t *p = (uint16_t *)out;
-	
-	for(int y = y1 * scale; y < y2 * scale; y += scale) {
-		for(int x = x1 * scale; x < x2 * scale; x += scale) {
-			*p++ = data[y * res.x + x];
+			if(value > 1)
+				value = 1;
+			*p++ = (uint16_t)(value * mul) & mul;
 		}
 	}
 	
-	size = (p - (uint16_t *)out) * bpp/8;
-	return size;							// Number of bytes
-}
-
-//! @todo rewrite this? use Camera:: method instead?
-int ImgCamera::store(Connection *connection) {
-	// Create & open file if necessary
-	if (outfd == 0) {
-		string file;
-		if (file.length() <= 0) file = "./imgcam-dump.raw";
-		outfd = fopen(file.c_str(), "a+");
+	void *old = cam_queue(frame, frame, &now);
+	if(old) {
+		//io.msg(IO_DEB2, "Got old=%p\n", old);
+		//free((uint16_t *)old);
 	}
 	
-	update(true);
+	// Make sure each update() takes at minimum interval seconds:
+	diff.tv_sec = 0;
+	diff.tv_usec = interval * 1.0e6;
+	timeradd(&now, &diff, &next);
+	
+	gettimeofday(&now, 0);
+	timersub(&next, &now, &diff);
+	if(diff.tv_sec >= 0)
+		usleep(diff.tv_sec * 1.0e6 + diff.tv_usec);
+}
+
+void ImgCamera::do_restart() {
+	io.msg(IO_INFO, "ImgCamera::do_restart()");
+}
+
+void ImgCamera::cam_handler() { 
+	pthread::setcanceltype(PTHREAD_CANCEL_ASYNCHRONOUS);
+	sleep(1);
+	
+	while (true) {
+		switch (mode) {
+			case Camera::RUNNING:
+				io.msg(IO_DEB1, "ImgCamera::cam_handler() RUNNING");
+				update();
+				break;
+			case Camera::SINGLE:
+				io.msg(IO_DEB1, "ImgCamera::cam_handler() SINGLE");
+				update();
+				mode = Camera::OFF;
+				break;
+			case Camera::OFF:
+			case Camera::CONFIG:
+			default:
+				io.msg(IO_INFO, "ImgCamera::cam_handler() OFF/CONFIG/UNKNOWN");
+				// We wait until the mode changed
+				mode_mutex.lock();
+				mode_cond.wait(mode_mutex);
+				mode_mutex.unlock();
+				break;
+		}
 		
-	size_t size = res.x * res.y * bpp/8;
-	if (fwrite(image, size, (size_t) 1, outfd) != 1) {
-		connection->write("err store :could not save frame");
-		return -1;
 	}
-	
-	connection->write("ok store");
-	return 0;
 }
 
-void ImgCamera::on_message(Connection *connection, std::string line) {	
-	Device::on_message(connection, line);
+void ImgCamera::cam_set_exposure(double value) {
+	pthread::mutexholder h(&cam_mutex);
+	exposure = value;
+}
+
+double ImgCamera::cam_get_exposure() {
+	return exposure;
+}
+
+void ImgCamera::cam_set_interval(double value) {
+	pthread::mutexholder h(&cam_mutex);
+	interval = value;
+}
+
+double ImgCamera::cam_get_interval() {
+	return interval;
+}
+
+void ImgCamera::cam_set_gain(double value) {
+	pthread::mutexholder h(&cam_mutex);
+	gain = value;
+}
+
+double ImgCamera::cam_get_gain() {
+	return gain;
+}
+
+void ImgCamera::cam_set_offset(double value) {
+	pthread::mutexholder h(&cam_mutex);
+	offset = value;
+}
+
+double ImgCamera::cam_get_offset() {
+	return offset;
+}
+
+void ImgCamera::cam_set_mode(const mode_t newmode) {
+	pthread::mutexholder h(&cam_mutex);
+	if (newmode == mode)
+		return;
 	
-	// Process everything in uppercase
-	string cmd = popword(line);
-	
-	if (cmd == "help") {
-		string topic = popword(line);
-		if (topic.size() == 0) {
-			connection->write(\
-												":==== imgcam help ===========================\n"
-												":info                    Print device info.\n"
-												":thumbnail               Get 32x32 thumbnail.\n"
-												":store                   Store frame to <file>.");
-		}
-		else connection->write("err cmd help :help topic unknown");
-	}
-	else if (cmd == "info") 
-		connection->write(format("ok info %d %d %d :width height bpp", res.x, res.y, bpp));
-	else if (cmd == "thumbnail") 
-		thumbnail(connection);
-	else if (cmd == "store") 
-		store(connection);
-	else connection->write("err cmd :cmd unknown");
+	mode = newmode;
+	mode_cond.broadcast();
 }

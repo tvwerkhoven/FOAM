@@ -36,12 +36,14 @@
 #include "foam.h"
 #include "devices.h"
 #include "dummycam.h"
+#include "imgcam.h"
 #include "camera.h"
 
 #include "foam-simstatic.h"
 
 // Global device list for easier access
 DummyCamera *testcam;
+ImgCamera *imgcamb;
 
 int FOAM_simstatic::load_modules() {
 	io.msg(IO_DEB2, "FOAM_simstatic::load_modules()");
@@ -50,7 +52,7 @@ int FOAM_simstatic::load_modules() {
 	// Add ImgCam device
 	testcam = new DummyCamera(io, ptc, "dummycam", ptc->listenport, ptc->conffile);
 	devices->add((Device *) testcam);
-	imgcamb = new ImgCamera(io, "imgcamB", ptc->listenport, ptc->conffile);
+	imgcamb = new ImgCamera(io, ptc, "imgcamB", ptc->listenport, ptc->conffile);
 	devices->add((Device *) imgcamb);
 //	imgcamc = new ImgCamera(io, "imgcamC", ptc->listenport, ptc->cfg);
 //	devices->add((Device *) imgcamc);

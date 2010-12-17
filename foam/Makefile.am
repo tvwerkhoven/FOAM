@@ -64,17 +64,21 @@ bin_PROGRAMS += foam-simstat
 foam_simstat_SOURCES = foam-simstatic.cc \
 		$(FRAME_SRC) $(FRAME_HDR) \
 		$(MODS_DIR)/camera.cc \
-		$(MODS_DIR)/dummycam.cc
-#		$(MODS_DIR)/imgcam.cc
+		$(MODS_DIR)/dummycam.cc \
+		$(MODS_DIR)/imgcam.cc
 
 # Header files are part of the sources as well
 foam_simstat_SOURCES += foam-simstatic.h \
 		$(MODS_DIR)/camera.h \
-		$(MODS_DIR)/dummycam.h
+		$(MODS_DIR)/dummycam.h \
+		$(MODS_DIR)/imgcam.h
 
 # Some CPP flags
 foam_simstat_CPPFLAGS = -DFOAM_DEFAULTCONF=\"$(FOAMCONFDIR)/foam-simstat.cfg\" \
 		$(SIMSTAT_CFLAGS) $(AM_CPPFLAGS)
+
+foam_simstat_LDADD = $(LIBSIU_DIR)/libimgdata.a \
+		$(LDADD)
 
 # specific flags and libraries
 foam_simstat_CXXFLAGS = $(SIMSTAT_CFLAGS) $(AM_CXXFLAGS)
