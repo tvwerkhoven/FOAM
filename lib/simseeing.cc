@@ -107,16 +107,16 @@ gsl_matrix_view SimSeeing::get_wavefront() {
 		croppos.y += (drand48()-0.5) * windspeed.y;
 
 		// Check bounds
-		croppos.x = clamp(croppos.x, (int) 0, (int) wfsrc->size1 - cropsize.x);
-		croppos.y = clamp(croppos.y, (int) 0, (int) wfsrc->size2 - cropsize.y);
+		croppos.x = clamp(croppos.x, (int) 0, (int) wfsrc->size2 - cropsize.x);
+		croppos.y = clamp(croppos.y, (int) 0, (int) wfsrc->size1 - cropsize.y);
 	}
 	else {
 		// Check bounds, change wind if necessary.
-		if (croppos.x + windspeed.x >= (int) wfsrc->size1 - cropsize.x)
+		if (croppos.x + windspeed.x >= (int) wfsrc->size2 - cropsize.x)
 			windspeed.x *= -1;
 		if (croppos.x + windspeed.x <= 0)
 			windspeed.x *= -1;
-		if (croppos.y + windspeed.y >= (int) wfsrc->size2 - cropsize.y)
+		if (croppos.y + windspeed.y >= (int) wfsrc->size1 - cropsize.y)
 			windspeed.y *= -1;
 		if (croppos.y + windspeed.y <= 0)
 			windspeed.y *= -1;
