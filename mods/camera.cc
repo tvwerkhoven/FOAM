@@ -46,8 +46,8 @@
 
 using namespace std;
 
-Camera::Camera(Io &io, foamctrl *ptc, string name, string type, string port, Path &conffile):
-Device(io, ptc, name, cam_type + "." + type, port, conffile),
+Camera::Camera(Io &io, foamctrl *ptc, string name, string type, string port, Path &conffile, bool online):
+Device(io, ptc, name, cam_type + "." + type, port, conffile, online),
 nframes(8), count(0), timeouts(0), ndark(10), nflat(10), 
 darkexp(1.0), flatexp(1.0),
 interval(1.0), exposure(1.0), gain(1.0), offset(0.0), 
@@ -73,10 +73,13 @@ fits_telescope("undef"), fits_observer("undef"), fits_instrument("undef"), fits_
 	offset = cfg.getdouble("offset", 0.0);
 	
 	// Set frame resolution & bitdepth
-	res.x = cfg.getint("width", 512);
 	res.y = cfg.getint("height", 512);
+	res.x = cfg.getint("width", 768);
 	depth = cfg.getint("depth", 8);
 
+	io.msg(IO_XNFO, "Camera::Camera(): %dx%dx%d, exp:%g, int:%g, gain:%g, off:%g",
+				 res.x, res.y, depth, exposure, interval, gain, offset);
+	
 	proc_thr.create(sigc::mem_fun(*this, &Camera::cam_proc));
 }
 

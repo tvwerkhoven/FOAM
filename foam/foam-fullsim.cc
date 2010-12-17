@@ -33,19 +33,26 @@
 #include "types.h"
 #include "io.h"
 #include "simulcam.h"
+#include "shwfs.h"
 
 #include "foam-fullsim.h"
 
 // Global device list for easier access
 SimulCam *simcam;
+Shwfs *shwfs;
 
 int FOAM_FullSim::load_modules() {
 	io.msg(IO_DEB2, "FOAM_FullSim::load_modules()");
 	io.msg(IO_INFO, "This is the full simulation mode, enjoy.");
 		
-	// Add ImgCam device
+	// Add Simulcam device
 	simcam = new SimulCam(io, ptc, "simcam", ptc->listenport, ptc->conffile);
 	devices->add((Device *) simcam);
+	// Create Shwfs device
+	shwfs = new Shwfs(io, ptc, "simshwfs", ptc->listenport, ptc->conffile, *simcam, false);
+	devices->add((Device *) shwfs);
+	
+	simcam->set_shwfs(shwfs);
 
 	return 0;
 }

@@ -100,23 +100,23 @@ bool SimSeeing::setup(Path &f, coord_t size, coord_t wspeed, wind_t t) {
 	return true;
 }
 
-gsl_matrix_view SimSeeing::get_wavefront() {
+gsl_matrix *SimSeeing::get_wavefront() {
 	// Update new crop position (i.e. simulate wind)
 	if (windtype == RANDOM) {
 		croppos.x += (drand48()-0.5) * windspeed.x;
 		croppos.y += (drand48()-0.5) * windspeed.y;
 
 		// Check bounds
-		croppos.x = clamp(croppos.x, (int) 0, (int) wfsrc->size1 - cropsize.x);
-		croppos.y = clamp(croppos.y, (int) 0, (int) wfsrc->size2 - cropsize.y);
+		croppos.x = clamp(croppos.x, (int) 0, (int) wfsrc->size2 - cropsize.x);
+		croppos.y = clamp(croppos.y, (int) 0, (int) wfsrc->size1 - cropsize.y);
 	}
 	else {
 		// Check bounds, change wind if necessary.
-		if (croppos.x + windspeed.x >= (int) wfsrc->size1 - cropsize.x)
+		if (croppos.x + windspeed.x >= (int) wfsrc->size2 - cropsize.x)
 			windspeed.x *= -1;
 		if (croppos.x + windspeed.x <= 0)
 			windspeed.x *= -1;
-		if (croppos.y + windspeed.y >= (int) wfsrc->size2 - cropsize.y)
+		if (croppos.y + windspeed.y >= (int) wfsrc->size1 - cropsize.y)
 			windspeed.y *= -1;
 		if (croppos.y + windspeed.y <= 0)
 			windspeed.y *= -1;
@@ -129,9 +129,12 @@ gsl_matrix_view SimSeeing::get_wavefront() {
 	return get_wavefront(croppos.x, croppos.y, cropsize.x, cropsize.y);
 }
 
-gsl_matrix_view SimSeeing::get_wavefront(size_t x0, size_t y0, size_t w, size_t h) {
+gsl_matrix *SimSeeing::get_wavefront(size_t x0, size_t y0, size_t w, size_t h) {
 	io.msg(IO_DEB2, "SimSeeing::get_wavefront(%zu, %zu, %zu, %zu)", x0, y0, w, h);
-	gsl_matrix_view tmp = gsl_matrix_submatrix(wfsrc, x0, y0, w, h);
-	return tmp;
+	gsl_matrix_view tmp = gsl_matrix_submatrix(wfsrc, y0, x0, h, w);
+	// Allocate new memory to store WF crop & copy data
+	gsl_matrix *wfcrop = gsl_matrix_alloc(h, w);
+	gsl_matrix_memcpy (wfcrop, &(tmp.matrix));
+	return wfcrop;
 }
 

@@ -30,8 +30,8 @@
 
 using namespace std;
 
-FW1394Camera::FW1394Camera(Io &io, foamctrl *ptc, string name, string port, Path &conffile):
-Camera(io, ptc, name, FW1394cam_type, port, conffile) 
+FW1394Camera::FW1394Camera(Io &io, foamctrl *ptc, string name, string port, Path &conffile, bool online):
+Camera(io, ptc, name, FW1394cam_type, port, conffile, online) 
 {
 	io.msg(IO_DEB2, "FW1394Camera::FW1394Camera()");
 	

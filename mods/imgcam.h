@@ -50,18 +50,26 @@ private:
 	uint16_t *frame;										//!< Frame stored here
 	
 public:
-	ImgCamera(Io &io, string name, string port, config *config);
+	ImgCamera(Io &io, foamctrl *ptc, string name, string port, Path &conffile, bool online=true);
 	~ImgCamera();
 	
-	void update(bool blocking);
+	void update();	
 	
-	virtual int verify();
-	virtual void on_message(Connection *, std::string);
-//	virtual void on_connect(Connection *conn, bool status); // Not re-implemented here
-
-	virtual int thumbnail(Connection *);	
-	virtual int monitor(void *out, size_t &size, int &x1, int &y1, int &x2, int &y2, int &scale);
-	virtual int store(Connection *);
+	// From Camera::
+	void cam_handler();
+	void cam_set_exposure(double value);
+	double cam_get_exposure();
+	void cam_set_interval(double value);
+	double cam_get_interval();
+	void cam_set_gain(double value);
+	double cam_get_gain();
+	void cam_set_offset(double value);
+	double cam_get_offset();
+	
+	void cam_set_mode(mode_t newmode);
+	
+	void do_restart();	
+	
 };
 
 #endif // HAVE_IMGCAM_H
