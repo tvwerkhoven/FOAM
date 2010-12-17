@@ -343,8 +343,8 @@ void CamView::do_histo_update() {
 	e_avg.set_text(format("%.2lf", sum));
 	e_rms.set_text(format("%.3lf", rms));
 	
-	e_datamin.set_text(format("%.3lf", camctrl->monitor.min));
-	e_datamax.set_text(format("%.3lf", camctrl->monitor.max));
+	e_datamin.set_text(format("%d", camctrl->monitor.min));
+	e_datamax.set_text(format("%d", camctrl->monitor.max));
 	// Update min/max if necessary
 
 	//<! @todo Add contrast feature
