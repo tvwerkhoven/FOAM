@@ -50,7 +50,7 @@ private:
 	uint16_t *frame;										//!< Frame stored here
 	
 public:
-	ImgCamera(Io &io, string name, string port, config *config);
+	ImgCamera(Io &io, foamctrl *ptc, string name, string port, Path &conffile, bool online=true);
 	~ImgCamera();
 	
 	void update(bool blocking);

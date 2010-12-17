@@ -32,16 +32,13 @@
 
 #include "imgcam.h"
 
-//! @todo update this to match new Camera prototype Camera(io, ptc, name, imgcam_type, port, conffile, bool online)
-ImgCamera::ImgCamera(Io &io, string name, string port, config *config): 
-Camera(io, name, imgcam_type, port) {
+ImgCamera::ImgCamera(Io &io, foamctrl *ptc, string name, string port, Path &conffile, bool online):
+Camera(io, ptc, name, dummycam_type, port, conffile, online)
+{
 	io.msg(IO_DEB2, "ImgCamera::ImgCamera()");
 	
-	string type = config->getstring(name+".type");
-	if (type != imgcam_type) throw exception("Type should be '" + imgcam_type + "' for this class.");
-	
-	string file = config->getstring(name+".imagefile");
-	if (file[0] != '/') file = FOAM_DATADIR "/" + file;
+	Path file = config->getstring(name + ".imagefile");
+	if (!file.isabs()) file = ptc->datadir + file;
 	
 	io.msg(IO_DEB2, "imagefile = %s", file.c_str());
 	noise = config->getdouble(name+".noise", 10.0);
