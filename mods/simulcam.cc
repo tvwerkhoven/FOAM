@@ -38,6 +38,8 @@ shwfs(NULL), out_size(0), frame_out(NULL), telradius(1.0), telapt(NULL)
 {
 	io.msg(IO_DEB2, "SimulCam::SimulCam()");
 	
+	noise = cfg.getdouble("simnoise", 10);
+	
 	// Setup seeing parameters
 	Path wffile = ptc->confdir + cfg.getstring("wavefront_file");
 
@@ -90,21 +92,21 @@ void SimulCam::gen_telapt() {
 	}
 }
 
-gsl_matrix *SimulCam::simul_telescope(gsl_matrix *im_in) {
+void SimulCam::simul_telescope(gsl_matrix *im_in) {
 	io.msg(IO_DEB2, "SimulCam::simul_telescope()");
 	// Multiply wavefront with aperture
 	gsl_matrix_mul_elements (im_in, telapt);
-	return im_in;
 }
 
-uint8_t *SimulCam::simul_wfs(gsl_matrix *wave_in) {
+void SimulCam::simul_wfs(gsl_matrix *wave_in) {
 	if (!shwfs)
 		io.msg(IO_ERR | IO_FATAL, "SimulCam::simul_wfs(): cannot simulate wavefront without Shwfs reference.");
 	
 	if (shwfs->mla.nsi <= 0) {
 		io.msg(IO_WARN, "SimulCam::simul_wfs(): no microlenses defined?.");
-		return NULL;
+		return;
 	}
+	
 	io.msg(IO_DEB2, "SimulCam::simul_wfs()");
 	
 	// Apply fourier transform to subimages here
@@ -126,7 +128,6 @@ uint8_t *SimulCam::simul_wfs(gsl_matrix *wave_in) {
 	for (int n=0; n<shwfs->mla.nsi; n++) {
 		sallpos = shwfs->mla.ml[n].llpos;
 		sasize = shwfs->mla.ml[n].size;
-		io.msg(IO_DEB2, "SimulCam::simul_wfs() FFT @ %d: (%d,%d)", n, sallpos.x, sallpos.y);
 		
 		// Crop out subaperture from larger frame, store as gsl_matrix_view
 		subap = gsl_matrix_submatrix(wave_in, sallpos.y, sallpos.x, sasize.y, sasize.x);
@@ -189,30 +190,32 @@ uint8_t *SimulCam::simul_wfs(gsl_matrix *wave_in) {
 			}
 		}
 	}
+}
 
+
+uint8_t *SimulCam::simul_capture(gsl_matrix *frame_in) {
 	// Convert frame to uint8_t, scale properly
 	double min=0, max=0, fac;
-	gsl_matrix_minmax(wave_in, &min, &max);
+	gsl_matrix_minmax(frame_in, &min, &max);
 	fac = 255.0/(max-min);
-	size_t cursize = wave_in->size1 * wave_in->size2  * (sizeof(uint8_t));
+	
+	size_t cursize = frame_in->size1 * frame_in->size2  * (sizeof(uint8_t));
 	if (out_size != cursize) {
-		io.msg(IO_DEB2, "SimulCam::simul_wfs() reallocing memory, %zu != %zu", out_size, cursize);
+		io.msg(IO_DEB2, "SimulCam::simul_capture() reallocing memory, %zu != %zu", out_size, cursize);
 		out_size = cursize;
 		frame_out = (uint8_t *) realloc(frame_out, out_size);
 	}
 	
-	for (size_t i=0; i<wave_in->size1; i++)
-		for (size_t j=0; j<wave_in->size2; j++)
-			frame_out[i*wave_in->size2 + j] = (uint8_t) ((wave_in->data[i*wave_in->tda + j] - min)*fac);
-
+	// Copy and scale
+	double pix=0;
+	for (size_t i=0; i<frame_in->size1; i++)
+		for (size_t j=0; j<frame_in->size2; j++) {
+			pix = (double) ((gsl_matrix_get(frame_in, i, j) - min)*fac + drand48()*noise);
+			frame_out[i*frame_in->size2 + j] = (uint8_t) clamp(((pix * exposure) + offset), 0.0, 1.0*UINT8_MAX);
+		}
+	//((wave_in->data[i*frame_in->tda + j]
+	
 	return frame_out;
-}
-
-
-void SimulCam::simul_capture(uint8_t *frame) {
-	// Apply offset and exposure here
-	for (size_t p=0; p<res.x*res.y; p++)
-		frame[p] = (uint8_t) clamp((int) ((frame[p] * exposure) + offset), 0, UINT8_MAX);
 }
 
 
@@ -278,12 +281,17 @@ void SimulCam::cam_handler() {
 		switch (mode) {
 			case Camera::RUNNING:
 			{
-				gsl_matrix_view wf = seeing.get_wavefront();
-				simul_telescope(&(wf.matrix));
-				uint8_t *frame = simul_wfs(&(wf.matrix));
-				simul_capture(frame);				
-				cam_queue(frame, frame);
-
+				// get_wavefront() allocates new memory, we need to free it later
+				gsl_matrix *wf = seeing.get_wavefront();
+				simul_telescope(wf);
+				simul_wfs(wf);
+				uint8_t *frame = simul_capture(wf);
+				
+				// Need to free gsl matrix if it is returned
+				gsl_matrix *ret = (gsl_matrix *) cam_queue(wf, frame);
+				if (ret)
+					gsl_matrix_free(ret);
+				
 				usleep(interval * 1000000);
 				break;
 			}
@@ -291,12 +299,15 @@ void SimulCam::cam_handler() {
 			{
 				io.msg(IO_DEB1, "SimulCam::cam_handler() SINGLE");
 
-				gsl_matrix_view wf = seeing.get_wavefront();
-				simul_telescope(&(wf.matrix));
-				uint8_t *frame = simul_wfs(&(wf.matrix));
-				simul_capture(frame);
+				gsl_matrix *wf = seeing.get_wavefront();
+				simul_telescope(wf);
+				simul_wfs(wf);
+				uint8_t *frame = simul_capture(wf);
 				
-				cam_queue(frame, frame);
+				// Need to free gsl matrix if it is returned
+				gsl_matrix *ret = (gsl_matrix *) cam_queue(wf, frame);
+				if (ret)
+					gsl_matrix_free(ret);
 				
 				usleep(interval * 1000000);
 

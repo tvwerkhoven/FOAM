@@ -57,15 +57,17 @@ private:
 	double telradius;										//!< Telescope radius (fraction of CCD)
 	gsl_matrix *telapt;									//!< Telescope aperture mask
 	
+	double noise;												//!< Noise factor for CCD
+	
 public:
 	SimulCam(Io &io, foamctrl *ptc, string name, string port, Path &conffile);
 	~SimulCam();
 	
 	void gen_telapt();									//!< Generate telescope aperture
 
-	gsl_matrix *simul_telescope(gsl_matrix *wave_in); //!< Apply telescope aperture mask
-	uint8_t *simul_wfs(gsl_matrix *wave_in); //!< Simulate wavefront sensor optics (i.e. MLA)
-	void simul_capture(uint8_t *frame);	//!< Simulate CCD frame capture (exposure, offset, etc.)
+	void simul_telescope(gsl_matrix *wave_in); //!< Apply telescope aperture mask
+	void simul_wfs(gsl_matrix *wave_in); //!< Simulate wavefront sensor optics (i.e. MLA)
+	uint8_t *simul_capture(gsl_matrix *frame_in);	//!< Simulate CCD frame capture (exposure, offset, etc.)
 	
 	void set_shwfs(Shwfs *ref) { shwfs = ref; } //!< Assign Shwfs object to SimulCam. The parameters of this Shwfs will be used for simulation.
 		
