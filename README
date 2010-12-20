@@ -20,14 +20,28 @@ Availability
 ============
 
 The current stable version of FOAM is always available from 
-http://www.phys.uu.nl/~werkhvn/research/FOAM.html
+http://www.phys.uu.nl/~werkhvn/research/FOAM.html or
+http://tvwerkhoven.github.com/FOAM/
 
 Installation
 ============
 
+Before installing FOAM, please install libsiu first. This utility library
+is available at <http://dotdb.phys.uu.nl/git/browse>. To install this
+software:
+
+- git clone http://dotdb.phys.uu.nl/git/libsiu libsiu
+- cd libsiu
+- autoreconf -sfi
+- ./configure
+- make -j2
+
+After that, point to the libsiu/src directory when installing FOAM.
+
 FOAM tries to follow the standard GNU installation procedure.  Please 
 consult the INSTALL file in this distribution for more detailed 
 instructions.
+
 
 For information about specific platforms and compilers see the
 INSTALL file.
