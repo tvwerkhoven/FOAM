@@ -6,7 +6,14 @@ dist_foamdata_DATA =
 ##############################
 if SIMSTAT
 
-dist_foamdata_DATA += simstatic*.pgm simstatic*.fits
+dist_foamdata_DATA += simstatic*.pgm #simstatic*.fits
+
+all-local:
+	@echo -n "Converting datafiles..."
+	@for f in *pgm; \
+		do convert $$f $$f.fits; \
+	done;
+	@echo "done."
 
 endif SIMSTAT
 ### END STATIC SIMULATION MODE ###
