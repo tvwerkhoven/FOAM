@@ -153,6 +153,12 @@ AC_ARG_WITH([libsiu],
 		[LIBSIU="libsiu"])
 		
 # @todo test LIBSIU presence
+# @todo test LIBSIU presence
+if test -d $LIBSIU ; then
+	AC_MSG_NOTICE([*** Found libsiu in $LIBSIU.])
+else
+	AC_MSG_ERROR([*** libsiu not found in $LIBSIU. Please install first (see INSTALL)])
+fi
 
 ### Set some automake variables ###
 ###################################
