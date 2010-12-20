@@ -77,9 +77,9 @@ AC_SUBST(COMMON_LIBS)
 
 # cfitsio
 AC_SEARCH_LIBS([ffopen], [cfitsio], 
-		[have_fitsio=true;
-		AM_CONDITIONAL([HAVE_FITSIO], [true])],
+		[have_fitsio=true],
 		[have_fitsio=false])
+AM_CONDITIONAL(HAVE_FITSIO, test x$have_fitsio = xtrue)
 
 ### Hardware libraries
 
@@ -94,16 +94,17 @@ if test "$have_dc1394" = true ; then
 		*-*-linux*)
 		# TODO: test this, do we need it?
 		AC_SEARCH_LIBS(raw1394_channel_modify, raw1394,
-				[AM_CONDITIONAL([HAVE_DC1394], [true])],
-				[AC_MSG_WARN(libraw1394 not found or too old (<1.2.0), required for libdc1394.)])
+				[have_dc1394=true],
+				[have_dc1394=false;AC_MSG_WARN(libraw1394 not found or too old (<1.2.0), required for libdc1394.)])
 		;;
 		*-*-darwin*)
 		AC_SEARCH_LIBS(IOMasterPort, IOKit,
-				[AM_CONDITIONAL([HAVE_DC1394], [true])],
-				[AC_MSG_WARN(IOKitLib not found, required for libdc1394.)])
+				[have_dc1394=true],
+				[have_dc1394=true;AC_MSG_WARN(IOKitLib not found, required for libdc1394.)])
 		;;
 	esac
 fi
+AM_CONDITIONAL(HAVE_DC1394, test x$have_dc1394 = xtrue)
 
 
 ### BUILD TARGETS ###
