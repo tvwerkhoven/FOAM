@@ -286,6 +286,15 @@ else
 	AC_MSG_NOTICE([Static sim mode:         missing:$simstatmissing])
 fi
 
+if test "$fullsim" = true ; then
+	AC_MSG_NOTICE([Full sim mode:           available])
+elif test "$fullsim" = disabled; then
+	AC_MSG_NOTICE([Full sim mode:           disabled])
+else
+	AC_MSG_NOTICE([Full sim mode:           not available])
+	AC_MSG_NOTICE([Full sim mode:           missing:$fullsimmissing])
+fi
+
 if test "$gui" = true ; then
 	AC_MSG_NOTICE([FOAM control GUI:        available])
 elif test "$gui" = disabled; then
