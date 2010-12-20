@@ -33,7 +33,7 @@
 
 using namespace std;
 
-const string SimulCam_type = "SimulCam";
+const string simulcam_type = "simulcam";
 
 /*!
  @brief Simulation class for seeing + camera
@@ -84,6 +84,8 @@ public:
 	
 	void cam_set_mode(mode_t newmode);
 	void do_restart();
+	
+	void on_message(Connection*, std::string);
 };
 
 #endif // HAVE_SIMULCAM_H

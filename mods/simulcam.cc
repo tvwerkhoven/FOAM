@@ -63,6 +63,60 @@ shwfs(NULL), out_size(0), frame_out(NULL), telradius(1.0), telapt(NULL)
 	cam_thr.create(sigc::mem_fun(*this, &SimulCam::cam_handler));
 }
 
+
+SimulCam::~SimulCam() {
+	//! @todo stop simulator etc.
+	io.msg(IO_DEB2, "SimulCam::~SimulCam()");
+	cam_thr.cancel();
+	cam_thr.join();
+	
+	mode = Camera::OFF;
+}
+
+void SimulCam::on_message(Connection *conn, std::string line) {
+	io.msg(IO_DEB1, "SimulCam::on_message('%s')", line.c_str()); 
+	string orig = line;
+	string command = popword(line);
+	bool parsed = true;
+	
+	if (command == "set") {
+		string what = popword(line);
+	
+		if(what == "noise") {
+			noise = popdouble(line);
+			fprintf(stderr, "noise: %g\n", noise);
+		} else if(what == "seeingfac") {
+			seeingfac = popdouble(line);
+		} else if(what == "telradius") {
+			telradius = popdouble(line);
+		}
+		else
+			parsed = false;
+	} 
+	else if (command == "get") {
+		string what = popword(line);
+	
+		if(what == "noise") {
+			conn->addtag("noise");
+			conn->write(format("ok noise %lf", noise));
+		} else if(what == "seeingfac") {
+			conn->addtag("seeingfac");
+			conn->write(format("ok seeingfac %lf", seeingfac));
+		} else if(what == "telradius") {
+			conn->addtag("telradius");
+			conn->write(format("ok telradius %lf", telradius));
+		}
+		else
+			parsed = false;
+	}
+	else
+		parsed = false;
+	
+	// If not parsed here, call parent
+	if (parsed == false)
+		Camera::on_message(conn, orig);
+}
+
 void SimulCam::gen_telapt() {
 	io.msg(IO_XNFO, "SimulCam::gen_telapt(): init");
 	
@@ -216,16 +270,6 @@ uint8_t *SimulCam::simul_capture(gsl_matrix *frame_in) {
 	//((wave_in->data[i*frame_in->tda + j]
 	
 	return frame_out;
-}
-
-
-SimulCam::~SimulCam() {
-	//! @todo stop simulator etc.
-	io.msg(IO_DEB2, "SimulCam::~SimulCam()");
-	cam_thr.cancel();
-	cam_thr.join();
-	
-	mode = Camera::OFF;
 }
 
 // From Camera::

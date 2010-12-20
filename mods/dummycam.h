@@ -55,8 +55,9 @@ public:
 	double cam_get_offset();
 
 	void cam_set_mode(mode_t newmode);
-
-	void do_restart();	
+	void do_restart();
+	
+	void on_message(Connection *conn, std::string line);
 };
 
 #endif // HAVE_DUMMYCAM_H

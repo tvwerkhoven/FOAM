@@ -331,9 +331,11 @@ Camera::frame_t *Camera::get_frame(size_t id, bool wait) {
 
 // Network IO starts here
 void Camera::on_message(Connection *conn, string line) {
-	io.msg(IO_DEB2, "Camera::on_message(line=%s)", line.c_str());
+	io.msg(IO_DEB1, "Camera::on_message('%s')", line.c_str()); 
 	
+	string orig = line;
 	string command = popword(line);
+	bool parsed = true;
 	
 	if (command == "quit" || command == "exit") {
 		conn->write("ok :Bye!");
@@ -371,8 +373,10 @@ void Camera::on_message(Connection *conn, string line) {
 		} else if(what == "fits") {
 			set_fits(line);
 			get_fits(conn);
-		} else
-			conn->write("error :Unknown argument " + what);
+		} else {
+			parsed = false;
+			//conn->write("error :Unknown argument " + what);
+		}
 	} else if (command == "get") {
 		string what = popword(line);
 		
@@ -406,7 +410,8 @@ void Camera::on_message(Connection *conn, string line) {
 		} else if(what == "fits") {
 			get_fits(conn);
 		} else {
-			conn->write("error :Unknown argument " + what);
+			parsed = false;
+			// conn->write("error :Unknown argument " + what);
 		}
 	} else if (command == "thumbnail") {
 		get_thumbnail(conn);
@@ -438,8 +443,13 @@ void Camera::on_message(Connection *conn, string line) {
 	} else if(command == "statistics") {
 		statistics(conn, popint(line));
 	} else {
-		conn->write("error :Unknown command: " + command);
+		parsed = false;
+		//conn->write("error :Unknown command: " + command);
 	}
+	
+	// If not parsed here, call parent
+	if (parsed == false)
+		Device::on_message(conn, orig);
 }
 
 double Camera::set_exposure(double value) {	

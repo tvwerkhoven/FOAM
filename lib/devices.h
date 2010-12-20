@@ -78,8 +78,10 @@ public:
 	/*! 
 	 @brief Called when the device receives a message
 	 */
-	virtual void on_message(Connection */*conn*/, std::string line) { 
-		io.msg(IO_DEB2, "Device::on_message(line='%s')", line.c_str()); 
+	virtual void on_message(Connection *conn, std::string line) { 
+		io.msg(IO_DEB2, "Device::on_message('%s') %s::%s", 
+					 line.c_str(), type.c_str(), name.c_str());
+		conn->write("error :Unknown command: " + line);
 	}
 	/*! 
 	 @brief Called when something connects to this device
