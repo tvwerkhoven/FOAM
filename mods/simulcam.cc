@@ -32,13 +32,14 @@
 #include "simulcam.h"
 
 SimulCam::SimulCam(Io &io, foamctrl *ptc, string name, string port, Path &conffile, bool online):
-Camera(io, ptc, name, SimulCam_type, port, conffile, online),
+Camera(io, ptc, name, simulcam_type, port, conffile, online),
 seeing(io, ptc, name + "-seeing", port, conffile),
-shwfs(NULL), out_size(0), frame_out(NULL), telradius(1.0), telapt(NULL)
+shwfs(NULL), out_size(0), frame_out(NULL), telradius(1.0), telapt(NULL), noise(10.0), seeingfac(1.0)
 {
 	io.msg(IO_DEB2, "SimulCam::SimulCam()");
 	
-	noise = cfg.getdouble("simnoise", 10);
+	noise = cfg.getdouble("noise", 10.0);
+	seeingfac = cfg.getdouble("seeingfac", 1.0);
 	
 	// Setup seeing parameters
 	Path wffile = ptc->confdir + cfg.getstring("wavefront_file");
@@ -140,7 +141,7 @@ void SimulCam::gen_telapt() {
 			pixj = ((float) j) - telapt->size2/2;
 			if (pixi*pixi + pixj*pixj < minradsq) {
 				sum++;
-				gsl_matrix_set (telapt, i, j, 1.0);
+				gsl_matrix_set (telapt, i, j, seeingfac);
 			}
 		}
 	}

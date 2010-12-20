@@ -45,6 +45,8 @@ const string simulcam_type = "simulcam";
  - wavefront_file: static FITS file which shows some wavefront
  - windspeed.x,y: windspeed by which the wavefront moves
  - windtype: 'random' or 'linear', method of scanning over the wavefront
+ - noise: random additive noise for frames
+ - seeingfac: factor to multiply wavefront image with
  */
 class SimulCam: public Camera {
 private:
@@ -58,15 +60,16 @@ private:
 	gsl_matrix *telapt;									//!< Telescope aperture mask
 	
 	double noise;												//!< Noise factor for CCD
+	double seeingfac;										//!< Multiplicative factor for wavefront screen.
 	
 public:
 	SimulCam(Io &io, foamctrl *ptc, string name, string port, Path &conffile, bool online=true);
 	~SimulCam();
 	
-	void gen_telapt();									//!< Generate telescope aperture
+	void gen_telapt();									//!< Generate telescope aperture with radius telradius. Inside this radius the mask has value 'seeingfac', outside it's 0.
 
-	void simul_telescope(gsl_matrix *wave_in); //!< Apply telescope aperture mask
-	void simul_wfs(gsl_matrix *wave_in); //!< Simulate wavefront sensor optics (i.e. MLA)
+	void simul_telescope(gsl_matrix *wave_in); //!< Multiply input wavefront with telescope aperture mask from gen_telapt().
+	void simul_wfs(gsl_matrix *wave_in); //!< Simulate wavefront sensor optics given an input wavefront.
 	uint8_t *simul_capture(gsl_matrix *frame_in);	//!< Simulate CCD frame capture (exposure, offset, etc.)
 	
 	void set_shwfs(Shwfs *ref) { shwfs = ref; } //!< Assign Shwfs object to SimulCam. The parameters of this Shwfs will be used for simulation.
