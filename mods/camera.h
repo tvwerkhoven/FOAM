@@ -30,6 +30,7 @@
 
 #include <fstream>
 #include <stdint.h>
+#include <limits.h>
 
 #include "types.h"
 #include "config.h"
@@ -216,8 +217,8 @@ protected:
 	void grab(Connection *conn, int x1, int y1, int x2, int y2, int scale, bool do_df, bool do_histo);
 	void accumfix();
 
-	const uint8_t df_correct(const uint8_t *in, size_t offset);
-	const uint16_t df_correct(const uint16_t *in, size_t offset);
+	uint8_t df_correct(const uint8_t *in, size_t offset);
+	uint16_t df_correct(const uint16_t *in, size_t offset);
 	
 	frame_t *frames;							//!< Frame ringbuffer
 	size_t nframes;								//!< Ringbuffer size

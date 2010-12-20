@@ -231,9 +231,11 @@ bool Camera::store_frame(frame_t *frame) {
 #ifdef LINUX
 	posix_fadvise(fd, 0, (res.x * res.y * depth/8) + sizeof phdu, POSIX_FADV_DONTNEED); 
 #endif
-	write(fd, phdu, sizeof phdu);
-	write(fd, frame->image, res.x * res.y * depth/8);
+	ssize_t ret = write(fd, phdu, sizeof phdu);
+	ret += write(fd, frame->image, res.x * res.y * depth/8);
 	close(fd);
+	if (ret != sizeof phdu + (res.x * res.y * depth/8))
+		return io.msg(IO_ERR, "Camera::store_frame() Writing failed!");
 	
 	return true;
 }
@@ -513,12 +515,14 @@ string Camera::set_outputdir(string value) {
 	// This automatically prefixes ptc->datadir if 'value' is not absolute
 	Path tmp = ptc->datadir + value;
 	
-	if (!tmp.exists()) // Does not exist, create
+	if (!tmp.exists()) {// Does not exist, create
 		if (mkdir(value.c_str(), 0755)) // mkdir() returned !0, error
 			return "";
-	else	// Directory exists, check if readable
+	}
+	else {	// Directory exists, check if readable
 		if (tmp.access(R_OK | W_OK | X_OK))
 			return "";
+	}
 	
 	outputdir = tmp;
 	netio.broadcast("ok outputdir :" + outputdir.str(), "outputdir");
@@ -675,7 +679,7 @@ void Camera::grab(Connection *conn, int x1, int y1, int x2, int y2, int scale = 
 	}
 }
 
-const uint8_t Camera::df_correct(const uint8_t *in, size_t offset) {
+uint8_t Camera::df_correct(const uint8_t *in, size_t offset) {
 	if (!dark.data || !flat.data)
 		return in[offset];
 	
@@ -690,7 +694,7 @@ const uint8_t Camera::df_correct(const uint8_t *in, size_t offset) {
 	return c;
 }
 
-const uint16_t Camera::df_correct(const uint16_t *in, size_t offset) {
+uint16_t Camera::df_correct(const uint16_t *in, size_t offset) {
 	if (!dark.data || !flat.data)
 		return in[offset];
 
