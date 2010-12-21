@@ -531,7 +531,6 @@ void CamView::on_capture_clicked() {
 }
 
 void CamView::on_display_clicked() {
-	//! @bug Does not work when activated before capturing frames?
 	if (display.get_state(SwitchButton::CLEAR)) {
 		display.set_state(SwitchButton::OK);
 		camctrl->grab(0, 0, camctrl->get_width(), camctrl->get_height(), 1, false);
