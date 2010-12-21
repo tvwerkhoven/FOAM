@@ -115,15 +115,18 @@ int DeviceManager::del(string id) {
 
 string DeviceManager::getlist(bool showtype, bool showonline) {
 	device_t::iterator it;
+	int num=0;
 	string devlist = "";
 	for (it=devices.begin() ; it != devices.end(); it++) {
 		// Skip devices that are not online if requested
-		if (!(*it).second->isonline() && showonline)
+		if (!it->second->isonline() && showonline)
 			continue;
-		devlist += (*it).first + " ";
-		if (showtype) devlist += (*it).second->gettype() + " ";
+		devlist += it->first + " ";
+		if (showtype) devlist += it->second->gettype() + " ";
+		num++;
 	}
 	
+	devlist = format("%d ", num) + devlist;
 	return devlist;
 }
 

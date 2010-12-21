@@ -143,11 +143,11 @@ public:
 	int del(string id);
 	
 	/*!
-	 @brief Return a list of all devices currently registered.
+	 @brief Return list of devices: <ndev> <devname> [devtype] {<devname> [devtype]} ...
 	 
 	 @param [in] showtype Set to true to return a list of (name type) pairs, otherwise only return a list of names.
 	 @param [in] showonline Only show devices that are network-aware (i.e. are listening on the network)
-	 @return A list of names of all the devices, seperated by spaces. If showtype is true, the device types will also be returned.
+	 @return A list of names of all the devices, seperated by spaces, prefixed by total count. If showtype is true, the device types will also be returned.
 	 */
 	string getlist(bool showtype = true, bool showonline=true);
 	
