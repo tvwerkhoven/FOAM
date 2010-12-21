@@ -21,11 +21,11 @@
 #include <string>
 #include <gsl/gsl_matrix.h>
 
-#include "imgdata.h"
 #include "io.h"
 #include "types.h"
-
+#include "imgdata.h"
 #include "foamctrl.h"
+
 #include "simseeing.h"
 
 /*

@@ -19,6 +19,8 @@
  */
 
 #include <unistd.h>
+#define __STDC_LIMIT_MACROS
+#include <stdint.h>
 #include <gsl/gsl_matrix.h>
 #include <math.h>
 #include <fftw3.h>
@@ -341,7 +343,7 @@ void SimulCam::cam_handler() {
 	cpu_set_t cpuset;
 	CPU_ZERO(&cpuset);
 	CPU_SET(1, &cpuset);
-	pthread::setaffinity(&cpuset);
+	// pthread::setaffinity(&cpuset);
 #endif
 	
 	while (true) {
