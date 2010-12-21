@@ -84,12 +84,17 @@ void SimulCam::on_message(Connection *conn, std::string line) {
 		string what = popword(line);
 	
 		if(what == "noise") {
+			conn->addtag("noise");
 			noise = popdouble(line);
-			fprintf(stderr, "noise: %g\n", noise);
+			netio.broadcast(format("ok noise %g", noise), "store");
 		} else if(what == "seeingfac") {
+			conn->addtag("seeingfac");
 			seeingfac = popdouble(line);
+			netio.broadcast(format("ok seeingfac %g", seeingfac), "seeingfac");
 		} else if(what == "telradius") {
+			conn->addtag("telradius");
 			telradius = popdouble(line);
+			netio.broadcast(format("ok telradius %g", telradius), "telradius");
 		}
 		else
 			parsed = false;
