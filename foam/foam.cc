@@ -379,6 +379,7 @@ void FOAM::on_connect(Connection *connection, bool status) {
 
 void FOAM::on_message(Connection *connection, std::string line) {
 	string cmd = popword(line);
+	//! @todo improve the delegation of on_message commands to derived classes. How do they know a command was or was not succesful?
 	
 	if (cmd == "help") {
 		connection->write("ok cmd help");
