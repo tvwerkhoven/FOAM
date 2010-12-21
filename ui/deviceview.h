@@ -40,6 +40,12 @@ using namespace std;
  This is the basic device GUI. It is the GUI counterpart of DeviceCtrl, which
  controls a remote piece of hardware. It provides a basis for implementation
  of more sophisticated GUIs.
+ 
+ The DeviceCtrl class queries all commands available for any device when it 
+ connects (see DeviceCtrl::on_connected) and DeviceCtrl is able to parse this
+ and store all commands in a list. This will be shown on DevicePage as a
+ dropdown list. This way, the GUI can support any device by simply providing
+ this 'raw' control method.
  */
 class DevicePage: public Gtk::VBox {
 protected:
@@ -49,6 +55,14 @@ protected:
 	Log &log;														//!< Log message in the GUI here
 	
 	string devname;											//!< Device name
+	
+	Frame devframe;											//!< Generic device controls Frame
+	HBox devhbox;												//!< Generic device controls HBox
+	ComboBoxText dev_cmds;							//!< All available commands for this device
+	LabeledEntry dev_val;								//!< Value or options for this command
+	Button dev_send;										//!< Send command
+	
+	void on_dev_send_activate();				//!< Callback for dev_send and dev_val
 
 public:
 	DevicePage(Log &log, FoamControl &foamctrl, string n, bool is_parent=false);
@@ -58,9 +72,9 @@ public:
 	virtual void on_message_update();		//!< Update GUI when device reports state changes
 	virtual void on_connect_update();		//!< Update GUI when connected or disconnected
 	
-	virtual void disable_gui() { ; }		//!< Disable GUI when disconnected
-	virtual void enable_gui() { ; }			//!< Enable GUI when connected
-	virtual void clear_gui() { ; }			//!< Clear GUI on init or reconnect
+	virtual void disable_gui();					//!< Disable GUI when disconnected
+	virtual void enable_gui();					//!< Enable GUI when connected
+	virtual void clear_gui();						//!< Clear GUI on init or reconnect
 };
 
 #endif // HAVE_DEVICEVIEW_H

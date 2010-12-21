@@ -37,6 +37,9 @@ Camera(io, ptc, name, dummycam_type, port, conffile, online)
 {
 	io.msg(IO_DEB2, "DummyCamera::DummyCamera()");
 
+	// Register network commands with base device:
+	add_cmd("hello world");
+
 	noise = cfg.getdouble("noise", 0.001);
 	
 	depth = 16;

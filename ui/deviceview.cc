@@ -28,11 +28,27 @@ using namespace std;
 using namespace Gtk;
 
 DevicePage::DevicePage(Log &log, FoamControl &foamctrl, string n, bool is_parent): 
-foamctrl(foamctrl), log(log), devname(n)  {
+foamctrl(foamctrl), log(log), devname(n),
+devframe("Raw device control"), dev_val("value:"), dev_send("Send")
+{
 	printf("%x:DevicePage::DevicePage()\n", (int) pthread_self());
 		
 	// Add frames to parent VBox
 	set_spacing(4);
+		
+	clear_gui();
+	disable_gui();
+	
+	dev_send.signal_clicked().connect(sigc::mem_fun(*this, &DevicePage::on_dev_send_activate));
+	dev_val.entry.signal_activate().connect(sigc::mem_fun(*this, &DevicePage::on_dev_send_activate));
+	
+	devhbox.set_spacing(4);
+	devhbox.pack_start(dev_cmds, PACK_SHRINK);
+	devhbox.pack_start(dev_val, PACK_SHRINK);
+	devhbox.pack_start(dev_send, PACK_SHRINK);
+	devframe.add(devhbox);
+	
+	pack_start(devframe, PACK_SHRINK);
 	
 	show_all_children();
 	
@@ -43,6 +59,29 @@ foamctrl(foamctrl), log(log), devname(n)  {
 DevicePage::~DevicePage() {
 	fprintf(stderr, "%x:DevicePage::~DevicePage()\n", (int) pthread_self());
 }
+
+void DevicePage::enable_gui() {
+	fprintf(stderr, "%x:DevicePage::enable_gui()\n", (int) pthread_self());
+	
+	dev_cmds.set_sensitive(true);
+	dev_val.set_sensitive(true);
+	dev_send.set_sensitive(true);
+}
+
+void DevicePage::disable_gui() {
+	fprintf(stderr, "%x:DevicePage::enable_gui()\n", (int) pthread_self());
+	
+	dev_cmds.set_sensitive(false);
+	dev_val.set_sensitive(false);
+	dev_send.set_sensitive(false);
+}
+
+void DevicePage::clear_gui() {
+	fprintf(stderr, "%x:DevicePage::clear_gui()\n", (int) pthread_self());
+	dev_cmds.clear_items();
+	dev_cmds.append_text("-");
+}
+
 
 void DevicePage::init() {
 	// Start device controller
@@ -56,10 +95,32 @@ void DevicePage::init() {
 	on_message_update();
 }
 
+void DevicePage::on_dev_send_activate() {
+	printf("%x:DevicePage::on_dev_send_activate()\n", (int) pthread_self());
+	// Send command from dev_cmds and dev_val
+	string cmd = dev_cmds.get_active_text();
+	cmd += " " + dev_val.get_text();
+	devctrl->send_cmd(cmd);
+}
+
 void DevicePage::on_message_update() {
 	printf("%x:DevicePage::on_message_update()\n", (int) pthread_self());
+	// Update list of device commands
+	//! @todo only update when commands *changed*, otherwise updated too often
+	dev_cmds.clear_items();
+
+	DeviceCtrl::cmdlist_t::iterator it;
+	DeviceCtrl::cmdlist_t devcmd_l = devctrl->get_devcmds();
+	
+  for (it=devcmd_l.begin(); it!=devcmd_l.end(); ++it)
+		dev_cmds.append_text(*it);
 }
 
 void DevicePage::on_connect_update() {
 	printf("%x:DevicePage::on_connect_update()\n", (int) pthread_self());
+	if (devctrl->is_connected())
+		enable_gui();
+	else
+		disable_gui();
 }
+

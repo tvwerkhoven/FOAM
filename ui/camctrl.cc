@@ -43,7 +43,7 @@ CamCtrl::CamCtrl(Log &log, const string h, const string p, const string n):
 	fprintf(stderr, "%x:CamCtrl::CamCtrl()\n", (int) pthread_self());
 	
 	ok = false;
-	mode = UNDEFINED;
+	mode = OFF;
 	errormsg = "Not connected";
 	
 	exposure = 0;
@@ -86,7 +86,6 @@ void CamCtrl::on_message(string line) {
 	DeviceCtrl::on_message(line);
 	
 	if (!ok) {
-		mode = ERROR;
 		return;
 	}
 	// Discard first 'ok' or 'err' (DeviceCtrl::on_message() already parsed this)

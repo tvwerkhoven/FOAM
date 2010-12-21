@@ -37,8 +37,17 @@ using namespace std;
  derived class should add to this, and overload on_message and on_connected.
  A derived GUI class should register signal_connect and signal_message to
  be notified when new data is received.
+ 
+ The DeviceCtrl class queries all commands available for any device when it 
+ connects (see DeviceCtrl::on_connected) and DeviceCtrl is able to parse this
+ and store all commands in a list. This will be shown on DevicePage as a
+ dropdown list. This way, the GUI can support any device by simply providing
+ this 'raw' control method.
  */
 class DeviceCtrl {
+public:
+	typedef list<string> cmdlist_t;
+
 protected:
 	Protocol::Client protocol;
 	Log &log;
@@ -49,6 +58,8 @@ protected:
 	string errormsg;										//!< Error message from hardware
 	string lastreply;										//!< Last reply we got from FOAM
 	string lastcmd;											//!< Last cmd we sent
+	
+	cmdlist_t devcmds;									//!< List of device commands available
 	
 	virtual void on_message(string line); //!< New data received from device
 	virtual void on_connected(bool status); //!< Connection to device changed
@@ -66,6 +77,7 @@ public:
 	bool is_connected() { return protocol.is_connected(); } //!< Return device connection status
 	string get_lastreply() const { return lastreply; } //!< Return last reply from device
 	string get_errormsg() const { return errormsg; } //!< Get errormessage (if !is_ok()).
+	cmdlist_t get_devcmds() { return devcmds; } //!< Get list of device commands
 	
 	virtual string getName() { return devname; } //!< Get device name
 	virtual void send_cmd(const string &cmd); //!< Wrapper for sending messages to device

@@ -37,13 +37,20 @@ seeing(io, ptc, name + "-seeing", port, conffile),
 shwfs(NULL), out_size(0), frame_out(NULL), telradius(1.0), telapt(NULL), noise(10.0), seeingfac(1.0)
 {
 	io.msg(IO_DEB2, "SimulCam::SimulCam()");
-	
+	// Register network commands with base device:
+	add_cmd("get noise");
+	add_cmd("set noise");
+	add_cmd("get seeingfac");
+	add_cmd("set seeingfac");
+	add_cmd("get windspeed");
+	add_cmd("set windspeed");
+
 	noise = cfg.getdouble("noise", 10.0);
 	seeingfac = cfg.getdouble("seeingfac", 1.0);
 	
 	// Setup seeing parameters
 	Path wffile = ptc->confdir + cfg.getstring("wavefront_file");
-
+	
 	coord_t wind;
 	wind.x = cfg.getint("windspeed.x", 16);
 	wind.y = cfg.getint("windspeed.y", 16);
@@ -86,7 +93,7 @@ void SimulCam::on_message(Connection *conn, std::string line) {
 		if(what == "noise") {
 			conn->addtag("noise");
 			noise = popdouble(line);
-			netio.broadcast(format("ok noise %g", noise), "store");
+			netio.broadcast(format("ok noise %g", noise), "noise");
 		} else if(what == "seeingfac") {
 			conn->addtag("seeingfac");
 			seeingfac = popdouble(line);
@@ -95,6 +102,14 @@ void SimulCam::on_message(Connection *conn, std::string line) {
 			conn->addtag("telradius");
 			telradius = popdouble(line);
 			netio.broadcast(format("ok telradius %g", telradius), "telradius");
+		} else if(what == "windspeed") {
+			conn->addtag("windspeed");
+			int tmp = popint(line);
+			// Only accept in certain ranges (sanity check)
+			if (fabs(tmp) < res.x/2) seeing.windspeed.x = tmp;
+			tmp = popint(line);
+			if (fabs(tmp) < res.x/2) seeing.windspeed.y = tmp;
+			netio.broadcast(format("ok windspeed %d %d", seeing.windspeed.x, seeing.windspeed.y), "windspeed");
 		}
 		else
 			parsed = false;
@@ -111,6 +126,9 @@ void SimulCam::on_message(Connection *conn, std::string line) {
 		} else if(what == "telradius") {
 			conn->addtag("telradius");
 			conn->write(format("ok telradius %lf", telradius));
+		} else if(what == "windspeed") {
+			conn->addtag("windspeed");
+			netio.broadcast(format("ok windspeed %x %x", seeing.windspeed.x, seeing.windspeed.y), "windspeed");
 		}
 		else
 			parsed = false;

@@ -50,11 +50,11 @@ private:
 	coord_t croppos;						//!< Lower-left position to crop out of wavefront
 	
 	coord_t cropsize;						//!< Size of the wavefront to return
-	coord_t windspeed;					//!< Windspeed in pixels/frame
 	
 	gsl_matrix *load_wavefront(Path &f); //!< Load wavefront data from disc
 	
 public:
+	coord_t windspeed;									//!< Windspeed in pixels/frame
 	wind_t windtype;										//!< Windtype used for seeing simulation
 	
 	SimSeeing(Io &io, foamctrl *ptc, string name, string port, Path &conffile);

@@ -46,6 +46,11 @@ typedef Protocol::Server::Connection Connection;
  implement a lot itself, but rather depends on the derived classes to do
  the work. Nonetheless, some basic functions (such as network I/O) are
  provided here. All devices are stored in a DeviceManager class.
+ 
+ One thing that is supported by the Device class is a list of commands 
+ supported by this piece of hardware. Each time this class is (sub)derived,
+ this should be updated. These commands are stored in cmd_list and things can
+ be added with add_cmd(string).
  */
 class Device {
 protected:
@@ -54,8 +59,12 @@ protected:
 	string name;												//!< Device name
 	string type;												//!< Device type
 	string port;												//!< Port to listen on
+	list<string> cmd_list;							//!< All commands this device supports
+	void add_cmd(string cmd) { cmd_list.push_back(cmd); } //!< Add command to list
+	
 	Path conffile;											//!< Configuration file
 	config cfg;													//!< Interpreted configuration file
+	
 	Protocol::Server netio;							//!< Network connection
 	bool online;												//!< Online or not?
 
@@ -78,11 +87,8 @@ public:
 	/*! 
 	 @brief Called when the device receives a message
 	 */
-	virtual void on_message(Connection *conn, std::string line) { 
-		io.msg(IO_DEB2, "Device::on_message('%s') %s::%s", 
-					 line.c_str(), type.c_str(), name.c_str());
-		conn->write("error :Unknown command: " + line);
-	}
+	virtual void on_message(Connection *conn, std::string line);
+	
 	/*! 
 	 @brief Called when something connects to this device
 	 */

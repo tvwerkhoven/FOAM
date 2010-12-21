@@ -57,6 +57,34 @@ filenamebase("FOAM"), outputdir(ptc->datadir), nstore(0),
 fits_telescope("undef"), fits_observer("undef"), fits_instrument("undef"), fits_target("undef"), fits_comments("undef")
 {
 	io.msg(IO_DEB2, "Camera::Camera()");
+	// Register network commands with base device:
+	add_cmd("quit");
+	add_cmd("restart");
+	add_cmd("set mode");
+	add_cmd("set exposure");
+	add_cmd("set interval");
+	add_cmd("set gain");
+	add_cmd("set offset");
+	add_cmd("set filename");
+	add_cmd("set outputdir");
+	add_cmd("set fits");
+	add_cmd("get mode");
+	add_cmd("get exposure");
+	add_cmd("get interval");
+	add_cmd("get gain");
+	add_cmd("get offset");
+	add_cmd("get width");
+	add_cmd("get height");
+	add_cmd("get depth");
+	add_cmd("get filename");
+	add_cmd("get outputdir");
+	add_cmd("get fits");
+	add_cmd("thumbnail");
+	add_cmd("grab");
+	add_cmd("store");
+	add_cmd("dark");
+	add_cmd("flat");
+//	add_cmd("statistics");
 	
 	// Set buffer size (default 8 frames)
 	nframes = cfg.getint("nframes", 8);
@@ -440,8 +468,8 @@ void Camera::on_message(Connection *conn, string line) {
 	} else if(command == "flat") {
 		if (flatburst(popint(line)))
 			conn->write("error :Error during flat burst");
-	} else if(command == "statistics") {
-		statistics(conn, popint(line));
+//	} else if(command == "statistics") {
+//		statistics(conn, popint(line));
 	} else {
 		parsed = false;
 		//conn->write("error :Unknown command: " + command);
@@ -844,33 +872,33 @@ bool Camera::accumburst(uint32_t *accum, size_t bcount) {
 	return true;
 }
 
-void Camera::statistics(Connection *conn, size_t bcount) {
-	if (bcount < 1)
-		bcount = 1;
-	
-	double avg = 0;
-	double rms = 0;
-	size_t rx = 0;
-	
-	{
-		pthread::mutexholder h(&cam_mutex);
-		size_t start = count;
-		
-		while(rx < bcount) {
-			frame_t *f = get_frame(start + rx);
-			if(!f)
-				break;
-			
-			avg += f->avg;
-			rms += f->rms * f->rms;
-			
-			rx++;
-		}
-	}
-	
-	avg /= rx;
-	rms /= rx;
-	rms = sqrt(rms);
-	
-	conn->write(format("ok statistics %lf %lf", avg, rms));
-}
+//void Camera::statistics(Connection *conn, size_t bcount) {
+//	if (bcount < 1)
+//		bcount = 1;
+//	
+//	double avg = 0;
+//	double rms = 0;
+//	size_t rx = 0;
+//	
+//	{
+//		pthread::mutexholder h(&cam_mutex);
+//		size_t start = count;
+//		
+//		while(rx < bcount) {
+//			frame_t *f = get_frame(start + rx);
+//			if(!f)
+//				break;
+//			
+//			avg += f->avg;
+//			rms += f->rms * f->rms;
+//			
+//			rx++;
+//		}
+//	}
+//	
+//	avg /= rx;
+//	rms /= rx;
+//	rms = sqrt(rms);
+//	
+//	conn->write(format("ok statistics %lf %lf", avg, rms));
+//}

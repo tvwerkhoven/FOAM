@@ -36,7 +36,9 @@ ImgCamera::ImgCamera(Io &io, foamctrl *ptc, string name, string port, Path &conf
 Camera(io, ptc, name, imgcam_type, port, conffile, online)
 {
 	io.msg(IO_DEB2, "ImgCamera::ImgCamera()");
-	
+	// Register network commands with base device:
+	// No extra commands
+
 	Path file = cfg.getstring(name + ".imagefile");
 	if (!file.isabs()) file = ptc->datadir + file;
 	

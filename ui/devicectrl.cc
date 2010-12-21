@@ -64,16 +64,34 @@ void DeviceCtrl::on_message(string line) {
 		log.add(Log::OK, devname + ": <- " + stat + " " + line);
 	}
 	
+	// Parse list of commands device can accept here
+	string what = popword(line);
+	if (what == "commands") {
+		// The rest should be semicolon-delimited commands: "<cmd> [opts]; <cmd2> [opts];" etc.
+		int ncmds = popint32(line);
+		
+		for (int i=0; i<ncmds; i++) {
+			string cmd = popword(line, ";");
+			if (cmd == "")
+				break;
+			devcmds.push_back(cmd);
+		}
+		// Sort alphabetically
+		devcmds.sort();
+	}
+	
 	signal_message();
 }
 
 void DeviceCtrl::on_connected(bool conn) {
 	printf("%x:DeviceCtrl::on_connected(status=%d)\n", (int) pthread_self(), conn);	
 	if (conn)
-		send_cmd("get info");
+		send_cmd("get commands");
 	else {
 		ok = false;
 		errormsg = "Not connected";
+		devcmds.clear();
+		//! @todo should we explictly disconnect the socket here too? Otherwise protocol will reconnect immediately.
 	}		
 	
 	signal_connect();

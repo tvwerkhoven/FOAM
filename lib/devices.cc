@@ -69,6 +69,32 @@ Device::~Device() {
 	io.msg(IO_DEB2, "Device::~Device()");
 }
 
+void Device::on_message(Connection *conn, std::string line) { 
+	io.msg(IO_DEB2, "Device::on_message('%s') %s::%s", 
+				 line.c_str(), type.c_str(), name.c_str());
+	string orig = line;
+	
+	string command = popword(line);
+	if (command == "get") {
+		string what = popword(line);
+		if (what == "commands") {
+			string devlist = "";
+			
+			list<string>::iterator it;
+			int ndev=0;
+			for (it=cmd_list.begin(); it!=cmd_list.end(); ++it) {
+				devlist += *it + ";";
+				ndev++;
+			}
+			
+			conn->write(format("ok commands %d %s", ndev, devlist.c_str()));
+			return;
+		}
+	}
+	
+	conn->write("error :Unknown command: " + orig);
+}
+
 // DeviceManager class
 
 DeviceManager::DeviceManager(Io &io): io(io), ndev(0) {
