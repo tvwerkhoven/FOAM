@@ -89,8 +89,10 @@ void CamCtrl::on_message(string line) {
 		mode = ERROR;
 		return;
 	}
-	popword(line);
-
+	// Discard first 'ok' or 'err' (DeviceCtrl::on_message() already parsed this)
+	string stat = popword(line);
+	
+	// Get command
 	string what = popword(line);
 
 	if(what == "exposure")
@@ -140,10 +142,10 @@ void CamCtrl::on_message(string line) {
 	signal_message();
 }
 
+//!< @bug If this function returns, there is a problem in camview.cc
 void CamCtrl::on_monitor_message(string line) {
 	fprintf(stderr, "%x:CamCtrl::on_monitor_message(line=%s)\n", (int) pthread_self(), line.c_str());
 	// Line has to start with 'ok image'
-	//!< @bug If this function returns, there is a problem in camview.cc
 	if(popword(line) != "ok") {
 		log.add(Log::ERROR, "image grab error (err=" + line + ")");
 		return;
