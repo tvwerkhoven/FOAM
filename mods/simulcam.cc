@@ -36,7 +36,8 @@
 SimulCam::SimulCam(Io &io, foamctrl *ptc, string name, string port, Path &conffile, bool online):
 Camera(io, ptc, name, simulcam_type, port, conffile, online),
 seeing(io, ptc, name + "-seeing", port, conffile),
-shwfs(NULL), out_size(0), frame_out(NULL), telradius(1.0), telapt(NULL), noise(10.0), seeingfac(1.0)
+out_size(0), frame_out(NULL), telradius(1.0), telapt(NULL), noise(10.0), seeingfac(1.0),
+shwfs(io, ptc, name + "-shwfs", port, conffile, *this, false)
 {
 	io.msg(IO_DEB2, "SimulCam::SimulCam()");
 	// Register network commands with base device:
@@ -49,26 +50,12 @@ shwfs(NULL), out_size(0), frame_out(NULL), telradius(1.0), telapt(NULL), noise(1
 
 	noise = cfg.getdouble("noise", 10.0);
 	seeingfac = cfg.getdouble("seeingfac", 1.0);
-	
-	// Setup seeing parameters
-	Path wffile = ptc->confdir + cfg.getstring("wavefront_file");
-	
-	coord_t wind;
-	wind.x = cfg.getint("windspeed.x", 16);
-	wind.y = cfg.getint("windspeed.y", 16);
 
-	SimSeeing::wind_t windtype;
-	string windstr = cfg.getstring("windtype", "linear");
-	if (windstr == "linear")
-		windtype = SimSeeing::LINEAR;
-	else
-		windtype = SimSeeing::RANDOM;
-	
-	seeing.setup(wffile, res, wind, windtype);
+	if (seeing.cropsize.x != res.x || seeing.cropsize.y != res.y)
+		throw std::runtime_error("SimulCam::SimulCam(): Camera resolution and seeing cropsize must be equal.");
 	
 	// Get telescope aperture
 	gen_telapt();
-
 	
 	cam_thr.create(sigc::mem_fun(*this, &SimulCam::cam_handler));
 }
@@ -184,10 +171,7 @@ void SimulCam::simul_telescope(gsl_matrix *im_in) {
 }
 
 void SimulCam::simul_wfs(gsl_matrix *wave_in) {
-	if (!shwfs)
-		io.msg(IO_ERR | IO_FATAL, "SimulCam::simul_wfs(): cannot simulate wavefront without Shwfs reference.");
-	
-	if (shwfs->mla.nsi <= 0) {
+	if (shwfs.mla.nsi <= 0) {
 		io.msg(IO_WARN, "SimulCam::simul_wfs(): no microlenses defined?.");
 		return;
 	}
@@ -195,8 +179,8 @@ void SimulCam::simul_wfs(gsl_matrix *wave_in) {
 	io.msg(IO_DEB2, "SimulCam::simul_wfs()");
 	
 	// Apply fourier transform to subimages here
-	coord_t sallpos = shwfs->mla.ml[0].llpos;
-	coord_t sasize = shwfs->mla.ml[0].size;
+	coord_t sallpos = shwfs.mla.ml[0].llpos;
+	coord_t sasize = shwfs.mla.ml[0].size;
 	// Get temporary memory
 	gsl_vector *workspace = gsl_vector_calloc(sasize.x * sasize.y * 4);
 	// Setup FFTW parameters
@@ -210,9 +194,9 @@ void SimulCam::simul_wfs(gsl_matrix *wave_in) {
 	gsl_matrix_view subap;
 	gsl_matrix *subapm;
 	
-	for (int n=0; n<shwfs->mla.nsi; n++) {
-		sallpos = shwfs->mla.ml[n].llpos;
-		sasize = shwfs->mla.ml[n].size;
+	for (int n=0; n<shwfs.mla.nsi; n++) {
+		sallpos = shwfs.mla.ml[n].llpos;
+		sasize = shwfs.mla.ml[n].size;
 		
 		// Crop out subaperture from larger frame, store as gsl_matrix_view
 		subap = gsl_matrix_submatrix(wave_in, sallpos.y, sallpos.x, sasize.y, sasize.x);

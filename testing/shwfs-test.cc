@@ -53,19 +53,11 @@ int main(int argc, char *argv[]) {
 		tmp = argv[1];
 		io.msg(IO_INFO, "Init SimulCam with %s", tmp.c_str());
 		SimulCam wfscam(io, &ptc, "wfscam", "12345", tmp);
-		
+				
 		sleep(1);
-
-		io.msg(IO_INFO, "Init Shwfs with SimulCam");
-		Shwfs shwfs(io, &ptc, "shwfs-test", "12345", tmp, wfscam);
-		
-		sleep(1);
-
-		io.msg(IO_INFO, "Link Shwfs to SimulCam");
-		wfscam.set_shwfs(&shwfs);
 
 		Path mlaout("./mla_grid");
-		shwfs.store_mla_grid(mlaout, true);
+		wfscam.shwfs.store_mla_grid(mlaout, true);
 		
 // Take one frame and store it
 		wfscam.set_store(1);

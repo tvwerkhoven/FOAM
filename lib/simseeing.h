@@ -30,10 +30,12 @@
 #include "devices.h"
 
 using namespace std;
-const string SimSeeing_type = "simseeing";
+const string simseeing_type = "simseeing";
 
 /*!
  @brief This class simulates seeing by an atmosphere.
+ 
+ This class is offline (no network connection).
  */
 class SimSeeing: public Device {
 public:
@@ -47,21 +49,19 @@ private:
 	Path file;									//!< If type = 'file', this is the full path
 	
 	gsl_matrix *wfcrop;					//!< This will hold the cropped wavefront data
-	coord_t croppos;						//!< Lower-left position to crop out of wavefront
 	
-	coord_t cropsize;						//!< Size of the wavefront to return
-	
-	gsl_matrix *load_wavefront(Path &f); //!< Load wavefront data from disc
+	gsl_matrix *load_wavefront(Path &f, bool norm=true); //!< Load wavefront data from disc. N.B. The returned matrix has to be freed on exit!
 	
 public:
+	coord_t croppos;										//!< Lower-left position to crop out of wavefront
+	coord_t cropsize;										//!< Size of the wavefront to return
+	
 	coord_t windspeed;									//!< Windspeed in pixels/frame
 	wind_t windtype;										//!< Windtype used for seeing simulation
 	
 	SimSeeing(Io &io, foamctrl *ptc, string name, string port, Path &conffile);
 	~SimSeeing();
-	
-	bool setup(Path &f, coord_t size=coord_t(128,128), coord_t wspeed=coord_t(16,16), wind_t t=RANDOM);
-	
+		
 	gsl_matrix *get_wavefront(const double fac=1.0);
 	gsl_matrix *get_wavefront(const size_t x0, const size_t y0, const size_t w, const size_t h, const double fac=1.0);
 };

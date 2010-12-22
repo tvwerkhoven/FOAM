@@ -448,7 +448,7 @@ void CamView::on_connect_update() {
 }
 
 void CamView::on_message_update() {
-//	DevicePage::on_message_update();
+	fprintf(stderr, "%x:CamView::on_message_update()\n", (int) pthread_self());
 	
 	// Set values in text entries
 	e_exposure.set_text(format("%g", camctrl->get_exposure()));

@@ -51,7 +51,6 @@ const string simulcam_type = "simulcam";
 class SimulCam: public Camera {
 private:
 	SimSeeing seeing;										//!< This class simulates the atmosphere
-	Shwfs *shwfs;												//!< Reference to WFS we simulate (i.e. for configuration)
 	
 	size_t out_size;										//!< Size of frame_out
 	uint8_t *frame_out;									//!< Frame to store simulated image
@@ -63,6 +62,7 @@ private:
 	double seeingfac;										//!< Multiplicative factor for wavefront screen.
 	
 public:
+	Shwfs shwfs;												//!< Reference to WFS we simulate (i.e. for configuration)
 	SimulCam(Io &io, foamctrl *ptc, string name, string port, Path &conffile, bool online=true);
 	~SimulCam();
 	
@@ -73,8 +73,6 @@ public:
 	void simul_wfs(gsl_matrix *wave_in); //!< Simulate wavefront sensor optics given an input wavefront.
 	uint8_t *simul_capture(gsl_matrix *frame_in);	//!< Simulate CCD frame capture (exposure, offset, etc.)
 	
-	void set_shwfs(Shwfs *ref) { shwfs = ref; } //!< Assign Shwfs object to SimulCam. The parameters of this Shwfs will be used for simulation.
-		
 	// From Camera::
 	void cam_handler();
 	void cam_set_exposure(double value);
