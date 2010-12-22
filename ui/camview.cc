@@ -39,8 +39,8 @@
 using namespace std;
 using namespace Gtk;
 
-CamView::CamView(Log &log, FoamControl &foamctrl, string n, bool is_parent): 
-DevicePage(log, foamctrl, n),
+CamView::CamView(CamCtrl *camctrl, Log &log, FoamControl &foamctrl, string n): 
+DevicePage((DeviceCtrl *) camctrl, log, foamctrl, n), camctrl(camctrl),
 infoframe("Info"),
 dispframe("Display settings"),
 ctrlframe("Camera controls"),
@@ -205,8 +205,14 @@ histoalign(0.5, 0.5, 0, 0), minval("Display min"), maxval("Display max"), e_avg(
 //	if(!histogram.get_active())
 //		histogramframe.hide();
 	
-	if (is_parent)
-		init();
+	camctrl->signal_monitor.connect(sigc::mem_fun(*this, &CamView::on_monitor_update));
+	camctrl->signal_message.connect(sigc::mem_fun(*this, &CamView::on_message_update));
+	camctrl->signal_connect.connect(sigc::mem_fun(*this, &CamView::on_connect_update));
+	
+	// Run update functions once for init (camctrl might already have connected previously)
+	on_connect_update();
+	on_monitor_update();
+	on_message_update();
 }
 
 CamView::~CamView() {
@@ -215,7 +221,7 @@ CamView::~CamView() {
 }
 
 void CamView::enable_gui() {
-	DevicePage::enable_gui();
+	fprintf(stderr, "%x:CamView::enable_gui()\n", (int) pthread_self());
 	
 	e_exposure.set_sensitive(true);
 	e_offset.set_sensitive(true);
@@ -234,7 +240,7 @@ void CamView::enable_gui() {
 }
 
 void CamView::disable_gui() {
-	DevicePage::disable_gui();
+	fprintf(stderr, "%x:CamView::disable_gui()\n", (int) pthread_self());
 	
 	e_exposure.set_sensitive(false);
 	e_offset.set_sensitive(false);
@@ -253,7 +259,7 @@ void CamView::disable_gui() {
 }
 
 void CamView::clear_gui() {
-	DevicePage::clear_gui();
+	fprintf(stderr, "%x:CamView::clear_gui()\n", (int) pthread_self());
 	
 	e_exposure.set_text("N/A");
 	e_offset.set_text("N/A");
@@ -277,17 +283,14 @@ void CamView::clear_gui() {
 	maxval.set_value(1 << camctrl->get_depth());
 }
 
-void CamView::init() {
-	fprintf(stderr, "%x:CamView::init()\n", (int) pthread_self());
-	// Init new camera control connection for this viewer
-	camctrl = new CamCtrl(log, foamctrl.host, foamctrl.port, devname);
-	// Downcast to generic device control pointer for base class (DevicePage in this case)
-	devctrl = (DeviceCtrl *) camctrl;
-	
-	camctrl->signal_monitor.connect(sigc::mem_fun(*this, &CamView::on_monitor_update));
-	camctrl->signal_message.connect(sigc::mem_fun(*this, &CamView::on_message_update));
-	camctrl->signal_connect.connect(sigc::mem_fun(*this, &CamView::on_connect_update));
-}
+//void CamView::init() {
+//	fprintf(stderr, "%x:CamView::init()\n", (int) pthread_self());
+//	// Init new camera control connection for this viewer
+//	//camctrl = new CamCtrl(log, foamctrl.host, foamctrl.port, devname);
+//	// Downcast to generic device control pointer for base class (DevicePage in this case)
+//	//devctrl = (DeviceCtrl *) camctrl;
+//	
+//}
 
 void CamView::on_glarea_view_update() {
 	// Callback for glarea update on viewstate (zoom, scale, shift)
@@ -445,7 +448,7 @@ void CamView::on_connect_update() {
 }
 
 void CamView::on_message_update() {
-	DevicePage::on_message_update();
+//	DevicePage::on_message_update();
 	
 	// Set values in text entries
 	e_exposure.set_text(format("%g", camctrl->get_exposure()));

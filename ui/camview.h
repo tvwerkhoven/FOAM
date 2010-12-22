@@ -40,6 +40,8 @@
  */
 class CamView: public DevicePage {
 protected:
+	CamCtrl *camctrl;
+	
 	Gtk::Frame infoframe;
 	Gtk::Frame dispframe;
 	Gtk::Frame ctrlframe;
@@ -147,11 +149,10 @@ protected:
 	bool on_timeout();
 
 public:
-	CamCtrl *camctrl;
-	CamView(Log &log, FoamControl &foamctrl, string n, bool is_parent=false);
+	CamView(CamCtrl *camctrl, Log &log, FoamControl &foamctrl, string n);
 	~CamView();
 	
-	virtual void init();
+//	virtual void init();
 };
 
 

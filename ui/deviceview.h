@@ -27,6 +27,7 @@
 #include "pthread++.h"
 #include "log.h"
 #include "widgets.h"
+
 #include "foamcontrol.h"
 #include "devicectrl.h"
 #include "protocol.h"
@@ -66,10 +67,10 @@ protected:
 	void on_commands_update();					//!< Hooks to DeviceCtrl::signal_commands
 
 public:
-	DevicePage(Log &log, FoamControl &foamctrl, string n, bool is_parent=false);
+	DevicePage(DeviceCtrl *devctrl, Log &log, FoamControl &foamctrl, string n);
 	virtual ~DevicePage();
 	
-	virtual void init();
+//	virtual void init();
 	virtual void on_message_update();		//!< Update GUI when device reports state changes
 	virtual void on_connect_update();		//!< Update GUI when connected or disconnected
 	virtual void disable_gui();					//!< Disable GUI when disconnected

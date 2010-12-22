@@ -236,14 +236,16 @@ void MainWindow::on_ctrl_device_update() {
 		// Then add specific devices first, and more general devices later
 		else if (dev.type.substr(0,7) == "dev.cam") {
 			fprintf(stderr, "MainWindow::on_ctrl_device_update() got generic camera device\n");
-			CamView *tmp = new CamView(log, foamctrl, dev.name);
-			tmp->init();
+			CamCtrl *tmpctrl = new CamCtrl(log, foamctrl.host, foamctrl.port, dev.name);
+			CamView *tmp = new CamView(tmpctrl, log, foamctrl, dev.name);
 			devlist[dev.name] = (DevicePage *) tmp;
 			log.add(Log::OK, "Added new generic camera, type="+dev.type+", name="+dev.name+".");
 		}
 		else if (dev.type.substr(0,3) == "dev") {
 			fprintf(stderr, "MainWindow::on_ctrl_device_update() got generic device\n");                    
-			devlist[dev.name] = new DevicePage(log, foamctrl, dev.name);
+			DeviceCtrl *tmpctrl = new DeviceCtrl(log, foamctrl.host, foamctrl.port, dev.name);
+			DevicePage *tmp = new DevicePage(tmpctrl, log, foamctrl, dev.name);
+			devlist[dev.name] = (DevicePage *) tmp;
 			log.add(Log::OK, "Added new generic device, type="+dev.type+", name="+dev.name+".");
 		}
 		else {

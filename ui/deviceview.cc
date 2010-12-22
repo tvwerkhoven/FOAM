@@ -22,13 +22,14 @@
 #include "protocol.h"
 #include "format.h"
 
+#include "devicectrl.h"
 #include "deviceview.h"
 
 using namespace std;
 using namespace Gtk;
 
-DevicePage::DevicePage(Log &log, FoamControl &foamctrl, string n, bool is_parent): 
-foamctrl(foamctrl), log(log), devname(n),
+DevicePage::DevicePage(DeviceCtrl *devctrl, Log &log, FoamControl &foamctrl, string n): 
+devctrl(devctrl), foamctrl(foamctrl), log(log), devname(n),
 devframe("Raw device control"), dev_val("value:"), dev_send("Send")
 {
 	printf("%x:DevicePage::DevicePage()\n", (int) pthread_self());
@@ -55,8 +56,15 @@ devframe("Raw device control"), dev_val("value:"), dev_send("Send")
 	// If this is the parent class, we need to initialize some more things 
 	// (connect callbacks). Otherwise when we are instantiated from a derived 
 	// class, we can skip that. (see CamView:: for example)
-	if (is_parent)
-		init();
+//	if (is_parent)
+//		init();
+	devctrl->signal_message.connect(sigc::mem_fun(*this, &DevicePage::on_message_update));
+	devctrl->signal_connect.connect(sigc::mem_fun(*this, &DevicePage::on_connect_update));
+	devctrl->signal_commands.connect(sigc::mem_fun(*this, &DevicePage::on_commands_update));
+	
+	on_connect_update();
+	on_message_update();
+	on_commands_update();
 }
 
 DevicePage::~DevicePage() {
@@ -72,7 +80,7 @@ void DevicePage::enable_gui() {
 }
 
 void DevicePage::disable_gui() {
-	fprintf(stderr, "%x:DevicePage::enable_gui()\n", (int) pthread_self());
+	fprintf(stderr, "%x:DevicePage::disable_gui()\n", (int) pthread_self());
 	
 	dev_cmds.set_sensitive(false);
 	dev_val.set_sensitive(false);
@@ -85,20 +93,17 @@ void DevicePage::clear_gui() {
 	dev_cmds.append_text("-");
 }
 
-void DevicePage::init() {
-	// This separate init() functions initializes devctrl when we are the parent 
-	// class. Since this class can be derived, we cannot always start this, 
-	// because it is device-dependent. For example: when CamView:: is started,
-	// This class should not start a separate connection.
-	
-	// Start device controller
-	devctrl = new DeviceCtrl(log, foamctrl.host, foamctrl.port, devname);
-	
-	// GUI update callback (from protocol thread to GUI thread)
-	devctrl->signal_message.connect(sigc::mem_fun(*this, &DevicePage::on_message_update));
-	devctrl->signal_connect.connect(sigc::mem_fun(*this, &DevicePage::on_connect_update));
-	devctrl->signal_commands.connect(sigc::mem_fun(*this, &DevicePage::on_commands_update));
-}
+//void DevicePage::init() {
+//	// This separate init() functions initializes devctrl when we are the parent 
+//	// class. Since this class can be derived, we cannot always start this, 
+//	// because it is device-dependent. For example: when CamView:: is started,
+//	// This class should not start a separate connection.
+//	
+//	// Start device controller
+//	devctrl = new DeviceCtrl(log, foamctrl.host, foamctrl.port, devname);
+//	
+//	// GUI update callback (from protocol thread to GUI thread)
+//}
 
 void DevicePage::on_dev_send_activate() {
 	printf("%x:DevicePage::on_dev_send_activate()\n", (int) pthread_self());
