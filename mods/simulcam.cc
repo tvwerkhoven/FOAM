@@ -172,6 +172,11 @@ void SimulCam::gen_telapt() {
 	}
 }
 
+gsl_matrix *SimulCam::simul_seeing() {
+	gsl_matrix *wf = seeing.get_wavefront(seeingfac);
+	return wf;
+}
+
 void SimulCam::simul_telescope(gsl_matrix *im_in) {
 	io.msg(IO_DEB2, "SimulCam::simul_telescope()");
 	// Multiply wavefront with aperture
@@ -351,8 +356,7 @@ void SimulCam::cam_handler() {
 		switch (mode) {
 			case Camera::RUNNING:
 			{
-				// get_wavefront() allocates new memory, we need to free it later
-				gsl_matrix *wf = seeing.get_wavefront();
+				gsl_matrix *wf = simul_seeing();
 				simul_telescope(wf);
 				simul_wfs(wf);
 				uint8_t *frame = simul_capture(wf);

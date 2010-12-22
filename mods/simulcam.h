@@ -68,6 +68,7 @@ public:
 	
 	void gen_telapt();									//!< Generate telescope aperture with radius telradius. Inside this radius the mask has value 'seeingfac', outside it's 0.
 
+	gsl_matrix *simul_seeing();					//!< Simulate seeing: get wavefront and apply seeing factor.
 	void simul_telescope(gsl_matrix *wave_in); //!< Multiply input wavefront with telescope aperture mask from gen_telapt().
 	void simul_wfs(gsl_matrix *wave_in); //!< Simulate wavefront sensor optics given an input wavefront.
 	uint8_t *simul_capture(gsl_matrix *frame_in);	//!< Simulate CCD frame capture (exposure, offset, etc.)
