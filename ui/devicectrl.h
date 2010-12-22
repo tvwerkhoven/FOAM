@@ -84,6 +84,7 @@ public:
 
 	Glib::Dispatcher signal_connect;		//!< Signalled when connection changes
 	Glib::Dispatcher signal_message;		//!< Signalled when message received
+	Glib::Dispatcher signal_commands;		//!< Signalled when new device commands received
 };
 
 

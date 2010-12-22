@@ -78,6 +78,7 @@ void DeviceCtrl::on_message(string line) {
 		}
 		// Sort alphabetically
 		devcmds.sort();
+		signal_commands();
 	}
 	
 	signal_message();

@@ -231,9 +231,6 @@ void CamView::enable_gui() {
 	display.set_sensitive(true);
 	store.set_sensitive(true);
 	store_n.set_sensitive(true);
-	
-//	e_avg.set_sensitive(true);
-//	e_rms.set_sensitive(true);
 }
 
 void CamView::disable_gui() {
@@ -253,9 +250,6 @@ void CamView::disable_gui() {
 	display.set_sensitive(false);
 	store.set_sensitive(false);
 	store_n.set_sensitive(false);
-
-//	e_avg.set_sensitive(false);
-//	e_rms.set_sensitive(false);
 }
 
 void CamView::clear_gui() {

@@ -52,6 +52,9 @@ devframe("Raw device control"), dev_val("value:"), dev_send("Send")
 	
 	show_all_children();
 	
+	// If this is the parent class, we need to initialize some more things 
+	// (connect callbacks). Otherwise when we are instantiated from a derived 
+	// class, we can skip that. (see CamView:: for example)
 	if (is_parent)
 		init();
 }
@@ -82,17 +85,19 @@ void DevicePage::clear_gui() {
 	dev_cmds.append_text("-");
 }
 
-
 void DevicePage::init() {
+	// This separate init() functions initializes devctrl when we are the parent 
+	// class. Since this class can be derived, we cannot always start this, 
+	// because it is device-dependent. For example: when CamView:: is started,
+	// This class should not start a separate connection.
+	
 	// Start device controller
 	devctrl = new DeviceCtrl(log, foamctrl.host, foamctrl.port, devname);
 	
 	// GUI update callback (from protocol thread to GUI thread)
 	devctrl->signal_message.connect(sigc::mem_fun(*this, &DevicePage::on_message_update));
 	devctrl->signal_connect.connect(sigc::mem_fun(*this, &DevicePage::on_connect_update));
-	
-	// Run once for init
-	on_message_update();
+	devctrl->signal_commands.connect(sigc::mem_fun(*this, &DevicePage::on_commands_update));
 }
 
 void DevicePage::on_dev_send_activate() {
@@ -103,17 +108,23 @@ void DevicePage::on_dev_send_activate() {
 	devctrl->send_cmd(cmd);
 }
 
-void DevicePage::on_message_update() {
-	printf("%x:DevicePage::on_message_update()\n", (int) pthread_self());
+void DevicePage::on_commands_update() {
+	printf("%x:DevicePage::on_commands_update()\n", (int) pthread_self());
 	// Update list of device commands
-	//! @todo only update when commands *changed*, otherwise updated too often
 	dev_cmds.clear_items();
-
+	
 	DeviceCtrl::cmdlist_t::iterator it;
 	DeviceCtrl::cmdlist_t devcmd_l = devctrl->get_devcmds();
 	
   for (it=devcmd_l.begin(); it!=devcmd_l.end(); ++it)
 		dev_cmds.append_text(*it);
+	
+	// Add empty field to send complete freeform command as well
+	dev_cmds.append_text(" ");
+}
+
+void DevicePage::on_message_update() {
+	printf("%x:DevicePage::on_message_update()\n", (int) pthread_self());
 }
 
 void DevicePage::on_connect_update() {

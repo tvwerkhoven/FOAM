@@ -63,6 +63,7 @@ protected:
 	Button dev_send;										//!< Send command
 	
 	void on_dev_send_activate();				//!< Callback for dev_send and dev_val
+	void on_commands_update();					//!< Hooks to DeviceCtrl::signal_commands
 
 public:
 	DevicePage(Log &log, FoamControl &foamctrl, string n, bool is_parent=false);
@@ -71,7 +72,6 @@ public:
 	virtual void init();
 	virtual void on_message_update();		//!< Update GUI when device reports state changes
 	virtual void on_connect_update();		//!< Update GUI when connected or disconnected
-	
 	virtual void disable_gui();					//!< Disable GUI when disconnected
 	virtual void enable_gui();					//!< Enable GUI when connected
 	virtual void clear_gui();						//!< Clear GUI on init or reconnect
