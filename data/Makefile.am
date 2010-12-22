@@ -8,10 +8,13 @@ if SIMSTAT
 
 dist_foamdata_DATA += simstatic*.pgm #simstatic*.fits
 
+# Loop over all pgms, convert only if fits does not exist.
+# @todo is this portable?
 all-local:
-	@echo -n "Converting datafiles..."
+	@echo Converting datafiles...
 	@for f in *pgm; \
-		do convert $$f $$f.fits; \
+		do \
+		if [ ! -f $$f.fits ]; then echo "Converting $$f..."; convert $$f $$f.fits; fi; \
 	done;
 	@echo "done."
 
