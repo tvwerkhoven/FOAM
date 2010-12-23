@@ -65,6 +65,7 @@ protected:
 	CheckButton fliph;									//!< Flip image horizontally (only GUI)
 	CheckButton crosshair;							//!< Show crosshair
 	CheckButton grid;										//!< Show grid
+	CheckButton histo;									//!< Show histogram
 	VSeparator vsep1;
 	Button zoomin;											//!< Zoom in, CamView::on_zoomin_activate()
 	Button zoomout;											//!< Zoom out, CamView::on_zoomout_activate()
@@ -101,7 +102,7 @@ protected:
 	LabeledEntry e_datamin;							//!< Shows data minimum
 	LabeledEntry e_datamax;							//!< Shows data maximum
 
-	uint32_t *histo;										//!< Local histogram copy for GUI
+	uint32_t *histo_img;								//!< Local histogram copy for GUI
 	
 	bool waitforupdate;
 	time_t lastupdate;
