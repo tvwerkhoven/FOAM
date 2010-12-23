@@ -206,13 +206,7 @@ histoalign(0.5, 0.5, 0, 0), minval("Display min"), maxval("Display max"), e_avg(
 //		histogramframe.hide();
 	
 	camctrl->signal_monitor.connect(sigc::mem_fun(*this, &CamView::on_monitor_update));
-	camctrl->signal_message.connect(sigc::mem_fun(*this, &CamView::on_message_update));
-	camctrl->signal_connect.connect(sigc::mem_fun(*this, &CamView::on_connect_update));
-	
-	// Run update functions once for init (camctrl might already have connected previously)
-	on_connect_update();
-	on_monitor_update();
-	on_message_update();
+
 }
 
 CamView::~CamView() {
@@ -221,6 +215,7 @@ CamView::~CamView() {
 }
 
 void CamView::enable_gui() {
+	DevicePage::enable_gui();
 	fprintf(stderr, "%x:CamView::enable_gui()\n", (int) pthread_self());
 	
 	e_exposure.set_sensitive(true);
@@ -240,6 +235,7 @@ void CamView::enable_gui() {
 }
 
 void CamView::disable_gui() {
+	DevicePage::disable_gui();
 	fprintf(stderr, "%x:CamView::disable_gui()\n", (int) pthread_self());
 	
 	e_exposure.set_sensitive(false);
@@ -259,6 +255,7 @@ void CamView::disable_gui() {
 }
 
 void CamView::clear_gui() {
+	DevicePage::clear_gui();
 	fprintf(stderr, "%x:CamView::clear_gui()\n", (int) pthread_self());
 	
 	e_exposure.set_text("N/A");
@@ -439,16 +436,16 @@ void CamView::force_update() {
 	do_histo_update();
 }
 
-void CamView::on_connect_update() {
-	fprintf(stderr, "%x:CamView::on_connect_update(conn=%d)\n", (int) pthread_self(), devctrl->is_connected());
-	if (devctrl->is_connected())
-		enable_gui();
-	else
-		disable_gui();
-}
+//void CamView::on_connect_update() {
+//	DevicePage::on_connect_update();
+//	
+//	fprintf(stderr, "%x:CamView::on_connect_update(conn=%d)\n", (int) pthread_self(), devctrl->is_connected());
+//}
 
 void CamView::on_message_update() {
-//	DevicePage::on_message_update();
+	DevicePage::on_message_update();
+	
+	fprintf(stderr, "%x:CamView::on_message_update()\n", (int) pthread_self());
 	
 	// Set values in text entries
 	e_exposure.set_text(format("%g", camctrl->get_exposure()));

@@ -64,18 +64,86 @@ protected:
 	Button dev_send;										//!< Send command
 	
 	void on_dev_send_activate();				//!< Callback for dev_send and dev_val
-	void on_commands_update();					//!< Hooks to DeviceCtrl::signal_commands
 
 public:
 	DevicePage(DeviceCtrl *devctrl, Log &log, FoamControl &foamctrl, string n);
 	virtual ~DevicePage();
 	
-//	virtual void init();
-	virtual void on_message_update();		//!< Update GUI when device reports state changes
-	virtual void on_connect_update();		//!< Update GUI when connected or disconnected
-	virtual void disable_gui();					//!< Disable GUI when disconnected
+	virtual void on_message_update();		//!< Update GUI when DeviceCtrl::signal_message is called
+	virtual void on_connect_update();		//!< Update GUI when DeviceCtrl::signal_connect is called
+	virtual void on_commands_update();	//!< Hooks to DeviceCtrl::signal_commands
+	virtual void disable_gui();					//!< Disable GUI when disconnected @todo Should this be virtual? Could also be regular such that each class calls its own function
 	virtual void enable_gui();					//!< Enable GUI when connected
 	virtual void clear_gui();						//!< Clear GUI on init or reconnect
 };
 
 #endif // HAVE_DEVICEVIEW_H
+
+/*!
+ 
+ \page dev Devices: DevicePage and DeviceCtrl
+ 
+ To control a Device, there are two relevant classes. DeviceCtrl connects to 
+ the Device and sends & receives commands and data, while DevicePage is a
+ user interface to DeviceCtrl, and provides the user with a GUI to control
+ DeviceCtrl and thus the Device itself.
+ 
+ \section dev_devctrl DeviceCtrl
+ 
+ DeviceCtrl connects to the Device with a Protocol::Client, and handles events
+ from this connection with DeviceCtrl::on_message (connected to 
+ protocol.slot_message) and DeviceCtrl::on_connected (to 
+ protocol.slot_connected). DeviceCtrl itself handles simple I/O that is
+ available for all devices (see relevant functions for details), but cannot
+ do more than that because the specific Device is unknown. To provide more
+ fine-grained control, one has to derive the DeviceCtrl class and add 
+ additional logic to handle another device (i.e. a camera).
+ 
+ \subsection dev_devctrl_der Deriving DeviceCtrl
+ 
+ When deriving DeviceCtrl, you can again (and should) register 
+ protocol.slot_message and protocol.slot_connected for your own class. These
+ handles are sigc::slot's and thus can handle multiple callback functions. You 
+ therefore do not need to call the base functions.
+ 
+ \subsection devio Device I/O
+ 
+ <ul>
+ <li>DeviceCtrl handles I/O per device</li>
+ <ul>
+ <li>on connect: request info, DeviceCtrl::signal_connect()</li>
+ <li>on disconnect: update internals, DeviceCtrl::signal_connect()</li>
+ <li>on message: update internals, DeviceCtrl::signal_message()</li>
+ </ul>
+ <li>DevicePage handles processes signals</li>
+ <ul>
+ <li>DevicePage::on_connect_update() connects to DeviceCtrl::signal_connect() and handles (dis)connection update for the GUI</li>
+ <li>DevicePage::on_message_update() connects to DeviceCtrl::signal_message() and handles GUI updates</li>
+ </ul>
+ </ul>
+ 
+ Each GUI page should have several basic functions:
+ - One function for each user interaction callback (i.e. pressing buttons, entering text), these *only* send commands to FOAM
+ - One function for each of the events on_message and on_connect: these reflect the changes from FOAM in the GUI
+ - DevicePage::clear_gui(), DevicePage::enable_gui() and DevicePage::disable_gui() are highly recommended to do exactly these things. Skeletons are already implemented in DevicePage.
+ 
+ \section devctrl Devices
+ 
+ The main aim of the GUI is to control devices running under FOAM. When 
+ FoamControl connects to an instance of FOAM, it queries which devices are 
+ connected to the system (see FoamControl::on_connected). This is processed
+ by FoamControl::on_message and when new devices are found 
+ FoamCtrl::signal_device() is triggered.
+ 
+ When a new device is detected, the appropriate GUI class is instantiated and 
+ added to the GUI. The GUI class will start a control connection to the device
+ and handle I/O. The basic classes to achieve this are DevicePage and 
+ DeviceCtrl. These can be overloaded to provide more detailed control over a
+ device.
+ 
+ \section moreinfo More information
+ 
+ More information can be found on these pages:
+ - \subpage dev_cam "Camera devices"
+ 
+ */

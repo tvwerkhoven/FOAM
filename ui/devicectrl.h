@@ -49,10 +49,10 @@ public:
 	typedef list<string> cmdlist_t;
 
 protected:
+	const string host, port, devname;		//!< Connection details
+
 	Protocol::Client protocol;
 	Log &log;
-
-	const string host, port, devname;
 	
 	bool ok;														//!< Hardware status
 	string errormsg;										//!< Error message from hardware
@@ -72,6 +72,7 @@ public:
 	
 	DeviceCtrl(Log &log, const string, const string, const string);
 	~DeviceCtrl();
+	virtual void connect();
 	
 	bool is_ok() const { return ok; }		//!< Return device status
 	bool is_connected() { return protocol.is_connected(); } //!< Return device connection status

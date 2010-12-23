@@ -87,6 +87,9 @@ protected:
 public:
 	CamCtrl(Log &log, const std::string name, const std::string host, const std::string port);
 	~CamCtrl();
+	
+	// From DeviceCtrl::
+	virtual void connect();
 
 	uint8_t thumbnail[32 * 32];
 	// Camera frame
