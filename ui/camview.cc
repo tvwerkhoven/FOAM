@@ -39,15 +39,15 @@
 using namespace std;
 using namespace Gtk;
 
-CamView::CamView(Log &log, FoamControl &foamctrl, string n, bool is_parent): 
-DevicePage(log, foamctrl, n),
+CamView::CamView(CamCtrl *camctrl, Log &log, FoamControl &foamctrl, string n): 
+DevicePage((DeviceCtrl *) camctrl, log, foamctrl, n), camctrl(camctrl),
 infoframe("Info"),
 dispframe("Display settings"),
 ctrlframe("Camera controls"),
 camframe("Camera"),
 histoframe("Histogram"),
 e_exposure("Exp."), e_offset("Offset"), e_interval("Intv."), e_gain("Gain"), e_res("Res."), e_mode("Mode"), e_stat("Status"),
-flipv("Flip vert."), fliph("Flip hor."), crosshair("Crosshair"), grid("Grid"), zoomin(Stock::ZOOM_IN), zoomout(Stock::ZOOM_OUT), zoom100(Stock::ZOOM_100), zoomfit(Stock::ZOOM_FIT), capture("Capture"), display("Display"), store("Store"),
+flipv("Flip vert."), fliph("Flip hor."), crosshair("Crosshair"), grid("Grid"), histo("Histogram"), zoomin(Stock::ZOOM_IN), zoomout(Stock::ZOOM_OUT), zoom100(Stock::ZOOM_100), zoomfit(Stock::ZOOM_FIT), capture("Capture"), display("Display"), store("Store"),
 histoalign(0.5, 0.5, 0, 0), minval("Display min"), maxval("Display max"), e_avg("Avg."), e_rms("RMS"), e_datamin("Min"), e_datamax("Max")
 {
 	fprintf(stderr, "%x:CamView::CamView()\n", (int) pthread_self());
@@ -57,7 +57,7 @@ histoalign(0.5, 0.5, 0, 0), minval("Display min"), maxval("Display max"), e_avg(
 	s = -1;
 	
 	// Setup histogram
-	histo = 0;
+	histo_img = 0;
 	histopixbuf = Gdk::Pixbuf::create(Gdk::COLORSPACE_RGB, false, 8, 256, 100);
 	histopixbuf->fill(0xFFFFFF00);
 	histoimage.set(histopixbuf);
@@ -79,6 +79,7 @@ histoalign(0.5, 0.5, 0, 0), minval("Display min"), maxval("Display max"), e_avg(
 	flipv.set_active(false);
 	crosshair.set_active(false);
 	grid.set_active(false);
+	histo.set_active(true);
 	
 	store_n.set_width_chars(4);
 	
@@ -120,6 +121,7 @@ histoalign(0.5, 0.5, 0, 0), minval("Display min"), maxval("Display max"), e_avg(
 	flipv.signal_toggled().connect(sigc::mem_fun(*this, &CamView::do_update));
 	crosshair.signal_toggled().connect(sigc::mem_fun(*this, &CamView::do_update));
 	grid.signal_toggled().connect(sigc::mem_fun(*this, &CamView::do_update));
+	histo.signal_toggled().connect(sigc::mem_fun(*this, &CamView::on_histo_toggled));
 	
 	zoomfit.signal_toggled().connect(sigc::mem_fun(*this, &CamView::do_update));
 	zoom100.signal_clicked().connect(sigc::mem_fun(*this, &CamView::on_zoom100_activate));
@@ -151,6 +153,7 @@ histoalign(0.5, 0.5, 0, 0), minval("Display min"), maxval("Display max"), e_avg(
 	disphbox.pack_start(fliph, PACK_SHRINK);
 	disphbox.pack_start(crosshair, PACK_SHRINK);
 	disphbox.pack_start(grid, PACK_SHRINK);
+	disphbox.pack_start(histo, PACK_SHRINK);
 	disphbox.pack_start(vsep1, PACK_SHRINK);
 	disphbox.pack_start(zoomfit, PACK_SHRINK);
 	disphbox.pack_start(zoom100, PACK_SHRINK);
@@ -201,12 +204,12 @@ histoalign(0.5, 0.5, 0, 0), minval("Display min"), maxval("Display max"), e_avg(
 	// finalize
 	show_all_children();
 	
-	//!< @todo add histogram toggling
-//	if(!histogram.get_active())
-//		histogramframe.hide();
-	
-	if (is_parent)
-		init();
+	if(!histo.get_active())
+		histoframe.hide();
+
+		
+	camctrl->signal_monitor.connect(sigc::mem_fun(*this, &CamView::on_monitor_update));
+
 }
 
 CamView::~CamView() {
@@ -216,6 +219,7 @@ CamView::~CamView() {
 
 void CamView::enable_gui() {
 	DevicePage::enable_gui();
+	fprintf(stderr, "%x:CamView::enable_gui()\n", (int) pthread_self());
 	
 	e_exposure.set_sensitive(true);
 	e_offset.set_sensitive(true);
@@ -226,18 +230,17 @@ void CamView::enable_gui() {
 	flipv.set_sensitive(true);
 	crosshair.set_sensitive(true);
 	grid.set_sensitive(true);
+	histo.set_sensitive(true);
 	
 	capture.set_sensitive(true);
 	display.set_sensitive(true);
 	store.set_sensitive(true);
 	store_n.set_sensitive(true);
-	
-//	e_avg.set_sensitive(true);
-//	e_rms.set_sensitive(true);
 }
 
 void CamView::disable_gui() {
 	DevicePage::disable_gui();
+	fprintf(stderr, "%x:CamView::disable_gui()\n", (int) pthread_self());
 	
 	e_exposure.set_sensitive(false);
 	e_offset.set_sensitive(false);
@@ -248,18 +251,17 @@ void CamView::disable_gui() {
 	flipv.set_sensitive(false);
 	crosshair.set_sensitive(false);
 	grid.set_sensitive(false);
+	histo.set_sensitive(false);
 
 	capture.set_sensitive(false);
 	display.set_sensitive(false);
 	store.set_sensitive(false);
 	store_n.set_sensitive(false);
-
-//	e_avg.set_sensitive(false);
-//	e_rms.set_sensitive(false);
 }
 
 void CamView::clear_gui() {
 	DevicePage::clear_gui();
+	fprintf(stderr, "%x:CamView::clear_gui()\n", (int) pthread_self());
 	
 	e_exposure.set_text("N/A");
 	e_offset.set_text("N/A");
@@ -283,17 +285,14 @@ void CamView::clear_gui() {
 	maxval.set_value(1 << camctrl->get_depth());
 }
 
-void CamView::init() {
-	fprintf(stderr, "%x:CamView::init()\n", (int) pthread_self());
-	// Init new camera control connection for this viewer
-	camctrl = new CamCtrl(log, foamctrl.host, foamctrl.port, devname);
-	// Downcast to generic device control pointer for base class (DevicePage in this case)
-	devctrl = (DeviceCtrl *) camctrl;
-	
-	camctrl->signal_monitor.connect(sigc::mem_fun(*this, &CamView::on_monitor_update));
-	camctrl->signal_message.connect(sigc::mem_fun(*this, &CamView::on_message_update));
-	camctrl->signal_connect.connect(sigc::mem_fun(*this, &CamView::on_connect_update));
-}
+//void CamView::init() {
+//	fprintf(stderr, "%x:CamView::init()\n", (int) pthread_self());
+//	// Init new camera control connection for this viewer
+//	//camctrl = new CamCtrl(log, foamctrl.host, foamctrl.port, devname);
+//	// Downcast to generic device control pointer for base class (DevicePage in this case)
+//	//devctrl = (DeviceCtrl *) camctrl;
+//	
+//}
 
 void CamView::on_glarea_view_update() {
 	// Callback for glarea update on viewstate (zoom, scale, shift)
@@ -303,6 +302,7 @@ void CamView::on_glarea_view_update() {
 void CamView::do_update() {
 	glarea.setcrosshair(crosshair.get_active());
 	glarea.setgrid(grid.get_active());
+	
 	// Flip settings
 	glarea.setfliph(fliph.get_active());
 	glarea.setflipv(flipv.get_active());
@@ -310,6 +310,22 @@ void CamView::do_update() {
 	glarea.setzoomfit(zoomfit.get_active());
 	glarea.do_update();
 	do_histo_update();
+}
+
+void CamView::on_histo_toggled() {
+	int w, h, fh;
+	//! @todo implement resize on histogram toggle
+//	get_size(w, h);
+	
+	if(histo.get_active()) {
+		histoframe.show();
+		fh = histoframe.get_height();
+//		resize(w, h + fh);
+	} else {
+		fh = histoframe.get_height();
+		histoframe.hide();
+//		resize(w, h - fh);
+	}
 }
 
 void CamView::do_histo_update() {	
@@ -323,13 +339,13 @@ void CamView::do_histo_update() {
 	
 	// Analyze histogram data if available. histo is a linear array from 0 to
 	// the maximum intensity and counts pixels for each intensity bin.
-	if (histo) {
+	if (histo_img) {
 		for (int i = 0; i < max; i++) {
-			pixels += histo[i];
-			sum += (double)i * histo[i];
-			sumsquared += (double)(i * i) * histo[i];
+			pixels += histo_img[i];
+			sum += (double)i * histo_img[i];
+			sumsquared += (double)(i * i) * histo_img[i];
 			
-			if (i >= 0.98 * max && histo[i])
+			if (i >= 0.98 * max && histo_img[i])
 				overexposed = true;
 		}
 		
@@ -371,9 +387,9 @@ void CamView::do_histo_update() {
 	// Draw histogram, make everything white that should not be black.
 	uint8_t *out = (uint8_t *)histopixbuf->get_pixels();
 	
-	if(histo) {
+	if(histo_img) {
 		for(int i = 0; i < max; i++) {
-			int height = histo[i] * 100 / hscale;
+			int height = histo_img[i] * 100 / hscale;
 			if(height > 100)
 				height = 100;
 			for(int y = 100 - height; y < 100; y++) {
@@ -427,13 +443,13 @@ void CamView::force_update() {
 	
 	// Do histogram, make local copy if needed
 	if (camctrl->monitor.histo) {
-		if (!histo)
-			histo = (uint32_t *) malloc((1 << camctrl->get_depth()) * sizeof *histo);
-		memcpy(histo, camctrl->monitor.histo, (1 << camctrl->get_depth()) * sizeof *histo);
+		if (!histo_img)
+			histo_img = (uint32_t *) malloc((1 << camctrl->get_depth()) * sizeof *histo_img);
+		memcpy(histo_img, camctrl->monitor.histo, (1 << camctrl->get_depth()) * sizeof *histo_img);
 	} 
-	else if (histo) {
-		free(histo);
-		histo = 0;
+	else if (histo_img) {
+		free(histo_img);
+		histo_img = 0;
 	}
 	
 	e_avg.set_text(format("%g", camctrl->monitor.avg));
@@ -442,16 +458,16 @@ void CamView::force_update() {
 	do_histo_update();
 }
 
-void CamView::on_connect_update() {
-	fprintf(stderr, "%x:CamView::on_connect_update(conn=%d)\n", (int) pthread_self(), devctrl->is_connected());
-	if (devctrl->is_connected())
-		enable_gui();
-	else
-		disable_gui();
-}
+//void CamView::on_connect_update() {
+//	DevicePage::on_connect_update();
+//	
+//	fprintf(stderr, "%x:CamView::on_connect_update(conn=%d)\n", (int) pthread_self(), devctrl->is_connected());
+//}
 
 void CamView::on_message_update() {
 	DevicePage::on_message_update();
+
+	fprintf(stderr, "%x:CamView::on_message_update()\n", (int) pthread_self());
 	
 	// Set values in text entries
 	e_exposure.set_text(format("%g", camctrl->get_exposure()));
@@ -531,7 +547,6 @@ void CamView::on_capture_clicked() {
 }
 
 void CamView::on_display_clicked() {
-	//! @bug Does not work when activated before capturing frames?
 	if (display.get_state(SwitchButton::CLEAR)) {
 		display.set_state(SwitchButton::OK);
 		camctrl->grab(0, 0, camctrl->get_width(), camctrl->get_height(), 1, false);

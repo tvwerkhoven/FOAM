@@ -37,6 +37,9 @@ Camera(io, ptc, name, dummycam_type, port, conffile, online)
 {
 	io.msg(IO_DEB2, "DummyCamera::DummyCamera()");
 
+	// Register network commands with base device:
+	add_cmd("hello world");
+
 	noise = cfg.getdouble("noise", 0.001);
 	
 	depth = 16;
@@ -60,6 +63,31 @@ DummyCamera::~DummyCamera() {
 	cam_thr.cancel();
 	cam_thr.join();
 }
+
+void DummyCamera::on_message(Connection *conn, std::string line) {
+	io.msg(IO_DEB1, "DummyCamera::on_message('%s')", line.c_str()); 
+	string orig = line;
+	string command = popword(line);
+	bool parsed = true;
+	
+	if (command == "hello") {
+		string what = popword(line);
+		
+		if(what == "world") {
+			io.msg(IO_DEB1, "DummyCamera::on_message(): hello world!!!"); 
+			conn->write("ok :hello world back!");
+		} 
+		else
+			parsed = false;
+	} 
+	else
+		parsed = false;
+	
+	// If not parsed here, call parent
+	if (parsed == false)
+		Camera::on_message(conn, orig);
+}
+
 
 void DummyCamera::update() {
 	io.msg(IO_DEB2, "DummyCamera::update()");

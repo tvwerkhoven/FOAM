@@ -77,9 +77,9 @@ AC_SUBST(COMMON_LIBS)
 
 # cfitsio
 AC_SEARCH_LIBS([ffopen], [cfitsio], 
-		[have_fitsio=true;
-		AM_CONDITIONAL([HAVE_FITSIO], [true])],
+		[have_fitsio=true],
 		[have_fitsio=false])
+AM_CONDITIONAL(HAVE_FITSIO, test x$have_fitsio = xtrue)
 
 ### Hardware libraries
 
@@ -94,16 +94,17 @@ if test "$have_dc1394" = true ; then
 		*-*-linux*)
 		# TODO: test this, do we need it?
 		AC_SEARCH_LIBS(raw1394_channel_modify, raw1394,
-				[AM_CONDITIONAL([HAVE_DC1394], [true])],
-				[AC_MSG_WARN(libraw1394 not found or too old (<1.2.0), required for libdc1394.)])
+				[have_dc1394=true],
+				[have_dc1394=false;AC_MSG_WARN(libraw1394 not found or too old (<1.2.0), required for libdc1394.)])
 		;;
 		*-*-darwin*)
 		AC_SEARCH_LIBS(IOMasterPort, IOKit,
-				[AM_CONDITIONAL([HAVE_DC1394], [true])],
-				[AC_MSG_WARN(IOKitLib not found, required for libdc1394.)])
+				[have_dc1394=true],
+				[have_dc1394=true;AC_MSG_WARN(IOKitLib not found, required for libdc1394.)])
 		;;
 	esac
 fi
+AM_CONDITIONAL(HAVE_DC1394, test x$have_dc1394 = xtrue)
 
 
 ### BUILD TARGETS ###
@@ -152,6 +153,12 @@ AC_ARG_WITH([libsiu],
 		[LIBSIU="libsiu"])
 		
 # @todo test LIBSIU presence
+# @todo test LIBSIU presence
+if test -d $LIBSIU ; then
+	AC_MSG_NOTICE([*** Found libsiu in $LIBSIU.])
+else
+	AC_MSG_ERROR([*** libsiu not found in $LIBSIU. Please install first (see INSTALL)])
+fi
 
 ### Set some automake variables ###
 ###################################
@@ -182,6 +189,8 @@ if test "$fullsim" = true ; then
 	AC_MSG_NOTICE([*** Full simulation enabled, checking for extra libs])
 	fullsimmissing=""
 	
+	# Optional libraries, for libimgdata.a.
+	# @todo this should be handled by libsiu (through .pc file?)
 	AC_SEARCH_LIBS([deflate], [z],
 		[have_z=true],
 		[have_z=false])
@@ -189,13 +198,6 @@ if test "$fullsim" = true ; then
 	AC_SEARCH_LIBS([IcsOpen], [ics],
 			[have_ics=true],
 			[have_ics=false])
-
-	if test "$have_z" = true -a "$have_ics" = true; then
-		have_ics=true
-	else
-		fullsim=false
-		fullsimmissing+=" libics"
-	fi
 
 	PKG_CHECK_MODULES(FFTW, fftw3 > 3.2.0, [],
 		[AC_MSG_WARN([FOAM full sim needs fftw3.]);fullsim=false;fullsimmissing+=" fftw3"])
@@ -277,6 +279,15 @@ elif test "$simstat" = disabled; then
 else
 	AC_MSG_NOTICE([Static sim mode:         not available])
 	AC_MSG_NOTICE([Static sim mode:         missing:$simstatmissing])
+fi
+
+if test "$fullsim" = true ; then
+	AC_MSG_NOTICE([Full sim mode:           available])
+elif test "$fullsim" = disabled; then
+	AC_MSG_NOTICE([Full sim mode:           disabled])
+else
+	AC_MSG_NOTICE([Full sim mode:           not available])
+	AC_MSG_NOTICE([Full sim mode:           missing:$fullsimmissing])
 fi
 
 if test "$gui" = true ; then

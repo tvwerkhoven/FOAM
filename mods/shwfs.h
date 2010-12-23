@@ -85,6 +85,14 @@ private:
 	
 	mode_t mode;												//!< Data processing mode (Center of Gravity, Correlation, etc)
 	
+	coord_t sisize;											//!< Subimage size
+	coord_t sipitch;										//!< Pitch between subimages
+	fcoord_t sitrack;										//!< Size of track window (relative to sisize)
+	coord_t disp;												//!< Displacement of complete pattern
+	float overlap;											//!< Overlap required 
+	int xoff;														//!< Odd row offset between lenses
+	mlashape_t shape;										//!< MLA Shape (SQUARE or CIRCULAR)
+	
 	//coord_t *shifts;										//!< subap shifts @todo fix this properly
 	
 	//template <class T> uint32_t _cog(T *img, int xpos, int ypos, int w, int h, int stride, uint32_t simini, fcoord_t& cog);

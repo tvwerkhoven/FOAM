@@ -93,7 +93,7 @@ Shwfs::sh_simg_t *Shwfs::gen_mla_grid(coord_t res, coord_t size, coord_t pitch, 
 			
 			if (shape == CIRCULAR) {
 				if (pow(fabs(sa_c.x) + (overlap-0.5)*size.x, 2) + pow(fabs(sa_c.y) + (overlap-0.5)*size.y, 2) < minradsq) {
-					io.msg(IO_DEB2, "Shwfs::gen_mla_grid(): Found subap within bounds @ (%d, %d)", sa_c.x, sa_c.y);
+					//io.msg(IO_DEB2, "Shwfs::gen_mla_grid(): Found subap within bounds @ (%d, %d)", sa_c.x, sa_c.y);
 					nsubap++;
 					pattern = (Shwfs::sh_simg_t *) realloc((void *) pattern, nsubap * sizeof (Shwfs::sh_simg_t));
 					pattern[nsubap-1].pos.x = sa_c.x + disp.x;
@@ -324,42 +324,46 @@ int Shwfs::mla_subapsel() {
 
 
 Shwfs::Shwfs(Io &io, foamctrl *ptc, string name, string port, Path &conffile, Camera &wfscam, bool online):
-Wfs(io, ptc, name, shwfs_type, port, conffile, wfscam, online)
+Wfs(io, ptc, name, shwfs_type, port, conffile, wfscam, online),
+mode(Shwfs::COG)
 {
 	io.msg(IO_DEB2, "Shwfs::Shwfs()");
-		
-	coord_t sisize;											//!< Subimage size
+	
+	// Micro lens array parameters:
+	
 	sisize.x = cfg.getint("sisizex", 16);
 	sisize.y = cfg.getint("sisizey", 16);
+	if (cfg.exists("sisize"))
+		sisize.x = sisize.y = cfg.getint("sisize");
 
-	coord_t sipitch;										//!< Pitch between subimages
 	sipitch.x = cfg.getint("sipitchx", 32);
 	sipitch.y = cfg.getint("sipitchy", 32);
+	if (cfg.exists("sipitch"))
+		sipitch.x = sipitch.y = cfg.getint("sipitch");
 	
-	fcoord_t sitrack;										//!< Size of track window (relative to sisize)
 	sitrack.x = sisize.x * cfg.getdouble("sitrackx", 0.5);
 	sitrack.y = sisize.y * cfg.getdouble("sitracky", 0.5);
+	if (cfg.exists("sitrack"))
+		sitrack.x = sitrack.y = cfg.getdouble("sitrack");
 	
-	coord_t disp;												//!< Displacement of complete pattern
 	disp.x = cfg.getint("dispx", cam.get_width()/2);
 	disp.y = cfg.getint("dispy", cam.get_height()/2);
+	if (cfg.exists("disp"))
+		disp.x = disp.y = cfg.getint("disp");
+
+	overlap = cfg.getdouble("overlap", 0.5);
+	xoff = cfg.getint("xoff", 0);
 	
-	float overlap = cfg.getdouble("overlap", 0.5);
-	
-	simaxr = cfg.getint("simaxr", -1);
-	simini = cfg.getint("simini", 30);
-	int xoff = cfg.getint("xoff", 0);
-	
-	Shwfs::mlashape_t shape;
 	string shapestr = cfg.getstring("shape", "circular");
 	if (shapestr == "circular")
 		shape = Shwfs::CIRCULAR;
 	else
 		shape = Shwfs::SQUARE;
+
+	// Other paramters:
+	simaxr = cfg.getint("simaxr", -1);
+	simini = cfg.getint("simini", 30);
 		
-	// Start in CoG mode
-	mode = Shwfs::COG;
-	
 	// Generate MLA grid
 	mla.ml = gen_mla_grid(cam.get_res(), sisize, sipitch, xoff, disp, shape, overlap, mla.nsi);
 }

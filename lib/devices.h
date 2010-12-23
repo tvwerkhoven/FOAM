@@ -46,6 +46,11 @@ typedef Protocol::Server::Connection Connection;
  implement a lot itself, but rather depends on the derived classes to do
  the work. Nonetheless, some basic functions (such as network I/O) are
  provided here. All devices are stored in a DeviceManager class.
+ 
+ One thing that is supported by the Device class is a list of commands 
+ supported by this piece of hardware. Each time this class is (sub)derived,
+ this should be updated. These commands are stored in cmd_list and things can
+ be added with add_cmd(string).
  */
 class Device {
 protected:
@@ -54,8 +59,12 @@ protected:
 	string name;												//!< Device name
 	string type;												//!< Device type
 	string port;												//!< Port to listen on
+	list<string> cmd_list;							//!< All commands this device supports
+	void add_cmd(string cmd) { cmd_list.push_back(cmd); } //!< Add command to list
+	
 	Path conffile;											//!< Configuration file
 	config cfg;													//!< Interpreted configuration file
+	
 	Protocol::Server netio;							//!< Network connection
 	bool online;												//!< Online or not?
 
@@ -78,9 +87,8 @@ public:
 	/*! 
 	 @brief Called when the device receives a message
 	 */
-	virtual void on_message(Connection */*conn*/, std::string line) { 
-		io.msg(IO_DEB2, "Device::on_message(line='%s')", line.c_str()); 
-	}
+	virtual void on_message(Connection *conn, std::string line);
+	
 	/*! 
 	 @brief Called when something connects to this device
 	 */
@@ -141,11 +149,11 @@ public:
 	int del(string id);
 	
 	/*!
-	 @brief Return a list of all devices currently registered.
+	 @brief Return list of devices: <ndev> <devname> [devtype] {<devname> [devtype]} ...
 	 
 	 @param [in] showtype Set to true to return a list of (name type) pairs, otherwise only return a list of names.
 	 @param [in] showonline Only show devices that are network-aware (i.e. are listening on the network)
-	 @return A list of names of all the devices, seperated by spaces. If showtype is true, the device types will also be returned.
+	 @return A list of names of all the devices, seperated by spaces, prefixed by total count. If showtype is true, the device types will also be returned.
 	 */
 	string getlist(bool showtype = true, bool showonline=true);
 	

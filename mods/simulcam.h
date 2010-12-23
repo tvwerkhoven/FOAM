@@ -33,7 +33,7 @@
 
 using namespace std;
 
-const string SimulCam_type = "SimulCam";
+const string simulcam_type = "simulcam";
 
 /*!
  @brief Simulation class for seeing + camera
@@ -45,11 +45,12 @@ const string SimulCam_type = "SimulCam";
  - wavefront_file: static FITS file which shows some wavefront
  - windspeed.x,y: windspeed by which the wavefront moves
  - windtype: 'random' or 'linear', method of scanning over the wavefront
+ - noise: random additive noise for frames
+ - seeingfac: factor to multiply wavefront image with
  */
 class SimulCam: public Camera {
 private:
 	SimSeeing seeing;										//!< This class simulates the atmosphere
-	Shwfs *shwfs;												//!< Reference to WFS we simulate (i.e. for configuration)
 	
 	size_t out_size;										//!< Size of frame_out
 	uint8_t *frame_out;									//!< Frame to store simulated image
@@ -58,19 +59,20 @@ private:
 	gsl_matrix *telapt;									//!< Telescope aperture mask
 	
 	double noise;												//!< Noise factor for CCD
+	double seeingfac;										//!< Multiplicative factor for wavefront screen.
 	
 public:
+	Shwfs shwfs;												//!< Reference to WFS we simulate (i.e. for configuration)
 	SimulCam(Io &io, foamctrl *ptc, string name, string port, Path &conffile, bool online=true);
 	~SimulCam();
 	
-	void gen_telapt();									//!< Generate telescope aperture
+	void gen_telapt();									//!< Generate telescope aperture with radius telradius. Inside this radius the mask has value 'seeingfac', outside it's 0.
 
-	void simul_telescope(gsl_matrix *wave_in); //!< Apply telescope aperture mask
-	void simul_wfs(gsl_matrix *wave_in); //!< Simulate wavefront sensor optics (i.e. MLA)
+	gsl_matrix *simul_seeing();					//!< Simulate seeing: get wavefront and apply seeing factor.
+	void simul_telescope(gsl_matrix *wave_in); //!< Multiply input wavefront with telescope aperture mask from gen_telapt().
+	void simul_wfs(gsl_matrix *wave_in); //!< Simulate wavefront sensor optics given an input wavefront.
 	uint8_t *simul_capture(gsl_matrix *frame_in);	//!< Simulate CCD frame capture (exposure, offset, etc.)
 	
-	void set_shwfs(Shwfs *ref) { shwfs = ref; } //!< Assign Shwfs object to SimulCam. The parameters of this Shwfs will be used for simulation.
-		
 	// From Camera::
 	void cam_handler();
 	void cam_set_exposure(double value);
@@ -84,6 +86,8 @@ public:
 	
 	void cam_set_mode(mode_t newmode);
 	void do_restart();
+	
+	void on_message(Connection*, std::string);
 };
 
 #endif // HAVE_SIMULCAM_H

@@ -30,6 +30,7 @@
 
 #include <fstream>
 #include <stdint.h>
+#include <limits.h>
 
 #include "types.h"
 #include "config.h"
@@ -81,7 +82,6 @@ const string cam_type = "cam";
  \li grab <x1> <y1> <x2> <y2> <scale> [darkflat] [histogram]: grab an image cropped from (x1,y1) to (x2,y2) and scaled down by factor scale. Darkflat and histogram are optional.
  \li dark [n]: grab <n> darkframes, otherwise take the default <ndark>
  \li flat [n]: grab <n> flatframes, otherwise take the default <nflat>
- \li statistics [n]: get statistics over the next n frames.
  
  Valid set properties:
  \li exposure
@@ -206,7 +206,7 @@ protected:
 
 	void calculate_stats(frame *frame);								//!< Calculate rms and such
 	bool accumburst(uint32_t *accum, size_t bcount);	//!< For dark/flat acquisition
-	void statistics(Connection *conn, size_t bcount);	//!< Post back statistics
+//	void statistics(Connection *conn, size_t bcount);	//!< Post back statistics
 	
 	Path makename(const string &base);								//!< Make filename from outputdir and filenamebase
 	Path makename() { return makename(filenamebase); }
@@ -216,8 +216,8 @@ protected:
 	void grab(Connection *conn, int x1, int y1, int x2, int y2, int scale, bool do_df, bool do_histo);
 	void accumfix();
 
-	const uint8_t df_correct(const uint8_t *in, size_t offset);
-	const uint16_t df_correct(const uint16_t *in, size_t offset);
+	uint8_t df_correct(const uint8_t *in, size_t offset);
+	uint16_t df_correct(const uint16_t *in, size_t offset);
 	
 	frame_t *frames;							//!< Frame ringbuffer
 	size_t nframes;								//!< Ringbuffer size

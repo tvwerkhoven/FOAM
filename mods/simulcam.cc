@@ -19,6 +19,8 @@
  */
 
 #include <unistd.h>
+#define __STDC_LIMIT_MACROS
+#include <stdint.h>
 #include <gsl/gsl_matrix.h>
 #include <math.h>
 #include <fftw3.h>
@@ -32,35 +34,115 @@
 #include "simulcam.h"
 
 SimulCam::SimulCam(Io &io, foamctrl *ptc, string name, string port, Path &conffile, bool online):
-Camera(io, ptc, name, SimulCam_type, port, conffile, online),
+Camera(io, ptc, name, simulcam_type, port, conffile, online),
 seeing(io, ptc, name + "-seeing", port, conffile),
-shwfs(NULL), out_size(0), frame_out(NULL), telradius(1.0), telapt(NULL)
+out_size(0), frame_out(NULL), telradius(1.0), telapt(NULL), noise(10.0), seeingfac(1.0),
+shwfs(io, ptc, name + "-shwfs", port, conffile, *this, false)
 {
 	io.msg(IO_DEB2, "SimulCam::SimulCam()");
-	
-	noise = cfg.getdouble("simnoise", 10);
-	
-	// Setup seeing parameters
-	Path wffile = ptc->confdir + cfg.getstring("wavefront_file");
+	// Register network commands with base device:
+	add_cmd("get noise");
+	add_cmd("set noise");
+	add_cmd("get seeingfac");
+	add_cmd("set seeingfac");
+	add_cmd("get windspeed");
+	add_cmd("set windspeed");
+	add_cmd("get windtype");
+	add_cmd("set windtype");
 
-	coord_t wind;
-	wind.x = cfg.getint("windspeed.x", 16);
-	wind.y = cfg.getint("windspeed.y", 16);
+	noise = cfg.getdouble("noise", 10.0);
+	seeingfac = cfg.getdouble("seeingfac", 1.0);
 
-	SimSeeing::wind_t windtype;
-	string windstr = cfg.getstring("windtype", "linear");
-	if (windstr == "linear")
-		windtype = SimSeeing::LINEAR;
-	else
-		windtype = SimSeeing::RANDOM;
-	
-	seeing.setup(wffile, res, wind, windtype);
+	if (seeing.cropsize.x != res.x || seeing.cropsize.y != res.y)
+		throw std::runtime_error("SimulCam::SimulCam(): Camera resolution and seeing cropsize must be equal.");
 	
 	// Get telescope aperture
 	gen_telapt();
-
 	
 	cam_thr.create(sigc::mem_fun(*this, &SimulCam::cam_handler));
+}
+
+
+SimulCam::~SimulCam() {
+	//! @todo stop simulator etc.
+	io.msg(IO_DEB2, "SimulCam::~SimulCam()");
+	cam_thr.cancel();
+	cam_thr.join();
+	
+	mode = Camera::OFF;
+}
+
+void SimulCam::on_message(Connection *conn, std::string line) {
+	io.msg(IO_DEB1, "SimulCam::on_message('%s')", line.c_str()); 
+	string orig = line;
+	string command = popword(line);
+	bool parsed = true;
+	
+	if (command == "set") {
+		string what = popword(line);
+	
+		if(what == "noise") {
+			conn->addtag("noise");
+			noise = popdouble(line);
+			netio.broadcast(format("ok noise %g", noise), "noise");
+		} else if(what == "seeingfac") {
+			conn->addtag("seeingfac");
+			seeingfac = popdouble(line);
+			netio.broadcast(format("ok seeingfac %g", seeingfac), "seeingfac");
+		} else if(what == "telradius") {
+			conn->addtag("telradius");
+			telradius = popdouble(line);
+			netio.broadcast(format("ok telradius %g", telradius), "telradius");
+		} else if(what == "windspeed") {
+			conn->addtag("windspeed");
+			int tmp = popint(line);
+			// Only accept in certain ranges (sanity check)
+			if (fabs(tmp) < res.x/2) seeing.windspeed.x = tmp;
+			tmp = popint(line);
+			if (fabs(tmp) < res.x/2) seeing.windspeed.y = tmp;
+			netio.broadcast(format("ok windspeed %d %d", seeing.windspeed.x, seeing.windspeed.y), "windspeed");
+		} else if(what == "windtype") {
+			conn->addtag("windtype");
+			string tmp = popword(line);
+			if (tmp == "linear")
+				seeing.windtype = SimSeeing::LINEAR;
+			else if (tmp == "random")
+				seeing.windtype = SimSeeing::RANDOM;
+			else {
+				tmp = "drifting"; // default case, set tmp to 'drifting' for return message below
+				seeing.windtype = SimSeeing::DRIFTING;
+			}
+			
+			netio.broadcast(format("ok windtype %s", tmp.c_str()), "windtype");
+		}
+		else
+			parsed = false;
+	} 
+	else if (command == "get") {
+		string what = popword(line);
+	
+		if(what == "noise") {
+			conn->addtag("noise");
+			conn->write(format("ok noise %lf", noise));
+		} else if(what == "seeingfac") {
+			conn->addtag("seeingfac");
+			conn->write(format("ok seeingfac %lf", seeingfac));
+		} else if(what == "telradius") {
+			conn->addtag("telradius");
+			conn->write(format("ok telradius %lf", telradius));
+		} else if(what == "windspeed") {
+			conn->addtag("windspeed");
+			netio.broadcast(format("ok windspeed %x %x", seeing.windspeed.x, seeing.windspeed.y), "windspeed");
+		}
+		else
+			parsed = false;
+	}
+	else
+		parsed = false;
+	
+	// If not parsed here, call parent
+	if (parsed == false)
+		Camera::on_message(conn, orig);
 }
 
 void SimulCam::gen_telapt() {
@@ -86,10 +168,15 @@ void SimulCam::gen_telapt() {
 			pixj = ((float) j) - telapt->size2/2;
 			if (pixi*pixi + pixj*pixj < minradsq) {
 				sum++;
-				gsl_matrix_set (telapt, i, j, 1.0);
+				gsl_matrix_set (telapt, i, j, seeingfac);
 			}
 		}
 	}
+}
+
+gsl_matrix *SimulCam::simul_seeing() {
+	gsl_matrix *wf = seeing.get_wavefront(seeingfac);
+	return wf;
 }
 
 void SimulCam::simul_telescope(gsl_matrix *im_in) {
@@ -99,10 +186,7 @@ void SimulCam::simul_telescope(gsl_matrix *im_in) {
 }
 
 void SimulCam::simul_wfs(gsl_matrix *wave_in) {
-	if (!shwfs)
-		io.msg(IO_ERR | IO_FATAL, "SimulCam::simul_wfs(): cannot simulate wavefront without Shwfs reference.");
-	
-	if (shwfs->mla.nsi <= 0) {
+	if (shwfs.mla.nsi <= 0) {
 		io.msg(IO_WARN, "SimulCam::simul_wfs(): no microlenses defined?.");
 		return;
 	}
@@ -110,8 +194,8 @@ void SimulCam::simul_wfs(gsl_matrix *wave_in) {
 	io.msg(IO_DEB2, "SimulCam::simul_wfs()");
 	
 	// Apply fourier transform to subimages here
-	coord_t sallpos = shwfs->mla.ml[0].llpos;
-	coord_t sasize = shwfs->mla.ml[0].size;
+	coord_t sallpos = shwfs.mla.ml[0].llpos;
+	coord_t sasize = shwfs.mla.ml[0].size;
 	// Get temporary memory
 	gsl_vector *workspace = gsl_vector_calloc(sasize.x * sasize.y * 4);
 	// Setup FFTW parameters
@@ -125,9 +209,9 @@ void SimulCam::simul_wfs(gsl_matrix *wave_in) {
 	gsl_matrix_view subap;
 	gsl_matrix *subapm;
 	
-	for (int n=0; n<shwfs->mla.nsi; n++) {
-		sallpos = shwfs->mla.ml[n].llpos;
-		sasize = shwfs->mla.ml[n].size;
+	for (int n=0; n<shwfs.mla.nsi; n++) {
+		sallpos = shwfs.mla.ml[n].llpos;
+		sasize = shwfs.mla.ml[n].size;
 		
 		// Crop out subaperture from larger frame, store as gsl_matrix_view
 		subap = gsl_matrix_submatrix(wave_in, sallpos.y, sallpos.x, sasize.y, sasize.x);
@@ -218,16 +302,6 @@ uint8_t *SimulCam::simul_capture(gsl_matrix *frame_in) {
 	return frame_out;
 }
 
-
-SimulCam::~SimulCam() {
-	//! @todo stop simulator etc.
-	io.msg(IO_DEB2, "SimulCam::~SimulCam()");
-	cam_thr.cancel();
-	cam_thr.join();
-	
-	mode = Camera::OFF;
-}
-
 // From Camera::
 void SimulCam::cam_set_exposure(double value) {
 	pthread::mutexholder h(&cam_mutex);
@@ -273,7 +347,7 @@ void SimulCam::cam_handler() {
 	cpu_set_t cpuset;
 	CPU_ZERO(&cpuset);
 	CPU_SET(1, &cpuset);
-	pthread::setaffinity(&cpuset);
+	// pthread::setaffinity(&cpuset);
 #endif
 	
 	while (true) {
@@ -281,8 +355,7 @@ void SimulCam::cam_handler() {
 		switch (mode) {
 			case Camera::RUNNING:
 			{
-				// get_wavefront() allocates new memory, we need to free it later
-				gsl_matrix *wf = seeing.get_wavefront();
+				gsl_matrix *wf = simul_seeing();
 				simul_telescope(wf);
 				simul_wfs(wf);
 				uint8_t *frame = simul_capture(wf);

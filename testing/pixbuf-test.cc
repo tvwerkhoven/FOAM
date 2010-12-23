@@ -12,6 +12,7 @@
 #include <cstring>
 #include <vector>
 #include <gtkmm.h>
+#include <stdint.h>
 
 using namespace std;
 using namespace Gtk;

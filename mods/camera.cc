@@ -57,6 +57,34 @@ filenamebase("FOAM"), outputdir(ptc->datadir), nstore(0),
 fits_telescope("undef"), fits_observer("undef"), fits_instrument("undef"), fits_target("undef"), fits_comments("undef")
 {
 	io.msg(IO_DEB2, "Camera::Camera()");
+	// Register network commands with base device:
+	add_cmd("quit");
+	add_cmd("restart");
+	add_cmd("set mode");
+	add_cmd("set exposure");
+	add_cmd("set interval");
+	add_cmd("set gain");
+	add_cmd("set offset");
+	add_cmd("set filename");
+	add_cmd("set outputdir");
+	add_cmd("set fits");
+	add_cmd("get mode");
+	add_cmd("get exposure");
+	add_cmd("get interval");
+	add_cmd("get gain");
+	add_cmd("get offset");
+	add_cmd("get width");
+	add_cmd("get height");
+	add_cmd("get depth");
+	add_cmd("get filename");
+	add_cmd("get outputdir");
+	add_cmd("get fits");
+	add_cmd("thumbnail");
+	add_cmd("grab");
+	add_cmd("store");
+	add_cmd("dark");
+	add_cmd("flat");
+//	add_cmd("statistics");
 	
 	// Set buffer size (default 8 frames)
 	nframes = cfg.getint("nframes", 8);
@@ -231,9 +259,11 @@ bool Camera::store_frame(frame_t *frame) {
 #ifdef LINUX
 	posix_fadvise(fd, 0, (res.x * res.y * depth/8) + sizeof phdu, POSIX_FADV_DONTNEED); 
 #endif
-	write(fd, phdu, sizeof phdu);
-	write(fd, frame->image, res.x * res.y * depth/8);
+	ssize_t ret = write(fd, phdu, sizeof phdu);
+	ret += write(fd, frame->image, res.x * res.y * depth/8);
 	close(fd);
+	if (ret != sizeof phdu + (res.x * res.y * depth/8))
+		return io.msg(IO_ERR, "Camera::store_frame() Writing failed!");
 	
 	return true;
 }
@@ -329,9 +359,11 @@ Camera::frame_t *Camera::get_frame(size_t id, bool wait) {
 
 // Network IO starts here
 void Camera::on_message(Connection *conn, string line) {
-	io.msg(IO_DEB2, "Camera::on_message(line=%s)", line.c_str());
+	io.msg(IO_DEB1, "Camera::on_message('%s')", line.c_str()); 
 	
+	string orig = line;
 	string command = popword(line);
+	bool parsed = true;
 	
 	if (command == "quit" || command == "exit") {
 		conn->write("ok :Bye!");
@@ -369,8 +401,10 @@ void Camera::on_message(Connection *conn, string line) {
 		} else if(what == "fits") {
 			set_fits(line);
 			get_fits(conn);
-		} else
-			conn->write("error :Unknown argument " + what);
+		} else {
+			parsed = false;
+			//conn->write("error :Unknown argument " + what);
+		}
 	} else if (command == "get") {
 		string what = popword(line);
 		
@@ -404,7 +438,8 @@ void Camera::on_message(Connection *conn, string line) {
 		} else if(what == "fits") {
 			get_fits(conn);
 		} else {
-			conn->write("error :Unknown argument " + what);
+			parsed = false;
+			// conn->write("error :Unknown argument " + what);
 		}
 	} else if (command == "thumbnail") {
 		get_thumbnail(conn);
@@ -433,11 +468,16 @@ void Camera::on_message(Connection *conn, string line) {
 	} else if(command == "flat") {
 		if (flatburst(popint(line)))
 			conn->write("error :Error during flat burst");
-	} else if(command == "statistics") {
-		statistics(conn, popint(line));
+//	} else if(command == "statistics") {
+//		statistics(conn, popint(line));
 	} else {
-		conn->write("error :Unknown command: " + command);
+		parsed = false;
+		//conn->write("error :Unknown command: " + command);
 	}
+	
+	// If not parsed here, call parent
+	if (parsed == false)
+		Device::on_message(conn, orig);
 }
 
 double Camera::set_exposure(double value) {	
@@ -513,12 +553,14 @@ string Camera::set_outputdir(string value) {
 	// This automatically prefixes ptc->datadir if 'value' is not absolute
 	Path tmp = ptc->datadir + value;
 	
-	if (!tmp.exists()) // Does not exist, create
+	if (!tmp.exists()) {// Does not exist, create
 		if (mkdir(value.c_str(), 0755)) // mkdir() returned !0, error
 			return "";
-	else	// Directory exists, check if readable
+	}
+	else {	// Directory exists, check if readable
 		if (tmp.access(R_OK | W_OK | X_OK))
 			return "";
+	}
 	
 	outputdir = tmp;
 	netio.broadcast("ok outputdir :" + outputdir.str(), "outputdir");
@@ -675,7 +717,7 @@ void Camera::grab(Connection *conn, int x1, int y1, int x2, int y2, int scale = 
 	}
 }
 
-const uint8_t Camera::df_correct(const uint8_t *in, size_t offset) {
+uint8_t Camera::df_correct(const uint8_t *in, size_t offset) {
 	if (!dark.data || !flat.data)
 		return in[offset];
 	
@@ -690,7 +732,7 @@ const uint8_t Camera::df_correct(const uint8_t *in, size_t offset) {
 	return c;
 }
 
-const uint16_t Camera::df_correct(const uint16_t *in, size_t offset) {
+uint16_t Camera::df_correct(const uint16_t *in, size_t offset) {
 	if (!dark.data || !flat.data)
 		return in[offset];
 
@@ -830,33 +872,33 @@ bool Camera::accumburst(uint32_t *accum, size_t bcount) {
 	return true;
 }
 
-void Camera::statistics(Connection *conn, size_t bcount) {
-	if (bcount < 1)
-		bcount = 1;
-	
-	double avg = 0;
-	double rms = 0;
-	size_t rx = 0;
-	
-	{
-		pthread::mutexholder h(&cam_mutex);
-		size_t start = count;
-		
-		while(rx < bcount) {
-			frame_t *f = get_frame(start + rx);
-			if(!f)
-				break;
-			
-			avg += f->avg;
-			rms += f->rms * f->rms;
-			
-			rx++;
-		}
-	}
-	
-	avg /= rx;
-	rms /= rx;
-	rms = sqrt(rms);
-	
-	conn->write(format("ok statistics %lf %lf", avg, rms));
-}
+//void Camera::statistics(Connection *conn, size_t bcount) {
+//	if (bcount < 1)
+//		bcount = 1;
+//	
+//	double avg = 0;
+//	double rms = 0;
+//	size_t rx = 0;
+//	
+//	{
+//		pthread::mutexholder h(&cam_mutex);
+//		size_t start = count;
+//		
+//		while(rx < bcount) {
+//			frame_t *f = get_frame(start + rx);
+//			if(!f)
+//				break;
+//			
+//			avg += f->avg;
+//			rms += f->rms * f->rms;
+//			
+//			rx++;
+//		}
+//	}
+//	
+//	avg /= rx;
+//	rms /= rx;
+//	rms = sqrt(rms);
+//	
+//	conn->write(format("ok statistics %lf %lf", avg, rms));
+//}

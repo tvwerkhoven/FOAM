@@ -21,11 +21,11 @@
 #include <string>
 #include <gsl/gsl_matrix.h>
 
-#include "imgdata.h"
 #include "io.h"
 #include "types.h"
-
+#include "imgdata.h"
 #include "foamctrl.h"
+
 #include "simseeing.h"
 
 /*
@@ -33,10 +33,56 @@
  */
 
 SimSeeing::SimSeeing(Io &io, foamctrl *ptc, string name, string port, Path &conffile):
-Device(io, ptc, name, SimSeeing_type, port),
+Device(io, ptc, name, simseeing_type, port, conffile, false),
 file(""), croppos(0,0), cropsize(0,0), windspeed(10,10), windtype(LINEAR)
 {
-	io.msg(IO_DEB2, "SimSeeing::SimSeeing()");	
+	io.msg(IO_DEB2, "SimSeeing::SimSeeing()");
+	
+	// Setup seeing parameters
+	file = ptc->confdir + cfg.getstring("wavefront_file");
+	
+	if (cfg.exists("windspeed"))
+		windspeed.x = windspeed.y = cfg.getint("windspeed");
+	else {
+		windspeed.x = cfg.getint("windspeed.x", 16);
+		windspeed.y = cfg.getint("windspeed.y", 16);
+	}
+
+	string windstr = cfg.getstring("windtype", "random");
+	if (windstr == "linear")
+		windtype = SimSeeing::LINEAR;
+	else if (windstr == "random")
+		windtype = SimSeeing::RANDOM;
+	else
+		windtype = SimSeeing::DRIFTING;
+
+	if (cfg.exists("cropsize"))
+		cropsize.x = cropsize.y = cfg.getint("cropsize");
+	else {
+		cropsize.x = cfg.getint("cropsize.x");
+		cropsize.y = cfg.getint("cropsize.y");
+	}
+
+	// Load & sacle wavefront
+	wfsrc = load_wavefront(file);
+		
+	// Check if cropsize makes sense.
+	// N.B. This can lead to problems if the SimulCam resolution is higher than
+	// the wavefront source file, the crop size will be smaller than the camera 
+	// and the program will break.
+	if (wfsrc->size1 < cropsize.x || wfsrc->size2 < cropsize.y) {
+		io.msg(IO_WARN, "SimSeeing::setup() wavefront smaller than requested cropsize (%dx%d vs %dx%d), reducing size to half the wavefront size.", 
+					 wfsrc->size1, wfsrc->size2, cropsize.x, cropsize.y);
+		cropsize.x = 0.5*wfsrc->size1;
+		cropsize.y = 0.5*wfsrc->size2;
+	}
+	// Check if windspeed makes sense
+	if (windspeed.x >= cropsize.x || windspeed.y >= cropsize.y) {
+		io.msg(IO_WARN, "SimSeeing::setup() windspeed (%d, %d) bigger than cropsize (%d, %d), reducing to half the cropsize.", 
+					 windspeed.x, windspeed.y, cropsize.x, cropsize.y);
+		windspeed.x = 0.5 * cropsize.x;
+		windspeed.y = 0.5 * cropsize.y;
+	}
 }
 
 SimSeeing::~SimSeeing() {
@@ -48,7 +94,7 @@ SimSeeing::~SimSeeing() {
  *  Private methods
  */
 
-gsl_matrix *SimSeeing::load_wavefront(Path &f) {
+gsl_matrix *SimSeeing::load_wavefront(Path &f, bool norm) {
 	file = f;
 	io.msg(IO_DEB2, "SimSeeing::load_wavefront(), file=%s", file.c_str());
 	
@@ -64,77 +110,72 @@ gsl_matrix *SimSeeing::load_wavefront(Path &f) {
 	io.msg(IO_XNFO, "SimSeeing::load_wavefront() got wavefront: %zux%zux%d", wftmp.getwidth(), wftmp.getheight(), wftmp.getbpp());
 	
 	// We own the data now, we need to free it as well
-	return wftmp.as_GSL(true);
+	gsl_matrix *wf = wftmp.as_GSL(true);
+	if (!wf)
+		throw std::runtime_error("SimSeeing::load_wavefront() Could not load wavefront.");
+
+	if (norm) {
+		double min,max;
+		gsl_matrix_minmax(wf, &min, &max);
+		gsl_matrix_add_constant(wf, -min);
+		gsl_matrix_scale(wf, 1.0/(max-min));
+	}
+	
+	return wf;
 }
 
 /*
  *  Public methods
  */
 
-bool SimSeeing::setup(Path &f, coord_t size, coord_t wspeed, wind_t t) {
-	io.msg(IO_INFO, "SimSeeing::setup() Loading wavefront.");
-	
-	cropsize = size;
-	windspeed = wspeed;
-	windtype = t;
-	
-	// Data is alloced in load_wavefront(), ImgData.as_GSL() only once, does not need to be freed
-	wfsrc = load_wavefront(f);
-	
-	if (!wfsrc)
-		return false;
-	
-	if (wfsrc->size1 < cropsize.x || wfsrc->size2 < cropsize.y) {
-		io.msg(IO_WARN, "SimSeeing::setup() wavefront smaller than requested cropsize (%dx%d vs %dx%d), reducing size to half the wavefront size.", 
-					 wfsrc->size1, wfsrc->size2, cropsize.x, cropsize.y);
-		cropsize.x = 0.5*wfsrc->size1;
-		cropsize.y = 0.5*wfsrc->size2;
-	}
-	if (windspeed.x >= cropsize.x || windspeed.y >= cropsize.y) {
-		io.msg(IO_WARN, "SimSeeing::setup() windspeed (%d, %d) bigger than cropsize (%d, %d), reducing to half the cropsize.", 
-					 windspeed.x, windspeed.y, cropsize.x, cropsize.y);
-		windspeed.x = 0.5 * cropsize.x;
-		windspeed.y = 0.5 * cropsize.y;
-	}
-		
-	return true;
-}
-
-gsl_matrix *SimSeeing::get_wavefront() {
+gsl_matrix *SimSeeing::get_wavefront(const double fac) {
 	// Update new crop position (i.e. simulate wind)
-	if (windtype == RANDOM) {
-		croppos.x += (drand48()-0.5) * windspeed.x;
-		croppos.y += (drand48()-0.5) * windspeed.y;
-
-		// Check bounds
-		croppos.x = clamp(croppos.x, (int) 0, (int) wfsrc->size2 - cropsize.x);
-		croppos.y = clamp(croppos.y, (int) 0, (int) wfsrc->size1 - cropsize.y);
-	}
-	else {
-		// Check bounds, change wind if necessary.
-		if (croppos.x + windspeed.x >= (int) wfsrc->size2 - cropsize.x)
-			windspeed.x *= -1;
-		if (croppos.x + windspeed.x <= 0)
-			windspeed.x *= -1;
-		if (croppos.y + windspeed.y >= (int) wfsrc->size1 - cropsize.y)
-			windspeed.y *= -1;
-		if (croppos.y + windspeed.y <= 0)
-			windspeed.y *= -1;
-		
-		// Apply wind
-		croppos.x += windspeed.x;
-		croppos.y += windspeed.y;
-	}
+	switch (windtype) {
+		case RANDOM:
+			croppos.x += (drand48()-0.5) * windspeed.x;
+			croppos.y += (drand48()-0.5) * windspeed.y;
+			// Check bounds
+			croppos.x = clamp(croppos.x, (int) 0, (int) wfsrc->size2 - cropsize.x);
+			croppos.y = clamp(croppos.y, (int) 0, (int) wfsrc->size1 - cropsize.y);
+			break;
+		case DRIFTING:
+			// Random drift, use a slowly changing crop vector
+			//! @todo randomness is hardcoded here, need to fix as a configuration
+			windspeed.x += (drand48()-0.5) * 10.0;
+			windspeed.y += (drand48()-0.5) * 10.0;
 			
-	return get_wavefront(croppos.x, croppos.y, cropsize.x, cropsize.y);
+		case LINEAR:
+		default:
+			// Check bounds, change wind if necessary.
+			if (croppos.x + windspeed.x >= (int) wfsrc->size2 - cropsize.x)
+				windspeed.x *= -1;
+			if (croppos.x + windspeed.x <= 0)
+				windspeed.x *= -1;
+			if (croppos.y + windspeed.y >= (int) wfsrc->size1 - cropsize.y)
+				windspeed.y *= -1;
+			if (croppos.y + windspeed.y <= 0)
+				windspeed.y *= -1;
+			
+			// Apply wind
+			croppos.x += windspeed.x;
+			croppos.y += windspeed.y;			
+			break;
+	}
+
+	return get_wavefront(croppos.x, croppos.y, cropsize.x, cropsize.y, fac);
 }
 
-gsl_matrix *SimSeeing::get_wavefront(size_t x0, size_t y0, size_t w, size_t h) {
+gsl_matrix *SimSeeing::get_wavefront(const size_t x0, const size_t y0, const size_t w, const size_t h, const double fac) {
 	io.msg(IO_DEB2, "SimSeeing::get_wavefront(%zu, %zu, %zu, %zu)", x0, y0, w, h);
 	gsl_matrix_view tmp = gsl_matrix_submatrix(wfsrc, y0, x0, h, w);
 	// Allocate new memory to store WF crop & copy data
 	gsl_matrix *wfcrop = gsl_matrix_alloc(h, w);
 	gsl_matrix_memcpy (wfcrop, &(tmp.matrix));
+	
+	// Apply scaling if requested (unequal to one)
+	if (fac != 1.0)
+		gsl_matrix_scale(wfcrop, fac);
+	
 	return wfcrop;
 }
 

@@ -29,10 +29,17 @@ if HWDEBUG
 # only do this if we want hardware debugging 
 # install the test programs in a foam-test subdir
 noinst_PROGRAMS += 
+if HAVE_DC1394
+noinst_PROGRAMS += dc1394-test
+
+dc1394_test_SOURCES = dc1394-test.cc
+dc1394_test_CXXFLAGS = $(AM_CXXFLAGS) $(DC1394_CFLAGS)
+dc1394_test_LDADD = $(LDADD) $(DC1394_LIBS)
+endif
 endif HWDEBUG
 
 if DEBUG
-noinst_PROGRAMS += pixbuf-test gtk-test dc1394-test shwfs-test
+noinst_PROGRAMS += pixbuf-test gtk-test sigcpp-test
 
 pixbuf_test_SOURCES = pixbuf-test.cc
 pixbuf_test_CPPFLAGS = $(GUI_CFLAGS) $(AM_CPPFLAGS)
@@ -42,11 +49,12 @@ gtk_test_SOURCES = gtk-test.cc
 gtk_test_CPPFLAGS = $(GUI_CFLAGS) $(AM_CPPFLAGS)
 gtk_test_LDADD = -lgthread-2.0
 
-dc1394_test_SOURCES = dc1394-test.cc
-dc1394_test_CXXFLAGS = $(AM_CXXFLAGS) $(DC1394_CFLAGS)
-dc1394_test_LDADD = $(LDADD) $(DC1394_LIBS)
+sigcpp_test_SOURCES = sigcpp-test.cc
+sigcpp_test_CPPFLAGS = $(SIGC_CFLAGS) $(AM_CPPFLAGS)
+sigcpp_test_LDADD = $(LDADD) $(SIGC_LIBS)
 
 if FULLSIM
+noinst_PROGRAMS += shwfs-test
 shwfs_test_SOURCES = shwfs-test.cc \
 		$(MODS_DIR)/shwfs.cc \
 		$(MODS_DIR)/dummycam.cc \
