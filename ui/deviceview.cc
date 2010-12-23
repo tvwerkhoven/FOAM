@@ -53,18 +53,13 @@ devframe("Raw device control"), dev_val("value:"), dev_send("Send")
 	
 	show_all_children();
 	
-	// If this is the parent class, we need to initialize some more things 
-	// (connect callbacks). Otherwise when we are instantiated from a derived 
-	// class, we can skip that. (see CamView:: for example)
-//	if (is_parent)
-//		init();
+	// Setup callbacks. These functions are virtual, so always call the parent functions in case of derived classes.
 	devctrl->signal_message.connect(sigc::mem_fun(*this, &DevicePage::on_message_update));
 	devctrl->signal_connect.connect(sigc::mem_fun(*this, &DevicePage::on_connect_update));
 	devctrl->signal_commands.connect(sigc::mem_fun(*this, &DevicePage::on_commands_update));
 	
-	on_connect_update();
-	on_message_update();
-	on_commands_update();
+	// Now that the callbacks are all registered, we can connect.
+	devctrl->connect();
 }
 
 DevicePage::~DevicePage() {
@@ -120,7 +115,7 @@ void DevicePage::on_commands_update() {
 	
 	DeviceCtrl::cmdlist_t::iterator it;
 	DeviceCtrl::cmdlist_t devcmd_l = devctrl->get_devcmds();
-	
+
   for (it=devcmd_l.begin(); it!=devcmd_l.end(); ++it)
 		dev_cmds.append_text(*it);
 	
@@ -133,7 +128,7 @@ void DevicePage::on_message_update() {
 }
 
 void DevicePage::on_connect_update() {
-	printf("%x:DevicePage::on_connect_update()\n", (int) pthread_self());
+	printf("%x:DevicePage::on_connect_update(conn=%d)\n", (int) pthread_self(), devctrl->is_connected());
 	if (devctrl->is_connected())
 		enable_gui();
 	else

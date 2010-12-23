@@ -38,7 +38,7 @@ using namespace std;
 
 CamCtrl::CamCtrl(Log &log, const string h, const string p, const string n):
 	DeviceCtrl(log, h, p, n),
-	monitorprotocol(h, p, n) 
+	monitorprotocol(host, port, devname)
 {
 	fprintf(stderr, "%x:CamCtrl::CamCtrl()\n", (int) pthread_self());
 	
@@ -57,7 +57,6 @@ CamCtrl::CamCtrl(Log &log, const string h, const string p, const string n):
 	nstore = 0;
 	
 	monitorprotocol.slot_message = sigc::mem_fun(this, &CamCtrl::on_monitor_message);
-	monitorprotocol.connect();
 }
 
 CamCtrl::~CamCtrl() {
@@ -65,9 +64,14 @@ CamCtrl::~CamCtrl() {
 	set_mode(OFF);
 }
 
+void CamCtrl::connect() {
+	DeviceCtrl::connect();
+	monitorprotocol.connect();
+}
+
 void CamCtrl::on_connected(bool conn) {
-	fprintf(stderr, "%x:CamCtrl::on_connected(conn=%d)\n", (int) pthread_self(), conn);
 	DeviceCtrl::on_connected(conn);
+	fprintf(stderr, "%x:CamCtrl::on_connected(conn=%d)\n", (int) pthread_self(), conn);
 	
 	if (conn) {
 		send_cmd("get mode");
@@ -84,6 +88,7 @@ void CamCtrl::on_connected(bool conn) {
 
 void CamCtrl::on_message(string line) {
 	DeviceCtrl::on_message(line);
+	fprintf(stderr, "%x:CamCtrl::on_message(line=%s)\n", (int) pthread_self(), line.c_str());
 	
 	if (!ok) {
 		return;
