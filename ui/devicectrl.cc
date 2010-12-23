@@ -28,19 +28,23 @@
 using namespace std;
 
 DeviceCtrl::DeviceCtrl(Log &log, const string h, const string p, const string n):
-	log(log), host(h), port(p), devname(n)
+	host(h), port(p), devname(n),
+	protocol(host, port, devname), log(log)
 {
 	printf("%x:DeviceCtrl::DeviceCtrl(name=%s)\n", (int) pthread_self(), n.c_str());	
 	
 	// Open control connection, register basic callbacks
 	protocol.slot_message = sigc::mem_fun(this, &DeviceCtrl::on_message);
 	protocol.slot_connected = sigc::mem_fun(this, &DeviceCtrl::on_connected);
-	printf("%x:DeviceCtrl::DeviceCtrl(): connecting to %s:%s@%s\n", (int) pthread_self(), host.c_str(), port.c_str(), devname.c_str());
-	protocol.connect(host, port, devname);
 }
 
 DeviceCtrl::~DeviceCtrl() {
 	fprintf(stderr, "DeviceCtrl::~DeviceCtrl()\n");
+}
+
+void DeviceCtrl::connect() {
+	printf("%x:DeviceCtrl::connect(): connecting to %s:%s@%s\n", (int) pthread_self(), host.c_str(), port.c_str(), devname.c_str());
+	protocol.connect();
 }
 
 void DeviceCtrl::send_cmd(const string &cmd) {

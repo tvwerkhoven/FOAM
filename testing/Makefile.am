@@ -39,7 +39,7 @@ endif
 endif HWDEBUG
 
 if DEBUG
-noinst_PROGRAMS += pixbuf-test gtk-test
+noinst_PROGRAMS += pixbuf-test gtk-test sigcpp-test
 
 pixbuf_test_SOURCES = pixbuf-test.cc
 pixbuf_test_CPPFLAGS = $(GUI_CFLAGS) $(AM_CPPFLAGS)
@@ -49,6 +49,9 @@ gtk_test_SOURCES = gtk-test.cc
 gtk_test_CPPFLAGS = $(GUI_CFLAGS) $(AM_CPPFLAGS)
 gtk_test_LDADD = -lgthread-2.0
 
+sigcpp_test_SOURCES = sigcpp-test.cc
+sigcpp_test_CPPFLAGS = $(SIGC_CFLAGS) $(AM_CPPFLAGS)
+sigcpp_test_LDADD = $(LDADD) $(SIGC_LIBS)
 
 if FULLSIM
 noinst_PROGRAMS += shwfs-test

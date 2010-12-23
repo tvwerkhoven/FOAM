@@ -142,7 +142,7 @@ protected:
 	virtual void clear_gui();
 
 	virtual void on_message_update();
-	virtual void on_connect_update();
+	//virtual void on_connect_update();
 	
 	// New event capture
 	virtual void on_monitor_update();		//!< Display new image from camera

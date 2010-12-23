@@ -222,27 +222,6 @@ public:
  </ul>
  </ul>
  
- \subsection devio Device I/O
- 
- <ul>
- <li>DeviceCtrl handles I/O per device</li>
- <ul>
- <li>on connect: request info, DeviceCtrl::signal_connect()</li>
- <li>on disconnect: update internals, DeviceCtrl::signal_connect()</li>
- <li>on message: update internals, DeviceCtrl::signal_message()</li>
- </ul>
- <li>DevicePage handles processes signals</li>
- <ul>
- <li>DevicePage::on_connect_update() connects to DeviceCtrl::signal_connect() and handles (dis)connection update for the GUI</li>
- <li>DevicePage::on_message_update() connects to DeviceCtrl::signal_message() and handles GUI updates</li>
- </ul>
- </ul>
- 
- Each GUI page should have several basic functions:
- - One function for each user interaction callback (i.e. pressing buttons, entering text), these *only* send commands to FOAM
- - One function for each of the events on_message and on_connect: these reflect the changes from FOAM in the GUI
- - DevicePage::clear_gui(), DevicePage::enable_gui() and DevicePage::disable_gui() are highly recommended to do exactly these things. Skeletons are already implemented in DevicePage.
- 
  \section devctrl Devices
  
  The main aim of the GUI is to control devices running under FOAM. When 
@@ -260,7 +239,8 @@ public:
  \section moreinfo More information
  
  More information can be found on these pages:
- - \subpage dev_cam "Camera devices"
+ - \subpage cam_dev "Camera devices UI"
+ 
 
  */
  
