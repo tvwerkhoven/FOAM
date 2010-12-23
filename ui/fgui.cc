@@ -113,10 +113,11 @@ connect(Stock::CONNECT), quit(Stock::QUIT), about(Stock::ABOUT)
 // !!!: MainWindow starts here
 
 MainWindow::MainWindow():
-	log(), foamctrl(log), 
-	aboutdialog(), notebook(), conndialog(foamctrl), 
-	logpage(log), controlpage(log, foamctrl), 
-	menubar(*this) {
+log(), foamctrl(log), 
+aboutdialog(), notebook(), conndialog(foamctrl), 
+logpage(log), controlpage(log, foamctrl), 
+menubar(*this) 
+{
 	log.add(Log::NORMAL, "FOAM Control (" PACKAGE_NAME " version " PACKAGE_VERSION " built " __DATE__ " " __TIME__ ")");
 	log.add(Log::NORMAL, "Copyright (c) 2009 Tim van Werkhoven (T.I.M.vanWerkhoven@xs4all.nl)");
 	
