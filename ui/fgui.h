@@ -222,6 +222,25 @@ public:
  </ul>
  </ul>
  
+ \section devctrl Devices
+ 
+ The main aim of the GUI is to control devices running under FOAM. When 
+ FoamControl connects to an instance of FOAM, it queries which devices are 
+ connected to the system (see FoamControl::on_connected). This is processed
+ by FoamControl::on_message and when new devices are found 
+ FoamCtrl::signal_device() is triggered.
+ 
+ When a new device is detected, the appropriate GUI class is instantiated and 
+ added to the GUI. The GUI class will start a control connection to the device
+ and handle I/O. The basic classes to achieve this are DevicePage and 
+ DeviceCtrl. These can be overloaded to provide more detailed control over a
+ device.
+ 
+ \section moreinfo More information
+ 
+ More information can be found on these pages:
+ - \subpage cam_dev "Camera devices UI"
+ 
 
  */
  

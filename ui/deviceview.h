@@ -101,49 +101,41 @@ public:
  
  \subsection dev_devctrl_der Deriving DeviceCtrl
  
- When deriving DeviceCtrl, you can again (and should) register 
- protocol.slot_message and protocol.slot_connected for your own class. These
- handles are sigc::slot's and thus can handle multiple callback functions. You 
- therefore do not need to call the base functions.
+ When deriving DeviceCtrl, you don't have to register protocol.slot_message 
+ and protocol.slot_connected for your own class. These are already registered
+ to the virtual functions on_message and on_connected by the baseclass, so the
+ newly derived functions will be called automatically. You do need to call the
+ base functions though, or replace all functionality yourself.
  
- \subsection devio Device I/O
+ \subsection dev_devctrl_sig DeviceCtrl signals
  
- <ul>
- <li>DeviceCtrl handles I/O per device</li>
- <ul>
- <li>on connect: request info, DeviceCtrl::signal_connect()</li>
- <li>on disconnect: update internals, DeviceCtrl::signal_connect()</li>
- <li>on message: update internals, DeviceCtrl::signal_message()</li>
- </ul>
- <li>DevicePage handles processes signals</li>
- <ul>
- <li>DevicePage::on_connect_update() connects to DeviceCtrl::signal_connect() and handles (dis)connection update for the GUI</li>
- <li>DevicePage::on_message_update() connects to DeviceCtrl::signal_message() and handles GUI updates</li>
- </ul>
- </ul>
+ There are several signals (Glib::Dispatcher) in DeviceCtrl that can be used
+ to connect to when certain functionality is required. These include:
+ - DeviceCtrl::signal_connect
+ - DeviceCtrl::signal_message
+ - DeviceCtrl::signal_commands
+ each called in specific cases.
+ 
+ \section dev_devpage DevicePage
+ 
+ DevicePage is the interface to DeviceCtrl and provides a nice GUI to send
+ the commands, so you don't have to type everything. It should work together
+ with DeviceCtrl closely, which is where the Glib::Dispatchers come in handy.
+ 
+ DevicePage handles the following signals:
+
+ - DevicePage::on_connect_update() connects to DeviceCtrl::signal_connect() and handles (dis)connection update for the GUI
+ - DevicePage::on_message_update() connects to DeviceCtrl::signal_message() and handles GUI updates
+ - DevicePage::on_command_update() connects to DeviceCtrl::signal_commands() and handles (new) raw device commands
  
  Each GUI page should have several basic functions:
  - One function for each user interaction callback (i.e. pressing buttons, entering text), these *only* send commands to FOAM
  - One function for each of the events on_message and on_connect: these reflect the changes from FOAM in the GUI
- - DevicePage::clear_gui(), DevicePage::enable_gui() and DevicePage::disable_gui() are highly recommended to do exactly these things. Skeletons are already implemented in DevicePage.
- 
- \section devctrl Devices
- 
- The main aim of the GUI is to control devices running under FOAM. When 
- FoamControl connects to an instance of FOAM, it queries which devices are 
- connected to the system (see FoamControl::on_connected). This is processed
- by FoamControl::on_message and when new devices are found 
- FoamCtrl::signal_device() is triggered.
- 
- When a new device is detected, the appropriate GUI class is instantiated and 
- added to the GUI. The GUI class will start a control connection to the device
- and handle I/O. The basic classes to achieve this are DevicePage and 
- DeviceCtrl. These can be overloaded to provide more detailed control over a
- device.
+ - clear_gui(), enable_gui() and disable_gui() are highly recommended to do exactly these things. Skeletons are already implemented in DevicePage.
  
  \section moreinfo More information
  
  More information can be found on these pages:
- - \subpage dev_cam "Camera devices"
+ - \subpage dev "Devices UI"
  
  */
