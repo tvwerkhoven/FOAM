@@ -40,9 +40,10 @@ const string simseeing_type = "simseeing";
 class SimSeeing: public Device {
 public:
 	typedef enum {
-		RANDOM=0,
-		LINEAR
-	} wind_t;														//!< Possible windtypes: random walk around the wavefront or linearly crop things out see SimSeeing::get_wavefront()
+		RANDOM=0,													//!< random walk around the wavefront
+		LINEAR,														//!< linearly move over the wavefront 
+		DRIFTING													//!< drift over the wavefront, combination of linear and random
+	} wind_t;														//!< Possible simulated windtypes
 	
 private:
 	gsl_matrix *wfsrc;					//!< Holds the wavefront data (can be bigger than wfsize)

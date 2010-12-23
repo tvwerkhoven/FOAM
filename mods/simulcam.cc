@@ -47,6 +47,8 @@ shwfs(io, ptc, name + "-shwfs", port, conffile, *this, false)
 	add_cmd("set seeingfac");
 	add_cmd("get windspeed");
 	add_cmd("set windspeed");
+	add_cmd("get windtype");
+	add_cmd("set windtype");
 
 	noise = cfg.getdouble("noise", 10.0);
 	seeingfac = cfg.getdouble("seeingfac", 1.0);
@@ -99,6 +101,19 @@ void SimulCam::on_message(Connection *conn, std::string line) {
 			tmp = popint(line);
 			if (fabs(tmp) < res.x/2) seeing.windspeed.y = tmp;
 			netio.broadcast(format("ok windspeed %d %d", seeing.windspeed.x, seeing.windspeed.y), "windspeed");
+		} else if(what == "windtype") {
+			conn->addtag("windtype");
+			string tmp = popword(line);
+			if (tmp == "linear")
+				seeing.windtype = SimSeeing::LINEAR;
+			else if (tmp == "random")
+				seeing.windtype = SimSeeing::RANDOM;
+			else {
+				tmp = "drifting"; // default case, set tmp to 'drifting' for return message below
+				seeing.windtype = SimSeeing::DRIFTING;
+			}
+			
+			netio.broadcast(format("ok windtype %s", tmp.c_str()), "windtype");
 		}
 		else
 			parsed = false;

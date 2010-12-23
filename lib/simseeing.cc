@@ -48,11 +48,13 @@ file(""), croppos(0,0), cropsize(0,0), windspeed(10,10), windtype(LINEAR)
 		windspeed.y = cfg.getint("windspeed.y", 16);
 	}
 
-	string windstr = cfg.getstring("windtype", "linear");
+	string windstr = cfg.getstring("windtype", "random");
 	if (windstr == "linear")
 		windtype = SimSeeing::LINEAR;
-	else
+	else if (windstr == "random")
 		windtype = SimSeeing::RANDOM;
+	else
+		windtype = SimSeeing::DRIFTING;
 
 	if (cfg.exists("cropsize"))
 		cropsize.x = cropsize.y = cfg.getint("cropsize");
@@ -128,30 +130,38 @@ gsl_matrix *SimSeeing::load_wavefront(Path &f, bool norm) {
 
 gsl_matrix *SimSeeing::get_wavefront(const double fac) {
 	// Update new crop position (i.e. simulate wind)
-	if (windtype == RANDOM) {
-		croppos.x += (drand48()-0.5) * windspeed.x;
-		croppos.y += (drand48()-0.5) * windspeed.y;
-
-		// Check bounds
-		croppos.x = clamp(croppos.x, (int) 0, (int) wfsrc->size2 - cropsize.x);
-		croppos.y = clamp(croppos.y, (int) 0, (int) wfsrc->size1 - cropsize.y);
-	}
-	else {
-		// Check bounds, change wind if necessary.
-		if (croppos.x + windspeed.x >= (int) wfsrc->size2 - cropsize.x)
-			windspeed.x *= -1;
-		if (croppos.x + windspeed.x <= 0)
-			windspeed.x *= -1;
-		if (croppos.y + windspeed.y >= (int) wfsrc->size1 - cropsize.y)
-			windspeed.y *= -1;
-		if (croppos.y + windspeed.y <= 0)
-			windspeed.y *= -1;
-		
-		// Apply wind
-		croppos.x += windspeed.x;
-		croppos.y += windspeed.y;
-	}
+	switch (windtype) {
+		case RANDOM:
+			croppos.x += (drand48()-0.5) * windspeed.x;
+			croppos.y += (drand48()-0.5) * windspeed.y;
+			// Check bounds
+			croppos.x = clamp(croppos.x, (int) 0, (int) wfsrc->size2 - cropsize.x);
+			croppos.y = clamp(croppos.y, (int) 0, (int) wfsrc->size1 - cropsize.y);
+			break;
+		case DRIFTING:
+			// Random drift, use a slowly changing crop vector
+			//! @todo randomness is hardcoded here, need to fix as a configuration
+			windspeed.x += (drand48()-0.5) * 10.0;
+			windspeed.y += (drand48()-0.5) * 10.0;
 			
+		case LINEAR:
+		default:
+			// Check bounds, change wind if necessary.
+			if (croppos.x + windspeed.x >= (int) wfsrc->size2 - cropsize.x)
+				windspeed.x *= -1;
+			if (croppos.x + windspeed.x <= 0)
+				windspeed.x *= -1;
+			if (croppos.y + windspeed.y >= (int) wfsrc->size1 - cropsize.y)
+				windspeed.y *= -1;
+			if (croppos.y + windspeed.y <= 0)
+				windspeed.y *= -1;
+			
+			// Apply wind
+			croppos.x += windspeed.x;
+			croppos.y += windspeed.y;			
+			break;
+	}
+
 	return get_wavefront(croppos.x, croppos.y, cropsize.x, cropsize.y, fac);
 }
 
