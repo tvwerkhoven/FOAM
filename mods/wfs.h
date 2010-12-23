@@ -62,11 +62,9 @@ public:
 		} wfmode;
 	};
 	
-	Camera &cam;												//!< Reference to the camera class used for this 
-		
-//	virtual int verify(int) = 0;				//!< Verify settings
-//	virtual int calibrate(int) = 0;			//!< Calibrate WFS
-//	virtual int measure(int) = 0;				//!< Measure abberations
+	Camera &cam;												//!< Reference to the camera class used for this WFS
+	
+	virtual int measure() = 0;					//!< Measure abberations (needs to be implemented in derived classes)
 	
 	virtual ~Wfs() {}
 	Wfs(Io &io, foamctrl *ptc, string name, string type, string port, Path conffile, Camera &wfscam, bool online=true):

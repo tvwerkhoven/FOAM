@@ -120,9 +120,9 @@ public:
 	
 	bool store_mla_grid(sh_mla_t mla, Path &f, bool overwrite=false);	//!< Store external MLA grid to disk, as CSV
 	bool store_mla_grid(Path &f, bool overwrite=false);	//!< Store this MLA grid to disk, as CSV
-//	virtual int verify(int);
-//	virtual int calibrate(int);
-//	virtual int measure(int);
+	
+	// From Wfs::
+	virtual int measure();
 };
 
 #endif // HAVE_SHWFS_H

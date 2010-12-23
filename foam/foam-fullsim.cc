@@ -39,7 +39,7 @@
 
 // Global device list for easier access
 SimulCam *simcam;
-Shwfs *shwfs;
+Shwfs *simwfs;
 
 int FOAM_FullSim::load_modules() {
 	io.msg(IO_DEB2, "FOAM_FullSim::load_modules()");
@@ -48,6 +48,10 @@ int FOAM_FullSim::load_modules() {
 	// Add Simulcam device
 	simcam = new SimulCam(io, ptc, "simcam", ptc->listenport, ptc->conffile);
 	devices->add((Device *) simcam);
+	
+	// Add new Shwfs based on this camera
+	simwfs = new Shwfs(io, ptc, "simwfs", ptc->listenport, ptc->conffile, *simcam);
+	devices->add((Device *) simwfs);
 
 
 	return 0;

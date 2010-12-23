@@ -63,7 +63,7 @@
 //template <class T> int Shwfs::_cogframe(T *img) {
 //	float csum=0;
 //	for (int s=0; s<ns; s++) { // Loop over all previously selected subapertures
-//		csum += (float) _cog<T>(img, sipos[s].x, sipos[s].y, track.x/2, track.y/2, cam->get_width(), 0, trackpos[s]);
+//		csum += (float) _cog<T>(img, sipos[s].x, sipos[s].y, track.x/2, track.y/2, cam.get_width(), 0, trackpos[s]);
 //	}
 //	return 0;
 //}
@@ -193,14 +193,14 @@ int Shwfs::mla_subapsel() {
 	ns = 0;
 	
 	// Get image first
-	if (cam->get_dtype() == UINT16) {
+	if (cam.get_dtype() == UINT16) {
 		io.msg(IO_DEB2, "Shwfs::subapSel() got UINT16");
 		void *tmpimg;
-		cam->get_image(&tmpimg);
+		cam.get_image(&tmpimg);
 		uint16_t *img = (uint16_t *) tmpimg;
 		for (int isy=0; isy < subap.y; isy++) { // loops over all grid cells
 			for (int isx=0; isx < subap.x; isx++) {
-				csum = _cog<uint16_t>(img, (int) (isx+0.5) * sisize.x, (int) (isy+0.5) * sisize.y, sisize.x/2, sisize.y/2, cam->get_width(), simini, cog);
+				csum = _cog<uint16_t>(img, (int) (isx+0.5) * sisize.x, (int) (isy+0.5) * sisize.y, sisize.x/2, sisize.y/2, cam.get_width(), simini, cog);
 				if (csum > 0) {
 					apmap[isy * subap.x + isx] = 1;
 					sipos[ns].x = (int) ((isx+0.5) * sisize.x); // Subap position
@@ -214,16 +214,16 @@ int Shwfs::mla_subapsel() {
 			}
 		}
 	}
-	else if (cam->get_dtype() == UINT8) {
+	else if (cam.get_dtype() == UINT8) {
 		io.msg(IO_DEB2, "Shwfs::subapSel() got UINT8");
 		
 		void *tmpimg;
-		cam->get_image(&tmpimg);
+		cam.get_image(&tmpimg);
 		uint8_t *img = (uint8_t *) tmpimg;
 		
 		for (int isy=0; isy < subap.y; isy++) { // loops over all grid cells
 			for (int isx=0; isx < subap.x; isx++) {
-				csum = _cog<uint8_t>(img, (int) (isx+0.5) * sisize.x, (int) (isy+0.5) * sisize.y, sisize.x/2, sisize.y/2, cam->get_width(), simini, cog);
+				csum = _cog<uint8_t>(img, (int) (isx+0.5) * sisize.x, (int) (isy+0.5) * sisize.y, sisize.x/2, sisize.y/2, cam.get_width(), simini, cog);
 				if (csum > 0) {
 					apmap[isy * subap.x + isx] = 1;
 					sipos[ns].x = (int) ((isx+0.5) * sisize.x); // Subap position
@@ -354,7 +354,7 @@ mode(Shwfs::COG)
 	overlap = cfg.getdouble("overlap", 0.5);
 	xoff = cfg.getint("xoff", 0);
 	
-	string shapestr = cfg.getstring("shape", "circular");
+	string shapestr = cfg.getstring("shape", "square");
 	if (shapestr == "circular")
 		shape = Shwfs::CIRCULAR;
 	else
@@ -378,56 +378,27 @@ Shwfs::~Shwfs() {
 //	delete[] shifts;
 }
 
-//int Shwfs::measure(int op) {
-//	void *tmpimg;
-//	cam->get_image(&tmpimg);
-//	
-//	if (cam->get_dtype() == UINT16) {
-//		if (mode == Shwfs::COG) {
-//			io.msg(IO_DEB2, "Shwfs::measure() got UINT16, COG");
-//			return _cogframe<uint16_t>((uint16_t *) tmpimg);
-//		}
-//		else
-//			return io.msg(IO_ERR, "Shwfs::measure() unknown wfs mode");
-//	}
-//	else if (cam->get_dtype() == UINT8) {
-//		if (mode == COG) {
-//			io.msg(IO_DEB2, "Shwfs::measure() got UINT8, COG");
-//			return _cogframe<uint8_t>((uint8_t *) tmpimg);
-//		}
-//		else
-//			return io.msg(IO_ERR, "Shwfs::measure() unknown wfs mode");
-//	}
-//	else
-//		return io.msg(IO_ERR, "Shwfs::measure() unknown datatype");
-//	
-//	return 0;
-//}
+int Shwfs::measure() {
+	Camera::frame_t *tmp = cam.get_last_frame();
 	
-//int Shwfs::verify(int op) {
-//	io.msg(IO_DEB2, "Shwfs::verify()");
-//	return 0;
-//}
-
-//int Shwfs::configure(wfs_prop_t *prop) {
-//	io.msg(IO_DEB2, "Shwfs::configure()");
-//	return 0;
-//}
-
-//int Shwfs::calibrate(int op) {
-//	if (op == Shwfs::CAL_SUBAPSEL) {
-//		io.msg(IO_DEB2, "Shwfs::calibrate(Shwfs::CAL_SUBAPSEL)");
-//		// For SH WFS: select the subapertures to use for processing
-//		return subapSel();
-//	}
-//	else if (op == Shwfs::CAL_PINHOLE) {
-//		io.msg(IO_DEB2, "Shwfs::calibrate(Shwfs::CAL_PINHOLE)");
-//		//! \todo add calibration for reference coordinates (with pinhole)
-//		return 0;
-//	}
-//	else {
-//		io.msg(IO_WARN, "Shwfs::calibrate() Unknown calibration mode.");
-//		return -1;
-//	}
-//	return 0;
-//}
+	if (cam.get_depth() == 16) {
+		if (mode == Shwfs::COG) {
+			io.msg(IO_DEB2, "Shwfs::measure() got UINT16, COG");
+			//return _cogframe<uint16_t>((uint16_t *) tmp->image);
+		}
+		else
+			return io.msg(IO_ERR, "Shwfs::measure() unknown wfs mode");
+	}
+	else if (cam.get_dtype() == UINT8) {
+		if (mode == COG) {
+			io.msg(IO_DEB2, "Shwfs::measure() got UINT8, COG");
+			//return _cogframe<uint8_t>((uint8_t *) tmp->image);
+		}
+		else
+			return io.msg(IO_ERR, "Shwfs::measure() unknown wfs mode");
+	}
+	else
+		return io.msg(IO_ERR, "Shwfs::measure() unknown datatype");
+	
+	return 0;
+}
