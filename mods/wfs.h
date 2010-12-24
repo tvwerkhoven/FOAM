@@ -61,18 +61,23 @@ public:
 		wavefront() : wfamp(NULL), nmodes(0) { ; }
 		gsl_vector_float *wfamp;					//!< Mode amplitudes
 		int nmodes;												//!< Number of modes
-		enum wfbasis wfmode;							//!< Basis functions used for this representation
+		enum wfbasis basis;								//!< Basis functions used for this representation
 	};
 	
+	struct wavefront wf;								//!< Wavefront representation
+	
 	Camera &cam;												//!< Reference to the camera class used for this WFS
+		
+	virtual int measure();							//!< Measure abberations (needs to be implemented in derived classes)
 	
-	virtual int measure() = 0;					//!< Measure abberations (needs to be implemented in derived classes)
+	// From Device::
+	virtual int verify() { return 0; }	//!< Verify the integrity of the device
 	
-	virtual ~Wfs() {}
-	Wfs(Io &io, foamctrl *ptc, string name, string type, string port, Path conffile, Camera &wfscam, bool online=true):
-	Device(io, ptc, name, wfs_type + "." + type, port, conffile, online),
-	cam(wfscam)
-	{	; }
+	virtual void on_message(Connection *conn, std::string line);
+	//virtual void on_connect(Connection *conn, bool status) = 0;
+	
+	virtual ~Wfs();
+	Wfs(Io &io, foamctrl *ptc, string name, string type, string port, Path conffile, Camera &wfscam, bool online=true);
 };
 
 #endif // HAVE_WFS_H
