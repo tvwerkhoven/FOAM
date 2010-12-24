@@ -11,3 +11,4 @@ testing/*-test
 docs/
 libsiu
 stamp-h1
+version.m4
