@@ -42,14 +42,19 @@ class CamView: public DevicePage {
 protected:
 	CamCtrl *camctrl;
 	
-	Gtk::Frame infoframe;
-	Gtk::Frame dispframe;
 	Gtk::Frame ctrlframe;
+	Gtk::Frame dispframe;
 	Gtk::Frame camframe;
 	Gtk::Frame histoframe;
 	
-	// Info stuff
-	HBox infohbox;
+	// Control stuff
+	// Need: darkflat, fsel, tiptilt, capture, thumb, ...?
+	HBox ctrlhbox;
+	SwitchButton capture;								//!< Start/stop capturing frames, CamView::on_capture_clicked()
+	SwitchButton display;								//!< Start/stop displaying frames, CamView::on_display_clicked()
+	SwitchButton store;									//!< Start/stop storing frames on the camera, CamView::on_store_clicked()
+	Entry store_n;											//!< How many frames to store when clicking CamView:store
+	VSeparator ctrl_vsep;
 	LabeledEntry e_exposure;						//!< For exposure time, RW
 	LabeledEntry e_offset;							//!< For offset, RW
 	LabeledEntry e_interval;						//!< For interval, RW
@@ -71,15 +76,6 @@ protected:
 	Button zoomout;											//!< Zoom out, CamView::on_zoomout_activate()
 	Button zoom100;											//!< Zoom to original size, CamView::on_zoom100_activate()
 	ToggleButton zoomfit;								//!< Zoom to fit to window
-
-	// control stuff
-	// Need: darkflat, fsel, tiptilt, capture, thumb, ...?
-	HBox ctrlhbox;
-	//Button refresh;
-	SwitchButton capture;								//!< Start/stop capturing frames, CamView::on_capture_clicked()
-	SwitchButton display;								//!< Start/stop displaying frames, CamView::on_display_clicked()
-	SwitchButton store;									//!< Start/stop storing frames on the camera, CamView::on_store_clicked()
-	Entry store_n;											//!< How many frames to store when clicking CamView:store
 		
 	// Camera image
 	HBox camhbox;

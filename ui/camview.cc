@@ -41,9 +41,8 @@ using namespace Gtk;
 
 CamView::CamView(CamCtrl *camctrl, Log &log, FoamControl &foamctrl, string n): 
 DevicePage((DeviceCtrl *) camctrl, log, foamctrl, n), camctrl(camctrl),
-infoframe("Info"),
-dispframe("Display settings"),
 ctrlframe("Camera controls"),
+dispframe("Display settings"),
 camframe("Camera"),
 histoframe("Histogram"),
 e_exposure("Exp."), e_offset("Offset"), e_interval("Intv."), e_gain("Gain"), e_res("Res."), e_mode("Mode"), e_stat("Status"),
@@ -63,16 +62,16 @@ histoalign(0.5, 0.5, 0, 0), minval("Display min"), maxval("Display max"), e_avg(
 	histoimage.set(histopixbuf);
 	histoimage.set_double_buffered(false);
 	
-	e_exposure.set_width_chars(8);
+	e_exposure.set_width_chars(4);
 	e_offset.set_width_chars(4);
-	e_interval.set_width_chars(8);
+	e_interval.set_width_chars(4);
 	e_gain.set_width_chars(4);
 	
-	e_res.set_width_chars(12);
+	e_res.set_width_chars(10);
 	e_res.set_editable(false);
 	e_mode.set_width_chars(8);
 	e_mode.set_editable(false);
-	e_stat.set_width_chars(20);
+	e_stat.set_width_chars(16);
 	e_stat.set_editable(false);
 	
 	fliph.set_active(false);
@@ -138,15 +137,20 @@ histoalign(0.5, 0.5, 0, 0), minval("Display min"), maxval("Display max"), e_avg(
 	glarea.view_update.connect(sigc::mem_fun(*this, &CamView::on_glarea_view_update));
 		
 	// layout
-	infohbox.set_spacing(4);
-	infohbox.pack_start(e_exposure, PACK_SHRINK);
-	infohbox.pack_start(e_offset, PACK_SHRINK);
-	infohbox.pack_start(e_interval, PACK_SHRINK);
-	infohbox.pack_start(e_gain, PACK_SHRINK);
-	infohbox.pack_start(e_res, PACK_SHRINK);
-	infohbox.pack_start(e_mode, PACK_SHRINK);
-	infohbox.pack_start(e_stat, PACK_SHRINK);
-	infoframe.add(infohbox);
+	ctrlhbox.set_spacing(4);
+	ctrlhbox.pack_start(capture, PACK_SHRINK);
+	ctrlhbox.pack_start(display, PACK_SHRINK);
+	ctrlhbox.pack_start(store, PACK_SHRINK);
+	ctrlhbox.pack_start(store_n, PACK_SHRINK);
+	ctrlhbox.pack_start(ctrl_vsep, PACK_SHRINK);
+	ctrlhbox.pack_start(e_exposure, PACK_SHRINK);
+	ctrlhbox.pack_start(e_offset, PACK_SHRINK);
+	ctrlhbox.pack_start(e_interval, PACK_SHRINK);
+	ctrlhbox.pack_start(e_gain, PACK_SHRINK);
+	ctrlhbox.pack_start(e_res, PACK_SHRINK);
+	ctrlhbox.pack_start(e_mode, PACK_SHRINK);
+	ctrlhbox.pack_start(e_stat, PACK_SHRINK);
+	ctrlframe.add(ctrlhbox);
 	
 	disphbox.set_spacing(4);
 	disphbox.pack_start(flipv, PACK_SHRINK);
@@ -161,53 +165,38 @@ histoalign(0.5, 0.5, 0, 0), minval("Display min"), maxval("Display max"), e_avg(
 	disphbox.pack_start(zoomout, PACK_SHRINK);
 	dispframe.add(disphbox);
 	
-	//ctrlhbox.pack_start(refresh, PACK_SHRINK);
-	ctrlhbox.set_spacing(4);
-	ctrlhbox.pack_start(capture, PACK_SHRINK);
-	ctrlhbox.pack_start(display, PACK_SHRINK);
-	ctrlhbox.pack_start(store, PACK_SHRINK);
-	ctrlhbox.pack_start(store_n, PACK_SHRINK);
-	ctrlframe.add(ctrlhbox);
-	
 	camhbox.pack_start(glarea);
 	camframe.add(camhbox);
 	
 	histoevents.add(histoimage);
 	histoalign.add(histoevents);
 	
-//	histohbox2.set_spacing(4);
 	histohbox2.pack_start(e_avg, PACK_SHRINK);
 	histohbox2.pack_start(e_rms, PACK_SHRINK);
-
-//	histohbox3.set_spacing(4);
+	
 	histohbox3.pack_start(e_datamin, PACK_SHRINK);
 	histohbox3.pack_start(e_datamax, PACK_SHRINK);
 	
-//	histovbox.set_spacing(4);
 	histovbox.pack_start(histohbox2);
 	histovbox.pack_start(histohbox3);
 	histovbox.pack_start(minval);
 	histovbox.pack_start(maxval);
 
-//	histohbox.set_spacing(4);
 	histohbox.pack_start(histoalign);
 	histohbox.pack_start(histovbox, PACK_SHRINK);
 
 	histoframe.add(histohbox);
 	
-	pack_start(infoframe, PACK_SHRINK);
-	pack_start(dispframe, PACK_SHRINK);
 	pack_start(ctrlframe, PACK_SHRINK);
+	pack_start(dispframe, PACK_SHRINK);
 	pack_start(camframe);
 	pack_start(histoframe, PACK_SHRINK);
 	
 	// finalize
 	show_all_children();
 	
-	if(!histo.get_active())
-		histoframe.hide();
-
-		
+	on_histo_toggled();
+			
 	camctrl->signal_monitor.connect(sigc::mem_fun(*this, &CamView::on_monitor_update));
 
 }
