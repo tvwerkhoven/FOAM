@@ -25,10 +25,11 @@
 #include "io.h"
 #include "wfs.h"
 
+using namespace std;
+
 const string shwfs_type = "shwfs";
 const int shwfs_maxlenses = 128;
 
-using namespace std;
 
 // CLASS DEFINITION //
 /********************/
