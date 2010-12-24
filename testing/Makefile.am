@@ -23,7 +23,9 @@ AM_LDFLAGS += -framework CoreFoundation -framework Carbon
 endif
 
 # foamtestdir = $(bindir)/foam-test
-noinst_PROGRAMS = 
+noinst_PROGRAMS = autotools-test
+
+autotools_test_SOURCES = autotools-test.cc
 
 if HWDEBUG
 # only do this if we want hardware debugging 
