@@ -42,9 +42,7 @@ CamCtrl::CamCtrl(Log &log, const string h, const string p, const string n):
 {
 	fprintf(stderr, "%x:CamCtrl::CamCtrl()\n", (int) pthread_self());
 	
-	ok = false;
 	mode = OFF;
-	errormsg = "Not connected";
 	
 	exposure = 0;
 	interval = 0;
