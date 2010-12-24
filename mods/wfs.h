@@ -48,6 +48,11 @@ static const string wfs_type = "wfs";
  */
 class Wfs: public Device {
 public:	
+	enum wfbasis {
+		ZERNIKE=0,
+		KL,
+		MIRROR
+	};
 	
 	/*!
 	 @brief This holds information on the wavefront
@@ -56,10 +61,7 @@ public:
 		wavefront() : wfamp(NULL), nmodes(0) { ; }
 		gsl_vector_float *wfamp;					//!< Mode amplitudes
 		int nmodes;												//!< Number of modes
-		enum {
-			ZERNIKE=0,											//!< Zernike modes
-			KL,															//!< Karhunen-Loeve modes
-		} wfmode;
+		enum wfbasis wfmode;							//!< Basis functions used for this representation
 	};
 	
 	Camera &cam;												//!< Reference to the camera class used for this WFS
