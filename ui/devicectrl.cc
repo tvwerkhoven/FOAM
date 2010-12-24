@@ -33,6 +33,9 @@ DeviceCtrl::DeviceCtrl(Log &log, const string h, const string p, const string n)
 {
 	printf("%x:DeviceCtrl::DeviceCtrl(name=%s)\n", (int) pthread_self(), n.c_str());	
 	
+	ok = false;
+	errormsg = "Not connected";
+
 	// Open control connection, register basic callbacks
 	protocol.slot_message = sigc::mem_fun(this, &DeviceCtrl::on_message);
 	protocol.slot_connected = sigc::mem_fun(this, &DeviceCtrl::on_connected);
