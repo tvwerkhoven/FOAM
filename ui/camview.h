@@ -32,6 +32,9 @@
 #include "camctrl.h"
 #include "glviewer.h"
 
+using namespace Gtk;
+using namespace std;
+
 /*!
  @brief Generic camera viewing class
  
@@ -42,10 +45,10 @@ class CamView: public DevicePage {
 protected:
 	CamCtrl *camctrl;
 	
-	Gtk::Frame ctrlframe;
-	Gtk::Frame dispframe;
-	Gtk::Frame camframe;
-	Gtk::Frame histoframe;
+	Frame ctrlframe;
+	Frame dispframe;
+	Frame camframe;
+	Frame histoframe;
 	
 	// Control stuff
 	// Need: darkflat, fsel, tiptilt, capture, thumb, ...?
@@ -83,9 +86,9 @@ protected:
 	
 	// Histogram GUI stuff
 	HBox histohbox;
-	Gtk::Alignment histoalign;
-	Gtk::EventBox histoevents;
-	Gtk::Image histoimage;
+	Alignment histoalign;
+	EventBox histoevents;
+	Image histoimage;
 	Glib::RefPtr<Gdk::Pixbuf> histopixbuf;
 
 	VBox histovbox;

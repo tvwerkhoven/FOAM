@@ -337,9 +337,8 @@ int CamView::histo_scale_func(int max) {
 }
 
 void CamView::do_histo_update() {	
-	int pixels = 0;											//!< Number of pixels
-	int max = 1 << camctrl->get_depth(); //!< Maximum intensity in image
-	int dmin=max, dmax=0;								//!< Data range
+	int pixels = 0;											// Number of pixels
+	int max = 1 << camctrl->get_depth(); // Maximum intensity in image
 	double sum = 0;
 	double sumsquared = 0;
 	double rms = max;
