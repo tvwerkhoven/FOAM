@@ -2,12 +2,16 @@
 ## @author Tim van Werkhoven (t.i.m.vanwerkhoven@xs4all.nl)
 ## Copyright 2007-2010 Tim van Werkhoven (t.i.m.vanwerkhoven@xs4all.nl)
 
-AC_INIT([FOAM], [0.1], [t.i.m.vanwerkhoven@xs4all.nl])
-AC_CONFIG_AUX_DIR([build-aux])
-AM_INIT_AUTOMAKE([FOAM], [0.1], [t.i.m.vanwerkhoven@xs4all.nl])
 AC_PREREQ(2.59)
+m4_include([version.m4])
+
+AC_INIT([FOAM], [GIT_REVISION], [Tim van Werkhoven <t.i.m.vanwerkhoven@xs4all.nl>])
+AC_CONFIG_AUX_DIR([build-aux])
+
+AM_INIT_AUTOMAKE([AC_PACKAGE_NAME], [AC_PACKAGE_VERSION])
+
 AC_COPYRIGHT([Copyright (C) 2007-2010 Tim van Werkhoven <t.i.m.vanwerkhoven@xs4all.nl>])
-AC_REVISION(`git describe`)
+AC_REVISION([GIT_REVISION])
 
 AC_CONFIG_SRCDIR(foam/foam.cc)
 AC_CONFIG_HEADERS(foam/autoconfig.h)

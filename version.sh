@@ -1,9 +1,5 @@
 #!/bin/bash
-
-if [ "`svn info | grep ^Revision`" ] ; then
-## If SVN gives a decent value back (i.e. non-null), use that
-	echo "r"`svn info | grep ^Revision | cut -f 2 -d' '`
-else
-## Otherwise use a manual version number
-	echo "r550"
+VER=`git describe HEAD 2>/dev/null`
+if [ "$VER" ] ; then
+	echo "m4_define([GIT_REVISION], [`echo $VER | tr -d '\n'`])" > version.m4
 fi
