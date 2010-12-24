@@ -64,6 +64,7 @@ if FULLSIM
 noinst_PROGRAMS += shwfs-test
 shwfs_test_SOURCES = shwfs-test.cc \
 		$(MODS_DIR)/shwfs.cc \
+		$(MODS_DIR)/wfs.cc \
 		$(MODS_DIR)/dummycam.cc \
 		$(MODS_DIR)/camera.cc \
 		$(MODS_DIR)/simulcam.cc \

@@ -131,6 +131,7 @@ foam_fullsim_SOURCES = foam-fullsim.cc \
 		$(FRAME_SRC) $(FRAME_HDR) \
 		$(MODS_DIR)/camera.cc \
 		$(MODS_DIR)/simulcam.cc \
+		$(MODS_DIR)/wfs.cc \
 		$(MODS_DIR)/shwfs.cc \
 		$(LIB_DIR)/simseeing.cc
 
@@ -138,6 +139,7 @@ foam_fullsim_SOURCES = foam-fullsim.cc \
 foam_fullsim_SOURCES += foam-fullsim.h \
 		$(MODS_DIR)/camera.h \
 		$(MODS_DIR)/simulcam.h \
+		$(MODS_DIR)/wfs.h \
 		$(MODS_DIR)/shwfs.h \
 		$(LIB_DIR)/simseeing.h
 
