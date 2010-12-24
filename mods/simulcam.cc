@@ -36,13 +36,15 @@
 SimulCam::SimulCam(Io &io, foamctrl *ptc, string name, string port, Path &conffile, bool online):
 Camera(io, ptc, name, simulcam_type, port, conffile, online),
 seeing(io, ptc, name + "-seeing", port, conffile),
-out_size(0), frame_out(NULL), telradius(1.0), telapt(NULL), noise(10.0), seeingfac(1.0),
+out_size(0), frame_out(NULL), telradius(1.0), telapt(NULL),
 shwfs(io, ptc, name + "-shwfs", port, conffile, *this, false)
 {
 	io.msg(IO_DEB2, "SimulCam::SimulCam()");
 	// Register network commands with base device:
 	add_cmd("get noise");
 	add_cmd("set noise");
+	add_cmd("get noiseamp");
+	add_cmd("set noiseamp");
 	add_cmd("get seeingfac");
 	add_cmd("set seeingfac");
 	add_cmd("get windspeed");
@@ -50,7 +52,8 @@ shwfs(io, ptc, name + "-shwfs", port, conffile, *this, false)
 	add_cmd("get windtype");
 	add_cmd("set windtype");
 
-	noise = cfg.getdouble("noise", 10.0);
+	noise = cfg.getdouble("noise", 0.1);
+	noiseamp = cfg.getdouble("noiseamp", 0.5);
 	seeingfac = cfg.getdouble("seeingfac", 1.0);
 
 	if (seeing.cropsize.x != res.x || seeing.cropsize.y != res.y)
@@ -85,6 +88,10 @@ void SimulCam::on_message(Connection *conn, std::string line) {
 			conn->addtag("noise");
 			noise = popdouble(line);
 			netio.broadcast(format("ok noise %g", noise), "noise");
+		} else if(what == "noiseamp") {
+			conn->addtag("noiseamp");
+			noiseamp = popdouble(line);
+			netio.broadcast(format("ok noiseamp %g", noiseamp), "noiseamp");
 		} else if(what == "seeingfac") {
 			conn->addtag("seeingfac");
 			seeingfac = popdouble(line);
@@ -124,6 +131,9 @@ void SimulCam::on_message(Connection *conn, std::string line) {
 		if(what == "noise") {
 			conn->addtag("noise");
 			conn->write(format("ok noise %lf", noise));
+		} else if(what == "noiseamp") {
+			conn->addtag("noiseamp");
+			conn->write(format("ok noiseamp %lf", noiseamp));
 		} else if(what == "seeingfac") {
 			conn->addtag("seeingfac");
 			conn->write(format("ok seeingfac %lf", seeingfac));
@@ -290,11 +300,14 @@ uint8_t *SimulCam::simul_capture(gsl_matrix *frame_in) {
 		frame_out = (uint8_t *) realloc(frame_out, out_size);
 	}
 	
-	// Copy and scale
+	// Copy and scale, add noise
 	double pix=0;
 	for (size_t i=0; i<frame_in->size1; i++)
 		for (size_t j=0; j<frame_in->size2; j++) {
-			pix = (double) ((gsl_matrix_get(frame_in, i, j) - min)*fac + drand48()*noise);
+			pix = (double) ((gsl_matrix_get(frame_in, i, j) - min)*fac);
+			// Add noise only in 'noise' fraction of the pixels, with 'noiseamp' amplitude
+			if (drand48() < noise) 
+				pix += drand48()*noiseamp*255.0;
 			frame_out[i*frame_in->size2 + j] = (uint8_t) clamp(((pix * exposure) + offset), 0.0, 1.0*UINT8_MAX);
 		}
 	//((wave_in->data[i*frame_in->tda + j]

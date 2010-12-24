@@ -106,7 +106,7 @@ FOAM::~FOAM() {
 
 void FOAM::show_version() {
 	printf("FOAM (%s version %s, built %s %s)\n", PACKAGE_NAME, PACKAGE_VERSION, __DATE__, __TIME__);
-	printf("Copyright (c) 2007--2010 Tim van Werkhoven <T.I.M.vanWerkhoven@xs4all.nl>\n");
+	printf("Copyright (c) 2007--2010 %s\n", PACKAGE_BUGREPORT);
 	printf("\nFOAM comes with ABSOLUTELY NO WARRANTY. This is free software,\n"
 				 "and you are welcome to redistribute it under certain conditions;\n"
 				 "see the file COPYING for details.\n");
@@ -125,7 +125,7 @@ void FOAM::show_clihelp(bool error = false) {
 					 "  -p, --pidfile=FILE   Write PID to FILE.\n"
 					 "  -h, --help           Display this help message.\n"
 					 "      --version        Display version information.\n\n");
-		printf("Report bugs to Tim van Werkhoven <T.I.M.vanWerkhoven@xs4all.nl>.\n");
+		printf("Report bugs to %s.\n", PACKAGE_BUGREPORT);
 	}
 }
 
@@ -150,7 +150,7 @@ void FOAM::show_welcome() {
 	
 	io.msg(IO_INFO, "This is FOAM (version %s, built %s %s)", PACKAGE_VERSION, __DATE__, __TIME__);
 	io.msg(IO_INFO, "Starting at %s", date);
-	io.msg(IO_INFO, "Copyright (c) 2007--2010 Tim van Werkhoven <T.I.M.vanWerkhoven@xs4all.nl>");
+	io.msg(IO_INFO, "Copyright (c) 2007--2010 %s", PACKAGE_BUGREPORT);
 }
 
 int FOAM::parse_args(int argc, char *argv[]) {

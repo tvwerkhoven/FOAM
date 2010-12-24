@@ -45,7 +45,8 @@ const string simulcam_type = "simulcam";
  - wavefront_file: static FITS file which shows some wavefront
  - windspeed.x,y: windspeed by which the wavefront moves
  - windtype: 'random' or 'linear', method of scanning over the wavefront
- - noise: random additive noise for frames
+ - noise: fraction of CCD pixels covered with noise
+ - noiseamp: nosie amplitude as fraction of maximum
  - seeingfac: factor to multiply wavefront image with
  */
 class SimulCam: public Camera {
@@ -58,7 +59,8 @@ private:
 	double telradius;										//!< Telescope radius (fraction of CCD)
 	gsl_matrix *telapt;									//!< Telescope aperture mask
 	
-	double noise;												//!< Noise factor for CCD
+	double noise;												//!< Noise fill factor for CCD
+	double noiseamp;										//!< Noise amplitude for CCD
 	double seeingfac;										//!< Multiplicative factor for wavefront screen.
 	
 public:

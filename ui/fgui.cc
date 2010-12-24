@@ -119,7 +119,7 @@ logpage(log), controlpage(log, foamctrl),
 menubar(*this) 
 {
 	log.add(Log::NORMAL, "FOAM Control (" PACKAGE_NAME " version " PACKAGE_VERSION " built " __DATE__ " " __TIME__ ")");
-	log.add(Log::NORMAL, "Copyright (c) 2009 Tim van Werkhoven (T.I.M.vanWerkhoven@xs4all.nl)");
+	log.add(Log::NORMAL, "Copyright (c) 2009--2010 " PACKAGE_BUGREPORT);
 	
 	// widget properties
 	set_title("FOAM Control");
@@ -279,6 +279,9 @@ static void signal_handler(int s) {
 }
 
 int main(int argc, char *argv[]) {
+	printf("FOAM Control (" PACKAGE_NAME " version " PACKAGE_VERSION " built " __DATE__ " " __TIME__ ")\n");
+	printf("Copyright (c) 2009--2010 %s\n", PACKAGE_BUGREPORT);
+
 	signal(SIGINT, signal_handler);
 	signal(SIGHUP, signal_handler);
 	signal(SIGTERM, signal_handler);
