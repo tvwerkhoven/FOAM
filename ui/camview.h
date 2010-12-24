@@ -144,8 +144,20 @@ protected:
 	// New event capture
 	virtual void on_monitor_update();		//!< Display new image from camera
 	bool on_timeout();
+	
+	int histo_scale_func(int i);				//!< Histogram scaling function (set through histo_scale_f). Must scale input from 0 to 100 onto 0 to 100
 
 public:
+	enum _histo_scale_f {
+		LINEAR=0,
+		SQRT,
+		LOG10,
+		LOG20,
+		LOG100,
+		LOG2,
+	};
+	enum _histo_scale_f histo_scale_f;
+	
 	CamView(CamCtrl *camctrl, Log &log, FoamControl &foamctrl, string n);
 	~CamView();
 	

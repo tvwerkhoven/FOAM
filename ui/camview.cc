@@ -30,6 +30,7 @@
 #include <cstring>
 #include <gtkmm/accelmap.h>
 #include <stdlib.h>
+#include <math.h>
 
 #include "types.h"
 #include "camctrl.h"
@@ -45,8 +46,8 @@ ctrlframe("Camera controls"),
 dispframe("Display settings"),
 camframe("Camera"),
 histoframe("Histogram"),
-e_exposure("Exp."), e_offset("Offset"), e_interval("Intv."), e_gain("Gain"), e_res("Res."), e_mode("Mode"), e_stat("Status"),
-flipv("Flip vert."), fliph("Flip hor."), crosshair("Crosshair"), grid("Grid"), histo("Histogram"), zoomin(Stock::ZOOM_IN), zoomout(Stock::ZOOM_OUT), zoom100(Stock::ZOOM_100), zoomfit(Stock::ZOOM_FIT), capture("Capture"), display("Display"), store("Store"),
+capture("Capture"), display("Display"), store("Store"), e_exposure("Exp."), e_offset("Offset"), e_interval("Intv."), e_gain("Gain"), e_res("Res."), e_mode("Mode"), e_stat("Status"),
+flipv("Flip vert."), fliph("Flip hor."), crosshair("Crosshair"), grid("Grid"), histo("Histogram"), zoomin(Stock::ZOOM_IN), zoomout(Stock::ZOOM_OUT), zoom100(Stock::ZOOM_100), zoomfit(Stock::ZOOM_FIT), 
 histoalign(0.5, 0.5, 0, 0), minval("Display min"), maxval("Display max"), e_avg("Avg."), e_rms("RMS"), e_datamin("Min"), e_datamax("Max")
 {
 	fprintf(stderr, "%x:CamView::CamView()\n", (int) pthread_self());
@@ -54,6 +55,7 @@ histoalign(0.5, 0.5, 0, 0), minval("Display min"), maxval("Display max"), e_avg(
 	lastupdate = 0;
 	waitforupdate = false;
 	s = -1;
+	histo_scale_f = LINEAR;
 	
 	// Setup histogram
 	histo_img = 0;
@@ -111,6 +113,10 @@ histoalign(0.5, 0.5, 0, 0), minval("Display min"), maxval("Display max"), e_avg(
 	
 	// signals
 	//Glib::signal_timeout().connect(sigc::mem_fun(*this, &CamView::on_timeout), 1000.0/30.0);
+	capture.signal_clicked().connect(sigc::mem_fun(*this, &CamView::on_capture_clicked));
+	display.signal_clicked().connect(sigc::mem_fun(*this, &CamView::on_display_clicked));
+	store.signal_clicked().connect(sigc::mem_fun(*this, &CamView::on_store_clicked));
+
 	e_exposure.entry.signal_activate().connect(sigc::mem_fun(*this, &CamView::on_info_change));
 	e_offset.entry.signal_activate().connect(sigc::mem_fun(*this, &CamView::on_info_change));
 	e_interval.entry.signal_activate().connect(sigc::mem_fun(*this, &CamView::on_info_change));
@@ -127,9 +133,6 @@ histoalign(0.5, 0.5, 0, 0), minval("Display min"), maxval("Display max"), e_avg(
 	zoomin.signal_clicked().connect(sigc::mem_fun(*this, &CamView::on_zoomin_activate));
 	zoomout.signal_clicked().connect(sigc::mem_fun(*this, &CamView::on_zoomout_activate));
 
-	capture.signal_clicked().connect(sigc::mem_fun(*this, &CamView::on_capture_clicked));
-	display.signal_clicked().connect(sigc::mem_fun(*this, &CamView::on_display_clicked));
-	store.signal_clicked().connect(sigc::mem_fun(*this, &CamView::on_store_clicked));
 	
 	histoevents.signal_button_press_event().connect(sigc::mem_fun(*this, &CamView::on_histo_clicked));
 	
@@ -304,16 +307,32 @@ void CamView::do_update() {
 void CamView::on_histo_toggled() {
 	int w, h, fh;
 	//! @todo implement resize on histogram toggle
-//	get_size(w, h);
-	
 	if(histo.get_active()) {
 		histoframe.show();
 		fh = histoframe.get_height();
-//		resize(w, h + fh);
 	} else {
 		fh = histoframe.get_height();
 		histoframe.hide();
-//		resize(w, h - fh);
+	}
+}
+
+int CamView::histo_scale_func(int max) {
+	switch (histo_scale_f) {
+		case LINEAR:
+			return max;
+		case SQRT:
+			return sqrt(max*100);
+			// Increasing steepness of the function:
+		case LOG2:
+			return log2((max*1.0/100.0)+1.)*100;
+		case LOG10:
+			return log10((max*9.0/100.0)+1.)*100;
+		case LOG20:
+			return log10((max*19.0/100.0)+1.)*100/log10(20.0);
+		case LOG100:
+			return log10((max*99.0/100.0)+1.)*100/log10(100.0);
+		default:
+			return max;
 	}
 }
 
@@ -363,6 +382,10 @@ void CamView::do_histo_update() {
 	if (!histoframe.is_visible())
 		return;
 	
+	// total nr of pixels: pixels
+	// maximum intensity in image (nr of bins): max
+	// avg nr of pixels/bin: pixels / max
+	// with average filled bin, the bar height will be ~0.1
 	const int hscale = 1 + 10 * pixels / max;
 	
 	// Color red if overexposed
@@ -378,7 +401,7 @@ void CamView::do_histo_update() {
 	
 	if(histo_img) {
 		for(int i = 0; i < max; i++) {
-			int height = histo_img[i] * 100 / hscale;
+			int height = histo_scale_func(histo_img[i] * 100 / hscale);
 			if(height > 100)
 				height = 100;
 			for(int y = 100 - height; y < 100; y++) {
