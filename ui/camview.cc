@@ -396,7 +396,7 @@ void CamView::do_histo_update() {
 	else
 		histopixbuf->fill(0xffffff00);
 	
-	// Draw histogram, make everything white that should not be black.
+	// Draw black bars in the histogram
 	uint8_t *out = (uint8_t *)histopixbuf->get_pixels();
 	
 	if(histo_img) {
