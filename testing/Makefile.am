@@ -22,10 +22,15 @@ if HAVE_MACOSX
 AM_LDFLAGS += -framework CoreFoundation -framework Carbon
 endif
 
-# foamtestdir = $(bindir)/foam-test
 noinst_PROGRAMS = autotools-test
 
 autotools_test_SOURCES = autotools-test.cc
+
+# include compilation test
+TESTS_ENVIRONMENT = $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) \
+	$(autotools_test_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -E -dM
+TESTS = $(autotools_test_SOURCES)
+		
 
 if HWDEBUG
 # only do this if we want hardware debugging 
