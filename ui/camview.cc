@@ -30,6 +30,7 @@
 #include <cstring>
 #include <gtkmm/accelmap.h>
 #include <stdlib.h>
+#include <math.h>
 
 #include "types.h"
 #include "camctrl.h"
@@ -41,13 +42,12 @@ using namespace Gtk;
 
 CamView::CamView(CamCtrl *camctrl, Log &log, FoamControl &foamctrl, string n): 
 DevicePage((DeviceCtrl *) camctrl, log, foamctrl, n), camctrl(camctrl),
-infoframe("Info"),
-dispframe("Display settings"),
 ctrlframe("Camera controls"),
+dispframe("Display settings"),
 camframe("Camera"),
 histoframe("Histogram"),
-e_exposure("Exp."), e_offset("Offset"), e_interval("Intv."), e_gain("Gain"), e_res("Res."), e_mode("Mode"), e_stat("Status"),
-flipv("Flip vert."), fliph("Flip hor."), crosshair("Crosshair"), grid("Grid"), histo("Histogram"), zoomin(Stock::ZOOM_IN), zoomout(Stock::ZOOM_OUT), zoom100(Stock::ZOOM_100), zoomfit(Stock::ZOOM_FIT), capture("Capture"), display("Display"), store("Store"),
+capture("Capture"), display("Display"), store("Store"), e_exposure("Exp."), e_offset("Offset"), e_interval("Intv."), e_gain("Gain"), e_res("Res."), e_mode("Mode"), e_stat("Status"),
+flipv("Flip vert."), fliph("Flip hor."), crosshair("Crosshair"), grid("Grid"), histo("Histogram"), zoomin(Stock::ZOOM_IN), zoomout(Stock::ZOOM_OUT), zoom100(Stock::ZOOM_100), zoomfit(Stock::ZOOM_FIT), 
 histoalign(0.5, 0.5, 0, 0), minval("Display min"), maxval("Display max"), e_avg("Avg."), e_rms("RMS"), e_datamin("Min"), e_datamax("Max")
 {
 	fprintf(stderr, "%x:CamView::CamView()\n", (int) pthread_self());
@@ -55,6 +55,7 @@ histoalign(0.5, 0.5, 0, 0), minval("Display min"), maxval("Display max"), e_avg(
 	lastupdate = 0;
 	waitforupdate = false;
 	s = -1;
+	histo_scale_f = LINEAR;
 	
 	// Setup histogram
 	histo_img = 0;
@@ -63,16 +64,16 @@ histoalign(0.5, 0.5, 0, 0), minval("Display min"), maxval("Display max"), e_avg(
 	histoimage.set(histopixbuf);
 	histoimage.set_double_buffered(false);
 	
-	e_exposure.set_width_chars(8);
+	e_exposure.set_width_chars(4);
 	e_offset.set_width_chars(4);
-	e_interval.set_width_chars(8);
+	e_interval.set_width_chars(4);
 	e_gain.set_width_chars(4);
 	
-	e_res.set_width_chars(12);
+	e_res.set_width_chars(10);
 	e_res.set_editable(false);
 	e_mode.set_width_chars(8);
 	e_mode.set_editable(false);
-	e_stat.set_width_chars(20);
+	e_stat.set_width_chars(16);
 	e_stat.set_editable(false);
 	
 	fliph.set_active(false);
@@ -112,6 +113,10 @@ histoalign(0.5, 0.5, 0, 0), minval("Display min"), maxval("Display max"), e_avg(
 	
 	// signals
 	//Glib::signal_timeout().connect(sigc::mem_fun(*this, &CamView::on_timeout), 1000.0/30.0);
+	capture.signal_clicked().connect(sigc::mem_fun(*this, &CamView::on_capture_clicked));
+	display.signal_clicked().connect(sigc::mem_fun(*this, &CamView::on_display_clicked));
+	store.signal_clicked().connect(sigc::mem_fun(*this, &CamView::on_store_clicked));
+
 	e_exposure.entry.signal_activate().connect(sigc::mem_fun(*this, &CamView::on_info_change));
 	e_offset.entry.signal_activate().connect(sigc::mem_fun(*this, &CamView::on_info_change));
 	e_interval.entry.signal_activate().connect(sigc::mem_fun(*this, &CamView::on_info_change));
@@ -128,9 +133,6 @@ histoalign(0.5, 0.5, 0, 0), minval("Display min"), maxval("Display max"), e_avg(
 	zoomin.signal_clicked().connect(sigc::mem_fun(*this, &CamView::on_zoomin_activate));
 	zoomout.signal_clicked().connect(sigc::mem_fun(*this, &CamView::on_zoomout_activate));
 
-	capture.signal_clicked().connect(sigc::mem_fun(*this, &CamView::on_capture_clicked));
-	display.signal_clicked().connect(sigc::mem_fun(*this, &CamView::on_display_clicked));
-	store.signal_clicked().connect(sigc::mem_fun(*this, &CamView::on_store_clicked));
 	
 	histoevents.signal_button_press_event().connect(sigc::mem_fun(*this, &CamView::on_histo_clicked));
 	
@@ -138,15 +140,20 @@ histoalign(0.5, 0.5, 0, 0), minval("Display min"), maxval("Display max"), e_avg(
 	glarea.view_update.connect(sigc::mem_fun(*this, &CamView::on_glarea_view_update));
 		
 	// layout
-	infohbox.set_spacing(4);
-	infohbox.pack_start(e_exposure, PACK_SHRINK);
-	infohbox.pack_start(e_offset, PACK_SHRINK);
-	infohbox.pack_start(e_interval, PACK_SHRINK);
-	infohbox.pack_start(e_gain, PACK_SHRINK);
-	infohbox.pack_start(e_res, PACK_SHRINK);
-	infohbox.pack_start(e_mode, PACK_SHRINK);
-	infohbox.pack_start(e_stat, PACK_SHRINK);
-	infoframe.add(infohbox);
+	ctrlhbox.set_spacing(4);
+	ctrlhbox.pack_start(capture, PACK_SHRINK);
+	ctrlhbox.pack_start(display, PACK_SHRINK);
+	ctrlhbox.pack_start(store, PACK_SHRINK);
+	ctrlhbox.pack_start(store_n, PACK_SHRINK);
+	ctrlhbox.pack_start(ctrl_vsep, PACK_SHRINK);
+	ctrlhbox.pack_start(e_exposure, PACK_SHRINK);
+	ctrlhbox.pack_start(e_offset, PACK_SHRINK);
+	ctrlhbox.pack_start(e_interval, PACK_SHRINK);
+	ctrlhbox.pack_start(e_gain, PACK_SHRINK);
+	ctrlhbox.pack_start(e_res, PACK_SHRINK);
+	ctrlhbox.pack_start(e_mode, PACK_SHRINK);
+	ctrlhbox.pack_start(e_stat, PACK_SHRINK);
+	ctrlframe.add(ctrlhbox);
 	
 	disphbox.set_spacing(4);
 	disphbox.pack_start(flipv, PACK_SHRINK);
@@ -161,53 +168,38 @@ histoalign(0.5, 0.5, 0, 0), minval("Display min"), maxval("Display max"), e_avg(
 	disphbox.pack_start(zoomout, PACK_SHRINK);
 	dispframe.add(disphbox);
 	
-	//ctrlhbox.pack_start(refresh, PACK_SHRINK);
-	ctrlhbox.set_spacing(4);
-	ctrlhbox.pack_start(capture, PACK_SHRINK);
-	ctrlhbox.pack_start(display, PACK_SHRINK);
-	ctrlhbox.pack_start(store, PACK_SHRINK);
-	ctrlhbox.pack_start(store_n, PACK_SHRINK);
-	ctrlframe.add(ctrlhbox);
-	
 	camhbox.pack_start(glarea);
 	camframe.add(camhbox);
 	
 	histoevents.add(histoimage);
 	histoalign.add(histoevents);
 	
-//	histohbox2.set_spacing(4);
 	histohbox2.pack_start(e_avg, PACK_SHRINK);
 	histohbox2.pack_start(e_rms, PACK_SHRINK);
-
-//	histohbox3.set_spacing(4);
+	
 	histohbox3.pack_start(e_datamin, PACK_SHRINK);
 	histohbox3.pack_start(e_datamax, PACK_SHRINK);
 	
-//	histovbox.set_spacing(4);
 	histovbox.pack_start(histohbox2);
 	histovbox.pack_start(histohbox3);
 	histovbox.pack_start(minval);
 	histovbox.pack_start(maxval);
 
-//	histohbox.set_spacing(4);
 	histohbox.pack_start(histoalign);
 	histohbox.pack_start(histovbox, PACK_SHRINK);
 
 	histoframe.add(histohbox);
 	
-	pack_start(infoframe, PACK_SHRINK);
-	pack_start(dispframe, PACK_SHRINK);
 	pack_start(ctrlframe, PACK_SHRINK);
+	pack_start(dispframe, PACK_SHRINK);
 	pack_start(camframe);
 	pack_start(histoframe, PACK_SHRINK);
 	
 	// finalize
 	show_all_children();
 	
-	if(!histo.get_active())
-		histoframe.hide();
-
-		
+	on_histo_toggled();
+			
 	camctrl->signal_monitor.connect(sigc::mem_fun(*this, &CamView::on_monitor_update));
 
 }
@@ -315,16 +307,32 @@ void CamView::do_update() {
 void CamView::on_histo_toggled() {
 	int w, h, fh;
 	//! @todo implement resize on histogram toggle
-//	get_size(w, h);
-	
 	if(histo.get_active()) {
 		histoframe.show();
 		fh = histoframe.get_height();
-//		resize(w, h + fh);
 	} else {
 		fh = histoframe.get_height();
 		histoframe.hide();
-//		resize(w, h - fh);
+	}
+}
+
+int CamView::histo_scale_func(int max) {
+	switch (histo_scale_f) {
+		case LINEAR:
+			return max;
+		case SQRT:
+			return sqrt(max*100);
+			// Increasing steepness of the function:
+		case LOG2:
+			return log2((max*1.0/100.0)+1.)*100;
+		case LOG10:
+			return log10((max*9.0/100.0)+1.)*100;
+		case LOG20:
+			return log10((max*19.0/100.0)+1.)*100/log10(20.0);
+		case LOG100:
+			return log10((max*99.0/100.0)+1.)*100/log10(100.0);
+		default:
+			return max;
 	}
 }
 
@@ -374,6 +382,10 @@ void CamView::do_histo_update() {
 	if (!histoframe.is_visible())
 		return;
 	
+	// total nr of pixels: pixels
+	// maximum intensity in image (nr of bins): max
+	// avg nr of pixels/bin: pixels / max
+	// with average filled bin, the bar height will be ~0.1
 	const int hscale = 1 + 10 * pixels / max;
 	
 	// Color red if overexposed
@@ -389,7 +401,7 @@ void CamView::do_histo_update() {
 	
 	if(histo_img) {
 		for(int i = 0; i < max; i++) {
-			int height = histo_img[i] * 100 / hscale;
+			int height = histo_scale_func(histo_img[i] * 100 / hscale);
 			if(height > 100)
 				height = 100;
 			for(int y = 100 - height; y < 100; y++) {
