@@ -51,14 +51,15 @@ public:
 	enum wfbasis {
 		ZERNIKE=0,
 		KL,
-		MIRROR
+		MIRROR,
+		UNDEFINED
 	};
 	
 	/*!
 	 @brief This holds information on the wavefront
 	 */
 	struct wavefront {
-		wavefront() : wfamp(NULL), nmodes(0) { ; }
+		wavefront() : wfamp(NULL), nmodes(0), basis(UNDEFINED) { ; }
 		gsl_vector_float *wfamp;					//!< Mode amplitudes
 		int nmodes;												//!< Number of modes
 		enum wfbasis basis;								//!< Basis functions used for this representation

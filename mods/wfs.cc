@@ -71,14 +71,13 @@ void Wfs::on_message(Connection *conn, std::string line) {
 			conn->addtag("basis");
 			string tmp;
 			if (wf.basis == ZERNIKE) tmp = "zernike";
-			else if (wf.basis = KL) tmp = "kl";
-			else if (wf.basis = MIRROR) tmp = "mirror";
+			else if (wf.basis == KL) tmp = "kl";
+			else if (wf.basis == MIRROR) tmp = "mirror";
 			else tmp = "unknown";
-			conn->write(format("ok basis %s", tmp));
+			conn->write(format("ok basis %s", tmp.c_str()));
  		}
 		else
 			parsed = false;
-		//! @todo basis
 	}
 	else
 		parsed = false;
