@@ -27,6 +27,7 @@
 
 #include "widgets.h"
 
+#include "wfsctrl.h"
 #include "deviceview.h"
 
 /*!
