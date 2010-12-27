@@ -115,20 +115,25 @@ void WfsView::do_wfspow_update() {
 	if (colw <= 0)
 		return;
 	
+	uint8_t col[3];
 	for (int n = 0; n < nmodes; n++) {
 		float amp = gsl_vector_float_get(mode_pow, n);
 		int height = amp*h/2.0; // should be between -h/2 and h/2
+		
+		// Set bar color (red, orange or green):
+		if (fabs(amp)>0.98) {
+			col[0] = 255; col[1] = 000; col[2] = 000; // X11 red
+		} else if (fabs(amp)>0.90) {
+			col[0] = 255; col[1] = 165; col[2] = 000; // X11 orange
+		} else {
+			col[0] = 144; col[1] = 238; col[2] = 144; // X11 lightgreen
+		}
 		
 		if (height < 0) {
 			for (int x = n*colw; x < (n+1)*colw; x++) {
 				for (int y = h/2; y > h/2+height; y--) {
 					uint8_t *p = out + 3 * (x + w * y);
-					if (fabs(amp)>0.95)
-						p[0] = 255;
-					else
-						p[0] = 0;
-					p[1] = 0;
-					p[2] = 0;
+					p[0] = col[0]; p[1] = col[1]; p[2] = col[2];
 				}
 			}
 		}
@@ -136,12 +141,7 @@ void WfsView::do_wfspow_update() {
 			for (int x = n*colw; x < (n+1)*colw; x++) {
 				for (int y = h/2; y < h/2+height; y++) {
 					uint8_t *p = out + 3 * (x + w * y);
-					if (fabs(amp)>0.95)
-						p[0] = 255;
-					else
-						p[0] = 0;
-					p[1] = 0;
-					p[2] = 0;
+					p[0] = col[0]; p[1] = col[1]; p[2] = col[2];
 				}
 			}				
 		}
