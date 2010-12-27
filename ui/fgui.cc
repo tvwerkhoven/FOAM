@@ -47,8 +47,13 @@
 #include "controlview.h"
 
 #include "deviceview.h"
+#include "devicectrl.h"
 #include "camview.h"
+#include "camctrl.h"
 #include "wfsview.h"
+#include "wfsctrl.h"
+#include "shwfsview.h"
+#include "shwfsctrl.h"
 
 #include "fgui.h"
 
@@ -237,12 +242,19 @@ void MainWindow::on_ctrl_device_update() {
 			continue;
 		}
 		// Then add specific devices first, and more general devices later
+		else if (dev.type.substr(0,13) == "dev.wfs.shwfs") {
+			fprintf(stderr, "MainWindow::on_ctrl_device_update() got shwfs device\n");
+			ShwfsCtrl *tmpctrl = new ShwfsCtrl(log, foamctrl.host, foamctrl.port, dev.name);
+			ShwfsView *tmp = new ShwfsView(tmpctrl, log, foamctrl, dev.name);
+			devlist[dev.name] = (DevicePage *) tmp;
+			log.add(Log::OK, "Added new SH-WFS, type="+dev.type+", name="+dev.name+".");
+		}
 		else if (dev.type.substr(0,7) == "dev.wfs") {
 			fprintf(stderr, "MainWindow::on_ctrl_device_update() got generic wfs device\n");
 			WfsCtrl *tmpctrl = new WfsCtrl(log, foamctrl.host, foamctrl.port, dev.name);
 			WfsView *tmp = new WfsView(tmpctrl, log, foamctrl, dev.name);
 			devlist[dev.name] = (DevicePage *) tmp;
-			log.add(Log::OK, "Added new generic camera, type="+dev.type+", name="+dev.name+".");
+			log.add(Log::OK, "Added new generic WFS, type="+dev.type+", name="+dev.name+".");
 		}
 		else if (dev.type.substr(0,7) == "dev.cam") {
 			fprintf(stderr, "MainWindow::on_ctrl_device_update() got generic camera device\n");
