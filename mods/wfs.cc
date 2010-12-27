@@ -53,7 +53,7 @@ void Wfs::on_message(Connection *conn, std::string line) {
 	bool parsed = true;
 	
 	if (command == "measuretest") {
-		measure();
+		Wfs::measure();
 		conn->addtag("measuretest");
 		conn->write("ok measuretest");
 	} else if (command == "get") {
@@ -67,13 +67,18 @@ void Wfs::on_message(Connection *conn, std::string line) {
 			}
 			conn->write(format("ok modes %d %s", wf.nmodes, moderep.c_str()));
 		}
+		else if (what == "basis") {
+			conn->addtag("basis");
+			string tmp;
+			if (wf.basis == ZERNIKE) tmp = "zernike";
+			else if (wf.basis = KL) tmp = "kl";
+			else if (wf.basis = MIRROR) tmp = "mirror";
+			else tmp = "unknown";
+			conn->write(format("ok basis %s", tmp));
+ 		}
 		else
 			parsed = false;
 		//! @todo basis
-//		else if (what == "basis") {
-//			conn->addtag("basis");
-//			conn->write(format("ok basis %lf", noiseamp));
-// 		}
 	}
 	else
 		parsed = false;
