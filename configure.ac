@@ -34,6 +34,11 @@ AC_PROG_MAKE_SET
 AC_PROG_INSTALL
 AC_PROG_RANLIB
 
+# TvW: littly hacky, these need to be defined before anything else, otherwise 
+# things collide when including. Any other solutions?
+AC_DEFINE([__STDC_FORMAT_MACROS], 1, [For including stdint.h])
+AC_DEFINE([__STDC_LIMIT_MACROS], 1, [For including stdint.h])
+
 PKG_PROG_PKG_CONFIG
 AC_CANONICAL_HOST
 

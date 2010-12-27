@@ -30,7 +30,12 @@
 // HEADERS //
 /***********/
 
+#ifdef HAVE_CONFIG_H
+// Contains various library we have.
+#include "autoconfig.h"
+#endif
 #include <getopt.h>
+
 #include "config.h"
 #include "io.h"
 #include "protocol.h"
@@ -39,7 +44,6 @@
 #include "foamtypes.h"
 #include "foamctrl.h"
 #include "devices.h"
-#include "autoconfig.h"
 #include "foam.h"
 
 using namespace std;

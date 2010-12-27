@@ -26,6 +26,11 @@
 #ifndef HAVE_FOAM_H
 #define HAVE_FOAM_H
 
+#ifdef HAVE_CONFIG_H
+// Contains various library we have.
+#include "autoconfig.h"
+#endif
+
 #include <stdio.h>
 #include <math.h>
 #include <pthread.h>
@@ -33,7 +38,8 @@
 #include <string>
 #include <stdexcept>
 
-#include "autoconfig.h"
+
+
 #include "foamtypes.h"
 #include "config.h"
 #include "protocol.h"
