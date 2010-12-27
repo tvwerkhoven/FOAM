@@ -53,6 +53,7 @@ wfpow_mode("Basis"), wfpow_align(0.5, 0.5, 0, 0)
 
 	pack_start(wfpow_frame, PACK_SHRINK);
 	
+	wfsctrl->signal_message.connect(sigc::mem_fun(*this, &WfsView::do_info_update));
 	wfsctrl->signal_wavefront.connect(sigc::mem_fun(*this, &WfsView::do_wfspow_update));
 
 	// finalize
@@ -78,6 +79,10 @@ void WfsView::clear_gui() {
 	fprintf(stderr, "%x:WfsView::clear_gui()\n", (int) pthread_self());
 }
 
+void WfsView::do_info_update() {
+	wfpow_mode.set_text(wfsctrl->get_basis_str());
+}
+	
 void WfsView::do_wfspow_update() {	
 	int nmodes = wfsctrl->get_nmodes();
 	gsl_vector_float *mode_pow = wfsctrl->get_modes();
@@ -94,11 +99,8 @@ void WfsView::do_wfspow_update() {
 	double max=0;
 	max = gsl_vector_float_max (mode_pow);
 
-	// Color red if (almost) maxed out, make background white otherwise
-	if (max > 0.97)
-		wfpow_pixbuf->fill(0xff000000);
-	else
-		wfpow_pixbuf->fill(0xffffff00);
+	// make background white
+	wfpow_pixbuf->fill(0xffffff00);
 	
 	// Draw bars
 	uint8_t *out = (uint8_t *)wfpow_pixbuf->get_pixels();
@@ -114,13 +116,17 @@ void WfsView::do_wfspow_update() {
 		return;
 	
 	for (int n = 0; n < nmodes; n++) {
-		int height = gsl_vector_float_get(mode_pow, n)*h/2.0; // should be between -h/2 and h/2
+		float amp = gsl_vector_float_get(mode_pow, n);
+		int height = amp*h/2.0; // should be between -h/2 and h/2
 		
 		if (height < 0) {
 			for (int x = n*colw; x < (n+1)*colw; x++) {
 				for (int y = h/2; y > h/2+height; y--) {
 					uint8_t *p = out + 3 * (x + w * y);
-					p[0] = 0;
+					if (fabs(amp)>0.95)
+						p[0] = 255;
+					else
+						p[0] = 0;
 					p[1] = 0;
 					p[2] = 0;
 				}
@@ -130,7 +136,10 @@ void WfsView::do_wfspow_update() {
 			for (int x = n*colw; x < (n+1)*colw; x++) {
 				for (int y = h/2; y < h/2+height; y++) {
 					uint8_t *p = out + 3 * (x + w * y);
-					p[0] = 0;
+					if (fabs(amp)>0.95)
+						p[0] = 255;
+					else
+						p[0] = 0;
 					p[1] = 0;
 					p[2] = 0;
 				}

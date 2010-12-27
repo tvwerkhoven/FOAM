@@ -51,6 +51,7 @@ protected:
 	Glib::RefPtr<Gdk::Pixbuf> wfpow_pixbuf;
 	
 	void do_wfspow_update();								//!< Update WF display
+	void do_info_update();									//!< Update general info in GUI
 
 	// From DevicePage::
 	virtual void enable_gui();
