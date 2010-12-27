@@ -118,7 +118,7 @@ void WfsView::do_wfspow_update() {
 		
 		if (height < 0) {
 			for (int x = n*colw; x < (n+1)*colw; x++) {
-				for (int y = h/2; y > height; y--) {
+				for (int y = h/2; y > h/2+height; y--) {
 					uint8_t *p = out + 3 * (x + w * y);
 					p[0] = 0;
 					p[1] = 0;
@@ -128,7 +128,7 @@ void WfsView::do_wfspow_update() {
 		}
 		else {
 			for (int x = n*colw; x < (n+1)*colw; x++) {
-				for (int y = h/2; y < height; y++) {
+				for (int y = h/2; y < h/2+height; y++) {
 					uint8_t *p = out + 3 * (x + w * y);
 					p[0] = 0;
 					p[1] = 0;
