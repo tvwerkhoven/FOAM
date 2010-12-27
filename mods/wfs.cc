@@ -38,7 +38,7 @@ cam(wfscam)
 	
 	add_cmd("measuretest");
 	add_cmd("get modes");
-	
+	add_cmd("get basis");
 }
 
 Wfs::~Wfs() {
