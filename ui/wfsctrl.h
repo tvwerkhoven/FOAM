@@ -37,6 +37,8 @@
 
 #include "devicectrl.h"
 
+using namespace std;
+
 /*!
  @brief Generic wavefront sensor control class
  
@@ -58,6 +60,7 @@ public:
 	// From DeviceCtrl::
 	virtual void connect();
 	
+	string get_basis_str();
 	int get_nmodes() { return wf.nmodes; }
 	gsl_vector_float *get_modes() { return wf.wfamp; }
 	

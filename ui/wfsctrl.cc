@@ -109,12 +109,15 @@ void WfsCtrl::on_message(string line) {
 			else if (basis == "mirror")
 				wf.basis = Wfs::MIRROR;
 			else {
-				ok = false;
 				wf.basis = Wfs::UNDEFINED;
+				ok = false;
 				errormsg = format("Got unknown wavefront basis '%s'.", basis.c_str());
-				//! @todo need signal_message(); here? can we exit more gently?
+				signal_message();
 				return;
 			}
+	} else if (what == "measuretest") {
+		// If Wfs did a measuretest, get the results
+		send_cmd("get modes");
 	} else {
 		ok = false;
 		errormsg = "Unexpected response '" + what + "'";
@@ -122,3 +125,18 @@ void WfsCtrl::on_message(string line) {
 
 	signal_message();
 }
+
+string WfsCtrl::get_basis_str() { 
+	switch (wf.basis) {
+		case Wfs::ZERNIKE:
+			return "zernike";
+		case Wfs::KL:
+			return "kl";
+		case Wfs::MIRROR:
+			return "mirror";
+		case Wfs::UNDEFINED:
+		default:
+			return "undef";
+	}
+}
+
