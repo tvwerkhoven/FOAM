@@ -110,7 +110,8 @@ void WfsCtrl::on_message(string line) {
 				wf.basis = Wfs::MIRROR;
 			else {
 				ok = false;
-				errormsg = format("Got unknown wavefron basis '%s'", basis);
+				wf.basis = Wfs::UNDEFINED;
+				errormsg = format("Got unknown wavefront basis '%s'.", basis.c_str());
 				//! @todo need signal_message(); here? can we exit more gently?
 				return;
 			}
