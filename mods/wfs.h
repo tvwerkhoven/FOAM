@@ -78,7 +78,8 @@ public:
 	//virtual void on_connect(Connection *conn, bool status) = 0;
 	
 	virtual ~Wfs();
-	Wfs(Io &io, foamctrl *ptc, string name, string type, string port, Path conffile, Camera &wfscam, bool online=true);
+	Wfs(Io &io, foamctrl *ptc, string name, string type, string port, Path conffile, Camera &wfscam, bool online=true); //!< Constructor for derived WFSs (i.e. SHWFS)
+	Wfs(Io &io, foamctrl *ptc, string name, string port, Path conffile, Camera &wfscam, bool online=true); //!< Constructor for bare WFS
 };
 
 #endif // HAVE_WFS_H

@@ -30,6 +30,17 @@
 #include "io.h"
 #include "wfs.h"
 
+Wfs::Wfs(Io &io, foamctrl *ptc, string name, string port, Path conffile, Camera &wfscam, bool online):
+Device(io, ptc, name, wfs_type, port, conffile, online),
+cam(wfscam)
+{	
+	io.msg(IO_DEB2, "Wfs::Wfs()");
+	
+	add_cmd("measuretest");
+	add_cmd("get modes");
+	add_cmd("get basis");
+}
+
 Wfs::Wfs(Io &io, foamctrl *ptc, string name, string type, string port, Path conffile, Camera &wfscam, bool online):
 Device(io, ptc, name, wfs_type + "." + type, port, conffile, online),
 cam(wfscam)
