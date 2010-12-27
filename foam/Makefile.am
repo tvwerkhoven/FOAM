@@ -1,31 +1,7 @@
 ## @file foam/Makefile.am
 ## @author Tim van Werkhoven (t.i.m.vanwerkhoven@xs4all.nl)
 
-MODS_DIR = $(top_builddir)/mods
-LIB_DIR = $(top_builddir)/lib
-LIBSIU_DIR = $(top_srcdir)/$(LIBSIU)
-
-AM_CPPFLAGS = \
-        -I$(LIB_DIR) \
-        -I$(MODS_DIR) \
-        -I$(LIBSIU_DIR)
-
-# This is used to get the config directory as a define (see top-level Makefile.am)
-# TODO: check this
-AM_CPPFLAGS += -DFOAM_DATADIR=\"$(FOAMDATADIR)\" \
-		$(COMMON_CFLAGS)
-
-# GSL flags
-AM_CPPFLAGS += -DHAVE_INLINE \
-		-DGSL_RANGE_CHECK_OFF
-
-if DEBUG
-AM_CPPFLAGS += -DFOAM_DEBUG=1
-endif DEBUG
-
-AM_CXXFLAGS = -Wall -Wextra \
-		-Wfatal-errors -Wno-unused-variable \
-		-O2 -g
+include $(top_srcdir)/common.mk
 
 AM_LDFLAGS = $(COMMON_LIBS)
 

@@ -20,7 +20,6 @@ AC_CONFIG_FILES([
 Makefile
 foam/Makefile
 ui/Makefile
-lib/Makefile
 conf/Makefile
 data/Makefile
 testing/Makefile
@@ -28,16 +27,12 @@ testing/Makefile
 
 AC_GNU_SOURCE
 
+AC_PROG_CPP
 AC_PROG_CXX
 AC_PROG_CXXCPP
 AC_PROG_MAKE_SET
 AC_PROG_INSTALL
 AC_PROG_RANLIB
-
-# TvW: littly hacky, these need to be defined before anything else, otherwise 
-# things collide when including. Any other solutions?
-AC_DEFINE([__STDC_FORMAT_MACROS], 1, [For including stdint.h])
-AC_DEFINE([__STDC_LIMIT_MACROS], 1, [For including stdint.h])
 
 PKG_PROG_PKG_CONFIG
 AC_CANONICAL_HOST
@@ -59,6 +54,7 @@ FOAMDATADIR=$datadir/foam
 FOAMCONFDIR=$sysconfdir/foam
 AC_SUBST(FOAMDATADIR)
 AC_SUBST(FOAMCONFDIR)
+
 
 ### These libraries are crucial for all targets
 AC_SEARCH_LIBS([sin],
