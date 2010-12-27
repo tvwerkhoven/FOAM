@@ -33,7 +33,10 @@
 // LIBRARIES //
 /*************/
 
+#ifdef HAVE_CONFIG_H
 #include "autoconfig.h"
+#endif
+
 #include "foam.h"
 #include "types.h"
 #include "io.h"

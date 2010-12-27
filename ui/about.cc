@@ -20,7 +20,9 @@
  */
 
 #include <about.h>
+#ifdef HAVE_CONFIG_H
 #include "autoconfig.h"
+#endif
 
 static const char GPL[] =
 "                    GNU GENERAL PUBLIC LICENSE\n"

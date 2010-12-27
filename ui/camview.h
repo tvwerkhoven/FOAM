@@ -22,6 +22,10 @@
 #ifndef HAVE_CAMVIEW_H
 #define HAVE_CAMVIEW_H
 
+#ifdef HAVE_CONFIG_H
+#include "autoconfig.h"
+#endif
+
 #include <gtkmm.h>
 #include <gdkmm/pixbuf.h>
 #include <gtkglmm.h>

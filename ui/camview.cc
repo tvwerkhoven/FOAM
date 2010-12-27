@@ -19,8 +19,8 @@
  along with FOAM.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __STDC_FORMAT_MACROS
-#define __STDC_FORMAT_MACROS
+#ifdef HAVE_CONFIG_H
+#include "autoconfig.h"
 #endif
 
 #define GL_GLEXT_PROTOTYPES

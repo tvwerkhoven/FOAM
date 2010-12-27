@@ -2,8 +2,11 @@
  autotools-test.cc -- test autotools variables
  */
 
-#include <stdio.h>
+#ifdef HAVE_CONFIG_H
 #include "autoconfig.h"
+#endif
+
+#include <stdio.h>
 
 int main() {
 	printf("Hello World\n");

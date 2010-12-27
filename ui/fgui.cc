@@ -26,6 +26,10 @@
  @todo disable buttons when not connected.
  */
 
+#ifdef HAVE_CONFIG_H
+#include "autoconfig.h"
+#endif
+
 #include <gtkmm.h>
 #include <gtkmm/accelmap.h>
 #include <string.h>
@@ -33,8 +37,6 @@
 #include <iostream>
 #include <string>
 #include <map>
-
-#include "autoconfig.h"
 
 #include "about.h"
 #include "widgets.h"

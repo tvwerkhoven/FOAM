@@ -22,6 +22,10 @@
 #ifndef HAVE_SIMULCAM_H
 #define HAVE_SIMULCAM_H
 
+#ifdef HAVE_CONFIG_H
+#include "autoconfig.h"
+#endif
+
 #include <stdint.h>
 
 #include "config.h"

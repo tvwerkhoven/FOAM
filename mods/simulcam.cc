@@ -18,8 +18,11 @@
  along with FOAM.	If not, see <http://www.gnu.org/licenses/>. 
  */
 
+#ifdef HAVE_CONFIG_H
+#include "autoconfig.h"
+#endif
+
 #include <unistd.h>
-#define __STDC_LIMIT_MACROS
 #include <stdint.h>
 #include <gsl/gsl_matrix.h>
 #include <math.h>

@@ -20,12 +20,13 @@
 #ifndef HAVE_IMGCAM_H
 #define HAVE_IMGCAM_H
 
+#ifdef HAVE_CONFIG_H
+#include "autoconfig.h"
+#endif
+
 #include <sys/time.h>
 #include <time.h>
 #include <math.h>
-#ifndef __STDC_LIMIT_MACROS
-#define __STDC_LIMIT_MACROS
-#endif
 #include <stdint.h>
 
 #include "config.h"

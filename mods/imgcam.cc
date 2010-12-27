@@ -17,13 +17,14 @@
  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+#ifdef HAVE_CONFIG_H
+#include "autoconfig.h"
+#endif
+
 #include <sys/time.h>
 #include <time.h>
 #include <math.h>
 #include <fcntl.h>
-#ifndef __STDC_LIMIT_MACROS
-#define __STDC_LIMIT_MACROS
-#endif
 #include <stdint.h>
 
 #include "config.h"
