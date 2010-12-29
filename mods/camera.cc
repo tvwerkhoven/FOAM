@@ -312,6 +312,7 @@ void *Camera::cam_queue(void *data, void *image, struct timeval *tv) {
 	frame->data = data;
 	frame->image = image;
 	frame->id = count++;
+	frame->size = res.x * res.y * depth/8;
 	
 	if(!frame->histo)
 		frame->histo = new uint32_t[get_maxval()];

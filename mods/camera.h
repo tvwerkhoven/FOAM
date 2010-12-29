@@ -118,6 +118,8 @@ const string cam_type = "cam";
  @todo What to do with mode & state?
  */ 
 class Camera: public Device {
+	// Wfs is a friend class because it needs more access to the camera (also mutexes etc)
+	friend class Wfs;
 public:
 	typedef enum {
 		OFF = 0,
@@ -150,18 +152,20 @@ public:
 	//!< Data structure for storing frames, taken from filter_control by Guus Sliepen
 	typedef struct frame {
 		void *data;						//!< Generic data pointer, might be necessary for some hardware
-		void *image;					//!< Pointer to frame data
-		uint32_t *histo;
-		size_t id;
+		void *image;					//!< Pointer to frame data (unsigned int, 8 or 16 bpp)
+		uint32_t *histo;			//!< Histogram data (optional)
+		size_t id;						//!< Unique frame ID
+		size_t size;					//!< Size of 'image'
 		struct timeval tv;
 		
-		bool proc;						//!< Was the frame processed in time?
+		bool proc;						//!< Was the frame processed?
 		
 		frame() {
 			data = 0;
 			image = 0;
-			id = 0;
 			histo = 0;
+			id = 0;
+			size = 0;
 			proc = false;
 			avg = 0;
 			rms = 0;
@@ -276,6 +280,8 @@ public:
 	
 	frame_t *get_frame(size_t id, bool wait = true);
 	frame_t *get_last_frame();
+	size_t get_count() { return count; }
+	size_t get_bufsize() { return nframes; }
 	
 	// From Devices::
 	virtual int verify() { return 0; }
