@@ -62,10 +62,16 @@ private:
 	} pool_t;
 	
 	pool_t workpool;										//!< Work pool
+
+	pthread::mutex work_mutex;					//!< Mutex used to limit access to frame data
+	pthread::cond work_cond;						//!< Cond used to signal threads about new frames
+
 	int nworker;												//!< Number of workers
+	int workid;													//!< Worker counter
 	pthread::thread *workers;						//!< Worker threads
 
 	void _worker_func();								//!< Worker function
+	int _worker_getid() { return workid++; }
 	
 public:
 	Shift(Io &io, int nthr=4);

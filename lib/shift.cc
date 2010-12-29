@@ -27,7 +27,7 @@
 
 #include "shift.h"
 
-Shift::Shift(Io &io, int nthr): io(io) {
+Shift::Shift(Io &io, int nthr): io(io), nworker(nthr), workid(0) {
 	io.msg(IO_DEB2, "Shift::Shift()");
 	
 	// Startup workers
@@ -46,7 +46,18 @@ Shift::~Shift() {
 }
 
 void Shift::_worker_func() {
-	io.msg(IO_XNFO, "Shift::_worker_func() new worker thread: %X", pthread_self());
+	work_mutex.lock();
+	int id = _worker_getid();
+	io.msg(IO_XNFO, "Shift::_worker_func() new worker thread(%d/%d): %X", id, nworker, pthread_self());
+	work_mutex.unlock();
+
+	while (true) {
+		work_mutex.lock();
+		work_cond.wait(work_mutex);
+		work_mutex.unlock();
+		io.msg(IO_XNFO, "Shift::_worker_func() woke up, new work!");
+		
+	}
 }
 
 bool Shift::calc_shifts(void *img, dtype_t dt, coord_t res, crop_t *crops, gsl_vector_float *shifts, mode_t mode) {
