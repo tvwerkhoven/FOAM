@@ -9,7 +9,8 @@ if HAVE_MACOSX
 AM_LDFLAGS += -framework CoreFoundation -framework Carbon
 endif
 
-noinst_PROGRAMS = autotools-test
+## Compilation tests
+check_PROGRAMS = autotools-test
 
 autotools_test_SOURCES = autotools-test.cc
 
@@ -17,14 +18,21 @@ autotools_test_SOURCES = autotools-test.cc
 TESTS_ENVIRONMENT = $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) \
 	$(autotools_test_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -E -dM
 TESTS = $(autotools_test_SOURCES)
-		
+
+## Bitness test
+check_PROGRAMS += bit64-test bit32-test bitdef-test
+
+bitdef_test_SOURCES = bitness-test.cc
+bit64_test_SOURCES = $(bitdef_test_SOURCES)
+bit64_test_CXXFLAGS = -m64 $(AM_CXXFLAGS)
+bit32_test_SOURCES = $(bitdef_test_SOURCES)
+bit32_test_CXXFLAGS = -m32 $(AM_CXXFLAGS)
 
 if HWDEBUG
 # only do this if we want hardware debugging 
 # install the test programs in a foam-test subdir
-noinst_PROGRAMS += 
 if HAVE_DC1394
-noinst_PROGRAMS += dc1394-test
+check_PROGRAMS += dc1394-test
 
 dc1394_test_SOURCES = dc1394-test.cc
 dc1394_test_CXXFLAGS = $(AM_CXXFLAGS) $(DC1394_CFLAGS)
@@ -33,7 +41,7 @@ endif
 endif HWDEBUG
 
 if DEBUG
-noinst_PROGRAMS += pixbuf-test gtk-test sigcpp-test
+check_PROGRAMS += pixbuf-test gtk-test sigcpp-test
 
 pixbuf_test_SOURCES = pixbuf-test.cc
 pixbuf_test_CPPFLAGS = $(GUI_CFLAGS) $(AM_CPPFLAGS)
@@ -48,7 +56,7 @@ sigcpp_test_CPPFLAGS = $(SIGC_CFLAGS) $(AM_CPPFLAGS)
 sigcpp_test_LDADD = $(LDADD) $(SIGC_LIBS)
 
 if FULLSIM
-noinst_PROGRAMS += shwfs-test
+check_PROGRAMS += shwfs-test
 shwfs_test_SOURCES = shwfs-test.cc \
 		$(MODS_DIR)/shwfs.cc \
 		$(MODS_DIR)/wfs.cc \
@@ -72,7 +80,7 @@ endif FULLSIM
 
 if HAVE_OPENGL
 
-noinst_PROGRAMS += opengl-test camview-test 
+check_PROGRAMS += opengl-test camview-test 
 
 opengl_test_SOURCES = opengl-test.cc
 opengl_test_CPPFLAGS = $(GUI_CFLAGS) $(AM_CPPFLAGS)
@@ -91,7 +99,7 @@ endif HAVE_OPENGL
 
 if HAVE_FITSIO
 
-noinst_PROGRAMS += camsend-test
+check_PROGRAMS += camsend-test
 
 camsend_test_SOURCES = camsend-test.cc
 camsend_test_LDADD = $(LIBSIU_DIR)/libprotocol.a \
