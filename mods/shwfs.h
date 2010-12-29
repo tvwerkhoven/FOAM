@@ -63,11 +63,10 @@ public:
 	} mode_t;														//!< Different SHWFS operation modes
 	
 	typedef struct sh_subimg {
-		coord_t pos;											//!< Centroid position of this subimg
 		coord_t llpos;										//!< Lower-left position of this subimg (pos - size/2)
 		coord_t size;											//!< Subaperture size (pixels)
 		size_t id;
-		sh_subimg(): pos(0,0), llpos(0,0), size(0,0), id(0) { ; }
+		sh_subimg(): llpos(0,0), size(0,0), id(0) { ; }
 	} sh_simg_t;												//!< MLA subimage definition on CCD
 	
 	typedef struct sh_mla {

@@ -202,8 +202,6 @@ int Shwfs::gen_mla_grid(sh_mla_t *mla, coord_t res, coord_t size, coord_t pitch,
 					//io.msg(IO_DEB2, "Shwfs::gen_mla_grid(): Found subap within bounds @ (%d, %d)", sa_c.x, sa_c.y);
 					(mla->nsi)++;
 					mla->ml = (sh_simg_t *) realloc((void *) mla->ml, mla->nsi * sizeof *(mla->ml));
-					mla->ml[mla->nsi-1].pos.x = sa_c.x + disp.x;
-					mla->ml[mla->nsi-1].pos.y = sa_c.y + disp.y;
 					mla->ml[mla->nsi-1].llpos.x = sa_c.x + disp.x - size.x/2;
 					mla->ml[mla->nsi-1].llpos.y = sa_c.y + disp.y - size.y/2;
 					mla->ml[mla->nsi-1].size.x = size.x;
@@ -217,8 +215,6 @@ int Shwfs::gen_mla_grid(sh_mla_t *mla, coord_t res, coord_t size, coord_t pitch,
 					//io.msg(IO_DEB2, "Shwfs::gen_mla_grid(): Found subap within bounds.");
 					(mla->nsi)++;
 					mla->ml = (sh_simg_t *) realloc((void *) mla->ml, mla->nsi * sizeof *(mla->ml));
-					mla->ml[mla->nsi-1].pos.x = sa_c.x + disp.x;
-					mla->ml[mla->nsi-1].pos.y = sa_c.y + disp.y;
 					mla->ml[mla->nsi-1].llpos.x = sa_c.x + disp.x - size.x/2;
 					mla->ml[mla->nsi-1].llpos.y = sa_c.y + disp.y - size.y/2;
 					mla->ml[mla->nsi-1].size.x = size.x;
@@ -256,11 +252,9 @@ bool Shwfs::store_mla_grid(sh_mla_t mla, Path &f, bool overwrite) {
 	fprintf(fd, "# MLA definition, nsi=%d.\n", mla.nsi);
 	fprintf(fd, "# Columns: llpos.x, llpos.y, cpos.x, cpos.y, size.x, size.y\n");
 	for (int n=0; n<mla.nsi; n++) {
-		fprintf(fd, "%d, %d, %d, %d, %d, %d\n", 
+		fprintf(fd, "%d, %d, %d, %d\n", 
 						mla.ml[n].llpos.x,
 						mla.ml[n].llpos.y,
-						mla.ml[n].pos.x,
-						mla.ml[n].pos.y,
 						mla.ml[n].size.x,
 						mla.ml[n].size.y);
 	}
@@ -315,21 +309,21 @@ int Shwfs::find_mla_grid(sh_mla_t *mla, coord_t size, int mini, int nmax, int it
 		(mla->nsi)++;
 		mla->ml = (sh_simg_t *) realloc((void *) mla->ml, mla->nsi * sizeof *(mla->ml));
 
-		sapos.x = maxidx % cam.get_width();
-		sapos.y = int(maxidx / cam.get_width());
+		sapos.x = (maxidx % cam.get_width()) - size.x/2;
+		sapos.y = int(maxidx / cam.get_width()) - size.y/2;
 		
-		mla->ml[mla->nsi-1].pos.x = sapos.x;
-		mla->ml[mla->nsi-1].pos.y = sapos.y;
+		mla->ml[mla->nsi-1].llpos.x = sapos.x;
+		mla->ml[mla->nsi-1].llpos.y = sapos.y;
 		
-		io.msg(IO_DEB2, "Shwfs::find_mla_grid(): new! I: %d, idx: %zu, pos: (%d,%d)", maxi, maxidx, sapos.x, sapos.y);
+		io.msg(IO_DEB2, "Shwfs::find_mla_grid(): new! I: %d, idx: %zu, llpos: (%d,%d)", maxi, maxidx, sapos.x, sapos.y);
 
 		// Enough subapertures, done
 		if (mla->nsi == nmax)
 			break;
 		
 		// Set the current subaperture to zero
-		int xran[] = {max(0, sapos.x-size.x/2), min(cam.get_width(), sapos.x+size.x/2)};
-		int yran[] = {max(0, sapos.y-size.y/2), min(cam.get_height(), sapos.y+size.y/2)};
+		int xran[] = {max(0, sapos.x), min(cam.get_width(), sapos.x+size.x)};
+		int yran[] = {max(0, sapos.y), min(cam.get_height(), sapos.y+size.y)};
 		
 		if (cam.get_depth() <= 8) {
 			uint8_t *image = (uint8_t *)f->image;
