@@ -28,7 +28,6 @@
 using namespace std;
 
 const string shwfs_type = "shwfs";
-const int shwfs_maxlenses = 128;
 
 
 // CLASS DEFINITION //
@@ -68,24 +67,27 @@ public:
 		coord_t llpos;										//!< Lower-left position of this subimg (pos - size/2)
 		coord_t size;											//!< Subaperture size (pixels)
 		coord_t track;										//!< Subaperture tracking window size
-		sh_subimg(): pos(0,0), llpos(0,0), size(0,0), track(0,0) { ; }
+		size_t id;
+		sh_subimg(): pos(0,0), llpos(0,0), size(0,0), track(0,0), id(0) { ; }
 	} sh_simg_t;												//!< MLA subimage definition on CCD
 	
 	typedef struct sh_mla {
 		int nsi;													//!< Number of microlenses (subapertures)
 		float f;													//!< Microlens focal length
-		Shwfs::sh_simg_t *ml;							//!< Array of microlens positions
+		sh_simg_t *ml;										//!< Array of microlens positions
 		sh_mla(): nsi(0), f(-1.0), ml(NULL) { ; }
 	} sh_mla_t;													//!< Microlens array struct
 
 private:
+	mode_t mode;												//!< Data processing mode (Center of Gravity, Correlation, etc)
+	
 	sh_mla_t mla;												//!< Subimages coordinates & sizes
 	
+	// Parameters for dynamic MLA grods:
 	int simaxr;													//!< Maximum radius to use, or edge erosion subimages
 	int simini;													//!< Minimum intensity in
 	
-	mode_t mode;												//!< Data processing mode (Center of Gravity, Correlation, etc)
-	
+	// Parameters for static MLA grids:
 	coord_t sisize;											//!< Subimage size
 	coord_t sipitch;										//!< Pitch between subimages
 	fcoord_t sitrack;										//!< Size of track window (relative to sisize)
@@ -98,6 +100,14 @@ private:
 	
 	//template <class T> uint32_t _cog(T *img, int xpos, int ypos, int w, int h, int stride, uint32_t simini, fcoord_t& cog);
 	//template <class T> int _cogframe(T *img);
+	/*! @brief Find maximum intensity & index of img
+
+	 @param [in] *img Image to scan
+	 @param [in] nel Number of pixels in image
+	 @param [out] idx Index of maximum intensity pixel
+	 @return Maximum intensity
+	 */
+	template <class T> int _find_max(T *img, size_t nel, size_t *idx);
 	
 	int mla_subapsel();	
 	
@@ -108,20 +118,33 @@ public:
 	/*! @brief Generate subaperture/subimage (sa/si) positions for a given configuration.
 	 
 	 @param [in] res Resolution of the sa pattern (before scaling) [pixels]
-	 @param [in] size size of the sa's [pixels]
-	 @param [in] pitch pitch of the sa's [pixels]
-	 @param [in] xoff the horizontal position offset of odd rows [fraction of pitch]
-	 @param [in] disp global displacement of the sa positions [pixels]
-	 @param [in] shape shape of the pattern, circular or square (see mlashape_t)
-	 @param [in] overlap how much overlap with aperture needed for inclusion (0--1)
-	 @param [out] *pattern the calculated subaperture pattern
-	 @return number of subapertures found
+	 @param [in] size Size of the sa's [pixels]
+	 @param [in] pitch Pitch of the sa's [pixels]
+	 @param [in] xoff The horizontal position offset of odd rows [fraction of pitch]
+	 @param [in] disp Global displacement of the sa positions [pixels]
+	 @param [in] shape Shape of the pattern, circular or square (see mlashape_t)
+	 @param [in] overlap How much overlap with aperture needed for inclusion (0--1)
+	 @param [out] nsubap Number of subapertures found
+	 @return The calculated subaperture pattern
 	 */
-	sh_simg_t *gen_mla_grid(coord_t res, coord_t size, coord_t pitch, int xoff, coord_t disp, mlashape_t shape, float overlap, int &nsubap);
-	
+	sh_simg_t *gen_mla_grid(coord_t res, coord_t size, coord_t pitch, int xoff, coord_t disp, mlashape_t shape, float overlap, int *nsubap);
+
+	/*! @brief Find subaperture/subimage (sa/si) positions in a given frame.
+	 
+	 This function takes a frame from the camera and finds the brightest spots to use as MLA grid
+	 
+	 @param [in] size Size of the sa's [pixels]
+	 @param [out] nsubap Number of subapertures found
+	 @param [in] mini Minimimum intensity in a SA pattern
+	 @param [in] nmax Maximum number of SA's to search
+	 @param [in] iter Number of iterations to do
+	 @return The calculated subaperture pattern
+	 */
+	sh_simg_t *find_mla_grid(coord_t size, int *nsubap, int mini=10, int nmax=-1, int iter=1);
+	 
 	bool store_mla_grid(sh_mla_t mla, Path &f, bool overwrite=false);	//!< Store external MLA grid to disk, as CSV
 	bool store_mla_grid(Path &f, bool overwrite=false);	//!< Store this MLA grid to disk, as CSV
-	
+
 	// From Wfs::
 	virtual int measure();
 };
