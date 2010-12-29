@@ -66,9 +66,8 @@ public:
 		coord_t pos;											//!< Centroid position of this subimg
 		coord_t llpos;										//!< Lower-left position of this subimg (pos - size/2)
 		coord_t size;											//!< Subaperture size (pixels)
-		coord_t track;										//!< Subaperture tracking window size
 		size_t id;
-		sh_subimg(): pos(0,0), llpos(0,0), size(0,0), track(0,0), id(0) { ; }
+		sh_subimg(): pos(0,0), llpos(0,0), size(0,0), id(0) { ; }
 	} sh_simg_t;												//!< MLA subimage definition on CCD
 	
 	typedef struct sh_mla {
@@ -90,7 +89,6 @@ private:
 	// Parameters for static MLA grids:
 	coord_t sisize;											//!< Subimage size
 	coord_t sipitch;										//!< Pitch between subimages
-	fcoord_t sitrack;										//!< Size of track window (relative to sisize)
 	coord_t disp;												//!< Displacement of complete pattern
 	float overlap;											//!< Overlap required 
 	int xoff;														//!< Odd row offset between lenses

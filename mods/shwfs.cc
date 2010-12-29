@@ -66,11 +66,6 @@ mode(Shwfs::COG)
 	if (cfg.exists("sipitch"))
 		sipitch.x = sipitch.y = cfg.getint("sipitch");
 	
-	sitrack.x = sisize.x * cfg.getdouble("sitrackx", 0.5);
-	sitrack.y = sisize.y * cfg.getdouble("sitracky", 0.5);
-	if (cfg.exists("sitrack"))
-		sitrack.x = sitrack.y = cfg.getdouble("sitrack");
-	
 	disp.x = cfg.getint("dispx", cam.get_width()/2);
 	disp.y = cfg.getint("dispy", cam.get_height()/2);
 	if (cfg.exists("disp"))
@@ -349,10 +344,10 @@ int Shwfs::find_mla_grid(sh_mla_t *mla, coord_t size, int mini, int nmax, int it
 		}
 	}
 	
-	// Done! We have found the maximum intensities now. Store in useful format
+	// Done! We have found the maximum intensities now.
 		
 	for (int it=1; it<iter; it++) {
-		//! @todo implement iterations in find_mla_grid()
+		//! @todo implement iterative updates
 		io.msg(IO_WARN, "Shwfs::find_mla_grid(): iter not yet implemented");
 	}
 	
