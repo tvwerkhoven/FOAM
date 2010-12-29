@@ -90,7 +90,7 @@ mode(Shwfs::COG)
 	simini = cfg.getint("simini", 30);
 	
 	// Generate MLA grid
-	mla.ml = gen_mla_grid(cam.get_res(), sisize, sipitch, xoff, disp, shape, overlap, &(mla.nsi));
+	gen_mla_grid(&mla, cam.get_res(), sisize, sipitch, xoff, disp, shape, overlap);
 }
 
 Shwfs::~Shwfs() {
@@ -179,15 +179,14 @@ int Shwfs::measure() {
 	return 0;
 }
 
-Shwfs::sh_simg_t *Shwfs::gen_mla_grid(coord_t res, coord_t size, coord_t pitch, int xoff, coord_t disp, mlashape_t shape, float overlap, int *nsubap) {
+int Shwfs::gen_mla_grid(sh_mla_t *mla, coord_t res, coord_t size, coord_t pitch, int xoff, coord_t disp, mlashape_t shape, float overlap) {
 	io.msg(IO_DEB2, "Shwfs::gen_mla_grid()");
 	
 	// How many subapertures would fit in the requested size 'res':
 	int sa_range_y = (int) ((res.y/2)/pitch.x + 1);
 	int sa_range_x = (int) ((res.x/2)/pitch.y + 1);
 	
-	*nsubap = 0;
-	sh_simg_t *pattern = NULL;
+	mla->nsi = 0;
 	
 	float minradsq = pow(((double) min(res.x, res.y))/2.0, 2);
 	
@@ -206,14 +205,14 @@ Shwfs::sh_simg_t *Shwfs::gen_mla_grid(coord_t res, coord_t size, coord_t pitch, 
 			if (shape == CIRCULAR) {
 				if (pow(fabs(sa_c.x) + (overlap-0.5)*size.x, 2) + pow(fabs(sa_c.y) + (overlap-0.5)*size.y, 2) < minradsq) {
 					//io.msg(IO_DEB2, "Shwfs::gen_mla_grid(): Found subap within bounds @ (%d, %d)", sa_c.x, sa_c.y);
-					(*nsubap)++;
-					pattern = (sh_simg_t *) realloc((void *) pattern, (*nsubap) * sizeof *pattern);
-					pattern[(*nsubap)-1].pos.x = sa_c.x + disp.x;
-					pattern[(*nsubap)-1].pos.y = sa_c.y + disp.y;
-					pattern[(*nsubap)-1].llpos.x = sa_c.x + disp.x - size.x/2;
-					pattern[(*nsubap)-1].llpos.y = sa_c.y + disp.y - size.y/2;
-					pattern[(*nsubap)-1].size.x = size.x;
-					pattern[(*nsubap)-1].size.y = size.y;
+					(mla->nsi)++;
+					mla->ml = (sh_simg_t *) realloc((void *) mla->ml, mla->nsi * sizeof *(mla->ml));
+					mla->ml[mla->nsi-1].pos.x = sa_c.x + disp.x;
+					mla->ml[mla->nsi-1].pos.y = sa_c.y + disp.y;
+					mla->ml[mla->nsi-1].llpos.x = sa_c.x + disp.x - size.x/2;
+					mla->ml[mla->nsi-1].llpos.y = sa_c.y + disp.y - size.y/2;
+					mla->ml[mla->nsi-1].size.x = size.x;
+					mla->ml[mla->nsi-1].size.y = size.y;
 				}
 			}
 			else {
@@ -221,21 +220,21 @@ Shwfs::sh_simg_t *Shwfs::gen_mla_grid(coord_t res, coord_t size, coord_t pitch, 
 				// half-size the subaperture is within the bounds
 				if ((fabs(sa_c.x + (overlap-0.5)*size.x) < res.x/2) && (fabs(sa_c.y + (overlap-0.5)*size.y) < res.y/2)) {
 					//io.msg(IO_DEB2, "Shwfs::gen_mla_grid(): Found subap within bounds.");
-					(*nsubap)++;
-					pattern = (sh_simg_t *) realloc((void *) pattern, (*nsubap) * sizeof *pattern);
-					pattern[(*nsubap)-1].pos.x = sa_c.x + disp.x;
-					pattern[(*nsubap)-1].pos.y = sa_c.y + disp.y;
-					pattern[(*nsubap)-1].llpos.x = sa_c.x + disp.x - size.x/2;
-					pattern[(*nsubap)-1].llpos.y = sa_c.y + disp.y - size.y/2;
-					pattern[(*nsubap)-1].size.x = size.x;
-					pattern[(*nsubap)-1].size.y = size.y;
+					(mla->nsi)++;
+					mla->ml = (sh_simg_t *) realloc((void *) mla->ml, mla->nsi * sizeof *(mla->ml));
+					mla->ml[mla->nsi-1].pos.x = sa_c.x + disp.x;
+					mla->ml[mla->nsi-1].pos.y = sa_c.y + disp.y;
+					mla->ml[mla->nsi-1].llpos.x = sa_c.x + disp.x - size.x/2;
+					mla->ml[mla->nsi-1].llpos.y = sa_c.y + disp.y - size.y/2;
+					mla->ml[mla->nsi-1].size.x = size.x;
+					mla->ml[mla->nsi-1].size.y = size.y;
 				}
 			}
 		}
 	}
-	io.msg(IO_XNFO, "Shwfs::gen_mla_grid(): Found %d subapertures.", nsubap);
+	io.msg(IO_XNFO, "Shwfs::gen_mla_grid(): Found %d subapertures.", mla->nsi);
 	
-	return pattern;
+	return mla->nsi;
 }
 
 bool Shwfs::store_mla_grid(Path &f, bool overwrite) {
@@ -284,7 +283,7 @@ bool Shwfs::store_mla_grid(sh_mla_t mla, Path &f, bool overwrite) {
 	return true;
 }
 
-Shwfs::sh_simg_t *Shwfs::find_mla_grid(coord_t size, int *nsubap, int mini, int nmax, int iter) {
+int Shwfs::find_mla_grid(sh_mla_t *mla, coord_t size, int mini, int nmax, int iter) {
 	io.msg(IO_DEB2, "Shwfs::find_mla_grid()");
 
 	// Store current camera count, get last frame
@@ -296,8 +295,7 @@ Shwfs::sh_simg_t *Shwfs::find_mla_grid(coord_t size, int *nsubap, int mini, int 
 		return NULL;
 	}
 	
-	*nsubap = 0;
-	sh_simg_t *subaps = NULL;
+	mla->nsi = 0;
 	coord_t sapos;
 	
 	// Find maximum intensity pixels & set area around it to zero until there is 
@@ -319,17 +317,19 @@ Shwfs::sh_simg_t *Shwfs::find_mla_grid(coord_t size, int *nsubap, int mini, int 
 			break;
 		
 		// Add new subaperture
-		*nsubap++;
-		subaps = (sh_simg_t *) realloc((void *) subaps, (*nsubap) * sizeof *subaps);
+		(mla->nsi)++;
+		mla->ml = (sh_simg_t *) realloc((void *) mla->ml, mla->nsi * sizeof *(mla->ml));
 
 		sapos.x = maxidx % cam.get_width();
 		sapos.y = int(maxidx / cam.get_width());
 		
-		subaps[*nsubap-1].pos.x = sapos.x;
-		subaps[*nsubap-1].pos.y = sapos.y;
+		mla->ml[mla->nsi-1].pos.x = sapos.x;
+		mla->ml[mla->nsi-1].pos.y = sapos.y;
 		
+		io.msg(IO_DEB2, "Shwfs::find_mla_grid(): new! I: %d, idx: %zu, pos: (%d,%d)", maxi, maxidx, sapos.x, sapos.y);
+
 		// Enough subapertures, done
-		if (*nsubap == nmax)
+		if (mla->nsi == nmax)
 			break;
 		
 		// Set the current subaperture to zero
@@ -364,7 +364,7 @@ Shwfs::sh_simg_t *Shwfs::find_mla_grid(coord_t size, int *nsubap, int mini, int 
 		io.msg(IO_WARN, "Shwfs::find_mla_grid(): got camera buffer overflow, data might be inaccurate");
 	}
 
-	return subaps;
+	return mla->nsi;
 }
 
 int Shwfs::mla_subapsel() {

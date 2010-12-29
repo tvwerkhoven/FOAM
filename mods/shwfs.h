@@ -120,7 +120,8 @@ public:
 	~Shwfs();	
 	
 	/*! @brief Generate subaperture/subimage (sa/si) positions for a given configuration.
-	 
+
+	 @param [in] *mla The calculated subaperture pattern
 	 @param [in] res Resolution of the sa pattern (before scaling) [pixels]
 	 @param [in] size Size of the sa's [pixels]
 	 @param [in] pitch Pitch of the sa's [pixels]
@@ -128,23 +129,22 @@ public:
 	 @param [in] disp Global displacement of the sa positions [pixels]
 	 @param [in] shape Shape of the pattern, circular or square (see mlashape_t)
 	 @param [in] overlap How much overlap with aperture needed for inclusion (0--1)
-	 @param [out] nsubap Number of subapertures found
-	 @return The calculated subaperture pattern
+	 @return Number of subapertures found
 	 */
-	sh_simg_t *gen_mla_grid(coord_t res, coord_t size, coord_t pitch, int xoff, coord_t disp, mlashape_t shape, float overlap, int *nsubap);
+	int gen_mla_grid(sh_mla_t *mla, coord_t res, coord_t size, coord_t pitch, int xoff, coord_t disp, mlashape_t shape, float overlap);
 
 	/*! @brief Find subaperture/subimage (sa/si) positions in a given frame.
 	 
 	 This function takes a frame from the camera and finds the brightest spots to use as MLA grid
 	 
+	 @param [in] *mla The calculated subaperture pattern
 	 @param [in] size Size of the sa's [pixels]
-	 @param [out] nsubap Number of subapertures found
 	 @param [in] mini Minimimum intensity in a SA pattern
 	 @param [in] nmax Maximum number of SA's to search
 	 @param [in] iter Number of iterations to do
-	 @return The calculated subaperture pattern
+	 @return Number of subapertures found
 	 */
-	sh_simg_t *find_mla_grid(coord_t size, int *nsubap, int mini=10, int nmax=-1, int iter=1);
+	int find_mla_grid(sh_mla_t *mla, coord_t size, int mini=0, int nmax=-1, int iter=1);
 	 
 	bool store_mla_grid(sh_mla_t mla, Path &f, bool overwrite=false);	//!< Store external MLA grid to disk, as CSV
 	bool store_mla_grid(Path &f, bool overwrite=false);	//!< Store this MLA grid to disk, as CSV
