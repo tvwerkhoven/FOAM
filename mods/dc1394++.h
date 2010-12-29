@@ -121,7 +121,7 @@ public:
 	enumpair2() {
 		curr = 0;
 		size = 16;
-		enumarr = (int *) malloc(size * sizeof(int));
+		enumarr = (int *) malloc(size * sizeof *enumarr);
 		strarr = (std::string *) malloc(size * sizeof(std::string));
 	}
 	~enumpair2() {

@@ -212,7 +212,7 @@ void SimulCam::simul_wfs(gsl_matrix *wave_in) {
 	// Get temporary memory
 	gsl_vector *workspace = gsl_vector_calloc(sasize.x * sasize.y * 4);
 	// Setup FFTW parameters
-	fftw_complex *shdata = (fftw_complex *) fftw_malloc(sasize.y*2 * sasize.x*2 * sizeof(fftw_complex));
+	fftw_complex *shdata = (fftw_complex *) fftw_malloc(sasize.y*2 * sasize.x*2 * sizeof *shdata);
 	// Set memory to 0
 	for (int i=0; i< sasize.y*2 * sasize.x*2; i++)
 		shdata[i][0] = shdata[i][1] = 0.0;
@@ -239,7 +239,7 @@ void SimulCam::simul_wfs(gsl_matrix *wave_in) {
 			// Re-alloc FFTW
 			fftw_destroy_plan(shplan);
 			fftw_free(shdata);
-			shdata = (fftw_complex *) fftw_malloc(sasize.y*2 * sasize.x*2 * sizeof(fftw_complex));
+			shdata = (fftw_complex *) fftw_malloc(sasize.y*2 * sasize.x*2 * sizeof *shdata);
 			// Set memory to 0
 			for (int i=0; i< sasize.y*2 * sasize.x*2; i++)
 				shdata[i][0] = shdata[i][1] = 0.0;
@@ -296,7 +296,7 @@ uint8_t *SimulCam::simul_capture(gsl_matrix *frame_in) {
 	gsl_matrix_minmax(frame_in, &min, &max);
 	fac = 255.0/(max-min);
 	
-	size_t cursize = frame_in->size1 * frame_in->size2  * (sizeof(uint8_t));
+	size_t cursize = frame_in->size1 * frame_in->size2  * sizeof *frame_out;
 	if (out_size != cursize) {
 		io.msg(IO_DEB2, "SimulCam::simul_capture() reallocing memory, %zu != %zu", out_size, cursize);
 		out_size = cursize;
