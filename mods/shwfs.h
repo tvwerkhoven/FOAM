@@ -24,11 +24,11 @@
 #include "camera.h"
 #include "io.h"
 #include "wfs.h"
+#include "shift.h"
 
 using namespace std;
 
 const string shwfs_type = "shwfs";
-
 
 // CLASS DEFINITION //
 /********************/
@@ -77,6 +77,8 @@ public:
 	} sh_mla_t;													//!< Microlens array struct
 
 private:
+	Shift shifts;												//!< Shift computation class. Does the heavy lifting.
+	
 	mode_t mode;												//!< Data processing mode (Center of Gravity, Correlation, etc)
 	
 	sh_mla_t mla;												//!< Subimages coordinates & sizes

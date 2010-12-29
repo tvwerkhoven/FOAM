@@ -19,15 +19,41 @@
  */
 
 #include <string>
+#include <gsl/gsl_vector.h>
+#include <stdlib.h>
 
 #include "io.h"
+#include "types.h"
 
 #include "shift.h"
 
-Shift::Shift(Io &io): io(io) {
+Shift::Shift(Io &io, int nthr): io(io) {
 	io.msg(IO_DEB2, "Shift::Shift()");
+	
+	// Startup workers
+	//! @todo Worker (workers) threads neet attr for scheduling etc
+	workers = new pthread::thread(nthr);
+
+	// Use this slot to point to a member function of this class (only used at start)
+	sigc::slot<void> funcslot = sigc::mem_fun(this, &Shift::_worker_func);
+	for (int w=0; w<nthr; w++)
+		workers->create(funcslot);
+	
 }
 
 Shift::~Shift() {
 	io.msg(IO_DEB2, "Shift::~Shift()");
+}
+
+void Shift::_worker_func() {
+	io.msg(IO_XNFO, "Shift::_worker_func() new worker thread: %X", pthread_self());
+}
+
+bool Shift::calc_shifts(void *img, dtype_t dt, coord_t res, crop_t *crops, gsl_vector_float *shifts, mode_t mode) {
+	io.msg(IO_DEB2, "Shift::calc_shifts()");
+	
+	for (size_t i=0; i<shifts->size; i++)
+		gsl_vector_float_set (shifts,  i, drand48());
+	
+	return true;
 }

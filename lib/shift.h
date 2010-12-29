@@ -22,36 +22,56 @@
 #ifndef HAVE_SHIFT_H
 #define HAVE_SHIFT_H
 
-const int NTHREADS = 4;
+#include <gsl/gsl_vector.h>
 
-#include "types.h"
 #include "io.h"
 #include "pthread++.h"
+#include "types.h"
 
 /*!
  @brief Image shift calculation class (for SHWFS)
- @todo Document this
+ 
+ This is a generic class for calculating 2-dimensional shifts over 
+ (subsections) of images. This is primarily meant for Shack-Hartmann wavefront
+ sensors, but can hopefully be used in other applications as well.
  */
 class Shift {
-private:
-	Io &io;
-	pthread::thread threads[NTHREADS];
-	
 public:
 	typedef enum {
-		COG=0,
-		CORR
-	} mode_t;														//!< Different shift calculation modes
+		UINT8=0,													//!< uint8_t datatype
+		UINT16,														//!< uint16_t datatype
+	} dtype_t;
+	
+	typedef enum {
+		COG=0,														//!< Center of Gravity method
+	} mode_t;														//!< Different image shift calculation modes
+		
+	// N.B.: This is a copy of Shwfs::sh_simg_t but I want to keep this class standalone
+	typedef struct _crop_t {
+		coord_t llpos;										//!< Lower-left position of this cropwindow
+		coord_t size;											//!< Cropwindow size (pixels)
+		size_t id;
+		_crop_t(): llpos(0,0), size(0,0), id(0) { ; }
+	} crop_t;														//!< Image cropping configuration
+	
+private:
+	Io &io;															//!< Message IO
+	
+	typedef struct pool {
+		int id;
+	} pool_t;
+	
+	pool_t workpool;										//!< Work pool
+	int nworker;												//!< Number of workers
+	pthread::thread *workers;						//!< Worker threads
 
-	typedef struct data_t {
-		void *data;						//!< Data pointer, type encoded in dt
-		dtype_t dt;						//!< Datatype
-		coord_t res;					//!< Size
-	}
-
-	Shift(Io &io);
+	void _worker_func();								//!< Worker function
+	
+public:
+	Shift(Io &io, int nthr=4);
 	~Shift(void);
-
+	
+	bool calc_shifts(void *img, dtype_t dt, coord_t res, crop_t *crops, gsl_vector_float *shifts, mode_t mode=COG);
 };
 
 #endif // HAVE_SHIFT_H

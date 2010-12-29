@@ -36,6 +36,7 @@
 
 #include "wfs.h"
 #include "shwfs.h"
+#include "shift.h"
 
 // PUBLIC FUNCTIONS //
 /********************/
@@ -43,6 +44,7 @@
 
 Shwfs::Shwfs(Io &io, foamctrl *ptc, string name, string port, Path &conffile, Camera &wfscam, bool online):
 Wfs(io, ptc, name, shwfs_type, port, conffile, wfscam, online),
+shifts(io, 4),
 mode(Shwfs::COG)
 {
 	io.msg(IO_DEB2, "Shwfs::Shwfs()");

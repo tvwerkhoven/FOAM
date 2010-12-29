@@ -63,9 +63,11 @@ shwfs_test_SOURCES = shwfs-test.cc \
 		$(MODS_DIR)/dummycam.cc \
 		$(MODS_DIR)/camera.cc \
 		$(MODS_DIR)/simulcam.cc \
+		$(LIB_DIR)/shift.cc \
 		$(LIB_DIR)/devices.cc \
 		$(LIB_DIR)/simseeing.cc \
 		../foam/foamctrl.cc
+
 shwfs_test_CFLAGS = $(FFTW_CFLAGS)
 shwfs_test_CXXFLAGS = $(AM_CXXFLAGS)
 shwfs_test_LDADD = $(FFTW_LIBS) \
@@ -74,6 +76,7 @@ shwfs_test_LDADD = $(FFTW_LIBS) \
 		$(LIBSIU_DIR)/libprotocol.a \
 		$(LIBSIU_DIR)/libconfig.a \
 		$(LIBSIU_DIR)/libimgdata.a
+
 endif FULLSIM
 
 ### OpenGL programs go here (need GUI libs)
