@@ -46,6 +46,13 @@ Wfs(io, ptc, name, shwfs_type, port, conffile, wfscam, online),
 mode(Shwfs::COG)
 {
 	io.msg(IO_DEB2, "Shwfs::Shwfs()");
+	add_cmd("mla generate");
+	add_cmd("mla find");
+	add_cmd("mla store");
+	add_cmd("mla del");
+	add_cmd("mla add");
+	add_cmd("get mla");
+	add_cmd("set mla");
 	
 	// Micro lens array parameters:
 	
@@ -90,6 +97,60 @@ Shwfs::~Shwfs() {
 	io.msg(IO_DEB2, "Shwfs::~Shwfs()");
 	if (mla.ml)
 		free(mla.ml);
+	
+}
+
+void Shwfs::on_message(Connection *conn, std::string line) {
+	io.msg(IO_DEB1, "Shwfs::on_message('%s')", line.c_str()); 
+	
+	string orig = line;
+	string command = popword(line);
+	bool parsed = true;
+	
+	if (command == "mla") {
+		string what = popword(line);
+
+		if (what == "generate") {
+			//! @todo get extra options from line
+			gen_mla_grid(&mla, cam.get_res(), sisize, sipitch, xoff, disp, shape, overlap);
+		} else if(what == "find") {
+			//! @todo get extra options from line
+			find_mla_grid(&mla, sisize, simini);
+		} else if(what == "store") {
+			//! @todo implement
+		} else if(what == "del") {
+			//! @todo implement
+		} else if(what == "add") {
+			//! @todo implement
+		}
+	} else if (command == "get") {
+		string what = popword(line);
+		
+		if (what == "mla") {
+			conn->addtag("mla");
+			conn->write("ok mla " + get_mla_str());
+		} else {
+			parsed = false;
+			//conn->write("error :Unknown argument " + what);
+		}
+	} else if (command == "set") {
+		string what = popword(line);
+		
+		if(what == "mla") {
+			conn->addtag("mla");
+			set_mla_str(line);
+		} else {
+			parsed = false;
+			//conn->write("error :Unknown argument " + what);
+		}
+	} else {
+		parsed = false;
+		//conn->write("error :Unknown command: " + command);
+	}
+	
+	// If not parsed here, call parent
+	if (parsed == false)
+		Wfs::on_message(conn, orig);
 	
 }
 
@@ -326,3 +387,29 @@ int Shwfs::_find_max(T *img, size_t nel, size_t *idx) {
 	}
 	return max;	
 }
+
+string Shwfs::get_mla_str(sh_mla_t mla) {
+	string ret = format("%d ", mla.nsi);
+	
+	for (int i=0; i<mla.nsi; i++)
+		ret += format("%d %d %d %d ", mla.ml[i].llpos.x, mla.ml[i].llpos.y, mla.ml[i].size.x, mla.ml[i].size.y);
+	
+	return ret;
+}
+
+int Shwfs::set_mla_str(string mla_str) {
+	// Syntax shoud be: <n> <x0> <y0> <w0> <h0> [<x1> <y1> <w1> <h1> [...]]
+	int nsi = popint(mla_str);
+	int x, y, w, h;
+	
+	for (int i=0; i<mla.nsi; i++) {
+		x = popint(mla_str);
+		y = popint(mla_str);
+		w = popint(mla_str);
+		h = popint(mla_str);
+	}
+	
+	netio.broadcast("ok mla " + mla_str);
+	return mla.nsi;
+}
+

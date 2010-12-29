@@ -109,6 +109,10 @@ private:
 	 */
 	template <class T> int _find_max(T *img, size_t nel, size_t *idx);
 	
+	string get_mla_str(sh_mla_t mla); //!< Represent a MLA configuration as one string
+	string get_mla_str() { return get_mla_str(mla); }
+	int set_mla_str(string mla_str); //!< Set MLA configuration from string, return number of subaps
+		
 	int mla_subapsel();	
 	
 public:
@@ -147,6 +151,9 @@ public:
 
 	// From Wfs::
 	virtual int measure();
+	
+	// From Devices::
+	virtual void on_message(Connection*, std::string);
 };
 
 #endif // HAVE_SHWFS_H
