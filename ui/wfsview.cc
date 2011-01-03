@@ -18,6 +18,8 @@
  along with FOAM.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include "types.h"
+
 #include "deviceview.h"
 #include "devicectrl.h"
 #include "wfsctrl.h"
@@ -117,7 +119,7 @@ void WfsView::do_wfspow_update() {
 	
 	uint8_t col[3];
 	for (int n = 0; n < nmodes; n++) {
-		float amp = gsl_vector_float_get(mode_pow, n);
+		float amp = clamp(gsl_vector_float_get(mode_pow, n), -1.0f, 1.0f);
 		int height = amp*h/2.0; // should be between -h/2 and h/2
 		
 		// Set bar color (red, orange or green):
