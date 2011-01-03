@@ -101,20 +101,7 @@ void WfsCtrl::on_message(string line) {
 		signal_wavefront();
 		
 	} else if (what == "basis") {
-			string basis = popword(line);
-			if (basis == "zernike")
-				wf.basis = Wfs::ZERNIKE;
-			else if (basis == "kl")
-				wf.basis = Wfs::KL;
-			else if (basis == "mirror")
-				wf.basis = Wfs::MIRROR;
-			else {
-				wf.basis = Wfs::UNDEFINED;
-				ok = false;
-				errormsg = format("Got unknown wavefront basis '%s'.", basis.c_str());
-				signal_message();
-				return;
-			}
+			wf.basis = popword(line);
 	} else if (what == "measuretest") {
 		// If Wfs did a measuretest, get the results
 		send_cmd("get modes");
@@ -125,18 +112,3 @@ void WfsCtrl::on_message(string line) {
 
 	signal_message();
 }
-
-string WfsCtrl::get_basis_str() { 
-	switch (wf.basis) {
-		case Wfs::ZERNIKE:
-			return "zernike";
-		case Wfs::KL:
-			return "kl";
-		case Wfs::MIRROR:
-			return "mirror";
-		case Wfs::UNDEFINED:
-		default:
-			return "undef";
-	}
-}
-

@@ -28,9 +28,8 @@
 #define HAVE_WFSCTRL_H
 
 #include <glibmm/dispatcher.h>
+#include <gsl/gsl_vector.h>
 #include <string>
-
-#include "wfs.h"
 
 #include "pthread++.h"
 #include "protocol.h"
@@ -52,7 +51,18 @@ protected:
 	virtual void on_connected(bool connected);
 
 public:
-	struct Wfs::wavefront wf;						//!< Wavefront information
+	
+	/*!
+	 @brief This holds information on the wavefront. Based on Wfs::wavefront, but more versatile (strings instead of enums)
+	 */
+	struct wavefront {
+		wavefront() : wfamp(NULL), nmodes(0), basis("UNDEF") { ; }
+		gsl_vector_float *wfamp;					//!< Mode amplitudes
+		int nmodes;												//!< Number of modes
+		string basis;											//!< Basis functions used for this representation
+	};
+	
+	struct wavefront wf;								//!< Wavefront information
 	
 	WfsCtrl(Log &log, const std::string name, const std::string host, const std::string port);
 	~WfsCtrl();
@@ -60,7 +70,7 @@ public:
 	// From DeviceCtrl::
 	virtual void connect();
 	
-	string get_basis_str();
+	string get_basis() { return wf.basis; }
 	int get_nmodes() { return wf.nmodes; }
 	gsl_vector_float *get_modes() { return wf.wfamp; }
 	

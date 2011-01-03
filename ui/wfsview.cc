@@ -80,7 +80,7 @@ void WfsView::clear_gui() {
 }
 
 void WfsView::do_info_update() {
-	wfpow_mode.set_text(wfsctrl->get_basis_str());
+	wfpow_mode.set_text(wfsctrl->get_basis());
 }
 	
 void WfsView::do_wfspow_update() {	
