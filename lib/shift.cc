@@ -21,6 +21,11 @@
 #include <string>
 #include <gsl/gsl_vector.h>
 #include <stdlib.h>
+#ifndef _BSD_SOURCE
+// For usleep glibc
+#define _BSD_SOURCE
+#endif
+#include <unistd.h>
 
 #include "io.h"
 #include "types.h"
@@ -32,11 +37,11 @@ Shift::Shift(Io &io, int nthr): io(io), nworker(nthr), workid(0) {
 	
 	// Startup workers
 	//! @todo Worker (workers) threads neet attr for scheduling etc (?)
-	workers = new pthread::thread[4];
+	workers = new pthread::thread[nworker];
 
 	// Use this slot to point to a member function of this class (only used at start)
 	sigc::slot<void> funcslot = sigc::mem_fun(this, &Shift::_worker_func);
-	for (int w=0; w<nthr; w++)
+	for (int w=0; w<nworker; w++)
 		workers->create(funcslot);
 	
 }
@@ -48,7 +53,7 @@ Shift::~Shift() {
 void Shift::_worker_func() {
 	work_mutex.lock();
 	int id = _worker_getid();
-	io.msg(IO_XNFO, "Shift::_worker_func() new worker thread(id=%d nworker=%d): %X", id, nworker, pthread_self());
+	io.msg(IO_XNFO, "Shift::_worker_func() new worker (id=%d n=%d)", id, nworker);
 	work_mutex.unlock();
 
 	while (true) {
@@ -64,26 +69,50 @@ void Shift::_worker_func() {
 			if (myjob < 0)
 				break;
 			
-			gsl_vector_float_set(workpool.shifts, myjob*2+0, drand48());
-			gsl_vector_float_set(workpool.shifts, myjob*2+1, drand48());
+			float tmp;
+			_calc_cog(workpool.img, workpool.res, workpool.crops[myjob], &tmp);
+			io.msg(IO_XNFO, "Shift::_worker_func():%d job:%d, val:%f", id, myjob, tmp);
+
+			gsl_vector_float_set(workpool.shifts, myjob*2+0, tmp);
+			gsl_vector_float_set(workpool.shifts, myjob*2+1, tmp);
+			usleep(50*1000);
 		}
+		
+		workpool.mutex.lock();
+		if (++(workpool.done) == nworker-1)
+			work_done_cond.broadcast();
+		workpool.mutex.unlock();
 	}
 }
 
-bool Shift::calc_shifts(uint8_t *img, coord_t res, crop_t *crops, int ncrop, gsl_vector_float *shifts, mode_t mode) {
+void Shift::_calc_cog(uint8_t *img, coord_t &res, crop_t &crop, float *vec) {
+	*vec = drand48();
+}
+
+bool Shift::calc_shifts(uint8_t *img, coord_t res, crop_t *crops, int ncrop, gsl_vector_float *shifts, mode_t mode, bool wait) {
 	io.msg(IO_DEB2, "Shift::calc_shifts(uint8_t)");
 	
 	// Setup work parameters
 	workpool.mode = mode;
 	workpool.img = img;
+	workpool.res = res;
 	workpool.refimg = NULL;
 	workpool.crops = crops;
 	workpool.ncrop = ncrop;
 	workpool.shifts = shifts;
 	workpool.jobid = ncrop-1;
+	workpool.done = 0;
 	
 	// Signal all workers
 	work_cond.broadcast();
+	
+	// Wait until all workers have signalled ready once
+	if (wait) {
+		io.msg(IO_DEB2, "Shift::calc_shifts(uint8_t): waiting for workers");
+		work_done_mutex.lock();
+		work_done_cond.wait(work_done_mutex);
+		work_done_mutex.unlock();
+	}
 	
 	return true;
 }

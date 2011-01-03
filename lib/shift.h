@@ -61,19 +61,24 @@ private:
 	typedef struct pool {
 		mode_t mode;
 		int bpp;													//!< Image bitdepth (8 for uint8_t, 16 for uint16_t)
-		void *img;												//!< Image to process
-		void *refimg;											//!< Reference image (for method=CORR)
+		uint8_t *img;												//!< Image to process
+		coord_t res;											//!< Image size (width x height)
+		uint8_t *refimg;											//!< Reference image (for method=CORR)
 		crop_t *crops;										//!< Crop fields within the bigger image
 		int ncrop;												//!< Number of crop fields
 		gsl_vector_float *shifts;					//!< Pre-allocated output vector
 		pthread::mutex mutex;							//!< Lock for jobid
 		int jobid;												//!< Next crop field to process
+		int done;													//!< Number of workers done
 	} pool_t;
 	
 	pool_t workpool;										//!< Work pool
 
 	pthread::mutex work_mutex;					//!< Mutex used to limit access to frame data
 	pthread::cond work_cond;						//!< Cond used to signal threads about new frames
+	
+	pthread::cond work_done_cond;				//!< Signal for work completed
+	pthread::mutex work_done_mutex;			//!< Signal for work completed
 
 	int nworker;												//!< Number of workers requested
 	int workid;													//!< Worker counter
@@ -82,11 +87,13 @@ private:
 	void _worker_func();								//!< Worker function
 	int _worker_getid() { return workid++; }
 	
+	void _calc_cog(uint8_t *img, coord_t &res, crop_t &crop, float *vec); //!< Calculate CoG in a crop field of img
+	
 public:
 	Shift(Io &io, int nthr=4);
 	~Shift();
 	
-	bool calc_shifts(uint8_t *img, coord_t res, crop_t *crops, int ncrop, gsl_vector_float *shifts, mode_t mode=COG);
+	bool calc_shifts(uint8_t *img, coord_t res, crop_t *crops, int ncrop, gsl_vector_float *shifts, mode_t mode=COG, bool wait=true);
 };
 
 #endif // HAVE_SHIFT_H
