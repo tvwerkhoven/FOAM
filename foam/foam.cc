@@ -88,6 +88,7 @@ int FOAM::init() {
 }
 
 FOAM::~FOAM() {
+	//! @bug FOAM quits when GUI disconnects
 	io.msg(IO_DEB2, "FOAM::~FOAM()");
 	
 	// Notify shutdown
