@@ -44,6 +44,7 @@ public:
 	
 	typedef enum {
 		COG=0,														//!< Center of Gravity method
+		CORR,															//!< Cross-correlation method
 	} mode_t;														//!< Different image shift calculation modes
 		
 	// N.B.: This is a copy of Shwfs::sh_simg_t but I want to keep this class standalone
@@ -58,7 +59,15 @@ private:
 	Io &io;															//!< Message IO
 	
 	typedef struct pool {
-		int id;
+		mode_t mode;
+		int bpp;													//!< Image bitdepth (8 for uint8_t, 16 for uint16_t)
+		void *img;												//!< Image to process
+		void *refimg;											//!< Reference image (for method=CORR)
+		crop_t *crops;										//!< Crop fields within the bigger image
+		int ncrop;												//!< Number of crop fields
+		gsl_vector_float *shifts;					//!< Pre-allocated output vector
+		pthread::mutex mutex;							//!< Lock for jobid
+		int jobid;												//!< Next crop field to process
 	} pool_t;
 	
 	pool_t workpool;										//!< Work pool
@@ -66,7 +75,7 @@ private:
 	pthread::mutex work_mutex;					//!< Mutex used to limit access to frame data
 	pthread::cond work_cond;						//!< Cond used to signal threads about new frames
 
-	int nworker;												//!< Number of workers
+	int nworker;												//!< Number of workers requested
 	int workid;													//!< Worker counter
 	pthread::thread *workers;						//!< Worker threads
 
@@ -77,7 +86,7 @@ public:
 	Shift(Io &io, int nthr=4);
 	~Shift();
 	
-	bool calc_shifts(void *img, dtype_t dt, coord_t res, crop_t *crops, gsl_vector_float *shifts, mode_t mode=COG);
+	bool calc_shifts(uint8_t *img, coord_t res, crop_t *crops, int ncrop, gsl_vector_float *shifts, mode_t mode=COG);
 };
 
 #endif // HAVE_SHIFT_H

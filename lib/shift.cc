@@ -31,7 +31,7 @@ Shift::Shift(Io &io, int nthr): io(io), nworker(nthr), workid(0) {
 	io.msg(IO_DEB2, "Shift::Shift()");
 	
 	// Startup workers
-	//! @todo Worker (workers) threads neet attr for scheduling etc
+	//! @todo Worker (workers) threads neet attr for scheduling etc (?)
 	workers = new pthread::thread[4];
 
 	// Use this slot to point to a member function of this class (only used at start)
@@ -48,23 +48,42 @@ Shift::~Shift() {
 void Shift::_worker_func() {
 	work_mutex.lock();
 	int id = _worker_getid();
-	io.msg(IO_XNFO, "Shift::_worker_func() new worker thread(%d/%d): %X", id, nworker, pthread_self());
+	io.msg(IO_XNFO, "Shift::_worker_func() new worker thread(id=%d nworker=%d): %X", id, nworker, pthread_self());
 	work_mutex.unlock();
 
 	while (true) {
 		work_mutex.lock();
+		io.msg(IO_XNFO, "Shift::_worker_func() worker %d waiting...", id);
 		work_cond.wait(work_mutex);
 		work_mutex.unlock();
-		io.msg(IO_XNFO, "Shift::_worker_func() woke up, new work!");
 		
+		while (true) {
+			workpool.mutex.lock();
+			int myjob = workpool.jobid--;
+			workpool.mutex.unlock();
+			if (myjob < 0)
+				break;
+			
+			gsl_vector_float_set(workpool.shifts, myjob*2+0, drand48());
+			gsl_vector_float_set(workpool.shifts, myjob*2+1, drand48());
+		}
 	}
 }
 
-bool Shift::calc_shifts(void *img, dtype_t dt, coord_t res, crop_t *crops, gsl_vector_float *shifts, mode_t mode) {
-	io.msg(IO_DEB2, "Shift::calc_shifts()");
+bool Shift::calc_shifts(uint8_t *img, coord_t res, crop_t *crops, int ncrop, gsl_vector_float *shifts, mode_t mode) {
+	io.msg(IO_DEB2, "Shift::calc_shifts(uint8_t)");
 	
-	for (size_t i=0; i<shifts->size; i++)
-		gsl_vector_float_set (shifts,  i, drand48());
+	// Setup work parameters
+	workpool.mode = mode;
+	workpool.img = img;
+	workpool.refimg = NULL;
+	workpool.crops = crops;
+	workpool.ncrop = ncrop;
+	workpool.shifts = shifts;
+	workpool.jobid = ncrop-1;
+	
+	// Signal all workers
+	work_cond.broadcast();
 	
 	return true;
 }
