@@ -102,8 +102,8 @@ void WfsCtrl::on_message(string line) {
 		
 	} else if (what == "basis") {
 			wf.basis = popword(line);
-	} else if (what == "measuretest") {
-		// If Wfs did a measuretest, get the results
+	} else if (what == "measuretest" || what == "measure") {
+		// If Wfs did a measurement or measuretest, get the results
 		send_cmd("get modes");
 	} else {
 		ok = false;
