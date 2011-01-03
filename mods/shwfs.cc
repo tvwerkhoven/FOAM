@@ -45,16 +45,18 @@
 Shwfs::Shwfs(Io &io, foamctrl *ptc, string name, string port, Path &conffile, Camera &wfscam, bool online):
 Wfs(io, ptc, name, shwfs_type, port, conffile, wfscam, online),
 shifts(io, 4),
-mode(Shwfs::COG)
+mode(Shift::COG)
 {
 	io.msg(IO_DEB2, "Shwfs::Shwfs()");
 	add_cmd("mla generate");
 	add_cmd("mla find");
-	add_cmd("mla store");
-	add_cmd("mla del");
-	add_cmd("mla add");
+//	add_cmd("mla store");
+//	add_cmd("mla del");
+//	add_cmd("mla add");
 	add_cmd("get mla");
 	add_cmd("set mla");
+	add_cmd("calibrate");
+	add_cmd("measure");
 	
 	// Micro lens array parameters:
 	
@@ -63,8 +65,8 @@ mode(Shwfs::COG)
 	if (cfg.exists("sisize"))
 		sisize.x = sisize.y = cfg.getint("sisize");
 	
-	sipitch.x = cfg.getint("sipitchx", 32);
-	sipitch.y = cfg.getint("sipitchy", 32);
+	sipitch.x = cfg.getint("sipitchx", 64);
+	sipitch.y = cfg.getint("sipitchy", 64);
 	if (cfg.exists("sipitch"))
 		sipitch.x = sipitch.y = cfg.getint("sipitch");
 	
@@ -87,13 +89,16 @@ mode(Shwfs::COG)
 	simini = cfg.getint("simini", 30);
 	
 	// Generate MLA grid
-	gen_mla_grid(&mla, cam.get_res(), sisize, sipitch, xoff, disp, shape, overlap);
+	gen_mla_grid(&mlacfg, cam.get_res(), sisize, sipitch, xoff, disp, shape, overlap);
+	
+	// Initial calibration
+	calibrate();
 }
 
 Shwfs::~Shwfs() {
 	io.msg(IO_DEB2, "Shwfs::~Shwfs()");
-	if (mla.ml)
-		free(mla.ml);
+	if (mlacfg.ml)
+		free(mlacfg.ml);
 	
 }
 
@@ -109,10 +114,10 @@ void Shwfs::on_message(Connection *conn, std::string line) {
 
 		if (what == "generate") {
 			//! @todo get extra options from line
-			gen_mla_grid(&mla, cam.get_res(), sisize, sipitch, xoff, disp, shape, overlap);
+			gen_mla_grid(&mlacfg, cam.get_res(), sisize, sipitch, xoff, disp, shape, overlap);
 		} else if(what == "find") {
 			//! @todo get extra options from line
-			find_mla_grid(&mla, sisize, simini);
+			find_mla_grid(&mlacfg, sisize, simini);
 		} else if(what == "store") {
 			//! @todo implement
 		} else if(what == "del") {
@@ -141,6 +146,14 @@ void Shwfs::on_message(Connection *conn, std::string line) {
 			parsed = false;
 			//conn->write("error :Unknown argument " + what);
 		}
+	} else if (command == "calibrate") {
+		calibrate();
+		conn->write("ok calibrate");
+	} else if (command == "measure") {
+		if (measure())
+			conn->write("error measure :unknown error in measure()");
+		else 
+			conn->write("ok measure");
 	} else {
 		parsed = false;
 		//conn->write("error :Unknown command: " + command);
@@ -153,33 +166,81 @@ void Shwfs::on_message(Connection *conn, std::string line) {
 }
 
 int Shwfs::measure() {
+	if (!is_calib)
+		return io.msg(IO_ERR, "Shwfs::measure() calibrate sensor first!");
+	
 	Camera::frame_t *tmp = cam.get_last_frame();
+
+	if (!tmp)
+		return io.msg(IO_ERR, "Shwfs::measure() couldn't get frame, is camera running?");
+	
+	// Calculate shifts
 	
 	if (cam.get_depth() == 16) {
-		if (mode == COG) {
-			io.msg(IO_DEB2, "Shwfs::measure() got UINT16, COG");
-			//return _cogframe<uint16_t>((uint16_t *) tmp->image);
-		}
-		else
-			return io.msg(IO_ERR, "Shwfs::measure() unknown wfs mode");
+		io.msg(IO_DEB2, "Shwfs::measure() got UINT16");
+		// Manually cast mlacfg.ml to Shift type, is the same (Shift has it's own types such that it does not depend on other files too much)
+		//! @todo Include Shift::crop_t in types.h (?)
+		//shifts.calc_shifts((uint16_t *) tmp->image, cam.get_res(), (Shift::crop_t *) mlacfg.ml, mlacfg.nsi, shift_vec, mode);
 	}
-	else if (cam.get_dtype() == UINT8) {
-		if (mode == COG) {
-			io.msg(IO_DEB2, "Shwfs::measure() got UINT8, COG");
-			//return _cogframe<uint8_t>((uint8_t *) tmp->image);
-		}
-		else
-			return io.msg(IO_ERR, "Shwfs::measure() unknown wfs mode");
+	else if (cam.get_depth() == 8) {
+		io.msg(IO_DEB2, "Shwfs::measure() got UINT8");
+		shifts.calc_shifts((uint8_t *) tmp->image, cam.get_res(), (Shift::crop_t *) mlacfg.ml, mlacfg.nsi, shift_vec, mode);
 	}
 	else
 		return io.msg(IO_ERR, "Shwfs::measure() unknown datatype");
 	
+	// Convert shifts to basisfunction
+	shift_to_basis(shift_vec, wf.basis, wf.wfamp);
+	
 	return 0;
 }
+
+int Shwfs::shift_to_basis(gsl_vector_float *invec, wfbasis basis, gsl_vector_float *outvec) {
+	switch (basis) {
+		case SENSOR:
+			gsl_vector_float_memcpy(outvec, invec);
+			break;
+		case ZERNIKE:
+		case KL:
+		case MIRROR:
+		case UNDEFINED:
+		default:
+			break;
+	}
+	
+	return 0;
+	
+}
+int Shwfs::calibrate() {
+	//! @todo Needs to setup Zernike & KL & mirror basis functions as well
+	shift_vec = gsl_vector_float_alloc(mlacfg.nsi * 2);
+	
+	switch (wf.basis) {
+		case SENSOR:
+			io.msg(IO_XNFO, "Shwfs::calibrate(): Calibrating for basis 'SENSOR'");
+			wf.nmodes = mlacfg.nsi * 2;
+			wf.wfamp = gsl_vector_float_alloc(wf.nmodes);
+			break;
+		case ZERNIKE:
+		case KL:
+		case MIRROR:
+		case UNDEFINED:
+		default:
+			io.msg(IO_WARN, "Shwfs::calibrate(): This basis is not implemented yet");
+			return -1;
+			break;
+	}
+	
+	is_calib = true;
+	return 0;
+}
+
 
 int Shwfs::gen_mla_grid(sh_mla_t *mla, coord_t res, coord_t size, coord_t pitch, int xoff, coord_t disp, mlashape_t shape, float overlap) {
 	io.msg(IO_DEB2, "Shwfs::gen_mla_grid()");
 	
+	is_calib = false;
+
 	// How many subapertures would fit in the requested size 'res':
 	int sa_range_y = (int) ((res.y/2)/pitch.x + 1);
 	int sa_range_x = (int) ((res.x/2)/pitch.y + 1);
@@ -232,7 +293,7 @@ int Shwfs::gen_mla_grid(sh_mla_t *mla, coord_t res, coord_t size, coord_t pitch,
 }
 
 bool Shwfs::store_mla_grid(Path &f, bool overwrite) {
-	return store_mla_grid(mla, f, overwrite);
+	return store_mla_grid(mlacfg, f, overwrite);
 }
 
 bool Shwfs::store_mla_grid(sh_mla_t mla, Path &f, bool overwrite) {
@@ -277,6 +338,8 @@ bool Shwfs::store_mla_grid(sh_mla_t mla, Path &f, bool overwrite) {
 
 int Shwfs::find_mla_grid(sh_mla_t *mla, coord_t size, int mini, int nmax, int iter) {
 	io.msg(IO_DEB2, "Shwfs::find_mla_grid()");
+
+	is_calib = false;
 
 	// Store current camera count, get last frame
 	size_t bcount = cam.get_count();
@@ -355,7 +418,7 @@ int Shwfs::find_mla_grid(sh_mla_t *mla, coord_t size, int mini, int nmax, int it
 		//! @todo This poses possible problems, what to do?
 		io.msg(IO_WARN, "Shwfs::find_mla_grid(): got camera buffer overflow, data might be inaccurate");
 	}
-
+	
 	return mla->nsi;
 }
 
@@ -394,6 +457,8 @@ int Shwfs::set_mla_str(string mla_str) {
 	int nsi = popint(mla_str);
 	int x, y, w, h;
 	
+	is_calib = false;
+	
 	sh_simg_t *ml_tmp = (sh_simg_t *) malloc(nsi * sizeof *ml_tmp);
 	
 	for (int i=0; i<nsi; i++) {
@@ -410,12 +475,12 @@ int Shwfs::set_mla_str(string mla_str) {
 		ml_tmp[i].size.y = h;
 	}
 	
-	if (mla.ml)
-		free(mla.ml);
+	if (mlacfg.ml)
+		free(mlacfg.ml);
 	
-	mla.nsi = nsi;
-	mla.ml = ml_tmp;
-
+	mlacfg.nsi = nsi;
+	mlacfg.ml = ml_tmp;
+	
 	netio.broadcast("ok mla " + mla_str);
 	return 0;
 }

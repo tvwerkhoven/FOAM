@@ -57,11 +57,6 @@ public:
 		CAL_PINHOLE
 	} wfs_cal_t;												//!< Different calibration methods
 	
-	typedef enum {
-		COG=0,
-		CORR
-	} mode_t;														//!< Different SHWFS operation modes
-	
 	typedef struct sh_subimg {
 		coord_t llpos;										//!< Lower-left position of this subimg (pos - size/2)
 		coord_t size;											//!< Subaperture size (pixels)
@@ -78,10 +73,11 @@ public:
 
 private:
 	Shift shifts;												//!< Shift computation class. Does the heavy lifting.
+	gsl_vector_float *shift_vec;				//!< SHWFS shift vector
 	
-	mode_t mode;												//!< Data processing mode (Center of Gravity, Correlation, etc)
+	Shift::mode_t mode;									//!< Data processing mode (Center of Gravity, Correlation, etc)
 	
-	sh_mla_t mla;												//!< Subimages coordinates & sizes
+	sh_mla_t mlacfg;										//!< Subimages configuration (coordinates & sizes)
 	
 	// Parameters for dynamic MLA grods:
 	int simaxr;													//!< Maximum radius to use, or edge erosion subimages
@@ -95,10 +91,6 @@ private:
 	int xoff;														//!< Odd row offset between lenses
 	mlashape_t shape;										//!< MLA Shape (SQUARE or CIRCULAR)
 	
-	//coord_t *shifts;										//!< subap shifts @todo fix this properly
-	
-	//template <class T> uint32_t _cog(T *img, int xpos, int ypos, int w, int h, int stride, uint32_t simini, fcoord_t& cog);
-	//template <class T> int _cogframe(T *img);
 	/*! @brief Find maximum intensity & index of img
 
 	 @param [in] *img Image to scan
@@ -109,7 +101,7 @@ private:
 	template <class T> int _find_max(T *img, size_t nel, size_t *idx);
 	
 	string get_mla_str(sh_mla_t mla); //!< Represent a MLA configuration as one string
-	string get_mla_str() { return get_mla_str(mla); }
+	string get_mla_str() { return get_mla_str(mlacfg); }
 	int set_mla_str(string mla_str); //!< Set MLA configuration from string, return number of subaps
 		
 	int mla_subapsel();	
@@ -148,8 +140,12 @@ public:
 	bool store_mla_grid(sh_mla_t mla, Path &f, bool overwrite=false);	//!< Store external MLA grid to disk, as CSV
 	bool store_mla_grid(Path &f, bool overwrite=false);	//!< Store this MLA grid to disk, as CSV
 
+	//!< Convert shifts to basis functions
+	int shift_to_basis(gsl_vector_float *invec, wfbasis basis, gsl_vector_float *outvec);
+	
 	// From Wfs::
 	virtual int measure();
+	virtual int calibrate();
 	
 	// From Devices::
 	virtual void on_message(Connection*, std::string);
