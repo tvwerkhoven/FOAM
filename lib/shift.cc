@@ -32,7 +32,7 @@ Shift::Shift(Io &io, int nthr): io(io), nworker(nthr), workid(0) {
 	
 	// Startup workers
 	//! @todo Worker (workers) threads neet attr for scheduling etc
-	workers = new pthread::thread(nthr);
+	workers = new pthread::thread[4];
 
 	// Use this slot to point to a member function of this class (only used at start)
 	sigc::slot<void> funcslot = sigc::mem_fun(this, &Shift::_worker_func);
