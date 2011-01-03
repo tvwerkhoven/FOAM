@@ -72,10 +72,7 @@ public:
 	virtual int measure();							//!< Measure abberations (needs to be implemented in derived classes)
 	
 	// From Device::
-	virtual int verify() { return 0; }	//!< Verify the integrity of the device
-	
 	virtual void on_message(Connection *conn, std::string line);
-	//virtual void on_connect(Connection *conn, bool status) = 0;
 	
 	virtual ~Wfs();
 	Wfs(Io &io, foamctrl *ptc, string name, string type, string port, Path conffile, Camera &wfscam, bool online=true); //!< Constructor for derived WFSs (i.e. SHWFS)
