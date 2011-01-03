@@ -91,29 +91,25 @@ void SimulCam::on_message(Connection *conn, std::string line) {
 		string what = popword(line);
 	
 		if(what == "noise") {
-			conn->addtag("noise");
-			noise = popdouble(line);
-			netio.broadcast(format("ok noise %g", noise), "noise");
+			set_var(conn, "noise", popdouble(line), &noise, 0.0, 1.0, "Out of range");
 		} else if(what == "noiseamp") {
-			conn->addtag("noiseamp");
-			noiseamp = popdouble(line);
-			netio.broadcast(format("ok noiseamp %g", noiseamp), "noiseamp");
+			set_var(conn, "noiseamp", popdouble(line), &noiseamp);
+		} else if(what == "telapt_fill") {
+			set_var(conn, "telapt_fill", popdouble(line), &telapt_fill, 0.0, 1.0, "out of range");
 		} else if(what == "seeingfac") {
-			conn->addtag("seeingfac");
-			seeingfac = popdouble(line);
-			netio.broadcast(format("ok seeingfac %g", seeingfac), "seeingfac");
-		} else if(what == "telradius") {
-			conn->addtag("telradius");
-			telradius = popdouble(line);
-			netio.broadcast(format("ok telradius %g", telradius), "telradius");
+			set_var(conn, "seeingfac", popdouble(line), &seeingfac);
 		} else if(what == "windspeed") {
-			conn->addtag("windspeed");
-			int tmp = popint(line);
+			int tmpx = popint(line);
+			int tmpy = popint(line);
 			// Only accept in certain ranges (sanity check)
-			if (fabs(tmp) < res.x/2) seeing.windspeed.x = tmp;
-			tmp = popint(line);
-			if (fabs(tmp) < res.x/2) seeing.windspeed.y = tmp;
-			netio.broadcast(format("ok windspeed %d %d", seeing.windspeed.x, seeing.windspeed.y), "windspeed");
+			if (fabs(tmpx) > res.x/2 || fabs(tmpy) > res.y/2)
+				conn->write("error windspeed :values out of range");
+			else {
+				conn->addtag("windspeed");
+				seeing.windspeed.x = tmpx;
+				seeing.windspeed.y = tmpy;
+				netio.broadcast(format("ok windspeed %d %d", seeing.windspeed.x, seeing.windspeed.y), "windspeed");
+			}
 		} else if(what == "windtype") {
 			conn->addtag("windtype");
 			string tmp = popword(line);
@@ -135,17 +131,11 @@ void SimulCam::on_message(Connection *conn, std::string line) {
 		string what = popword(line);
 	
 		if(what == "noise") {
-			conn->addtag("noise");
-			conn->write(format("ok noise %lf", noise));
+			get_var(conn, "noise", noise);
 		} else if(what == "noiseamp") {
-			conn->addtag("noiseamp");
-			conn->write(format("ok noiseamp %lf", noiseamp));
+			get_var(conn, "noiseamp", noiseamp);
 		} else if(what == "seeingfac") {
-			conn->addtag("seeingfac");
-			conn->write(format("ok seeingfac %lf", seeingfac));
-		} else if(what == "telradius") {
-			conn->addtag("telradius");
-			conn->write(format("ok telradius %lf", telradius));
+			get_var(conn, "seeingfac", seeingfac);
 		} else if(what == "windspeed") {
 			conn->addtag("windspeed");
 			netio.broadcast(format("ok windspeed %x %x", seeing.windspeed.x, seeing.windspeed.y), "windspeed");
