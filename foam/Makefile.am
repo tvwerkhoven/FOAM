@@ -18,7 +18,7 @@ LDADD = $(LIBSIU_DIR)/libsocket.a \
 
 # Basic framework files which are always needed
 FRAME_SRC = foam.cc foamctrl.cc $(LIB_DIR)/devices.cc
-FRAME_HDR = foam.h foamctrl.h config.h $(LIB_DIR)/devices.h
+FRAME_HDR = foam.h foamctrl.h autoconfig.h $(LIB_DIR)/devices.h
 
 ### DUMMY MODE ###
 ##################
@@ -38,13 +38,14 @@ if SIMSTAT
 bin_PROGRAMS += foam-simstat
 
 foam_simstat_SOURCES = foam-simstatic.cc \
-		$(FRAME_SRC) $(FRAME_HDR) \
+		$(FRAME_SRC) \
 		$(MODS_DIR)/camera.cc \
 		$(MODS_DIR)/dummycam.cc \
 		$(MODS_DIR)/imgcam.cc
 
 # Header files are part of the sources as well
 foam_simstat_SOURCES += foam-simstatic.h \
+		$(FRAME_HDR) \
 		$(MODS_DIR)/camera.h \
 		$(MODS_DIR)/dummycam.h \
 		$(MODS_DIR)/imgcam.h
@@ -73,12 +74,13 @@ if HAVE_DC1394
 bin_PROGRAMS += foam-hwtest
 
 foam_hwtest_SOURCES = foam-hwtest.cc \
-		$(FRAME_SRC) $(FRAME_HDR) \
+		$(FRAME_SRC) \
 		$(MODS_DIR)/camera.cc \
 		$(MODS_DIR)/fw1394cam.cc
 
 # Header files are part of the sources as well
 foam_hwtest_SOURCES += foam-hwtest.h \
+		$(FRAME_HDR) \
 		$(MODS_DIR)/camera.h \
 		$(MODS_DIR)/fw1394cam.h \
 		$(MODS_DIR)/dc1394++.h
@@ -104,7 +106,7 @@ if FULLSIM
 bin_PROGRAMS += foam-fullsim
 
 foam_fullsim_SOURCES = foam-fullsim.cc \
-		$(FRAME_SRC) $(FRAME_HDR) \
+		$(FRAME_SRC) \
 		$(MODS_DIR)/camera.cc \
 		$(MODS_DIR)/simulcam.cc \
 		$(MODS_DIR)/wfs.cc \
@@ -114,6 +116,7 @@ foam_fullsim_SOURCES = foam-fullsim.cc \
 
 # Header files are part of the sources as well
 foam_fullsim_SOURCES += foam-fullsim.h \
+		$(FRAME_HDR) \
 		$(MODS_DIR)/camera.h \
 		$(MODS_DIR)/simulcam.h \
 		$(MODS_DIR)/wfs.h \
