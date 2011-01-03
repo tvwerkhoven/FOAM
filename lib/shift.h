@@ -75,7 +75,7 @@ private:
 	
 public:
 	Shift(Io &io, int nthr=4);
-	~Shift(void);
+	~Shift();
 	
 	bool calc_shifts(void *img, dtype_t dt, coord_t res, crop_t *crops, gsl_vector_float *shifts, mode_t mode=COG);
 };
