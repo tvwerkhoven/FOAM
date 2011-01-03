@@ -24,9 +24,15 @@
  @brief Generic device class, specific hardware controls are derived from this class.
  */
 
+#ifdef HAVE_CONFIG_H
+#include "autoconfig.h"
+#endif
+
 #include "io.h"
 #include "devices.h"
 #include "foamctrl.h"
+
+using namespace std;
 
 // Device class
 
@@ -94,6 +100,18 @@ void Device::on_message(Connection *conn, std::string line) {
 	
 	conn->write("error :Unknown command: " + orig);
 }
+
+void Device::get_var(Connection *conn, string varname, double value, string comment) {
+	if (!conn)
+		return;
+	
+	conn->addtag(varname);
+	if (comment == "")
+		conn->write(format("ok %s %lf :%s", varname.c_str(), (double) value, comment.c_str()));
+	else 
+		conn->write(format("ok %s %lf", varname.c_str(), (double) value));
+}
+
 
 // DeviceManager class
 

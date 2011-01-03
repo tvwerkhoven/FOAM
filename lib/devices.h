@@ -26,6 +26,10 @@
 #ifndef HAVE_DEVICES_H
 #define HAVE_DEVICES_H
 
+#ifdef HAVE_CONFIG_H
+#include "autoconfig.h"
+#endif
+
 #include <map>
 
 #include "io.h"
@@ -34,6 +38,8 @@
 #include "path++.h"
 
 #include "foamctrl.h"
+
+using namespace std;
 
 typedef Protocol::Server::Connection Connection;
 
@@ -56,9 +62,9 @@ class Device {
 protected:
 	Io &io;
 	foamctrl *ptc;
-	string name;												//!< Device name
-	string type;												//!< Device type
-	string port;												//!< Port to listen on
+	string name;										//!< Device name
+	string type;										//!< Device type
+	string port;										//!< Port to listen on
 	list<string> cmd_list;							//!< All commands this device supports
 	void add_cmd(string cmd) { cmd_list.push_back(cmd); } //!< Add command to list
 	
@@ -70,10 +76,48 @@ protected:
 
 	bool init();												//!< Initialisation (common for all constructors)
 	
+	/*! @brief Set variable, helper function for on_message
+	 
+	 N.B. Value should be castable to double, such that it can be formatted with %lf.
+	 
+	 @param [in] *conn Client connection
+	 @param [in] varname Variable name
+	 @param [in] value Value for this variable
+	 @param [in] *var Pointer to variable
+	 @param [in] min Minimum allowed value
+	 @param [in] min Maximum allowed value
+	 @param [in] errmsg Error message to send to Client if value is outside [min, max]
+	 */
+	template <class T> T set_var(Connection *conn, string varname, T value, T* var, T min=0, T max=0, string errmsg="") {
+		if (conn)
+			conn->addtag(varname);
+		
+		if (errmsg != "" && (value > max || value < min)) {
+			if (conn)
+				conn->write("error " + varname + " :" + errmsg);
+				return *var;
+		}
+		else {
+			*var = value;
+			netio.broadcast(format("ok %s %lf", varname.c_str(), (double) *var), varname);
+			return *var;
+		}
+	}
+
+	/*! @brief Get variable, helper function for on_message
+	 
+	 @param [in] *conn Client connection
+	 @param [in] varname Variable name
+	 @param [in] value Value for this variable
+	 @param [in] comment Comment to send along to Client (optional)
+	 */
+	void get_var(Connection *conn, string varname, double value, string comment="");
+
+	
 public:
 	class exception: public std::runtime_error {
 	public:
-		exception(const std::string reason): runtime_error(reason) {}
+		exception(const string reason): runtime_error(reason) {}
 	};
 	
 	Device(Io &io, foamctrl *ptc, string n, string t, string p, Path conf=string(""), bool online=true);
@@ -87,7 +131,7 @@ public:
 	/*! 
 	 @brief Called when the device receives a message
 	 */
-	virtual void on_message(Connection *conn, std::string line);
+	virtual void on_message(Connection *conn, string line);
 	
 	/*! 
 	 @brief Called when something connects to this device
@@ -95,7 +139,7 @@ public:
 	virtual void on_connect(Connection */*conn*/, bool status) { 
 		io.msg(IO_DEB2, "Device::on_connect(stat=%d)", (int) status); 
 	}
-	
+
 	bool isonline() { return online; }
 	string getname() { return name; }
 	string gettype() { return type; }
@@ -118,7 +162,7 @@ private:
 public:
 	class exception: public std::runtime_error {
 	public:
-		exception(const std::string reason): runtime_error(reason) {}
+		exception(const string reason): runtime_error(reason) {}
 	};
 	
 	/*! 
