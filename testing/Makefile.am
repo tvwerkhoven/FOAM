@@ -23,10 +23,16 @@ TESTS = $(autotools_test_SOURCES)
 check_PROGRAMS += bit64-test bit32-test bitdef-test
 
 bitdef_test_SOURCES = bitness-test.cc
+bitdef_test_LDFLAGS = 
+bitdef_test_LIBS = 
 bit64_test_SOURCES = $(bitdef_test_SOURCES)
 bit64_test_CXXFLAGS = -m64 $(AM_CXXFLAGS)
+bit64_test_LDFLAGS = 
+bit64_test_LIBS = 
 bit32_test_SOURCES = $(bitdef_test_SOURCES)
 bit32_test_CXXFLAGS = -m32 $(AM_CXXFLAGS)
+bit32_test_LDFLAGS = 
+bit32_test_LIBS =
 
 if HWDEBUG
 # only do this if we want hardware debugging 
@@ -105,7 +111,9 @@ if HAVE_FITSIO
 check_PROGRAMS += camsend-test
 
 camsend_test_SOURCES = camsend-test.cc
-camsend_test_LDADD = $(LIBSIU_DIR)/libprotocol.a \
+camsend_test_CFLAGS = $(FITSIO_CFLAGS) 
+camsend_test_LDADD = $(FITSIO_LIBS) \
+		$(LIBSIU_DIR)/libprotocol.a \
 		$(LIBSIU_DIR)/libsocket.a
 
 endif HAVE_FITSIO
