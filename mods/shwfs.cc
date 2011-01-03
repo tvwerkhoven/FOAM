@@ -135,7 +135,8 @@ void Shwfs::on_message(Connection *conn, std::string line) {
 		
 		if(what == "mla") {
 			conn->addtag("mla");
-			set_mla_str(line);
+			if (set_mla_str(line))
+				conn->write("error mla :Could not parse MLA string");
 		} else {
 			parsed = false;
 			//conn->write("error :Unknown argument " + what);
@@ -201,7 +202,7 @@ int Shwfs::gen_mla_grid(sh_mla_t *mla, coord_t res, coord_t size, coord_t pitch,
 			
 			if (shape == CIRCULAR) {
 				if (pow(fabs(sa_c.x) + (overlap-0.5)*size.x, 2) + pow(fabs(sa_c.y) + (overlap-0.5)*size.y, 2) < minradsq) {
-					//io.msg(IO_DEB2, "Shwfs::gen_mla_grid(): Found subap within bounds @ (%d, %d)", sa_c.x, sa_c.y);
+//				io.msg(IO_DEB2, "Shwfs::gen_mla_grid(): Found subap within bounds @ (%d, %d)", sa_c.x, sa_c.y);
 					(mla->nsi)++;
 					mla->ml = (sh_simg_t *) realloc((void *) mla->ml, mla->nsi * sizeof *(mla->ml));
 					mla->ml[mla->nsi-1].llpos.x = sa_c.x + disp.x - size.x/2;
@@ -214,7 +215,7 @@ int Shwfs::gen_mla_grid(sh_mla_t *mla, coord_t res, coord_t size, coord_t pitch,
 				// Accept a subimage coordinate (center position) the position + 
 				// half-size the subaperture is within the bounds
 				if ((fabs(sa_c.x + (overlap-0.5)*size.x) < res.x/2) && (fabs(sa_c.y + (overlap-0.5)*size.y) < res.y/2)) {
-					//io.msg(IO_DEB2, "Shwfs::gen_mla_grid(): Found subap within bounds.");
+//					io.msg(IO_DEB2, "Shwfs::gen_mla_grid(): Found subap within bounds.");
 					(mla->nsi)++;
 					mla->ml = (sh_simg_t *) realloc((void *) mla->ml, mla->nsi * sizeof *(mla->ml));
 					mla->ml[mla->nsi-1].llpos.x = sa_c.x + disp.x - size.x/2;
@@ -393,14 +394,29 @@ int Shwfs::set_mla_str(string mla_str) {
 	int nsi = popint(mla_str);
 	int x, y, w, h;
 	
-	for (int i=0; i<mla.nsi; i++) {
+	sh_simg_t *ml_tmp = (sh_simg_t *) malloc(nsi * sizeof *ml_tmp);
+	
+	for (int i=0; i<nsi; i++) {
 		x = popint(mla_str);
 		y = popint(mla_str);
 		w = popint(mla_str);
 		h = popint(mla_str);
+		if (x <=0 || y <= 0 || w <= 0 || h <= 0)
+			return -1;
+		
+		ml_tmp[i].llpos.x = x;
+		ml_tmp[i].llpos.y = y;
+		ml_tmp[i].size.x = w;
+		ml_tmp[i].size.y = h;
 	}
 	
+	if (mla.ml)
+		free(mla.ml);
+	
+	mla.nsi = nsi;
+	mla.ml = ml_tmp;
+
 	netio.broadcast("ok mla " + mla_str);
-	return mla.nsi;
+	return 0;
 }
 
