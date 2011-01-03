@@ -49,9 +49,10 @@ static const string wfs_type = "wfs";
 class Wfs: public Device {
 public:	
 	enum wfbasis {
-		ZERNIKE=0,
-		KL,
-		MIRROR,
+		ZERNIKE=0,												//!< Zernike
+		KL,																//!< Karhunen-Loéve 
+		MIRROR,														//!< Mirror modes
+		SENSOR,														//!< Sensor modes (e.g. shift vectors)
 		UNDEFINED
 	};
 	
@@ -59,17 +60,20 @@ public:
 	 @brief This holds information on the wavefront
 	 */
 	struct wavefront {
-		wavefront() : wfamp(NULL), nmodes(0), basis(UNDEFINED) { ; }
+		wavefront() : wfamp(NULL), nmodes(0), basis(SENSOR) { ; }
 		gsl_vector_float *wfamp;					//!< Mode amplitudes
 		int nmodes;												//!< Number of modes
 		enum wfbasis basis;								//!< Basis functions used for this representation
 	};
 	
 	struct wavefront wf;								//!< Wavefront representation
+	bool is_calib;											//!< Is calibrated & ready for use
 	
 	Camera &cam;												//!< Reference to the camera class used for this WFS
-		
-	virtual int measure();							//!< Measure abberations (needs to be implemented in derived classes)
+	
+	// To be implemented:
+	virtual int measure();							//!< Measure abberations
+	virtual int calibrate();						//!< Calibrate sensor, set up reference and mode basis
 	
 	// From Device::
 	virtual void on_message(Connection *conn, std::string line);

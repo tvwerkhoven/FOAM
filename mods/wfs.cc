@@ -32,6 +32,7 @@
 
 Wfs::Wfs(Io &io, foamctrl *ptc, string name, string port, Path conffile, Camera &wfscam, bool online):
 Device(io, ptc, name, wfs_type, port, conffile, online),
+is_calib(false),
 cam(wfscam)
 {	
 	io.msg(IO_DEB2, "Wfs::Wfs()");
@@ -43,6 +44,7 @@ cam(wfscam)
 
 Wfs::Wfs(Io &io, foamctrl *ptc, string name, string type, string port, Path conffile, Camera &wfscam, bool online):
 Device(io, ptc, name, wfs_type + "." + type, port, conffile, online),
+is_calib(false),
 cam(wfscam)
 {	
 	io.msg(IO_DEB2, "Wfs::Wfs()");
@@ -50,6 +52,7 @@ cam(wfscam)
 	add_cmd("measuretest");
 	add_cmd("get modes");
 	add_cmd("get basis");
+	add_cmd("get calib");
 }
 
 Wfs::~Wfs() {
@@ -58,12 +61,13 @@ Wfs::~Wfs() {
 
 
 void Wfs::on_message(Connection *conn, std::string line) {
-	io.msg(IO_DEB2, "Wfs::on_message()");
+	io.msg(IO_DEB2, "Wfs::on_message('%s')", line.c_str());
 	string orig = line;
 	string command = popword(line);
 	bool parsed = true;
 	
 	if (command == "measuretest") {
+		// Specifically call Wfs::measure() to fake a measurement
 		Wfs::measure();
 		conn->addtag("measuretest");
 		conn->write("ok measuretest");
@@ -77,13 +81,16 @@ void Wfs::on_message(Connection *conn, std::string line) {
 				moderep += format("%4f ", gsl_vector_float_get(wf.wfamp, n));
 			}
 			conn->write(format("ok modes %d %s", wf.nmodes, moderep.c_str()));
-		}
-		else if (what == "basis") {
+		} else if (what == "calib") {
+			conn->addtag("calib");
+			conn->write(format("ok calib %d", is_calib));
+		} else if (what == "basis") {
 			conn->addtag("basis");
 			string tmp;
 			if (wf.basis == ZERNIKE) tmp = "zernike";
 			else if (wf.basis == KL) tmp = "kl";
 			else if (wf.basis == MIRROR) tmp = "mirror";
+			else if (wf.basis == SENSOR) tmp = "sensor";
 			else tmp = "unknown";
 			conn->write(format("ok basis %s", tmp.c_str()));
  		}
@@ -104,13 +111,20 @@ int Wfs::measure() {
 	if (wf.nmodes == 0) {
 		wf.nmodes = 16;
 		wf.wfamp = gsl_vector_float_alloc(wf.nmodes);
-		wf.basis = MIRROR;
+		wf.basis = SENSOR;
 	}
 	
 	for (int n=0; n<wf.nmodes; n++) {
 		gsl_vector_float_set(wf.wfamp, n, drand48()*2.0-1.0);
 	}
 	
+	return 0;
+}
+
+int Wfs::calibrate() {
+	io.msg(IO_DEB2, "Wfs::calibrate()");
+	is_calib = true;
+
 	return 0;
 }
 
