@@ -32,6 +32,7 @@
 #include "config.h"
 #include "pthread++.h"
 
+#include "devices.h"
 #include "simseeing.h"
 #include "camera.h"
 #include "simulcam.h"
@@ -39,7 +40,7 @@
 SimulCam::SimulCam(Io &io, foamctrl *ptc, string name, string port, Path &conffile, bool online):
 Camera(io, ptc, name, simulcam_type, port, conffile, online),
 seeing(io, ptc, name + "-seeing", port, conffile),
-out_size(0), frame_out(NULL), telradius(1.0), telapt(NULL),
+out_size(0), frame_out(NULL), telradius(1.0), telapt(NULL), telapt_fill(0.7),
 shwfs(io, ptc, name + "-shwfs", port, conffile, *this, false)
 {
 	io.msg(IO_DEB2, "SimulCam::SimulCam()");
@@ -54,6 +55,8 @@ shwfs(io, ptc, name + "-shwfs", port, conffile, *this, false)
 	add_cmd("set windspeed");
 	add_cmd("get windtype");
 	add_cmd("set windtype");
+	add_cmd("get telapt_fill");
+	add_cmd("set telapt_fill");
 
 	noise = cfg.getdouble("noise", 0.1);
 	noiseamp = cfg.getdouble("noiseamp", 0.5);
@@ -221,15 +224,38 @@ void SimulCam::simul_wfs(gsl_matrix *wave_in) {
 	// Temporary matrices
 	gsl_matrix_view subap;
 	gsl_matrix *subapm;
+	gsl_matrix_view telapt_crop;
+	gsl_matrix *telapt_cropm;
+	
 	
 	for (int n=0; n<shwfs.mla.nsi; n++) {
 		sallpos = shwfs.mla.ml[n].llpos;
 		sasize = shwfs.mla.ml[n].size;
-		
+
 		// Crop out subaperture from larger frame, store as gsl_matrix_view
 		subap = gsl_matrix_submatrix(wave_in, sallpos.y, sallpos.x, sasize.y, sasize.x);
 		subapm = &(subap.matrix);
 		
+		// Check if this subaperture is within the bounds of the telescope 
+		// aperture for at least telapt_fill. All values of telapt are either 0 or 
+		// seeingfac, see gen_telapt(). If the sum is higher than telapt_fill *
+		// sasize.y * sasize.x * seeingfac, accept this subaperture. Otherwise set
+		// to zero.
+		telapt_crop = gsl_matrix_submatrix(telapt, sallpos.y, sallpos.x, sasize.y, sasize.x);
+		telapt_cropm = &(telapt_crop.matrix);
+		
+		double tmp_sum = 0.0;
+		for (size_t i=0; i<telapt_cropm->size1; i++)
+			for (size_t j=0; j<telapt_cropm->size2; j++)
+				tmp_sum += gsl_matrix_get (telapt_cropm, i, j);
+
+		if (tmp_sum <= telapt_fill * sasize.y * sasize.x * seeingfac) {
+			for (size_t i=0; i<subapm->size1; i++)
+				for (size_t j=0; j<subapm->size2; j++)
+					gsl_matrix_set (subapm, i, j, 0.0);
+			continue;
+		}
+						
 		if (workspace->size != sasize.x * sasize.y * 4) {
 			// Re-alloc data if necessary (should be sasize, but this can vary per subap)
 			io.msg(IO_WARN, "SimulCam::simul_wfs() subap sizes unequal, re-allocating. Support might be flaky.");
@@ -264,10 +290,12 @@ void SimulCam::simul_wfs(gsl_matrix *wave_in) {
 		fftw_execute(shplan);
 		
 		// now calculate the absolute squared value of that, store it in the subapt thing
-		// also find min and maximum heredouble tmp
+		// also find min and maximum here
 		for (int i=0; i<sasize.y/2; i++) {
 			for (int j=0; j<sasize.x/2; j++) {
-				// Calculate abs(E^2), store in original memory (per quadrant)
+				// Calculate abs(E^2), store in original memory (per quadrant).
+				// We need to move the data because we want the origin of the FFT to 
+				// be in the center of the matrix.
 				tmp = fabs(pow(shdata[i*sasize.x*2 + j][0], 2) + 
 									 pow(shdata[i*sasize.x*2 + j][1], 2));
 				gsl_matrix_set(subapm, sasize.y/2+i, sasize.x/2+j, tmp);
@@ -286,6 +314,7 @@ void SimulCam::simul_wfs(gsl_matrix *wave_in) {
 				//fprintf(stderr, "out: abs(%g^2+%g^2) = %g\n", shdata[i*sasize.y*2 + j][0], shdata[i*sasize.y*2 + j][1], tmp);
 			}
 		}
+		//! @bug The original wave_in is never set to zero everywhere, it is only overwritten with FFT'ed data in the subapertures, not in between the subapertures.
 	}
 }
 

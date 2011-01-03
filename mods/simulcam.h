@@ -62,6 +62,7 @@ private:
 
 	double telradius;										//!< Telescope radius (fraction of CCD)
 	gsl_matrix *telapt;									//!< Telescope aperture mask
+	double telapt_fill;									//!< How much subaperture should be within the telescope aperture to be processed
 	
 	double noise;												//!< Noise fill factor for CCD
 	double noiseamp;										//!< Noise amplitude for CCD
