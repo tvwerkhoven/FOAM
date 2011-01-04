@@ -150,11 +150,11 @@ void Camera::cam_proc() {
 	}
 }
 
-void Camera::fits_init_phdu(char *phdu) {
+void Camera::fits_init_phdu(char *const phdu) const {
 	memset(phdu, ' ', 2880);
 }
 
-bool Camera::fits_add_card(char *phdu, const string &key, const string &value) {
+bool Camera::fits_add_card(char *phdu, const string &key, const string &value) const {
 	int i;
 	
 	for(i = 0; i < 36; i++) {
@@ -176,7 +176,7 @@ bool Camera::fits_add_card(char *phdu, const string &key, const string &value) {
 	return true;
 }
 
-bool Camera::fits_add_comment(char *phdu, const string &comment) {
+bool Camera::fits_add_comment(char *phdu, const string &comment) const {
 	int i;
 	
 	for(i = 0; i < 35; i++) {
@@ -195,7 +195,7 @@ bool Camera::fits_add_comment(char *phdu, const string &comment) {
 }
 
 
-bool Camera::store_frame(frame_t *frame) {
+bool Camera::store_frame(const frame_t *const frame) const {
 	// Generate path to store file to, based on filenamebase
 	if (depth != 8 && depth != 16) {
 		io.msg(IO_WARN, "Camera::store_frame() Only 8 and 16 bit images supported!");
@@ -268,7 +268,7 @@ bool Camera::store_frame(frame_t *frame) {
 	return true;
 }
 
-void Camera::calculate_stats(frame_t *frame) {
+void Camera::calculate_stats(frame_t *const frame) const {
 	memset(frame->histo, 0, get_maxval() * sizeof *frame->histo);
 	
 	if(depth <= 8) {
@@ -302,7 +302,7 @@ void Camera::calculate_stats(frame_t *frame) {
 	frame->rms = sqrt(sumsquared - sum * sum) / sum;
 }
 
-void *Camera::cam_queue(void *data, void *image, struct timeval *tv) {
+void *Camera::cam_queue(void * const data, void * const image, struct timeval *const tv) {
 	pthread::mutexholder h(&cam_mutex);
 	
 	frame_t *frame = &frames[count % nframes];
@@ -334,14 +334,14 @@ void *Camera::cam_queue(void *data, void *image, struct timeval *tv) {
 	return old;
 }
 
-Camera::frame_t *Camera::get_last_frame() {
+Camera::frame_t *Camera::get_last_frame() const {
 	if(count)
 		return &frames[(count - 1) % nframes];
 	else
 		return 0;
 }
 
-Camera::frame_t *Camera::get_frame(size_t id, bool wait) {	
+Camera::frame_t *Camera::get_frame(const size_t id, const bool wait) {	
 	if(id >= count) {
 		if(wait) {
 			while(id >= count) {
@@ -359,7 +359,7 @@ Camera::frame_t *Camera::get_frame(size_t id, bool wait) {
 }
 
 // Network IO starts here
-void Camera::on_message(Connection *conn, string line) {
+void Camera::on_message(Connection *const conn, string line) {
 	io.msg(IO_DEB1, "Camera::on_message('%s')", line.c_str()); 
 	
 	string orig = line;
@@ -481,44 +481,44 @@ void Camera::on_message(Connection *conn, string line) {
 		Device::on_message(conn, orig);
 }
 
-double Camera::set_exposure(double value) {	
+double Camera::set_exposure(const double value) {	
 	cam_set_exposure(value);
 	accumfix();
 	netio.broadcast(format("ok exposure %lf", exposure), "exposure");
 	return exposure;
 }
 
-double Camera::set_interval(double value) {
+double Camera::set_interval(const double value) {
 	cam_set_interval(value);
 	netio.broadcast(format("ok interval %lf", interval), "interval");
 	return interval;
 }
 
-double Camera::set_gain(double value) {
+double Camera::set_gain(const double value) {
 	cam_set_gain(value);
 	netio.broadcast(format("ok gain %lf", gain), "gain");
 	return gain;
 }
 
-double Camera::set_offset(double value) {
+double Camera::set_offset(const double value) {
 	cam_set_offset(value);
 	netio.broadcast(format("ok offset %lf", offset), "offset");
 	return offset;
 }
 
-Camera::mode_t Camera::set_mode(mode_t value) {
+Camera::mode_t Camera::set_mode(const mode_t value) {
 	cam_set_mode(value);
 	netio.broadcast("ok mode " + mode2str(mode), "mode");
 	return mode;
 }
 
-int Camera::set_store(int n) {
+int Camera::set_store(const int n) {
 	nstore = n;
 	netio.broadcast(format("ok store %d", nstore), "store");
 	return nstore;	
 }
 
-void Camera::get_fits(Connection *conn = NULL) {
+void Camera::get_fits(const Connection *const conn = NULL) const {
 	if (conn)
 		conn->write("ok fits " + fits_observer + ", " + fits_target + ", :" + fits_comments);
 }
@@ -529,28 +529,28 @@ void Camera::set_fits(string line) {
 	set_fits_comments(popword(line));
 }
 
-string Camera::set_fits_observer(string val) {
+string Camera::set_fits_observer(const string val) {
 	fits_observer = val;
 	return fits_observer;
 }
 
-string Camera::set_fits_target(string val) {
+string Camera::set_fits_target(const string val) {
 	fits_target = val;
 	return fits_target;
 }
 
-string Camera::set_fits_comments(string val) {
+string Camera::set_fits_comments(const string val) {
 	fits_comments = val;
 	return fits_comments;
 }
 
-string Camera::set_filename(string value) {
+string Camera::set_filename(const string value) {
 	filenamebase = value;
 	netio.broadcast("ok filename :" + filenamebase, "filename");
 	return filenamebase;
 }
 
-string Camera::set_outputdir(string value) {
+string Camera::set_outputdir(const string value) {
 	// This automatically prefixes ptc->datadir if 'value' is not absolute
 	Path tmp = ptc->datadir + value;
 	
@@ -568,7 +568,7 @@ string Camera::set_outputdir(string value) {
 	return outputdir.str();
 }
 
-Path Camera::makename(const string &base) {
+Path Camera::makename(const string &base) const {
 	struct timeval tv;
 	struct tm tm;
 	gettimeofday(&tv, 0);
