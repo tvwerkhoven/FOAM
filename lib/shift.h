@@ -96,7 +96,7 @@ private:
 	 @param [out] *vec Shift found within crop field in img
 	 @param [in] mini Minimum intensity to consider
 	 */
-	void _calc_cog(uint8_t *img, coord_t &res, crop_t &crop, float *vec, uint8_t mini=0);
+	void _calc_cog(const uint8_t *img, const coord_t &res, const crop_t &crop, float *vec, const uint8_t mini=0);
 	
 public:
 	Shift(Io &io, int nthr=4);
@@ -113,7 +113,7 @@ public:
 	 @param [in] wait Block until complete, or return asap
 	 @param [in] mini Minimum intensity to consider (for COG)
 	 */
-	bool calc_shifts(uint8_t *img, coord_t res, crop_t *crops, int ncrop, gsl_vector_float *shifts, method_t method=COG, bool wait=true, uint8_t mini=0);
+	bool calc_shifts(const uint8_t *img, const coord_t res, const crop_t *crops, const int ncrop, gsl_vector_float *shifts, const method_t method=COG, const bool wait=true, const uint8_t mini=0);
 };
 
 #endif // HAVE_SHIFT_H

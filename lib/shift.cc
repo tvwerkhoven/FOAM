@@ -89,13 +89,20 @@ void Shift::_worker_func() {
 	}
 }
 
-void Shift::_calc_cog(uint8_t *img, coord_t &res, crop_t &crop, float *v, uint8_t mini) {
-	uint8_t *p, sum=0.0;
-	v[0] = v[1] = 0.0;
+void Shift::_calc_cog(const uint8_t *img, const coord_t &res, const crop_t &crop, float *v, const uint8_t mini) {
+	uint8_t *p;
+	float sum;
+
+	sum = v[0] = v[1] = 0.0;
 	
-	for (int j=crop.llpos.y; j<crop.size.y; j++) {
-		p = img + (j*res.x);
-		for (int i=crop.llpos.x; i<crop.size.x; i++) {
+	// i,j loop over the pixels inside the crop field for *img
+	for (int j=crop.llpos.y; j<crop.llpos.y+crop.size.y; j++) {
+		// j is the vertical counter, store the beginning of the current row here:
+		p = (uint8_t *) img;
+		p += (j*res.x) + crop.llpos.x;
+		//  img = data origin, j * res.x skips a few rows, crop.llpos.x gives the offset for the current row.
+		for (int i=crop.llpos.x; i<crop.llpos.x+crop.size.x; i++) {
+			// Skip pixels with too low an intensity
 			if (*p < mini) {
 				p++;
 				continue;
@@ -106,24 +113,26 @@ void Shift::_calc_cog(uint8_t *img, coord_t &res, crop_t &crop, float *v, uint8_
 			p++;
 		}
 	}
+
 	if (sum <= 0) { 
 		v[0] = v[1] = 0.0;
 		return;
 	}
+
 	v[0] = v[0]/sum - crop.llpos.x - crop.size.x/2;
 	v[1] = v[1]/sum - crop.llpos.y - crop.size.y/2;
 }
 
-bool Shift::calc_shifts(uint8_t *img, coord_t res, crop_t *crops, int ncrop, gsl_vector_float *shifts, method_t method, bool wait, uint8_t mini) {
+bool Shift::calc_shifts(const uint8_t *img, const coord_t res, const crop_t *crops, const int ncrop, gsl_vector_float *shifts, const method_t method, const bool wait, const uint8_t mini) {
 	io.msg(IO_DEB2, "Shift::calc_shifts(uint8_t)");
 	
 	// Setup work parameters
 	workpool.method = method;
-	workpool.img = img;
+	workpool.img = (uint8_t *) img;
 	workpool.res = res;
 	workpool.refimg = NULL;
 	workpool.mini = mini;
-	workpool.crops = crops;
+	workpool.crops = (crop_t *) crops;
 	workpool.ncrop = ncrop;
 	workpool.shifts = shifts;
 	workpool.jobid = ncrop-1;
@@ -134,7 +143,6 @@ bool Shift::calc_shifts(uint8_t *img, coord_t res, crop_t *crops, int ncrop, gsl
 	
 	// Wait until all workers have signalled ready once
 	if (wait) {
-		io.msg(IO_DEB2, "Shift::calc_shifts(uint8_t): waiting for workers");
 		work_done_mutex.lock();
 		work_done_cond.wait(work_done_mutex);
 		work_done_mutex.unlock();
