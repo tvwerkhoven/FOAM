@@ -134,7 +134,7 @@ menubar(*this)
 	set_gravity(Gdk::GRAVITY_STATIC);
 	
 	//vbox.set_spacing(4);
-	vbox.pack_start(menubar, PACK_SHRINK);
+	//vbox.pack_start(menubar, PACK_SHRINK);
 	
 	// signals
 	menubar.connect.signal_activate().connect(sigc::mem_fun(*this, &MainWindow::on_connect_activate));
