@@ -56,6 +56,8 @@ void Shift::_worker_func() {
 	io.msg(IO_XNFO, "Shift::_worker_func() new worker (id=%d n=%d)", id, nworker);
 	work_mutex.unlock();
 
+	float shift[2];
+
 	while (true) {
 		work_mutex.lock();
 		io.msg(IO_XNFO, "Shift::_worker_func() worker %d waiting...", id);
@@ -69,27 +71,50 @@ void Shift::_worker_func() {
 			if (myjob < 0)
 				break;
 			
-			float tmp;
-			_calc_cog(workpool.img, workpool.res, workpool.crops[myjob], &tmp);
-			io.msg(IO_XNFO, "Shift::_worker_func():%d job:%d, val:%f", id, myjob, tmp);
+			_calc_cog(workpool.img, workpool.res, workpool.crops[myjob], shift, workpool.mini);
+			
+			//workpool.shifts->data[workpool.shifts->stride * myjob * 2 + 0]
+			//workpool.shifts->data[workpool.shifts->stride * myjob * 2 + 1]
 
-			gsl_vector_float_set(workpool.shifts, myjob*2+0, tmp);
-			gsl_vector_float_set(workpool.shifts, myjob*2+1, tmp);
-			usleep(50*1000);
+			gsl_vector_float_set(workpool.shifts, myjob*2+0, shift[0]);
+			gsl_vector_float_set(workpool.shifts, myjob*2+1, shift[1]);
+			//usleep(20*1000);
 		}
 		
 		workpool.mutex.lock();
+		// Increment thread done counter, broadcast signal if we are the last thread
 		if (++(workpool.done) == nworker-1)
 			work_done_cond.broadcast();
 		workpool.mutex.unlock();
 	}
 }
 
-void Shift::_calc_cog(uint8_t *img, coord_t &res, crop_t &crop, float *vec) {
-	*vec = drand48();
+void Shift::_calc_cog(uint8_t *img, coord_t &res, crop_t &crop, float *v, uint8_t mini) {
+	uint8_t *p, sum=0.0;
+	v[0] = v[1] = 0.0;
+	
+	for (int j=crop.llpos.y; j<crop.size.y; j++) {
+		p = img + (j*res.x);
+		for (int i=crop.llpos.x; i<crop.size.x; i++) {
+			if (*p < mini) {
+				p++;
+				continue;
+			}
+			v[0] += *p * i;
+			v[1] += *p * j;
+			sum += *p;
+			p++;
+		}
+	}
+	if (sum <= 0) { 
+		v[0] = v[1] = 0.0;
+		return;
+	}
+	v[0] = v[0]/sum - crop.llpos.x - crop.size.x/2;
+	v[1] = v[1]/sum - crop.llpos.y - crop.size.y/2;
 }
 
-bool Shift::calc_shifts(uint8_t *img, coord_t res, crop_t *crops, int ncrop, gsl_vector_float *shifts, mode_t mode, bool wait) {
+bool Shift::calc_shifts(uint8_t *img, coord_t res, crop_t *crops, int ncrop, gsl_vector_float *shifts, method_t method, bool wait, uint8_t mini) {
 	io.msg(IO_DEB2, "Shift::calc_shifts(uint8_t)");
 	
 	// Setup work parameters
@@ -97,6 +122,7 @@ bool Shift::calc_shifts(uint8_t *img, coord_t res, crop_t *crops, int ncrop, gsl
 	workpool.img = img;
 	workpool.res = res;
 	workpool.refimg = NULL;
+	workpool.mini = mini;
 	workpool.crops = crops;
 	workpool.ncrop = ncrop;
 	workpool.shifts = shifts;

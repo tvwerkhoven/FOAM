@@ -61,9 +61,10 @@ private:
 	typedef struct pool {
 		mode_t mode;
 		int bpp;													//!< Image bitdepth (8 for uint8_t, 16 for uint16_t)
-		uint8_t *img;												//!< Image to process
+		uint8_t *img;											//!< Image to process
 		coord_t res;											//!< Image size (width x height)
-		uint8_t *refimg;											//!< Reference image (for method=CORR)
+		uint8_t *refimg;									//!< Reference image (for method=CORR)
+		uint8_t mini;											//!< Minimum intensity to consider (for method=COG)
 		crop_t *crops;										//!< Crop fields within the bigger image
 		int ncrop;												//!< Number of crop fields
 		gsl_vector_float *shifts;					//!< Pre-allocated output vector
