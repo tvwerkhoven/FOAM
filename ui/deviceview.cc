@@ -1,6 +1,6 @@
 /*
  deviceview.cc -- generic device viewer
- Copyright (C) 2011 Tim van Werkhoven <t.i.m.vanwerkhoven@xs4all.nl>
+ Copyright (C) 2010--2011 Tim van Werkhoven <t.i.m.vanwerkhoven@xs4all.nl>
  
  This file is part of FOAM.
  
@@ -35,7 +35,7 @@ devframe("Raw device control"), dev_val("value:"), dev_send("Send")
 	printf("%x:DevicePage::DevicePage()\n", (int) pthread_self());
 		
 	// Add frames to parent VBox
-	set_spacing(4);
+	//set_spacing(4);
 		
 	clear_gui();
 	disable_gui();
