@@ -38,6 +38,8 @@ modeframe("Run mode"), mode_listen("Listen"), mode_open("Open loop"), mode_close
 calibframe("Calibration"), calmode_lbl("Calibration mode: "), calib("Calibrate"),
 statframe("Status"), stat_mode("Mode: "), stat_ndev("# Dev: "), stat_nframes("# Frames: "), stat_lastcmd("Last cmd: ") {
 	
+	//set_spacing(4);
+	
 	// request minimum size for entry boxes
 	host.set_width_chars(24);
 	port.set_width_chars(5);
@@ -96,7 +98,6 @@ statframe("Status"), stat_mode("Mode: "), stat_ndev("# Dev: "), stat_nframes("# 
 	statbox.pack_start(stat_lastcmd, PACK_SHRINK);
 	statframe.add(statbox);
 	
-	set_spacing(4);
 	pack_start(connframe, PACK_SHRINK);
 	pack_start(modeframe, PACK_SHRINK);
 	pack_start(calibframe, PACK_SHRINK);
