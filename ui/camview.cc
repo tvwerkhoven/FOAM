@@ -47,7 +47,7 @@ dispframe("Display settings"),
 camframe("Camera"),
 histoframe("Histogram"),
 capture("Capture"), display("Display"), store("Store"), e_exposure("Exp."), e_offset("Offset"), e_interval("Intv."), e_gain("Gain"), e_res("Res."), e_mode("Mode"), e_stat("Status"),
-flipv("Flip vert."), fliph("Flip hor."), crosshair("Crosshair"), grid("Grid"), histo("Histogram"), zoomin(Stock::ZOOM_IN), zoomout(Stock::ZOOM_OUT), zoom100(Stock::ZOOM_100), zoomfit(Stock::ZOOM_FIT), 
+flipv("Flip V"), fliph("Flip H"), crosshair("X-hair"), grid("Grid"), histo("Histogram"), zoomin(Stock::ZOOM_IN), zoomout(Stock::ZOOM_OUT), zoom100(Stock::ZOOM_100), zoomfit(Stock::ZOOM_FIT), 
 histoalign(0.5, 0.5, 0, 0), minval("Display min"), maxval("Display max"), e_avg("Avg."), e_rms("RMS"), e_datamin("Min"), e_datamax("Max")
 {
 	fprintf(stderr, "%x:CamView::CamView()\n", (int) pthread_self());
