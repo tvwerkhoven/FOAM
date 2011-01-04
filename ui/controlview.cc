@@ -89,18 +89,20 @@ statframe("Status"), stat_mode("Mode: "), stat_ndev("# Dev: "), stat_nframes("# 
 	calibbox.pack_start(calib, PACK_SHRINK);
 	calibframe.add(calibbox);
 	
+	// Pack runmode and calibration mode in one HBox
+	modecalibbox.set_spacing(4);
+	modecalibbox.pack_start(modeframe, PACK_SHRINK);
+	modecalibbox.pack_start(calibframe, PACK_SHRINK);
+	
 	// Status row (mode, # dev, # frames)
 	statbox.set_spacing(4);
-	//! \todo statbox superfluous? can be removed?
-	//statbox.pack_start(stat_mode, PACK_SHRINK);
 	statbox.pack_start(stat_ndev, PACK_SHRINK);
 	statbox.pack_start(stat_nframes, PACK_SHRINK);
 	statbox.pack_start(stat_lastcmd, PACK_SHRINK);
 	statframe.add(statbox);
 	
 	pack_start(connframe, PACK_SHRINK);
-	pack_start(modeframe, PACK_SHRINK);
-	pack_start(calibframe, PACK_SHRINK);
+	pack_start(modecalibbox, PACK_SHRINK);
 	pack_start(statframe, PACK_SHRINK);
 	
 	// register callback functions

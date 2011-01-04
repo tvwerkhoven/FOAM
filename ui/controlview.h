@@ -52,6 +52,7 @@ class ControlPage: public VBox {
 	LabeledEntry port;
 	Button connect;											//!< Init connection, ControlPage::on_connect_clicked()
 	
+	HBox modecalibbox;
 	Frame modeframe;
 	HBox modebox;
 	SwitchButton mode_listen;						//!< Switch FOAM mode to listen, ControlPage::on_mode_listen_clicked()
