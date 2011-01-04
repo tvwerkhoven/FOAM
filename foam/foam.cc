@@ -53,7 +53,6 @@ nodaemon(false), error(false), conffile(FOAM_DEFAULTCONF), execname(argv[0]),
 io(IO_DEB2)
 {
 	io.msg(IO_DEB2, "FOAM::FOAM()");
-	tm_start = localtime(&(ptc->starttime));
 	
 	devices = new DeviceManager(io);
 	
@@ -140,7 +139,8 @@ void FOAM::show_welcome() const {
 	io.msg(IO_DEB2, "FOAM::show_welcome()");
 	
 	char date[64];
-	strftime (date, 64, "%A, %B %d %H:%M:%S, %Y (%Z).", tm_start);	
+	struct tm *tmp_tm = localtime(&(ptc->starttime));
+	strftime(date, 64, "%A, %B %d %H:%M:%S, %Y (%Z).", tmp_tm);	
 	
 	io.msg(IO_NOID|IO_INFO,"      ___           ___           ___           ___     \n\
      /\\  \\         /\\  \\         /\\  \\         /\\__\\    \n\

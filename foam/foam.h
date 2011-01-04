@@ -67,9 +67,6 @@ protected:
 	Path conffile;											//!< Configuration file to use
 	const Path execname;								//!< Executable name, i.e. Path(argv[0])
 
-	struct tm *tm_start;								//!< Start time
-	struct tm *tm_end;									//!< End time
-	
 	struct {
 		bool ok;													//!< Track whether a network command is ok or not
 	} netio;
