@@ -1,6 +1,6 @@
 /*
  foam-hwtest.h -- hardware testing mode
- Copyright (C) 2008--2010 Tim van Werkhoven <t.i.m.vanwerkhoven@xs4all.nl>
+ Copyright (C) 2008--2011 Tim van Werkhoven <t.i.m.vanwerkhoven@xs4all.nl>
  
  This file is part of FOAM.
  

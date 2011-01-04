@@ -1,6 +1,6 @@
 /*
  cam.cc -- generic camera input/output wrapper
- Copyright (C) 2009--2010 Tim van Werkhoven <t.i.m.vanwerkhoven@xs4all.nl>
+ Copyright (C) 2009--2011 Tim van Werkhoven <t.i.m.vanwerkhoven@xs4all.nl>
  
  This file is part of FOAM.
  

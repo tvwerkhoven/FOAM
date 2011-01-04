@@ -1,6 +1,6 @@
 /*
  imgcam.cc -- Dummy 'camera' with static images as source
- Copyright (C) 2009--2010 Tim van Werkhoven <t.i.m.vanwerkhoven@xs4all.nl>
+ Copyright (C) 2009--2011 Tim van Werkhoven <t.i.m.vanwerkhoven@xs4all.nl>
  
  This program is free software; you can redistribute it and/or modify
  it under the terms of the GNU General Public License as published by

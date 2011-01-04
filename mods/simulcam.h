@@ -1,6 +1,6 @@
 /*
  simulcam.h -- atmosphere/telescope simulator camera header
- Copyright (C) 2010 Tim van Werkhoven <t.i.m.vanwerkhoven@xs4all.nl>
+ Copyright (C) 2011 Tim van Werkhoven <t.i.m.vanwerkhoven@xs4all.nl>
  
  This file is part of FOAM.
  

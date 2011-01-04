@@ -1,6 +1,6 @@
 /*
  fgui.cc -- the FOAM GUI
- Copyright (C) 2009--2010 Tim van Werkhoven <t.i.m.vanwerkhoven@xs4all.nl>
+ Copyright (C) 2009--2011 Tim van Werkhoven <t.i.m.vanwerkhoven@xs4all.nl>
  
  This file is part of FOAM.
  
@@ -126,7 +126,7 @@ logpage(log), controlpage(log, foamctrl),
 menubar(*this) 
 {
 	log.add(Log::NORMAL, "FOAM Control (" PACKAGE_NAME " version " PACKAGE_VERSION " built " __DATE__ " " __TIME__ ")");
-	log.add(Log::NORMAL, "Copyright (c) 2009--2010 " PACKAGE_BUGREPORT);
+	log.add(Log::NORMAL, "Copyright (c) 2009--2011 " PACKAGE_BUGREPORT);
 	
 	// widget properties
 	set_title("FOAM Control");
@@ -301,7 +301,7 @@ static void signal_handler(int s) {
 
 int main(int argc, char *argv[]) {
 	printf("FOAM Control (" PACKAGE_NAME " version " PACKAGE_VERSION " built " __DATE__ " " __TIME__ ")\n");
-	printf("Copyright (c) 2009--2010 %s\n", PACKAGE_BUGREPORT);
+	printf("Copyright (c) 2009--2011 %s\n", PACKAGE_BUGREPORT);
 
 	signal(SIGINT, signal_handler);
 	signal(SIGHUP, signal_handler);

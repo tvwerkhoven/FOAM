@@ -3,7 +3,7 @@
  *  foam
  *
  *  Created by Tim on 20100120.
- *  Copyright 2010 Tim van Werkhoven. All rights reserved.
+ *  Copyright 2011 Tim van Werkhoven. All rights reserved.
  *
  */
 
