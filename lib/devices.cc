@@ -75,7 +75,7 @@ Device::~Device() {
 	io.msg(IO_DEB2, "Device::~Device()");
 }
 
-void Device::on_message(const Connection * const conn, std::string line) { 
+void Device::on_message(Connection * const conn, std::string line) { 
 	io.msg(IO_DEB2, "Device::on_message('%s') %s::%s", 
 				 line.c_str(), type.c_str(), name.c_str());
 	string orig = line;

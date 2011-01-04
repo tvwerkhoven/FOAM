@@ -129,7 +129,7 @@ public:
 	/*! 
 	 @brief Called when the device receives a message
 	 */
-	virtual void on_message(const Connection * const conn, string line);
+	virtual void on_message(Connection * const conn, string line);
 	
 	/*! 
 	 @brief Called when something connects to this device
