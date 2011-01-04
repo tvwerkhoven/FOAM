@@ -118,7 +118,7 @@ bool Shift::calc_shifts(uint8_t *img, coord_t res, crop_t *crops, int ncrop, gsl
 	io.msg(IO_DEB2, "Shift::calc_shifts(uint8_t)");
 	
 	// Setup work parameters
-	workpool.mode = mode;
+	workpool.method = method;
 	workpool.img = img;
 	workpool.res = res;
 	workpool.refimg = NULL;

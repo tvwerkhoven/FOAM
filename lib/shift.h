@@ -45,7 +45,7 @@ public:
 	typedef enum {
 		COG=0,														//!< Center of Gravity method
 		CORR,															//!< Cross-correlation method
-	} mode_t;														//!< Different image shift calculation modes
+	} method_t;													//!< Different image shift calculation methods
 		
 	// N.B.: This is a copy of Shwfs::sh_simg_t but I want to keep this class standalone
 	typedef struct _crop_t {
@@ -59,7 +59,7 @@ private:
 	Io &io;															//!< Message IO
 	
 	typedef struct pool {
-		mode_t mode;
+		method_t method;
 		int bpp;													//!< Image bitdepth (8 for uint8_t, 16 for uint16_t)
 		uint8_t *img;											//!< Image to process
 		coord_t res;											//!< Image size (width x height)
@@ -88,13 +88,32 @@ private:
 	void _worker_func();								//!< Worker function
 	int _worker_getid() { return workid++; }
 	
-	void _calc_cog(uint8_t *img, coord_t &res, crop_t &crop, float *vec); //!< Calculate CoG in a crop field of img
+	/*! @brief Calculate CoG in a crop field of img
+	 
+	 @param [in] img Pointer to image data.
+	 @param [in] res Resolution of image data (i.e. data stride)
+	 @param [in] crop Crop field to process
+	 @param [out] *vec Shift found within crop field in img
+	 @param [in] mini Minimum intensity to consider
+	 */
+	void _calc_cog(uint8_t *img, coord_t &res, crop_t &crop, float *vec, uint8_t mini=0);
 	
 public:
 	Shift(Io &io, int nthr=4);
 	~Shift();
 	
-	bool calc_shifts(uint8_t *img, coord_t res, crop_t *crops, int ncrop, gsl_vector_float *shifts, mode_t mode=COG, bool wait=true);
+	/*! @brief Calculate shifts in a series of crop fields within an image
+	 
+	 @param [in] img Pointer to image data.
+	 @param [in] res Resolution of image data (i.e. data stride)
+	 @param [in] *crops Array of crop field to process
+	 @param [in] ncrop Length of *crops
+	 @param [out] *shifts Buffer to hold results (pre-allocated)
+	 @param [in] method Tracking method (see method_t)
+	 @param [in] wait Block until complete, or return asap
+	 @param [in] mini Minimum intensity to consider (for COG)
+	 */
+	bool calc_shifts(uint8_t *img, coord_t res, crop_t *crops, int ncrop, gsl_vector_float *shifts, method_t method=COG, bool wait=true, uint8_t mini=0);
 };
 
 #endif // HAVE_SHIFT_H

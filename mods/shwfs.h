@@ -75,7 +75,7 @@ private:
 	Shift shifts;												//!< Shift computation class. Does the heavy lifting.
 	gsl_vector_float *shift_vec;				//!< SHWFS shift vector
 	
-	Shift::mode_t mode;									//!< Data processing mode (Center of Gravity, Correlation, etc)
+	Shift::method_t method;							//!< Data processing method (Center of Gravity, Correlation, etc)
 	
 	sh_mla_t mlacfg;										//!< Subimages configuration (coordinates & sizes)
 	

@@ -45,7 +45,7 @@
 Shwfs::Shwfs(Io &io, foamctrl *ptc, string name, string port, Path &conffile, Camera &wfscam, bool online):
 Wfs(io, ptc, name, shwfs_type, port, conffile, wfscam, online),
 shifts(io, 4),
-mode(Shift::COG)
+method(Shift::COG)
 {
 	io.msg(IO_DEB2, "Shwfs::Shwfs()");
 	add_cmd("mla generate");
@@ -180,11 +180,11 @@ int Shwfs::measure() {
 		io.msg(IO_DEB2, "Shwfs::measure() got UINT16");
 		// Manually cast mlacfg.ml to Shift type, is the same (Shift has it's own types such that it does not depend on other files too much)
 		//! @todo Include Shift::crop_t in types.h (?)
-		//shifts.calc_shifts((uint16_t *) tmp->image, cam.get_res(), (Shift::crop_t *) mlacfg.ml, mlacfg.nsi, shift_vec, mode);
+		//shifts.calc_shifts((uint16_t *) tmp->image, cam.get_res(), (Shift::crop_t *) mlacfg.ml, mlacfg.nsi, shift_vec, method);
 	}
 	else if (cam.get_depth() == 8) {
 		io.msg(IO_DEB2, "Shwfs::measure() got UINT8");
-		shifts.calc_shifts((uint8_t *) tmp->image, cam.get_res(), (Shift::crop_t *) mlacfg.ml, mlacfg.nsi, shift_vec, mode);
+		shifts.calc_shifts((uint8_t *) tmp->image, cam.get_res(), (Shift::crop_t *) mlacfg.ml, mlacfg.nsi, shift_vec, method);
 	}
 	else
 		return io.msg(IO_ERR, "Shwfs::measure() unknown datatype");
