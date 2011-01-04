@@ -99,7 +99,7 @@ private:
 	void _calc_cog(const uint8_t *img, const coord_t &res, const crop_t &crop, float *vec, const uint8_t mini=0);
 	
 public:
-	Shift(Io &io, int nthr=4);
+	Shift(Io &io, const int nthr=4);
 	~Shift();
 	
 	/*! @brief Calculate shifts in a series of crop fields within an image

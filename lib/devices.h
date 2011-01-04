@@ -62,13 +62,13 @@ class Device {
 protected:
 	Io &io;
 	foamctrl *ptc;
-	string name;										//!< Device name
-	string type;										//!< Device type
-	string port;										//!< Port to listen on
+	const string name;									//!< Device name
+	const string type;									//!< Device type
+	const string port;									//!< Port to listen on
 	list<string> cmd_list;							//!< All commands this device supports
 	void add_cmd(string cmd) { cmd_list.push_back(cmd); } //!< Add command to list
 	
-	Path conffile;											//!< Configuration file
+	const Path conffile;								//!< Configuration file
 	config cfg;													//!< Interpreted configuration file
 	
 	Protocol::Server netio;							//!< Network connection
@@ -88,7 +88,7 @@ protected:
 	 @param [in] min Maximum allowed value
 	 @param [in] errmsg Error message to send to Client if value is outside [min, max]
 	 */
-	template <class T> T set_var(Connection *conn, string varname, T value, T* var, T min=0, T max=0, string errmsg="") {
+	template <class T> T set_var(Connection * const conn, const string varname, const T value, T* var, const T min=0, const T max=0, const string errmsg="") const {
 		if (conn)
 			conn->addtag(varname);
 		
@@ -111,7 +111,7 @@ protected:
 	 @param [in] value Value for this variable
 	 @param [in] comment Comment to send along to Client (optional)
 	 */
-	void get_var(Connection *conn, string varname, double value, string comment="");
+	void get_var(Connection * const conn, const string varname, const double value, const string comment="") const;
 
 	
 public:
@@ -120,9 +120,7 @@ public:
 		exception(const string reason): runtime_error(reason) {}
 	};
 	
-	Device(Io &io, foamctrl *ptc, string n, string t, string p, Path conf=string(""), bool online=true);
-//	Device(Io &io, foamctrl *ptc, string n, string t, string p, Path &conf);
-//	Device(Io &io, foamctrl *ptc, string n, string t, string p);
+	Device(Io &io, foamctrl *ptc, const string n, const string t, const string p, const Path conf=string(""), const bool online=true);
 	virtual ~Device();
 	
 	
@@ -131,18 +129,18 @@ public:
 	/*! 
 	 @brief Called when the device receives a message
 	 */
-	virtual void on_message(Connection *conn, string line);
+	virtual void on_message(const Connection * const conn, string line);
 	
 	/*! 
 	 @brief Called when something connects to this device
 	 */
-	virtual void on_connect(Connection */*conn*/, bool status) { 
+	virtual void on_connect(const Connection * const /*conn*/, const bool status) const { 
 		io.msg(IO_DEB2, "Device::on_connect(stat=%d)", (int) status); 
 	}
 
-	bool isonline() { return online; }
-	string getname() { return name; }
-	string gettype() { return type; }
+	bool isonline() const { return online; }
+	string getname() const { return name; }
+	string gettype() const { return type; }
 };
 
 /*!

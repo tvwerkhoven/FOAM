@@ -53,6 +53,8 @@ nodaemon(false), error(false), conffile(FOAM_DEFAULTCONF), execname(argv[0]),
 io(IO_DEB2)
 {
 	io.msg(IO_DEB2, "FOAM::FOAM()");
+	tm_start = localtime(&(ptc->starttime));
+	
 	devices = new DeviceManager(io);
 	
 	if (parse_args(argc, argv)) {
@@ -109,7 +111,7 @@ FOAM::~FOAM() {
 					end-ptc->starttime, ptc->frames, ptc->frames/(float) (end-ptc->starttime));
 }
 
-void FOAM::show_version() {
+void FOAM::show_version() const {
 	printf("FOAM (%s version %s, built %s %s)\n", PACKAGE_NAME, PACKAGE_VERSION, __DATE__, __TIME__);
 	printf("Copyright (c) 2007--2011 %s\n", PACKAGE_BUGREPORT);
 	printf("\nFOAM comes with ABSOLUTELY NO WARRANTY. This is free software,\n"
@@ -117,7 +119,7 @@ void FOAM::show_version() {
 				 "see the file COPYING for details.\n");
 }
 
-void FOAM::show_clihelp(bool error = false) {
+void FOAM::show_clihelp(const bool error = false) const {
 	if(error)
 		io.msg(IO_ERR | IO_NOID, "Try '%s --help' for more information.\n", execname.c_str());
 	else {
@@ -134,10 +136,9 @@ void FOAM::show_clihelp(bool error = false) {
 	}
 }
 
-void FOAM::show_welcome() {
+void FOAM::show_welcome() const {
 	io.msg(IO_DEB2, "FOAM::show_welcome()");
 	
-	tm_start = localtime(&(ptc->starttime));
 	char date[64];
 	strftime (date, 64, "%A, %B %d %H:%M:%S, %Y (%Z).", tm_start);	
 	
@@ -161,7 +162,6 @@ void FOAM::show_welcome() {
 int FOAM::parse_args(int argc, char *argv[]) {
 	io.msg(IO_DEB2, "FOAM::parse_args()");
 	int r, option_index = 0;
-	execname = Path(argv[0]);
 	
 	static struct option const long_options[] = {
 		{"config", required_argument, NULL, 'c'},
@@ -236,7 +236,7 @@ int FOAM::load_config() {
 	return 0;
 }
 
-int FOAM::verify() {	
+int FOAM::verify() const {	
 	// Check final configuration integrity
 	int ret = 0;
 	ret += ptc->verify();
@@ -371,7 +371,7 @@ int FOAM::mode_calib() {
 	return 0;
 }
 
-void FOAM::on_connect(Connection *connection, bool status) {
+void FOAM::on_connect(const Connection * const connection, const bool status) const {
   if (status) {
     connection->write(":client connected");
     io.msg(IO_DEB1, "Client connected from %s.", connection->getpeername().c_str());
@@ -382,7 +382,7 @@ void FOAM::on_connect(Connection *connection, bool status) {
   }
 }
 
-void FOAM::on_message(Connection *connection, std::string line) {
+void FOAM::on_message(Connection *const connection, std::string line) {
 	string cmd = popword(line);
 	//! @todo improve the delegation of on_message commands to derived classes. How do they know a command was or was not succesful?
 	
@@ -449,7 +449,7 @@ void FOAM::on_message(Connection *connection, std::string line) {
   }
 }
 
-int FOAM::show_nethelp(Connection *connection, string topic, string /*rest*/) {
+int FOAM::show_nethelp(const Connection *const connection, string topic, string /*rest*/) {
 	if (topic.size() == 0) {
 		connection->write(\
 ":==== FOAM help ==========================\n"
@@ -489,7 +489,7 @@ int FOAM::show_nethelp(Connection *connection, string topic, string /*rest*/) {
 	return 0;
 }
 
-string FOAM::mode2str(aomode_t m) {
+string FOAM::mode2str(const aomode_t m) const {
 	switch (m) {
 		case AO_MODE_OPEN: return "open";
 		case AO_MODE_CLOSED: return "closed";
@@ -501,7 +501,7 @@ string FOAM::mode2str(aomode_t m) {
 	}
 }
 
-aomode_t FOAM::str2mode(string m) {
+aomode_t FOAM::str2mode(const string m) const {
 	if (m == "open") return AO_MODE_OPEN;
 	else if (m == "closed") return AO_MODE_CLOSED;
 	else if (m == "calib") return AO_MODE_CAL;

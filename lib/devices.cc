@@ -42,7 +42,7 @@ using namespace std;
 //	init();
 //}
 
-Device::Device(Io &io, foamctrl *ptc, string n, string t, string p, Path conf, bool online): 
+Device::Device(Io &io, foamctrl *ptc, const string n, const string t, const string p, const Path conf, const bool online): 
 io(io), ptc(ptc), name(n), type("dev." + t), port(p), conffile(conf), netio(p, n), online(online)
 { 
 	init();
@@ -75,7 +75,7 @@ Device::~Device() {
 	io.msg(IO_DEB2, "Device::~Device()");
 }
 
-void Device::on_message(Connection *conn, std::string line) { 
+void Device::on_message(const Connection * const conn, std::string line) { 
 	io.msg(IO_DEB2, "Device::on_message('%s') %s::%s", 
 				 line.c_str(), type.c_str(), name.c_str());
 	string orig = line;
@@ -101,7 +101,7 @@ void Device::on_message(Connection *conn, std::string line) {
 	conn->write("error :Unknown command: " + orig);
 }
 
-void Device::get_var(Connection *conn, string varname, double value, string comment) {
+void Device::get_var(Connection * const conn, const string varname, const double value, const string comment) const {
 	if (!conn)
 		return;
 	

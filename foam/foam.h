@@ -65,7 +65,7 @@ protected:
 	bool nodaemon;											//!< Run daemon or not
 	bool error;													//!< Error flag
 	Path conffile;											//!< Configuration file to use
-	Path execname;											//!< Executable name, i.e. Path(argv[0])
+	const Path execname;								//!< Executable name, i.e. Path(argv[0])
 
 	struct tm *tm_start;								//!< Start time
 	struct tm *tm_end;									//!< End time
@@ -82,7 +82,7 @@ protected:
 	/*!
 	 @brief Run on new connection to FOAM
 	 */
-	void on_connect(Connection *connection, bool status);
+	void on_connect(const Connection * const conn, const bool status) const;
 	
 	/*!
 	 @brief Run on new incoming message to FOAM
@@ -94,12 +94,12 @@ protected:
 	 by the setup-specific child-class such that it can process setup-specific
 	 commands in addition to generic commands.
 	 */
-	virtual void on_message(Connection *connection, std::string line);
+	virtual void on_message(Connection * const conn, std::string line);
 
-	void show_clihelp(bool);						//!< Show help on command-line syntax.
-	int show_nethelp(Connection *connection, string topic, string rest); //!< Show help on network command usage
-	void show_version();								//!< Show version information
-	void show_welcome();								//!< Show welcome banner
+	void show_clihelp(const bool) const;//!< Show help on command-line syntax.
+	int show_nethelp(const Connection *const connection, string topic, string rest); //!< Show help on network command usage
+	void show_version() const;					//!< Show version information
+	void show_welcome() const;					//!< Show welcome banner
 	
 public:
 	FOAM(int argc, char *argv[]);
@@ -109,17 +109,17 @@ public:
 	DeviceManager *devices;							//!< Device/hardware management
 	Io io;															//!< Terminal diagnostics output
 	
-	bool has_error() { return error; }
+	bool has_error() const { return error; }
 	
 	int init();													//!< Initialize FOAM setup
 	int parse_args(int argc, char *argv[]); //!< Parse command-line arguments
 	int load_config();									//!< Load FOAM configuration (from arguments)
-	int verify();												//!< Verify setup integrity (from configuration)
+	int verify() const;									//!< Verify setup integrity (from configuration)
 	void daemon();											//!< Start network daemon
 	int listen();												//!< Start main FOAM control loop
 	
-	string mode2str(aomode_t m);
-	aomode_t str2mode(string m);
+	string mode2str(const aomode_t m) const;
+	aomode_t str2mode(const string m) const;
 	
 	/*!
 	 @brief Load setup-specific modules

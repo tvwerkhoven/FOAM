@@ -32,7 +32,7 @@
 
 #include "shift.h"
 
-Shift::Shift(Io &io, int nthr): io(io), nworker(nthr), workid(0) {
+Shift::Shift(Io &io, const int nthr): io(io), nworker(nthr), workid(0) {
 	io.msg(IO_DEB2, "Shift::Shift()");
 	
 	// Startup workers
