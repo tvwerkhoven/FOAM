@@ -53,7 +53,7 @@ public:
 	virtual ~FOAM_FullSim() { io.msg(IO_DEB2, "FOAM_FullSim::~FOAM_FullSim()"); } 
 	
 	virtual int load_modules();
-	virtual void on_message(Connection *connection, std::string line);
+	virtual void on_message(Connection * const connection, std::string line);
 	
 	virtual int closed_init();
 	virtual int closed_loop();
