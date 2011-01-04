@@ -133,7 +133,7 @@ menubar(*this)
 	set_default_size(800, 600);
 	set_gravity(Gdk::GRAVITY_STATIC);
 	
-	vbox.set_spacing(4);
+	//vbox.set_spacing(4);
 	vbox.pack_start(menubar, PACK_SHRINK);
 	
 	// signals
