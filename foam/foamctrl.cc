@@ -55,7 +55,7 @@ starttime(time(NULL)), frames(0)
 	io.msg(IO_DEB2, "foamctrl::foamctrl(void)");
 }
 
-foamctrl::foamctrl(Io &io, Path &file): 
+foamctrl::foamctrl(Io &io, Path const &file): 
 err(0), io(io), conffile(file),
 mode(AO_MODE_LISTEN), calib(""),
 starttime(time(NULL)), frames(0)

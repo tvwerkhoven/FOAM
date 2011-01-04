@@ -40,12 +40,12 @@ private:
 	
 public:
 	foamctrl(Io &io);
-	foamctrl(Io &io, Path &file);
+	foamctrl(Io &io, Path const &file);
 	~foamctrl(void);
 	
 	int parse();									//!< Parse configuration file
 	int verify();									//!< Verify whether settings are sane
-	int error() { return err; }
+	int error() const { return err; }
 	
 	//Path progname;								//!< Name of the program executable (Path(argv[0]).basename())
 	Path progdir;									//!< Path of the program executable (Path(argv[0]).dirname())

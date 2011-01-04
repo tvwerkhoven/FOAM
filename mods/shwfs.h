@@ -98,10 +98,10 @@ private:
 	 @param [out] idx Index of maximum intensity pixel
 	 @return Maximum intensity
 	 */
-	template <class T> int _find_max(T *img, size_t nel, size_t *idx);
+	template <class T> int _find_max(const T *const img, const size_t nel, size_t *idx);
 	
-	string get_mla_str(sh_mla_t mla); //!< Represent a MLA configuration as one string
-	string get_mla_str() { return get_mla_str(mlacfg); }
+	string get_mla_str(const sh_mla_t mla) const; //!< Represent a MLA configuration as one string
+	string get_mla_str() const { return get_mla_str(mlacfg); }
 	int set_mla_str(string mla_str); //!< Set MLA configuration from string, return number of subaps
 		
 	int mla_subapsel();	
@@ -122,7 +122,7 @@ public:
 	 @param [in] overlap How much overlap with aperture needed for inclusion (0--1)
 	 @return Number of subapertures found
 	 */
-	int gen_mla_grid(sh_mla_t *mla, coord_t res, coord_t size, coord_t pitch, int xoff, coord_t disp, mlashape_t shape, float overlap);
+	int gen_mla_grid(sh_mla_t *const mla, const coord_t res, const coord_t size, const coord_t pitch, const int xoff, const coord_t disp, const mlashape_t shape, const float overlap);
 
 	/*! @brief Find subaperture/subimage (sa/si) positions in a given frame.
 	 
@@ -135,20 +135,20 @@ public:
 	 @param [in] iter Number of iterations to do
 	 @return Number of subapertures found
 	 */
-	int find_mla_grid(sh_mla_t *mla, coord_t size, int mini=0, int nmax=-1, int iter=1);
+	int find_mla_grid(sh_mla_t *const mla, const coord_t size, const int mini=0, const int nmax=-1, const int iter=1);
 	 
-	bool store_mla_grid(sh_mla_t mla, Path &f, bool overwrite=false);	//!< Store external MLA grid to disk, as CSV
-	bool store_mla_grid(Path &f, bool overwrite=false);	//!< Store this MLA grid to disk, as CSV
+	bool store_mla_grid(const sh_mla_t mla, const Path &f, const bool overwrite=false) const;	//!< Store external MLA grid to disk, as CSV
+	bool store_mla_grid(const Path &f, const bool overwrite=false) const;	//!< Store this MLA grid to disk, as CSV
 
 	//!< Convert shifts to basis functions
-	int shift_to_basis(gsl_vector_float *invec, wfbasis basis, gsl_vector_float *outvec);
+	int shift_to_basis(const gsl_vector_float *const invec, const wfbasis basis, gsl_vector_float *outvec);
 	
 	// From Wfs::
 	virtual int measure();
 	virtual int calibrate();
 	
 	// From Devices::
-	virtual void on_message(Connection*, std::string);
+	virtual void on_message(Connection *const, std::string);
 };
 
 #endif // HAVE_SHWFS_H

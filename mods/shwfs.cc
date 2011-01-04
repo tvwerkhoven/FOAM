@@ -102,7 +102,7 @@ Shwfs::~Shwfs() {
 	
 }
 
-void Shwfs::on_message(Connection *conn, std::string line) {
+void Shwfs::on_message(Connection *const conn, std::string line) {
 	io.msg(IO_DEB1, "Shwfs::on_message('%s')", line.c_str()); 
 	
 	string orig = line;
@@ -195,7 +195,7 @@ int Shwfs::measure() {
 	return 0;
 }
 
-int Shwfs::shift_to_basis(gsl_vector_float *invec, wfbasis basis, gsl_vector_float *outvec) {
+int Shwfs::shift_to_basis(const gsl_vector_float *const invec, const wfbasis basis, gsl_vector_float *outvec) {
 	switch (basis) {
 		case SENSOR:
 			gsl_vector_float_memcpy(outvec, invec);
@@ -236,7 +236,7 @@ int Shwfs::calibrate() {
 }
 
 
-int Shwfs::gen_mla_grid(sh_mla_t *mla, coord_t res, coord_t size, coord_t pitch, int xoff, coord_t disp, mlashape_t shape, float overlap) {
+int Shwfs::gen_mla_grid(sh_mla_t *const mla, const coord_t res, const coord_t size, const coord_t pitch, const int xoff, const coord_t disp, const mlashape_t shape, const float overlap) {
 	io.msg(IO_DEB2, "Shwfs::gen_mla_grid()");
 	
 	is_calib = false;
@@ -292,11 +292,11 @@ int Shwfs::gen_mla_grid(sh_mla_t *mla, coord_t res, coord_t size, coord_t pitch,
 	return mla->nsi;
 }
 
-bool Shwfs::store_mla_grid(Path &f, bool overwrite) {
+bool Shwfs::store_mla_grid(const Path &f, const bool overwrite) const {
 	return store_mla_grid(mlacfg, f, overwrite);
 }
 
-bool Shwfs::store_mla_grid(sh_mla_t mla, Path &f, bool overwrite) {
+bool Shwfs::store_mla_grid(const sh_mla_t mla, const Path &f, const bool overwrite) const {
 	if (f.exists() && !overwrite) {
 		io.msg(IO_WARN, "Shwfs::store_mla_grid(): Cannot store MLA grid, file exists.");
 		return false;
@@ -336,7 +336,7 @@ bool Shwfs::store_mla_grid(sh_mla_t mla, Path &f, bool overwrite) {
 	return true;
 }
 
-int Shwfs::find_mla_grid(sh_mla_t *mla, coord_t size, int mini, int nmax, int iter) {
+int Shwfs::find_mla_grid(sh_mla_t *const mla, const coord_t size, const int mini, const int nmax, const int iter) {
 	io.msg(IO_DEB2, "Shwfs::find_mla_grid()");
 
 	is_calib = false;
@@ -432,7 +432,7 @@ int Shwfs::mla_subapsel() {
 /*********************/
 
 template <class T> 
-int Shwfs::_find_max(T *img, size_t nel, size_t *idx) {
+int Shwfs::_find_max(const T *const img, const size_t nel, size_t *const idx) {
 	int max=img[0];
 	for (size_t p=0; p<nel; p++) {
 		if (img[p] > max) {
@@ -443,7 +443,7 @@ int Shwfs::_find_max(T *img, size_t nel, size_t *idx) {
 	return max;	
 }
 
-string Shwfs::get_mla_str(sh_mla_t mla) {
+string Shwfs::get_mla_str(const sh_mla_t mla) const {
 	string ret = format("%d ", mla.nsi);
 	
 	for (int i=0; i<mla.nsi; i++)
