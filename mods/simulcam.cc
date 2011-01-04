@@ -37,7 +37,7 @@
 #include "camera.h"
 #include "simulcam.h"
 
-SimulCam::SimulCam(Io &io, foamctrl *ptc, string name, string port, Path &conffile, bool online):
+SimulCam::SimulCam(Io &io, foamctrl *ptc, const string name, const string port, Path const &conffile, const bool online):
 Camera(io, ptc, name, simulcam_type, port, conffile, online),
 seeing(io, ptc, name + "-seeing", port, conffile),
 out_size(0), frame_out(NULL), telradius(1.0), telapt(NULL), telapt_fill(0.7),
@@ -81,7 +81,7 @@ SimulCam::~SimulCam() {
 	mode = Camera::OFF;
 }
 
-void SimulCam::on_message(Connection *conn, std::string line) {
+void SimulCam::on_message(Connection *const conn, std::string line) {
 	io.msg(IO_DEB1, "SimulCam::on_message('%s')", line.c_str()); 
 	string orig = line;
 	string command = popword(line);
@@ -185,13 +185,13 @@ gsl_matrix *SimulCam::simul_seeing() {
 	return wf;
 }
 
-void SimulCam::simul_telescope(gsl_matrix *im_in) {
+void SimulCam::simul_telescope(gsl_matrix *im_in) const {
 	io.msg(IO_DEB2, "SimulCam::simul_telescope()");
 	// Multiply wavefront with aperture
 	gsl_matrix_mul_elements (im_in, telapt);
 }
 
-void SimulCam::simul_wfs(gsl_matrix *wave_in) {
+void SimulCam::simul_wfs(gsl_matrix *wave_in) const {
 	if (shwfs.mlacfg.nsi <= 0) {
 		io.msg(IO_WARN, "SimulCam::simul_wfs(): no microlenses defined?.");
 		return;
@@ -338,7 +338,7 @@ uint8_t *SimulCam::simul_capture(gsl_matrix *frame_in) {
 }
 
 // From Camera::
-void SimulCam::cam_set_exposure(double value) {
+void SimulCam::cam_set_exposure(const double value) {
 	pthread::mutexholder h(&cam_mutex);
 	exposure = value;
 }
@@ -348,7 +348,7 @@ double SimulCam::cam_get_exposure() {
 	return exposure;
 }
 
-void SimulCam::cam_set_interval(double value) {
+void SimulCam::cam_set_interval(const double value) {
 	pthread::mutexholder h(&cam_mutex);
 	interval = value;
 }
@@ -357,7 +357,7 @@ double SimulCam::cam_get_interval() {
 	return interval;
 }
 
-void SimulCam::cam_set_gain(double value) {
+void SimulCam::cam_set_gain(const double value) {
 	pthread::mutexholder h(&cam_mutex);
 	gain = value;
 }
@@ -366,7 +366,7 @@ double SimulCam::cam_get_gain() {
 	return gain;
 }
 
-void SimulCam::cam_set_offset(double value) {
+void SimulCam::cam_set_offset(const double value) {
 	pthread::mutexholder h(&cam_mutex);
 	offset = value;
 }
@@ -436,7 +436,7 @@ void SimulCam::cam_handler() {
 	}
 }
 
-void SimulCam::cam_set_mode(mode_t newmode) {
+void SimulCam::cam_set_mode(const mode_t newmode) {
 	if (newmode == mode)
 		return;
 	

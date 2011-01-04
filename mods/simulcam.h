@@ -70,31 +70,32 @@ private:
 	
 public:
 	Shwfs shwfs;												//!< Reference to WFS we simulate (i.e. for configuration)
-	SimulCam(Io &io, foamctrl *ptc, string name, string port, Path &conffile, bool online=true);
+	SimulCam(Io &io, foamctrl *ptc, const string name, const string port, Path const &conffile, const bool online=true);
 	~SimulCam();
 	
 	void gen_telapt();									//!< Generate telescope aperture with radius telradius. Inside this radius the mask has value 'seeingfac', outside it's 0.
 
 	gsl_matrix *simul_seeing();					//!< Simulate seeing: get wavefront and apply seeing factor.
-	void simul_telescope(gsl_matrix *wave_in); //!< Multiply input wavefront with telescope aperture mask from gen_telapt().
-	void simul_wfs(gsl_matrix *wave_in); //!< Simulate wavefront sensor optics given an input wavefront.
+	void simul_telescope(gsl_matrix *wave_in) const; //!< Multiply input wavefront with telescope aperture mask from gen_telapt().
+	void simul_wfs(gsl_matrix *wave_in) const; //!< Simulate wavefront sensor optics given an input wavefront.
 	uint8_t *simul_capture(gsl_matrix *frame_in);	//!< Simulate CCD frame capture (exposure, offset, etc.)
 	
 	// From Camera::
 	void cam_handler();
-	void cam_set_exposure(double value);
+	void cam_set_exposure(const double value);
 	double cam_get_exposure();
-	void cam_set_interval(double value);
+	void cam_set_interval(const double value);
 	double cam_get_interval();
-	void cam_set_gain(double value);
+	void cam_set_gain(const double value);
 	double cam_get_gain();
-	void cam_set_offset(double value);
+	void cam_set_offset(const double value);
 	double cam_get_offset();
 	
-	void cam_set_mode(mode_t newmode);
+	void cam_set_mode(const mode_t newmode);
 	void do_restart();
 	
-	void on_message(Connection*, std::string);
+	// From Devices::
+	void on_message(Connection *const conn, std::string);
 };
 
 #endif // HAVE_SIMULCAM_H

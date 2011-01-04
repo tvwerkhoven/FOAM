@@ -40,24 +40,26 @@ private:
 	double noise;
 	
 public:
-	DummyCamera(Io &io, foamctrl *ptc, string name, string port, Path &conffile, bool online=true);
+	DummyCamera(Io &io, foamctrl *ptc, const string name, const string port, Path const &conffile, const bool online=true);
 	~DummyCamera();
 	
 	// From Camera::
 	void cam_handler();
-	void cam_set_exposure(double value);
+	void cam_set_exposure(const double value);
 	double cam_get_exposure();
-	void cam_set_interval(double value);
+	void cam_set_interval(const double value);
 	double cam_get_interval();
-	void cam_set_gain(double value);
+	void cam_set_gain(const double value);
 	double cam_get_gain();
-	void cam_set_offset(double value);
+	void cam_set_offset(const double value);
 	double cam_get_offset();
 
-	void cam_set_mode(mode_t newmode);
+	void cam_set_mode(const mode_t newmode);
 	void do_restart();
 	
-	void on_message(Connection *conn, std::string line);
+	// From Devices::
+	int verify() { return 0; }
+	void on_message(Connection *const conn, std::string line);
 };
 
 #endif // HAVE_DUMMYCAM_H

@@ -33,7 +33,7 @@
 
 #include "imgcam.h"
 
-ImgCamera::ImgCamera(Io &io, foamctrl *ptc, string name, string port, Path &conffile, bool online):
+ImgCamera::ImgCamera(Io &io, foamctrl *ptc, const string name, const string port, Path const &conffile, const bool online):
 Camera(io, ptc, name, imgcam_type, port, conffile, online)
 {
 	io.msg(IO_DEB2, "ImgCamera::ImgCamera()");
@@ -111,10 +111,6 @@ void ImgCamera::update() {
 		usleep(diff.tv_sec * 1.0e6 + diff.tv_usec);
 }
 
-void ImgCamera::do_restart() {
-	io.msg(IO_INFO, "ImgCamera::do_restart()");
-}
-
 void ImgCamera::cam_handler() { 
 	pthread::setcanceltype(PTHREAD_CANCEL_ASYNCHRONOUS);
 	sleep(1);
@@ -144,7 +140,7 @@ void ImgCamera::cam_handler() {
 	}
 }
 
-void ImgCamera::cam_set_exposure(double value) {
+void ImgCamera::cam_set_exposure(const double value) {
 	pthread::mutexholder h(&cam_mutex);
 	exposure = value;
 }
@@ -153,7 +149,7 @@ double ImgCamera::cam_get_exposure() {
 	return exposure;
 }
 
-void ImgCamera::cam_set_interval(double value) {
+void ImgCamera::cam_set_interval(const double value) {
 	pthread::mutexholder h(&cam_mutex);
 	interval = value;
 }
@@ -162,7 +158,7 @@ double ImgCamera::cam_get_interval() {
 	return interval;
 }
 
-void ImgCamera::cam_set_gain(double value) {
+void ImgCamera::cam_set_gain(const double value) {
 	pthread::mutexholder h(&cam_mutex);
 	gain = value;
 }
@@ -171,7 +167,7 @@ double ImgCamera::cam_get_gain() {
 	return gain;
 }
 
-void ImgCamera::cam_set_offset(double value) {
+void ImgCamera::cam_set_offset(const double value) {
 	pthread::mutexholder h(&cam_mutex);
 	offset = value;
 }
@@ -187,4 +183,12 @@ void ImgCamera::cam_set_mode(const mode_t newmode) {
 	
 	mode = newmode;
 	mode_cond.broadcast();
+}
+
+void ImgCamera::do_restart() {
+	io.msg(IO_INFO, "ImgCamera::do_restart()");
+}
+
+void ImgCamera::on_message(Connection *const conn, std::string line) {
+	io.msg(IO_INFO, "ImgCamera::on_message()");
 }

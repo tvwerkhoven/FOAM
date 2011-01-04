@@ -32,7 +32,7 @@
 
 using namespace std;
 
-DummyCamera::DummyCamera(Io &io, foamctrl *ptc, string name, string port, Path &conffile, bool online):
+DummyCamera::DummyCamera(Io &io, foamctrl *ptc, const string name, const string port, Path const &conffile, const bool online):
 Camera(io, ptc, name, dummycam_type, port, conffile, online)
 {
 	io.msg(IO_DEB2, "DummyCamera::DummyCamera()");
@@ -64,7 +64,7 @@ DummyCamera::~DummyCamera() {
 	cam_thr.join();
 }
 
-void DummyCamera::on_message(Connection *conn, std::string line) {
+void DummyCamera::on_message(Connection *const conn, std::string line) {
 	io.msg(IO_DEB1, "DummyCamera::on_message('%s')", line.c_str()); 
 	string orig = line;
 	string command = popword(line);
@@ -169,7 +169,7 @@ void DummyCamera::cam_handler() {
 	}
 }
 
-void DummyCamera::cam_set_exposure(double value) {
+void DummyCamera::cam_set_exposure(const double value) {
 	pthread::mutexholder h(&cam_mutex);
 	exposure = value;
 }
@@ -178,7 +178,7 @@ double DummyCamera::cam_get_exposure() {
 	return exposure;
 }
 
-void DummyCamera::cam_set_interval(double value) {
+void DummyCamera::cam_set_interval(const double value) {
 	pthread::mutexholder h(&cam_mutex);
 	interval = value;
 }
@@ -187,7 +187,7 @@ double DummyCamera::cam_get_interval() {
 	return interval;
 }
 
-void DummyCamera::cam_set_gain(double value) {
+void DummyCamera::cam_set_gain(const double value) {
 	pthread::mutexholder h(&cam_mutex);
 	gain = value;
 }
@@ -196,7 +196,7 @@ double DummyCamera::cam_get_gain() {
 	return gain;
 }
 
-void DummyCamera::cam_set_offset(double value) {
+void DummyCamera::cam_set_offset(const double value) {
 	pthread::mutexholder h(&cam_mutex);
 	offset = value;
 }
