@@ -31,22 +31,10 @@
 
 using namespace Gtk;
 
-FoamControl::FoamControl(Log &log): log(log) {
+FoamControl::FoamControl(Log &log): 
+log(log),
+ok(false), errormsg("Not connected") {
 	printf("%x:FoamControl::FoamControl()\n", (int) pthread_self());
-	
-	ok = false;
-	errormsg = "Not connected";
-	
-	// Init variables
-	state.mode = AO_MODE_UNDEF;
-	state.numdev = 0;
-	state.devices[0].name = "undef";
-	state.devices[0].type = "undef";
-	state.numframes = 0;
-	state.numcal = 0;
-	state.calmodes[0] = "undef";
-	state.lastreply = "undef";
-	state.lastcmd = "undef";
 }
 
 int FoamControl::connect(const string &h, const string &p) {

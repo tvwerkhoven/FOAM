@@ -91,6 +91,7 @@ private:
 		string calmodes[32];							//!< Different calibration modes
 		string lastreply;									//!< Last reply (stored in on_message())
 		string lastcmd;										//!< Last command issued to FOAM
+		state_t(): mode(AO_MODE_UNDEF), numdev(0), numframes(0), numcal(0), lastreply("undef"), lastcmd("undef") { ; }
 	} state;														//!< Basic state of the remote AO system
 	
 	bool ok;														//!< Status of the system
