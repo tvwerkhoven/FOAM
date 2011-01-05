@@ -288,7 +288,7 @@ static void signal_handler(int s) {
 	
 	signal(s, SIG_DFL);
 	
-	fprintf(stderr, "Received %s signal, exitting\n", strsignal(s));
+	fprintf(stderr, "fgui.cc::signal_handler(): Received %s signal, exitting\n", strsignal(s));
 	
 	if(s == SIGILL || s == SIGABRT || s == SIGFPE || s == SIGSEGV || s == SIGBUS)
 		abort();
