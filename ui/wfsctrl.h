@@ -19,10 +19,6 @@
  along with FOAM.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-/*!
- @file WfsCtrl.h
- @brief Camera UI control 
- */
 
 #ifndef HAVE_WFSCTRL_H
 #define HAVE_WFSCTRL_H
@@ -47,7 +43,7 @@ using namespace std;
 class WfsCtrl: public DeviceCtrl {
 protected:
 	// From DeviceCtrl::
-	virtual void on_message(std::string line);
+	virtual void on_message(string line);
 	virtual void on_connected(bool connected);
 
 public:
@@ -64,7 +60,7 @@ public:
 	
 	struct wavefront wf;								//!< Wavefront information
 	
-	WfsCtrl(Log &log, const std::string name, const std::string host, const std::string port);
+	WfsCtrl(Log &log, const string name, const string host, const string port);
 	~WfsCtrl();
 	
 	// From DeviceCtrl::

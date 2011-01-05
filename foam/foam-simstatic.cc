@@ -17,14 +17,6 @@
  You should have received a copy of the GNU General Public License
  along with FOAM.  If not, see <http://www.gnu.org/licenses/>.
  */
-/*! 
- @file foam-simstatic.c
- @author Tim van Werkhoven (t.i.m.vanwerkhoven@xs4all.nl)
- @brief This is a static simulation mode, with just a simple image to work with.
- 
- This setup can be used to benchmark performance of the AO system if no
- AO hardware (camera, TT, DM) is present.
- */
 
 #include <iostream>
 #include <string>
@@ -40,6 +32,8 @@
 #include "camera.h"
 
 #include "foam-simstatic.h"
+
+using namespace std;
 
 // Global device list for easier access
 DummyCamera *testcam;
@@ -134,7 +128,7 @@ int FOAM_simstatic::calib() {
 	return 0;
 }
 
-void FOAM_simstatic::on_message(Connection *connection, std::string line) {
+void FOAM_simstatic::on_message(Connection *connection, string line) {
 	io.msg(IO_DEB2, "FOAM_simstatic::on_message(line=%s)", line.c_str());
 	netio.ok = true;
 	

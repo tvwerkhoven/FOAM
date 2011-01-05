@@ -68,6 +68,25 @@ public:
 
 
 /*!
- \page dev_wfs Wavefront sensor devices : WfsView & WfsCtrl
+ \page dev_wfs_ui Wavefront sensor devices UI : WfsView & WfsCtrl
 
+ \section wfsview_wfsview WfsView
+ 
+ Shows a basic GUI for a generic wavefront sensor. See WfsView
+ 
+ \section wfsview_wfsctrl WfsCtrl
+ 
+ Controls a generic wavefront sensor. See WfsCtrl.
+ 
+ \section wfsview_derived Derived classes
+ 
+ The following classes are derived from this class:
+ - \subpage dev_wfs_shwfs_ui "Shack-Hartmann Wavefront sensor device UI"
+ 
+ \section wfsview_derived Related classes
+ 
+ The following classes are closely related to this class:
+ - \ref dev_cam_ui "Camera device UI"
+ 
+ 
  */

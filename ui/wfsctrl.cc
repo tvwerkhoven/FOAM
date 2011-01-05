@@ -18,11 +18,6 @@
  along with FOAM.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-/*!
- @file wfsctrl.cc
- @brief Wavefront sensor control
- */
-
 #include <iostream>
 #include <arpa/inet.h>
 #include <string>

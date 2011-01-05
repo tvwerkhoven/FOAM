@@ -53,3 +53,9 @@ public:
 };
 
 #endif // HAVE_WFC_H
+
+/*!
+ \page dev_wfc Wavefront corrector devices
+ 
+ The Wfc class provides control for wavefront correctors.
+*/

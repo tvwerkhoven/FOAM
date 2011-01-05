@@ -18,12 +18,6 @@
  along with FOAM.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-/*! 
- @file devices.cc
- @author Tim van Werkhoven (t.i.m.vanwerkhoven@xs4all.nl)
- @brief Generic device class, specific hardware controls are derived from this class.
- */
-
 #ifdef HAVE_CONFIG_H
 #include "autoconfig.h"
 #endif
@@ -35,12 +29,6 @@
 using namespace std;
 
 // Device class
-
-//Device::Device(Io &io, foamctrl *const ptc, string n, string t, string p, Path &conf): 
-//io(io), ptc(ptc), name(n), type("dev." + t), port(p), conffile(conf), netio(p, n)
-//{ 
-//	init();
-//}
 
 Device::Device(Io &io, foamctrl *const ptc, const string n, const string t, const string p, const Path conf, const bool online): 
 io(io), ptc(ptc), name(n), type("dev." + t), port(p), conffile(conf), netio(p, n), online(online)
@@ -75,7 +63,7 @@ Device::~Device() {
 	io.msg(IO_DEB2, "Device::~Device()");
 }
 
-void Device::on_message(Connection * const conn, std::string line) { 
+void Device::on_message(Connection * const conn, string line) { 
 	io.msg(IO_DEB2, "Device::on_message('%s') %s::%s", 
 				 line.c_str(), type.c_str(), name.c_str());
 	string orig = line;

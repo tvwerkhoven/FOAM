@@ -17,11 +17,6 @@
  You should have received a copy of the GNU General Public License
  along with FOAM.  If not, see <http://www.gnu.org/licenses/>.
 */
-/*! 
- @file wfs.cc
- @brief Base wavefront sensor class
- @author Tim van Werkhoven (t.i.m.vanwerkhoven@xs4all.nl)
- */
 
 #include <string>
 #include <gsl/gsl_vector.h>
@@ -29,6 +24,8 @@
 #include "types.h"
 #include "io.h"
 #include "wfs.h"
+
+using namespace std;
 
 Wfs::Wfs(Io &io, foamctrl *const ptc, const string name, const string port, Path const &conffile, Camera &wfscam, const bool online):
 Device(io, ptc, name, wfs_type, port, conffile, online),
@@ -60,7 +57,7 @@ Wfs::~Wfs() {
 }
 
 
-void Wfs::on_message(Connection *const conn, std::string line) {
+void Wfs::on_message(Connection *const conn, string line) {
 	io.msg(IO_DEB2, "Wfs::on_message('%s')", line.c_str());
 	string orig = line;
 	string command = popword(line);

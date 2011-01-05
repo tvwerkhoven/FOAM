@@ -33,6 +33,9 @@
 
 #include "imgcam.h"
 
+using namespace std;
+
+
 ImgCamera::ImgCamera(Io &io, foamctrl *const ptc, const string name, const string port, Path const &conffile, const bool online):
 Camera(io, ptc, name, imgcam_type, port, conffile, online)
 {
@@ -189,6 +192,6 @@ void ImgCamera::do_restart() {
 	io.msg(IO_INFO, "ImgCamera::do_restart()");
 }
 
-void ImgCamera::on_message(Connection *const conn, std::string line) {
+void ImgCamera::on_message(Connection *const conn, string line) {
 	io.msg(IO_INFO, "ImgCamera::on_message()");
 }

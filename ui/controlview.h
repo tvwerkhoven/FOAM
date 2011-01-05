@@ -17,12 +17,6 @@
  You should have received a copy of the GNU General Public License
  along with FOAM.  If not, see <http://www.gnu.org/licenses/>.
  */
-/*!
- @file controlview.h
- @author Tim van Werkhoven (t.i.m.vanwerkhoven@xs4all.nl)
- 
- @brief This is the FOAM connection control pane
- */
 
 #ifndef HAVE_CONTROLVIEW_H
 #define HAVE_CONTROLVIEW_H

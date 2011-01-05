@@ -17,12 +17,7 @@
  You should have received a copy of the GNU General Public License
  along with FOAM.  If not, see <http://www.gnu.org/licenses/>.
  */
-/*! 
-	@file foam-hwtest.h
-	@author Tim van Werkhoven (t.i.m.vanwerkhoven@xs4all.nl)
-	@date 2008-04-18 12:55
 
-*/
 
 #ifndef HAVE_FOAM_SIMSTATIC_H
 #define HAVE_FOAM_SIMSTATIC_H
@@ -38,6 +33,8 @@
 #include "types.h"
 #include "io.h"
 
+using namespace std;
+
 /*!
  @brief FOAM hardware test implementation
 */
@@ -47,7 +44,7 @@ public:
 	virtual ~FOAM_hwtest() { io.msg(IO_DEB2, "FOAM_hwtest::~FOAM_hwtest()"); } 
 	
 	virtual int load_modules();
-	virtual void on_message(Connection *connection, std::string line);
+	virtual void on_message(Connection *connection, string line);
 	
 	virtual int closed_init();
 	virtual int closed_loop();

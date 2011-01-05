@@ -18,13 +18,6 @@
  along with FOAM.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-/*!
- @file fgui.h
- @author Tim van Werkhoven (t.i.m.vanwerkhoven@xs4all.nl)
- 
- @brief This is the FOAM control GUI header
- */
-
 #ifndef HAVE_FGUI_H
 #define HAVE_FGUI_H
 
@@ -239,7 +232,7 @@ public:
  \section moreinfo More information
  
  More information can be found on these pages:
- - \subpage cam_dev "Camera devices UI"
+ - \subpage dev_ui "Devices UI"
  
 
  */

@@ -18,7 +18,7 @@
  along with FOAM.  If not, see <http://www.gnu.org/licenses/>.
  */
 /*! 
- @file types.h
+ @file foamtypes.h
  @brief This file contains some datatypes used.
  @author Tim van Werkhoven (t.i.m.vanwerkhoven@xs4all.nl)
 */

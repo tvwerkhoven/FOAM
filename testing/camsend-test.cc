@@ -10,7 +10,7 @@
 using namespace std;
 typedef Protocol::Server::Connection Connection;
 
-void on_client_msg(std::string line);
+void on_client_msg(string line);
 
 int main(int argc, char *argv[]) {
 	printf("%d.\n", argc);
@@ -69,6 +69,6 @@ int main(int argc, char *argv[]) {
 }
 
 
-void on_client_msg(std::string line) {
+void on_client_msg(string line) {
 	fprintf(stderr, "cli:on_client_msg: %s\n", line.c_str());
 }

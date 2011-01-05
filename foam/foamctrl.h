@@ -32,7 +32,8 @@
  @brief Stores the control state of the AO system
  
  This class is used to store several variables indicating the state of the AO 
- system. At startup it reads the general configuration from a file using 
+ system, including logging, networking, terminal I/O, pidfiles, etc. At 
+ startup it reads the general configuration from a file using 
  foamctrl::parse().
  
  */

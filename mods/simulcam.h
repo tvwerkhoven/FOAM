@@ -95,7 +95,14 @@ public:
 	void do_restart();
 	
 	// From Devices::
-	void on_message(Connection *const conn, std::string);
+	void on_message(Connection *const conn, string);
 };
 
 #endif // HAVE_SIMULCAM_H
+
+/*!
+ \page dev_cam_simulcam Simulation camera devices
+ 
+ The SimulCam class is an end-to-end simulation camera.
+ 
+ */

@@ -17,11 +17,6 @@
  You should have received a copy of the GNU General Public License
  along with FOAM.  If not, see <http://www.gnu.org/licenses/>.
  */
-/*! 
-	@file foam.h
-	@author Tim van Werkhoven (t.i.m.vanwerkhoven@xs4all.nl)
-	@brief This is the main header file for FOAM.
-*/
 
 #ifndef HAVE_FOAM_H
 #define HAVE_FOAM_H
@@ -119,7 +114,7 @@ protected:
 	 by the setup-specific child-class such that it can process setup-specific
 	 commands in addition to generic commands.
 	 */
-	virtual void on_message(Connection * const conn, std::string line);
+	virtual void on_message(Connection * const conn, string line);
 
 	void show_clihelp(const bool) const;//!< Show help on command-line syntax.
 	int show_nethelp(const Connection *const connection, string topic, string rest); //!< Show help on network command usage

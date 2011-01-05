@@ -17,12 +17,6 @@
  You should have received a copy of the GNU General Public License
  along with FOAM.  If not, see <http://www.gnu.org/licenses/>.
  */
-/*!
- @file foamcontrol.h
- @author Tim van Werkhoven (t.i.m.vanwerkhoven@xs4all.nl)
- 
- @brief This is the FOAM control connection class
- */
 
 #ifndef HAVE_FOAMCONTROL_H
 #define HAVE_FOAMCONTROL_H

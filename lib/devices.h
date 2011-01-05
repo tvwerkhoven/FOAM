@@ -17,11 +17,7 @@
  You should have received a copy of the GNU General Public License
  along with FOAM.  If not, see <http://www.gnu.org/licenses/>.
  */
-/*! 
- @file devices.h
- @author Tim van Werkhoven (t.i.m.vanwerkhoven@xs4all.nl)
- @brief Generic device class, specific hardware controls are derived from this class.
- */
+
 
 #ifndef HAVE_DEVICES_H
 #define HAVE_DEVICES_H
@@ -85,7 +81,7 @@ protected:
 	 @param [in] value Value for this variable
 	 @param [in] *var Pointer to variable
 	 @param [in] min Minimum allowed value
-	 @param [in] min Maximum allowed value
+	 @param [in] max Maximum allowed value
 	 @param [in] errmsg Error message to send to Client if value is outside [min, max]
 	 */
 	template <class T> T set_var(Connection * const conn, const string varname, const T value, T* var, const T min=0, const T max=0, const string errmsg="") const {
@@ -154,7 +150,7 @@ private:
 	Io &io;
 	
 	typedef map<string, Device*> device_t;
-	device_t devices;
+	device_t devices;										//!< Simple list of devices, stored by name.
 	int ndev;														//!< Number of devices in the system
 	
 public:
@@ -206,3 +202,46 @@ public:
 };
 
 #endif // HAVE_DEVICES_H
+
+/*!
+ \page devmanager DeviceManager
+ 
+ DeviceManager keeps track of which devices are connected to the system. Use 
+ DeviceManager::add() and DeviceManager::del() to manage the list. 
+ DeviceManager::getlist() and DeviceManager::getcount() can be used to see
+ what is currently available.
+ 
+ \section moreinfo See also
+ - \ref dev "Devices"
+
+*/
+
+/*!
+ \page dev Devices
+
+ In order to accomodate all kinds of hardware devices, the Device baseclass 
+ provides a template for all sorts of hardware (camera, wavefront sensor,
+ deformable mirrors, etc). Because of its genericity this class does not 
+ implement a lot itself, but rather depends on the derived classes to do
+ the work. Nonetheless, some basic functions (such as network I/O) are
+ provided here. All devices are stored in a DeviceManager class.
+
+ \section dev_derive Deriving a Device
+ 
+ To derive a Device class, one can use the following functions for overloading:
+ 
+ - Device::on_message(Connection * const, string)
+ - Device::on_connect(Connection * const, bool)
+ - Device::verify()
+ 
+ but this is only necessary if one wants to extend the functionality.
+ 
+ \section moreinfo More information
+ - \subpage dev_cam "Camera device"
+ - \subpage dev_wfs "Wavefront sensor device"
+ - \subpage dev_wfc "Wavefront corrector device"
+
+ \section moreinfo See also
+ - \ref devmanager "DeviceManager"
+
+*/

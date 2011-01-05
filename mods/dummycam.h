@@ -30,9 +30,8 @@
 
 #include "camera.h"
 
-const std::string dummycam_type = "dummycam";
-
 using namespace std;
+const string dummycam_type = "dummycam";
 
 class DummyCamera: public Camera {
 private:
@@ -59,7 +58,14 @@ public:
 	
 	// From Devices::
 	int verify() { return 0; }
-	void on_message(Connection *const conn, std::string line);
+	void on_message(Connection *const conn, string line);
 };
 
 #endif // HAVE_DUMMYCAM_H
+
+/*!
+ \page dev_cam_dummy Dummy camera devices
+ 
+ The DummyCamera class is a dummy camera and is for testing only.
+ 
+ */

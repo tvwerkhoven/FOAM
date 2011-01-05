@@ -37,6 +37,8 @@
 #include "camera.h"
 #include "simulcam.h"
 
+using namespace std;
+
 SimulCam::SimulCam(Io &io, foamctrl *const ptc, const string name, const string port, Path const &conffile, const bool online):
 Camera(io, ptc, name, simulcam_type, port, conffile, online),
 seeing(io, ptc, name + "-seeing", port, conffile),
@@ -81,7 +83,7 @@ SimulCam::~SimulCam() {
 	mode = Camera::OFF;
 }
 
-void SimulCam::on_message(Connection *const conn, std::string line) {
+void SimulCam::on_message(Connection *const conn, string line) {
 	io.msg(IO_DEB1, "SimulCam::on_message('%s')", line.c_str()); 
 	string orig = line;
 	string command = popword(line);

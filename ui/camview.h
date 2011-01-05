@@ -176,7 +176,7 @@ public:
 
 
 /*!
- \page dev_cam Camera devices : CamView & CamCtrl
+ \page dev_cam_ui Camera devices UI: CamView & CamCtrl
  
  \section camview_camview CamView
  
@@ -188,7 +188,7 @@ public:
  
  \section camview_derived Derived classes
  
- The following classes are dervied from the Camera device:
- - \subpage dev_cam_wfs "Wavefront sensor device"
+ The following classes are derived from the Camera device:
+ - none
  
  */

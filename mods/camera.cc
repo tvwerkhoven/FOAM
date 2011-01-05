@@ -17,13 +17,6 @@
  You should have received a copy of the GNU General Public License
  along with FOAM.	If not, see <http://www.gnu.org/licenses/>. 
  */
-/*! 
- @file cam.cc
- @author Tim van Werkhoven (t.i.m.vanwerkhoven@xs4all.nl) and Guus Sliepen (guus@sliepen.org)
- @brief Generic camera class.
- 
- This class extends the Device class and provides a base class for cameras. Does not implement anything itself.
- */
 
 #include <string>
 #include <string.h>

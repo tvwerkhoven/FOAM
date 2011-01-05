@@ -18,11 +18,6 @@
  along with FOAM.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-/*!
- @file shwfsctrl.h
- @brief Camera UI control 
- */
-
 #ifndef HAVE_SHWFSCTRL_H
 #define HAVE_SHWFSCTRL_H
 
@@ -46,11 +41,11 @@ using namespace std;
 class ShwfsCtrl: public WfsCtrl {
 protected:
 	// From WfsCtrl::
-	virtual void on_message(std::string line);
+	virtual void on_message(string line);
 	virtual void on_connected(bool connected);
 
 public:
-	ShwfsCtrl(Log &log, const std::string name, const std::string host, const std::string port);
+	ShwfsCtrl(Log &log, const string name, const string host, const string port);
 	~ShwfsCtrl();
 	
 	// From WfsCtrl::

@@ -41,7 +41,18 @@ const string shwfs_type = "shwfs";
  microlenses on the CCD). It is the subimages we are interested in when
  processing the CCD data.
  
- @todo Document this
+ \section cam_netio Camera net IO
+ 
+ Valid commends include:
+ - mla generate
+ - mla find
+ - mla store
+ - mla del
+ - mla add
+ 
+ \section cam_cfg Configuration parameters
+ 
+
  */
 class Shwfs: public Wfs {
 	friend class SimulCam;
@@ -148,7 +159,14 @@ public:
 	virtual int calibrate();
 	
 	// From Devices::
-	virtual void on_message(Connection *const, std::string);
+	virtual void on_message(Connection *const, string);
 };
 
 #endif // HAVE_SHWFS_H
+
+/*!
+ \page dev_wfs_shwfs Shack-Hartmann Wavefront sensor devices
+ 
+ The Shwfs class provides control for SH-wavefront sensors.
+ 
+ */ 

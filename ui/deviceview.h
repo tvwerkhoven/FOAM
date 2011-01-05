@@ -81,7 +81,7 @@ public:
 
 /*!
  
- \page dev Devices: DevicePage and DeviceCtrl
+ \page dev_ui Devices: DevicePage and DeviceCtrl
  
  To control a Device, there are two relevant classes. DeviceCtrl connects to 
  the Device and sends & receives commands and data, while DevicePage is a
@@ -134,6 +134,7 @@ public:
  - clear_gui(), enable_gui() and disable_gui() are highly recommended to do exactly these things. Skeletons are already implemented in DevicePage.
  
  \section moreinfo More information
- 
+ - \subpage dev_cam_ui "Camera device UI"
+ - \subpage dev_wfs_ui "Wavefront sensor device UI"
  
  */

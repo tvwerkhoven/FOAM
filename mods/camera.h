@@ -17,13 +17,6 @@
  You should have received a copy of the GNU General Public License
  along with FOAM.	If not, see <http://www.gnu.org/licenses/>. 
  */
-/*! 
- @file camera.h
- @author Tim van Werkhoven (t.i.m.vanwerkhoven@xs4all.nl) and Guus Sliepen (guus@sliepen.org)
- @brief Generic camera class.
- 
- This class extends the Device class and provides a base class for cameras. Does not implement anything itself.
- */
 
 #ifndef HAVE_CAM_H
 #define HAVE_CAM_H
@@ -115,7 +108,6 @@ const string cam_type = "cam";
  - depth (8): bitdepth of CCD
  
  
- @todo What to do with mode & state?
  */ 
 class Camera: public Device {
 	// Wfs is a friend class because it needs more access to the camera (also mutexes etc)
@@ -285,7 +277,7 @@ public:
 	
 	// From Devices::
 	virtual int verify() { return 0; }
-	virtual void on_message(Connection*, std::string);
+	virtual void on_message(Connection*, string);
 	
 	double set_exposure(const double value);
 	int set_store(const int value);
@@ -311,3 +303,16 @@ public:
 
 
 #endif /* HAVE_CAM_H */
+
+/*!
+ \page dev_cam Camera devices
+ 
+ The Camera class provides control for cameras.
+ 
+ \section moreinfo More information
+ - \subpage dev_cam_dummy "Dummy camera device"
+ - \subpage dev_cam_fw1394 "FW1394 camera device"
+ - \subpage dev_cam_imgcam "Image camera device"
+ - \subpage dev_cam_simulcam "Simulation camera device"
+
+ */

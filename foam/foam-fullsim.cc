@@ -17,14 +17,6 @@
  You should have received a copy of the GNU General Public License
  along with FOAM.  If not, see <http://www.gnu.org/licenses/>.
  */
-/*! 
- @file foam-fullsim.c
- @author Tim van Werkhoven (t.i.m.vanwerkhoven@xs4all.nl)
- @brief This is a full simulation mode
- 
- This is a full simulation mode, where the complete system from atmosphere to 
- CCD is taken into account.
- */
 
 #include <iostream>
 #include <string>
@@ -36,6 +28,8 @@
 #include "shwfs.h"
 
 #include "foam-fullsim.h"
+
+using namespace std;
 
 // Global device list for easier access
 SimulCam *simcam;
@@ -135,7 +129,7 @@ int FOAM_FullSim::calib() {
 	return 0;
 }
 
-void FOAM_FullSim::on_message(Connection *const conn, std::string line) {
+void FOAM_FullSim::on_message(Connection *const conn, string line) {
 	io.msg(IO_DEB2, "FOAM_FullSim::on_message(line=%s)", line.c_str());
 	netio.ok = true;
 	

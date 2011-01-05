@@ -17,13 +17,6 @@
  You should have received a copy of the GNU General Public License
  along with FOAM.  If not, see <http://www.gnu.org/licenses/>.
  */
-/*! 
-	@file shwfs.ccc
-	@author Tim van Werkhoven <t.i.m.vanwerkhoven@xs4all.nl>
-
-	@brief This file contains modules and functions related to Shack-Hartmann 
-	wavefront sensing.
-*/
 
 #include <stdint.h>
 #include <math.h>
@@ -37,6 +30,8 @@
 #include "wfs.h"
 #include "shwfs.h"
 #include "shift.h"
+
+using namespace std;
 
 // PUBLIC FUNCTIONS //
 /********************/
@@ -102,7 +97,7 @@ Shwfs::~Shwfs() {
 	
 }
 
-void Shwfs::on_message(Connection *const conn, std::string line) {
+void Shwfs::on_message(Connection *const conn, string line) {
 	io.msg(IO_DEB1, "Shwfs::on_message('%s')", line.c_str()); 
 	
 	string orig = line;

@@ -19,11 +19,6 @@
  along with FOAM.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-/*!
- @file camctrl.cc
- @brief Camera UI control 
- */
-
 #include <iostream>
 #include <arpa/inet.h>
 #include <string>
@@ -215,16 +210,8 @@ void CamCtrl::on_monitor_message(string line) {
 }
 
 void CamCtrl::get_thumbnail() { send_cmd("thumbnail"); }
-double CamCtrl::get_exposure() const { return exposure; }
-double CamCtrl::get_interval() const { return interval; }
-double CamCtrl::get_gain() const { return gain; }
-double CamCtrl::get_offset() const { return offset; }
-int32_t CamCtrl::get_width() const { return width; }
-int32_t CamCtrl::get_height() const { return height; }
-int32_t CamCtrl::get_depth() const { return depth; }
-std::string CamCtrl::get_filename() const { return filename; }
 
-std::string CamCtrl::get_modestr(const mode_t m) const {
+string CamCtrl::get_modestr(const mode_t m) const {
 	if (m == OFF) return "OFF";
 	if (m == WAITING) return "WAITING";
 	if (m == SINGLE) return "SINGLE";
@@ -243,19 +230,19 @@ void CamCtrl::set_offset(double value) { send_cmd(format("set offset %lf", value
 void CamCtrl::set_filename(const string &filename) { send_cmd("set filename :" + filename); }
 void CamCtrl::set_fits(const string &fits) { send_cmd("set fits " + fits); }
 
-void CamCtrl::darkburst(int32_t count) {
+void CamCtrl::darkburst(int count) {
 	string command = format("dark %d", count);
 	mode = UNDEFINED;
 	send_cmd(command);
 }
 
-void CamCtrl::flatburst(int32_t count) {
+void CamCtrl::flatburst(int count) {
 	string command = format("flat %d", count);
 	mode = UNDEFINED;
 	send_cmd(command);
 }
 
-void CamCtrl::burst(int32_t count, int32_t fsel) {
+void CamCtrl::burst(int count, int fsel) {
 	string command = format("burst %d", count);
 	if(fsel > 1)
 		command += format(" select %d", fsel);

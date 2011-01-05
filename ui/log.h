@@ -63,7 +63,7 @@ class Log {
 
 	Glib::RefPtr<Gtk::TextBuffer> &get_buffer();
 	Glib::ustring get_text();
-	void add(enum severity severity, const Glib::ustring &message);
+	void add(enum Log::severity severity, const Glib::ustring &message);
 };
 
 #endif // HAVE_LOG_H

@@ -59,3 +59,11 @@ public:
 };
 
 #endif // HAVE_1394CAM_H
+
+/*!
+ \page dev_cam_fw1394 Firewire camera devices
+ 
+ The FW1394Camera class provides control for firewire (IEEE 1394) cameras.
+ 
+ 
+ */

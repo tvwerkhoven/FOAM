@@ -40,7 +40,7 @@ Log::Log() {
 Log::~Log() {
 }
 
-void Log::add(enum severity severity, const Glib::ustring &message) {
+void Log::add(enum Log::severity severity, const Glib::ustring &message) {
 	{
 		pthread::mutexholder h(&mutex);
 		struct entry e;

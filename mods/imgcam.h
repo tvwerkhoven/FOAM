@@ -35,9 +35,10 @@
 
 #include "camera.h"
 
+using namespace std;
+
 const string imgcam_type = "imgcam";
 
-using namespace std;
 
 /*!
  @brief Fake camera taking image files as input
@@ -72,7 +73,14 @@ public:
 
 	// From Devices::
 	int verify() { return 0; }
-	void on_message(Connection *const conn, std::string line);
+	void on_message(Connection *const conn, string line);
 };
 
 #endif // HAVE_IMGCAM_H
+
+/*!
+ \page dev_cam_imgcam Image camera devices
+ 
+ The ImgCamera class loads images from file and shows these.
+ 
+ */

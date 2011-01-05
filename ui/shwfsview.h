@@ -53,6 +53,14 @@ public:
 
 
 /*!
- \page dev_wfs Wavefront sensor devices : ShwfsView & WfsCtrl
-
+ \page dev_wfs_shwfs_ui Shack-Hartmann Wavefront sensor devices UI : ShwfsView & ShwfsCtrl
+ 
+ \section shwfsview_shwfsview ShwfsView
+ 
+ Shows a basic GUI for a Shack-Hartmann wavefront sensor. See ShwfsView
+ 
+ \section shwfsview_shwfsctrl ShwfsCtrl
+ 
+ Controls a Shack-Hartmann wavefront sensor. See ShwfsCtrl.
+ 
  */

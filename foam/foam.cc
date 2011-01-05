@@ -17,15 +17,6 @@
  You should have received a copy of the GNU General Public License
  along with FOAM.  If not, see <http://www.gnu.org/licenses/>.
  */
-/*! 
-	@file foam.cc
-	@author Tim van Werkhoven (t.i.m.vanwerkhoven@xs4all.nl)
-
-	@brief This is the main file for FOAM.
-
-	This is the framework for FOAM, it provides basic functionality and can be 
-	customized through deriving this main class to your specific needs. 
-*/
 
 // HEADERS //
 /***********/
@@ -381,7 +372,7 @@ void FOAM::on_connect(const Connection * const connection, const bool status) co
   }
 }
 
-void FOAM::on_message(Connection *const connection, std::string line) {
+void FOAM::on_message(Connection *const connection, string line) {
 	string cmd = popword(line);
 	//! @todo improve the delegation of on_message commands to derived classes. How do they know a command was or was not succesful?
 	
@@ -632,4 +623,9 @@ ALIASES += longname="Modular Adaptive Optics Framework"
   change of the system, it will broadcast the new setting to all connected 
   clients. See each specific Device on which networking commands and replies 
   are supported.
+ 
+	More information can be found on these pages:
+  - \subpage dev "Devices"
+  - \subpage devmanager "Device Manager"
+
 */

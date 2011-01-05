@@ -17,17 +17,12 @@
  You should have received a copy of the GNU General Public License
  along with FOAM.  If not, see <http://www.gnu.org/licenses/>.
  */
-/*! 
-	@file foam-dummy.c
-	@author Tim van Werkhoven (t.i.m.vanwerkhoven@xs4all.nl)
-
-	@brief This is a dummy module to test the bare FOAM framework capabilities.
-*/
 
 // HEADERS //
 /***********/
 
 #include "foam.h"
+using namespace std;
 
 /*!
  @brief FOAM dummy implementation
@@ -55,7 +50,7 @@ public:
 	virtual ~FOAM_dummy() { io.msg(IO_DEB2, "FOAM_dummy::~FOAM_dummy()"); } 
 	
 	virtual int load_modules() { io.msg(IO_DEB2, "FOAM_dummy::load_modules()"); return 0; } 
-	virtual void on_message(Connection *connection, std::string line) { FOAM::on_message(connection, line); io.msg(IO_DEB2, "FOAM_dummy::on_message()"); } 
+	virtual void on_message(Connection *connection, string line) { FOAM::on_message(connection, line); io.msg(IO_DEB2, "FOAM_dummy::on_message()"); } 
 		
 	virtual int closed_init() { io.msg(IO_DEB2, "FOAM_dummy::closed_init()"); return 0; }
 	virtual int closed_loop()  { io.msg(IO_DEB2, "FOAM_dummy::closed_loop()"); return 0; }

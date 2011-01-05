@@ -17,11 +17,6 @@
  You should have received a copy of the GNU General Public License
  along with FOAM.  If not, see <http://www.gnu.org/licenses/>.
 */
-/*! 
- @file wfs.h
- @brief Base wavefront sensor class
- @author Tim van Werkhoven (t.i.m.vanwerkhoven@xs4all.nl)
- */
 
 #ifndef HAVE_WFS_H
 #define HAVE_WFS_H
@@ -34,17 +29,18 @@
 #include "camera.h"
 #include "io.h"
 
+using namespace std;
+
 static const string wfs_type = "wfs";
 
 /*!
  @brief Base wavefront-sensor class. 
- @author Tim van Werkhoven (t.i.m.vanwerkhoven@xs4all.nl)
  
  This class provides a template for the implementation of wavefront sensors 
  such as a Shack-Hartmann WFS. This class should be implemented with WFS
  specific routines. The Wfs class is independent of the camera used and
  only provides the data processing/interpretation of the camera. The camera
- itself can be accessed through the pointer *cam.
+ itself can be accessed through the reference &cam.
  */
 class Wfs: public Device {
 public:	
@@ -76,7 +72,7 @@ public:
 	virtual int calibrate();						//!< Calibrate sensor, set up reference and mode basis
 	
 	// From Device::
-	virtual void on_message(Connection *const conn, std::string line);
+	virtual void on_message(Connection *const conn, string line);
 	
 	virtual ~Wfs();
 	Wfs(Io &io, foamctrl *const ptc, const string name, const string type, const string port, Path const & conffile, Camera &wfscam, const bool online=true); //!< Constructor for derived WFSs (i.e. SHWFS)
@@ -84,3 +80,16 @@ public:
 };
 
 #endif // HAVE_WFS_H
+
+/*!
+ \page dev_wfs Wavefront sensor devices
+ 
+ The Wfs class provides control for wavefront sensors.
+ 
+ \section moreinfo More information
+ - \subpage dev_wfs_shwfs "Shack-Hartmann wavefront sensor device"
+
+ \section related See also
+ - \ref dev_cam "Camera devices"
+ 
+*/ 
