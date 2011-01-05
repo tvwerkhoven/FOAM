@@ -36,6 +36,18 @@
  class, but does nothing else than report which function is being called.
  This class is a simple example of how to implement your own specific
  AO setup with FOAM.
+ 
+ FOAM is the base class that can be derived to specific AO setups. It provides
+ basic necessary functions to facilitate the control software itself, but
+ does not implement anything specifically for AO. A bare example 
+ implementation is provided as foam-dummy to show the idea behind the 
+ framework.
+ 
+ Extra command line arguments supported are:
+ - none
+ 
+ Extra networking commands supported are:
+ - none
  */
 class FOAM_dummy : public FOAM {
 public:

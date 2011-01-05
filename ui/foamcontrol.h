@@ -49,8 +49,9 @@ using namespace std;
 class FoamControl {
 public:
 	typedef struct _device_t {
-		string name;
-		string type;		
+		string name;											//!< Device name
+		string type;											//!< Device type, hierarchical (i.e. dev.cam.simulcam)
+		_device_t(): name("undef"), type("undef") { ; }
 	} device_t;													//!< Describes hardware devices
 	
 private:

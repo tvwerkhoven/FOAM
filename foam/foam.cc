@@ -570,15 +570,16 @@ ALIASES += longname="Modular Adaptive Optics Framework"
 	The base class provides the following virtual functions to re-implement in
 	derived classes
 	
-	\li load_modules()
-	\li open_init()
-	\li open_loop()
-	\li open_finish()
-	\li closed_init()
-	\li closed_loop()
-	\li closed_finish()
-	\li calib()
-	\li on_message()
+	\li FOAM::load_modules()
+	\li FOAM::open_init()
+	\li FOAM::open_loop()
+	\li FOAM::open_finish()
+	\li FOAM::closed_init()
+	\li FOAM::closed_loop()
+	\li FOAM::closed_finish()
+	\li FOAM::calib()
+	\li FOAM::on_message(Connection*, string) (optional)
+  \li FOAM::on_connect(Connection*, bool) (optional)
 	
 	See the documentation on the specific functions for more details on what 
 	these functions can be used for.
@@ -609,7 +610,7 @@ ALIASES += longname="Modular Adaptive Optics Framework"
 	program some software yourself. When doing so, please include Doxygen
 	compatible documentation in the source code like this one.
  
-	\todo Extend this doc
+	\todo Improve documentation on extending FOAM
 	
 	\subsection ownmake Adapt the build process
 	
@@ -626,6 +627,10 @@ ALIASES += longname="Modular Adaptive Optics Framework"
 	software. Look in the source code for clues on how it works, or connect
   to FOAM with telnet to look at it yourself.
  
-	\todo Extend this doc
- 
+  Commands are sent to FOAM in plaintext, and upon succesfull reception of the 
+  command, an 'ok cmd <CMD>' will be given back. If the command was executed 
+  succesfully, this will be sent back as well, or if it concerns a state 
+  change of the system, it will broadcast the new setting to all connected 
+  clients. See each specific Device on which networking commands and replies 
+  are supported.
 */

@@ -58,6 +58,31 @@ typedef Protocol::Server::Connection Connection;
  does not implement anything specifically for AO. A bare example 
  implementation is provided as foam-dummy to show the idea behind the 
  framework.
+ 
+ Command line arguments supported are:
+ - -c or --config: configuration file [FOAM_DEFAULTCONF]
+ - -v: increase verbosity
+ - -q: decrease verbosity
+ - --verb=LEVEL: set verbosity
+ - --nodaemon: don't start network daemon
+ - -h or --help: show help
+ - --version: show version info
+ 
+ The configuration file is read by foamctrl::parse(), see documentation there
+ about configuration variables supported.
+ 
+ Networking commands supported are:
+ 
+ - help (ok cmd help): show help
+ - exit or quit or bye (ok cmd <cmd>) [ok client disconnected]: disconnect client
+ - shutdown (ok cmd shutdown) [warn :shutting down now]: shutdown FOAM
+ - broadcast <msg> (ok cmd broadcast) [ok broadcast <msg> :from <client>]: broadcast msg to all clients
+ - verb <+|-|INT> [ok verb <LEVEL>]: set verbosity
+ - get mode (ok mode <mode>): get runmode
+ - get frames (ok frames <nframes>): get frames
+ - get devices (ok devices <ndev> <dev1> <dev1>): get devices, see Devices::getlist
+ - mode <mode> (ok cmd mode <mode>): set runmode
+ 
  */
 class FOAM {
 protected:
@@ -78,13 +103,16 @@ protected:
 	
 	/*!
 	 @brief Run on new connection to FOAM
+	 
+	 @param [in] *conn Connection used for this event
+	 @param [in] status Connection status (connect or disconnect)
 	 */
-	void on_connect(const Connection * const conn, const bool status) const;
+	virtual void on_connect(const Connection * const conn, const bool status) const;
 	
 	/*!
 	 @brief Run on new incoming message to FOAM
-	 @param [in] *connection connection the message was received on
-	 @param [in] line the message received
+	 @param [in] *conn Connection the message was received on
+	 @param [in] line The message received
 	 
 	 This is called when a new network message is received. Callback registred 
 	 through protocol. This routine is virtual and can (and should) be overloaded
@@ -106,7 +134,7 @@ public:
 	DeviceManager *devices;							//!< Device/hardware management
 	Io io;															//!< Terminal diagnostics output
 	
-	bool has_error() const { return error; }
+	bool has_error() const { return error; } //!< Return error status
 	
 	int init();													//!< Initialize FOAM setup
 	int parse_args(int argc, char *argv[]); //!< Parse command-line arguments

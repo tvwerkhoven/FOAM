@@ -31,7 +31,10 @@
 /*! 
  @brief Stores the control state of the AO system
  
- This class is used to store several variables indicating the state of the AO system.
+ This class is used to store several variables indicating the state of the AO 
+ system. At startup it reads the general configuration from a file using 
+ foamctrl::parse().
+ 
  */
 class foamctrl {
 private:
@@ -39,15 +42,24 @@ private:
 	Io &io;												//!< Terminal logging
 	
 public:
-	foamctrl(Io &io);
-	foamctrl(Io &io, Path const &file);
+	foamctrl(Io &io, Path const file=Path(""));
 	~foamctrl(void);
 	
-	int parse();									//!< Parse configuration file
+	/*! @brief Parse configuration file
+	 
+	 Supported fields include: (with defaults between square brackets)
+	 - datadir (relative to working dir) [/tmp/]
+	 - pidfile (relative to datadir) [foam.pid]
+	 - listenip [0.0.0.0]
+	 - listenport [1025]
+	 - use_syslog [false]
+	 - syslog_prepend [foam]
+	 - logfile (relative to datadir) [foam.log]
+	 */
+	int parse();
 	int verify();									//!< Verify whether settings are sane
-	int error() const { return err; }
+	int error() const { return err; } //!< Return error status
 	
-	//Path progname;								//!< Name of the program executable (Path(argv[0]).basename())
 	Path progdir;									//!< Path of the program executable (Path(argv[0]).dirname())
 	
 	Path conffile;								//!< Configuration file used
@@ -58,7 +70,7 @@ public:
 	string listenip;							//!< IP to listen on (def: 0.0.0.0)
 	string listenport;						//!< port to listen on (def: 1025)
 	
-	Path datadir;									//!< path to data directory (relative to confdir) (def: FOAM_DATADIR)
+	Path datadir;									//!< path to data directory (relative to progdir) (def: /tmp/)
 	
 	Path logfile;									//!< file to log info messages to (def: none)
 	

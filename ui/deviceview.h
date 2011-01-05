@@ -135,7 +135,5 @@ public:
  
  \section moreinfo More information
  
- More information can be found on these pages:
- - \subpage dev "Devices UI"
  
  */

@@ -45,6 +45,15 @@
  This FOAM implementation provides a simple static simulation. The WFS camera
  is fed by an image stored on disk and the shifts calculated that way are 
  thus static.
+ 
+ Extra command line arguments supported are:
+ - none
+ 
+ Extra networking commands supported are: 
+ - help (ok cmd help): show more help
+ - get calib (ok calib <ncalib> <calib1> <calib2> ...): get calibration mdoes
+ - calib <calib> (ok cmd calib): calibrate setup
+ 
  */
 class FOAM_simstatic : public FOAM {
 public:

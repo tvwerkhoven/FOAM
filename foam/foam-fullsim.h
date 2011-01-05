@@ -46,6 +46,15 @@
  
  This FOAM implementation provides a complete end-to-end simulation of the 
  atmosphere, the telescope, the wavefront correctors and -sensors.
+ 
+ 
+ Extra command line arguments supported are:
+ - none
+ 
+ Extra networking commands supported are:
+ - help (ok cmd help): show more help
+ - get calib (ok calib <ncalib> <calib1> <calib2> ...): get calibration mdoes
+ - calib <calib> (ok cmd calib): calibrate setup
  */
 class FOAM_FullSim : public FOAM {
 public:
