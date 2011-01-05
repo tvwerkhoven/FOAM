@@ -65,27 +65,9 @@ io(IO_DEB2)
 		exit(-1);
 	}
 	
-}
-
-int FOAM::init() {
-	io.msg(IO_DEB2, "FOAM::init()");
+	if (init())
+		exit(-1);
 	
-	// Start networking thread
-	if (!nodaemon)
-		daemon();	
-	
-	// Try to load setup-specific modules 
-	if (load_modules())
-		return io.msg(IO_ERR, "Could not load modules, aborting. Check your code.");
-	
-	// Verify setup integrity
-	if (verify())
-		return io.msg(IO_ERR, "Verification of setup failed, aborting. Check your configuration.");
-	
-	// Show banner
-	show_welcome();
-	
-	return 0;
 }
 
 FOAM::~FOAM() {
@@ -108,6 +90,27 @@ FOAM::~FOAM() {
 	io.msg(IO_INFO, "Stopping FOAM at %s", date);
 	io.msg(IO_INFO, "Ran for %ld seconds, parsed %ld frames (%.1f FPS).", \
 					end-ptc->starttime, ptc->frames, ptc->frames/(float) (end-ptc->starttime));
+}
+
+int FOAM::init() {
+	io.msg(IO_DEB2, "FOAM::init()");
+	
+	// Start networking thread
+	if (!nodaemon)
+		daemon();	
+	
+	// Try to load setup-specific modules 
+	if (load_modules())
+		return io.msg(IO_ERR, "Could not load modules, aborting. Check your code.");
+	
+	// Verify setup integrity
+	if (verify())
+		return io.msg(IO_ERR, "Verification of setup failed, aborting. Check your configuration.");
+	
+	// Show banner
+	show_welcome();
+	
+	return 0;
 }
 
 void FOAM::show_version() const {

@@ -182,14 +182,7 @@ void FOAM_hwtest::on_message(Connection *connection, std::string line) {
 int main(int argc, char *argv[]) {
 	FOAM_hwtest foam(argc, argv);
 	
-	if (foam.has_error())
-		return foam.io.msg(IO_INFO, "Initialisation error.");
-	
-	if (foam.init())
-		return foam.io.msg(IO_ERR, "Configuration error.");
-		
 	foam.io.msg(IO_INFO, "Running hwtest mode");
-	
 	foam.listen();
 	
 	return 0;

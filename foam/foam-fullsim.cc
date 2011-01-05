@@ -183,15 +183,8 @@ void FOAM_FullSim::on_message(Connection *const conn, std::string line) {
 
 int main(int argc, char *argv[]) {
 	FOAM_FullSim foam(argc, argv);
-	
-	if (foam.has_error())
-		return foam.io.msg(IO_INFO, "Initialisation error.");
-	
-	if (foam.init())
-		return foam.io.msg(IO_ERR, "Configuration error.");
 		
 	foam.io.msg(IO_INFO, "Running full simulation mode");
-	
 	foam.listen();
 	
 	return 0;
