@@ -42,7 +42,7 @@
 /********************/
 
 
-Shwfs::Shwfs(Io &io, foamctrl *ptc, const string name, const string port, Path const &conffile, Camera &wfscam, const bool online):
+Shwfs::Shwfs(Io &io, foamctrl *const ptc, const string name, const string port, Path const &conffile, Camera &wfscam, const bool online):
 Wfs(io, ptc, name, shwfs_type, port, conffile, wfscam, online),
 shifts(io, 4),
 method(Shift::COG)

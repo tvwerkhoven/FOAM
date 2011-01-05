@@ -37,7 +37,7 @@
 #include "camera.h"
 #include "simulcam.h"
 
-SimulCam::SimulCam(Io &io, foamctrl *ptc, const string name, const string port, Path const &conffile, const bool online):
+SimulCam::SimulCam(Io &io, foamctrl *const ptc, const string name, const string port, Path const &conffile, const bool online):
 Camera(io, ptc, name, simulcam_type, port, conffile, online),
 seeing(io, ptc, name + "-seeing", port, conffile),
 out_size(0), frame_out(NULL), telradius(1.0), telapt(NULL), telapt_fill(0.7),

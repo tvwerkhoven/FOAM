@@ -76,11 +76,11 @@ public:
 	virtual int calibrate();						//!< Calibrate sensor, set up reference and mode basis
 	
 	// From Device::
-	virtual void on_message(Connection *conn, std::string line);
+	virtual void on_message(Connection *const conn, std::string line);
 	
 	virtual ~Wfs();
-	Wfs(Io &io, foamctrl *ptc, string name, string type, string port, Path conffile, Camera &wfscam, bool online=true); //!< Constructor for derived WFSs (i.e. SHWFS)
-	Wfs(Io &io, foamctrl *ptc, string name, string port, Path conffile, Camera &wfscam, bool online=true); //!< Constructor for bare WFS
+	Wfs(Io &io, foamctrl *const ptc, const string name, const string type, const string port, Path const & conffile, Camera &wfscam, const bool online=true); //!< Constructor for derived WFSs (i.e. SHWFS)
+	Wfs(Io &io, foamctrl *const ptc, const string name, const string port, Path const & conffile, Camera &wfscam, const bool online=true); //!< Constructor for bare WFS
 };
 
 #endif // HAVE_WFS_H

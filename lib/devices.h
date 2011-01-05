@@ -61,7 +61,7 @@ typedef Protocol::Server::Connection Connection;
 class Device {
 protected:
 	Io &io;
-	foamctrl *ptc;
+	foamctrl *const ptc;
 	const string name;									//!< Device name
 	const string type;									//!< Device type
 	const string port;									//!< Port to listen on
@@ -120,7 +120,7 @@ public:
 		exception(const string reason): runtime_error(reason) {}
 	};
 	
-	Device(Io &io, foamctrl *ptc, const string n, const string t, const string p, const Path conf=string(""), const bool online=true);
+	Device(Io &io, foamctrl *const ptc, const string n, const string t, const string p, const Path conf=string(""), const bool online=true);
 	virtual ~Device();
 	
 	

@@ -33,7 +33,7 @@
 
 #include "imgcam.h"
 
-ImgCamera::ImgCamera(Io &io, foamctrl *ptc, const string name, const string port, Path const &conffile, const bool online):
+ImgCamera::ImgCamera(Io &io, foamctrl *const ptc, const string name, const string port, Path const &conffile, const bool online):
 Camera(io, ptc, name, imgcam_type, port, conffile, online)
 {
 	io.msg(IO_DEB2, "ImgCamera::ImgCamera()");

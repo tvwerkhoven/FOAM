@@ -32,7 +32,7 @@
  *  Constructors / destructors
  */
 
-SimSeeing::SimSeeing(Io &io, foamctrl *ptc, const string name, const string port, const Path &conffile):
+SimSeeing::SimSeeing(Io &io, foamctrl *const ptc, const string name, const string port, const Path &conffile):
 Device(io, ptc, name, simseeing_type, port, conffile, false),
 file(""), croppos(0,0), cropsize(0,0), windspeed(10,10), windtype(LINEAR)
 {

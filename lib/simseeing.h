@@ -60,7 +60,7 @@ public:
 	coord_t windspeed;									//!< Windspeed in pixels/frame
 	wind_t windtype;										//!< Windtype used for seeing simulation
 	
-	SimSeeing(Io &io, foamctrl *ptc, const string name, const string port, const Path &conffile);
+	SimSeeing(Io &io, foamctrl *const ptc, const string name, const string port, const Path &conffile);
 	~SimSeeing();
 		
 	gsl_matrix *get_wavefront(const double fac=1.0);

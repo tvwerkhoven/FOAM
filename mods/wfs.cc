@@ -30,7 +30,7 @@
 #include "io.h"
 #include "wfs.h"
 
-Wfs::Wfs(Io &io, foamctrl *ptc, string name, string port, Path conffile, Camera &wfscam, bool online):
+Wfs::Wfs(Io &io, foamctrl *const ptc, const string name, const string port, Path const &conffile, Camera &wfscam, const bool online):
 Device(io, ptc, name, wfs_type, port, conffile, online),
 is_calib(false),
 cam(wfscam)
@@ -42,7 +42,7 @@ cam(wfscam)
 	add_cmd("get basis");
 }
 
-Wfs::Wfs(Io &io, foamctrl *ptc, string name, string type, string port, Path conffile, Camera &wfscam, bool online):
+Wfs::Wfs(Io &io, foamctrl *const ptc, const string name, const string type, const string port, Path const &conffile, Camera &wfscam, const bool online):
 Device(io, ptc, name, wfs_type + "." + type, port, conffile, online),
 is_calib(false),
 cam(wfscam)
@@ -60,7 +60,7 @@ Wfs::~Wfs() {
 }
 
 
-void Wfs::on_message(Connection *conn, std::string line) {
+void Wfs::on_message(Connection *const conn, std::string line) {
 	io.msg(IO_DEB2, "Wfs::on_message('%s')", line.c_str());
 	string orig = line;
 	string command = popword(line);

@@ -107,7 +107,7 @@ private:
 	int mla_subapsel();	
 	
 public:
-	Shwfs(Io &io, foamctrl *ptc, const string name, const string port, Path const &conffile, Camera &wfscam, const bool online=true);
+	Shwfs(Io &io, foamctrl *const ptc, const string name, const string port, Path const &conffile, Camera &wfscam, const bool online=true);
 	~Shwfs();	
 	
 	/*! @brief Generate subaperture/subimage (sa/si) positions for a given configuration.

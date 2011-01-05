@@ -70,7 +70,7 @@ private:
 	
 public:
 	Shwfs shwfs;												//!< Reference to WFS we simulate (i.e. for configuration)
-	SimulCam(Io &io, foamctrl *ptc, const string name, const string port, Path const &conffile, const bool online=true);
+	SimulCam(Io &io, foamctrl *const ptc, const string name, const string port, Path const &conffile, const bool online=true);
 	~SimulCam();
 	
 	void gen_telapt();									//!< Generate telescope aperture with radius telradius. Inside this radius the mask has value 'seeingfac', outside it's 0.

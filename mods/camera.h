@@ -262,7 +262,7 @@ protected:
 	string fits_comments;					//!< FITS header properties for saved files
 	
 public:
-	Camera(Io &io, foamctrl *ptc, const string name, const string type, const string port, Path const &conffile, const bool online=true);
+	Camera(Io &io, foamctrl *const ptc, const string name, const string type, const string port, Path const &conffile, const bool online=true);
 	virtual ~Camera();
 
 	double get_exposure() const { return exposure; }

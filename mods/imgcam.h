@@ -51,7 +51,7 @@ private:
 	uint16_t *frame;										//!< Frame stored here
 	
 public:
-	ImgCamera(Io &io, foamctrl *ptc, const string name, const string port, Path const &conffile, const bool online=true);
+	ImgCamera(Io &io, foamctrl *const ptc, const string name, const string port, Path const &conffile, const bool online=true);
 	~ImgCamera();
 	
 	void update();	
