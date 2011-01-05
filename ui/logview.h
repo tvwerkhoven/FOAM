@@ -25,6 +25,7 @@
 #include "log.h"
 
 using namespace std;
+using namespace Gtk;
 
 /*!
  @brief Logging display class

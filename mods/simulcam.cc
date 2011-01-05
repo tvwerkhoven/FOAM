@@ -75,12 +75,12 @@ shwfs(io, ptc, name + "-shwfs", port, conffile, *this, false)
 
 
 SimulCam::~SimulCam() {
-	//! @todo stop simulator etc.
 	io.msg(IO_DEB2, "SimulCam::~SimulCam()");
+	cam_set_mode(Camera::OFF);
+
 	cam_thr.cancel();
 	cam_thr.join();
 	
-	mode = Camera::OFF;
 }
 
 void SimulCam::on_message(Connection *const conn, string line) {

@@ -124,14 +124,14 @@ public:
 	} monitor;													//!< Stores frames from the camera. Note that these frames can be cropped and/or scaled wrt the original frame.
 	
 	// Get & set settings
-	double CamCtrl::get_exposure() const { return exposure; } //!< Get camera exposure
-	double CamCtrl::get_interval() const { return interval; } //!< Get time between frames (inverse framerate)
-	double CamCtrl::get_gain() const { return gain; } //!< Get gain
-	double CamCtrl::get_offset() const { return offset; } //!< Get offset
-	int CamCtrl::get_width() const { return width; } //!< Get horizontal number of pixels
-	int CamCtrl::get_height() const { return height; } //!< Get vertical number of pixels
-	int CamCtrl::get_depth() const { return depth; } //!< Get camera bitdepth
-	string CamCtrl::get_filename() const { return filename; } //!< Get filename
+	double get_exposure() const { return exposure; } //!< Get camera exposure
+	double get_interval() const { return interval; } //!< Get time between frames (inverse framerate)
+	double get_gain() const { return gain; } //!< Get gain
+	double get_offset() const { return offset; } //!< Get offset
+	int get_width() const { return width; } //!< Get horizontal number of pixels
+	int get_height() const { return height; } //!< Get vertical number of pixels
+	int get_depth() const { return depth; } //!< Get camera bitdepth
+	string get_filename() const { return filename; } //!< Get filename
 	
 	void get_thumbnail();								//!< Send request for a thumnail
 	mode_t get_mode() const { return mode; } //!< Get current camera mode

@@ -72,7 +72,7 @@ public:
 	virtual void on_message_update();		//!< Update GUI when DeviceCtrl::signal_message is called
 	virtual void on_connect_update();		//!< Update GUI when DeviceCtrl::signal_connect is called
 	virtual void on_commands_update();	//!< Hooks to DeviceCtrl::signal_commands
-	virtual void disable_gui();					//!< Disable GUI when disconnected @todo Should this be virtual? Could also be regular such that each class calls its own function
+	virtual void disable_gui();					//!< Disable GUI when disconnected
 	virtual void enable_gui();					//!< Enable GUI when connected
 	virtual void clear_gui();						//!< Clear GUI on init or reconnect
 };
