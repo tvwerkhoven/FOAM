@@ -64,6 +64,8 @@ devframe("Raw device control"), dev_val("value:"), dev_send("Send")
 
 DevicePage::~DevicePage() {
 	fprintf(stderr, "%x:DevicePage::~DevicePage()\n", (int) pthread_self());
+	if (devctrl)
+		delete devctrl;
 }
 
 void DevicePage::enable_gui() {
