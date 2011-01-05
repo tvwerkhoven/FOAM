@@ -82,7 +82,7 @@ public:
 	
 	time_t starttime;							//!< FOAM start timestamp
 	time_t lasttime;							//!< Last frame timestamp
-	long frames;									//!< Number of frames parsed
+	size_t frames;								//!< Number of frames parsed
 };
 
 #endif // HAVE_FOAMCTRL_H

@@ -69,48 +69,47 @@ int foamctrl::parse() {
 	
 	char curdir[FILENAME_MAX];
 	progdir = string(getcwd(curdir, sizeof curdir));
-
+	io.msg(IO_INFO, "Progdir: '%s'", progdir.c_str());
+	
 	// Get absolute path of configuration file (reference for further relative paths
 	confdir = progdir + conffile.dirname();
-	io.msg(IO_DEB1, "Confdir: '%s', file: '%s'", confdir.c_str(), conffile.basename().c_str());
+	io.msg(IO_INFO, "Confdir: '%s', file: '%s'", confdir.c_str(), conffile.basename().c_str());
 	cfg = new config(conffile);
 	
-	// Datadir (relative to confdir)
-	datadir = confdir + cfg->getstring("datadir", "/tmp/");
-	if (datadir == confdir + ".") io.msg(IO_WARN, "datadir not set, using current directory.");
-	else io.msg(IO_DEB1, "Datadir: '%s'.", datadir.c_str());
+	// Datadir (relative to progdir)
+	datadir = progdir + cfg->getstring("datadir", "/tmp/");
+	io.msg(IO_INFO, "Datadir: '%s'.", datadir.c_str());
 
 	// PID file (relative to confdir)
-	pidfile = cfg->getstring("pidfile", "/tmp/foam.pid");
-	if (pidfile.isrel())
-		pidfile = datadir + pidfile;
-	io.msg(IO_DEB1, "Pidfile: '%s'.", pidfile.c_str());
+	pidfile = datadir + cfg->getstring("pidfile", "foam.pid");
+	io.msg(IO_INFO, "Pidfile: '%s'.", pidfile.c_str());
 	
 	// Daemon settings
 	listenip = cfg->getstring("listenip", "0.0.0.0");
-	io.msg(IO_DEB1, "IP: '%s'.", listenip.c_str());
-	listenport = cfg->getstring("listenport", "1025").c_str();
-	io.msg(IO_DEB1, "Port: '%s'.", listenport.c_str());
+	io.msg(IO_INFO, "IP: '%s'.", listenip.c_str());
+	listenport = cfg->getstring("listenport", "1025");
+	io.msg(IO_INFO, "Port: '%s'.", listenport.c_str());
 	
 	// Syslog settings
 	use_syslog = cfg->getbool("use_syslog", false);
 	syslog_prepend = cfg->getstring("syslog_prepend", "foam");
-	io.msg(IO_DEB1, "Use syslog: %d, prefix: '%s'.", use_syslog, syslog_prepend.c_str());
-	if (use_syslog) openlog(syslog_prepend.c_str(), LOG_PID, LOG_USER);
+	if (use_syslog) 
+		openlog(syslog_prepend.c_str(), LOG_PID, LOG_USER);
+	io.msg(IO_INFO, "Use syslog: %d, prefix: '%s'.", use_syslog, syslog_prepend.c_str());
 	
 	// Logfile settings
-	logfile = cfg->getstring("logfile", "");
+	logfile = cfg->getstring("logfile", "foam.log");
 	if (logfile.length()) {
 		// If a log file was given, init the logging to datadir
 		logfile = datadir + logfile;
 		io.setLogfile(logfile);
-		io.msg(IO_DEB1, "Logfile: %s.", logfile.c_str());
+		io.msg(IO_INFO, "Logfile: %s.", logfile.c_str());
 	}
 	else
-		io.msg(IO_DEB1, "Not logging to disk for now...");
+		io.msg(IO_INFO, "Not logging to disk for now...");
 
 	
-	io.msg(IO_INFO, "Successfully parsed control config.");
+	io.msg(IO_XNFO, "Successfully parsed control config.");
 	return 0;
 }
 
