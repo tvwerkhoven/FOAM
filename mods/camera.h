@@ -235,7 +235,6 @@ protected:
 	
 	coord_t res;									//!< Camera pixel resolution
 	int depth;										//!< Camera pixel depth in bits
-	dtype_t dtype;								//!< Camera datatype @todo do we need this?
 
 	mode_t mode;									//!< Camera mode (see mode_t)
 	
@@ -268,7 +267,6 @@ public:
 	coord_t get_res() const { return res; }
 	int get_depth() const { return depth; }
 	uint16_t get_maxval() const { return (1 << depth); }
-	dtype_t get_dtype() const { return dtype; }
 	
 	frame_t *get_frame(const size_t id, const bool wait = true);
 	frame_t *get_last_frame() const;

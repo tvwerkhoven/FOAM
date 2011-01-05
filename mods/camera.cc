@@ -44,7 +44,7 @@ Device(io, ptc, name, cam_type + "." + type, port, conffile, online),
 nframes(8), count(0), timeouts(0), ndark(10), nflat(10), 
 darkexp(1.0), flatexp(1.0),
 interval(1.0), exposure(1.0), gain(1.0), offset(0.0), 
-res(0,0), depth(-1), dtype(UINT16),
+res(0,0), depth(-1),
 mode(Camera::OFF),
 filenamebase("FOAM"), outputdir(ptc->datadir), nstore(0),
 fits_telescope("undef"), fits_observer("undef"), fits_instrument("undef"), fits_target("undef"), fits_comments("undef")
