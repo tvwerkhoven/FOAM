@@ -131,7 +131,6 @@ void FOAM::show_clihelp(const bool error = false) const {
 					 "      --showthreads     Prefix logging with thread ID.\n"
 					 "  -q,                  Decrease verbosity level.\n"
 					 "      --nodaemon       Do not start network daemon.\n"
-					 "  -p, --pidfile=FILE   Write PID to FILE.\n"
 					 "  -h, --help           Display this help message.\n"
 					 "      --version        Display version information.\n\n");
 		printf("Report bugs to %s.\n", PACKAGE_BUGREPORT);
@@ -171,13 +170,12 @@ int FOAM::parse_args(int argc, char *argv[]) {
 		{"help", no_argument, NULL, 'h'},
 		{"version", no_argument, NULL, 1},
 		{"verb", required_argument, NULL, 2},
-		{"pidfile", required_argument, NULL, 'p'},
 		{"nodaemon", no_argument, NULL, 3},
 		{"showthreads", no_argument, NULL, 4},
 		{NULL, 0, NULL, 0}
 	};
 	
-	while((r = getopt_long(argc, argv, "c:hvqp:", long_options, &option_index)) != EOF) {
+	while((r = getopt_long(argc, argv, "c:hvq", long_options, &option_index)) != EOF) {
 		switch(r) {
 			case 0:
 				break;
@@ -204,8 +202,6 @@ int FOAM::parse_args(int argc, char *argv[]) {
 					show_clihelp(true);
 					return -1;
 				}
-				break;
-			case 'p':												// pidfile placeholder
 				break;
 			case 3:													// Don't run daemon
 				nodaemon = true;
