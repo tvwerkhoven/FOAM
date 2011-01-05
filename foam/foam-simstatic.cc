@@ -163,7 +163,7 @@ void FOAM_simstatic::on_message(Connection *connection, std::string line) {
 	else if (cmd == "get") {
 		string what = popword(line);
 		if (what == "calib") {
-			connection->write("ok var calib 1 influence");
+			connection->write("ok calib 1 influence");
 		}
 		else if (!netio.ok) {
 			connection->write("err get var :var unkown");

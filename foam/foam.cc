@@ -396,7 +396,7 @@ void FOAM::on_message(Connection *const connection, std::string line) {
 			netio.ok = false;
   }
   else if (cmd == "exit" || cmd == "quit" || cmd == "bye") {
-		connection->write("ok cmd exit");
+		connection->write("ok cmd " + cmd);
     connection->server->broadcast("ok client disconnected");
     connection->close();
   }
@@ -421,9 +421,9 @@ void FOAM::on_message(Connection *const connection, std::string line) {
 	}
   else if (cmd == "get") {
     string var = popword(line);
-		if (var == "frames") connection->write(format("ok var frames %d", ptc->frames));
-		else if (var == "mode") connection->write(format("ok var mode %s", mode2str(ptc->mode).c_str()));
-		else if (var == "devices") connection->write(format("ok var devices %s", devices->getlist().c_str()));
+		if (var == "frames") connection->write(format("ok frames %d", ptc->frames));
+		else if (var == "mode") connection->write(format("ok mode %s", mode2str(ptc->mode).c_str()));
+		else if (var == "devices") connection->write(format("ok devices %s", devices->getlist().c_str()));
 		else netio.ok = false;
 	}
   else if (cmd == "mode") {

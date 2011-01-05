@@ -146,26 +146,23 @@ void FoamControl::on_message(string line) {
 	ok = true;
 	string what = popword(line);
 	
-	if (what == "var") {
-		string var = popword(line);
-		if (var == "frames")
-			state.numframes = popint32(line);
-		else if (var == "mode")
-			state.mode = str2mode(popword(line));
-		else if (var == "calib") {
-			state.numcal = popint32(line);
-			for (int i=0; i<state.numcal; i++)
-				state.calmodes[i] = popword(line);
+	if (what == "frames")
+		state.numframes = popint32(line);
+	else if (what == "mode")
+		state.mode = str2mode(popword(line));
+	else if (what == "calib") {
+		state.numcal = popint32(line);
+		for (int i=0; i<state.numcal; i++)
+			state.calmodes[i] = popword(line);
+	}
+	else if (what == "devices") {
+		state.numdev = popint32(line);
+		for (int i=0; i<state.numdev; i++) {
+			state.devices[i].name = popword(line);
+			state.devices[i].type = popword(line);
 		}
-		else if (var == "devices") {
-			state.numdev = popint32(line);
-			for (int i=0; i<state.numdev; i++) {
-				state.devices[i].name = popword(line);
-				state.devices[i].type = popword(line);
-			}
-			// Signal device update to main GUI thread
-			signal_device();
-		}
+		// Signal device update to main GUI thread
+		signal_device();
 	}
 	else if (what == "cmd") {
 		//! \todo implement "cmd" confirmation hook
