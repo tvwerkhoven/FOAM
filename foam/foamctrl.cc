@@ -39,30 +39,29 @@
 foamctrl::~foamctrl(void) {
 	io.msg(IO_DEB2, "foamctrl::~foamctrl(void)");
 
-	if (use_syslog) closelog();
-	delete cfg;
+	if (use_syslog) 
+		closelog();
+	if (cfg)
+		delete cfg;
 }
 
-foamctrl::foamctrl(Io &io): 
+foamctrl::foamctrl(Io &io, Path const file): 
 err(0), io(io),
-conffile(""), pidfile("/tmp/foam.pid"), 
-listenip("0.0.0.0"), listenport("1025"),
-datadir("/tmp/"), logfile("foam-log"),
-use_syslog(false), syslog_prepend("foam"), 
-mode(AO_MODE_LISTEN), calib(""),
-starttime(time(NULL)), frames(0)
+conffile(file), pidfile("/tmp/foam.pid"), 
+listenip("0.0.0.0"), 
+listenport("1025"),
+datadir("/tmp/"), 
+logfile("foam-log"),
+use_syslog(false), 
+syslog_prepend("foam"), 
+mode(AO_MODE_LISTEN), 
+calib(""),
+starttime(time(NULL)), 
+frames(0)
 { 
-	io.msg(IO_DEB2, "foamctrl::foamctrl(void)");
-}
-
-foamctrl::foamctrl(Io &io, Path const &file): 
-err(0), io(io), conffile(file),
-mode(AO_MODE_LISTEN), calib(""),
-starttime(time(NULL)), frames(0)
-{
-	io.msg(IO_DEB2, "foamctrl::foamctrl()");
-	io.msg(IO_DEB2, "foamctrl::foamctrl() %s", conffile.c_str());
-	parse();
+	io.msg(IO_DEB2, "foamctrl::foamctrl(file=%s)", conffile.c_str());
+	if (conffile.length())
+		parse();
 }
 
 int foamctrl::parse() {
