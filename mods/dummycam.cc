@@ -33,7 +33,8 @@
 using namespace std;
 
 DummyCamera::DummyCamera(Io &io, foamctrl *const ptc, const string name, const string port, Path const &conffile, const bool online):
-Camera(io, ptc, name, dummycam_type, port, conffile, online)
+Camera(io, ptc, name, dummycam_type, port, conffile, online),
+noise(0.001),
 {
 	io.msg(IO_DEB2, "DummyCamera::DummyCamera()");
 
@@ -41,12 +42,7 @@ Camera(io, ptc, name, dummycam_type, port, conffile, online)
 	add_cmd("hello world");
 
 	noise = cfg.getdouble("noise", 0.001);
-	
 	depth = 16;
-	interval = 0.25;
-	exposure = 0.3;
-	
-	dtype = UINT16;
 	
 	set_filename("dummycam-"+name);
 	
@@ -96,7 +92,7 @@ void DummyCamera::update() {
 	
 	gettimeofday(&now, 0);
 	
-	uint16_t *image = (uint16_t *) malloc(res.x * res.y * depth/8);
+	uint16_t *image = (uint16_t *) malloc(res.x * res.y * sizeof *image);
 	if (!image)
 		throw exception("DummyCamera::update(): Could not allocate memory for framebuffer");	
 
