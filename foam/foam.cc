@@ -549,8 +549,6 @@ ALIASES += longname="Modular Adaptive Optics Framework"
 	
 	See FOAM, Device, DeviceManager for more information.
  
-	\todo Improve doc
- 
 	\subsection struct-frame The Framework
 	
 	The base class itself does very little. Actual functionality should be
@@ -623,6 +621,8 @@ ALIASES += longname="Modular Adaptive Optics Framework"
   change of the system, it will broadcast the new setting to all connected 
   clients. See each specific Device on which networking commands and replies 
   are supported.
+ 
+ \section moreinfo See also
  
 	More information can be found on these pages:
   - \subpage dev "Devices"
