@@ -540,7 +540,7 @@ ALIASES += longname="Modular Adaptive Optics Framework"
 	FOAM uses a base class with the same name that can be derived to specific
 	configurations necessary for the AO system. Such a derived FOAM class can
 	then use various hardware controller classes to allow actual processing. 
-	Also the hardware controller classes are derived from a base 'device' class.
+	Also the hardware controller classes are derived from a base 'Device' class.
 	All devices together are stored in a DeviceManager class.
 	
 	See FOAM, Device, DeviceManager for more information.
@@ -562,8 +562,8 @@ ALIASES += longname="Modular Adaptive Optics Framework"
 	\li FOAM::closed_loop()
 	\li FOAM::closed_finish()
 	\li FOAM::calib()
-	\li FOAM::on_message(Connection*, string) (optional)
-  \li FOAM::on_connect(Connection*, bool) (optional)
+	\li FOAM::on_message(Connection* const, string) (optional)
+  \li FOAM::on_connect(const Connection * const, const bool) const (optional)
 	
 	See the documentation on the specific functions for more details on what 
 	these functions can be used for.
@@ -618,10 +618,10 @@ ALIASES += longname="Modular Adaptive Optics Framework"
   clients. See each specific Device on which networking commands and replies 
   are supported.
  
- \section moreinfo See also
+ \section related See also
  
 	More information can be found on these pages:
-  - \subpage dev "Devices"
-  - \subpage devmanager "Device Manager"
+  - \subpage dev "Devices info"
+  - \subpage devmngr "Device Manager info"
 
 */

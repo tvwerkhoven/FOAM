@@ -133,7 +133,7 @@ public:
  - One function for each of the events on_message and on_connect: these reflect the changes from FOAM in the GUI
  - clear_gui(), enable_gui() and disable_gui() are highly recommended to do exactly these things. Skeletons are already implemented in DevicePage.
  
- \section moreinfo More information
+ \section dev_moreinfo See also
  - \subpage dev_cam_ui "Camera device UI"
  - \subpage dev_wfs_ui "Wavefront sensor device UI"
  

@@ -204,15 +204,18 @@ public:
 #endif // HAVE_DEVICES_H
 
 /*!
- \page devmanager DeviceManager
+ \page devmngr DeviceManager
  
- DeviceManager keeps track of which devices are connected to the system. Use 
- DeviceManager::add() and DeviceManager::del() to manage the list. 
- DeviceManager::getlist() and DeviceManager::getcount() can be used to see
- what is currently available.
+ DeviceManager keeps track of which devices are connected to the system. The 
+ following methods are available:
+ - int DeviceManager::add(Device*) add device
+ - int DeviceManager::del(string) to manage the list. 
+ - Device* DeviceManager::get(string id) to get a device named 'id'
+ - int DeviceManager::getcount() get number of devices
+ - string DeviceManager::getlist(bool, bool) get list of devices
  
- \section moreinfo See also
- - \ref dev "Devices"
+ \section devmngr_related See also
+ - \ref dev "Devices info"
 
 */
 
@@ -231,17 +234,17 @@ public:
  To derive a Device class, one can use the following functions for overloading:
  
  - Device::on_message(Connection * const, string)
- - Device::on_connect(Connection * const, bool)
+ - Device::on_connect(const Connection * const, const bool) const
  - Device::verify()
  
  but this is only necessary if one wants to extend the functionality.
  
- \section moreinfo More information
+ \section dev_der Derived classes
  - \subpage dev_cam "Camera device"
  - \subpage dev_wfs "Wavefront sensor device"
  - \subpage dev_wfc "Wavefront corrector device"
 
- \section moreinfo See also
- - \ref devmanager "DeviceManager"
+ \section dev_related See also
+ - \ref devmngr "Device Manager info"
 
 */

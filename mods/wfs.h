@@ -86,10 +86,10 @@ public:
  
  The Wfs class provides control for wavefront sensors.
  
- \section moreinfo More information
+ \section dev_wfs_der Derived classes
  - \subpage dev_wfs_shwfs "Shack-Hartmann wavefront sensor device"
 
- \section related See also
+ \section dev_wfs_more See also
  - \ref dev_cam "Camera devices"
  
 */ 

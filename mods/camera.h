@@ -45,10 +45,12 @@ const string cam_type = "cam";
  part is hardware I/O which is done by a seperate thread through 'handler' in
  the 'camthr' thread. Graphically:
  
+ <tt>
  Device --- netio --        --- netio ----
       \---- main --- Camera --- cam_thr --
 												  +---- proc_thr -
-												  \----	main -----
+													\----	main -----
+ </tt>
  
  \li netio gets input from outside (GUIs), reads from shared class
  \li cam_thr runs standalone, gets input from variables (configuration), 
@@ -307,7 +309,7 @@ public:
  
  The Camera class provides control for cameras.
  
- \section moreinfo More information
+ \section dev_cam_der Derived classes
  - \subpage dev_cam_dummy "Dummy camera device"
  - \subpage dev_cam_fw1394 "FW1394 camera device"
  - \subpage dev_cam_imgcam "Image camera device"

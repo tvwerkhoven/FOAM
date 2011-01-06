@@ -229,7 +229,7 @@ public:
  DeviceCtrl. These can be overloaded to provide more detailed control over a
  device.
  
- \section moreinfo More information
+ \section moreinfo See also
  
  More information can be found on these pages:
  - \subpage dev_ui "Devices UI"
