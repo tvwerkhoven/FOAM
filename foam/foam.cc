@@ -55,10 +55,6 @@ io(IO_DEB2)
 		error = true;
 		exit(-1);
 	}
-	
-	if (init())
-		exit(-1);
-	
 }
 
 FOAM::~FOAM() {

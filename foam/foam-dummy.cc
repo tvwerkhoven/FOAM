@@ -68,6 +68,9 @@ int main(int argc, char *argv[]) {
 	// Init FOAM_dummy class
 	FOAM_dummy foam(argc, argv);
 	
+	if (foam.init())
+		exit(-1);
+
 	foam.io.msg(IO_INFO, "Running dummy mode");
 	foam.listen();
 	

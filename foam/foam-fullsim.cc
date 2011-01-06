@@ -177,7 +177,10 @@ void FOAM_FullSim::on_message(Connection *const conn, string line) {
 
 int main(int argc, char *argv[]) {
 	FOAM_FullSim foam(argc, argv);
-		
+	
+	if (foam.init())
+		exit(-1);
+	
 	foam.io.msg(IO_INFO, "Running full simulation mode");
 	foam.listen();
 	

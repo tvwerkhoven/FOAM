@@ -178,6 +178,9 @@ void FOAM_simstatic::on_message(Connection *connection, string line) {
 int main(int argc, char *argv[]) {
 	FOAM_simstatic foam(argc, argv);
 	
+	if (foam.init())
+		exit(-1);
+
 	foam.io.msg(IO_INFO, "Running simstatic mode");
 	foam.listen();
 	
