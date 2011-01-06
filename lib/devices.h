@@ -95,7 +95,7 @@ protected:
 		}
 		else {
 			*var = value;
-			netio.broadcast(format("ok %s %lf", varname.c_str(), (double) *var), varname);
+			netio.broadcast(format("ok %s %le", varname.c_str(), (double) *var), varname);
 			return *var;
 		}
 	}
