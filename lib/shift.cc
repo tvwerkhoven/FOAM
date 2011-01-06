@@ -76,11 +76,14 @@ void Shift::_worker_func() {
 			//workpool.shifts->data[workpool.shifts->stride * myjob * 2 + 0]
 			//workpool.shifts->data[workpool.shifts->stride * myjob * 2 + 1]
 
+			//! @todo might give problems with 64 bit systems?
 			gsl_vector_float_set(workpool.shifts, myjob*2+0, shift[0]);
 			gsl_vector_float_set(workpool.shifts, myjob*2+1, shift[1]);
 			//usleep(20*1000);
 		}
 		
+		//pthread::mutexholder h(workpool.mutex);
+		//! @todo use mutexholders
 		workpool.mutex.lock();
 		// Increment thread done counter, broadcast signal if we are the last thread
 		if (++(workpool.done) == nworker-1)
