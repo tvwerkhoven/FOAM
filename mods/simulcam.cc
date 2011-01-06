@@ -176,7 +176,7 @@ void SimulCam::gen_telapt() {
 			pixj = ((float) j) - telapt->size2/2;
 			if (pixi*pixi + pixj*pixj < minradsq) {
 				sum++;
-				gsl_matrix_set (telapt, i, j, seeingfac);
+				gsl_matrix_set (telapt, i, j, 1.0);
 			}
 		}
 	}
@@ -241,7 +241,8 @@ void SimulCam::simul_wfs(gsl_matrix *wave_in) const {
 			for (size_t j=0; j<telapt_cropm->size2; j++)
 				tmp_sum += gsl_matrix_get (telapt_cropm, i, j);
 
-		if (tmp_sum < telapt_fill * sasize.y * sasize.x * seeingfac) {
+		//! @bug this goes to zero
+		if (tmp_sum < telapt_fill * sasize.y * sasize.x) {
 			for (size_t i=0; i<subapm->size1; i++)
 				for (size_t j=0; j<subapm->size2; j++)
 					gsl_matrix_set (subapm, i, j, 0.0);
