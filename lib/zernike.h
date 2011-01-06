@@ -37,17 +37,20 @@ private:
 	Io &io;
 	
 	typedef struct _zern_basis {
-		_zern_basis(): nmodes(0), res(0,0), basisfuncs(NULL) { }
+		_zern_basis(): nmodes(0), res(0,0), basisfuncs(NULL), rho(NULL), phi(NULL), is_calc(false) { }
 		int nmodes;												//!< Number of basis functions
-		coord_t res;											//!< Resolution of grid
+		int size;													//!< Resolution of grid (always square, so only one int)
+		bool is_calc;											//!< Indicates whether basis functions are computed or not
 		gsl_matrix **basisfuncs;					//!< Array of basisfunctions
 		gsl_matrix *rho;									//!< Matrix with radial coordinates as values
 		gsl_matrix *phi;									//!< Matrix with azimuthal coordinates as values
-	} zern_basis_t
+	} zern_basis_t; //!< Struct for holding a Zernike set of basis functions.
 	
 	zern_basis_t basis;
 	
-	void setup();												//!< Allocate memory etc.
+	void setup(int, int);								//!< Allocate memory et cetera
+	void calc_rho(gsl_matrix *mat);			//!< Calculate rho (radial) matrix
+	void calc_phi(gsl_matrix *mat);			//!< Calculate phi (azimuthal) matrix
 	
 	gsl_matrix *zern_rad(int m, int n); //!< Generate radial zernike mode.
 	
@@ -61,7 +64,7 @@ private:
 //	wf += rho**(n-2.0*k) * (-1.0)**k * fac(n-k) / ( fac(k) * fac( (n+m)/2.0 - k ) * fac( (n-m)/2.0 - k ) )
 	
 public:
-	Zernike(Io &io, int n=0, coord_t res=coord_t(128, 128));
+	Zernike(Io &io, int n=0, int size=128);
 	~Zernike();
 	
 	/*! @brief Generate Zernike mode j
@@ -72,7 +75,7 @@ public:
 	 @param [in] j Calculate Zernike mode j
 	 @return 0 for ok, !0 for fail
 	 */
-	int gen_mode(gsl_matrix *outmat, coord_t res, int j) {
+	int gen_mode(gsl_matrix *outmat, int size, int j) {
 		io.msg(IO_XNFO, "Zernike::gen_mode(j=%d)", j);
 		int n = 0;
 		while (j > n) {
@@ -90,7 +93,7 @@ public:
 	 @param [in] m Zernike mode within order
 	 @return 0 for ok, !0 for fail
 	 */
-	int gen_mode(gsl_matrix *outmat, coord_t res, int m, int n) { 
+	int gen_mode(gsl_matrix *outmat, int size, int m, int n) { 
 		io.msg(IO_XNFO, "Zernike::gen_mode(m=%d, n=%d)", m, n);
 			
 //		Python:
