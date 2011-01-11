@@ -73,18 +73,13 @@ PKG_CHECK_MODULES(SIGC, [sigc++-2.0 >= 2.0], [],
 PKG_CHECK_MODULES(GSL, [gsl], [],
 		[FOAM_FATAL=yes;FOAM_MISSING+=" gsl gslcblas"])
 
-COMMON_CFLAGS="$SIGC_CFLAGS $GSL_CFLAGS"
-COMMON_LIBS="$SIGC_LIBS $GSL_LIBS"
+PKG_CHECK_MODULES(FITSIO, [cfitsio], [],
+		[FOAM_FATAL=yes;FOAM_MISSING+=" cfitsio"])
+
+COMMON_CFLAGS="$SIGC_CFLAGS $GSL_CFLAGS $FITSIO_CFLAGS"
+COMMON_LIBS="$SIGC_LIBS $GSL_LIBS $FITSIO_LIBS"
 AC_SUBST(COMMON_CFLAGS)
 AC_SUBST(COMMON_LIBS)
-
-### Miscellaneous optional libraries
-
-# cfitsio
-PKG_CHECK_MODULES(FITSIO, [cfitsio],
-		[have_fitsio=true],
-		[have_fitsio=false])
-AM_CONDITIONAL(HAVE_FITSIO, test x$have_fitsio = xtrue)
 
 ### Hardware libraries
 
