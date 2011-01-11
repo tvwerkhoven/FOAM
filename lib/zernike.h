@@ -37,20 +37,20 @@ private:
 	Io &io;
 	
 	typedef struct _zern_basis {
-		_zern_basis(): nmodes(0), res(0,0), basisfuncs(NULL), rho(NULL), phi(NULL), is_calc(false) { }
+		_zern_basis(): nmodes(0), size(0), is_calc(false), bfuncs(NULL), rho(NULL), phi(NULL) { }
 		int nmodes;												//!< Number of basis functions
 		int size;													//!< Resolution of grid (always square, so only one int)
 		bool is_calc;											//!< Indicates whether basis functions are computed or not
-		gsl_matrix **basisfuncs;					//!< Array of basisfunctions
+		gsl_matrix **bfuncs;							//!< Array of basisfunctions
 		gsl_matrix *rho;									//!< Matrix with radial coordinates as values
 		gsl_matrix *phi;									//!< Matrix with azimuthal coordinates as values
 	} zern_basis_t; //!< Struct for holding a Zernike set of basis functions.
 	
 	zern_basis_t basis;
 	
-	void setup(int, int);								//!< Allocate memory et cetera
-	void calc_rho(gsl_matrix *mat);			//!< Calculate rho (radial) matrix
-	void calc_phi(gsl_matrix *mat);			//!< Calculate phi (azimuthal) matrix
+	int setup(int, int);								//!< Allocate memory et cetera
+	void calc_rho(gsl_matrix *mat);			//!< Calculate rho (radial) matrix. Each element gives is the distance to the center of the matrix
+	void calc_phi(gsl_matrix *mat);			//!< Calculate phi (azimuthal) matrix. Each element gives the angle wrt the 'x-axis'
 	
 	gsl_matrix *zern_rad(int m, int n); //!< Generate radial zernike mode.
 	
@@ -100,12 +100,16 @@ public:
 //		if (m > 0): return zernike_rad(m, n, rho) * N.cos(m * phi)
 //		if (m < 0): return zernike_rad(-m, n, rho) * N.sin(-m * phi)
 //		return zernike_rad(0, n, rho)
+		return 0;
 	}
 	
 	gsl_matrix* get_mode(int j);				//!< Return mode J
 	
 	gsl_matrix* get_modesum(gsl_vector *amplitudes, int nmax=-1);
 	gsl_matrix* get_modesum(double *amplitudes, int nmax=-1);
+	
+	gsl_matrix* get_phi() const { return basis.phi; }
+	gsl_matrix* get_rho() const { return basis.rho; }
 	
 };
 

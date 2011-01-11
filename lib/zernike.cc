@@ -21,6 +21,8 @@
 #include <string>
 #include <gsl/gsl_vector.h>
 #include <gsl/gsl_matrix.h>
+#include <strings.h>
+#include <math.h>
 
 #include "io.h"
 #include "types.h"
@@ -28,10 +30,11 @@
 #include "zernike.h"
 
 Zernike::Zernike(Io &io, int n, int size):
-io(io), {
+io(io) {
 	io.msg(IO_DEB2, "Zernike::Zernike(n=%d, size=%d)", n, size);
 	
 	setup(n, size);
+	
 }
 
 Zernike::~Zernike() {
@@ -39,16 +42,16 @@ Zernike::~Zernike() {
 }
 
 
-void Zernike::setup(int n, int size) {
+int Zernike::setup(int n, int size) {
 	io.msg(IO_DEB2, "Zernike::setup(n=%d, size=%d)", n, size);
 	
-	if (n <= 0)
-		return;
+	if (n <= 0 || size <= 0)
+		return 0;
 	
-	// Allocate pointer-to-gsl_matrix array. Realloc such that if basisfuncs is already alloc'ed, it only adds
-	basisfuncs = (gsl_matrix **) realloc(basisfuncs, n * sizeof *basisfuncs);
+	// Allocate pointer-to-gsl_matrix array. Realloc such that if basisfuncs is already alloc'ed, it only allocates the extra memory
+	basis.bfuncs = (gsl_matrix **) realloc(basis.bfuncs, n * sizeof *(basis.bfuncs));
 	//! @todo bzero() proper function for clearing memory?
-	bzero((void *) basisfuncs, n * sizeof *basisfuncs);
+	bzero((void *) basis.bfuncs, n * sizeof *(basis.bfuncs));
 	
 	// Allocate coordinate grids (free first in case it was previously allocated)
 	gsl_matrix_free(basis.rho);
@@ -56,14 +59,15 @@ void Zernike::setup(int n, int size) {
 	gsl_matrix_free(basis.phi);
 	basis.phi = (gsl_matrix *) gsl_matrix_alloc(size, size);
 	
+	// Calculate coordinate grids
 	calc_rho(basis.rho);
 	calc_phi(basis.phi);
 	
 	// Allocate individual matrices
 	for (int i=0; i<n; i++) {
-		gsl_matrix_free(basisfuncs[i]);
-		basisfuncs[i] = (gsl_matrix *) gsl_matrix_alloc(size, size);
-		if (!basisfuncs[i])
+		gsl_matrix_free((basis.bfuncs)[i]);
+		(basis.bfuncs)[i] = (gsl_matrix *) gsl_matrix_alloc(size, size);
+		if (!(basis.bfuncs)[i])
 			return io.msg(IO_ERR, "Zernike::setup(): error allocating memory");
 	}
 	
@@ -72,19 +76,30 @@ void Zernike::setup(int n, int size) {
 	basis.size = size;
 	
 	io.msg(IO_ERR, "Zernike::setup(): allocate ok");
-
+	
+	return 0;
 }
 
 void Zernike::calc_rho(gsl_matrix *mat) {
 	// *mat should be square. Center is at:
 	int c = mat->size1/2;
+	io.msg(IO_DEB2, "Zernike::calc_rho(c=(%d,%d))", c, c);
+	
 	// every pixel will be ((i-c)**2 + (j-c)**2 )**0.5
 	
 	for (size_t i=0; i<mat->size1; i++)
 		for (size_t j=0; j<mat->size2; j++)
-			gsl_matrix_set(mat, i, j, sqrt(pow((double) (i-c), 2.0) + pow((double) (j-c), 2.0)) / c);
+			gsl_matrix_set(mat, i, j, sqrt(pow( ( (double) i-c ) /c, 2.0) + pow( ( (double) j-c ) /c, 2.0)));
 }
 
 void Zernike::calc_phi(gsl_matrix *mat) {
+	// *mat should be square. Center is at:
+	int c = mat->size1/2;
+	io.msg(IO_DEB2, "Zernike::calc_phi(c=(%d,%d))", c, c);
+
+	// every pixel will be atan2(-(i-c), (j-c))
 	
+	for (size_t i=0; i<mat->size1; i++)
+		for (size_t j=0; j<mat->size2; j++)
+			gsl_matrix_set(mat, i, j, atan2(-1.0*((double)i-c)/c, 1.0*((double)j-c)/c));
 }
