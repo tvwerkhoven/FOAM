@@ -47,7 +47,7 @@ endif
 endif HWDEBUG
 
 if DEBUG
-check_PROGRAMS += pixbuf-test gtk-test sigcpp-test
+check_PROGRAMS += pixbuf-test gtk-test sigcpp-test zern-test
 
 pixbuf_test_SOURCES = pixbuf-test.cc
 pixbuf_test_CPPFLAGS = $(GUI_CFLAGS) $(AM_CPPFLAGS)
@@ -60,6 +60,12 @@ gtk_test_LDADD = -lgthread-2.0
 sigcpp_test_SOURCES = sigcpp-test.cc
 sigcpp_test_CPPFLAGS = $(SIGC_CFLAGS) $(AM_CPPFLAGS)
 sigcpp_test_LDADD = $(LDADD) $(SIGC_LIBS)
+
+zern_test_SOURCES = zern-test.cc \
+		$(LIB_DIR)/zernike.cc
+zern_test_LDADD = $(LIBSIU_DIR)/libimgdata.a \
+		$(LIBSIU_DIR)/libio.a
+
 
 if FULLSIM
 check_PROGRAMS += shwfs-test
@@ -106,8 +112,6 @@ camview_test_LDADD = $(GUI_CFLAGS) -lgthread-2.0 \
 
 endif HAVE_OPENGL
 
-if HAVE_FITSIO
-
 check_PROGRAMS += camsend-test
 
 camsend_test_SOURCES = camsend-test.cc
@@ -116,6 +120,5 @@ camsend_test_LDADD = $(FITSIO_LIBS) \
 		$(LIBSIU_DIR)/libprotocol.a \
 		$(LIBSIU_DIR)/libsocket.a
 
-endif HAVE_FITSIO
 
 endif DEBUG
