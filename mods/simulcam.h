@@ -67,6 +67,9 @@ private:
 	double noise;												//!< Noise fill factor for CCD
 	double noiseamp;										//!< Noise amplitude for CCD
 	double seeingfac;										//!< Multiplicative factor for wavefront screen.
+	bool simtel;												//!< Simulate telescope aperture or not
+	bool simmla;												//!< Simulate microlens array or not
+	
 	
 public:
 	Shwfs shwfs;												//!< Reference to WFS we simulate (i.e. for configuration)

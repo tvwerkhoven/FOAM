@@ -43,6 +43,7 @@ SimulCam::SimulCam(Io &io, foamctrl *const ptc, const string name, const string 
 Camera(io, ptc, name, simulcam_type, port, conffile, online),
 seeing(io, ptc, name + "-seeing", port, conffile),
 out_size(0), frame_out(NULL), telradius(1.0), telapt(NULL), telapt_fill(0.7),
+simtel(true), simmla(true),
 shwfs(io, ptc, name + "-shwfs", port, conffile, *this, false)
 {
 	io.msg(IO_DEB2, "SimulCam::SimulCam()");
@@ -59,9 +60,12 @@ shwfs(io, ptc, name + "-shwfs", port, conffile, *this, false)
 	add_cmd("set windtype");
 	add_cmd("get telapt_fill");
 	add_cmd("set telapt_fill");
+	add_cmd("set simwf"); // Alias for 'seeingfac'. If this is 0, wf is multiplied by 0
+	add_cmd("set simtel");
+	add_cmd("set simmla");
 
-	noise = cfg.getdouble("noise", 0.1);
-	noiseamp = cfg.getdouble("noiseamp", 0.5);
+	noise = cfg.getdouble("noise", 0.2);
+	noiseamp = cfg.getdouble("noiseamp", 0.2);
 	seeingfac = cfg.getdouble("seeingfac", 1.0);
 
 	if (seeing.cropsize.x != res.x || seeing.cropsize.y != res.y)
@@ -125,11 +129,15 @@ void SimulCam::on_message(Connection *const conn, string line) {
 			}
 			
 			netio.broadcast(format("ok windtype %s", tmp.c_str()), "windtype");
-		}
-		else
+		} else if(what == "simwf") {
+			set_var(conn, "simwf", popdouble(line), &seeingfac);
+		} else if(what == "simtel") {
+			set_var(conn, "simtel", popbool(line), &simtel);
+		} else if(what == "simmla") {
+			set_var(conn, "simmla", popbool(line), &simmla);
+		} else
 			parsed = false;
-	} 
-	else if (command == "get") {
+	} else if (command == "get") {
 		string what = popword(line);
 	
 		if(what == "noise") {
@@ -141,8 +149,7 @@ void SimulCam::on_message(Connection *const conn, string line) {
 		} else if(what == "windspeed") {
 			conn->addtag("windspeed");
 			netio.broadcast(format("ok windspeed %x %x", seeing.windspeed.x, seeing.windspeed.y), "windspeed");
-		}
-		else
+		} else
 			parsed = false;
 	}
 	else
@@ -188,12 +195,18 @@ gsl_matrix *SimulCam::simul_seeing() {
 }
 
 void SimulCam::simul_telescope(gsl_matrix *im_in) const {
+	if (!simtel)
+		return;
+	
 	io.msg(IO_DEB2, "SimulCam::simul_telescope()");
 	// Multiply wavefront with aperture
 	gsl_matrix_mul_elements (im_in, telapt);
 }
 
 void SimulCam::simul_wfs(gsl_matrix *wave_in) const {
+	if (!simmla)
+		return;
+	
 	if (shwfs.mlacfg.nsi <= 0) {
 		io.msg(IO_WARN, "SimulCam::simul_wfs(): no microlenses defined?.");
 		return;
