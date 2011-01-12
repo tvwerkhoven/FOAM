@@ -268,7 +268,7 @@ public:
 	int get_height() const { return res.y; }
 	coord_t get_res() const { return res; }
 	int get_depth() const { return depth; }
-	uint16_t get_maxval() const { return (1 << depth); }
+	size_t get_maxval() const { return (1 << depth); }
 	
 	frame_t *get_frame(const size_t id, const bool wait = true);
 	frame_t *get_last_frame() const;

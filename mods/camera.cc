@@ -108,6 +108,8 @@ Camera::~Camera() {
 	io.msg(IO_DEB2, "Camera::~Camera()");
 	proc_thr.cancel();
 	proc_thr.join();
+	
+	// frames should be free()'ed by derived classes, they know how to
 	delete[] frames;
 }
 
@@ -117,6 +119,7 @@ void Camera::cam_proc() {
 	
 	while (true) {
 		// Always wait for proc_cond broadcasts
+		//! @todo update to pthread::mutexholder h(&proc_mutex);
 		proc_mutex.lock();
 		proc_cond.wait(proc_mutex);
 		proc_mutex.unlock();
@@ -186,7 +189,6 @@ bool Camera::fits_add_comment(char *phdu, const string &comment) const {
 	
 	return true;
 }
-
 
 bool Camera::store_frame(const frame_t *const frame) const {
 	// Generate path to store file to, based on filenamebase
