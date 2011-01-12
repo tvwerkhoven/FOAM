@@ -50,12 +50,19 @@ noise(0.001)
 					res.x, res.y, depth, noise, interval, exposure);
 	
 	// Start camera thread
-	mode = Camera::RUNNING;
+	mode = Camera::OFF;
 	cam_thr.create(sigc::mem_fun(*this, &DummyCamera::cam_handler));
 }
 
 DummyCamera::~DummyCamera() {
 	io.msg(IO_DEB2, "DummyCamera::~DummyCamera()");
+	
+	// Delete frames in buffer
+	for (int f=0; f<nframes; f++) {
+		free((uint16_t *) frames[f].data);
+		delete[] frames[f].histo;
+	}
+	
 	cam_thr.cancel();
 	cam_thr.join();
 }
@@ -92,6 +99,7 @@ void DummyCamera::update() {
 	
 	gettimeofday(&now, 0);
 	
+	// Allocate new memory for this frame.
 	uint16_t *image = (uint16_t *) malloc(res.x * res.y * sizeof *image);
 	if (!image)
 		throw exception("DummyCamera::update(): Could not allocate memory for framebuffer");	
@@ -111,10 +119,12 @@ void DummyCamera::update() {
 		}
 	}
 	
+	// Queue this frame, if the buffer is full, we will get the oldest one back
 	void *old = cam_queue(image, image, &now);
-	if(old) {
-		//io.msg(IO_DEB2, "Got old=%p\n", old);
-		//free((uint16_t *)old);
+	
+	if (old) {
+		io.msg(IO_DEB2, "DummyCamera::update(): got old frame=%p", old);
+		free((uint16_t *) old);
 	}
 	
 	// Make sure each update() takes at minimum interval seconds:
@@ -148,7 +158,8 @@ void DummyCamera::cam_handler() {
 				mode = Camera::OFF;
 				break;
 			case Camera::OFF:
-				io.msg(IO_INFO, "DummyCamera::cam_handler() OFF.");
+			case Camera::WAITING:
+				io.msg(IO_INFO, "DummyCamera::cam_handler() OFF/WAITING.");
 				// We wait until the mode changed
 				mode_mutex.lock();
 				mode_cond.wait(mode_mutex);
