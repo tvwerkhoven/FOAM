@@ -45,7 +45,7 @@ Zernike::~Zernike() {
 	gsl_matrix_free(basis.rho);
 	gsl_matrix_free(basis.phi);
 	gsl_matrix_free(basis.cropmask);
-	for (int i=0; i<n; i++)
+	for (int i=0; i<basis.nmodes; i++)
 		gsl_matrix_free((basis.bfuncs)[i]);
 	
 	gsl_matrix_free(scratch);
