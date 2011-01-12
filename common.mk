@@ -26,5 +26,5 @@ AM_CPPFLAGS += -DHAVE_INLINE \
 #endif DEBUG
 
 
-AM_CXXFLAGS = -Wall -Wextra -Wfatal-errors -O3 -ftree-vectorize -g
+AM_CXXFLAGS = -Wall -Wextra -Wfatal-errors -O3 -ftree-vectorize -ggdb
 		
