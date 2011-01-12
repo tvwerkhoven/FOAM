@@ -41,12 +41,14 @@ io(io), scratch(NULL) {
 
 Zernike::~Zernike() {
 	io.msg(IO_DEB2, "Zernike::~Zernike()");
-	// Clean up memory usage
+	// Free used memory
 	gsl_matrix_free(basis.rho);
 	gsl_matrix_free(basis.phi);
 	gsl_matrix_free(basis.cropmask);
 	for (int i=0; i<basis.nmodes; i++)
 		gsl_matrix_free((basis.bfuncs)[i]);
+	
+	free(basis.bfuncs);
 	
 	gsl_matrix_free(scratch);
 }

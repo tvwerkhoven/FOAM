@@ -51,7 +51,7 @@ private:
 
 	zern_basis_t basis;									//!< Basis of Zernike functions is stored here, with metadata
 	
-	int setup(const int, const int);		//!< Allocate memory et cetera
+	int setup(const int n, const int size); //!< Allocate memory et cetera
 	
 	void calc_rho(gsl_matrix *mat);			//!< Calculate rho (radial) matrix. Each element gives is the distance to the center of the matrix
 	void calc_phi(gsl_matrix *mat);			//!< Calculate phi (azimuthal) matrix. Each element gives the angle wrt the 'x-axis'
