@@ -31,6 +31,9 @@ int main() {
 	printf("sizeof int: %zu\n", sizeof (int));
 	printf("sizeof int*: %zu\n", sizeof (int*));
 
+	printf("sizeof *dataint: %zu\n", sizeof *dataint);
+	printf("sizeof dataint: %zu\n", sizeof dataint);
+
 	printf("sizeof uint32_t: %zu\n", sizeof (uint32_t));
 	printf("sizeof uint32_t*: %zu\n", sizeof (uint32_t*));
 	
