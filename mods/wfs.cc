@@ -23,6 +23,8 @@
 
 #include "types.h"
 #include "io.h"
+
+#include "zernike.h"
 #include "wfs.h"
 
 using namespace std;

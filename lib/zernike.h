@@ -51,8 +51,6 @@ private:
 
 	zern_basis_t basis;									//!< Basis of Zernike functions is stored here, with metadata
 	
-	int setup(const int n, const int size); //!< Allocate memory et cetera
-	
 	void calc_rho(gsl_matrix *mat);			//!< Calculate rho (radial) matrix. Each element gives is the distance to the center of the matrix
 	void calc_phi(gsl_matrix *mat);			//!< Calculate phi (azimuthal) matrix. Each element gives the angle wrt the 'x-axis'
 	void calc_crop(gsl_matrix *mat);		//!< Calculate cropmask: 1 within a circle, 0 outside
@@ -63,6 +61,8 @@ private:
 public:
 	Zernike(Io &io, int n, int size=128);
 	~Zernike();
+	
+	int setup(const int n, const int size); //!< Allocate memory et cetera
 	
 	/*! @brief Generate Zernike mode j
 	 

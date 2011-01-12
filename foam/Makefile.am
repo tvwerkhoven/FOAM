@@ -112,6 +112,7 @@ foam_fullsim_SOURCES = foam-fullsim.cc \
 		$(MODS_DIR)/wfs.cc \
 		$(MODS_DIR)/shwfs.cc \
 		$(LIB_DIR)/shift.cc \
+		$(LIB_DIR)/zernike.cc \
 		$(LIB_DIR)/simseeing.cc
 
 # Header files are part of the sources as well
@@ -122,6 +123,7 @@ foam_fullsim_SOURCES += foam-fullsim.h \
 		$(MODS_DIR)/wfs.h \
 		$(MODS_DIR)/shwfs.h \
 		$(LIB_DIR)/shift.h \
+		$(LIB_DIR)/zernike.h \
 		$(LIB_DIR)/simseeing.h
 
 foam_fullsim_LDADD = $(LIBSIU_DIR)/libimgdata.a \

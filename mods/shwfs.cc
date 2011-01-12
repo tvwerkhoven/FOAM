@@ -104,7 +104,7 @@ int Shwfs::calc_zern_infl(int nmodes) {
 	
 	// Calculate the slope in each of the subapertures for each wavefront mode
 	double slope[2];
-	for (int m=0; m <= nmodes, m++) {
+	for (int m=0; m <= nmodes; m++) {
 		gsl_matrix *tmp = zernbasis.get_mode(m);
 		_calc_slope(tmp, mlacfg, slope);
 		

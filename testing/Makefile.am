@@ -78,6 +78,7 @@ shwfs_test_SOURCES = shwfs-test.cc \
 		$(LIB_DIR)/shift.cc \
 		$(LIB_DIR)/devices.cc \
 		$(LIB_DIR)/simseeing.cc \
+		$(LIB_DIR)/zernike.cc \
 		../foam/foamctrl.cc
 
 shwfs_test_CFLAGS = $(FFTW_CFLAGS)

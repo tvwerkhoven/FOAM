@@ -24,10 +24,12 @@
 #include <string>
 #include <gsl/gsl_vector.h>
 
+#include "io.h"
 #include "types.h"
 #include "config.h"
+
 #include "camera.h"
-#include "io.h"
+#include "zernike.h"
 
 using namespace std;
 

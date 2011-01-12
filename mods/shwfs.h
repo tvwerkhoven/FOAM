@@ -117,6 +117,7 @@ private:
 		
 	int mla_subapsel();
 	int calc_zern_infl(int nmodes);			//!< Calculate influence for each Zernike mode
+	int _calc_slope(gsl_matrix *tmp, sh_mla_t &mlacfg, double *slope); //!< Calculate slopes (for calc_zern_infl())
 	
 public:
 	Shwfs(Io &io, foamctrl *const ptc, const string name, const string port, Path const &conffile, Camera &wfscam, const bool online=true);
