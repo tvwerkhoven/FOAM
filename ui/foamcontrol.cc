@@ -155,7 +155,6 @@ void FoamControl::on_message(string line) {
 	else if (what == "mode") {
 		state.mode = str2mode(popword(line));
 	} else {
-		ok = false;
 		errormsg = "Unexpected response '" + what + "'";
 	}
 
