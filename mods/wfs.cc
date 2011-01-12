@@ -29,6 +29,7 @@ using namespace std;
 
 Wfs::Wfs(Io &io, foamctrl *const ptc, const string name, const string port, Path const &conffile, Camera &wfscam, const bool online):
 Device(io, ptc, name, wfs_type, port, conffile, online),
+zernbasis(io, 16, wfscam.get_width()),
 is_calib(false),
 cam(wfscam)
 {	
@@ -41,6 +42,7 @@ cam(wfscam)
 
 Wfs::Wfs(Io &io, foamctrl *const ptc, const string name, const string type, const string port, Path const &conffile, Camera &wfscam, const bool online):
 Device(io, ptc, name, wfs_type + "." + type, port, conffile, online),
+zernbasis(io, 16, wfscam.get_width()),
 is_calib(false),
 cam(wfscam)
 {	

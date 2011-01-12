@@ -62,6 +62,9 @@ public:
 		enum wfbasis basis;								//!< Basis functions used for this representation
 	};
 	
+	Zernike zernbasis;									//!< Zernike polynomials basis
+	gsl_matrix_float *zerninfl;					//!< Influence matrix to convert WFS data to Zernike modes
+	
 	struct wavefront wf;								//!< Wavefront representation
 	bool is_calib;											//!< Is calibrated & ready for use
 	

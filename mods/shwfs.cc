@@ -97,6 +97,36 @@ Shwfs::~Shwfs() {
 	
 }
 
+int Shwfs::calc_zern_infl(int nmodes) {
+	// Re-compute Zernike basis functions if necessary
+	if (nmodes > zernbasis.get_nmodes() || cam.get_width() != zernbasis.get_size())
+		zernbasis.setup(nmodes, cam.get_width());
+	
+	// Calculate the slope in each of the subapertures for each wavefront mode
+	double slope[2];
+	for (int m=0; m <= nmodes, m++) {
+		gsl_matrix *tmp = zernbasis.get_mode(m);
+		_calc_slope(tmp, mlacfg, slope);
+		
+	}
+}
+
+int Shwfs::_calc_slope(gsl_matrix *tmp, sh_mla_t &mlacfg, double *slope) {
+	double sum;
+	for (int si=0; si < mlacfg.nsi; si++) {
+		sum=0;
+		for (int x=0; x < mlacfg.ml[si].llpos.x; x++) {
+			for (int y=0; y < mlacfg.ml[si].llpos.y; y++) {
+				// Calculate (x,y)-slope in each subaperture
+				gsl_matrix_get(tmp, y, x);
+			}
+		}
+		
+	}
+	
+	return 0;
+}
+
 void Shwfs::on_message(Connection *const conn, string line) {
 	io.msg(IO_DEB1, "Shwfs::on_message('%s')", line.c_str()); 
 	
@@ -207,7 +237,6 @@ int Shwfs::shift_to_basis(const gsl_vector_float *const invec, const wfbasis bas
 	
 }
 int Shwfs::calibrate() {
-	//! @todo Needs to setup Zernike & KL & mirror basis functions as well
 	shift_vec = gsl_vector_float_alloc(mlacfg.nsi * 2);
 	
 	switch (wf.basis) {
@@ -217,8 +246,13 @@ int Shwfs::calibrate() {
 			wf.wfamp = gsl_vector_float_alloc(wf.nmodes);
 			break;
 		case ZERNIKE:
+			//! @todo how many modes do we want if we're using Zernike? Is the same as the number of coordinates ok or not?
+			wf.nmodes = mlacfg.nsi * 2;
+			wf.wfamp = gsl_vector_float_alloc(wf.nmodes);
+			zerninfl = gsl_matrix_float_alloc(mlacfg.nsi * 2, wf.nmodes);
 		case KL:
 		case MIRROR:
+			//! @todo Implement KL & mirror modes
 		case UNDEFINED:
 		default:
 			io.msg(IO_WARN, "Shwfs::calibrate(): This basis is not implemented yet");

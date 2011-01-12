@@ -115,7 +115,8 @@ private:
 	string get_mla_str() const { return get_mla_str(mlacfg); }
 	int set_mla_str(string mla_str); //!< Set MLA configuration from string, return number of subaps
 		
-	int mla_subapsel();	
+	int mla_subapsel();
+	int calc_zern_infl(int nmodes);			//!< Calculate influence for each Zernike mode
 	
 public:
 	Shwfs(Io &io, foamctrl *const ptc, const string name, const string port, Path const &conffile, Camera &wfscam, const bool online=true);
