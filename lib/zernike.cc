@@ -145,8 +145,8 @@ void Zernike::calc_phi(gsl_matrix *mat) {
 int Zernike::calc_basis(bool force) { 
 	io.msg(IO_DEB2, "Zernike::calc_basis(%d)", force);
 
-	if (!basis.nmodes || !basis.rho || !basis.phi)
-		return io.msg(IO_ERR, "Zernike::calc_basis(): error: basis not configured properly"); 
+	if (basis.nmodes <= 0 || !basis.rho || !basis.phi)
+		return io.msg(IO_WARN, "Zernike::calc_basis(): basis not configured properly"); 
 	
 	if (basis.is_calc && !force)
 		return 0;
