@@ -37,79 +37,69 @@ private:
 	Io &io;
 	
 	typedef struct _zern_basis {
-		_zern_basis(): nmodes(0), size(0), is_calc(false), bfuncs(NULL), rho(NULL), phi(NULL) { }
+		_zern_basis(): nmodes(0), size(0), is_calc(false), bfuncs(NULL), rho(NULL), phi(NULL), cropmask(NULL) { }
 		int nmodes;												//!< Number of basis functions
 		int size;													//!< Resolution of grid (always square, so only one int)
 		bool is_calc;											//!< Indicates whether basis functions are computed or not
 		gsl_matrix **bfuncs;							//!< Array of basisfunctions
 		gsl_matrix *rho;									//!< Matrix with radial coordinates as values
 		gsl_matrix *phi;									//!< Matrix with azimuthal coordinates as values
+		gsl_matrix *cropmask;							//!< Circular cropmask @todo
 	} zern_basis_t; //!< Struct for holding a Zernike set of basis functions.
 	
-	zern_basis_t basis;
+	gsl_matrix *scratch;								//!< Temporary matrix that can be used for calculations
+
+	zern_basis_t basis;									//!< Basis of Zernike functions is stored here, with metadata
 	
-	int setup(int, int);								//!< Allocate memory et cetera
+	int setup(const int, const int);		//!< Allocate memory et cetera
+	
 	void calc_rho(gsl_matrix *mat);			//!< Calculate rho (radial) matrix. Each element gives is the distance to the center of the matrix
 	void calc_phi(gsl_matrix *mat);			//!< Calculate phi (azimuthal) matrix. Each element gives the angle wrt the 'x-axis'
-	
-	gsl_matrix *zern_rad(int m, int n); //!< Generate radial zernike mode.
-	
-//  Python:
-//	def zernike_rad(m, n, rho):
-//	if (N.mod(n-m, 2) == 1):
-//	return rho*0.0
-//	
-//	wf = rho*0.0
-//	for k in range((n-m)/2+1):
-//	wf += rho**(n-2.0*k) * (-1.0)**k * fac(n-k) / ( fac(k) * fac( (n+m)/2.0 - k ) * fac( (n-m)/2.0 - k ) )
+	void calc_crop(gsl_matrix *mat);		//!< Calculate cropmask: 1 within a circle, 0 outside
+	int calc_basis(bool f=true);				//!< Calculate basis functions, as set up previously
+
+	int zern_rad(gsl_matrix *const mat, const int m, const int n); //!< Generate radial zernike mode.
 	
 public:
-	Zernike(Io &io, int n=0, int size=128);
+	Zernike(Io &io, int n, int size=128);
 	~Zernike();
 	
 	/*! @brief Generate Zernike mode j
 	 
 	 Noll introduced a single-integer mode counting. See http://oeis.org/A176988
 
-	 @param [in] *outmat Store zernike mode here
+	 @param [in] *outmat Store zernike mode here (pre-allocated)
 	 @param [in] j Calculate Zernike mode j
 	 @return 0 for ok, !0 for fail
 	 */
-	int gen_mode(gsl_matrix *outmat, int size, int j) {
-		io.msg(IO_XNFO, "Zernike::gen_mode(j=%d)", j);
-		int n = 0;
-		while (j > n) {
-			n++;
-			j -= n;
-		}
-		int m = -n + 2*j;
-		return gen_mode(outmat, m, n);
-	}		
-
+	int gen_mode(gsl_matrix * const outmat, const int size, const int j);
+	
 	/*! @brief Generate Zernike mode n, m with n>=m.
 	 
-	 @param [in] *outmat Store zernike mode here
+	 @param [in] *outmat Store zernike mode here (pre-allocated)
 	 @param [in] n Zernike order
 	 @param [in] m Zernike mode within order
 	 @return 0 for ok, !0 for fail
 	 */
-	int gen_mode(gsl_matrix *outmat, int size, int m, int n) { 
-		io.msg(IO_XNFO, "Zernike::gen_mode(m=%d, n=%d)", m, n);
-			
-//		Python:
-//		if (m > 0): return zernike_rad(m, n, rho) * N.cos(m * phi)
-//		if (m < 0): return zernike_rad(-m, n, rho) * N.sin(-m * phi)
-//		return zernike_rad(0, n, rho)
-		return 0;
-	}
+	int gen_mode(gsl_matrix * const outmat, const int size, const int m, const int n);
 	
-	gsl_matrix* get_mode(int j);				//!< Return mode J
-	
-	gsl_matrix* get_modesum(gsl_vector *amplitudes, int nmax=-1);
-	gsl_matrix* get_modesum(double *amplitudes, int nmax=-1);
-	
+	int get_is_calc() { return (basis.is_calc); }
+	int get_nmodes() { return (basis.nmodes); }
+	int get_size() { return (basis.size); }
 	gsl_matrix* get_phi() const { return basis.phi; }
 	gsl_matrix* get_rho() const { return basis.rho; }
+	
+	/*! @brief Return mode j, optionally copy and crop
+	 
+	 @param [in] j Return this mode. Must be < basis.nmodes
+	 @param [in] copy Copy matrix or return reference only
+	 @param [in] crop Crop matrix with basis.cropmask (i.e. circle) or not. Implies 'copy=true'
+	 @return gsl_matrix* pointing to Zernike mode j
+	 */
+	gsl_matrix* get_mode(const int j, bool copy=false, bool crop=true);
+	
+	gsl_matrix* get_modesum(gsl_vector *amplitudes, bool crop=true); //!< Calculate sum of modes
+	//gsl_matrix* get_modesum(double *amplitudes, int namp, bool crop=true); //!< Calculate sum of modes
 	
 };
 
