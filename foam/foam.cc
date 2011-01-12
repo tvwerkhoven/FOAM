@@ -18,6 +18,8 @@
  along with FOAM.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+//! @todo Handle signals properly, call shutdown()
+
 // HEADERS //
 /***********/
 
@@ -77,6 +79,8 @@ FOAM::~FOAM() {
 	io.msg(IO_INFO, "Stopping FOAM at %s", date);
 	io.msg(IO_INFO, "Ran for %ld seconds, parsed %ld frames (%.1f FPS).", \
 					end-ptc->starttime, ptc->frames, ptc->frames/(float) (end-ptc->starttime));
+	
+	delete ptc;
 }
 
 int FOAM::init() {
