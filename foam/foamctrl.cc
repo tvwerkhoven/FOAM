@@ -30,18 +30,11 @@
 #include "config.h"
 #include "io.h"
 
-foamctrl::~foamctrl(void) {
-	io.msg(IO_DEB2, "foamctrl::~foamctrl(void)");
-
-	if (use_syslog) 
-		closelog();
-	if (cfg)
-		delete cfg;
-}
-
 foamctrl::foamctrl(Io &io, Path const file): 
 err(0), io(io),
-conffile(file), pidfile("/tmp/foam.pid"), 
+conffile(file), 
+cfg(NULL),
+pidfile("/tmp/foam.pid"), 
 listenip("0.0.0.0"), 
 listenport("1025"),
 datadir("/tmp/"), 
@@ -56,6 +49,15 @@ frames(0)
 	io.msg(IO_DEB2, "foamctrl::foamctrl(file=%s)", conffile.c_str());
 	if (conffile.length())
 		parse();
+}
+
+foamctrl::~foamctrl(void) {
+	io.msg(IO_DEB2, "foamctrl::~foamctrl(void)");
+	
+	if (use_syslog) 
+		closelog();
+	if (cfg)
+		delete cfg;
 }
 
 int foamctrl::parse() {
