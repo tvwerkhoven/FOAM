@@ -171,15 +171,6 @@ AC_SUBST(LIBSIU)
 ###################################
 if test "$simstat" = true ; then
 	AC_MSG_NOTICE([*** Static simulation enabled, doesn't need extra libs])
-	if test "$have_fitsio" = true ; then
-		simstatmissing=""
-		SIMSTAT_CFLAGS="$FITSIO_CFLAGS "
-		SIMSTAT_LIBS="$FITSIO_LIBS"
-	else
-		simstatmissing=" cfitsio"
-		simstat=false
-		AC_MSG_WARN([FOAM static simulation needs cfitsio.])
-	fi
 		
 else 
 	AC_MSG_NOTICE([*** Static simulation disabled])
@@ -208,15 +199,6 @@ if test "$fullsim" = true ; then
 	PKG_CHECK_MODULES(FFTW, fftw3 > 3.2.0, [],
 		[AC_MSG_WARN([FOAM full sim needs fftw3.]);fullsim=false;fullsimmissing+=" fftw3"])
 	
-	if test "$have_fitsio" = true ; then
-		FULLSIM_CFLAGS+="$FITSIO_CFLAGS "
-		FULLSIM_LIBS="$FITSIO_LIBS"
-	else
-		fullsimmissing=" cfitsio"
-		fullsim=false
-		AC_MSG_WARN([FOAM full sim needs cfitsio.])
-	fi
-
 	FULLSIM_CFLAGS+=" $FFTW_CFLAGS"
 	FULLSIM_LIBS+=" $FFTW_LIBS"
 else 
