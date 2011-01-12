@@ -72,6 +72,7 @@ int main() {
 			ImgData tmpimg(io, (gsl_matrix *) tmp, true);
 			tmpimg.writedata(format("./zern-test_zern_%03d.fits", m), ImgData::FITS, true);
 		}
+		gsl_matrix_free(tmp);
 	}
 
 	gsl_vector *vec = gsl_vector_calloc(zerntest.get_nmodes());
@@ -86,6 +87,7 @@ int main() {
 			ImgData tmpimg(io, (gsl_matrix *) tmp, true);
 			tmpimg.writedata(format("./zern-test_zernsum_%03d.fits", m), ImgData::FITS, true);
 		}
+		gsl_matrix_free(tmp);
 	}
 
 	for (int m=0; m<zerntest.get_nmodes(); m++) {
@@ -97,6 +99,7 @@ int main() {
 			ImgData tmpimg(io, (gsl_matrix *) tmp, true);
 			tmpimg.writedata(format("./zern-test_zerncumsum_%03d.fits", m), ImgData::FITS, true);
 		}
+		gsl_matrix_free(tmp);
 	}
 	
 	for (int m=0; m<zerntest.get_nmodes(); m++)
@@ -108,6 +111,8 @@ int main() {
 		ImgData tmpimg(io, (gsl_matrix *) tmp, true);
 		tmpimg.writedata("./zern-test_zern_random.fits", ImgData::FITS, true);
 	}
+	gsl_matrix_free(tmp);
 	
+	gsl_vector_free(vec);
 	return 0;
 }
