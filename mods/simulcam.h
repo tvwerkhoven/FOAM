@@ -27,6 +27,9 @@
 #endif
 
 #include <stdint.h>
+#include <math.h>
+#include <fftw3.h>
+#include <gsl/gsl_vector.h>
 
 #include "config.h"
 #include "io.h"
