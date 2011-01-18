@@ -44,7 +44,6 @@ Camera(io, ptc, name, simulcam_type, port, conffile, online),
 seeing(io, ptc, name + "-seeing", port, conffile),
 out_size(0), frame_out(NULL), telradius(1.0), telapt(NULL), telapt_fill(0.7),
 simtel(true), simmla(true),
-workspace(NULL), shdata(NULL),
 shwfs(io, ptc, name + "-shwfs", port, conffile, *this, false)
 {
 	io.msg(IO_DEB2, "SimulCam::SimulCam()");
@@ -219,7 +218,8 @@ void SimulCam::simul_wfs(gsl_matrix *wave_in) const {
 	coord_t sallpos = shwfs.mlacfg.ml[0].llpos;
 	coord_t sasize = shwfs.mlacfg.ml[0].size;
 	// Get temporary memory
-	if (!workspace) workspace = gsl_vector_calloc(sasize.x * sasize.y * 4);
+	static gsl_vector *workspace = NULL;
+	if (!workspace) workspace = (gsl_vector *) gsl_vector_calloc(sasize.x * sasize.y * 4);
 	
 	// Setup FFTW parameters
 	static fftw_complex *shdata = NULL;

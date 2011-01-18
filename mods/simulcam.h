@@ -73,10 +73,6 @@ private:
 	bool simtel;												//!< Simulate telescope aperture or not
 	bool simmla;												//!< Simulate microlens array or not
 	
-	// Some scratch memory here
-	gsl_vector *workspace;
-	fftw_complex *shdata;
-	
 public:
 	Shwfs shwfs;												//!< Reference to WFS we simulate (i.e. for configuration)
 	SimulCam(Io &io, foamctrl *const ptc, const string name, const string port, Path const &conffile, const bool online=true);
