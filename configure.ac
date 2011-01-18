@@ -67,14 +67,19 @@ AC_SEARCH_LIBS([pthread_create],
 		[],
 		[FOAM_FATAL=yes;FOAM_MISSING+=" pthread"])
 
+AC_SEARCH_LIBS([ffopen],
+		[cfitsio],
+		[],
+		[FOAM_FATAL=yes;FOAM_MISSING+=" cfitsio"])
+
 PKG_CHECK_MODULES(SIGC, [sigc++-2.0 >= 2.0], [],
 		[FOAM_FATAL=yes;FOAM_MISSING+=" sigc++-2.0"])
 
 PKG_CHECK_MODULES(GSL, [gsl], [],
 		[FOAM_FATAL=yes;FOAM_MISSING+=" gsl gslcblas"])
 
-PKG_CHECK_MODULES(FITSIO, [cfitsio], [],
-		[FOAM_FATAL=yes;FOAM_MISSING+=" cfitsio"])
+#PKG_CHECK_MODULES(FITSIO, [cfitsio], [],
+#		[FOAM_FATAL=yes;FOAM_MISSING+=" cfitsio"])
 
 COMMON_CFLAGS="$SIGC_CFLAGS $GSL_CFLAGS $FITSIO_CFLAGS"
 COMMON_LIBS="$SIGC_LIBS $GSL_LIBS $FITSIO_LIBS"
@@ -237,11 +242,12 @@ if test "$gui" = true ; then
 
 	if test "$no_gl" = yes || test  "$no_glu" = yes || test "$no_glut" = yes ; then
 		opengl=false;
-		AC_MSG_ERROR([OpenGL not found.]);
+		gui=false;
+		AC_MSG_WARN([FOAM GUI needs OpenGL]);
 	fi
 
 	PKG_CHECK_MODULES(GLEXTMM, gtkglextmm-1.2, [],
-		[AC_MSG_WARN([OpenGL needs gtkglextmm-1.2.]);gui=false;guimissing+=" gtkglextmm-1.2"])
+		[AC_MSG_WARN([FOAM GUI gtkglextmm-1.2.]);gui=false;guimissing+=" gtkglextmm-1.2"])
 
 	GUI_CFLAGS+=" $GTHREAD_CFLAGS $GTKMM_CFLAGS $GL_CFLAGS $GLU_CFLAGS $GLUT_CFLAGS $GLEXTMM_CFLAGS"
 	GUI_LIBS+=" $GTHREAD_LIBS $GTKMM_LIBS $GL_LIBS $GLU_LIBS $GLUT_LIBS $GLEXTMM_LIBS"
@@ -258,7 +264,7 @@ AM_CONDITIONAL([HAVE_OPENGL], [test "$opengl" = true])
 #############################
 
 if test "$FOAM_FATAL" = yes ; then
-	AC_MSG_ERROR([Cannot build FOAM! Missing libraries$FOAM_MISSING!])
+	AC_MSG_ERROR([Cannot build FOAM! Missing libraries:$FOAM_MISSING!])
 fi
 
 AC_MSG_NOTICE([===============Summary================])
