@@ -44,6 +44,7 @@ Camera(io, ptc, name, simulcam_type, port, conffile, online),
 seeing(io, ptc, name + "-seeing", port, conffile),
 out_size(0), frame_out(NULL), telradius(1.0), telapt(NULL), telapt_fill(0.7),
 simtel(true), simmla(true),
+workspace(NULL), shdata(NULL),
 shwfs(io, ptc, name + "-shwfs", port, conffile, *this, false)
 {
 	io.msg(IO_DEB2, "SimulCam::SimulCam()");
@@ -81,7 +82,7 @@ shwfs(io, ptc, name + "-shwfs", port, conffile, *this, false)
 SimulCam::~SimulCam() {
 	io.msg(IO_DEB2, "SimulCam::~SimulCam()");
 	cam_set_mode(Camera::OFF);
-
+	
 	cam_thr.cancel();
 	cam_thr.join();
 	
@@ -218,12 +219,17 @@ void SimulCam::simul_wfs(gsl_matrix *wave_in) const {
 	coord_t sallpos = shwfs.mlacfg.ml[0].llpos;
 	coord_t sasize = shwfs.mlacfg.ml[0].size;
 	// Get temporary memory
-	gsl_vector *workspace = gsl_vector_calloc(sasize.x * sasize.y * 4);
+	if (!workspace) workspace = gsl_vector_calloc(sasize.x * sasize.y * 4);
+	
 	// Setup FFTW parameters
-	fftw_complex *shdata = (fftw_complex *) fftw_malloc(sasize.y*2 * sasize.x*2 * sizeof *shdata);
+	static fftw_complex *shdata = NULL;
+	if (!shdata) shdata = (fftw_complex *) fftw_malloc(sasize.y*2 * sasize.x*2 * sizeof *shdata);
+	
 	// Set memory to 0
 	for (int i=0; i< sasize.y*2 * sasize.x*2; i++)
 		shdata[i][0] = shdata[i][1] = 0.0;
+
+	//! @todo This has to be deleted somewhere
 	fftw_plan shplan = fftw_plan_dft_2d(sasize.y*2, sasize.x*2, shdata, shdata, FFTW_FORWARD, FFTW_MEASURE);
 	double tmp=0;
 	// Temporary matrices
@@ -335,6 +341,7 @@ uint8_t *SimulCam::simul_capture(gsl_matrix *frame_in) {
 	if (out_size != cursize) {
 		io.msg(IO_DEB2, "SimulCam::simul_capture() reallocing memory, %zu != %zu", out_size, cursize);
 		out_size = cursize;
+		//! @todo frame_out needs to be free()'ed somewhere
 		frame_out = (uint8_t *) realloc(frame_out, out_size);
 	}
 	
@@ -412,6 +419,8 @@ void SimulCam::cam_handler() {
 				uint8_t *frame = simul_capture(wf);
 				
 				// Need to free gsl matrix if it is returned
+				//! @todo We use memory for wf and for frame. This should both be freed when returned. 
+				//! @todo 'frame' is the same memory each time, so this does not really queue a *new* image, it's the same memory.
 				gsl_matrix *ret = (gsl_matrix *) cam_queue(wf, frame);
 				if (ret)
 					gsl_matrix_free(ret);
@@ -423,7 +432,7 @@ void SimulCam::cam_handler() {
 			{
 				io.msg(IO_DEB1, "SimulCam::cam_handler() SINGLE");
 
-				gsl_matrix *wf = seeing.get_wavefront();
+				gsl_matrix *wf = simul_seeing();
 				simul_telescope(wf);
 				simul_wfs(wf);
 				uint8_t *frame = simul_capture(wf);
