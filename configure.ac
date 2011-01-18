@@ -75,7 +75,7 @@ AC_SEARCH_LIBS([ffopen],
 PKG_CHECK_MODULES(SIGC, [sigc++-2.0 >= 2.0], [],
 		[FOAM_FATAL=yes;FOAM_MISSING+=" sigc++-2.0"])
 
-PKG_CHECK_MODULES(GSL, [gsl], [],
+PKG_CHECK_MODULES(GSL, [gsl >= 1.11], [],
 		[FOAM_FATAL=yes;FOAM_MISSING+=" gsl gslcblas"])
 
 #PKG_CHECK_MODULES(FITSIO, [cfitsio], [],
@@ -89,7 +89,7 @@ AC_SUBST(COMMON_LIBS)
 ### Hardware libraries
 
 # dc1394
-PKG_CHECK_MODULES(DC1394, [libdc1394-2],
+PKG_CHECK_MODULES(DC1394, [libdc1394-2 >= 2.0.2],
 		[have_dc1394=true],
 		[have_dc1394=false])
 
@@ -201,7 +201,7 @@ if test "$fullsim" = true ; then
 			[have_ics=true],
 			[have_ics=false])
 
-	PKG_CHECK_MODULES(FFTW, fftw3 > 3.2.0, [],
+	PKG_CHECK_MODULES(FFTW, fftw3 >= 3.1.2, [],
 		[AC_MSG_WARN([FOAM full sim needs fftw3.]);fullsim=false;fullsimmissing+=" fftw3"])
 	
 	FULLSIM_CFLAGS+=" $FFTW_CFLAGS"
@@ -226,7 +226,7 @@ if test "$gui" = true ; then
 	PKG_CHECK_MODULES(GTKMM, gtkmm-2.4 >= 2.6, [],
 		[AC_MSG_WARN([FOAM GUI needs gtkmm.]);gui=false;guimissing+=" gtkmm-2.4"])
 	
-	PKG_CHECK_MODULES(GTHREAD, gthread-2.0, [],
+	PKG_CHECK_MODULES(GTHREAD, gthread-2.0 >= 2.16.6, [],
 		[AC_MSG_WARN([FOAM GUI needs gthread-2.0.]);gui=false;guimissing+=" gthread-2.0"])
 	
 	### OpenGL for UI etc.
@@ -246,7 +246,7 @@ if test "$gui" = true ; then
 		AC_MSG_WARN([FOAM GUI needs OpenGL]);
 	fi
 
-	PKG_CHECK_MODULES(GLEXTMM, gtkglextmm-1.2, [],
+	PKG_CHECK_MODULES(GLEXTMM, gtkglextmm-1.2 >= 1.2.0, [],
 		[AC_MSG_WARN([FOAM GUI gtkglextmm-1.2.]);gui=false;guimissing+=" gtkglextmm-1.2"])
 
 	GUI_CFLAGS+=" $GTHREAD_CFLAGS $GTKMM_CFLAGS $GL_CFLAGS $GLU_CFLAGS $GLUT_CFLAGS $GLEXTMM_CFLAGS"
