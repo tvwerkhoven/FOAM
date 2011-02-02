@@ -101,8 +101,6 @@ private:
 	
 	LogPage logpage;										//!< Shows log messages (see LogPage and Log)
 	ControlPage controlpage;						//!< Shows base controls (see FoamCtrl)
-	typedef std::map<string, DevicePage*> devlist_t;
-	devlist_t devlist;									//!< A list of devices to keep track of
 	
 	void on_about_activate();						//!< MainMenu::about button callback
 	void on_quit_activate();						//!< MainMenu::quit button callback

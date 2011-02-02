@@ -30,6 +30,11 @@
 #include "foamtypes.h"
 #include "log.h"
 
+//! @todo Mutual inclusion of DevicePage/DeviceCtrl and FoamControl problem
+
+class DevicePage;
+class DeviceCtrl;
+
 using namespace std;
 
 /*!
@@ -45,11 +50,13 @@ public:
 	typedef struct _device_t {
 		string name;											//!< Device name
 		string type;											//!< Device type, hierarchical (i.e. dev.cam.simulcam)
-		_device_t(): name("undef"), type("undef") { ; }
+		DevicePage *page;									//!< GUI element for this device
+		DeviceCtrl *ctrl;									//!< Control element for this device
+		_device_t(string _n="undef", string _t="undef"): name(_n), type(_t), page(NULL), ctrl(NULL) { ; }
 	} device_t;													//!< Describes hardware devices
 	
 private:
-	string mode2str(aomode_t m) {
+	const string mode2str(const aomode_t m) const {
 		switch (m) {
 			case AO_MODE_OPEN: return "open";
 			case AO_MODE_CLOSED: return "closed";
@@ -61,14 +68,14 @@ private:
 		}
 	}
 	
-	aomode_t str2mode(string m) {
+	const aomode_t str2mode(const string m) const {
 		if (m == "open") return AO_MODE_OPEN;
 		else if (m == "closed") return AO_MODE_CLOSED;
 		else if (m == "calib") return AO_MODE_CAL;
 		else if (m == "listen") return AO_MODE_LISTEN;
 		else if (m == "undef") return AO_MODE_UNDEF;
 		else if (m == "shutdown") return AO_MODE_SHUTDOWN;
-		else return AO_MODE_UNDEF;
+		else return (const aomode_t) AO_MODE_UNDEF;
 	}
 	
 	Protocol::Client protocol;					//!< Connection used to FOAM
@@ -98,6 +105,8 @@ public:
 	string host;
 	string port;
 	
+	pthread::mutex gui_mutex;
+	
 	FoamControl(Log &log);
 	~FoamControl() { };
 	
@@ -105,19 +114,28 @@ public:
 	int disconnect();
 	void send_cmd(const string &cmd);
 	
+	// Device management
+	bool add_device(const string name, const string type);
+	bool rem_device(const string name);
+	device_t *get_device(const string name);
+	device_t *get_device(const DevicePage *page);
+	device_t *get_device(const int i) { return &(state.devices[i]); }
+
 	// get-like commands
 	string getpeername() { return protocol.getpeername(); }
 	string getsockname() { return protocol.getsockname(); }
-	int get_numdev() { return state.numdev; }
-	void set_numdev(int n) { state.numdev = n; }
-	uint64_t get_numframes() { return state.numframes; }
-	aomode_t get_mode() { return state.mode; }
-	string get_mode_str() { return mode2str(state.mode); }
-	int get_numcal() { return state.numcal; }
-	string get_calmode(int i) { return state.calmodes[i]; }
-	device_t get_device(int i ) { return state.devices[i]; }
-	string get_lastreply() { return state.lastreply; }
-	string get_lastcmd() { return state.lastcmd; }
+	
+	const int get_numdev() const { return (const int) state.numdev; }
+	
+	const uint64_t get_numframes() const { return (const uint64_t) state.numframes; }
+	const aomode_t get_mode() const { return (const aomode_t) state.mode; }
+	const string get_mode_str() const { return mode2str(state.mode); }
+
+	const int get_numcal() const { return (const int) state.numcal; }
+	const string get_calmode(const int i) const { return state.calmodes[i]; }
+
+	const string get_lastreply() const { return state.lastreply; }
+	const string get_lastcmd() const { return state.lastcmd; }
 	
 	// set-like commands
 	void set_mode(aomode_t mode);
@@ -133,6 +151,10 @@ public:
 	Glib::Dispatcher signal_message;
 	Glib::Dispatcher signal_device;
 };
+
+#include "deviceview.h"
+#include "devicectrl.h"
+
 
 
 #endif // HAVE_FOAMCONTROL_H

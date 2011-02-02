@@ -45,8 +45,8 @@ int FOAM_FullSim::load_modules() {
 	devices->add((Device *) simcam);
 
 	// Add new Wfs based on simulcam
-	wfs = new Wfs(io, ptc, "simwfs", ptc->listenport, ptc->conffile, *simcam);
-	devices->add((Device *) wfs);
+//	wfs = new Wfs(io, ptc, "simwfs", ptc->listenport, ptc->conffile, *simcam);
+//	devices->add((Device *) wfs);
 	
 	// Add new Shwfs based on simulcam
 	simwfs = new Shwfs(io, ptc, "simshwfs", ptc->listenport, ptc->conffile, *simcam);
