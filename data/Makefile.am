@@ -11,8 +11,8 @@ dist_foamdata_DATA = simstatic*.pgm wavefront.fits
 all-local:
 	@echo -n Cropping wavefront...
 	@convert wavefront.fits wavefront.png
-	@convert wavefront.png -crop 1024x768+0+128 wavefront-crop.png
-	@convert wavefront-crop.png wavefront-crop.fits
+	@convert wavefront.fits -depth 8 -crop 1024x768+0+128 wavefront-crop.fits
+	@convert wavefront-crop.fits wavefront-crop.png
 	@echo "done."
 	
 	@echo Converting datafiles...
