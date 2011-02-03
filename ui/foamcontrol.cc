@@ -140,11 +140,11 @@ void FoamControl::on_message(string line) {
 	else if (what == "devices") {
 		state.numdev = popint32(line);
 		for (int i=0; i<state.numdev; i++) {
-			state.devices[i].name = popword(line);
-			state.devices[i].type = popword(line);
+			string name = popword(line);
+			string type = popword(line);
+			add_device(name, type);
 		}
 		// Signal device update to main GUI thread
-		signal_device();
 	}
 	else if (what == "cmd") {
 		//! \todo implement "cmd" confirmation hook
@@ -161,3 +161,87 @@ void FoamControl::on_message(string line) {
 	signal_message();
 }
 
+// Device management
+
+bool FoamControl::add_device(const string name, const string type) {
+	printf("%x:FoamControl::add_device(%s, %s)\n", (int) pthread_self(), name.c_str(), type.c_str());
+	// Check if already exists
+	if (get_device(name) != NULL) {
+		printf("%x:FoamControl::add_device() Exists!\n", (int) pthread_self());
+		return false;
+	}
+	
+	//! @todo check that this works
+	pthread::mutexholder h(&(gui_mutex));
+
+	// Does not exist, add and init
+	device_t newdev = state.devices[state.numdev];
+	newdev.name = name;
+	newdev.name = type;
+	
+	
+	if (newdev.type.substr(0,3) != "dev") {
+		printf("%x:FoamControl::add_device() Type wrong!\n", (int) pthread_self());
+		log.add(Log::ERROR, "Device type wrong, should start with 'dev' (was: " + newdev.type + ")");
+		return false;
+	}
+	else if (newdev.type.substr(0,3) == "dev") {
+		printf("%x:FoamControl::add_device() got dev\n", (int) pthread_self());
+		newdev.ctrl = (DeviceCtrl *) new DeviceCtrl(log, host, port, newdev.name);
+		newdev.page = (DevicePage *) new DevicePage(newdev.ctrl, log, *this, newdev.name);
+		log.add(Log::OK, "Added new generic device, type="+newdev.type+", name="+newdev.name+".");
+	}
+	else {
+		printf("%x:FoamControl::add_device() unknown device type\n", (int) pthread_self());
+		log.add(Log::WARNING, "Got unknown device type ("+newdev.type+"), ignored.");
+		return false;
+	}	
+	
+	printf("%x:FoamControl::add_device() Ok\n", (int) pthread_self());
+	state.numdev++;
+	signal_device();
+	return true;
+}
+
+bool FoamControl::rem_device(const string name) {
+	printf("%x:FoamControl::rem_device(%s)\n", (int) pthread_self(), name.c_str());
+	
+	device_t *tmpdev = get_device(name);
+	if (tmpdev == NULL) {
+		printf("%x:FoamControl::rem_device() Does not exist!\n", (int) pthread_self());
+		return false;
+	}
+	
+	//! @todo check that this works
+	pthread::mutexholder h(&(gui_mutex));
+
+	
+	printf("%x:FoamControl::rem_device() Ok\n", (int) pthread_self());
+	state.numdev--;
+	signal_device();
+	return true;
+}
+
+FoamControl::device_t *FoamControl::get_device(const string name) {
+	printf("%x:FoamControl::get_device(%s)\n", (int) pthread_self(), name.c_str());
+
+	for (int i=0; i<state.numdev; i++) {
+		if (state.devices[i].name == name) 
+			return &(state.devices[i]);
+	}
+
+	printf("%x:FoamControl::get_device() Does not exist!\n", (int) pthread_self());
+	return NULL;
+}
+
+FoamControl::device_t *FoamControl::get_device(const DevicePage *page) {
+	printf("%x:FoamControl::get_device(page)\n", (int) pthread_self());
+	
+	for (int i=0; i<state.numdev; i++) {
+		if (state.devices[i].page == page) 
+			return &(state.devices[i]);
+	}
+	
+	printf("%x:FoamControl::get_device() Does not exist!\n", (int) pthread_self());
+	return NULL;	
+}

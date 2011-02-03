@@ -197,13 +197,48 @@ void MainWindow::on_ctrl_message_update() {
 
 void MainWindow::on_ctrl_device_update() {
 	fprintf(stderr, "MainWindow::on_ctrl_device_update()\n");
-	fprintf(stderr, "MainWindow::on_ctrl_device_update() %d devs: ", foamctrl.get_numdev());
-	for (int i=0; i<foamctrl.get_numdev(); i++) {
-		FoamControl::device_t dev = foamctrl.get_device(i);
-		fprintf(stderr, "%s - %s, ", dev.name.c_str(), dev.type.c_str());
-	}
-	fprintf(stderr, "\n");
+
+	// Need mutex because we change this in both fgui and foamcontrol, asynchronously.
+	pthread::mutexholder h(&(foamctrl.gui_mutex));
 	
+	DevicePage *tmppage=NULL;
+	FoamControl::device_t *tmpdev=NULL;
+	
+	// First remove superfluous pages. Check all notebook pages and see if they exist in FoamControl:
+	for (int j=0; j<notebook.get_n_pages(); j++) {
+		fprintf(stderr, "MainWindow::on_ctrl_device_update() %d/%d\n", j, notebook.get_n_pages());
+		tmppage = (DevicePage *) notebook.get_nth_page(j);
+		
+		// Check if this exists in foamctrl. If not, remove
+		tmpdev = foamctrl.get_device(tmppage);
+		if (tmpdev == NULL) {
+			notebook.remove_page(*(tmpdev->page)); // removes GUI element
+			delete tmpdev; // remove gui element itself
+		}
+	}
+	
+	// Check for each device from foamctrl if it is already a notebook page. If not, add.
+	
+	for (int i=0; i<foamctrl.get_numdev(); i++) {
+		tmpdev = foamctrl.get_device(i);
+		fprintf(stderr, "MainWindow::on_ctrl_device_update() %d/%d: %s - %s\n", i, foamctrl.get_numdev(), tmpdev->name.c_str(), tmpdev->type.c_str());
+		
+		tmppage = NULL;
+		
+		for (int j=0; j<notebook.get_n_pages(); j++) {
+			fprintf(stderr, "MainWindow::on_ctrl_device_update() %d/%d\n", j, notebook.get_n_pages());
+			tmppage = (DevicePage *) notebook.get_nth_page(j);
+			if (tmppage == tmpdev->page)
+				break;
+		}
+		
+		if (tmppage != tmpdev->page) {
+			// Did not find this page in pagelist, add
+			notebook.append_page(*(tmpdev->page), "_" + tmpdev->name, tmpdev->name, true);
+		}
+	}
+	
+	/*
 	// We remove devices from the GUI that are not known to foamctrl here. 
 	// We loop over devices in the GUI and if these do not appear in the 
 	// foamctrl list, we remove them.
@@ -222,6 +257,7 @@ void MainWindow::on_ctrl_device_update() {
 			// If i equals foamctrl.get_numdev(), the device wasn't found, remove it from the GUI
 			//! @todo Add destructor to DevicePage to remove itself from the Notebook so we don't have to
 			notebook.remove_page(*(it->second)); // removes GUI element
+	 devlist[dev.name] = (DevicePage *) tmp;
 			delete it->second; // remove gui element itself
 			devlist.erase(it); // remove from devlist
 		}       
@@ -275,6 +311,7 @@ void MainWindow::on_ctrl_device_update() {
 		
 		notebook.append_page(*devlist[dev.name], "_" + dev.name, dev.name, true);
 	}
+	 */
 	
 	show_all_children();
 }

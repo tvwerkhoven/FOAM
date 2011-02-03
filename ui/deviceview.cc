@@ -64,6 +64,8 @@ devframe("Raw device control"), dev_val("value:"), dev_send("Send")
 
 DevicePage::~DevicePage() {
 	fprintf(stderr, "%x:DevicePage::~DevicePage()\n", (int) pthread_self());
+
+	// Destruct device control (if present)
 	if (devctrl)
 		delete devctrl;
 }
