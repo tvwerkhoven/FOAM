@@ -205,36 +205,31 @@ void MainWindow::on_ctrl_device_update() {
 	FoamControl::device_t *tmpdev=NULL;
 	
 	// First remove superfluous pages. Check all notebook pages and see if they exist in FoamControl:
-	for (int j=0; j<notebook.get_n_pages(); j++) {
-		fprintf(stderr, "MainWindow::on_ctrl_device_update() %d/%d\n", j, notebook.get_n_pages());
-		tmppage = (DevicePage *) notebook.get_nth_page(j);
+	fprintf(stderr, "MainWindow::on_ctrl_device_update() deleting superfluous...\n");
+	for (pagelist_t::iterator it = pagelist.begin(); it != pagelist.end(); ++it) {
+		fprintf(stderr, "MainWindow::on_ctrl_device_update() %s\n", (it->first).c_str());
+		tmppage = (DevicePage *) it->second;
 		
 		// Check if this exists in foamctrl. If not, remove
 		tmpdev = foamctrl.get_device(tmppage);
 		if (tmpdev == NULL) {
-			notebook.remove_page(*(tmpdev->page)); // removes GUI element
-			delete tmpdev; // remove gui element itself
+			fprintf(stderr, "MainWindow::on_ctrl_device_update() removing gui element\n");
+			notebook.remove_page(*(tmppage)); // removes GUI element
+			delete tmppage;
+			pagelist.erase(it);
 		}
 	}
 	
 	// Check for each device from foamctrl if it is already a notebook page. If not, add.
-	
+	fprintf(stderr, "MainWindow::on_ctrl_device_update() adding new pages...\n");
 	for (int i=0; i<foamctrl.get_numdev(); i++) {
 		tmpdev = foamctrl.get_device(i);
 		fprintf(stderr, "MainWindow::on_ctrl_device_update() %d/%d: %s - %s\n", i, foamctrl.get_numdev(), tmpdev->name.c_str(), tmpdev->type.c_str());
 		
-		tmppage = NULL;
-		
-		for (int j=0; j<notebook.get_n_pages(); j++) {
-			fprintf(stderr, "MainWindow::on_ctrl_device_update() %d/%d\n", j, notebook.get_n_pages());
-			tmppage = (DevicePage *) notebook.get_nth_page(j);
-			if (tmppage == tmpdev->page)
-				break;
-		}
-		
-		if (tmppage != tmpdev->page) {
+		if (pagelist.find(tmpdev->name) == pagelist.end()) {
 			// Did not find this page in pagelist, add
 			notebook.append_page(*(tmpdev->page), "_" + tmpdev->name, tmpdev->name, true);
+			pagelist[tmpdev->name] = tmpdev->page;
 		}
 	}
 	

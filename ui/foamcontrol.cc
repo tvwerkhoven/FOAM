@@ -138,8 +138,8 @@ void FoamControl::on_message(string line) {
 			state.calmodes[i] = popword(line);
 	}
 	else if (what == "devices") {
-		state.numdev = popint32(line);
-		for (int i=0; i<state.numdev; i++) {
+		int tmp = popint32(line);
+		for (int i=0; i<tmp; i++) {
 			string name = popword(line);
 			string type = popword(line);
 			add_device(name, type);
@@ -175,25 +175,26 @@ bool FoamControl::add_device(const string name, const string type) {
 	pthread::mutexholder h(&(gui_mutex));
 
 	// Does not exist, add and init
-	device_t newdev = state.devices[state.numdev];
-	newdev.name = name;
-	newdev.name = type;
+	printf("%x:FoamControl::add_device() @ index %d\n", (int) pthread_self(), state.numdev);
+	device_t *newdev = &(state.devices[state.numdev]);
+	newdev->name = name;
+	newdev->type = type;
 	
 	
-	if (newdev.type.substr(0,3) != "dev") {
+	if (newdev->type.substr(0,3) != "dev") {
 		printf("%x:FoamControl::add_device() Type wrong!\n", (int) pthread_self());
-		log.add(Log::ERROR, "Device type wrong, should start with 'dev' (was: " + newdev.type + ")");
+		log.add(Log::ERROR, "Device type wrong, should start with 'dev' (was: " + newdev->type + ")");
 		return false;
 	}
-	else if (newdev.type.substr(0,3) == "dev") {
+	else if (newdev->type.substr(0,3) == "dev") {
 		printf("%x:FoamControl::add_device() got dev\n", (int) pthread_self());
-		newdev.ctrl = (DeviceCtrl *) new DeviceCtrl(log, host, port, newdev.name);
-		newdev.page = (DevicePage *) new DevicePage(newdev.ctrl, log, *this, newdev.name);
-		log.add(Log::OK, "Added new generic device, type="+newdev.type+", name="+newdev.name+".");
+		newdev->ctrl = (DeviceCtrl *) new DeviceCtrl(log, host, port, newdev->name);
+		newdev->page = (DevicePage *) new DevicePage(newdev->ctrl, log, *this, newdev->name);
+		log.add(Log::OK, "Added new generic device, type="+newdev->type+", name="+newdev->name+".");
 	}
 	else {
 		printf("%x:FoamControl::add_device() unknown device type\n", (int) pthread_self());
-		log.add(Log::WARNING, "Got unknown device type ("+newdev.type+"), ignored.");
+		log.add(Log::WARNING, "Got unknown device type ("+newdev->type+"), ignored.");
 		return false;
 	}	
 	
@@ -230,7 +231,6 @@ FoamControl::device_t *FoamControl::get_device(const string name) {
 			return &(state.devices[i]);
 	}
 
-	printf("%x:FoamControl::get_device() Does not exist!\n", (int) pthread_self());
 	return NULL;
 }
 
@@ -242,6 +242,5 @@ FoamControl::device_t *FoamControl::get_device(const DevicePage *page) {
 			return &(state.devices[i]);
 	}
 	
-	printf("%x:FoamControl::get_device() Does not exist!\n", (int) pthread_self());
 	return NULL;	
 }

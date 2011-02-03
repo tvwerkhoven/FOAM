@@ -102,6 +102,9 @@ private:
 	LogPage logpage;										//!< Shows log messages (see LogPage and Log)
 	ControlPage controlpage;						//!< Shows base controls (see FoamCtrl)
 	
+	typedef std::map<const string, DevicePage*> pagelist_t;
+	pagelist_t pagelist;								//!< List all device pages here
+	
 	void on_about_activate();						//!< MainMenu::about button callback
 	void on_quit_activate();						//!< MainMenu::quit button callback
 	void on_connect_activate();					//!< MainMenu::connect button callback
