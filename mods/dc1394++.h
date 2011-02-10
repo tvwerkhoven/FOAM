@@ -24,6 +24,7 @@
 #include <dc1394/register.h>
 #include <dc1394/utils.h>
 #include <stdint.h>
+#include <stdlib.h>
 #include <vector>
 #include <stdexcept>
 #include <iostream>
