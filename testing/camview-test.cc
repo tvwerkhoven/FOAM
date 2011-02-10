@@ -251,7 +251,7 @@ void CamView::on_render_clicked() {
 
 void CamView::on_update() {
 	fprintf(stderr, "CamView::on_update()\n");
-	glarea.linkData((void *) data, d, w, h);
+	glarea.link_data((void *) data, d, w, h);
 }
 
 void CamView::on_quit_clicked() {
