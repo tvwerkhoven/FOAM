@@ -1,12 +1,24 @@
 ## @file testing/Makefile.am
 ## @author Tim van Werkhoven (t.i.m.vanwerkhoven@xs4all.nl)
 
-include $(top_srcdir)/common.mk
 
-AM_LDFLAGS = $(COMMON_LIBS) $(GUI_LIBS)
+MODS_DIR = $(top_builddir)/mods
+LIB_DIR = $(top_builddir)/lib
+LIBSIU_DIR = $(top_srcdir)/$(LIBSIU)
+
+AM_CPPFLAGS = -D__STDC_FORMAT_MACROS \
+		-D__STDC_LIMIT_MACROS \
+		-DFOAM_DATADIR=\"$(FOAMDATADIR)\"
+
+AM_CPPFLAGS += \
+        -I$(LIB_DIR) \
+        -I$(MODS_DIR) \
+        -I$(LIBSIU_DIR)
+								
+#AM_LDFLAGS =
 
 if HAVE_MACOSX
-AM_LDFLAGS += -framework CoreFoundation -framework Carbon
+#AM_LDFLAGS += -framework CoreFoundation -framework Carbon
 endif
 
 ## Compilation tests
@@ -41,7 +53,7 @@ if HAVE_DC1394
 check_PROGRAMS += dc1394-test
 
 dc1394_test_SOURCES = dc1394-test.cc
-dc1394_test_CXXFLAGS = $(AM_CXXFLAGS) $(DC1394_CFLAGS)
+dc1394_test_CPPFLAGS = $(DC1394_CFLAGS) $(AM_CPPFLAGS)
 dc1394_test_LDADD = $(LDADD) $(DC1394_LIBS)
 endif
 endif HWDEBUG
@@ -51,11 +63,11 @@ check_PROGRAMS += pixbuf-test gtk-test sigcpp-test zern-test
 
 pixbuf_test_SOURCES = pixbuf-test.cc
 pixbuf_test_CPPFLAGS = $(GUI_CFLAGS) $(AM_CPPFLAGS)
-pixbuf_test_LDADD = -lgthread-2.0
+pixbuf_test_LDADD = $(GUI_LIBS) -lgthread-2.0
 
 gtk_test_SOURCES = gtk-test.cc
 gtk_test_CPPFLAGS = $(GUI_CFLAGS) $(AM_CPPFLAGS)
-gtk_test_LDADD = -lgthread-2.0
+gtk_test_LDADD = $(GUI_LIBS) -lgthread-2.0
 
 sigcpp_test_SOURCES = sigcpp-test.cc
 sigcpp_test_CPPFLAGS = $(SIGC_CFLAGS) $(AM_CPPFLAGS)
@@ -63,8 +75,10 @@ sigcpp_test_LDADD = $(LDADD) $(SIGC_LIBS)
 
 zern_test_SOURCES = zern-test.cc \
 		$(LIB_DIR)/zernike.cc
+zern_test_CPPFLAGS = $(COMMON_CFLAGS) $(AM_CPPFLAGS)
 zern_test_LDADD = $(LIBSIU_DIR)/libimgdata.a \
-		$(LIBSIU_DIR)/libio.a
+		$(LIBSIU_DIR)/libio.a \
+		$(COMMON_LIBS)
 
 
 if FULLSIM
@@ -81,9 +95,11 @@ shwfs_test_SOURCES = shwfs-test.cc \
 		$(LIB_DIR)/zernike.cc \
 		../foam/foamctrl.cc
 
-shwfs_test_CFLAGS = $(FFTW_CFLAGS)
-shwfs_test_CXXFLAGS = $(AM_CXXFLAGS)
-shwfs_test_LDADD = $(FFTW_LIBS) \
+shwfs_test_CFLAGS = $(COMMON_CFLAGS) $(FFTW_CFLAGS)
+shwfs_test_CPPFLAGS = $(SIGC_CFLAGS) $(AM_CPPFLAGS)
+shwfs_test_LDADD = $(COMMON_LIBS) \
+		$(SIGC_LIBS) \
+		$(FFTW_LIBS) \
 		$(LIBSIU_DIR)/libio.a \
 		$(LIBSIU_DIR)/libpath.a \
 		$(LIBSIU_DIR)/libprotocol.a \
@@ -96,12 +112,7 @@ endif FULLSIM
 
 if HAVE_OPENGL
 
-check_PROGRAMS += opengl-test camview-test 
-
-opengl_test_SOURCES = opengl-test.cc
-opengl_test_CPPFLAGS = $(GUI_CFLAGS) $(AM_CPPFLAGS)
-opengl_test_CFLAGS = $(GUI_CFLAGS)
-opengl_test_LDADD = $(GUI_LIBS) $(LIBSIU_DIR)/libglviewer.a -lgthread-2.0
+check_PROGRAMS += camview-test 
 
 camview_test_SOURCES = camview-test.cc
 camview_test_CPPFLAGS = $(GUI_CFLAGS) $(AM_CPPFLAGS)
