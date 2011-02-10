@@ -155,13 +155,13 @@ double FW1394Camera::cam_get_offset() {
 
 void FW1394Camera::cam_handler() { 
 	pthread::setcanceltype(PTHREAD_CANCEL_ASYNCHRONOUS);
-	//! @todo make this Mac compatible
-#ifndef __APPLE__
-	cpu_set_t cpuset;
-	CPU_ZERO(&cpuset);
-	CPU_SET(1, &cpuset);
-	pthread::setaffinity(&cpuset);
-#endif
+	//! @todo Re-implement this
+	//#ifndef __APPLE__
+//	cpu_set_t cpuset;
+//	CPU_ZERO(&cpuset);
+//	CPU_SET(1, &cpuset);
+	//pthread::setaffinity(&cpuset);
+	//#endif
 	
 	while (true) {
 		//! @todo Should mutex lock each time reading mode, or is this ok?
