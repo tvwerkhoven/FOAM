@@ -69,16 +69,16 @@ AC_SEARCH_LIBS([pthread_create],
 
 AC_SEARCH_LIBS([ffopen],
 		[cfitsio],
-		[],
+  	[AC_DEFINE([HAVE_CFITSIO], [1], [CFITSIO supported.])],
 		[FOAM_FATAL=yes;FOAM_MISSING+=" cfitsio"])
 
 PKG_CHECK_MODULES(SIGC, [sigc++-2.0 >= 2.0], [],
 		[FOAM_FATAL=yes;FOAM_MISSING+=" sigc++-2.0"])
 
-PKG_CHECK_MODULES(GSL, [gsl >= 1.11], [],
-		[FOAM_FATAL=yes;FOAM_MISSING+=" gsl gslcblas"])
+PKG_CHECK_MODULES(GSL, [gsl >= 1.11], [AC_DEFINE([HAVE_GSL], [1], [GSL supported.])],
+		[FOAM_FATAL=yes;FOAM_MISSING+=" gsl gslcblas";])
 
-#PKG_CHECK_MODULES(FITSIO, [cfitsio], [],
+#PKG_CHECK_MODULES(FITSIO, [cfitsio], [AC_DEFINE([HAVE_CFITSIO], [1], [CFITSIO supported.])],
 #		[FOAM_FATAL=yes;FOAM_MISSING+=" cfitsio"])
 
 COMMON_CFLAGS="$SIGC_CFLAGS $GSL_CFLAGS $FITSIO_CFLAGS"
@@ -98,9 +98,9 @@ if test "$have_dc1394" = true ; then
 	case "$build" in
 		*-*-linux*)
 		# TODO: test this, do we need it?
-		AC_SEARCH_LIBS(raw1394_channel_modify, raw1394,
-				[have_dc1394=true],
-				[have_dc1394=false;AC_MSG_WARN(libraw1394 not found or too old (<1.2.0), required for libdc1394.)])
+		#AC_SEARCH_LIBS(raw1394_channel_modify, raw1394,
+		#		[have_dc1394=true],
+		#		[have_dc1394=false;AC_MSG_WARN(libraw1394 not found or too old (<1.2.0), required for libdc1394.)])
 		;;
 		*-*-darwin*)
 		AC_SEARCH_LIBS(IOMasterPort, IOKit,
