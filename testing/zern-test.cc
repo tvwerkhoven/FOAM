@@ -19,7 +19,13 @@
  along with FOAM.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include "autoconfig.h"
+
+#if HAVE_GSL
 #include <gsl/gsl_matrix.h>
+#else
+#error "Cannot compile without GSL libraries!"
+#endif
 #include <math.h>
 
 #include "imgdata.h"
