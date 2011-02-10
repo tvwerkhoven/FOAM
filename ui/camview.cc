@@ -108,7 +108,7 @@ histoalign(0.5, 0.5, 0, 0), minval("Display min"), maxval("Display max"), e_avg(
 	disable_gui();
 	
 	// glarea
-	//glarea.linkData((void *) NULL, 8, 0, 0);
+	//glarea.link_data((void *) NULL, 8, 0, 0);
 	glarea.set_size_request(256, 256);	
 	
 	// signals
@@ -450,7 +450,7 @@ void CamView::on_monitor_update() {
 void CamView::force_update() {
 	//! @todo difference between on_monitor_update
 	//! @todo need mutex here?
-	glarea.linkData((void *) camctrl->monitor.image, camctrl->monitor.depth, camctrl->monitor.x2 - camctrl->monitor.x1, camctrl->monitor.y2 - camctrl->monitor.y1);
+	glarea.link_data((void *) camctrl->monitor.image, camctrl->monitor.depth, camctrl->monitor.x2 - camctrl->monitor.x1, camctrl->monitor.y2 - camctrl->monitor.y1);
 	
 	// Do histogram, make local copy if needed
 	if (camctrl->monitor.histo) {
