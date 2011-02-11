@@ -40,6 +40,6 @@ int main() {
 	printf("sizeof uint64_t: %zu\n", sizeof (uint64_t));
 	printf("sizeof uint64_t*: %zu\n", sizeof (uint64_t*));
 	
-	printf("This is a %zu bit system.\n", sizeof (int*)*8);
+	printf("This program is running as %zu bits.\n", sizeof (int*)*8);
 	return 0;
 }
