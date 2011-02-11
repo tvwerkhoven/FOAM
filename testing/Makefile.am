@@ -116,8 +116,8 @@ check_PROGRAMS += camview-test
 
 camview_test_SOURCES = camview-test.cc
 camview_test_CPPFLAGS = $(GUI_CFLAGS) $(AM_CPPFLAGS)
-camview_test_CFLAGS = $(GUI_CFLAGS) 
-camview_test_LDADD = $(GUI_CFLAGS) -lgthread-2.0 \
+camview_test_CFLAGS = $(COMMON_CFLAGS) $(GUI_CFLAGS) 
+camview_test_LDADD = $(COMMON_LIBS) $(GUI_LIBS) -lgthread-2.0 \
 		$(LIBSIU_DIR)/libglviewer.a \
 		$(LIBSIU_DIR)/libprotocol.a \
 		$(LIBSIU_DIR)/libsocket.a
@@ -127,8 +127,8 @@ endif HAVE_OPENGL
 check_PROGRAMS += camsend-test
 
 camsend_test_SOURCES = camsend-test.cc
-camsend_test_CFLAGS = $(FITSIO_CFLAGS) 
-camsend_test_LDADD = $(FITSIO_LIBS) \
+camsend_test_CPPFLAGS = $(COMMON_CFLAGS) $(AM_CPPFLAGS)
+camsend_test_LDADD = $(COMMON_LIBS) \
 		$(LIBSIU_DIR)/libprotocol.a \
 		$(LIBSIU_DIR)/libsocket.a
 
