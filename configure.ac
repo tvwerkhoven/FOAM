@@ -56,6 +56,10 @@ AC_SUBST(FOAMDATADIR)
 AC_SUBST(FOAMCONFDIR)
 
 
+### Store & reset $(LIBS) to capture output of AC_SEARCH_LIBS
+OLDLIBS=$(LIBS)
+LIBS=
+
 ### These libraries are crucial for all targets
 AC_SEARCH_LIBS([sin],
 		[m],
@@ -82,9 +86,12 @@ PKG_CHECK_MODULES(GSL, [gsl >= 1.11], [AC_DEFINE([HAVE_GSL], [1], [GSL supported
 #		[FOAM_FATAL=yes;FOAM_MISSING+=" cfitsio"])
 
 COMMON_CFLAGS="$SIGC_CFLAGS $GSL_CFLAGS $FITSIO_CFLAGS"
-COMMON_LIBS="$SIGC_LIBS $GSL_LIBS $FITSIO_LIBS"
+COMMON_LIBS="$SIGC_LIBS $GSL_LIBS $FITSIO_LIBS $LIBS"
 AC_SUBST(COMMON_CFLAGS)
 AC_SUBST(COMMON_LIBS)
+
+# Reset LIBS
+LIBS=$(OLDLIBS)
 
 ### Hardware libraries
 
