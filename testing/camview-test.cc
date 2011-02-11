@@ -57,7 +57,6 @@ class CamView: public Gtk::Window {
 	Gtk::ImageMenuItem zoomout;
 	Gtk::SeparatorMenuItem tsep2;
 	Gtk::CheckMenuItem crosshair;
-	Gtk::CheckMenuItem pager;
 	Gtk::SeparatorMenuItem tsep3;
 	Gtk::ImageMenuItem close;
 	
@@ -97,7 +96,7 @@ public:
 CamView::CamView():
 view("View"), fliph("Flip horizontal"), flipv("Flip vertical"),
 zoom1(Stock::ZOOM_100), zoomin(Stock::ZOOM_IN), zoomout(Stock::ZOOM_OUT), 
-crosshair("Show crosshair"), pager("Show pager"),
+crosshair("Show crosshair"),
 close(Stock::CLOSE),
 glframe("Camera X"),
 reset("Reset zoom/pan"), render(Stock::REFRESH), zoom1b(Stock::ZOOM_100), quit(Stock::QUIT)
@@ -117,7 +116,6 @@ reset("Reset zoom/pan"), render(Stock::REFRESH), zoom1b(Stock::ZOOM_100), quit(S
 	fliph.set_active(false);
 	flipv.set_active(false);
 	crosshair.set_active(false);
-	pager.set_active(false);
 	
 	viewmenu.set_accel_group(get_accel_group());
 	
@@ -135,8 +133,6 @@ reset("Reset zoom/pan"), render(Stock::REFRESH), zoom1b(Stock::ZOOM_100), quit(S
 	
 	crosshair.set_accel_path("<camera>/menu/view/crosshair");
 	AccelMap::add_entry("<camera>/menu/view/crosshair", AccelKey("c").get_key(), Gdk::SHIFT_MASK);
-	pager.set_accel_path("<camera>/menu/view/pager");
-	AccelMap::add_entry("<camera>/menu/view/pager", AccelKey("p").get_key(), Gdk::SHIFT_MASK);
 
 	glarea.set_size_request(256, 256);	
 
@@ -144,7 +140,6 @@ reset("Reset zoom/pan"), render(Stock::REFRESH), zoom1b(Stock::ZOOM_100), quit(S
 	fliph.signal_toggled().connect(sigc::mem_fun(*this, &CamView::state_update));
 	flipv.signal_toggled().connect(sigc::mem_fun(*this, &CamView::state_update));
 	crosshair.signal_toggled().connect(sigc::mem_fun(*this, &CamView::state_update));
-	pager.signal_toggled().connect(sigc::mem_fun(*this, &CamView::state_update));
 	zoom1.signal_activate().connect(sigc::mem_fun(*this, &CamView::on_zoom1_activate));
 	zoomin.signal_activate().connect(sigc::mem_fun(*this, &CamView::on_zoomin_activate));
 	zoomout.signal_activate().connect(sigc::mem_fun(*this, &CamView::on_zoomout_activate));
@@ -169,7 +164,6 @@ reset("Reset zoom/pan"), render(Stock::REFRESH), zoom1b(Stock::ZOOM_100), quit(S
 	viewmenu.add(zoomout);
 	viewmenu.add(tsep2);
 	viewmenu.add(crosshair);
-	viewmenu.add(pager);
 	viewmenu.add(tsep3);
 	viewmenu.add(close);
 	view.set_submenu(viewmenu);
@@ -207,7 +201,6 @@ CamView::~CamView() {
 void CamView::state_update() {
 	fprintf(stderr, "CamView::state_update()\n");
 	glarea.setcrosshair(crosshair.get_active());
-	glarea.setpager(pager.get_active());
 	// Flip settings
 	glarea.setfliph(fliph.get_active());
 	glarea.setflipv(flipv.get_active());
