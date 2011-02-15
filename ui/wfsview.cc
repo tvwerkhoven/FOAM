@@ -24,6 +24,7 @@
 #include "devicectrl.h"
 #include "wfsctrl.h"
 #include "wfsview.h"
+#include "camview.h"
 
 using namespace std;
 using namespace Gtk;
@@ -31,7 +32,8 @@ using namespace Gtk;
 WfsView::WfsView(WfsCtrl *wfsctrl, Log &log, FoamControl &foamctrl, string n): 
 DevicePage((DeviceCtrl *) wfsctrl, log, foamctrl, n), wfsctrl(wfsctrl),
 wfpow_frame("Wavefront info"), 
-wfpow_mode("Basis"), wfpow_align(0.5, 0.5, 0, 0)
+wfpow_mode("Basis"), wfpow_align(0.5, 0.5, 0, 0),
+wfscam_ui(NULL)
 {
 	fprintf(stderr, "%x:WfsView::WfsView()\n", (int) pthread_self());
 	
@@ -52,11 +54,12 @@ wfpow_mode("Basis"), wfpow_align(0.5, 0.5, 0, 0)
 	wfpow_hbox.pack_start(wfpow_mode, PACK_SHRINK);
 	wfpow_hbox.pack_start(wfpow_align);
 	wfpow_frame.add(wfpow_hbox);
-
+	
 	pack_start(wfpow_frame, PACK_SHRINK);
 	
 	wfsctrl->signal_message.connect(sigc::mem_fun(*this, &WfsView::do_info_update));
 	wfsctrl->signal_wavefront.connect(sigc::mem_fun(*this, &WfsView::do_wfspow_update));
+	wfsctrl->signal_wfscam.connect(sigc::mem_fun(*this, &WfsView::do_cam_update));
 
 	// finalize
 	show_all_children();
@@ -151,4 +154,11 @@ void WfsView::do_wfspow_update() {
 
 	wfpow_img.queue_draw();
 }
+
+void WfsView::do_cam_update() {
+	// New camera for this WFS, get from foamctrl and store in this class.
+	FoamControl::device_t *dev_wfscam = foamctrl.get_device(wfsctrl->wfscam);
+	wfscam_ui = (CamView *) dev_wfscam->page;
+}
+
 

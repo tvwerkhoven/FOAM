@@ -29,6 +29,7 @@
 
 #include "wfsctrl.h"
 #include "deviceview.h"
+#include "camview.h"
 
 /*!
  @brief Generic wavefront sensor GUI class
@@ -43,15 +44,19 @@ protected:
 	
 	Frame wfpow_frame;
 	HBox wfpow_hbox;
-
+	
 	LabeledEntry wfpow_mode;								//!< Wavefront representation modes used (KL, Zernike, mirror, etc.)
 	Alignment wfpow_align;
 	EventBox wfpow_events;
 	Image wfpow_img;
 	Glib::RefPtr<Gdk::Pixbuf> wfpow_pixbuf;
 	
+	CamView *wfscam_ui;									//!< Camera GUI class
+	
+	
 	void do_wfspow_update();								//!< Update WF display
 	void do_info_update();									//!< Update general info in GUI
+	void do_cam_update();								//!< Update on WFS camera
 
 	// From DevicePage::
 	virtual void enable_gui();
