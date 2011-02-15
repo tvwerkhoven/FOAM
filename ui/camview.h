@@ -46,6 +46,7 @@ using namespace std;
  cameras and can display frames.
  */
 class CamView: public DevicePage {
+	friend class WfsView;
 protected:
 	CamCtrl *camctrl;
 	
