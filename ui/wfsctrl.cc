@@ -31,7 +31,8 @@
 using namespace std;
 
 WfsCtrl::WfsCtrl(Log &log, const string h, const string p, const string n):
-	DeviceCtrl(log, h, p, n)
+DeviceCtrl(log, h, p, n),
+wfscam("")
 {
 	fprintf(stderr, "%x:WfsCtrl::WfsCtrl()\n", (int) pthread_self());
 	
@@ -53,6 +54,7 @@ void WfsCtrl::on_connected(bool conn) {
 		send_cmd("measuretest");
 		send_cmd("get modes");
 		send_cmd("get basis");
+		send_cmd("get camera");
 	}
 }
 
@@ -95,6 +97,10 @@ void WfsCtrl::on_message(string line) {
 		}
 		signal_wavefront();
 		
+	} else if (what == "camera") {
+		wfscam = popword(line);
+		signal_wfscam();
+		return;
 	} else if (what == "basis") {
 			wf.basis = popword(line);
 	} else if (what == "measuretest" || what == "measure") {

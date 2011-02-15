@@ -60,6 +60,8 @@ public:
 	
 	struct wavefront wf;								//!< Wavefront information
 	
+	string wfscam;											//!< Camera associated with this wavefront sensor
+	
 	WfsCtrl(Log &log, const string name, const string host, const string port);
 	~WfsCtrl();
 	
@@ -70,7 +72,8 @@ public:
 	int get_nmodes() { return wf.nmodes; }
 	gsl_vector_float *get_modes() { return wf.wfamp; }
 	
-	Glib::Dispatcher signal_wavefront;	//!< New wavefront inforatmion available
+	Glib::Dispatcher signal_wfscam;			//!< WFS camera available now
+	Glib::Dispatcher signal_wavefront;	//!< New wavefront information available
 };
 
 #endif // HAVE_WFSCTRL_H

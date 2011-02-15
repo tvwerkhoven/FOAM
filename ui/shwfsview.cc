@@ -30,6 +30,8 @@ WfsView((WfsCtrl *) ctrl, log, foamctrl, n), shwfsctrl(ctrl)
 {
 	fprintf(stderr, "%x:ShwfsView::ShwfsView()\n", (int) pthread_self());
 	
+
+	
 	clear_gui();
 	disable_gui();
 	
