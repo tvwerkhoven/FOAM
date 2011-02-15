@@ -144,7 +144,6 @@ void FoamControl::on_message(string line) {
 			string type = popword(line);
 			add_device(name, type);
 		}
-		// Signal device update to main GUI thread
 	}
 	else if (what == "cmd") {
 		//! \todo implement "cmd" confirmation hook
@@ -168,6 +167,13 @@ bool FoamControl::add_device(const string name, const string type) {
 	// Check if already exists
 	if (get_device(name) != NULL) {
 		printf("%x:FoamControl::add_device() Exists!\n", (int) pthread_self());
+		log.add(Log::ERROR, "Device " + name + " already exists, cannot add!");
+		return false;
+	}
+
+	if (type.substr(0,3) != "dev") {
+		printf("%x:FoamControl::add_device() Type wrong!\n", (int) pthread_self());
+		log.add(Log::ERROR, "Device type wrong, should start with 'dev' (was: " + type + ")");
 		return false;
 	}
 	
@@ -180,24 +186,7 @@ bool FoamControl::add_device(const string name, const string type) {
 	newdev->name = name;
 	newdev->type = type;
 	
-	
-	if (newdev->type.substr(0,3) != "dev") {
-		printf("%x:FoamControl::add_device() Type wrong!\n", (int) pthread_self());
-		log.add(Log::ERROR, "Device type wrong, should start with 'dev' (was: " + newdev->type + ")");
-		return false;
-	}
-	else if (newdev->type.substr(0,3) == "dev") {
-		printf("%x:FoamControl::add_device() got dev\n", (int) pthread_self());
-		newdev->ctrl = (DeviceCtrl *) new DeviceCtrl(log, host, port, newdev->name);
-		newdev->page = (DevicePage *) new DevicePage(newdev->ctrl, log, *this, newdev->name);
-		log.add(Log::OK, "Added new generic device, type="+newdev->type+", name="+newdev->name+".");
-	}
-	else {
-		printf("%x:FoamControl::add_device() unknown device type\n", (int) pthread_self());
-		log.add(Log::WARNING, "Got unknown device type ("+newdev->type+"), ignored.");
-		return false;
-	}	
-	
+		
 	printf("%x:FoamControl::add_device() Ok\n", (int) pthread_self());
 	state.numdev++;
 	signal_device();

@@ -29,20 +29,25 @@
 
 #include <gtkmm.h>
 #include <gtkmm/accelmap.h>
+#include <gtkglmm.h>
+
 #include <string.h>
 
 #include <iostream>
 #include <string>
 #include <map>
 
+#include "protocol.h"
+#include "glviewer.h"
+
 #include "about.h"
 #include "widgets.h"
 #include "log.h"
 #include "logview.h"
-#include "protocol.h"
 #include "foamcontrol.h"
 #include "controlview.h"
 
+// Supported devices go here
 #include "deviceview.h"
 #include "devicectrl.h"
 #include "camview.h"
@@ -227,86 +232,38 @@ void MainWindow::on_ctrl_device_update() {
 		fprintf(stderr, "MainWindow::on_ctrl_device_update() %d/%d: %s - %s\n", i, foamctrl.get_numdev(), tmpdev->name.c_str(), tmpdev->type.c_str());
 		
 		if (pagelist.find(tmpdev->name) == pagelist.end()) {
-			// Did not find this page in pagelist, add
+			// This device is new! Init control and GUI element and add to mother GUI
+			
+			if (tmpdev->type.substr(0, 13) == "dev.wfs.shwfs") {
+				fprintf(stderr, "MainWindow::on_ctrl_device_update() got shwfs device\n");
+				tmpdev->ctrl = (DeviceCtrl *) new ShwfsCtrl(log, foamctrl.host, foamctrl.port, tmpdev->name);
+				tmpdev->page = (DevicePage *) new ShwfsView((ShwfsCtrl *) tmpdev->ctrl, log, foamctrl, tmpdev->name);
+				log.add(Log::OK, "Added new SH-WFS device, type="+tmpdev->type+", name="+tmpdev->name+".");
+			}
+			else if (tmpdev->type.substr(0, 7) == "dev.wfs") {
+				fprintf(stderr, "MainWindow::on_ctrl_device_update() got generic wfs device\n");
+				tmpdev->ctrl = (DeviceCtrl *) new WfsCtrl(log, foamctrl.host, foamctrl.port, tmpdev->name);
+				tmpdev->page = (DevicePage *) new WfsView((WfsCtrl *) tmpdev->ctrl, log, foamctrl, tmpdev->name);
+				log.add(Log::OK, "Added new generic WFS device, type="+tmpdev->type+", name="+tmpdev->name+".");
+			}
+			else if (tmpdev->type.substr(0, 7) == "dev.cam") {
+				fprintf(stderr, "MainWindow::on_ctrl_device_update() got generic camera device\n");
+				tmpdev->ctrl = (DeviceCtrl *) new CamCtrl(log, foamctrl.host, foamctrl.port, tmpdev->name);
+				tmpdev->page = (DevicePage *) new CamView((CamCtrl *) tmpdev->ctrl, log, foamctrl, tmpdev->name);
+				log.add(Log::OK, "Added new generic camera, type="+tmpdev->type+", name="+tmpdev->name+".");
+			}
+			// Fallback, if we don't have a good GUI element for the device, use a generic device controller
+			else {
+				printf("%x:FoamControl::add_device() got dev\n", (int) pthread_self());
+				tmpdev->ctrl = (DeviceCtrl *) new DeviceCtrl(log, foamctrl.host, foamctrl.port, tmpdev->name);
+				tmpdev->page = (DevicePage *) new DevicePage((DeviceCtrl *) tmpdev->ctrl, log, foamctrl, tmpdev->name);
+				log.add(Log::OK, "Added new generic device, type="+tmpdev->type+", name="+tmpdev->name+".");
+			}
+			
 			notebook.append_page(*(tmpdev->page), "_" + tmpdev->name, tmpdev->name, true);
 			pagelist[tmpdev->name] = tmpdev->page;
 		}
 	}
-	
-	/*
-	// We remove devices from the GUI that are not known to foamctrl here. 
-	// We loop over devices in the GUI and if these do not appear in the 
-	// foamctrl list, we remove them.
-	devlist_t::iterator it;
-	for (it=devlist.begin(); it != devlist.end(); it++) {
-		// This GUI device is named it->first, has GUI element it->second.
-		
-		// Find this device and remove it if it does not exist
-		int i=0;
-		for (i=0; i<foamctrl.get_numdev(); i++) {
-			FoamControl::device_t dev = foamctrl.get_device(i);
-			if (dev.name == it->first) // Found it! break here now
-				break;
-		}
-		if (i == foamctrl.get_numdev()) {
-			// If i equals foamctrl.get_numdev(), the device wasn't found, remove it from the GUI
-			//! @todo Add destructor to DevicePage to remove itself from the Notebook so we don't have to
-			notebook.remove_page(*(it->second)); // removes GUI element
-	 devlist[dev.name] = (DevicePage *) tmp;
-			delete it->second; // remove gui element itself
-			devlist.erase(it); // remove from devlist
-		}       
-	}
-	
-	for (int i=0; i<foamctrl.get_numdev(); i++) {
-		FoamControl::device_t dev = foamctrl.get_device(i);
-		if (devlist.find(dev.name) != devlist.end())
-			continue; // Already exists, skip
-		
-		// First check if type is sane
-		if (dev.type.substr(0,3) != "dev") {
-			fprintf(stderr, "MainWindow::on_ctrl_device_update() Type wrong!\n");
-			log.add(Log::ERROR, "Device type wrong, should start with 'dev' (was: " + dev.type + ")");
-			continue;
-		}
-		// Then add specific devices first, and more general devices later
-		else if (dev.type.substr(0,13) == "dev.wfs.shwfs") {
-			fprintf(stderr, "MainWindow::on_ctrl_device_update() got shwfs device\n");
-			ShwfsCtrl *tmpctrl = new ShwfsCtrl(log, foamctrl.host, foamctrl.port, dev.name);
-			ShwfsView *tmp = new ShwfsView(tmpctrl, log, foamctrl, dev.name);
-			devlist[dev.name] = (DevicePage *) tmp;
-			log.add(Log::OK, "Added new SH-WFS, type="+dev.type+", name="+dev.name+".");
-		}
-		else if (dev.type.substr(0,7) == "dev.wfs") {
-			fprintf(stderr, "MainWindow::on_ctrl_device_update() got generic wfs device\n");
-			WfsCtrl *tmpctrl = new WfsCtrl(log, foamctrl.host, foamctrl.port, dev.name);
-			WfsView *tmp = new WfsView(tmpctrl, log, foamctrl, dev.name);
-			devlist[dev.name] = (DevicePage *) tmp;
-			log.add(Log::OK, "Added new generic WFS, type="+dev.type+", name="+dev.name+".");
-		}
-		else if (dev.type.substr(0,7) == "dev.cam") {
-			fprintf(stderr, "MainWindow::on_ctrl_device_update() got generic camera device\n");
-			CamCtrl *tmpctrl = new CamCtrl(log, foamctrl.host, foamctrl.port, dev.name);
-			CamView *tmp = new CamView(tmpctrl, log, foamctrl, dev.name);
-			devlist[dev.name] = (DevicePage *) tmp;
-			log.add(Log::OK, "Added new generic camera, type="+dev.type+", name="+dev.name+".");
-		}
-		else if (dev.type.substr(0,3) == "dev") {
-			fprintf(stderr, "MainWindow::on_ctrl_device_update() got generic device\n");                    
-			DeviceCtrl *tmpctrl = new DeviceCtrl(log, foamctrl.host, foamctrl.port, dev.name);
-			DevicePage *tmp = new DevicePage(tmpctrl, log, foamctrl, dev.name);
-			devlist[dev.name] = (DevicePage *) tmp;
-			log.add(Log::OK, "Added new generic device, type="+dev.type+", name="+dev.name+".");
-		}
-		else {
-			fprintf(stderr, "MainWindow::on_ctrl_device_update() Type unknown!\n");
-			log.add(Log::WARNING, "Got unknown device type ("+dev.type+"), ignored.");
-			continue;
-		}
-		
-		notebook.append_page(*devlist[dev.name], "_" + dev.name, dev.name, true);
-	}
-	 */
 	
 	show_all_children();
 }
@@ -346,6 +303,8 @@ int main(int argc, char *argv[]) {
 	
 	Gtk::Main kit(argc, argv);
 	Gtk::GL::init(argc, argv);
+	
+	glutInit(&argc, argv);
 	
  	MainWindow *window = new MainWindow();
 	Main::run(*window);

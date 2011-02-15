@@ -21,6 +21,10 @@
 #ifndef HAVE_FGUI_H
 #define HAVE_FGUI_H
 
+#ifdef HAVE_AUTOCONFIG_H
+#include "autoconfig.h"
+#endif
+
 #include <iostream>
 #include <string>
 #include <map>
