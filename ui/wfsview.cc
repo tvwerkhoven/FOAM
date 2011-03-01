@@ -64,7 +64,14 @@ wfscam_ui(NULL)
 	wfpow_hbox.pack_start(wfpow_align);
 	wfpow_frame.add(wfpow_hbox);
 	
-	pack_start(wfpow_frame, PACK_SHRINK);
+	// Extra window
+	extra_win.set_title("FOAM WFS " + devname);
+	
+	extra_vbox.pack_start(wfpow_frame, PACK_SHRINK);
+	extra_win.add(extra_vbox);
+	
+	extra_win.show_all_children();
+	extra_win.present();
 	
 	wfsctrl->signal_message.connect(sigc::mem_fun(*this, &WfsView::do_info_update));
 	wfsctrl->signal_wavefront.connect(sigc::mem_fun(*this, &WfsView::do_wfspow_update));

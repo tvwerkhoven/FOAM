@@ -38,6 +38,7 @@ ShwfsCtrl::ShwfsCtrl(Log &log, const string h, const string p, const string n):
 {
 	fprintf(stderr, "%x:ShwfsCtrl::ShwfsCtrl()\n", (int) pthread_self());
 	
+	mlacfg.reserve(128);
 }
 
 ShwfsCtrl::~ShwfsCtrl() {
@@ -53,9 +54,7 @@ void ShwfsCtrl::on_connected(bool conn) {
 	fprintf(stderr, "%x:ShwfsCtrl::on_connected(conn=%d)\n", (int) pthread_self(), conn);
 	
 	if (conn) {
-		// send_cmd("measuretest");
-		// send_cmd("get modes");
-		// send_cmd("get basis");
+		send_cmd("mla get");
 	}
 }
 

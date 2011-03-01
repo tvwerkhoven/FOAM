@@ -38,10 +38,42 @@ class ShwfsView: public WfsView {
 protected:
 	ShwfsCtrl *shwfsctrl;
 	
-	// From WfsView::
+	// MLA / subimage controls
+	Frame subi_frame;										//!< Frame for subimage controls
+	HBox subi_hbox1;
+	VBox subi_vbox11;
+	HBox subi_hbox111;
+	VBox subi_vbox12;
+	HBox subi_hbox121;
+	HBox subi_hbox122;
+	VBox subi_vbox13;
+	VSeparator vsep1;
+	VSeparator vsep2;
+	
+	ComboBoxText subi_select;						//!< List of subimages
+	LabeledEntry subi_lx;								//!< Subimage coordinate lower x
+	LabeledEntry subi_ly;								//!< Subimage coordinate lower y
+	LabeledEntry subi_tx;								//!< Subimage coordinate top x
+	LabeledEntry subi_ty;								//!< Subimage coordinate top y
+	
+	Button subi_update;									//!< Update current subimage data
+	Button subi_del;										//!< Delete current subimage
+	Button subi_add;										//!< Add new subimage
+	
+	Button subi_regen;									//!< Re-generate subimage pattern
+	Button subi_find;										//!< Find subimage pattern
+
+	// From DeviceView::
 	virtual void enable_gui();
 	virtual void disable_gui();
 	virtual void clear_gui();
+
+	// From WfsView::
+	virtual void do_wfspow_update();
+	virtual void do_info_update();
+	
+	// Extra events:
+	void on_subi_select_changed();
 	
 public:
 	ShwfsView(ShwfsCtrl *ctrl, Log &log, FoamControl &foamctrl, string n);
