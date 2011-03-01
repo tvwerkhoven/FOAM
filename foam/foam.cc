@@ -19,6 +19,7 @@
  */
 
 //! @todo Handle signals properly, call shutdown()
+//! @bug FOAM quits when GUI quits, perhaps because of unhandled signals?
 
 // HEADERS //
 /***********/
