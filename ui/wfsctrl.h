@@ -46,7 +46,7 @@ protected:
 	virtual void on_message(string line);
 	virtual void on_connected(bool connected);
 
-public:
+private:
 	
 	/*!
 	 @brief This holds information on the wavefront. Based on Wfs::wavefront, but more versatile (strings instead of enums)
@@ -60,8 +60,9 @@ public:
 	
 	struct wavefront wf;								//!< Wavefront information
 	
-	string wfscam;											//!< Camera associated with this wavefront sensor
-	
+	string wfscam;											//!< Cameraname associated with this wavefront sensor
+
+public:
 	WfsCtrl(Log &log, const string name, const string host, const string port);
 	~WfsCtrl();
 	

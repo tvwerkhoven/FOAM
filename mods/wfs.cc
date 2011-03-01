@@ -40,6 +40,8 @@ cam(wfscam)
 	add_cmd("measuretest");
 	add_cmd("get modes");
 	add_cmd("get basis");
+	add_cmd("get calib");
+	add_cmd("get camera");
 }
 
 Wfs::Wfs(Io &io, foamctrl *const ptc, const string name, const string type, const string port, Path const &conffile, Camera &wfscam, const bool online):
@@ -54,6 +56,7 @@ cam(wfscam)
 	add_cmd("get modes");
 	add_cmd("get basis");
 	add_cmd("get calib");
+	add_cmd("get camera");
 }
 
 Wfs::~Wfs() {
@@ -82,6 +85,9 @@ void Wfs::on_message(Connection *const conn, string line) {
 				moderep += format("%4f ", gsl_vector_float_get(wf.wfamp, n));
 			}
 			conn->write(format("ok modes %d %s", wf.nmodes, moderep.c_str()));
+		} else if (what == "camera") {
+			conn->addtag("camera");
+			conn->write("ok camera " + cam.name);
 		} else if (what == "calib") {
 			conn->addtag("calib");
 			conn->write(format("ok calib %d", is_calib));

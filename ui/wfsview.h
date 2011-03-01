@@ -42,10 +42,12 @@ class WfsView: public DevicePage {
 protected:
 	WfsCtrl *wfsctrl;
 	
+	VSeparator vsep0;
+	LabeledEntry wf_cam;								//!< Camera used for this wavefront sensor	
+	
 	Frame wfpow_frame;
 	HBox wfpow_hbox;
-	
-	LabeledEntry wfpow_mode;								//!< Wavefront representation modes used (KL, Zernike, mirror, etc.)
+	LabeledEntry wfpow_mode;						//!< Wavefront representation modes used (KL, Zernike, mirror, etc.)
 	Alignment wfpow_align;
 	EventBox wfpow_events;
 	Image wfpow_img;
@@ -53,10 +55,9 @@ protected:
 	
 	CamView *wfscam_ui;									//!< Camera GUI class
 	
-	
-	void do_wfspow_update();								//!< Update WF display
-	void do_info_update();									//!< Update general info in GUI
-	void do_cam_update();								//!< Update on WFS camera
+	virtual void do_wfspow_update();		//!< Update WF display
+	virtual void do_info_update();			//!< Update general info in GUI
+	virtual void do_cam_update();				//!< Update on WFS camera
 
 	// From DevicePage::
 	virtual void enable_gui();

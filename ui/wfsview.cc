@@ -31,6 +31,7 @@ using namespace Gtk;
 
 WfsView::WfsView(WfsCtrl *wfsctrl, Log &log, FoamControl &foamctrl, string n): 
 DevicePage((DeviceCtrl *) wfsctrl, log, foamctrl, n), wfsctrl(wfsctrl),
+wf_cam("Cam"), 
 wfpow_frame("Wavefront info"), 
 wfpow_mode("Basis"), wfpow_align(0.5, 0.5, 0, 0),
 wfscam_ui(NULL)
@@ -45,9 +46,17 @@ wfscam_ui(NULL)
 	wfpow_mode.set_width_chars(12);
 	wfpow_mode.set_editable(false);
 	
+	wf_cam.set_width_chars(16);
+	wf_cam.set_editable(false);
+	
 	clear_gui();
 	disable_gui();
 	
+	// Extra device info
+	devhbox.pack_start(vsep0, PACK_SHRINK);
+	devhbox.pack_start(wf_cam, PACK_SHRINK);
+		
+	// Wavefront power 'spectrum' (separate window)
 	wfpow_events.add(wfpow_img);
 	wfpow_align.add(wfpow_events);
 	
@@ -72,20 +81,30 @@ WfsView::~WfsView() {
 void WfsView::enable_gui() {
 	DevicePage::enable_gui();
 	fprintf(stderr, "%x:WfsView::enable_gui()\n", (int) pthread_self());
+
 }
 
 void WfsView::disable_gui() {
 	DevicePage::disable_gui();
 	fprintf(stderr, "%x:WfsView::disable_gui()\n", (int) pthread_self());
+	
 }
 
 void WfsView::clear_gui() {
 	DevicePage::clear_gui();
 	fprintf(stderr, "%x:WfsView::clear_gui()\n", (int) pthread_self());
+	
+	wf_cam.set_text("N/A");
+	
+	wfpow_mode.set_text("N/A");
 }
 
 void WfsView::do_info_update() {
+	// Set wavefront basis text
 	wfpow_mode.set_text(wfsctrl->get_basis());
+	
+	if (wfscam_ui)
+		wf_cam.set_text(wfsctrl->wfscam);
 }
 	
 void WfsView::do_wfspow_update() {	
@@ -159,6 +178,10 @@ void WfsView::do_cam_update() {
 	// New camera for this WFS, get from foamctrl and store in this class.
 	FoamControl::device_t *dev_wfscam = foamctrl.get_device(wfsctrl->wfscam);
 	wfscam_ui = (CamView *) dev_wfscam->page;
+	
+	// update gui with new information
+	do_info_update();
+	do_wfspow_update();
 }
 
 
