@@ -24,8 +24,8 @@
 #define HAVE_WFSCTRL_H
 
 #include <glibmm/dispatcher.h>
-#include <gsl/gsl_vector.h>
 #include <string>
+#include <vector>
 
 #include "pthread++.h"
 #include "protocol.h"

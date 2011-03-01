@@ -21,6 +21,7 @@
 #include <iostream>
 #include <arpa/inet.h>
 #include <string>
+#include <vector>
 
 #include "format.h"
 #include "protocol.h"
