@@ -106,7 +106,11 @@ void CamCtrl::on_message(string line) {
 		height = popint32(line);
 	else if(what == "depth")
 		depth = popint32(line);
-	else if(what == "store")
+	else if(what == "resolution") {
+		width = popint32(line);
+		height = popint32(line);
+		depth = popint32(line);
+	} else if(what == "store")
 		nstore = popint32(line);
 	else if(what == "filename")
 		filename = popword(line);

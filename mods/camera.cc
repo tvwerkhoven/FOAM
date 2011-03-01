@@ -69,6 +69,7 @@ fits_telescope("undef"), fits_observer("undef"), fits_instrument("undef"), fits_
 	add_cmd("get width");
 	add_cmd("get height");
 	add_cmd("get depth");
+	add_cmd("get resolution");
 	add_cmd("get filename");
 	add_cmd("get outputdir");
 	add_cmd("get fits");
@@ -425,6 +426,8 @@ void Camera::on_message(Connection *const conn, string line) {
 			conn->write(format("ok height %d", res.y));
 		} else if(what == "depth") {
 			conn->write(format("ok depth %d", depth));
+		} else if(what == "resolution") {
+			conn->write(format("ok resolution %d %d %d", res.x, res.y, depth));
 		} else if(what == "filename") {
 			conn->addtag("filename");
 			conn->write("ok filename :" + filenamebase);
