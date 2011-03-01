@@ -31,9 +31,6 @@ int main() {
 	printf("sizeof int: %zu\n", sizeof (int));
 	printf("sizeof int*: %zu\n", sizeof (int*));
 
-	printf("sizeof *dataint: %zu\n", sizeof *dataint);
-	printf("sizeof dataint: %zu\n", sizeof dataint);
-
 	printf("sizeof uint32_t: %zu\n", sizeof (uint32_t));
 	printf("sizeof uint32_t*: %zu\n", sizeof (uint32_t*));
 	
@@ -41,5 +38,17 @@ int main() {
 	printf("sizeof uint64_t*: %zu\n", sizeof (uint64_t*));
 	
 	printf("This program is running as %zu bits.\n", sizeof (int*)*8);
+	
+	size_t as = 32;
+	int ai = 32;
+	printf("(int) size_t(32): %zu -> %d\n", as, (int) as);
+	printf("(size_t) int(32): %d -> %zu\n", ai, (size_t) ai);
+
+	as = (1 << 31) -1;
+	ai = (1 << 31) - 1;
+	
+	printf("(int) size_t(2^31-1): %zu -> %d\n", as, (int) as);
+	printf("(size_t) int(2^31-1): %d -> %d\n", ai, (size_t) ai);
+	
 	return 0;
 }

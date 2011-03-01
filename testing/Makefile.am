@@ -55,7 +55,7 @@ check_PROGRAMS += dc1394-test
 dc1394_test_SOURCES = dc1394-test.cc
 dc1394_test_CPPFLAGS = $(DC1394_CFLAGS) $(AM_CPPFLAGS)
 dc1394_test_LDADD = $(LDADD) $(DC1394_LIBS)
-endif
+endif HAVE_DC1394
 endif HWDEBUG
 
 if DEBUG
