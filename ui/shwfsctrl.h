@@ -23,10 +23,11 @@
 
 #include <glibmm/dispatcher.h>
 #include <string>
-
+#include <vector>
 
 #include "pthread++.h"
 #include "protocol.h"
+#include "types.h"
 
 #include "devicectrl.h"
 #include "wfsctrl.h"
@@ -43,7 +44,9 @@ protected:
 	// From WfsCtrl::
 	virtual void on_message(string line);
 	virtual void on_connected(bool connected);
-
+	
+	std::vector<fvector_t> mlacfg;			//!< Simple subimage configuration
+	
 public:
 	ShwfsCtrl(Log &log, const string name, const string host, const string port);
 	~ShwfsCtrl();
@@ -51,6 +54,8 @@ public:
 	// From WfsCtrl::
 	virtual void connect();
 	
+	size_t get_mla_nsi() const { return mlacfg.size(); }
+	fvector_t get_mla_si(const size_t idx) const { return mlacfg[idx]; }
 };
 
 #endif // HAVE_SHWFSCTRL_H

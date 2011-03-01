@@ -29,15 +29,13 @@ using namespace std;
 
 DeviceCtrl::DeviceCtrl(Log &log, const string h, const string p, const string n):
 	host(h), port(p), devname(n),
-	protocol(host, port, devname), log(log)
+	protocol(host, port, devname), log(log),
+	ok(false), init(false), errormsg("Not connected")
 {
 	printf("%x:DeviceCtrl::DeviceCtrl(name=%s)\n", (int) pthread_self(), n.c_str());	
 	
-	ok = false;
-	errormsg = "Not connected";
-
 	// Open control connection, register basic callbacks
-	protocol.slot_message = sigc::mem_fun(this, &DeviceCtrl::on_message);
+	protocol.slot_message = sigc::mem_fun(this, &DeviceCtrl::on_message_common);
 	protocol.slot_connected = sigc::mem_fun(this, &DeviceCtrl::on_connected);
 }
 
@@ -57,20 +55,34 @@ void DeviceCtrl::send_cmd(const string &cmd) {
 	printf("%x:DeviceCtrl::sent cmd: %s\n", (int) pthread_self(), cmd.c_str());
 }
 
-void DeviceCtrl::on_message(string line) {
-	printf("%x:DeviceCtrl::on_message(line=%s)\n", (int) pthread_self(), line.c_str());	
+void DeviceCtrl::on_message_common(string line) {
+	printf("%x:DeviceCtrl::on_message_common(line=%s)\n", (int) pthread_self(), line.c_str());
+	// Save line for passing to on_message()
+	string orig = line;
 	string stat = popword(line);
-
+	
 	if (stat != "ok") {
 		ok = false;
 		errormsg = line;
 		log.add(Log::ERROR, devname + ": <- " + stat + " " + line);
-	}
-	else {
+	} else {
 		ok = true;
 		log.add(Log::OK, devname + ": <- " + stat + " " + line);
+		
+		// Common functions are complete, call on_message for further parsing. 
+		// DeviceCtrl::on_message() is virtual so it will call the derived class first.
+		
+		// Only call in case of success
+		on_message(orig);
 	}
-	
+}
+
+void DeviceCtrl::on_message(string line) {
+	fprintf(stderr, "%x:DeviceCtrl::on_message(line=%s)\n", (int) pthread_self(), line.c_str());
+
+	// Discard first 'ok' or 'err' (DeviceCtrl::on_message_common() already parsed this)
+	string stat = popword(line);
+
 	// Parse list of commands device can accept here
 	string what = popword(line);
 	if (what == "commands") {
@@ -83,11 +95,15 @@ void DeviceCtrl::on_message(string line) {
 				break;
 			devcmds.push_back(cmd);
 		}
-		// Sort alphabetically
+		// Sort alphabetically & notify GUI of update
 		devcmds.sort();
 		signal_commands();
+		return;
+	} else {
+		ok = false;
+		errormsg = "Unexpected response '" + what + "'";
 	}
-	
+
 	signal_message();
 }
 

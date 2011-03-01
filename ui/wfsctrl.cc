@@ -59,26 +59,26 @@ void WfsCtrl::on_connected(bool conn) {
 }
 
 void WfsCtrl::on_message(string line) {
-	DeviceCtrl::on_message(line);
 	fprintf(stderr, "%x:WfsCtrl::on_message(line=%s)\n", (int) pthread_self(), line.c_str());
-	
-	if (!ok) {
-		return;
-	}
-	// Discard first 'ok' or 'err' (DeviceCtrl::on_message() already parsed this)
+
+	// Save original line in case this function does not know what to do
+	string orig = line;
+	bool parsed = true;
+
+	// Discard first 'ok' or 'err' (DeviceCtrl::on_message_common() already parsed this)
 	string stat = popword(line);
 	
 	// Get command
 	string what = popword(line);
 
-	if(what == "modes") {
+	if (what == "modes") {
 		wf.nmodes = popint(line);
 
 		// Check nmodes sane
 		if (wf.nmodes <= 0) {
 			ok = false;
 			errormsg = format("Got %d<=0 modes", wf.nmodes);
-			//! @todo need signal_message(); here? can we exit more gently?
+			signal_message();
 			return;
 		}
 		
@@ -96,7 +96,6 @@ void WfsCtrl::on_message(string line) {
 			gsl_vector_float_set(wf.wfamp, n, tmp);
 		}
 		signal_wavefront();
-		
 	} else if (what == "camera") {
 		wfscam = popword(line);
 		signal_wfscam();
@@ -106,10 +105,11 @@ void WfsCtrl::on_message(string line) {
 	} else if (what == "measuretest" || what == "measure") {
 		// If Wfs did a measurement or measuretest, get the results
 		send_cmd("get modes");
-	} else {
-		ok = false;
-		errormsg = "Unexpected response '" + what + "'";
-	}
-
-	signal_message();
+	} else
+		parsed = false;
+	
+	if (!parsed)
+		DeviceCtrl::on_message(orig);
+	else
+		signal_message();
 }

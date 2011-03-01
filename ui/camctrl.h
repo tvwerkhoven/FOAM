@@ -60,7 +60,7 @@ public:
 	mode_t mode;
 	
 protected:
-	Protocol::Client monitorprotocol;		//!< Data channel for images
+	Protocol::Client monitorprotocol;		//!< Data connection for images (bulk data)
 
 	// Camera settings
 	double exposure;										//!< Camera exposure
@@ -77,7 +77,7 @@ protected:
 	virtual void on_message(string line);
 	virtual void on_connected(bool connected);
 
-	// For monitorprotocol
+	// For monitorprotocol message handling
 	void on_monitor_message(string line);
 	void on_monitor_connected(bool connected);
 	

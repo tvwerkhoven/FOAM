@@ -21,10 +21,12 @@
 #include <iostream>
 #include <arpa/inet.h>
 #include <string>
+#include <vector>
 
 #include "format.h"
 #include "protocol.h"
 #include "log.h"
+#include "types.h"
 
 #include "wfsctrl.h"
 #include "shwfsctrl.h"
@@ -58,18 +60,52 @@ void ShwfsCtrl::on_connected(bool conn) {
 }
 
 void ShwfsCtrl::on_message(string line) {
-	WfsCtrl::on_message(line);
 	fprintf(stderr, "%x:ShwfsCtrl::on_message(line=%s)\n", (int) pthread_self(), line.c_str());
 	
-	if (!ok) {
-		return;
-	}
-	// Discard first 'ok' or 'err' (DeviceCtrl::on_message() already parsed this)
+	// Save original line in case this function does not know what to do
+	string orig = line;
+	bool parsed = true;
+	
+	// Discard first 'ok' or 'err' (DeviceCtrl::on_message_common() already parsed this)
 	string stat = popword(line);
 	
 	// Get command
 	string what = popword(line);
 
-	//signal_message();
+	if (what == "mla") {
+		// get subtopic
+		string what2 = popword(line);
+		
+		if (what2 == "get") {
+			int n = popint(line);
+			
+			fprintf(stderr, "%x:ShwfsCtrl::on_message(mla get=%d)\n", (int) pthread_self(), n);
+			if (n <= 0) {
+				ok = false;
+				errormsg = "Unexpected response for 'mla get'";
+				signal_message();
+				return;
+			}
+			int idx;
+			double x0, y0, w, h;
+			//! @todo this probably needs a mutex as well (Should we use a *Ctrl mutex for all DeviceCtrl classes?)
+			mlacfg.clear();
+			for (int i=0; i<n; i++) {
+				idx = popint(line);
+				x0 = popdouble(line); y0 = popdouble(line);
+				w = popdouble(line); h = popdouble(line);
+				mlacfg.push_back(fvector_t(x0, y0, x0+w, y0+h));
+			}
+			
+			signal_wavefront();
+			return;
+		}
+	} else
+		parsed = false;
+
+	if (!parsed)
+		WfsCtrl::on_message(orig);
+	else
+		signal_message();
 }
 

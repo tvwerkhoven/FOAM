@@ -55,13 +55,29 @@ protected:
 	Log &log;
 	
 	bool ok;														//!< Hardware status
+	uint32_t init;											//!< Initial setup complete?
 	string errormsg;										//!< Error message from hardware
 	string lastreply;										//!< Last reply we got from FOAM
 	string lastcmd;											//!< Last cmd we sent
 	
 	cmdlist_t devcmds;									//!< List of device commands available
 	
-	virtual void on_message(string line); //!< New data received from device
+	/*! @brief New data received from Device over network
+	 
+	 This virtual function is the GUI version of Device::on_message on the 
+	 hardware part of FOAM. The top function is called first, tries to parse the
+	 message and if succesful, does something with the data. If the message was
+	 not understood, it passes the data on to the base function, until it is 
+	 parsed. If finally DeviceCtrl::on_message() is called (this function),
+	 error handling may occur if the message is not understood.
+	 */
+	virtual void on_message(string line);
+	/*! @brief Common functions for on_message()
+	 
+	 This function is called first when new data is received. It handles common
+	 tasks and then delegates the rest to on_message().
+	 */
+	void on_message_common(string line);
 	virtual void on_connected(bool status); //!< Connection to device changed
 	
 public:

@@ -33,22 +33,12 @@ using namespace std;
 
 CamCtrl::CamCtrl(Log &log, const string h, const string p, const string n):
 	DeviceCtrl(log, h, p, n),
-	monitorprotocol(host, port, devname)
+	monitorprotocol(host, port, devname),
+	mode(OFF), exposure(0.0), interval(0.0), gain(0.0), offset(0.0), 
+	width(0), height(0), depth(0), nstore(0)
 {
 	fprintf(stderr, "%x:CamCtrl::CamCtrl()\n", (int) pthread_self());
-	
-	mode = OFF;
-	
-	exposure = 0;
-	interval = 0;
-	gain = 0;
-	offset = 0;
-	width = 0;
-	height = 0;
-	depth = 0;
-	mode = OFF;
-	nstore = 0;
-	
+
 	monitorprotocol.slot_message = sigc::mem_fun(this, &CamCtrl::on_monitor_message);
 }
 
@@ -72,26 +62,24 @@ void CamCtrl::on_connected(bool conn) {
 		send_cmd("get interval");
 		send_cmd("get gain");
 		send_cmd("get offset");
-		send_cmd("get width");
-		send_cmd("get height");
-		send_cmd("get depth");
+		send_cmd("get resolution");
 		send_cmd("get filename");
 	}
 }
 
 void CamCtrl::on_message(string line) {
-	DeviceCtrl::on_message(line);
 	fprintf(stderr, "%x:CamCtrl::on_message(line=%s)\n", (int) pthread_self(), line.c_str());
 	
-	if (!ok) {
-		return;
-	}
-	// Discard first 'ok' or 'err' (DeviceCtrl::on_message() already parsed this)
+	// Save original line in case this function does not know what to do
+	string orig = line;
+	bool parsed = true;
+
+	// Discard first 'ok' or 'err' (DeviceCtrl::on_message_common() already parsed this)
 	string stat = popword(line);
 	
 	// Get command
 	string what = popword(line);
-
+	
 	if(what == "exposure")
 		exposure = popdouble(line);
 	else if(what == "interval")
@@ -131,16 +119,17 @@ void CamCtrl::on_message(string line) {
 			ok = false;
 			errormsg = "Unexpected mode '" + m + "'";
 		}	
-	} else if(what == "thumbnail") {
+	} else if (what == "thumbnail") {
 		protocol.read(thumbnail, sizeof thumbnail);
 		signal_thumbnail();
 		return;
-	} else {
-		ok = false;
-		errormsg = "Unexpected response '" + what + "'";
-	}
-
-	signal_message();
+	} else
+		parsed = false;
+	
+	if (!parsed)
+		DeviceCtrl::on_message(orig);
+	else
+		signal_message();
 }
 
 //!< @bug If this function returns, there is a problem in camview.cc
