@@ -48,6 +48,9 @@ method(Shift::COG)
 //	add_cmd("mla store");
 //	add_cmd("mla del");
 //	add_cmd("mla add");
+//	add_cmd("mla set");
+	add_cmd("mla get");
+	
 	add_cmd("get mla");
 	add_cmd("set mla");
 	add_cmd("calibrate");
@@ -106,12 +109,13 @@ int Shwfs::calc_zern_infl(int nmodes) {
 	double slope[2];
 	for (int m=0; m <= nmodes; m++) {
 		gsl_matrix *tmp = zernbasis.get_mode(m);
-		_calc_slope(tmp, mlacfg, slope);
+		calc_slope(tmp, mlacfg, slope);
 		
 	}
+	return 0;
 }
 
-int Shwfs::_calc_slope(gsl_matrix *tmp, sh_mla_t &mlacfg, double *slope) {
+int Shwfs::calc_slope(gsl_matrix *tmp, sh_mla_t &mlacfg, double *slope) {
 	double sum;
 	for (int si=0; si < mlacfg.nsi; si++) {
 		sum=0;
@@ -141,36 +145,45 @@ void Shwfs::on_message(Connection *const conn, string line) {
 			//! @todo get extra options from line
 			gen_mla_grid(&mlacfg, cam.get_res(), sisize, sipitch, xoff, disp, shape, overlap);
 		} else if(what == "find") {
-			//! @todo get extra options from line
+			int tmp = popint(line);
+			if (tmp > 0) sisize = tmp;
+			tmp = popint(line);
+			if (tmp > 0) simini = tmp;
+			
 			find_mla_grid(&mlacfg, sisize, simini);
 		} else if(what == "store") {
 			//! @todo implement
 		} else if(what == "del") {
-			//! @todo implement
+			int idx = popint(line);
+			//if (idx >= 0) 
 		} else if(what == "add") {
 			//! @todo implement
+		} else if(what == "set") {
+			conn->addtag("mla");
+			if (set_mla_str(line))
+				conn->write("error mla :Could not parse MLA string");
+		} else if(what == "get") {
+			//! @todo implement
+			int tmp = popint(line);
+			if (tmp > 0 && tmp < mlacfg.nsi) {
+				conn->write(format("ok mla get 1 %d %d %d %d %d", 
+													 tmp, 
+													 mlacfg.ml[tmp].llpos.x, 
+													 mlacfg.ml[tmp].llpos.y, 
+													 mlacfg.ml[tmp].size.x, 
+													 mlacfg.ml[tmp].size.y));
+			}
+			else
+				conn->write("ok mla get " + get_mla_str());
 		}
 	} else if (command == "get") {
 		string what = popword(line);
 		
-		if (what == "mla") {
-			conn->addtag("mla");
-			conn->write("ok mla " + get_mla_str());
-		} else {
-			parsed = false;
-			//conn->write("error :Unknown argument " + what);
-		}
+		parsed = false;
 	} else if (command == "set") {
 		string what = popword(line);
 		
-		if(what == "mla") {
-			conn->addtag("mla");
-			if (set_mla_str(line))
-				conn->write("error mla :Could not parse MLA string");
-		} else {
-			parsed = false;
-			//conn->write("error :Unknown argument " + what);
-		}
+		parsed = false;
 	} else if (command == "calibrate") {
 		calibrate();
 		conn->write("ok calibrate");
@@ -476,13 +489,14 @@ string Shwfs::get_mla_str(const sh_mla_t mla) const {
 	string ret = format("%d ", mla.nsi);
 	
 	for (int i=0; i<mla.nsi; i++)
-		ret += format("%d %d %d %d ", mla.ml[i].llpos.x, mla.ml[i].llpos.y, mla.ml[i].size.x, mla.ml[i].size.y);
+		ret += format("%d %d %d %d %d ", i, mla.ml[i].llpos.x, mla.ml[i].llpos.y, mla.ml[i].size.x, mla.ml[i].size.y);
 	
 	return ret;
 }
 
 int Shwfs::set_mla_str(string mla_str) {
 	// Syntax shoud be: <n> <x0> <y0> <w0> <h0> [<x1> <y1> <w1> <h1> [...]]
+	//! @todo Change MLA syntax to (x0, y0), (x1, y1) instead of size, store corner coordinates
 	int nsi = popint(mla_str);
 	int x, y, w, h;
 	
@@ -495,7 +509,7 @@ int Shwfs::set_mla_str(string mla_str) {
 		y = popint(mla_str);
 		w = popint(mla_str);
 		h = popint(mla_str);
-		if (x <=0 || y <= 0 || w <= 0 || h <= 0)
+		if (x <= 0 || y <= 0 || w <= 0 || h <= 0)
 			return -1;
 		
 		ml_tmp[i].llpos.x = x;
