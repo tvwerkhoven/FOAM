@@ -54,8 +54,14 @@ public:
 	// From WfsCtrl::
 	virtual void connect();
 	
+	// Local MLA configuration
 	size_t get_mla_nsi() const { return mlacfg.size(); }
 	fvector_t get_mla_si(const size_t idx) const { return mlacfg[idx]; }
+	
+	// Control MLA configuration of remote system
+	void mla_add_si(const int lx, const int ly, const int tx, const int ty) const { send_cmd(format("mla add %d %d %d %d", lx, ly, tx, ty)); }
+	void mla_del_si(const int idx) const { send_cmd(format("mla del %d", idx)); }
+	
 };
 
 #endif // HAVE_SHWFSCTRL_H

@@ -46,8 +46,8 @@ method(Shift::COG)
 	add_cmd("mla generate");
 	add_cmd("mla find");
 //	add_cmd("mla store");
-//	add_cmd("mla del");
-//	add_cmd("mla add");
+	add_cmd("mla del");
+	add_cmd("mla add");
 //	add_cmd("mla set");
 	add_cmd("mla get");
 	
@@ -152,18 +152,22 @@ void Shwfs::on_message(Connection *const conn, string line) {
 			
 			find_mla_grid(&mlacfg, sisize, simini);
 		} else if(what == "store") {
-			//! @todo implement
+			// mla store [id]
+			//! @todo implement mla store [id]
 		} else if(what == "del") {
+			// mla del <idx>
 			int idx = popint(line);
-			//if (idx >= 0) 
+			//if (idx >= 0)
+				
 		} else if(what == "add") {
-			//! @todo implement
+			// mla add <lx> <ly> <tx> <ty>
 		} else if(what == "set") {
+			// mla set [mla configuration]
 			conn->addtag("mla");
 			if (set_mla_str(line))
 				conn->write("error mla :Could not parse MLA string");
 		} else if(what == "get") {
-			//! @todo implement
+			// mla get [index]
 			int tmp = popint(line);
 			if (tmp > 0 && tmp < mlacfg.nsi) {
 				conn->write(format("ok mla get 1 %d %d %d %d %d", 
