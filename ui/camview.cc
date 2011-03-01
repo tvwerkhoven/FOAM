@@ -40,11 +40,13 @@
 using namespace std;
 using namespace Gtk;
 
+
+
 CamView::CamView(CamCtrl *camctrl, Log &log, FoamControl &foamctrl, string n): 
 DevicePage((DeviceCtrl *) camctrl, log, foamctrl, n), camctrl(camctrl),
 ctrlframe("Camera controls"),
 dispframe("Display settings"),
-camframe("Camera"),
+camframe("Camera " + devname),
 histoframe("Histogram"),
 capture("Capture"), display("Display"), store("Store"), e_exposure("Exp."), e_offset("Offset"), e_interval("Intv."), e_gain("Gain"), e_res("Res."), e_mode("Mode"), e_stat("Status"),
 flipv("Flip V"), fliph("Flip H"), crosshair("X-hair"), grid("Grid"), histo("Histogram"), zoomin(Stock::ZOOM_IN), zoomout(Stock::ZOOM_OUT), zoom100(Stock::ZOOM_100), zoomfit(Stock::ZOOM_FIT), 
@@ -107,8 +109,6 @@ histoalign(0.5, 0.5, 0, 0), minval("Display min"), maxval("Display max"), e_avg(
 	clear_gui();
 	disable_gui();
 	
-	// glarea
-	//glarea.link_data((void *) NULL, 8, 0, 0);
 	glarea.set_size_request(256, 256);	
 	
 	// signals
@@ -132,14 +132,13 @@ histoalign(0.5, 0.5, 0, 0), minval("Display min"), maxval("Display max"), e_avg(
 	zoom100.signal_clicked().connect(sigc::mem_fun(*this, &CamView::on_zoom100_activate));
 	zoomin.signal_clicked().connect(sigc::mem_fun(*this, &CamView::on_zoomin_activate));
 	zoomout.signal_clicked().connect(sigc::mem_fun(*this, &CamView::on_zoomout_activate));
-
 	
 	histoevents.signal_button_press_event().connect(sigc::mem_fun(*this, &CamView::on_histo_clicked));
 	
 	// Handle some glarea events as well
 	glarea.view_update.connect(sigc::mem_fun(*this, &CamView::on_glarea_view_update));
 		
-	// layout
+	// Camera controls
 	ctrlhbox.set_spacing(4);
 	ctrlhbox.pack_start(capture, PACK_SHRINK);
 	ctrlhbox.pack_start(display, PACK_SHRINK);
@@ -168,8 +167,8 @@ histoalign(0.5, 0.5, 0, 0), minval("Display min"), maxval("Display max"), e_avg(
 	disphbox.pack_start(zoomout, PACK_SHRINK);
 	dispframe.add(disphbox);
 	
-	camhbox.pack_start(glarea);
-	camframe.add(camhbox);
+	// Camera window
+	camframe.add(glarea);
 	
 	histoevents.add(histoimage);
 	histoalign.add(histoevents);
@@ -192,16 +191,23 @@ histoalign(0.5, 0.5, 0, 0), minval("Display min"), maxval("Display max"), e_avg(
 	
 	pack_start(ctrlframe, PACK_SHRINK);
 	pack_start(dispframe, PACK_SHRINK);
-	pack_start(camframe);
-	pack_start(histoframe, PACK_SHRINK);
 	
-	// finalize
+	// Extra window
+	extra_win.set_title("FOAM Camera " + devname);
+	
+	extra_vbox.pack_start(camframe);
+	extra_vbox.pack_start(histoframe, PACK_SHRINK);
+	extra_win.add(extra_vbox);
+
+	extra_win.show_all_children();
+	extra_win.present();
+
+	// Finalize
 	show_all_children();
-	
+		
 	on_histo_toggled();
 			
 	camctrl->signal_monitor.connect(sigc::mem_fun(*this, &CamView::on_monitor_update));
-
 }
 
 CamView::~CamView() {
@@ -276,15 +282,6 @@ void CamView::clear_gui() {
 	minval.set_value(0);
 	maxval.set_value(1 << camctrl->get_depth());
 }
-
-//void CamView::init() {
-//	fprintf(stderr, "%x:CamView::init()\n", (int) pthread_self());
-//	// Init new camera control connection for this viewer
-//	//camctrl = new CamCtrl(log, foamctrl.host, foamctrl.port, devname);
-//	// Downcast to generic device control pointer for base class (DevicePage in this case)
-//	//devctrl = (DeviceCtrl *) camctrl;
-//	
-//}
 
 void CamView::on_glarea_view_update() {
 	// Callback for glarea update on viewstate (zoom, scale, shift)
@@ -366,16 +363,10 @@ void CamView::do_histo_update() {
 	e_avg.set_text(format("%.2lf", sum));
 	e_rms.set_text(format("%.3lf", rms));
 	
+	// Update min/max if necessary
 	e_datamin.set_text(format("%d", camctrl->monitor.min));
 	e_datamax.set_text(format("%d", camctrl->monitor.max));
-	// Update min/max if necessary
 
-	//<! @todo Add contrast feature
-//	if (contrast.get_active()) {
-//		minval.set_value(sum - 5 * sum * rms);
-//		maxval.set_value(sum + 5 * sum * rms);
-//	}
-	
 	// Draw the histogram
 	
 	if (!histoframe.is_visible())
@@ -469,12 +460,6 @@ void CamView::force_update() {
 	do_histo_update();
 }
 
-//void CamView::on_connect_update() {
-//	DevicePage::on_connect_update();
-//	
-//	fprintf(stderr, "%x:CamView::on_connect_update(conn=%d)\n", (int) pthread_self(), devctrl->is_connected());
-//}
-
 void CamView::on_message_update() {
 	DevicePage::on_message_update();
 
@@ -486,7 +471,10 @@ void CamView::on_message_update() {
 	e_interval.set_text(format("%g", camctrl->get_interval()));
 	e_gain.set_text(format("%g", camctrl->get_gain()));
 	e_res.set_text(format("%dx%dx%d", camctrl->get_width(), camctrl->get_height(), camctrl->get_depth()));
-
+	
+	// Tell glarea what we can expect
+	glarea.set_data(camctrl->get_depth(), camctrl->get_width(), camctrl->get_height());
+	
 	// Set 'Mode' text entry, change color appropriately
 	e_mode.set_text(camctrl->get_modestr());
 	if (camctrl->get_mode() == CamCtrl::WAITING || camctrl->get_mode() == CamCtrl::OFF)

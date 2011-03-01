@@ -46,14 +46,17 @@ using namespace std;
  cameras and can display frames.
  */
 class CamView: public DevicePage {
-	friend class WfsView;
+	friend class ShwfsView;
 protected:
 	CamCtrl *camctrl;
 	
+	// These frames go in the main VBox
 	Frame ctrlframe;
 	Frame dispframe;
+	
+	// The Camera image goes in the extra window
 	Frame camframe;
-	Frame histoframe;
+	Frame histoframe;	
 	
 	// Control stuff
 	// Need: darkflat, fsel, tiptilt, capture, thumb, ...?
@@ -72,7 +75,6 @@ protected:
 	LabeledEntry e_stat;								//!< For status, RO
 	
 	// Display stuff
-	//!< @todo contrast, underover, colorsel, histogram
 	HBox disphbox;
 	CheckButton flipv;									//!< Flip image vertically (only GUI)
 	CheckButton fliph;									//!< Flip image horizontally (only GUI)

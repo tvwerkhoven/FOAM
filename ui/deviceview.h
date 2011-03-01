@@ -57,11 +57,15 @@ protected:
 	
 	string devname;											//!< Device name
 	
+	// This frame 
 	Frame devframe;											//!< Generic device controls Frame
 	HBox devhbox;												//!< Generic device controls HBox
 	ComboBoxText dev_cmds;							//!< All available commands for this device
 	LabeledEntry dev_val;								//!< Value or options for this command
 	Button dev_send;										//!< Send command
+	
+	Window extra_win;										//!< Window for extra information
+	VBox extra_vbox;										//!< VBox for extra_win
 	
 	void on_dev_send_activate();				//!< Callback for dev_send and dev_val
 

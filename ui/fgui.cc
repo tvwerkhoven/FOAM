@@ -233,19 +233,19 @@ void MainWindow::on_ctrl_device_update() {
 		
 		if (pagelist.find(tmpdev->name) == pagelist.end()) {
 			// This device is new! Init control and GUI element and add to mother GUI
-			
+
 			if (tmpdev->type.substr(0, 13) == "dev.wfs.shwfs") {
 				fprintf(stderr, "MainWindow::on_ctrl_device_update() got shwfs device\n");
 				tmpdev->ctrl = (DeviceCtrl *) new ShwfsCtrl(log, foamctrl.host, foamctrl.port, tmpdev->name);
 				tmpdev->page = (DevicePage *) new ShwfsView((ShwfsCtrl *) tmpdev->ctrl, log, foamctrl, tmpdev->name);
 				log.add(Log::OK, "Added new SH-WFS device, type="+tmpdev->type+", name="+tmpdev->name+".");
 			}
-			else if (tmpdev->type.substr(0, 7) == "dev.wfs") {
-				fprintf(stderr, "MainWindow::on_ctrl_device_update() got generic wfs device\n");
-				tmpdev->ctrl = (DeviceCtrl *) new WfsCtrl(log, foamctrl.host, foamctrl.port, tmpdev->name);
-				tmpdev->page = (DevicePage *) new WfsView((WfsCtrl *) tmpdev->ctrl, log, foamctrl, tmpdev->name);
-				log.add(Log::OK, "Added new generic WFS device, type="+tmpdev->type+", name="+tmpdev->name+".");
-			}
+//			else if (tmpdev->type.substr(0, 7) == "dev.wfs") {
+//				fprintf(stderr, "MainWindow::on_ctrl_device_update() got generic wfs device\n");
+//				tmpdev->ctrl = (DeviceCtrl *) new WfsCtrl(log, foamctrl.host, foamctrl.port, tmpdev->name);
+//				tmpdev->page = (DevicePage *) new WfsView((WfsCtrl *) tmpdev->ctrl, log, foamctrl, tmpdev->name);
+//				log.add(Log::OK, "Added new generic WFS device, type="+tmpdev->type+", name="+tmpdev->name+".");
+//			}
 			else if (tmpdev->type.substr(0, 7) == "dev.cam") {
 				fprintf(stderr, "MainWindow::on_ctrl_device_update() got generic camera device\n");
 				tmpdev->ctrl = (DeviceCtrl *) new CamCtrl(log, foamctrl.host, foamctrl.port, tmpdev->name);
