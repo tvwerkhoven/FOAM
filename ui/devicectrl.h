@@ -88,7 +88,7 @@ public:
 	
 	DeviceCtrl(Log &log, const string, const string, const string);
 	~DeviceCtrl();
-	virtual void connect();
+	virtual void connect();							//!< Connect to FOAM. Does not happen immediately because we wait for the GUI to be ready (see DeviceView::)
 	
 	bool is_ok() const { return ok; }		//!< Return device status
 	bool is_connected() { return protocol.is_connected(); } //!< Return device connection status

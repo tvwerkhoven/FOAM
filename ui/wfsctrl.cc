@@ -42,10 +42,6 @@ WfsCtrl::~WfsCtrl() {
 	fprintf(stderr, "%x:WfsCtrl::~WfsCtrl()\n", (int) pthread_self());
 }
 
-void WfsCtrl::connect() {
-	DeviceCtrl::connect();
-}
-
 void WfsCtrl::on_connected(bool conn) {
 	DeviceCtrl::on_connected(conn);
 	fprintf(stderr, "%x:WfsCtrl::on_connected(conn=%d)\n", (int) pthread_self(), conn);
@@ -72,29 +68,20 @@ void WfsCtrl::on_message(string line) {
 	string what = popword(line);
 
 	if (what == "modes") {
-		wf.nmodes = popint(line);
+		int nm = popint(line);
 
 		// Check nmodes sane
-		if (wf.nmodes <= 0) {
+		if (nm <= 0) {
 			ok = false;
-			errormsg = format("Got %d<=0 modes", wf.nmodes);
+			errormsg = format("Got %d<=0 modes", nm);
 			signal_message();
 			return;
 		}
 		
-		// Check allocation ok
-		if (!wf.wfamp)
-			wf.wfamp = gsl_vector_float_alloc(wf.nmodes);
-		else if (wf.wfamp->size != wf.nmodes) {
-			gsl_vector_float_free(wf.wfamp);
-			wf.wfamp = gsl_vector_float_alloc(wf.nmodes);
-		}
-		
 		// Copy wavefront data
-		for (int n=0; n<wf.nmodes; n++) {
-			double tmp = popdouble(line);
-			gsl_vector_float_set(wf.wfamp, n, tmp);
-		}
+		for (int n=0; n<nm; n++)
+			wf.wfamp.push_back(popdouble(line));
+
 		signal_wavefront();
 	} else if (what == "camera") {
 		wfscam = popword(line);

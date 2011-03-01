@@ -47,31 +47,27 @@ protected:
 	virtual void on_connected(bool connected);
 
 private:
-	
 	/*!
 	 @brief This holds information on the wavefront. Based on Wfs::wavefront, but more versatile (strings instead of enums)
 	 */
+	
 	struct wavefront {
-		wavefront() : wfamp(NULL), nmodes(0), basis("UNDEF") { ; }
-		gsl_vector_float *wfamp;					//!< Mode amplitudes
-		int nmodes;												//!< Number of modes
+		wavefront(): basis("UNDEF") { ; }
+		std::vector<float> wfamp;					//!< Mode amplitudes
 		string basis;											//!< Basis functions used for this representation
 	};
 	
 	struct wavefront wf;								//!< Wavefront information
 	
-	string wfscam;											//!< Cameraname associated with this wavefront sensor
-
 public:
 	WfsCtrl(Log &log, const string name, const string host, const string port);
 	~WfsCtrl();
 	
-	// From DeviceCtrl::
-	virtual void connect();
+	string wfscam;											//!< Cameraname associated with this wavefront sensor
 	
-	string get_basis() { return wf.basis; }
-	int get_nmodes() { return wf.nmodes; }
-	gsl_vector_float *get_modes() { return wf.wfamp; }
+	string get_basis() const { return wf.basis; }
+	int get_nmodes() const { return (int) wf.wfamp.size(); }
+	float get_mode(const size_t idx) const { return wf.wfamp[idx]; }
 	
 	Glib::Dispatcher signal_wfscam;			//!< WFS camera available now
 	Glib::Dispatcher signal_wavefront;	//!< New wavefront information available

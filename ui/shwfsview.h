@@ -35,7 +35,7 @@
  
  */
 class ShwfsView: public WfsView {
-protected:
+private:
 	ShwfsCtrl *shwfsctrl;
 	
 	// MLA / subimage controls

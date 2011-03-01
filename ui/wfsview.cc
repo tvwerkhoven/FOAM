@@ -73,10 +73,12 @@ wfscam_ui(NULL)
 	extra_win.show_all_children();
 	extra_win.present();
 	
+	// Event handlers
+	
 	wfsctrl->signal_message.connect(sigc::mem_fun(*this, &WfsView::do_info_update));
 	wfsctrl->signal_wavefront.connect(sigc::mem_fun(*this, &WfsView::do_wfspow_update));
 	wfsctrl->signal_wfscam.connect(sigc::mem_fun(*this, &WfsView::do_cam_update));
-
+	
 	// finalize
 	show_all_children();
 }
@@ -116,25 +118,22 @@ void WfsView::do_info_update() {
 	
 void WfsView::do_wfspow_update() {	
 	int nmodes = wfsctrl->get_nmodes();
-	gsl_vector_float *mode_pow = wfsctrl->get_modes();
 	
-	if (!mode_pow)
-		return;
-	
-	// Draw the wavefront modes
-	
-	if (!wfpow_frame.is_visible())
+	// Return if nothing to be drawn
+	if (!wfpow_frame.is_visible() || nmodes <= 0)
 		return;
 	
 	// mode_pow range is -1 -- 1 for all modes. Check actual maximum:
 	double max=0;
-	max = gsl_vector_float_max (mode_pow);
-
+	for (int m = 0; m < nmodes; m++)
+		if (wfsctrl->get_mode(m) > max)
+			max = wfsctrl->get_mode(m);
+	
 	// make background white
 	wfpow_pixbuf->fill(0xffffff00);
 	
 	// Draw bars
-	uint8_t *out = (uint8_t *)wfpow_pixbuf->get_pixels();
+	uint8_t *out = (uint8_t *) wfpow_pixbuf->get_pixels();
 	
 	int w = wfpow_pixbuf->get_width();
 	int h = wfpow_pixbuf->get_height();
@@ -142,16 +141,18 @@ void WfsView::do_wfspow_update() {
 	// The pixbuf is w pixels wide, we have nmodes modes, so each column is colw wide:
 	int colw = (w/nmodes)-1;
 	
-	//! @todo this fails for more than ~200 modes, add scrollbar?
-	if (colw <= 0)
+	//! @bug this fails for more than ~200 modes, add scrollbar?
+	if (colw <= 0) {
+		fprintf(stderr, "WfsView::do_wfspow_update(): error, too many wavefronts, cannot draw!\n");
 		return;
+	}
 	
 	uint8_t col[3];
 	for (int n = 0; n < nmodes; n++) {
-		float amp = clamp(gsl_vector_float_get(mode_pow, n), -1.0f, 1.0f);
+		float amp = clamp(wfsctrl->get_mode(n), -1.0f, 1.0f);
 		int height = amp*h/2.0; // should be between -h/2 and h/2
 		
-		// Set bar color (red, orange or green):
+		// Set bar color (red 2%, orange 10% or green rest):
 		if (fabs(amp)>0.98) {
 			col[0] = 255; col[1] = 000; col[2] = 000; // X11 red
 		} else if (fabs(amp)>0.90) {
@@ -160,22 +161,18 @@ void WfsView::do_wfspow_update() {
 			col[0] = 144; col[1] = 238; col[2] = 144; // X11 lightgreen
 		}
 		
+		// Bars going down (first part) or up (second part)
 		if (height < 0) {
 			for (int x = n*colw; x < (n+1)*colw; x++) {
 				for (int y = h/2; y > h/2+height; y--) {
 					uint8_t *p = out + 3 * (x + w * y);
 					p[0] = col[0]; p[1] = col[1]; p[2] = col[2];
-				}
-			}
-		}
-		else {
+		} } } else {
 			for (int x = n*colw; x < (n+1)*colw; x++) {
 				for (int y = h/2; y < h/2+height; y++) {
 					uint8_t *p = out + 3 * (x + w * y);
 					p[0] = col[0]; p[1] = col[1]; p[2] = col[2];
-				}
-			}				
-		}
+		} } }
 	}
 
 	wfpow_img.queue_draw();
