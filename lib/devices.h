@@ -124,6 +124,12 @@ public:
 	
 	/*! 
 	 @brief Called when the device receives a message
+	 
+	 This virtual function is called when the Device receives data over the 
+	 network (i.e. commands etc.). The derived class parses this message first,
+	 and if it did not understand the command it will be passed down to the base
+	 class until it is known. If the base class (this class) does still not know
+	 this command, it is treated as 'unknown'.
 	 */
 	virtual void on_message(Connection * const conn, string line);
 	

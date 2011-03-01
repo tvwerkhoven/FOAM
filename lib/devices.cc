@@ -86,6 +86,7 @@ void Device::on_message(Connection * const conn, string line) {
 		}
 	}
 	
+	// Command is not known, give an error message back
 	conn->write("error :Unknown command: " + orig);
 }
 
