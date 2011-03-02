@@ -135,8 +135,6 @@ void ShwfsView::clear_gui() {
 }
 
 void ShwfsView::on_subi_select_changed() {
-	fprintf(stderr, "%x:ShwfsView::on_subi_select_changed()\n", (int) pthread_self());
-
 	// Get current selected item, convert to int
 	string tmp = subi_select.get_active_text();
 	int curr_si = strtol(tmp.c_str(), NULL, 10);
@@ -148,9 +146,6 @@ void ShwfsView::on_subi_select_changed() {
 	// Get coordinates for that subimage
 	fvector_t tmp_si = shwfsctrl->get_mla_si((size_t) curr_si);
 	
-	fprintf(stderr, "%x:ShwfsView::on_subi_select_changed %d, (%.3f, %.3f), (%.3f, %.3f)\n", 
-					(int) pthread_self(), curr_si, tmp_si.lx, tmp_si.ly, tmp_si.tx, tmp_si.ty);
-
 	subi_lx.set_text(format("%.0f", tmp_si.lx));
 	subi_ly.set_text(format("%.0f", tmp_si.ly));
 	subi_tx.set_text(format("%.0f", tmp_si.tx));

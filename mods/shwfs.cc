@@ -171,7 +171,7 @@ void Shwfs::on_message(Connection *const conn, string line) {
 			nx0 = popint(line); ny0 = popint(line); 
 			nx1 = popint(line); ny1 = popint(line);
 			
-			if (mla_update_si(-1, nx0, ny0, nx1, ny1))
+			if (mla_update_si(nx0, ny0, nx1, ny1, -1))
 				conn->write("error mla add :Incorrect subimage coordinates");
 			
 		} else if(what == "update") {			// mla update <idx> <lx> <ly> <tx> <ty>
@@ -181,7 +181,7 @@ void Shwfs::on_message(Connection *const conn, string line) {
 			nx0 = popint(line); ny0 = popint(line); 
 			nx1 = popint(line); ny1 = popint(line);
 
-			if (mla_update_si(idx, nx0, ny0, nx1, ny1))
+			if (mla_update_si(nx0, ny0, nx1, ny1, idx))
 				conn->write("error mla update :Incorrect subimage coordinates");
 		} else if(what == "set") {				// mla set [mla configuration]
 			conn->addtag("mla");
@@ -526,7 +526,7 @@ int Shwfs::_find_max(const T *const img, const size_t nel, size_t *const idx) {
 }
 
 string Shwfs::get_mla_str(const int idx) const {
-	io.msg(IO_WARN, "Shwfs::get_mla_str(idx=%d)", idx);
+	io.msg(IO_DEB2, "Shwfs::get_mla_str(idx=%d)", idx);
 	string ret;
 	
 	if (idx >= 0 && idx < (int) mlacfg.size()) {

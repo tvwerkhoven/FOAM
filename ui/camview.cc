@@ -463,8 +463,6 @@ void CamView::force_update() {
 void CamView::on_message_update() {
 	DevicePage::on_message_update();
 
-	fprintf(stderr, "%x:CamView::on_message_update()\n", (int) pthread_self());
-	
 	// Set values in text entries
 	e_exposure.set_text(format("%g", camctrl->get_exposure()));
 	e_offset.set_text(format("%g", camctrl->get_offset()));
