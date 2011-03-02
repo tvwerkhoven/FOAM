@@ -109,7 +109,26 @@ protected:
 	 */
 	void get_var(Connection * const conn, const string varname, const double value, const string comment="") const;
 
+	/*! 
+	 @brief Called when the device receives a message
+	 
+	 This virtual function is called when the Device receives data over the 
+	 network (i.e. commands etc.). The derived class parses this message first,
+	 and if it did not understand the command it will be passed down to the base
+	 class until it is known. If the base class (this class) does still not know
+	 this command, it is treated as 'unknown'.
+	 */
+	virtual void on_message(Connection * const conn, string line);
 	
+	//!< Common on_message functions go here.
+	void on_message_common(Connection * const conn, string line);
+	
+	/*! 
+	 @brief Called when something connects to this device
+	 */
+	virtual void on_connect(const Connection * const /*conn*/, const bool status) const { 
+		io.msg(IO_DEB2, "Device::on_connect(stat=%d)", (int) status); 
+	}	
 public:
 	class exception: public std::runtime_error {
 	public:
@@ -122,24 +141,6 @@ public:
 	
 	virtual int verify() { return 0; }	//!< Verify the integrity of the device
 	
-	/*! 
-	 @brief Called when the device receives a message
-	 
-	 This virtual function is called when the Device receives data over the 
-	 network (i.e. commands etc.). The derived class parses this message first,
-	 and if it did not understand the command it will be passed down to the base
-	 class until it is known. If the base class (this class) does still not know
-	 this command, it is treated as 'unknown'.
-	 */
-	virtual void on_message(Connection * const conn, string line);
-	
-	/*! 
-	 @brief Called when something connects to this device
-	 */
-	virtual void on_connect(const Connection * const /*conn*/, const bool status) const { 
-		io.msg(IO_DEB2, "Device::on_connect(stat=%d)", (int) status); 
-	}
-
 	bool isonline() const { return online; }
 	string getname() const { return name; }
 	string gettype() const { return type; }
