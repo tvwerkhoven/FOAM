@@ -155,6 +155,9 @@ public:
 	
 	//!< Store MLA grid to disk, as CSV
 	bool store_mla_grid(const bool overwrite=false) const;
+	
+	int mla_update_si(const int nx0, const int ny0, const int nx1, const int ny1, const int idx=-1);
+	int mla_del_si(const int idx);
 
 	//!< Convert shifts to basis functions
 	int shift_to_basis(const gsl_vector_float *const invec, const wfbasis basis, gsl_vector_float *outvec);

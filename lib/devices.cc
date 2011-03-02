@@ -49,12 +49,14 @@ bool Device::init() {
 			throw exception("Device::Device(): Type should be " + type + " for this Device (" + _type + ")!");
 	}
 
-	io.msg(IO_XNFO, "Device %s listening on port %s.", name.c_str(), port.c_str());
 	if (online) {
 		netio.slot_message = sigc::mem_fun(this, &Device::on_message_common);
 		netio.slot_connected = sigc::mem_fun(this, &Device::on_connect);
-		netio.listen();
+		io.msg(IO_XNFO, "Device %s listening on port %s.", name.c_str(), port.c_str());
 	}
+	
+	// Always listen, also for offline devices. In that latter case, simply don't parse any data.
+	netio.listen();
 	
 	return true;
 }

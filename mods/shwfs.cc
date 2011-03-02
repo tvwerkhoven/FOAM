@@ -45,11 +45,11 @@ method(Shift::COG)
 	io.msg(IO_DEB2, "Shwfs::Shwfs()");
 	add_cmd("mla generate");
 	add_cmd("mla find");
-//	add_cmd("mla store");
+	add_cmd("mla store");
 	add_cmd("mla del");
 	add_cmd("mla add");
-//	add_cmd("mla set");
 	add_cmd("mla get");
+	add_cmd("mla set");
 	
 	add_cmd("get mla");
 	add_cmd("set mla");
@@ -139,38 +139,55 @@ void Shwfs::on_message(Connection *const conn, string line) {
 	if (command == "mla") {
 		string what = popword(line);
 
-		if (what == "generate") {
+		if (what == "generate") {					// mla generate
 			//! @todo get extra options from line
+			conn->addtag("mla");
 			gen_mla_grid(mlacfg, cam.get_res(), sisize, sipitch, xoff, disp, shape, overlap);
-		} else if(what == "find") {
-			int tmp = popint(line);
+		} else if(what == "find") {				// mla find [sisize] [simini] [nmax] [iter]
+			conn->addtag("mla");
+			int nmax=-1, iter=1, tmp = popint(line);
 			if (tmp > 0) sisize = tmp;
 			tmp = popint(line);
 			if (tmp > 0) simini = tmp;
+			tmp = popint(line);
+			if (tmp > 0) nmax = tmp;
+			tmp = popint(line);
+			if (tmp > 0) iter = tmp;
 			
-			find_mla_grid(mlacfg, sisize, simini);
-		} else if(what == "store") {
-			// mla store [reserved] [overwrite]
+			find_mla_grid(mlacfg, sisize, simini, nmax, iter);
+		} else if(what == "store") {			// mla store [reserved] [overwrite]
 			popword(line);
 			if (popword(line) == "overwrite")
 				store_mla_grid(true);
 			else
 				store_mla_grid(false);
-		} else if(what == "del") {
-			// mla del <idx>
-			//int idx = popint(line);
-			//if (idx >= 0)
-				
-		} else if(what == "add") {
-			// mla add <lx> <ly> <tx> <ty>
-		} else if(what == "set") {
-			// mla set [mla configuration]
+		} else if(what == "del") {				// mla del <idx>
+			conn->addtag("mla");
+			if (mla_del_si(popint(line)))
+				conn->write("error mla del :Incorrect subimage index");
+		} else if(what == "add") {				// mla add <lx> <ly> <tx> <ty>
+			conn->addtag("mla");
+			int nx0, ny0, nx1, ny1;
+			nx0 = popint(line); ny0 = popint(line); 
+			nx1 = popint(line); ny1 = popint(line);
+			
+			if (mla_update_si(-1, nx0, ny0, nx1, ny1))
+				conn->write("error mla add :Incorrect subimage coordinates");
+			
+		} else if(what == "update") {			// mla update <idx> <lx> <ly> <tx> <ty>
+			conn->addtag("mla");
+			int idx, nx0, ny0, nx1, ny1;
+			idx = popint(line);
+			nx0 = popint(line); ny0 = popint(line); 
+			nx1 = popint(line); ny1 = popint(line);
+
+			if (mla_update_si(idx, nx0, ny0, nx1, ny1))
+				conn->write("error mla update :Incorrect subimage coordinates");
+		} else if(what == "set") {				// mla set [mla configuration]
 			conn->addtag("mla");
 			if (set_mla_str(line))
-				conn->write("error mla :Could not parse MLA string");
-		} else if(what == "get") {
-			// mla get
-			//int tmp = popint(line);
+				conn->write("error mla set :Could not parse MLA string");
+		} else if(what == "get") {				// mla get
 			conn->write("ok mla get " + get_mla_str());
 		}
 	} else if (command == "get") {
@@ -186,18 +203,16 @@ void Shwfs::on_message(Connection *const conn, string line) {
 		conn->write("ok calibrate");
 	} else if (command == "measure") {
 		if (measure())
-			conn->write("error measure :unknown error in measure()");
+			conn->write("error measure :error in measure()");
 		else 
 			conn->write("ok measure");
 	} else {
 		parsed = false;
-		//conn->write("error :Unknown command: " + command);
 	}
 	
 	// If not parsed here, call parent
 	if (parsed == false)
 		Wfs::on_message(conn, orig);
-	
 }
 
 int Shwfs::measure() {
@@ -324,6 +339,7 @@ int Shwfs::gen_mla_grid(std::vector<vector_t> &mlacfg, const coord_t res, const 
 		}
 	}
 	io.msg(IO_XNFO, "Shwfs::gen_mla_grid(): Found %d subapertures.", (int) mlacfg.size());
+	netio.broadcast("ok mla get " + get_mla_str(), "mla");
 	
 	return (int) mlacfg.size();
 }
@@ -453,6 +469,7 @@ int Shwfs::find_mla_grid(std::vector<vector_t> &mlacfg, const coord_t size, cons
 		io.msg(IO_WARN, "Shwfs::find_mla_grid(): got camera buffer overflow, data might be inaccurate");
 	}
 	
+	netio.broadcast("ok mla get " + get_mla_str(), "mla");
 	return (int) mlacfg.size();
 }
 
@@ -461,6 +478,37 @@ int Shwfs::mla_subapsel() {
 	//! @todo implement this with generic MLA setup
 	return 0;
 }
+
+int Shwfs::mla_update_si(const int nx0, const int ny0, const int nx1, const int ny1, const int idx) {
+	// Check bounds
+	if (nx0 >= 0 && ny0 >= 0 && 
+			nx1 < cam.get_width() && ny1 < cam.get_height() &&
+			nx1 > nx0 && ny1 > ny0) {
+		
+		// Update if idx is valid, otherwise add extra subimage
+		if (idx >=0 && idx < (int) mlacfg.size())
+			mlacfg[idx] = vector_t(nx0, ny0, nx1, ny1);
+		else
+			mlacfg.push_back(vector_t(nx0, ny0, nx1, ny1));
+
+		netio.broadcast("ok mla get " + get_mla_str(), "mla");
+		return 0;
+	}
+	else {
+		return -1;
+	}
+}
+
+int Shwfs::mla_del_si(const int idx) {
+	if (idx >=0 && idx < (int) mlacfg.size()) {
+		mlacfg.erase(mlacfg.begin() + idx);
+		netio.broadcast("ok mla get " + get_mla_str(), "mla");
+		return 0;
+	}
+	else
+		return -1;
+}
+
  
 // PRIVATE FUNCTIONS //
 /*********************/
@@ -512,7 +560,7 @@ int Shwfs::set_mla_str(string mla_str) {
 		mlacfg.push_back(vector_t(x0, y0, x1, y1));
 	}
 	
-	netio.broadcast("ok mla " + mla_str);
+	netio.broadcast("ok mla " + mla_str, "mla");
 	return (int) mlacfg.size();
 }
 

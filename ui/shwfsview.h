@@ -38,6 +38,8 @@ class ShwfsView: public WfsView {
 private:
 	ShwfsCtrl *shwfsctrl;
 	
+	const string shwfs_addnew;
+	
 	// MLA / subimage controls
 	Frame subi_frame;										//!< Frame for subimage controls
 	HBox subi_hbox1;
@@ -74,6 +76,12 @@ private:
 	
 	// Extra events:
 	void on_subi_select_changed();
+	void on_subi_add_clicked();
+	void on_subi_del_clicked();
+	void on_subi_update_clicked();
+	
+	void on_subi_regen_clicked();
+	void on_subi_find_clicked();
 	
 public:
 	ShwfsView(ShwfsCtrl *ctrl, Log &log, FoamControl &foamctrl, string n);

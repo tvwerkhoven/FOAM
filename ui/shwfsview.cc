@@ -29,6 +29,7 @@ using namespace Gtk;
 
 ShwfsView::ShwfsView(ShwfsCtrl *ctrl, Log &log, FoamControl &foamctrl, string n): 
 WfsView((WfsCtrl *) ctrl, log, foamctrl, n), shwfsctrl(ctrl),
+shwfs_addnew("Add new"),
 subi_frame("Subimages"),
 subi_lx("X_0"), subi_ly("Y_0"), subi_tx("X_1"), subi_ty("Y_1"), 
 subi_update("Update"), subi_del("Del"), subi_add("Add"), subi_regen("Regen pattern"), subi_find("Find pattern")
@@ -46,6 +47,9 @@ subi_update("Update"), subi_del("Del"), subi_add("Add"), subi_regen("Regen patte
 	subi_add.signal_clicked().connect(sigc::mem_fun(*this, &ShwfsView::on_subi_add_clicked));
 	subi_del.signal_clicked().connect(sigc::mem_fun(*this, &ShwfsView::on_subi_del_clicked));
 	subi_update.signal_clicked().connect(sigc::mem_fun(*this, &ShwfsView::on_subi_update_clicked));
+	
+	subi_regen.signal_clicked().connect(sigc::mem_fun(*this, &ShwfsView::on_subi_regen_clicked));
+	subi_find.signal_clicked().connect(sigc::mem_fun(*this, &ShwfsView::on_subi_find_clicked));
 	
 	// Add widgets
 	// Subimage/ MLA pattern controls
@@ -156,7 +160,11 @@ void ShwfsView::on_subi_select_changed() {
 void ShwfsView::on_subi_add_clicked() {
 	fprintf(stderr, "%x:ShwfsView::on_subi_add_clicked()\n", (int) pthread_self());
 	
-	string tmp;
+	string tmp = subi_select.get_active_text();
+	if (tmp != shwfs_addnew) {
+		fprintf(stderr, "%x:ShwfsView::on_subi_add_clicked() Select '%s' first to add new subimages\n", (int) pthread_self(), shwfs_addnew.c_str());
+		return;
+	}
 
 	// Get text from GUI, convert to floats
 	// Read as floats to process potential decimal signals, then cast to int. 
@@ -192,22 +200,44 @@ void ShwfsView::on_subi_del_clicked() {
 void ShwfsView::on_subi_update_clicked() {
 	fprintf(stderr, "%x:ShwfsView::on_subi_update_clicked()\n", (int) pthread_self());
 	
+	string tmp;
+	
+	// Get text from GUI, convert to floats
+	// Read as floats to process potential decimal signals, then cast to int. 
+	// Reading as ints directly might break on decimals.
+	tmp = subi_lx.get_text();
+	int new_lx = (int) strtof(tmp.c_str(), NULL);
+	tmp = subi_ly.get_text();
+	int new_ly = (int) strtof(tmp.c_str(), NULL);
+	tmp = subi_tx.get_text();
+	int new_tx = (int) strtof(tmp.c_str(), NULL);
+	tmp = subi_ty.get_text();
+	int new_ty = (int) strtof(tmp.c_str(), NULL);
+	
+	// Get current selected item, convert to int
+	tmp = subi_select.get_active_text();
+	int curr_si = strtol(tmp.c_str(), NULL, 10);
+	
+	// Check if selected sub image is within bounds. This also filters out 'Add New'
+	if (curr_si < 0 || curr_si >= (int) shwfsctrl->get_mla_nsi())
+		return;
+	
 	// Add new subimage, delete old one
-#error continue here
+	shwfsctrl->mla_update_si(curr_si, new_lx, new_ly, new_tx, new_ty);
 }
 
 void ShwfsView::on_subi_regen_clicked() {
 	fprintf(stderr, "%x:ShwfsView::on_subi_regen_clicked()\n", (int) pthread_self());
 	
 	// Re-generate subimage pattern
-#error continue here
+	shwfsctrl->mla_regen_pattern();
 }
 
 void ShwfsView::on_subi_find_clicked() {
 	fprintf(stderr, "%x:ShwfsView::on_subi_find_clicked()\n", (int) pthread_self());
 	
 	// Find subimage pattern heuristically
-#error continue here
+	shwfsctrl->mla_find_pattern();
 }
 
 void ShwfsView::do_wfspow_update() {
@@ -225,20 +255,18 @@ void ShwfsView::do_wfspow_update() {
 		//! @todo add drawing vectors for wavefront measurements
 	}
 	
+	//! @bug Updates here do not show immediately. glarea.do_update() does not work because it might not have an image yet
 }
 
 void ShwfsView::do_info_update() {
 	WfsView::do_info_update();
-	fprintf(stderr, "%x:ShwfsView::do_info_update()\n", (int) pthread_self());
+	fprintf(stderr, "%x:ShwfsView::do_info_update(append %zu)\n", (int) pthread_self(), shwfsctrl->get_mla_nsi());
 	
 	// Add list of subimages
 	subi_select.clear_items();
-	fprintf(stderr, "%x:ShwfsView::do_info_update(append %zu)\n", (int) pthread_self(), shwfsctrl->get_mla_nsi());
-	for (int i=0; i<shwfsctrl->get_mla_nsi(); i++) {
-		fprintf(stderr, "%x:ShwfsView::do_info_update(append %d)\n", (int) pthread_self(), i);
-		subi_select.append_text(format("%d", i));
-	}
+	for (size_t i=0; i<shwfsctrl->get_mla_nsi(); i++)
+		subi_select.append_text(format("%d", (int) i));
 	
 	// Add text to add a new subimage
-	subi_select.append_text("Add new");
+	subi_select.append_text(shwfs_addnew);
 }
