@@ -51,7 +51,7 @@ bool Device::init() {
 
 	io.msg(IO_XNFO, "Device %s listening on port %s.", name.c_str(), port.c_str());
 	if (online) {
-		netio.slot_message = sigc::mem_fun(this, &Device::on_message);
+		netio.slot_message = sigc::mem_fun(this, &Device::on_message_common);
 		netio.slot_connected = sigc::mem_fun(this, &Device::on_connect);
 		netio.listen();
 	}
@@ -63,9 +63,13 @@ Device::~Device() {
 	io.msg(IO_DEB2, "Device::~Device()");
 }
 
+void Device::on_message_common(Connection * const conn, string line) {
+	io.msg(IO_DEB2, "Device::on_message_common('%s') %s", 
+				 line.c_str(), name.c_str());
+	on_message(conn, line);
+}
+
 void Device::on_message(Connection * const conn, string line) { 
-	io.msg(IO_DEB2, "Device::on_message('%s') %s::%s", 
-				 line.c_str(), type.c_str(), name.c_str());
 	string orig = line;
 	
 	string command = popword(line);

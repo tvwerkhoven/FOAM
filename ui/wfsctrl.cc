@@ -56,8 +56,6 @@ void WfsCtrl::on_connected(bool conn) {
 }
 
 void WfsCtrl::on_message(string line) {
-	fprintf(stderr, "%x:WfsCtrl::on_message(line=%s)\n", (int) pthread_self(), line.c_str());
-
 	// Save original line in case this function does not know what to do
 	string orig = line;
 	bool parsed = true;

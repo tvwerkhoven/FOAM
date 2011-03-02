@@ -356,8 +356,6 @@ Camera::frame_t *Camera::get_frame(const size_t id, const bool wait) {
 
 // Network IO starts here
 void Camera::on_message(Connection *const conn, string line) {
-	io.msg(IO_DEB1, "Camera::on_message('%s')", line.c_str()); 
-	
 	string orig = line;
 	string command = popword(line);
 	bool parsed = true;

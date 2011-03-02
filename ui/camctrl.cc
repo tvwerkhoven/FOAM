@@ -68,8 +68,6 @@ void CamCtrl::on_connected(bool conn) {
 }
 
 void CamCtrl::on_message(string line) {
-	fprintf(stderr, "%x:CamCtrl::on_message(line=%s)\n", (int) pthread_self(), line.c_str());
-	
 	// Save original line in case this function does not know what to do
 	string orig = line;
 	bool parsed = true;

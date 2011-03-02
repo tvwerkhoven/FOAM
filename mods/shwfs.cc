@@ -132,7 +132,6 @@ int Shwfs::calc_slope(gsl_matrix *tmp, sh_mla_t &mlacfg, double *slope) {
 }
 
 void Shwfs::on_message(Connection *const conn, string line) {
-	io.msg(IO_DEB1, "Shwfs::on_message('%s')", line.c_str()); 
 	
 	string orig = line;
 	string command = popword(line);

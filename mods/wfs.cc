@@ -65,7 +65,6 @@ Wfs::~Wfs() {
 
 
 void Wfs::on_message(Connection *const conn, string line) {
-	io.msg(IO_DEB2, "Wfs::on_message('%s')", line.c_str());
 	string orig = line;
 	string command = popword(line);
 	bool parsed = true;

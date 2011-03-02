@@ -78,8 +78,6 @@ void DeviceCtrl::on_message_common(string line) {
 }
 
 void DeviceCtrl::on_message(string line) {
-	fprintf(stderr, "%x:DeviceCtrl::on_message(line=%s)\n", (int) pthread_self(), line.c_str());
-
 	// Discard first 'ok' or 'err' (DeviceCtrl::on_message_common() already parsed this)
 	string stat = popword(line);
 
