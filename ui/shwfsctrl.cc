@@ -93,7 +93,7 @@ void ShwfsCtrl::on_message(string line) {
 				mlacfg.push_back(fvector_t(x0, y0, x1, y1));
 			}
 			
-			signal_wavefront();
+			signal_message();
 			return;
 		}
 	} else

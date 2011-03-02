@@ -238,6 +238,25 @@ void ShwfsView::on_subi_find_clicked() {
 void ShwfsView::do_wfspow_update() {
 	WfsView::do_wfspow_update();
 	fprintf(stderr, "%x:ShwfsView::do_wfspow_update()\n", (int) pthread_self());
+		
+	// Add subimage boxes & wavefront vectors to glarea
+	if (wfscam_ui) {
+		//! @todo add drawing vectors for wavefront measurements
+		//! @bug Updates here do not show immediately. glarea.do_update() does not work because it might not have an image yet
+	}
+}
+
+void ShwfsView::do_info_update() {
+	WfsView::do_info_update();
+	fprintf(stderr, "%x:ShwfsView::do_info_update(append %zu)\n", (int) pthread_self(), shwfsctrl->get_mla_nsi());
+
+	// Add list of subimages to dropdown box
+	subi_select.clear_items();
+	for (size_t i=0; i<shwfsctrl->get_mla_nsi(); i++)
+		subi_select.append_text(format("%d", (int) i));
+	
+	// Add text to add a new subimage
+	subi_select.append_text(shwfs_addnew);
 	
 	// Add subimage boxes & wavefront vectors to glarea
 	if (wfscam_ui) {
@@ -246,22 +265,6 @@ void ShwfsView::do_wfspow_update() {
 		for (size_t i=0; i<shwfsctrl->get_mla_nsi(); i++) {
 			wfscam_ui->glarea.addbox(shwfsctrl->get_mla_si((size_t) i));
 		}
-		
-		//! @todo add drawing vectors for wavefront measurements
-	}
-	
-	//! @bug Updates here do not show immediately. glarea.do_update() does not work because it might not have an image yet
-}
-
-void ShwfsView::do_info_update() {
-	WfsView::do_info_update();
-	fprintf(stderr, "%x:ShwfsView::do_info_update(append %zu)\n", (int) pthread_self(), shwfsctrl->get_mla_nsi());
-	
-	// Add list of subimages
-	subi_select.clear_items();
-	for (size_t i=0; i<shwfsctrl->get_mla_nsi(); i++)
-		subi_select.append_text(format("%d", (int) i));
-	
-	// Add text to add a new subimage
-	subi_select.append_text(shwfs_addnew);
+		//! @bug Updates here do not show immediately. glarea.do_update() does not work because it might not have an image yet
+	}	
 }

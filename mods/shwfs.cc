@@ -85,7 +85,7 @@ method(Shift::COG)
 	
 	// Other paramters:
 	simaxr = cfg.getint("simaxr", -1);
-	simini = cfg.getint("simini", 30);
+	simini_f = cfg.getdouble("simini_f", 0.8);
 	
 	// Generate MLA grid
 	gen_mla_grid(mlacfg, cam.get_res(), sisize, sipitch, xoff, disp, shape, overlap);
@@ -143,18 +143,18 @@ void Shwfs::on_message(Connection *const conn, string line) {
 			//! @todo get extra options from line
 			conn->addtag("mla");
 			gen_mla_grid(mlacfg, cam.get_res(), sisize, sipitch, xoff, disp, shape, overlap);
-		} else if(what == "find") {				// mla find [sisize] [simini] [nmax] [iter]
+		} else if(what == "find") {				// mla find [sisize] [simini_f] [nmax] [iter]
 			conn->addtag("mla");
 			int nmax=-1, iter=1, tmp = popint(line);
 			if (tmp > 0) sisize = tmp;
-			tmp = popint(line);
-			if (tmp > 0) simini = tmp;
+			tmp = popdouble(line);
+			if (tmp > 0) simini_f = tmp;
 			tmp = popint(line);
 			if (tmp > 0) nmax = tmp;
 			tmp = popint(line);
 			if (tmp > 0) iter = tmp;
 			
-			find_mla_grid(mlacfg, sisize, simini, nmax, iter);
+			find_mla_grid(mlacfg, sisize, simini_f, nmax, iter);
 		} else if(what == "store") {			// mla store [reserved] [overwrite]
 			popword(line);
 			if (popword(line) == "overwrite")
@@ -387,7 +387,7 @@ bool Shwfs::store_mla_grid(const bool overwrite) const {
 	return true;
 }
 
-int Shwfs::find_mla_grid(std::vector<vector_t> &mlacfg, const coord_t size, const int mini, const int nmax, const int iter) {
+int Shwfs::find_mla_grid(std::vector<vector_t> &mlacfg, const coord_t size, const float mini_f, const int nmax, const int iter) {
 	io.msg(IO_DEB2, "Shwfs::find_mla_grid()");
 
 	is_calib = false;
@@ -406,11 +406,26 @@ int Shwfs::find_mla_grid(std::vector<vector_t> &mlacfg, const coord_t size, cons
 	
 	coord_t sipos;
 	
+	size_t maxidx = 0;
+	int maxi = 0;
+	
+	if (cam.get_depth() <= 8) {
+		uint8_t *image = (uint8_t *)f->image;
+		maxi = _find_max(image, f->size, &maxidx);
+	} else {
+		uint16_t *image = (uint16_t *)f->image;
+		maxi = _find_max(image, f->size/2, &maxidx);
+	}
+	// Minimum intensity
+	int mini = maxi * mini_f;
+	io.msg(IO_DEB2, "Shwfs::find_mla_grid(maxi=%d, mini_f=%g, mini=%d)", maxi, mini_f, mini);
+
+	
 	// Find maximum intensity pixels & set area around it to zero until there is 
 	// no more maximum above mini or we have reached nmax subapertures
 	while (true) {
-		size_t maxidx = 0;
-		int maxi = 0;
+		maxidx = 0;
+		maxi = 0;
 		
 		if (cam.get_depth() <= 8) {
 			uint8_t *image = (uint8_t *)f->image;

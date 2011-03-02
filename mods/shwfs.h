@@ -82,7 +82,7 @@ private:
 	
 	// Parameters for dynamic MLA grids:
 	int simaxr;													//!< Maximum radius to use, or edge erosion subimages
-	int simini;													//!< Minimum intensity in
+	float simini_f;											//!< Minimum intensity for a subimage as fraction of the max intensity in a frame
 	
 	// Parameters for static MLA grids:
 	coord_t sisize;											//!< Subimage size
@@ -146,12 +146,12 @@ public:
 	 
 	 @param [in] mlacfg The calculated subaperture pattern will be stored here
 	 @param [in] size Size of the sa's [pixels]
-	 @param [in] mini Minimimum intensity in a SA pattern
+	 @param [in] mini_f Minimimum intensity a pixel has to have to consider it, as fraction of the maximum intensity.
 	 @param [in] nmax Maximum number of SA's to search
 	 @param [in] iter Number of iterations to do
 	 @return Number of subapertures found
 	 */
-	int find_mla_grid(std::vector<vector_t> &mlacfg, const coord_t size, const int mini=0, const int nmax=-1, const int iter=1);
+	int find_mla_grid(std::vector<vector_t> &mlacfg, const coord_t size, const float mini_f=0.8, const int nmax=-1, const int iter=1);
 	
 	//!< Store MLA grid to disk, as CSV
 	bool store_mla_grid(const bool overwrite=false) const;
