@@ -165,7 +165,7 @@ void SimulCam::gen_telapt() {
 	if (!telapt) {							// Doesn't exist, callocate (all zeros is goed)
 		telapt = gsl_matrix_calloc(res.y, res.x);
 	}
-	else if (telapt->size1 != res.x || telapt->size2 != res.y) { // Wrong size, re-allocate
+	else if ((int) telapt->size1 != res.x || (int) telapt->size2 != res.y) { // Wrong size, re-allocate
 		gsl_matrix_free(telapt);
 		telapt = gsl_matrix_calloc(res.y, res.x);
 	}
@@ -272,7 +272,7 @@ void SimulCam::simul_wfs(gsl_matrix *wave_in) const {
 			continue;
 		}
 		
-		if (workspace->size != sasize.x * sasize.y * 4) {
+		if ((int) workspace->size != sasize.x * sasize.y * 4) {
 			// Re-alloc data if necessary (should be sasize, but this can vary per subap)
 			io.msg(IO_WARN, "SimulCam::simul_wfs() subap sizes unequal, re-allocating. Support might be flaky.");
 			// Re-alloc data
