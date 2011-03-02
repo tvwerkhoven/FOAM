@@ -56,8 +56,9 @@ method(Shift::COG)
 	add_cmd("calibrate");
 	add_cmd("measure");
 	
-	// Micro lens array parameters:
+	mlacfg.reserve(128);
 	
+	// Micro lens array parameters:	
 	sisize.x = cfg.getint("sisizex", 16);
 	sisize.y = cfg.getint("sisizey", 16);
 	if (cfg.exists("sisize"))
@@ -87,7 +88,7 @@ method(Shift::COG)
 	simini = cfg.getint("simini", 30);
 	
 	// Generate MLA grid
-	gen_mla_grid(&mlacfg, cam.get_res(), sisize, sipitch, xoff, disp, shape, overlap);
+	gen_mla_grid(mlacfg, cam.get_res(), sisize, sipitch, xoff, disp, shape, overlap);
 	
 	// Initial calibration
 	calibrate();
@@ -95,41 +96,39 @@ method(Shift::COG)
 
 Shwfs::~Shwfs() {
 	io.msg(IO_DEB2, "Shwfs::~Shwfs()");
-	if (mlacfg.ml)
-		free(mlacfg.ml);
-	
 }
 
-int Shwfs::calc_zern_infl(int nmodes) {
-	// Re-compute Zernike basis functions if necessary
-	if (nmodes > zernbasis.get_nmodes() || cam.get_width() != zernbasis.get_size())
-		zernbasis.setup(nmodes, cam.get_width());
-	
-	// Calculate the slope in each of the subapertures for each wavefront mode
-	double slope[2];
-	for (int m=0; m <= nmodes; m++) {
-		gsl_matrix *tmp = zernbasis.get_mode(m);
-		calc_slope(tmp, mlacfg, slope);
-		
-	}
-	return 0;
-}
-
-int Shwfs::calc_slope(gsl_matrix *tmp, sh_mla_t &mlacfg, double *slope) {
-	double sum;
-	for (int si=0; si < mlacfg.nsi; si++) {
-		sum=0;
-		for (int x=0; x < mlacfg.ml[si].llpos.x; x++) {
-			for (int y=0; y < mlacfg.ml[si].llpos.y; y++) {
-				// Calculate (x,y)-slope in each subaperture
-				gsl_matrix_get(tmp, y, x);
-			}
-		}
-		
-	}
-	
-	return 0;
-}
+//int Shwfs::calc_zern_infl(int nmodes) {
+//	// Re-compute Zernike basis functions if necessary
+//	if (nmodes > zernbasis.get_nmodes() || cam.get_width() != zernbasis.get_size())
+//		zernbasis.setup(nmodes, cam.get_width());
+//	
+//	// Calculate the slope in each of the subapertures for each wavefront mode
+//	double slope[2];
+//	for (int m=0; m <= nmodes; m++) {
+//		gsl_matrix *tmp = zernbasis.get_mode(m);
+//		calc_slope(tmp, mlacfg, slope);
+//		
+//		//! @todo implement this
+//		
+//	}
+//	return 0;
+//}
+//
+//int Shwfs::calc_slope(gsl_matrix *tmp, std::vector<vector_t> &mlacfg, double *slope) {
+//	double sum;
+//	for (size_t si=0; si < mlacfg.size(); si++) {
+//		sum=0;
+//		for (int x=mlacfg[i].lx; x < mlacfg[i].tx; x++) {
+//			for (int y=mlacfg[i].ly; y < mlacfg[i].ty; y++) {
+//				// Calculate (x,y)-slope in each subaperture
+//				//! @todo implement this
+//				gsl_matrix_get(tmp, y, x);
+//			}
+//		}
+//	}
+//	return 0;
+//}
 
 void Shwfs::on_message(Connection *const conn, string line) {
 	
@@ -142,20 +141,24 @@ void Shwfs::on_message(Connection *const conn, string line) {
 
 		if (what == "generate") {
 			//! @todo get extra options from line
-			gen_mla_grid(&mlacfg, cam.get_res(), sisize, sipitch, xoff, disp, shape, overlap);
+			gen_mla_grid(mlacfg, cam.get_res(), sisize, sipitch, xoff, disp, shape, overlap);
 		} else if(what == "find") {
 			int tmp = popint(line);
 			if (tmp > 0) sisize = tmp;
 			tmp = popint(line);
 			if (tmp > 0) simini = tmp;
 			
-			find_mla_grid(&mlacfg, sisize, simini);
+			find_mla_grid(mlacfg, sisize, simini);
 		} else if(what == "store") {
-			// mla store [id]
-			//! @todo implement mla store [id]
+			// mla store [reserved] [overwrite]
+			popword(line);
+			if (popword(line) == "overwrite")
+				store_mla_grid(true);
+			else
+				store_mla_grid(false);
 		} else if(what == "del") {
 			// mla del <idx>
-			int idx = popint(line);
+			//int idx = popint(line);
 			//if (idx >= 0)
 				
 		} else if(what == "add") {
@@ -166,18 +169,9 @@ void Shwfs::on_message(Connection *const conn, string line) {
 			if (set_mla_str(line))
 				conn->write("error mla :Could not parse MLA string");
 		} else if(what == "get") {
-			// mla get [index]
-			int tmp = popint(line);
-			if (tmp > 0 && tmp < mlacfg.nsi) {
-				conn->write(format("ok mla get 1 %d %d %d %d %d", 
-													 tmp, 
-													 mlacfg.ml[tmp].llpos.x, 
-													 mlacfg.ml[tmp].llpos.y, 
-													 mlacfg.ml[tmp].size.x, 
-													 mlacfg.ml[tmp].size.y));
-			}
-			else
-				conn->write("ok mla get " + get_mla_str());
+			// mla get
+			//int tmp = popint(line);
+			conn->write("ok mla get " + get_mla_str());
 		}
 	} else if (command == "get") {
 		string what = popword(line);
@@ -221,11 +215,11 @@ int Shwfs::measure() {
 		io.msg(IO_DEB2, "Shwfs::measure() got UINT16");
 		// Manually cast mlacfg.ml to Shift type, is the same (Shift has it's own types such that it does not depend on other files too much)
 		//! @todo Include Shift::crop_t in types.h (?)
-		//shifts.calc_shifts((uint16_t *) tmp->image, cam.get_res(), (Shift::crop_t *) mlacfg.ml, mlacfg.nsi, shift_vec, method);
+		//shifts.calc_shifts((uint16_t *) tmp->image, cam.get_res(), (Shift::crop_t *) mlacfg.ml, mlacfg.size(), shift_vec, method);
 	}
 	else if (cam.get_depth() == 8) {
 		io.msg(IO_DEB2, "Shwfs::measure() got UINT8");
-		shifts.calc_shifts((uint8_t *) tmp->image, cam.get_res(), (Shift::crop_t *) mlacfg.ml, mlacfg.nsi, shift_vec, method);
+		shifts.calc_shifts((uint8_t *) tmp->image, cam.get_res(), mlacfg, shift_vec, method);
 	}
 	else
 		return io.msg(IO_ERR, "Shwfs::measure() unknown datatype");
@@ -253,19 +247,19 @@ int Shwfs::shift_to_basis(const gsl_vector_float *const invec, const wfbasis bas
 	
 }
 int Shwfs::calibrate() {
-	shift_vec = gsl_vector_float_alloc(mlacfg.nsi * 2);
+	shift_vec = gsl_vector_float_alloc(mlacfg.size() * 2);
 	
 	switch (wf.basis) {
 		case SENSOR:
 			io.msg(IO_XNFO, "Shwfs::calibrate(): Calibrating for basis 'SENSOR'");
-			wf.nmodes = mlacfg.nsi * 2;
+			wf.nmodes = mlacfg.size() * 2;
 			wf.wfamp = gsl_vector_float_alloc(wf.nmodes);
 			break;
 		case ZERNIKE:
 			//! @todo how many modes do we want if we're using Zernike? Is the same as the number of coordinates ok or not?
-			wf.nmodes = mlacfg.nsi * 2;
+			wf.nmodes = mlacfg.size() * 2;
 			wf.wfamp = gsl_vector_float_alloc(wf.nmodes);
-			zerninfl = gsl_matrix_float_alloc(mlacfg.nsi * 2, wf.nmodes);
+			zerninfl = gsl_matrix_float_alloc(mlacfg.size() * 2, wf.nmodes);
 		case KL:
 		case MIRROR:
 			//! @todo Implement KL & mirror modes
@@ -281,7 +275,7 @@ int Shwfs::calibrate() {
 }
 
 
-int Shwfs::gen_mla_grid(sh_mla_t *const mla, const coord_t res, const coord_t size, const coord_t pitch, const int xoff, const coord_t disp, const mlashape_t shape, const float overlap) {
+int Shwfs::gen_mla_grid(std::vector<vector_t> &mlacfg, const coord_t res, const coord_t size, const coord_t pitch, const int xoff, const coord_t disp, const mlashape_t shape, const float overlap) {
 	io.msg(IO_DEB2, "Shwfs::gen_mla_grid()");
 	
 	is_calib = false;
@@ -290,7 +284,8 @@ int Shwfs::gen_mla_grid(sh_mla_t *const mla, const coord_t res, const coord_t si
 	int sa_range_y = (int) ((res.y/2)/pitch.x + 1);
 	int sa_range_x = (int) ((res.x/2)/pitch.y + 1);
 	
-	mla->nsi = 0;
+	vector_t tmpsi;
+	mlacfg.clear();
 	
 	float minradsq = pow(((double) min(res.x, res.y))/2.0, 2);
 	
@@ -308,40 +303,35 @@ int Shwfs::gen_mla_grid(sh_mla_t *const mla, const coord_t res, const coord_t si
 			
 			if (shape == CIRCULAR) {
 				if (pow(fabs(sa_c.x) + (overlap-0.5)*size.x, 2) + pow(fabs(sa_c.y) + (overlap-0.5)*size.y, 2) < minradsq) {
-//				io.msg(IO_DEB2, "Shwfs::gen_mla_grid(): Found subap within bounds @ (%d, %d)", sa_c.x, sa_c.y);
-					(mla->nsi)++;
-					mla->ml = (sh_simg_t *) realloc((void *) mla->ml, mla->nsi * sizeof *(mla->ml));
-					mla->ml[mla->nsi-1].llpos.x = sa_c.x + disp.x - size.x/2;
-					mla->ml[mla->nsi-1].llpos.y = sa_c.y + disp.y - size.y/2;
-					mla->ml[mla->nsi-1].size.x = size.x;
-					mla->ml[mla->nsi-1].size.y = size.y;
+					tmpsi = vector_t(sa_c.x + disp.x - size.x/2,
+									 sa_c.y + disp.y - size.y/2,
+									 sa_c.x + disp.x + size.x/2,
+									 sa_c.y + disp.y + size.y/2);
+					mlacfg.push_back(tmpsi);
 				}
 			}
 			else {
 				// Accept a subimage coordinate (center position) the position + 
 				// half-size the subaperture is within the bounds
 				if ((fabs(sa_c.x + (overlap-0.5)*size.x) < res.x/2) && (fabs(sa_c.y + (overlap-0.5)*size.y) < res.y/2)) {
-//					io.msg(IO_DEB2, "Shwfs::gen_mla_grid(): Found subap within bounds.");
-					(mla->nsi)++;
-					mla->ml = (sh_simg_t *) realloc((void *) mla->ml, mla->nsi * sizeof *(mla->ml));
-					mla->ml[mla->nsi-1].llpos.x = sa_c.x + disp.x - size.x/2;
-					mla->ml[mla->nsi-1].llpos.y = sa_c.y + disp.y - size.y/2;
-					mla->ml[mla->nsi-1].size.x = size.x;
-					mla->ml[mla->nsi-1].size.y = size.y;
+					tmpsi = vector_t(sa_c.x + disp.x - size.x/2,
+													 sa_c.y + disp.y - size.y/2,
+													 sa_c.x + disp.x + size.x/2,
+													 sa_c.y + disp.y + size.y/2);
+					mlacfg.push_back(tmpsi);
 				}
 			}
 		}
 	}
-	io.msg(IO_XNFO, "Shwfs::gen_mla_grid(): Found %d subapertures.", mla->nsi);
+	io.msg(IO_XNFO, "Shwfs::gen_mla_grid(): Found %d subapertures.", (int) mlacfg.size());
 	
-	return mla->nsi;
+	return (int) mlacfg.size();
 }
 
-bool Shwfs::store_mla_grid(const Path &f, const bool overwrite) const {
-	return store_mla_grid(mlacfg, f, overwrite);
-}
-
-bool Shwfs::store_mla_grid(const sh_mla_t mla, const Path &f, const bool overwrite) const {
+bool Shwfs::store_mla_grid(const bool overwrite) const {
+	// Make path from fileid 
+	Path f = ptc->datadir + format("shwfs_mla_cfg_n=%03d.csv", mlacfg.size());
+	
 	if (f.exists() && !overwrite) {
 		io.msg(IO_WARN, "Shwfs::store_mla_grid(): Cannot store MLA grid, file exists.");
 		return false;
@@ -358,14 +348,14 @@ bool Shwfs::store_mla_grid(const sh_mla_t mla, const Path &f, const bool overwri
 	}
 	
 	fprintf(fd, "# Shwfs:: MLA definition\n");
-	fprintf(fd, "# MLA definition, nsi=%d.\n", mla.nsi);
-	fprintf(fd, "# Columns: llpos.x, llpos.y, cpos.x, cpos.y, size.x, size.y\n");
-	for (int n=0; n<mla.nsi; n++) {
+	fprintf(fd, "# MLA definition, nsi=%zu.\n", mlacfg.size());
+	fprintf(fd, "# Columns: x0, y0, x1, y1\n");
+	for (size_t n=0; n<mlacfg.size(); n++) {
 		fprintf(fd, "%d, %d, %d, %d\n", 
-						mla.ml[n].llpos.x,
-						mla.ml[n].llpos.y,
-						mla.ml[n].size.x,
-						mla.ml[n].size.y);
+						mlacfg[n].lx,
+						mlacfg[n].ly,
+						mlacfg[n].tx,
+						mlacfg[n].ty);
 	}
 	fclose(fd);
 	
@@ -381,7 +371,7 @@ bool Shwfs::store_mla_grid(const sh_mla_t mla, const Path &f, const bool overwri
 	return true;
 }
 
-int Shwfs::find_mla_grid(sh_mla_t *const mla, const coord_t size, const int mini, const int nmax, const int iter) {
+int Shwfs::find_mla_grid(std::vector<vector_t> &mlacfg, const coord_t size, const int mini, const int nmax, const int iter) {
 	io.msg(IO_DEB2, "Shwfs::find_mla_grid()");
 
 	is_calib = false;
@@ -395,8 +385,10 @@ int Shwfs::find_mla_grid(sh_mla_t *const mla, const coord_t size, const int mini
 		return NULL;
 	}
 	
-	mla->nsi = 0;
-	coord_t sapos;
+	vector_t tmpsi;
+	mlacfg.clear();
+	
+	coord_t sipos;
 	
 	// Find maximum intensity pixels & set area around it to zero until there is 
 	// no more maximum above mini or we have reached nmax subapertures
@@ -416,25 +408,22 @@ int Shwfs::find_mla_grid(sh_mla_t *const mla, const coord_t size, const int mini
 		if (maxi < mini)
 			break;
 		
-		// Add new subaperture
-		(mla->nsi)++;
-		mla->ml = (sh_simg_t *) realloc((void *) mla->ml, mla->nsi * sizeof *(mla->ml));
-
-		sapos.x = (maxidx % cam.get_width()) - size.x/2;
-		sapos.y = int(maxidx / cam.get_width()) - size.y/2;
+		// Add new subimage
+		tmpsi = vector_t((maxidx % cam.get_width()) - size.x/2,
+										 int(maxidx / cam.get_width()) - size.y/2,
+										 (maxidx % cam.get_width()) + size.x/2,
+										 int(maxidx / cam.get_width()) + size.y/2);
+		mlacfg.push_back(tmpsi);
 		
-		mla->ml[mla->nsi-1].llpos.x = sapos.x;
-		mla->ml[mla->nsi-1].llpos.y = sapos.y;
-		
-		io.msg(IO_DEB2, "Shwfs::find_mla_grid(): new! I: %d, idx: %zu, llpos: (%d,%d)", maxi, maxidx, sapos.x, sapos.y);
+		io.msg(IO_DEB2, "Shwfs::find_mla_grid(): new! I: %d, idx: %zu, llpos: (%d,%d)", maxi, maxidx, tmpsi.lx, tmpsi.ly);
 
-		// Enough subapertures, done
-		if (mla->nsi == nmax)
+		// If we have enough subimages, done
+		if ((int) mlacfg.size() == nmax)
 			break;
 		
-		// Set the current subaperture to zero
-		int xran[] = {max(0, sapos.x), min(cam.get_width(), sapos.x+size.x)};
-		int yran[] = {max(0, sapos.y), min(cam.get_height(), sapos.y+size.y)};
+		// Set the current subimage to zero such that we don't detect it next time
+		int xran[] = {max(0, tmpsi.lx), min(cam.get_width(), tmpsi.tx)};
+		int yran[] = {max(0, tmpsi.ly), min(cam.get_height(), tmpsi.ty)};
 		
 		if (cam.get_depth() <= 8) {
 			uint8_t *image = (uint8_t *)f->image;
@@ -449,10 +438,10 @@ int Shwfs::find_mla_grid(sh_mla_t *const mla, const coord_t size, const int mini
 		}
 	}
 	
-	// Done! We have found the maximum intensities now.
+	// Done! We have found all maximum intensities now.
 		
 	for (int it=1; it<iter; it++) {
-		//! @todo implement iterative updates
+		//! @todo implement iterative updates?
 		io.msg(IO_WARN, "Shwfs::find_mla_grid(): iter not yet implemented");
 	}
 	
@@ -464,7 +453,7 @@ int Shwfs::find_mla_grid(sh_mla_t *const mla, const coord_t size, const int mini
 		io.msg(IO_WARN, "Shwfs::find_mla_grid(): got camera buffer overflow, data might be inaccurate");
 	}
 	
-	return mla->nsi;
+	return (int) mlacfg.size();
 }
 
 int Shwfs::mla_subapsel() {
@@ -488,46 +477,42 @@ int Shwfs::_find_max(const T *const img, const size_t nel, size_t *const idx) {
 	return max;	
 }
 
-string Shwfs::get_mla_str(const sh_mla_t mla) const {
-	string ret = format("%d ", mla.nsi);
+string Shwfs::get_mla_str(const int idx) const {
+	io.msg(IO_WARN, "Shwfs::get_mla_str(idx=%d)", idx);
+	string ret;
 	
-	for (int i=0; i<mla.nsi; i++)
-		ret += format("%d %d %d %d %d ", i, mla.ml[i].llpos.x, mla.ml[i].llpos.y, mla.ml[i].size.x, mla.ml[i].size.y);
-	
+	if (idx >= 0 && idx < (int) mlacfg.size()) {
+		// Return only 1 subimage 
+		ret = format("1 %d %d %d %d %d", idx, mlacfg[idx].lx, mlacfg[idx].ly, mlacfg[idx].tx, mlacfg[idx].ty);
+	} else {
+		// Return all subimages
+		ret = format("%d ", mlacfg.size());
+		
+		for (size_t i=0; i<mlacfg.size(); i++)
+			ret += format("%d %d %d %d %d ", (int) i, mlacfg[i].lx, mlacfg[i].ly, mlacfg[i].tx, mlacfg[i].ty);
+	}
+
 	return ret;
 }
 
 int Shwfs::set_mla_str(string mla_str) {
-	// Syntax shoud be: <n> <x0> <y0> <w0> <h0> [<x1> <y1> <w1> <h1> [...]]
-	//! @todo Change MLA syntax to (x0, y0), (x1, y1) instead of size, store corner coordinates
 	int nsi = popint(mla_str);
-	int x, y, w, h;
+	int x0, y0, x1, y1;
 	
 	is_calib = false;
 	
-	sh_simg_t *ml_tmp = (sh_simg_t *) malloc(nsi * sizeof *ml_tmp);
-	
 	for (int i=0; i<nsi; i++) {
-		x = popint(mla_str);
-		y = popint(mla_str);
-		w = popint(mla_str);
-		h = popint(mla_str);
-		if (x <= 0 || y <= 0 || w <= 0 || h <= 0)
-			return -1;
+		x0 = popint(mla_str);
+		y0 = popint(mla_str);
+		x1 = popint(mla_str);
+		y1 = popint(mla_str);
+		if (x0 <= 0 || y0 <= 0 || x1 <= 0 || y1 <= 0)
+			continue;
 		
-		ml_tmp[i].llpos.x = x;
-		ml_tmp[i].llpos.y = y;
-		ml_tmp[i].size.x = w;
-		ml_tmp[i].size.y = h;
+		mlacfg.push_back(vector_t(x0, y0, x1, y1));
 	}
 	
-	if (mlacfg.ml)
-		free(mlacfg.ml);
-	
-	mlacfg.nsi = nsi;
-	mlacfg.ml = ml_tmp;
-	
 	netio.broadcast("ok mla " + mla_str);
-	return 0;
+	return (int) mlacfg.size();
 }
 

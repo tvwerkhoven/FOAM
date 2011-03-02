@@ -23,6 +23,7 @@
 #define HAVE_SHIFT_H
 
 #include <gsl/gsl_vector.h>
+#include <vector>
 
 #include "io.h"
 #include "pthread++.h"
@@ -46,34 +47,25 @@ public:
 		COG=0,														//!< Center of Gravity method
 		CORR,															//!< Cross-correlation method
 	} method_t;													//!< Different image shift calculation methods
-		
-	// N.B.: This is a copy of Shwfs::sh_simg_t but I want to keep this class standalone
-	typedef struct _crop_t {
-		coord_t llpos;										//!< Lower-left position of this cropwindow
-		coord_t size;											//!< Cropwindow size (pixels)
-		size_t id;
-		_crop_t(): llpos(0,0), size(0,0), id(0) { ; }
-	} crop_t;														//!< Image cropping configuration
 	
 private:
 	Io &io;															//!< Message IO
 	
-	typedef struct pool {
+	typedef struct jobinfo {
 		method_t method;
 		int bpp;													//!< Image bitdepth (8 for uint8_t, 16 for uint16_t)
 		uint8_t *img;											//!< Image to process
 		coord_t res;											//!< Image size (width x height)
 		uint8_t *refimg;									//!< Reference image (for method=CORR)
 		uint8_t mini;											//!< Minimum intensity to consider (for method=COG)
-		crop_t *crops;										//!< Crop fields within the bigger image
-		int ncrop;												//!< Number of crop fields
+		std::vector<vector_t> crops;			//!< Crop fields within the bigger image
 		gsl_vector_float *shifts;					//!< Pre-allocated output vector
 		pthread::mutex mutex;							//!< Lock for jobid
 		int jobid;												//!< Next crop field to process
-		int done;													//!< Number of workers done
-	} pool_t;
+		int done;													//!< Number of worker threads done
+	} job_t;
 	
-	pool_t workpool;										//!< Work pool
+	job_t workpool;											//!< Work pool, used by different threads to get work from
 
 	pthread::mutex work_mutex;					//!< Mutex used to limit access to frame data
 	pthread::cond work_cond;						//!< Cond used to signal threads about new frames
@@ -83,7 +75,7 @@ private:
 
 	int nworker;												//!< Number of workers requested
 	int workid;													//!< Worker counter
-	pthread::thread *workers;						//!< Worker threads
+	std::vector<pthread::thread> workers; //!< Worker threads
 
 	void _worker_func();								//!< Worker function
 	int _worker_getid() { return workid++; }
@@ -96,7 +88,7 @@ private:
 	 @param [out] *vec Shift found within crop field in img
 	 @param [in] mini Minimum intensity to consider
 	 */
-	void _calc_cog(const uint8_t *img, const coord_t &res, const crop_t &crop, float *vec, const uint8_t mini=0);
+	void _calc_cog(const uint8_t *img, const coord_t &res, const vector_t &crop, float *vec, const uint8_t mini=0);
 	
 public:
 	Shift(Io &io, const int nthr=4);
@@ -107,13 +99,12 @@ public:
 	 @param [in] img Pointer to image data.
 	 @param [in] res Resolution of image data (i.e. data stride)
 	 @param [in] *crops Array of crop field to process
-	 @param [in] ncrop Length of *crops
 	 @param [out] *shifts Buffer to hold results (pre-allocated)
 	 @param [in] method Tracking method (see method_t)
 	 @param [in] wait Block until complete, or return asap
 	 @param [in] mini Minimum intensity to consider (for COG)
 	 */
-	bool calc_shifts(const uint8_t *img, const coord_t res, const crop_t *crops, const int ncrop, gsl_vector_float *shifts, const method_t method=COG, const bool wait=true, const uint8_t mini=0);
+	bool calc_shifts(const uint8_t *img, const coord_t res, const std::vector<vector_t> &crops, gsl_vector_float *shifts, const method_t method=COG, const bool wait=true, const uint8_t mini=0);
 };
 
 #endif // HAVE_SHIFT_H

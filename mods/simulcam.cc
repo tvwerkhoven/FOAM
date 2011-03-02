@@ -206,7 +206,7 @@ void SimulCam::simul_wfs(gsl_matrix *wave_in) const {
 	if (!simmla)
 		return;
 	
-	if (shwfs.mlacfg.nsi <= 0) {
+	if (shwfs.mlacfg.size() <= 0) {
 		io.msg(IO_WARN, "SimulCam::simul_wfs(): no microlenses defined?.");
 		return;
 	}
@@ -214,8 +214,11 @@ void SimulCam::simul_wfs(gsl_matrix *wave_in) const {
 	io.msg(IO_DEB2, "SimulCam::simul_wfs()");
 	
 	// Apply fourier transform to subimages here
-	coord_t sallpos = shwfs.mlacfg.ml[0].llpos;
-	coord_t sasize = shwfs.mlacfg.ml[0].size;
+	coord_t sallpos(shwfs.mlacfg[0].lx, 
+									shwfs.mlacfg[0].ly);
+	coord_t sasize(shwfs.mlacfg[0].tx - shwfs.mlacfg[0].lx,
+								 shwfs.mlacfg[0].ty - shwfs.mlacfg[0].ly);
+	
 	// Get temporary memory
 	static gsl_vector *workspace = NULL;
 	if (!workspace) workspace = (gsl_vector *) gsl_vector_calloc(sasize.x * sasize.y * 4);
@@ -238,9 +241,11 @@ void SimulCam::simul_wfs(gsl_matrix *wave_in) const {
 	gsl_matrix *telapt_cropm;
 	
 	
-	for (int n=0; n<shwfs.mlacfg.nsi; n++) {
-		sallpos = shwfs.mlacfg.ml[n].llpos;
-		sasize = shwfs.mlacfg.ml[n].size;
+	for (size_t n=0; n<shwfs.mlacfg.size(); n++) {
+		sallpos.x = shwfs.mlacfg[n].lx;
+		sallpos.y = shwfs.mlacfg[n].ly;
+		sasize.x = shwfs.mlacfg[n].tx - shwfs.mlacfg[n].lx;
+		sasize.y = shwfs.mlacfg[n].ty - shwfs.mlacfg[n].ly;
 
 		// Crop out subaperture from larger frame, store as gsl_matrix_view
 		subap = gsl_matrix_submatrix(wave_in, sallpos.y, sallpos.x, sasize.y, sasize.x);

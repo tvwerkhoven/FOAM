@@ -83,15 +83,14 @@ void ShwfsCtrl::on_message(string line) {
 				signal_message();
 				return;
 			}
-			int idx;
-			double x0, y0, w, h;
+			double x0, y0, x1, y1;
 			//! @todo this probably needs a mutex as well (Should we use a *Ctrl mutex for all DeviceCtrl classes?)
 			mlacfg.clear();
 			for (int i=0; i<n; i++) {
-				idx = popint(line);
+				popint(line);
 				x0 = popdouble(line); y0 = popdouble(line);
-				w = popdouble(line); h = popdouble(line);
-				mlacfg.push_back(fvector_t(x0, y0, x0+w, y0+h));
+				x1 = popdouble(line); y1 = popdouble(line);
+				mlacfg.push_back(fvector_t(x0, y0, x1, y1));
 			}
 			
 			signal_wavefront();

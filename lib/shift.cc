@@ -37,13 +37,15 @@ Shift::Shift(Io &io, const int nthr): io(io), nworker(nthr), workid(0) {
 	
 	// Startup workers
 	//! @todo Worker (workers) threads neet attr for scheduling etc (?)
-	workers = new pthread::thread[nworker];
+	//workers = new pthread::thread[nworker];
 
 	// Use this slot to point to a member function of this class (only used at start)
 	sigc::slot<void> funcslot = sigc::mem_fun(this, &Shift::_worker_func);
-	for (int w=0; w<nworker; w++)
-		workers->create(funcslot);
-	
+	for (int w=0; w<nworker; w++) {
+		pthread::thread tmp = pthread::thread();
+		tmp.create(funcslot);
+		workers.push_back(tmp);
+	}	
 }
 
 Shift::~Shift() {
@@ -76,7 +78,7 @@ void Shift::_worker_func() {
 			//workpool.shifts->data[workpool.shifts->stride * myjob * 2 + 0]
 			//workpool.shifts->data[workpool.shifts->stride * myjob * 2 + 1]
 
-			//! @todo might give problems with 64 bit systems?
+			//! @todo might give problems with 64 bit systems? Better to reserve a block per thread?
 			gsl_vector_float_set(workpool.shifts, myjob*2+0, shift[0]);
 			gsl_vector_float_set(workpool.shifts, myjob*2+1, shift[1]);
 			//usleep(20*1000);
@@ -92,19 +94,19 @@ void Shift::_worker_func() {
 	}
 }
 
-void Shift::_calc_cog(const uint8_t *img, const coord_t &res, const crop_t &crop, float *v, const uint8_t mini) {
+void Shift::_calc_cog(const uint8_t *img, const coord_t &res, const vector_t &crop, float *v, const uint8_t mini) {
 	uint8_t *p;
 	float sum;
 
 	sum = v[0] = v[1] = 0.0;
 	
 	// i,j loop over the pixels inside the crop field for *img
-	for (int j=crop.llpos.y; j<crop.llpos.y+crop.size.y; j++) {
+	for (int j=crop.ly; j<crop.ty; j++) {
 		// j is the vertical counter, store the beginning of the current row here:
 		p = (uint8_t *) img;
-		p += (j*res.x) + crop.llpos.x;
+		p += (j*res.x) + crop.lx;
 		//  img = data origin, j * res.x skips a few rows, crop.llpos.x gives the offset for the current row.
-		for (int i=crop.llpos.x; i<crop.llpos.x+crop.size.x; i++) {
+		for (int i=crop.lx; i<crop.tx; i++) {
 			// Skip pixels with too low an intensity
 			if (*p < mini) {
 				p++;
@@ -116,17 +118,18 @@ void Shift::_calc_cog(const uint8_t *img, const coord_t &res, const crop_t &crop
 			p++;
 		}
 	}
-
+	
+	// Sum 0? Then we skip this subimage
 	if (sum <= 0) { 
 		v[0] = v[1] = 0.0;
 		return;
 	}
 
-	v[0] = v[0]/sum - crop.llpos.x - crop.size.x/2;
-	v[1] = v[1]/sum - crop.llpos.y - crop.size.y/2;
+	v[0] = v[0]/sum - crop.lx - (crop.tx - crop.lx)/2;
+	v[1] = v[1]/sum - crop.ly - (crop.ty - crop.ly)/2;
 }
 
-bool Shift::calc_shifts(const uint8_t *img, const coord_t res, const crop_t *crops, const int ncrop, gsl_vector_float *shifts, const method_t method, const bool wait, const uint8_t mini) {
+bool Shift::calc_shifts(const uint8_t *img, const coord_t res, const std::vector<vector_t> &crops, gsl_vector_float *shifts, const method_t method, const bool wait, const uint8_t mini) {
 	io.msg(IO_DEB2, "Shift::calc_shifts(uint8_t)");
 	
 	// Setup work parameters
@@ -135,16 +138,15 @@ bool Shift::calc_shifts(const uint8_t *img, const coord_t res, const crop_t *cro
 	workpool.res = res;
 	workpool.refimg = NULL;
 	workpool.mini = mini;
-	workpool.crops = (crop_t *) crops;
-	workpool.ncrop = ncrop;
+	workpool.crops = crops;
 	workpool.shifts = shifts;
-	workpool.jobid = ncrop-1;
+	workpool.jobid = crops.size()-1;
 	workpool.done = 0;
 	
 	// Signal all workers
 	work_cond.broadcast();
 	
-	// Wait until all workers have signalled ready once
+	// Wait until the work is completed
 	if (wait) {
 		work_done_mutex.lock();
 		work_done_cond.wait(work_done_mutex);

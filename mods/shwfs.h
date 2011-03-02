@@ -21,6 +21,9 @@
 #ifndef HAVE_SHWFS_H
 #define HAVE_SHWFS_H
 
+#include <vector>
+#include "types.h"
+
 #include "camera.h"
 #include "io.h"
 #include "wfs.h"
@@ -41,7 +44,7 @@ const string shwfs_type = "shwfs";
  microlenses on the CCD). It is the subimages we are interested in when
  processing the CCD data.
  
- \section cam_netio Camera net IO
+ \section shwfs_netio Camera net IO
  
  Valid commends include:
  - mla generate
@@ -51,7 +54,7 @@ const string shwfs_type = "shwfs";
  - mla add
  - mla get [idx]
  
- \section cam_cfg Configuration parameters
+ \section shwfs_cfg Configuration parameters
  
 
  */
@@ -69,29 +72,15 @@ public:
 		CAL_PINHOLE
 	} wfs_cal_t;												//!< Different calibration methods
 	
-	typedef struct sh_subimg {
-		coord_t llpos;										//!< Lower-left position of this subimg (pos - size/2)
-		coord_t size;											//!< Subaperture size (pixels)
-		size_t id;
-		sh_subimg(): llpos(0,0), size(0,0), id(0) { ; }
-	} sh_simg_t;												//!< MLA subimage definition on CCD
+	std::vector<vector_t> mlacfg;				//!< Microlens array configuration. Each element is a vector with the lower-left corner and upper-right corner of the subimage
 	
-	typedef struct sh_mla {
-		int nsi;													//!< Number of microlenses (subapertures)
-		float f;													//!< Microlens focal length
-		sh_simg_t *ml;										//!< Array of microlens positions
-		sh_mla(): nsi(0), f(-1.0), ml(NULL) { ; }
-	} sh_mla_t;													//!< Microlens array struct
-
 private:
 	Shift shifts;												//!< Shift computation class. Does the heavy lifting.
 	gsl_vector_float *shift_vec;				//!< SHWFS shift vector
 	
 	Shift::method_t method;							//!< Data processing method (Center of Gravity, Correlation, etc)
 	
-	sh_mla_t mlacfg;										//!< Subimages configuration (coordinates & sizes)
-	
-	// Parameters for dynamic MLA grods:
+	// Parameters for dynamic MLA grids:
 	int simaxr;													//!< Maximum radius to use, or edge erosion subimages
 	int simini;													//!< Minimum intensity in
 	
@@ -112,13 +101,26 @@ private:
 	 */
 	template <class T> int _find_max(const T *const img, const size_t nel, size_t *idx);
 	
-	string get_mla_str(const sh_mla_t mla) const; //!< Represent a MLA configuration as one string
-	string get_mla_str() const { return get_mla_str(mlacfg); }
-	int set_mla_str(string mla_str); //!< Set MLA configuration from string, return number of subaps
-		
+	/*! @brief Represent the MLA configuration as one string
+	 
+	 @param [in] idx The index of the subimage to return or -1 for all subimages (default)
+	 @return <N> [idx x0 y0 x1 y1 [idx x0 y0 x1 y1 [...]]]
+	 */
+	string get_mla_str(const int idx=-1) const;
+	
+	/*! @brief Set MLA configuration from string, return number of subaps, reverse of get_mla_str(). Output stored in mlacfg.
+	 
+	 @param [in] <N> [idx x0 y0 x1 y1 [idx x0 y0 x1 y1 [...]]]
+	 @return Number of subimages successfully added (might be != N)
+	 */
+	int set_mla_str(string mla_str);
+	
 	int mla_subapsel();
-	int calc_zern_infl(int nmodes);			//!< Calculate influence for each Zernike mode
-	int calc_slope(gsl_matrix *tmp, sh_mla_t &mlacfg, double *slope); //!< Calculate slopes (for calc_zern_infl())
+	
+	//!< Calculate influence for each Zernike mode
+//	int calc_zern_infl(int nmodes);
+	//!< Calculate slopes (helper for calc_zern_infl())
+//	int calc_slope(gsl_matrix *tmp, std::vector<vector_t> &mlacfg, double *slope); 
 	
 public:
 	Shwfs(Io &io, foamctrl *const ptc, const string name, const string port, Path const &conffile, Camera &wfscam, const bool online=true);
@@ -126,7 +128,7 @@ public:
 	
 	/*! @brief Generate subaperture/subimage (sa/si) positions for a given configuration.
 
-	 @param [in] *mla The calculated subaperture pattern
+	 @param [in] mlacfg The calculated subaperture pattern will be stored here
 	 @param [in] res Resolution of the sa pattern (before scaling) [pixels]
 	 @param [in] size Size of the sa's [pixels]
 	 @param [in] pitch Pitch of the sa's [pixels]
@@ -136,23 +138,23 @@ public:
 	 @param [in] overlap How much overlap with aperture needed for inclusion (0--1)
 	 @return Number of subapertures found
 	 */
-	int gen_mla_grid(sh_mla_t *const mla, const coord_t res, const coord_t size, const coord_t pitch, const int xoff, const coord_t disp, const mlashape_t shape, const float overlap);
+	int gen_mla_grid(std::vector<vector_t> &mlacfg, const coord_t res, const coord_t size, const coord_t pitch, const int xoff, const coord_t disp, const mlashape_t shape, const float overlap);
 
 	/*! @brief Find subaperture/subimage (sa/si) positions in a given frame.
 	 
 	 This function takes a frame from the camera and finds the brightest spots to use as MLA grid
 	 
-	 @param [in] *mla The calculated subaperture pattern
+	 @param [in] mlacfg The calculated subaperture pattern will be stored here
 	 @param [in] size Size of the sa's [pixels]
 	 @param [in] mini Minimimum intensity in a SA pattern
 	 @param [in] nmax Maximum number of SA's to search
 	 @param [in] iter Number of iterations to do
 	 @return Number of subapertures found
 	 */
-	int find_mla_grid(sh_mla_t *const mla, const coord_t size, const int mini=0, const int nmax=-1, const int iter=1);
-	 
-	bool store_mla_grid(const sh_mla_t mla, const Path &f, const bool overwrite=false) const;	//!< Store external MLA grid to disk, as CSV
-	bool store_mla_grid(const Path &f, const bool overwrite=false) const;	//!< Store this MLA grid to disk, as CSV
+	int find_mla_grid(std::vector<vector_t> &mlacfg, const coord_t size, const int mini=0, const int nmax=-1, const int iter=1);
+	
+	//!< Store MLA grid to disk, as CSV
+	bool store_mla_grid(const bool overwrite=false) const;
 
 	//!< Convert shifts to basis functions
 	int shift_to_basis(const gsl_vector_float *const invec, const wfbasis basis, gsl_vector_float *outvec);
