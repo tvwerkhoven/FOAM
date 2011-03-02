@@ -42,6 +42,8 @@ private:
 	int err;											//!< Error flag
 	Io &io;												//!< Terminal logging
 	
+	void make_path(const char *dir);
+	
 public:
 	foamctrl(Io &io, Path const file=Path(""));
 	~foamctrl(void);

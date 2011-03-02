@@ -23,6 +23,7 @@
 #include <stdio.h>  // defines FILENAME_MAX
 #include <syslog.h>
 #include <unistd.h>
+#include <string.h>
 
 #include "path++.h"
 #include "foamctrl.h"
@@ -72,12 +73,20 @@ int foamctrl::parse() {
 	io.msg(IO_INFO, "Confdir: '%s', file: '%s'", confdir.c_str(), conffile.basename().c_str());
 	cfg = new config(conffile);
 	
-	// Datadir (relative to progdir)
+	// Datadir (relative to progdir if relative)
 	datadir = progdir + cfg->getstring("datadir", "/tmp/");
+	// Create subdirectory unique for this run
+	struct tm *tmp;
+	tmp = gmtime(&starttime);
+	char tstamp[16];
+	strftime(tstamp, sizeof(tstamp), "%Y%m%d_%H%M%S", tmp);
+	datadir += format("FOAM_data_%s/", tstamp);
+	make_path(datadir.c_str());
+	
 	io.msg(IO_INFO, "Datadir: '%s'.", datadir.c_str());
 
 	// PID file (relative to confdir)
-	pidfile = datadir + cfg->getstring("pidfile", "foam.pid");
+	pidfile = confdir + cfg->getstring("pidfile", "foam.pid");
 	io.msg(IO_INFO, "Pidfile: '%s'.", pidfile.c_str());
 	
 	// Daemon settings
@@ -113,4 +122,26 @@ int foamctrl::verify() {
 	int ret=0;
 	
 	return ret;
+}
+
+// From: <http://nion.modprobe.de/blog/archives/357-Recursive-directory-creation.html>
+void foamctrl::make_path(const char *dir) {
+	char tmp[512];
+	char *p = NULL;
+	size_t len;
+
+	snprintf(tmp, sizeof(tmp),"%s",dir);
+	len = strlen(tmp);
+	
+	if(tmp[len - 1] == '/')
+		tmp[len - 1] = 0;
+	
+	for(p = tmp + 1; *p; p++)
+		if(*p == '/') {
+			*p = 0;
+			mkdir(tmp, S_IRWXU);
+			*p = '/';
+		}
+	
+	mkdir(tmp, S_IRWXU);
 }
