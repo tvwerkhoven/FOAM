@@ -112,7 +112,7 @@ histoalign(0.5, 0.5, 0, 0), minval("Display min"), maxval("Display max"), e_avg(
 	glarea.set_size_request(256, 256);	
 	
 	// signals
-	//Glib::signal_timeout().connect(sigc::mem_fun(*this, &CamView::on_timeout), 1000.0/30.0);
+	Glib::signal_timeout().connect(sigc::mem_fun(*this, &CamView::on_timeout), 1000.0/30.0);
 	capture.signal_clicked().connect(sigc::mem_fun(*this, &CamView::on_capture_clicked));
 	display.signal_clicked().connect(sigc::mem_fun(*this, &CamView::on_display_clicked));
 	store.signal_clicked().connect(sigc::mem_fun(*this, &CamView::on_store_clicked));
@@ -284,21 +284,19 @@ void CamView::clear_gui() {
 }
 
 void CamView::on_glarea_view_update() {
-	// Callback for glarea update on viewstate (zoom, scale, shift)
-	zoomfit.set_active(glarea.getzoomfit());		
+	zoomfit.set_active(glarea.getzoomfit());
 }
 
 void CamView::do_update() {
 	glarea.setcrosshair(crosshair.get_active());
 	glarea.setgrid(grid.get_active());
-	
 	// Flip settings
 	glarea.setfliph(fliph.get_active());
 	glarea.setflipv(flipv.get_active());
 	// Zoom settings
 	glarea.setzoomfit(zoomfit.get_active());
+	
 	glarea.do_update();
-	do_histo_update();
 }
 
 void CamView::on_histo_toggled() {
@@ -421,25 +419,23 @@ void CamView::do_histo_update() {
 	histoimage.queue_draw();
 }
 
-//! @todo Implement on_timeout method here
 bool CamView::on_timeout() {
-	if(waitforupdate && time(NULL) - lastupdate < 5)
-		return true;
-
-	fprintf(stderr, "%x:CamView::on_timeout()\n", (int) pthread_self());
+	// If 'display' is in OK state, we want a new frame (if clear: we dont want frames, if waiting: we still expect a new frame, if error: error!)
+	if (display.get_state() == SwitchButton::OK) {
+		camctrl->grab(0, 0, camctrl->get_width(), camctrl->get_height(), 1, false);
+		display.set_state(SwitchButton::WAITING);
+	}
 
 	return true;
 }
 
 void CamView::on_monitor_update() {
-	force_update();
-	// Get new image if dispay button is in 'OK'
-	if (display.get_state(SwitchButton::OK))
-		camctrl->grab(0, 0, camctrl->get_width(), camctrl->get_height(), 1, false);
+	// New image has arrived, display & update 'display' state
+	display.set_state(SwitchButton::OK);
+	do_full_update();
 }
 
-void CamView::force_update() {
-	//! @todo difference between on_monitor_update
+void CamView::do_full_update() {
 	//! @todo need mutex here?
 	glarea.link_data((void *) camctrl->monitor.image, camctrl->monitor.depth, camctrl->monitor.x2 - camctrl->monitor.x1, camctrl->monitor.y2 - camctrl->monitor.y1);
 	
@@ -501,7 +497,7 @@ void CamView::on_message_update() {
 	}	
 	
 	store_n.set_text(format("%d", camctrl->get_nstore()));
-	if (camctrl->get_nstore() <= 0)
+	if (camctrl->get_nstore() == 0)
 		store.set_state(SwitchButton::CLEAR);
 	else
 		store.set_state(SwitchButton::WAITING);
@@ -532,6 +528,7 @@ void CamView::on_zoomout_activate() {
 }
 
 void CamView::on_capture_clicked() {
+	// Click the 'capture' button: if running, disable, otherwise start camera
 	if (camctrl->get_mode() == CamCtrl::RUNNING || 
 			camctrl->get_mode() == CamCtrl::SINGLE) {
 		fprintf(stderr, "%x:CamView::on_capture_update(): Stopping camera.\n", (int) pthread_self());
@@ -544,20 +541,29 @@ void CamView::on_capture_clicked() {
 }
 
 void CamView::on_display_clicked() {
-	if (display.get_state(SwitchButton::CLEAR)) {
-		display.set_state(SwitchButton::OK);
+	// Click the 'display' button: if clear & not waiting: request new frame, otherwise, stop grabbing
+	if (display.get_state() == SwitchButton::CLEAR) {
+		//!< @todo Can do a smarter grab here, we only need a subsection...
 		camctrl->grab(0, 0, camctrl->get_width(), camctrl->get_height(), 1, false);
+		display.set_state(SwitchButton::WAITING);
 	}
 	else
 		display.set_state(SwitchButton::CLEAR);
 }
 
 void CamView::on_store_clicked() {
+	// If 'store' state is waiting, we are already storing frames...
+	if (store.get_state() != SwitchButton::WAITING)
+		return;
+		
 	int nstore = atoi(store_n.get_text().c_str());
-	fprintf(stderr, "%x:CamView::on_store_update() n=%d\n", (int) pthread_self(), nstore);
+	fprintf(stderr, "%x:CamView::on_store_clicked() n=%d\n", (int) pthread_self(), nstore);
 	
-	if (nstore > 0 || nstore == -1)
+	// If the value 'nstore' is valid, 
+	if (nstore > 0 || nstore == -1) {
 		camctrl->store(nstore);
+		store.set_state(SwitchButton::WAITING);
+	}
 }
 
 bool CamView::on_histo_clicked(GdkEventButton *event) {
@@ -578,10 +584,8 @@ bool CamView::on_histo_clicked(GdkEventButton *event) {
 	if (event->button == 3)
 		maxval.set_value(value);
 	
-	//!< @todo contrast
-	//contrast.set_active(false);
-	do_update();
-	
+	//!< @todo implement histogram binning here
+	//do_update();	
 	return true;
 }
 

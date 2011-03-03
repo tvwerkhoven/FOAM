@@ -137,23 +137,22 @@ protected:
 	bool on_image_button_event(GdkEventButton *event);
 	
 	// GUI updates
-	void on_glarea_view_update();				//!< Callback from glarea class
-	//!< @todo Sort these functions out
-	void force_update();								//!< Update full image etc.
-	void do_update();										//!< Update with new GUI input
-	void do_histo_update();							//!< Update histogram
+	void do_full_update();							//!< Update full glimage image & histo etc (corresponds to OpenGLImageViewer::do_full_update())
+	void do_update();										//!< Update glarea with new view settings (crosshair, flip, etc.) (corresponds to OpenGLImageViewer::do_update())
+	void do_histo_update();							//!< Update histogram (
 
-	// Overload from DeviceView:
+	void on_glarea_view_update();				//!< Callback for OpenGLImageViewer update on viewstate (zoom (scale), shift, etc.)
+
+	// From DeviceView:
 	virtual void disable_gui();
 	virtual void enable_gui();
 	virtual void clear_gui();
 
 	virtual void on_message_update();
-	//virtual void on_connect_update();
-	
-	// New event capture
-	virtual void on_monitor_update();		//!< Display new image from camera
-	bool on_timeout();
+
+	// New events
+	virtual void on_monitor_update();		//!< New camera image available, display it
+	bool on_timeout();									//!< Timeout function, do regular updates (camera image etc.)
 	
 	int histo_scale_func(int i);				//!< Histogram scaling function (set through histo_scale_f). Must scale input from 0 to 100 onto 0 to 100
 
