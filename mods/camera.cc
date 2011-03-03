@@ -120,10 +120,10 @@ void Camera::cam_proc() {
 	
 	while (true) {
 		// Always wait for proc_cond broadcasts
-		//! @todo update to pthread::mutexholder h(&proc_mutex);
-		proc_mutex.lock();
-		proc_cond.wait(proc_mutex);
-		proc_mutex.unlock();
+		{
+			pthread::mutexholder h(&proc_mutex);
+			proc_cond.wait(proc_mutex);
+		}
 		
 		// Lock cam_mut before handling the data
 		pthread::mutexholder h(&cam_mutex);
