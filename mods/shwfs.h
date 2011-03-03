@@ -54,6 +54,11 @@ const string shwfs_type = "shwfs";
  - mla add
  - mla get [idx]
  
+ - get shifts
+ 
+ - calibrate
+ - measure
+ 
  \section shwfs_cfg Configuration parameters
  
 
@@ -72,11 +77,11 @@ public:
 		CAL_PINHOLE
 	} wfs_cal_t;												//!< Different calibration methods
 	
-	std::vector<vector_t> mlacfg;				//!< Microlens array configuration. Each element is a vector with the lower-left corner and upper-right corner of the subimage
+	std::vector<vector_t> mlacfg;				//!< Microlens array configuration. Each element is a vector with the lower-left corner and upper-right corner of the subimage. Same order as shift_vec.
 	
 private:
 	Shift shifts;												//!< Shift computation class. Does the heavy lifting.
-	gsl_vector_float *shift_vec;				//!< SHWFS shift vector
+	gsl_vector_float *shift_vec;				//!< SHWFS shift vector. Shift for subimage N are elements N*2+0 and N*2+1. Same order as mlacfg @todo Make this a ring buffer
 	
 	Shift::method_t method;							//!< Data processing method (Center of Gravity, Correlation, etc)
 	
@@ -103,10 +108,9 @@ private:
 	
 	/*! @brief Represent the MLA configuration as one string
 	 
-	 @param [in] idx The index of the subimage to return or -1 for all subimages (default)
 	 @return <N> [idx x0 y0 x1 y1 [idx x0 y0 x1 y1 [...]]]
 	 */
-	string get_mla_str(const int idx=-1) const;
+	string get_mla_str() const;
 	
 	/*! @brief Set MLA configuration from string, return number of subaps, reverse of get_mla_str(). Output stored in mlacfg.
 	 
@@ -121,6 +125,9 @@ private:
 //	int calc_zern_infl(int nmodes);
 	//!< Calculate slopes (helper for calc_zern_infl())
 //	int calc_slope(gsl_matrix *tmp, std::vector<vector_t> &mlacfg, double *slope); 
+	
+	//!< Represent SHWFS shifts as a string [<N> [idx Sx0 Sy0 Sx1 Sy1 [idx Sx0 Sy0 Sx1 Sy1 [...]]]
+	string get_shifts_str() const;
 	
 public:
 	Shwfs(Io &io, foamctrl *const ptc, const string name, const string port, Path const &conffile, Camera &wfscam, const bool online=true);

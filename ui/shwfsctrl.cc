@@ -54,11 +54,14 @@ void ShwfsCtrl::on_connected(bool conn) {
 	fprintf(stderr, "%x:ShwfsCtrl::on_connected(conn=%d)\n", (int) pthread_self(), conn);
 	
 	if (conn) {
-		send_cmd("mla get");
+		cmd_get_mla();
 	}
 }
 
 void ShwfsCtrl::on_message(string line) {
+	double x0, y0, x1, y1;
+	int n;
+	
 	// Save original line in case this function does not know what to do
 	string orig = line;
 	bool parsed = true;
@@ -69,33 +72,37 @@ void ShwfsCtrl::on_message(string line) {
 	// Get command
 	string what = popword(line);
 
-	if (what == "mla") {
-		// get subtopic
-		string what2 = popword(line);
+	if (what == "mla") {								// ok mla <N> [idx x0 y0 x1 y1 [idx x0 y0 x1 y1 [...]]]
+		n = popint(line);
 		
-		if (what2 == "get") {
-			int n = popint(line);
-			
-			fprintf(stderr, "%x:ShwfsCtrl::on_message(mla get=%d)\n", (int) pthread_self(), n);
-			if (n <= 0) {
-				ok = false;
-				errormsg = "Unexpected response for 'mla get'";
-				signal_message();
-				return;
-			}
-			double x0, y0, x1, y1;
-			//! @todo this probably needs a mutex as well (Should we use a *Ctrl mutex for all DeviceCtrl classes?)
-			mlacfg.clear();
-			for (int i=0; i<n; i++) {
-				popint(line);
-				x0 = popdouble(line); y0 = popdouble(line);
-				x1 = popdouble(line); y1 = popdouble(line);
-				mlacfg.push_back(fvector_t(x0, y0, x1, y1));
-			}
-			
+		if (n <= 0) {
+			ok = false;
+			errormsg = "Unexpected response for 'mla'";
 			signal_message();
 			return;
 		}
+		
+		//! @todo this probably needs a mutex as well (Should we use a *Ctrl mutex for all DeviceCtrl classes?)
+		mlacfg.clear();
+		for (int i=0; i<n; i++) {
+			popint(line);										// discard idx
+			x0 = popdouble(line); y0 = popdouble(line);
+			x1 = popdouble(line); y1 = popdouble(line);
+			mlacfg.push_back(fvector_t(x0, y0, x1, y1));
+		}
+		
+		signal_message();
+		return;
+	} else if (what == "shifts") {			// ok shifts [<N> [idx Sx0 Sy0 Sx1 Sy1 [idx Sx0 Sy0 Sx1 Sy1 [...]]]
+		n = popint(line);
+		
+		for (int i=0; i<n; i++) {
+			popint(line);										// discard idx
+			x0 = popdouble(line); y0 = popdouble(line);
+			x1 = popdouble(line); y1 = popdouble(line);
+			shifts_v.push_back(fvector_t(x0, y0, x1, y1));
+		}
+		signal_sh_shifts();
 	} else
 		parsed = false;
 

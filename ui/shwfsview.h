@@ -45,12 +45,14 @@ private:
 	HBox subi_hbox1;
 	VBox subi_vbox11;
 	HBox subi_hbox111;
+	VSeparator vsep1;
 	VBox subi_vbox12;
 	HBox subi_hbox121;
 	HBox subi_hbox122;
-	VBox subi_vbox13;
-	VSeparator vsep1;
 	VSeparator vsep2;
+	VBox subi_vbox13;
+	VSeparator vsep3;
+	VBox subi_vbox14;
 	
 	ComboBoxText subi_select;						//!< List of subimages
 	LabeledEntry subi_lx;								//!< Subimage coordinate lower x
@@ -64,6 +66,8 @@ private:
 	
 	Button subi_regen;									//!< Re-generate subimage pattern
 	Button subi_find;										//!< Find subimage pattern
+	
+	SwitchButton subi_vecs;							//!< Display shift vectors or not
 
 	// From DeviceView::
 	virtual void enable_gui();
@@ -71,17 +75,23 @@ private:
 	virtual void clear_gui();
 
 	// From WfsView::
-	virtual void do_wfspow_update();
 	virtual void do_info_update();
 	
-	// Extra events:
-	void on_subi_select_changed();
-	void on_subi_add_clicked();
-	void on_subi_del_clicked();
-	void on_subi_update_clicked();
+	// New:
+	void do_sh_shifts_update();					//!< Connected to ShwfsCtrl::signal_sh_shifts(), fires when new SHWFS shifts are available
 	
-	void on_subi_regen_clicked();
-	void on_subi_find_clicked();
+	// Extra events:
+	void on_subi_select_changed();			//!< Select a subimage combobox
+	void on_subi_add_clicked();					//!< Add new subimage button
+	void on_subi_del_clicked();					//!< Delete selected subimage button
+	void on_subi_update_clicked();			//!< Update current subimage coordinates
+	
+	void on_subi_regen_clicked();				//!< Re-generate new MLA pattern
+	void on_subi_find_clicked();				//!< Heuristically find new MLA pattern
+	
+	void on_subi_vecs_clicked();				//!< Show SHWFS shift vectors toggler
+	
+	bool on_timeout();
 	
 public:
 	ShwfsView(ShwfsCtrl *ctrl, Log &log, FoamControl &foamctrl, string n);

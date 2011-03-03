@@ -46,6 +46,7 @@ protected:
 	virtual void on_connected(bool connected);
 	
 	std::vector<fvector_t> mlacfg;			//!< Simple subimage configuration
+	std::vector<fvector_t> shifts_v;		//!< SHWFS shift vectors
 	
 public:
 	ShwfsCtrl(Log &log, const string name, const string host, const string port);
@@ -54,16 +55,27 @@ public:
 	// From WfsCtrl::
 	virtual void connect();
 	
-	// Local MLA configuration
+	// ==== Get properties ====
 	size_t get_mla_nsi() const { return mlacfg.size(); }
 	fvector_t get_mla_si(const size_t idx) const { return mlacfg[idx]; }
 	
+	size_t get_nshifts() const { return shifts_v.size(); }
+	fvector_t get_shift(const size_t idx) const { return shifts_v[idx]; }
+	
+	// ==== Network control ====
+	
 	// Control MLA configuration of remote system
+	void cmd_get_mla() { send_cmd("mla get"); }
 	void mla_add_si(const int lx, const int ly, const int tx, const int ty) { send_cmd(format("mla add %d %d %d %d", lx, ly, tx, ty)); }
 	void mla_del_si(const int idx) { send_cmd(format("mla del %d", idx)); }
 	void mla_update_si(const int idx, const int lx, const int ly, const int tx, const int ty) { send_cmd(format("mla update %d %d %d %d %d", idx, lx, ly, tx, ty)); }
 	void mla_regen_pattern() { send_cmd("mla generate"); }
 	void mla_find_pattern() { send_cmd("mla find"); }
+	
+	// Get SHWFS shifts
+	void cmd_get_shifts() { send_cmd("get shifts"); }
+	
+	Glib::Dispatcher signal_sh_shifts;	//!< New SHWFS shifts available
 };
 
 #endif // HAVE_SHWFSCTRL_H

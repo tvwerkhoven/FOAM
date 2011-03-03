@@ -50,9 +50,9 @@ method(Shift::COG)
 	add_cmd("mla add");
 	add_cmd("mla get");
 	add_cmd("mla set");
+
+	add_cmd("get shifts");
 	
-	add_cmd("get mla");
-	add_cmd("set mla");
 	add_cmd("calibrate");
 	add_cmd("measure");
 	
@@ -188,12 +188,15 @@ void Shwfs::on_message(Connection *const conn, string line) {
 			if (set_mla_str(line))
 				conn->write("error mla set :Could not parse MLA string");
 		} else if(what == "get") {				// mla get
-			conn->write("ok mla get " + get_mla_str());
+			conn->write("ok mla " + get_mla_str());
 		}
 	} else if (command == "get") {
 		string what = popword(line);
 		
-		parsed = false;
+		if (what == "shifts")
+			conn->write("ok shifts " + get_shifts_str());
+		else 
+			parsed = false;
 	} else if (command == "set") {
 		string what = popword(line);
 		
@@ -228,8 +231,6 @@ int Shwfs::measure() {
 	
 	if (cam.get_depth() == 16) {
 		io.msg(IO_DEB2, "Shwfs::measure() got UINT16");
-		// Manually cast mlacfg.ml to Shift type, is the same (Shift has it's own types such that it does not depend on other files too much)
-		//! @todo Include Shift::crop_t in types.h (?)
 		//shifts.calc_shifts((uint16_t *) tmp->image, cam.get_res(), (Shift::crop_t *) mlacfg.ml, mlacfg.size(), shift_vec, method);
 	}
 	else if (cam.get_depth() == 8) {
@@ -237,7 +238,7 @@ int Shwfs::measure() {
 		shifts.calc_shifts((uint8_t *) tmp->image, cam.get_res(), mlacfg, shift_vec, method);
 	}
 	else
-		return io.msg(IO_ERR, "Shwfs::measure() unknown datatype");
+		return io.msg(IO_ERR, "Shwfs::measure() unknown camera datatype");
 	
 	// Convert shifts to basisfunction
 	shift_to_basis(shift_vec, wf.basis, wf.wfamp);
@@ -262,19 +263,19 @@ int Shwfs::shift_to_basis(const gsl_vector_float *const invec, const wfbasis bas
 	
 }
 int Shwfs::calibrate() {
-	shift_vec = gsl_vector_float_alloc(mlacfg.size() * 2);
+	shift_vec = gsl_vector_float_calloc(mlacfg.size() * 2);
 	
 	switch (wf.basis) {
 		case SENSOR:
 			io.msg(IO_XNFO, "Shwfs::calibrate(): Calibrating for basis 'SENSOR'");
 			wf.nmodes = mlacfg.size() * 2;
-			wf.wfamp = gsl_vector_float_alloc(wf.nmodes);
+			wf.wfamp = gsl_vector_float_calloc(wf.nmodes);
 			break;
 		case ZERNIKE:
 			//! @todo how many modes do we want if we're using Zernike? Is the same as the number of coordinates ok or not?
 			wf.nmodes = mlacfg.size() * 2;
-			wf.wfamp = gsl_vector_float_alloc(wf.nmodes);
-			zerninfl = gsl_matrix_float_alloc(mlacfg.size() * 2, wf.nmodes);
+			wf.wfamp = gsl_vector_float_calloc(wf.nmodes);
+			zerninfl = gsl_matrix_float_calloc(mlacfg.size() * 2, wf.nmodes);
 		case KL:
 		case MIRROR:
 			//! @todo Implement KL & mirror modes
@@ -339,7 +340,7 @@ int Shwfs::gen_mla_grid(std::vector<vector_t> &mlacfg, const coord_t res, const 
 		}
 	}
 	io.msg(IO_XNFO, "Shwfs::gen_mla_grid(): Found %d subapertures.", (int) mlacfg.size());
-	netio.broadcast("ok mla get " + get_mla_str(), "mla");
+	netio.broadcast("ok mla " + get_mla_str(), "mla");
 	
 	return (int) mlacfg.size();
 }
@@ -484,7 +485,7 @@ int Shwfs::find_mla_grid(std::vector<vector_t> &mlacfg, const coord_t size, cons
 		io.msg(IO_WARN, "Shwfs::find_mla_grid(): got camera buffer overflow, data might be inaccurate");
 	}
 	
-	netio.broadcast("ok mla get " + get_mla_str(), "mla");
+	netio.broadcast("ok mla " + get_mla_str(), "mla");
 	return (int) mlacfg.size();
 }
 
@@ -506,7 +507,7 @@ int Shwfs::mla_update_si(const int nx0, const int ny0, const int nx1, const int 
 		else
 			mlacfg.push_back(vector_t(nx0, ny0, nx1, ny1));
 
-		netio.broadcast("ok mla get " + get_mla_str(), "mla");
+		netio.broadcast("ok mla " + get_mla_str(), "mla");
 		return 0;
 	}
 	else {
@@ -517,7 +518,7 @@ int Shwfs::mla_update_si(const int nx0, const int ny0, const int nx1, const int 
 int Shwfs::mla_del_si(const int idx) {
 	if (idx >=0 && idx < (int) mlacfg.size()) {
 		mlacfg.erase(mlacfg.begin() + idx);
-		netio.broadcast("ok mla get " + get_mla_str(), "mla");
+		netio.broadcast("ok mla " + get_mla_str(), "mla");
 		return 0;
 	}
 	else
@@ -540,20 +541,15 @@ int Shwfs::_find_max(const T *const img, const size_t nel, size_t *const idx) {
 	return max;	
 }
 
-string Shwfs::get_mla_str(const int idx) const {
-	io.msg(IO_DEB2, "Shwfs::get_mla_str(idx=%d)", idx);
+string Shwfs::get_mla_str() const {
+	io.msg(IO_DEB2, "Shwfs::get_mla_str()");
 	string ret;
 	
-	if (idx >= 0 && idx < (int) mlacfg.size()) {
-		// Return only 1 subimage 
-		ret = format("1 %d %d %d %d %d", idx, mlacfg[idx].lx, mlacfg[idx].ly, mlacfg[idx].tx, mlacfg[idx].ty);
-	} else {
-		// Return all subimages
-		ret = format("%d ", mlacfg.size());
-		
-		for (size_t i=0; i<mlacfg.size(); i++)
-			ret += format("%d %d %d %d %d ", (int) i, mlacfg[i].lx, mlacfg[i].ly, mlacfg[i].tx, mlacfg[i].ty);
-	}
+	// Return all subimages
+	ret = format("%d ", mlacfg.size());
+	
+	for (size_t i=0; i<mlacfg.size(); i++)
+		ret += format("%d %d %d %d %d ", (int) i, mlacfg[i].lx, mlacfg[i].ly, mlacfg[i].tx, mlacfg[i].ty);
 
 	return ret;
 }
@@ -575,7 +571,27 @@ int Shwfs::set_mla_str(string mla_str) {
 		mlacfg.push_back(vector_t(x0, y0, x1, y1));
 	}
 	
-	netio.broadcast("ok mla " + mla_str, "mla");
+	netio.broadcast("ok mla " + get_mla_str(), "mla");
 	return (int) mlacfg.size();
+}
+
+string Shwfs::get_shifts_str() const {
+	io.msg(IO_DEB2, "Shwfs::get_shifts_str()");
+	string ret;
+	
+	// Return all shifts in one string
+	//! @bug This might cause problems when others are writing this data!
+	ret = format("%d ", (int) shift_vec->size);
+	
+	for (size_t i=0; i<shift_vec->size/2; i++) {
+		fcoord_t vec_origin(mlacfg[i].lx/2 + mlacfg[i].tx/2, mlacfg[i].ly/2 + mlacfg[i].ty/2);
+		ret += format("%d %g %g %g %g ", (int) i, 
+									vec_origin.x,
+									vec_origin.y,
+									vec_origin.x + gsl_vector_float_get(shift_vec, i*2+0), 
+									vec_origin.y + gsl_vector_float_get(shift_vec, i*2+1));
+	}
+	
+	return ret;
 }
 

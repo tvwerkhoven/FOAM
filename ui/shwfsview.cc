@@ -32,7 +32,7 @@ WfsView((WfsCtrl *) ctrl, log, foamctrl, n), shwfsctrl(ctrl),
 shwfs_addnew("Add new"),
 subi_frame("Subimages"),
 subi_lx("X_0"), subi_ly("Y_0"), subi_tx("X_1"), subi_ty("Y_1"), 
-subi_update("Update"), subi_del("Del"), subi_add("Add"), subi_regen("Regen pattern"), subi_find("Find pattern")
+subi_update("Update"), subi_del("Del"), subi_add("Add"), subi_regen("Regen pattern"), subi_find("Find pattern"), subi_vecs("Show shifts")
 {
 	fprintf(stderr, "%x:ShwfsView::ShwfsView()\n", (int) pthread_self());
 	
@@ -50,6 +50,11 @@ subi_update("Update"), subi_del("Del"), subi_add("Add"), subi_regen("Regen patte
 	
 	subi_regen.signal_clicked().connect(sigc::mem_fun(*this, &ShwfsView::on_subi_regen_clicked));
 	subi_find.signal_clicked().connect(sigc::mem_fun(*this, &ShwfsView::on_subi_find_clicked));
+	
+	subi_vecs.signal_clicked().connect(sigc::mem_fun(*this, &ShwfsView::on_subi_vecs_clicked));
+	
+	shwfsctrl->signal_sh_shifts.connect(sigc::mem_fun(*this, &ShwfsView::do_sh_shifts_update));
+	Glib::signal_timeout().connect(sigc::mem_fun(*this, &ShwfsView::on_timeout), 1000.0/1.0);
 	
 	// Add widgets
 	// Subimage/ MLA pattern controls
@@ -71,12 +76,16 @@ subi_update("Update"), subi_del("Del"), subi_add("Add"), subi_regen("Regen patte
 	subi_vbox13.pack_start(subi_regen, PACK_SHRINK);
 	subi_vbox13.pack_start(subi_find, PACK_SHRINK);
 	
+	subi_vbox14.pack_start(subi_vecs, PACK_SHRINK);
+	
 	subi_hbox1.pack_start(subi_vbox11, PACK_SHRINK);
 	subi_hbox1.pack_start(vsep1, PACK_SHRINK);
 	subi_hbox1.pack_start(subi_vbox12, PACK_SHRINK);
 	subi_hbox1.pack_start(vsep2, PACK_SHRINK);
 	subi_hbox1.pack_start(subi_vbox13, PACK_SHRINK);
-	
+	subi_hbox1.pack_start(vsep3, PACK_SHRINK);
+	subi_hbox1.pack_start(subi_vbox14, PACK_SHRINK);
+
 	subi_frame.add(subi_hbox1);
 	
 	pack_start(subi_frame, PACK_SHRINK);
@@ -101,7 +110,8 @@ void ShwfsView::enable_gui() {
 	subi_del.set_sensitive(true);
 	subi_add.set_sensitive(true);
 	subi_regen.set_sensitive(true);
-	subi_find.set_sensitive(true);	
+	subi_find.set_sensitive(true);
+	subi_vecs.set_sensitive(true);	
 }
 
 void ShwfsView::disable_gui() {
@@ -114,7 +124,7 @@ void ShwfsView::disable_gui() {
 	subi_add.set_sensitive(false);
 	subi_regen.set_sensitive(false);
 	subi_find.set_sensitive(false);
-	
+	subi_vecs.set_sensitive(false);	
 }
 
 void ShwfsView::clear_gui() {
@@ -132,6 +142,8 @@ void ShwfsView::clear_gui() {
 		wfscam_ui->glarea.clearboxes();
 		wfscam_ui->glarea.clearlines();
 	}
+	
+	subi_vecs.set_state(SwitchButton::CLEAR);
 }
 
 void ShwfsView::on_subi_select_changed() {
@@ -235,14 +247,39 @@ void ShwfsView::on_subi_find_clicked() {
 	shwfsctrl->mla_find_pattern();
 }
 
-void ShwfsView::do_wfspow_update() {
-	WfsView::do_wfspow_update();
-	fprintf(stderr, "%x:ShwfsView::do_wfspow_update()\n", (int) pthread_self());
+void ShwfsView::on_subi_vecs_clicked() {
+	fprintf(stderr, "%x:ShwfsView::on_subi_vecs_clicked()\n", (int) pthread_self());
+	// If the button is clear: start acquisition, otherwise: set button to clear (and stop acquisition)
+	if (subi_vecs.get_state() == SwitchButton::CLEAR) {
+		shwfsctrl->cmd_get_shifts();
+		subi_vecs.set_state(SwitchButton::WAITING);
+	}
+	else {
+		subi_vecs.set_state(SwitchButton::CLEAR);
+	}
+}
+
+bool ShwfsView::on_timeout() {
+	// If button is clear we don't want shifts, if waiting we're expecting new shifts soon
+	if (subi_vecs.get_state() == SwitchButton::OK) {
+		subi_vecs.set_state(SwitchButton::WAITING);
+		shwfsctrl->cmd_get_shifts();
+	}
+	return true;
+}
+
+void ShwfsView::do_sh_shifts_update() {
+	fprintf(stderr, "%x:ShwfsView::do_sh_shifts_update()\n", (int) pthread_self());
+	subi_vecs.set_state(SwitchButton::OK);
 		
 	// Add subimage boxes & wavefront vectors to glarea
 	if (wfscam_ui) {
-		//! @todo add drawing vectors for wavefront measurements
-		//! @bug Updates here do not show immediately. glarea.do_update() does not work because it might not have an image yet
+		wfscam_ui->glarea.clearlines();
+		
+		for (size_t i=0; i<shwfsctrl->get_nshifts(); i++)
+			wfscam_ui->glarea.addline(shwfsctrl->get_shift((size_t) i));
+		
+		wfscam_ui->glarea.do_update();
 	}
 }
 
@@ -265,6 +302,7 @@ void ShwfsView::do_info_update() {
 		for (size_t i=0; i<shwfsctrl->get_mla_nsi(); i++) {
 			wfscam_ui->glarea.addbox(shwfsctrl->get_mla_si((size_t) i));
 		}
-		//! @bug Updates here do not show immediately. glarea.do_update() does not work because it might not have an image yet
+	
+		wfscam_ui->glarea.do_update();
 	}	
 }
