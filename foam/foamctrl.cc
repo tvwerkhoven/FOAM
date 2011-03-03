@@ -76,8 +76,7 @@ int foamctrl::parse() {
 	// Datadir (relative to progdir if relative)
 	datadir = progdir + cfg->getstring("datadir", "/tmp/");
 	// Create subdirectory unique for this run
-	struct tm *tmp;
-	tmp = gmtime(&starttime);
+	struct tm *tmp = gmtime(&starttime);
 	char tstamp[16];
 	strftime(tstamp, sizeof(tstamp), "%Y%m%d_%H%M%S", tmp);
 	datadir += format("FOAM_data_%s/", tstamp);
