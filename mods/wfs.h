@@ -68,11 +68,10 @@ public:
 	gsl_matrix_float *zerninfl;					//!< Influence matrix to convert WFS data to Zernike modes
 	
 	struct wavefront wf;								//!< Wavefront representation
-	bool is_calib;											//!< Is calibrated & ready for use
 	
 	Camera &cam;												//!< Reference to the camera class used for this WFS
 	
-	// To be implemented:
+	// To be implemented by derived classes:
 	virtual int measure();							//!< Measure abberations
 	virtual int calibrate();						//!< Calibrate sensor, set up reference and mode basis
 	

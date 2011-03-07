@@ -69,6 +69,7 @@ protected:
 	
 	Protocol::Server netio;							//!< Network connection
 	bool online;												//!< Online or not?
+	bool is_calib;											//!< Is calibrated & ready for use
 
 	bool init();												//!< Initialisation (common for all constructors)
 	

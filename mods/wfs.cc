@@ -32,7 +32,6 @@ using namespace std;
 Wfs::Wfs(Io &io, foamctrl *const ptc, const string name, const string port, Path const &conffile, Camera &wfscam, const bool online):
 Device(io, ptc, name, wfs_type, port, conffile, online),
 zernbasis(io, 0, wfscam.get_width()),
-is_calib(false),
 cam(wfscam)
 {	
 	io.msg(IO_DEB2, "Wfs::Wfs()");
@@ -47,7 +46,6 @@ cam(wfscam)
 Wfs::Wfs(Io &io, foamctrl *const ptc, const string name, const string type, const string port, Path const &conffile, Camera &wfscam, const bool online):
 Device(io, ptc, name, wfs_type + "." + type, port, conffile, online),
 zernbasis(io, 0, wfscam.get_width()),
-is_calib(false),
 cam(wfscam)
 {	
 	io.msg(IO_DEB2, "Wfs::Wfs()");
@@ -60,7 +58,10 @@ cam(wfscam)
 }
 
 Wfs::~Wfs() {
-		io.msg(IO_DEB2, "Wfs::~Wfs()");
+	io.msg(IO_DEB2, "Wfs::~Wfs()");
+
+	if (wf.wfamp)
+		gsl_vector_float_free(wf.wfamp);
 }
 
 
@@ -72,7 +73,6 @@ void Wfs::on_message(Connection *const conn, string line) {
 	if (command == "measuretest") {
 		// Specifically call Wfs::measure() to fake a measurement
 		Wfs::measure();
-		conn->addtag("measuretest");
 		conn->write("ok measuretest");
 	} else if (command == "get") {
 		string what = popword(line);
@@ -106,7 +106,6 @@ void Wfs::on_message(Connection *const conn, string line) {
 	else
 		parsed = false;
 	
-
 	// If not parsed here, call parent
 	if (parsed == false)
 		Device::on_message(conn, orig);
@@ -114,7 +113,7 @@ void Wfs::on_message(Connection *const conn, string line) {
 
 int Wfs::measure() {
 	io.msg(IO_DEB2, "Wfs::measure(), filling random");
-	if (wf.nmodes == 0) {
+	if (!wf.wfamp) {
 		wf.nmodes = 16;
 		wf.wfamp = gsl_vector_float_alloc(wf.nmodes);
 		wf.basis = SENSOR;
