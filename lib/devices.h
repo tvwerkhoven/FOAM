@@ -79,6 +79,7 @@ protected:
 	config cfg;													//!< Interpreted configuration file
 	
 	Protocol::Server netio;							//!< Network connection
+
 	bool online;												//!< Online flag, indicates whether this Device listens to network commands or not.
 	
 	
