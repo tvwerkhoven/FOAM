@@ -96,6 +96,7 @@ void ShwfsCtrl::on_message(string line) {
 	} else if (what == "shifts") {			// ok shifts [<N> [idx Sx0 Sy0 Sx1 Sy1 [idx Sx0 Sy0 Sx1 Sy1 [...]]]
 		n = popint(line);
 		
+		shifts_v.clear();
 		for (int i=0; i<n; i++) {
 			popint(line);										// discard idx
 			x0 = popdouble(line); y0 = popdouble(line);

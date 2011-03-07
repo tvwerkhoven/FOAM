@@ -285,7 +285,7 @@ void ShwfsView::do_sh_shifts_update() {
 
 void ShwfsView::do_info_update() {
 	WfsView::do_info_update();
-	fprintf(stderr, "%x:ShwfsView::do_info_update(append %zu)\n", (int) pthread_self(), shwfsctrl->get_mla_nsi());
+	fprintf(stderr, "%x:ShwfsView::do_info_update()\n", (int) pthread_self());
 
 	// Add list of subimages to dropdown box
 	subi_select.clear_items();

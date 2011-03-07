@@ -78,6 +78,7 @@ void WfsCtrl::on_message(string line) {
 		}
 		
 		// Copy wavefront data
+		wf.wfamp.clear();
 		for (int n=0; n<nm; n++)
 			wf.wfamp.push_back(popdouble(line));
 

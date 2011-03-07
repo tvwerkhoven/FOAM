@@ -87,6 +87,7 @@ void DeviceCtrl::on_message(string line) {
 		// The rest should be semicolon-delimited commands: "<cmd> [opts]; <cmd2> [opts];" etc.
 		int ncmds = popint32(line);
 		
+		devcmds.clear();
 		for (int i=0; i<ncmds; i++) {
 			string cmd = popword(line, ";");
 			if (cmd == "")

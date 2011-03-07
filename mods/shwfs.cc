@@ -560,6 +560,7 @@ int Shwfs::set_mla_str(string mla_str) {
 	
 	is_calib = false;
 	
+	mlacfg.clear();
 	for (int i=0; i<nsi; i++) {
 		x0 = popint(mla_str);
 		y0 = popint(mla_str);
