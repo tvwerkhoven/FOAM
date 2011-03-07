@@ -290,12 +290,16 @@ void ShwfsView::do_sh_shifts_update() {
 	log.term(format("%s", __PRETTY_FUNCTION__));
 	subi_vecs.set_state(SwitchButton::OK);
 		
-	// Add subimage boxes & wavefront vectors to glarea
+	// Add image shift vectors to glarea
 	if (wfscam_ui) {
 		wfscam_ui->glarea.clearlines();
 		
-		for (size_t i=0; i<shwfsctrl->get_nshifts(); i++)
-			wfscam_ui->glarea.addline(shwfsctrl->get_shift((size_t) i));
+		for (size_t i=0; i<shwfsctrl->get_nshifts(); i++) {
+			fvector_t tmp = shwfsctrl->get_shift((size_t) i);
+			// Add 0.5 to all coordinates because we want the arrow to begin in the middle of the pixel
+			tmp.add(0.5, 0.5, 0.5, 0.5);
+			wfscam_ui->glarea.addline(tmp);
+		}
 		
 		wfscam_ui->glarea.do_update();
 	}
