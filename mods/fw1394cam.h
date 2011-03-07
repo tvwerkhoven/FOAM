@@ -1,6 +1,6 @@
 /*
  fw1394cam.h -- IEEE 1394 camera module
- Copyright (C) 2010 Tim van Werkhoven <t.i.m.vanwerkhoven@xs4all.nl>
+ Copyright (C) 2010--2011 Tim van Werkhoven <t.i.m.vanwerkhoven@xs4all.nl>
  Copyright (C) 2006  Guus Sliepen <guus@sliepen.eu.org>
  
  This program is free software; you can redistribute it and/or modify
@@ -40,7 +40,7 @@ private:
 	dc1394::camera *camera;
 	
 public:
-	FW1394Camera(Io &io, foamctrl *ptc, string name, string port, Path &conffile, bool online=true);
+	FW1394Camera(Io &io, foamctrl *const ptc, string name, string port, Path &conffile, bool online=true);
 	~FW1394Camera();
 
 	// From Camera::
@@ -59,3 +59,11 @@ public:
 };
 
 #endif // HAVE_1394CAM_H
+
+/*!
+ \page dev_cam_fw1394 Firewire camera devices
+ 
+ The FW1394Camera class provides control for firewire (IEEE 1394) cameras.
+ 
+ 
+ */

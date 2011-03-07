@@ -1,6 +1,6 @@
 /*
  camview.h -- camera control class
- Copyright (C) 2010 Tim van Werkhoven <t.i.m.vanwerkhoven@xs4all.nl>
+ Copyright (C) 2010--2011 Tim van Werkhoven <t.i.m.vanwerkhoven@xs4all.nl>
  Copyright (C) 2010 Guus Sliepen
  
  This file is part of FOAM.
@@ -22,6 +22,10 @@
 #ifndef HAVE_CAMVIEW_H
 #define HAVE_CAMVIEW_H
 
+#ifdef HAVE_CONFIG_H
+#include "autoconfig.h"
+#endif
+
 #include <gtkmm.h>
 #include <gdkmm/pixbuf.h>
 #include <gtkglmm.h>
@@ -32,6 +36,9 @@
 #include "camctrl.h"
 #include "glviewer.h"
 
+using namespace Gtk;
+using namespace std;
+
 /*!
  @brief Generic camera viewing class
  
@@ -39,17 +46,26 @@
  cameras and can display frames.
  */
 class CamView: public DevicePage {
+	friend class ShwfsView;
 protected:
 	CamCtrl *camctrl;
 	
-	Gtk::Frame infoframe;
-	Gtk::Frame dispframe;
-	Gtk::Frame ctrlframe;
-	Gtk::Frame camframe;
-	Gtk::Frame histoframe;
+	// These frames go in the main VBox
+	Frame ctrlframe;
+	Frame dispframe;
 	
-	// Info stuff
-	HBox infohbox;
+	// The Camera image goes in the extra window
+	Frame camframe;
+	Frame histoframe;	
+	
+	// Control stuff
+	// Need: darkflat, fsel, tiptilt, capture, thumb, ...?
+	HBox ctrlhbox;
+	SwitchButton capture;								//!< Start/stop capturing frames, CamView::on_capture_clicked()
+	SwitchButton display;								//!< Start/stop displaying frames, CamView::on_display_clicked()
+	SwitchButton store;									//!< Start/stop storing frames on the camera, CamView::on_store_clicked()
+	Entry store_n;											//!< How many frames to store when clicking CamView:store
+	VSeparator ctrl_vsep;
 	LabeledEntry e_exposure;						//!< For exposure time, RW
 	LabeledEntry e_offset;							//!< For offset, RW
 	LabeledEntry e_interval;						//!< For interval, RW
@@ -59,7 +75,6 @@ protected:
 	LabeledEntry e_stat;								//!< For status, RO
 	
 	// Display stuff
-	//!< @todo contrast, underover, colorsel, histogram
 	HBox disphbox;
 	CheckButton flipv;									//!< Flip image vertically (only GUI)
 	CheckButton fliph;									//!< Flip image horizontally (only GUI)
@@ -71,15 +86,6 @@ protected:
 	Button zoomout;											//!< Zoom out, CamView::on_zoomout_activate()
 	Button zoom100;											//!< Zoom to original size, CamView::on_zoom100_activate()
 	ToggleButton zoomfit;								//!< Zoom to fit to window
-
-	// control stuff
-	// Need: darkflat, fsel, tiptilt, capture, thumb, ...?
-	HBox ctrlhbox;
-	//Button refresh;
-	SwitchButton capture;								//!< Start/stop capturing frames, CamView::on_capture_clicked()
-	SwitchButton display;								//!< Start/stop displaying frames, CamView::on_display_clicked()
-	SwitchButton store;									//!< Start/stop storing frames on the camera, CamView::on_store_clicked()
-	Entry store_n;											//!< How many frames to store when clicking CamView:store
 		
 	// Camera image
 	HBox camhbox;
@@ -87,9 +93,9 @@ protected:
 	
 	// Histogram GUI stuff
 	HBox histohbox;
-	Gtk::Alignment histoalign;
-	Gtk::EventBox histoevents;
-	Gtk::Image histoimage;
+	Alignment histoalign;
+	EventBox histoevents;
+	Image histoimage;
 	Glib::RefPtr<Gdk::Pixbuf> histopixbuf;
 
 	VBox histovbox;
@@ -131,25 +137,36 @@ protected:
 	bool on_image_button_event(GdkEventButton *event);
 	
 	// GUI updates
-	void on_glarea_view_update();				//!< Callback from glarea class
-	//!< @todo Sort these functions out
-	void force_update();								//!< Update full image etc.
-	void do_update();										//!< Update with new GUI input
-	void do_histo_update();							//!< Update histogram
+	void do_full_update();							//!< Update full glimage image & histo etc (corresponds to OpenGLImageViewer::do_full_update())
+	void do_update();										//!< Update glarea with new view settings (crosshair, flip, etc.) (corresponds to OpenGLImageViewer::do_update())
+	void do_histo_update();							//!< Update histogram (
 
-	// Overload from DeviceView:
+	void on_glarea_view_update();				//!< Callback for OpenGLImageViewer update on viewstate (zoom (scale), shift, etc.)
+
+	// From DeviceView:
 	virtual void disable_gui();
 	virtual void enable_gui();
 	virtual void clear_gui();
 
 	virtual void on_message_update();
-	//virtual void on_connect_update();
+
+	// New events
+	virtual void on_monitor_update();		//!< New camera image available, display it
+	bool on_timeout();									//!< Timeout function, do regular updates (camera image etc.)
 	
-	// New event capture
-	virtual void on_monitor_update();		//!< Display new image from camera
-	bool on_timeout();
+	int histo_scale_func(int i);				//!< Histogram scaling function (set through histo_scale_f). Must scale input from 0 to 100 onto 0 to 100
 
 public:
+	enum _histo_scale_f {
+		LINEAR=0,
+		SQRT,
+		LOG10,
+		LOG20,
+		LOG100,
+		LOG2,
+	};
+	enum _histo_scale_f histo_scale_f;
+	
 	CamView(CamCtrl *camctrl, Log &log, FoamControl &foamctrl, string n);
 	~CamView();
 	
@@ -161,7 +178,7 @@ public:
 
 
 /*!
- \page dev_cam Camera devices : CamView & CamCtrl
+ \page dev_cam_ui Camera devices UI: CamView & CamCtrl
  
  \section camview_camview CamView
  
@@ -173,7 +190,7 @@ public:
  
  \section camview_derived Derived classes
  
- The following classes are dervied from the Camera device:
- - \subpage dev_cam_wfs "Wavefront sensor device"
+ The following classes are derived from the Camera device:
+ - none
  
  */

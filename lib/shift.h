@@ -1,6 +1,6 @@
 /*
  shift.h -- Shift measurements header file
- Copyright (C) 2010 Tim van Werkhoven <t.i.m.vanwerkhoven@xs4all.nl>
+ Copyright (C) 2010--2011 Tim van Werkhoven <t.i.m.vanwerkhoven@xs4all.nl>
  
  This file is part of FOAM.
  
@@ -22,36 +22,89 @@
 #ifndef HAVE_SHIFT_H
 #define HAVE_SHIFT_H
 
-const int NTHREADS = 4;
+#include <gsl/gsl_vector.h>
+#include <vector>
 
-#include "types.h"
 #include "io.h"
 #include "pthread++.h"
+#include "types.h"
 
 /*!
  @brief Image shift calculation class (for SHWFS)
- @todo Document this
+ 
+ This is a generic class for calculating 2-dimensional shifts over 
+ (subsections) of images. This is primarily meant for Shack-Hartmann wavefront
+ sensors, but can hopefully be used in other applications as well.
  */
 class Shift {
-private:
-	Io &io;
-	pthread::thread threads[NTHREADS];
-	
 public:
 	typedef enum {
-		COG=0,
-		CORR
-	} mode_t;														//!< Different shift calculation modes
+		UINT8=0,													//!< uint8_t datatype
+		UINT16,														//!< uint16_t datatype
+	} dtype_t;
+	
+	typedef enum {
+		COG=0,														//!< Center of Gravity method
+		CORR,															//!< Cross-correlation method
+	} method_t;													//!< Different image shift calculation methods
+	
+private:
+	Io &io;															//!< Message IO
+	
+	typedef struct jobinfo {
+		method_t method;
+		int bpp;													//!< Image bitdepth (8 for uint8_t, 16 for uint16_t)
+		uint8_t *img;											//!< Image to process
+		coord_t res;											//!< Image size (width x height)
+		uint8_t *refimg;									//!< Reference image (for method=CORR)
+		uint8_t mini;											//!< Minimum intensity to consider (for method=COG)
+		std::vector<vector_t> crops;			//!< Crop fields within the bigger image
+		gsl_vector_float *shifts;					//!< Pre-allocated output vector
+		pthread::mutex mutex;							//!< Lock for jobid
+		int jobid;												//!< Next crop field to process
+		int done;													//!< Number of worker threads done
+	} job_t;
+	
+	job_t workpool;											//!< Work pool, used by different threads to get work from
 
-	typedef struct data_t {
-		void *data;						//!< Data pointer, type encoded in dt
-		dtype_t dt;						//!< Datatype
-		coord_t res;					//!< Size
-	}
+	pthread::mutex work_mutex;					//!< Mutex used to limit access to frame data
+	pthread::cond work_cond;						//!< Cond used to signal threads about new frames
+	
+	pthread::cond work_done_cond;				//!< Signal for work completed
+	pthread::mutex work_done_mutex;			//!< Signal for work completed
 
-	Shift(Io &io);
-	~Shift(void);
+	int nworker;												//!< Number of workers requested
+	int workid;													//!< Worker counter
+	std::vector<pthread::thread> workers; //!< Worker threads
 
+	void _worker_func();								//!< Worker function
+	int _worker_getid() { return workid++; }
+	
+	/*! @brief Calculate CoG in a crop field of img
+	 
+	 @param [in] img Pointer to image data.
+	 @param [in] res Resolution of image data (i.e. data stride)
+	 @param [in] crop Crop field to process
+	 @param [out] *vec Shift found within crop field in img
+	 @param [in] mini Minimum intensity to consider
+	 */
+	void _calc_cog(const uint8_t *img, const coord_t &res, const vector_t &crop, float *vec, const uint8_t mini=0);
+	
+public:
+	Shift(Io &io, const int nthr=4);
+	~Shift();
+	
+	/*! @brief Calculate shifts in a series of crop fields within an image
+	 
+	 @param [in] img Pointer to image data.
+	 @param [in] res Resolution of image data (i.e. data stride)
+	 @param [in] *crops Array of crop field to process
+	 @param [out] *shifts Buffer to hold results (pre-allocated)
+	 @param [in] method Tracking method (see method_t)
+	 @param [in] wait Block until complete, or return asap
+	 @param [in] mini Minimum intensity to consider (for COG)
+	 */
+	bool calc_shifts(const uint8_t *img, const coord_t res, const std::vector<vector_t> &crops, gsl_vector_float *shifts, const method_t method=COG, const bool wait=true, const uint8_t mini=0);
 };
 
 #endif // HAVE_SHIFT_H

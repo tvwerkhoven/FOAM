@@ -1,6 +1,6 @@
 /*
  foam-full.h -- static simulation module header file
- Copyright (C) 2008--2010 Tim van Werkhoven <t.i.m.vanwerkhoven@xs4all.nl>
+ Copyright (C) 2008--2011 Tim van Werkhoven <t.i.m.vanwerkhoven@xs4all.nl>
  
  This file is part of FOAM.
  
@@ -17,12 +17,6 @@
  You should have received a copy of the GNU General Public License
  along with FOAM.  If not, see <http://www.gnu.org/licenses/>.
  */
-/*! 
-	@file foam-simstatic.h
-	@author Tim van Werkhoven (t.i.m.vanwerkhoven@xs4all.nl)
-	@date 2008-04-18 12:55
-
-*/
 
 #ifndef HAVE_FOAM_FULLSIM_H
 #define HAVE_FOAM_FULLSIM_H
@@ -33,16 +27,30 @@
 // LIBRARIES //
 /*************/
 
+#ifdef HAVE_CONFIG_H
 #include "autoconfig.h"
+#endif
+
 #include "foam.h"
 #include "types.h"
 #include "io.h"
+
+using namespace std;
 
 /*!
  @brief FOAM full simulation implementation
  
  This FOAM implementation provides a complete end-to-end simulation of the 
  atmosphere, the telescope, the wavefront correctors and -sensors.
+ 
+ 
+ Extra command line arguments supported are:
+ - none
+ 
+ Extra networking commands supported are:
+ - help (ok cmd help): show more help
+ - get calib (ok calib <ncalib> <calib1> <calib2> ...): get calibration mdoes
+ - calib <calib> (ok cmd calib): calibrate setup
  */
 class FOAM_FullSim : public FOAM {
 public:
@@ -50,7 +58,7 @@ public:
 	virtual ~FOAM_FullSim() { io.msg(IO_DEB2, "FOAM_FullSim::~FOAM_FullSim()"); } 
 	
 	virtual int load_modules();
-	virtual void on_message(Connection *connection, std::string line);
+	virtual void on_message(Connection * const connection, string line);
 	
 	virtual int closed_init();
 	virtual int closed_loop();

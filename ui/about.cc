@@ -1,6 +1,6 @@
 /*
  about.cc -- FOAM GUI about window
- Copyright (C) 2010 Tim van Werkhoven <t.i.m.vanwerkhoven@xs4all.nl>
+ Copyright (C) 2010--2011 Tim van Werkhoven <t.i.m.vanwerkhoven@xs4all.nl>
  Copyright (C) 2009 Guus Sliepen <guus@sliepen.eu.org>
  
  This file is part of FOAM.
@@ -20,7 +20,9 @@
  */
 
 #include <about.h>
+#ifdef HAVE_CONFIG_H
 #include "autoconfig.h"
+#endif
 
 static const char GPL[] =
 "                    GNU GENERAL PUBLIC LICENSE\n"
@@ -255,7 +257,7 @@ AboutFOAMGui::AboutFOAMGui() {
 	authors.push_back("Guus Sliepen <guus@sliepen.eu.org>");
 
 	set_name("FOAM GUI");
-	set_copyright("Copyright (c) 2009--2010 Tim van Werkhoven");
+	set_copyright("Copyright (c) 2009--2011 Tim van Werkhoven");
 	set_comments("FOAM Control interface");
 	set_version(PACKAGE_VERSION);
 	set_website("http://www.phys.uu.nl/~werkhvn/research/foam.html");

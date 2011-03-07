@@ -1,6 +1,6 @@
 /*
  simseeing.cc -- atmosphere/telescope simulator
- Copyright (C) 2010 Tim van Werkhoven <t.i.m.vanwerkhoven@xs4all.nl>
+ Copyright (C) 2010--2011 Tim van Werkhoven <t.i.m.vanwerkhoven@xs4all.nl>
  
  This file is part of FOAM.
  
@@ -32,7 +32,7 @@
  *  Constructors / destructors
  */
 
-SimSeeing::SimSeeing(Io &io, foamctrl *ptc, string name, string port, Path &conffile):
+SimSeeing::SimSeeing(Io &io, foamctrl *const ptc, const string name, const string port, const Path &conffile):
 Device(io, ptc, name, simseeing_type, port, conffile, false),
 file(""), croppos(0,0), cropsize(0,0), windspeed(10,10), windtype(LINEAR)
 {
@@ -94,7 +94,7 @@ SimSeeing::~SimSeeing() {
  *  Private methods
  */
 
-gsl_matrix *SimSeeing::load_wavefront(Path &f, bool norm) {
+gsl_matrix *SimSeeing::load_wavefront(const Path &f, const bool norm) {
 	file = f;
 	io.msg(IO_DEB2, "SimSeeing::load_wavefront(), file=%s", file.c_str());
 	

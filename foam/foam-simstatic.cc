@@ -1,6 +1,6 @@
 /*
  foam-simstatic.cc -- static simulation module
- Copyright (C) 2008--2010 Tim van Werkhoven <t.i.m.vanwerkhoven@xs4all.nl>
+ Copyright (C) 2008--2011 Tim van Werkhoven <t.i.m.vanwerkhoven@xs4all.nl>
  
  This file is part of FOAM.
  
@@ -17,14 +17,6 @@
  You should have received a copy of the GNU General Public License
  along with FOAM.  If not, see <http://www.gnu.org/licenses/>.
  */
-/*! 
- @file foam-simstatic.c
- @author Tim van Werkhoven (t.i.m.vanwerkhoven@xs4all.nl)
- @brief This is a static simulation mode, with just a simple image to work with.
- 
- This setup can be used to benchmark performance of the AO system if no
- AO hardware (camera, TT, DM) is present.
- */
 
 #include <iostream>
 #include <string>
@@ -40,6 +32,8 @@
 #include "camera.h"
 
 #include "foam-simstatic.h"
+
+using namespace std;
 
 // Global device list for easier access
 DummyCamera *testcam;
@@ -134,7 +128,7 @@ int FOAM_simstatic::calib() {
 	return 0;
 }
 
-void FOAM_simstatic::on_message(Connection *connection, std::string line) {
+void FOAM_simstatic::on_message(Connection *connection, string line) {
 	io.msg(IO_DEB2, "FOAM_simstatic::on_message(line=%s)", line.c_str());
 	netio.ok = true;
 	
@@ -163,7 +157,7 @@ void FOAM_simstatic::on_message(Connection *connection, std::string line) {
 	else if (cmd == "get") {
 		string what = popword(line);
 		if (what == "calib") {
-			connection->write("ok var calib 1 influence");
+			connection->write("ok calib 1 influence");
 		}
 		else if (!netio.ok) {
 			connection->write("err get var :var unkown");
@@ -184,14 +178,10 @@ void FOAM_simstatic::on_message(Connection *connection, std::string line) {
 int main(int argc, char *argv[]) {
 	FOAM_simstatic foam(argc, argv);
 	
-	if (foam.has_error())
-		return foam.io.msg(IO_INFO, "Initialisation error.");
-	
 	if (foam.init())
-		return foam.io.msg(IO_ERR, "Configuration error.");
-		
+		exit(-1);
+
 	foam.io.msg(IO_INFO, "Running simstatic mode");
-	
 	foam.listen();
 	
 	return 0;

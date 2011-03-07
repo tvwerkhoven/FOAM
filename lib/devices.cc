@@ -1,6 +1,6 @@
 /*
  devices.cc -- base hardware handling classes
- Copyright (C) 2010 Tim van Werkhoven <t.i.m.vanwerkhoven@xs4all.nl>
+ Copyright (C) 2010--2011 Tim van Werkhoven <t.i.m.vanwerkhoven@xs4all.nl>
  
  This file is part of FOAM.
  
@@ -18,25 +18,19 @@
  along with FOAM.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-/*! 
- @file devices.cc
- @author Tim van Werkhoven (t.i.m.vanwerkhoven@xs4all.nl)
- @brief Generic device class, specific hardware controls are derived from this class.
- */
+#ifdef HAVE_CONFIG_H
+#include "autoconfig.h"
+#endif
 
 #include "io.h"
 #include "devices.h"
 #include "foamctrl.h"
 
+using namespace std;
+
 // Device class
 
-//Device::Device(Io &io, foamctrl *ptc, string n, string t, string p, Path &conf): 
-//io(io), ptc(ptc), name(n), type("dev." + t), port(p), conffile(conf), netio(p, n)
-//{ 
-//	init();
-//}
-
-Device::Device(Io &io, foamctrl *ptc, string n, string t, string p, Path conf, bool online): 
+Device::Device(Io &io, foamctrl *const ptc, const string n, const string t, const string p, const Path conf, const bool online): 
 io(io), ptc(ptc), name(n), type("dev." + t), port(p), conffile(conf), netio(p, n), online(online)
 { 
 	init();
@@ -55,12 +49,14 @@ bool Device::init() {
 			throw exception("Device::Device(): Type should be " + type + " for this Device (" + _type + ")!");
 	}
 
-	io.msg(IO_XNFO, "Device %s listening on port %s.", name.c_str(), port.c_str());
 	if (online) {
-		netio.slot_message = sigc::mem_fun(this, &Device::on_message);
+		netio.slot_message = sigc::mem_fun(this, &Device::on_message_common);
 		netio.slot_connected = sigc::mem_fun(this, &Device::on_connect);
-		netio.listen();
+		io.msg(IO_XNFO, "Device %s listening on port %s.", name.c_str(), port.c_str());
 	}
+	
+	// Always listen, also for offline devices. In that latter case, simply don't parse any data.
+	netio.listen();
 	
 	return true;
 }
@@ -69,9 +65,13 @@ Device::~Device() {
 	io.msg(IO_DEB2, "Device::~Device()");
 }
 
-void Device::on_message(Connection *conn, std::string line) { 
-	io.msg(IO_DEB2, "Device::on_message('%s') %s::%s", 
-				 line.c_str(), type.c_str(), name.c_str());
+void Device::on_message_common(Connection * const conn, string line) {
+	io.msg(IO_DEB2, "Device::on_message_common('%s') %s", 
+				 line.c_str(), name.c_str());
+	on_message(conn, line);
+}
+
+void Device::on_message(Connection * const conn, string line) { 
 	string orig = line;
 	
 	string command = popword(line);
@@ -92,8 +92,21 @@ void Device::on_message(Connection *conn, std::string line) {
 		}
 	}
 	
+	// Command is not known, give an error message back
 	conn->write("error :Unknown command: " + orig);
 }
+
+void Device::get_var(Connection * const conn, const string varname, const double value, const string comment) const {
+	if (!conn)
+		return;
+	
+	conn->addtag(varname);
+	if (comment == "")
+		conn->write(format("ok %s %lf :%s", varname.c_str(), (double) value, comment.c_str()));
+	else 
+		conn->write(format("ok %s %lf", varname.c_str(), (double) value));
+}
+
 
 // DeviceManager class
 

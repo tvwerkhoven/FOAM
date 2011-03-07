@@ -31,7 +31,7 @@ PROJECT_NAME           = FOAM
 # This could be handy for archiving the generated documentation or 
 # if some version control system is used.
 
-PROJECT_NUMBER         = 1.0-alpha
+PROJECT_NUMBER = 0.3.0-258-g64f0a99
 
 # The OUTPUT_DIRECTORY tag is used to specify the (relative or absolute) 
 # base path where the generated documentation will be put. 
@@ -574,14 +574,13 @@ WARN_LOGFILE           =
 # directories like "/usr/src/myproject". Separate the files or directories 
 # with spaces.
 
-INPUT                  = /Users/tim/workdocs/dev/foam \
-                         /Users/tim/workdocs/dev/foam/foam \
-			 /Users/tim/workdocs/dev/foam/conf \
-			 /Users/tim/workdocs/dev/foamdata \
-			 /Users/tim/workdocs/dev/foam/lib \
-			 /Users/tim/workdocs/dev/foam/mods \
-			 /Users/tim/workdocs/dev/foam/ui \
-			 /Users/tim/workdocs/dev/foam/testing
+INPUT                  = ../ \
+			 ../conf \
+			 ../data \
+			 ../foam \
+			 ../lib \
+			 ../mods \
+			 ../ui
 
 # This tag can be used to specify the character encoding of the source files 
 # that doxygen parses. Internally doxygen uses the UTF-8 encoding, which is 

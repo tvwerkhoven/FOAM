@@ -1,6 +1,6 @@
 /*
  imgcam.h -- Dummy 'camera' with static images as source - header file
- Copyright (C) 2010 Tim van Werkhoven <t.i.m.vanwerkhoven@xs4all.nl>
+ Copyright (C) 2010--2011 Tim van Werkhoven <t.i.m.vanwerkhoven@xs4all.nl>
  
  This program is free software; you can redistribute it and/or modify
  it under the terms of the GNU General Public License as published by
@@ -20,12 +20,13 @@
 #ifndef HAVE_IMGCAM_H
 #define HAVE_IMGCAM_H
 
+#ifdef HAVE_CONFIG_H
+#include "autoconfig.h"
+#endif
+
 #include <sys/time.h>
 #include <time.h>
 #include <math.h>
-#ifndef __STDC_LIMIT_MACROS
-#define __STDC_LIMIT_MACROS
-#endif
 #include <stdint.h>
 
 #include "config.h"
@@ -34,9 +35,10 @@
 
 #include "camera.h"
 
+using namespace std;
+
 const string imgcam_type = "imgcam";
 
-using namespace std;
 
 /*!
  @brief Fake camera taking image files as input
@@ -50,26 +52,35 @@ private:
 	uint16_t *frame;										//!< Frame stored here
 	
 public:
-	ImgCamera(Io &io, foamctrl *ptc, string name, string port, Path &conffile, bool online=true);
+	ImgCamera(Io &io, foamctrl *const ptc, const string name, const string port, Path const &conffile, const bool online=true);
 	~ImgCamera();
 	
 	void update();	
 	
 	// From Camera::
 	void cam_handler();
-	void cam_set_exposure(double value);
+	void cam_set_exposure(const double value);
 	double cam_get_exposure();
-	void cam_set_interval(double value);
+	void cam_set_interval(const double value);
 	double cam_get_interval();
-	void cam_set_gain(double value);
+	void cam_set_gain(const double value);
 	double cam_get_gain();
-	void cam_set_offset(double value);
+	void cam_set_offset(const double value);
 	double cam_get_offset();
 	
-	void cam_set_mode(mode_t newmode);
-	
+	void cam_set_mode(const mode_t newmode);
 	void do_restart();	
-	
+
+	// From Devices::
+	int verify() { return 0; }
+	void on_message(Connection *const conn, string line);
 };
 
 #endif // HAVE_IMGCAM_H
+
+/*!
+ \page dev_cam_imgcam Image camera devices
+ 
+ The ImgCamera class loads images from file and shows these.
+ 
+ */

@@ -1,6 +1,6 @@
 /*
  wfs.h -- a wavefront sensor abstraction class
- Copyright (C) 2009--2010 Tim van Werkhoven <t.i.m.vanwerkhoven@xs4all.nl>
+ Copyright (C) 2009--2011 Tim van Werkhoven <t.i.m.vanwerkhoven@xs4all.nl>
  
  This file is part of FOAM.
  
@@ -17,11 +17,6 @@
  You should have received a copy of the GNU General Public License
  along with FOAM.  If not, see <http://www.gnu.org/licenses/>.
 */
-/*! 
- @file wfs.h
- @brief Base wavefront sensor class
- @author Tim van Werkhoven (t.i.m.vanwerkhoven@xs4all.nl)
- */
 
 #ifndef HAVE_WFS_H
 #define HAVE_WFS_H
@@ -29,50 +24,77 @@
 #include <string>
 #include <gsl/gsl_vector.h>
 
+#include "io.h"
 #include "types.h"
 #include "config.h"
+
 #include "camera.h"
-#include "io.h"
+#include "zernike.h"
+
+using namespace std;
 
 static const string wfs_type = "wfs";
 
 /*!
  @brief Base wavefront-sensor class. 
- @author Tim van Werkhoven (t.i.m.vanwerkhoven@xs4all.nl)
  
  This class provides a template for the implementation of wavefront sensors 
  such as a Shack-Hartmann WFS. This class should be implemented with WFS
  specific routines. The Wfs class is independent of the camera used and
  only provides the data processing/interpretation of the camera. The camera
- itself can be accessed through the pointer *cam.
+ itself can be accessed through the reference &cam.
  */
 class Wfs: public Device {
 public:	
+	enum wfbasis {
+		ZERNIKE=0,												//!< Zernike
+		KL,																//!< Karhunen-Loéve 
+		MIRROR,														//!< Mirror modes
+		SENSOR,														//!< Sensor modes (e.g. shift vectors)
+		UNDEFINED
+	};
 	
 	/*!
 	 @brief This holds information on the wavefront
 	 */
 	struct wavefront {
-		wavefront() : wfamp(NULL), nmodes(0) { ; }
+		wavefront() : wfamp(NULL), nmodes(0), basis(SENSOR) { ; }
 		gsl_vector_float *wfamp;					//!< Mode amplitudes
 		int nmodes;												//!< Number of modes
-		enum {
-			ZERNIKE=0,											//!< Zernike modes
-			KL,															//!< Karhunen-Loeve modes
-		} wfmode;
+		enum wfbasis basis;								//!< Basis functions used for this representation
 	};
 	
-	Camera &cam;												//!< Reference to the camera class used for this 
-		
-//	virtual int verify(int) = 0;				//!< Verify settings
-//	virtual int calibrate(int) = 0;			//!< Calibrate WFS
-//	virtual int measure(int) = 0;				//!< Measure abberations
+	Zernike zernbasis;									//!< Zernike polynomials basis
+	gsl_matrix_float *zerninfl;					//!< Influence matrix to convert WFS data to Zernike modes
 	
-	virtual ~Wfs() {}
-	Wfs(Io &io, foamctrl *ptc, string name, string type, string port, Path conffile, Camera &wfscam, bool online=true):
-	Device(io, ptc, name, wfs_type + "." + type, port, conffile, online),
-	cam(wfscam)
-	{	; }
+	struct wavefront wf;								//!< Wavefront representation
+	bool is_calib;											//!< Is calibrated & ready for use
+	
+	Camera &cam;												//!< Reference to the camera class used for this WFS
+	
+	// To be implemented:
+	virtual int measure();							//!< Measure abberations
+	virtual int calibrate();						//!< Calibrate sensor, set up reference and mode basis
+	
+	// From Device::
+	virtual void on_message(Connection *const conn, string line);
+	
+	virtual ~Wfs();
+	Wfs(Io &io, foamctrl *const ptc, const string name, const string type, const string port, Path const & conffile, Camera &wfscam, const bool online=true); //!< Constructor for derived WFSs (i.e. SHWFS)
+	Wfs(Io &io, foamctrl *const ptc, const string name, const string port, Path const & conffile, Camera &wfscam, const bool online=true); //!< Constructor for bare WFS
 };
 
 #endif // HAVE_WFS_H
+
+/*!
+ \page dev_wfs Wavefront sensor devices
+ 
+ The Wfs class provides control for wavefront sensors.
+ 
+ \section dev_wfs_der Derived classes
+ - \subpage dev_wfs_shwfs "Shack-Hartmann wavefront sensor device"
+
+ \section dev_wfs_more See also
+ - \ref dev_cam "Camera devices"
+ 
+*/ 

@@ -1,6 +1,6 @@
 /*
  fgui.cc -- the FOAM GUI
- Copyright (C) 2009--2010 Tim van Werkhoven <t.i.m.vanwerkhoven@xs4all.nl>
+ Copyright (C) 2009--2011 Tim van Werkhoven <t.i.m.vanwerkhoven@xs4all.nl>
  
  This file is part of FOAM.
  
@@ -20,33 +20,42 @@
 /*!
  @file fgui.cc
  @author Tim van Werkhoven (t.i.m.vanwerkhoven@xs4all.nl)
- @brief This is the FOAM control GUI
-
- @todo add timeout to connect() attempt
- @todo disable buttons when not connected.
+ @brief This is the FOAM control GUI, consisting mostly of MainWindow::
  */
+
+#ifdef HAVE_CONFIG_H
+#include "autoconfig.h"
+#endif
 
 #include <gtkmm.h>
 #include <gtkmm/accelmap.h>
+#include <gtkglmm.h>
+
 #include <string.h>
 
 #include <iostream>
 #include <string>
 #include <map>
 
-#include "autoconfig.h"
-
+#include "protocol.h"
+#include "glviewer.h"
 
 #include "about.h"
 #include "widgets.h"
 #include "log.h"
 #include "logview.h"
-#include "protocol.h"
 #include "foamcontrol.h"
 #include "controlview.h"
 
+// Supported devices go here
 #include "deviceview.h"
+#include "devicectrl.h"
 #include "camview.h"
+#include "camctrl.h"
+#include "wfsview.h"
+#include "wfsctrl.h"
+#include "shwfsview.h"
+#include "shwfsctrl.h"
 
 #include "fgui.h"
 
@@ -119,15 +128,15 @@ logpage(log), controlpage(log, foamctrl),
 menubar(*this) 
 {
 	log.add(Log::NORMAL, "FOAM Control (" PACKAGE_NAME " version " PACKAGE_VERSION " built " __DATE__ " " __TIME__ ")");
-	log.add(Log::NORMAL, "Copyright (c) 2009--2010 " PACKAGE_BUGREPORT);
+	log.add(Log::NORMAL, "Copyright (c) 2009--2011 " PACKAGE_BUGREPORT);
 	
 	// widget properties
 	set_title("FOAM Control");
 	set_default_size(800, 600);
 	set_gravity(Gdk::GRAVITY_STATIC);
 	
-	vbox.set_spacing(4);
-	vbox.pack_start(menubar, PACK_SHRINK);
+	//vbox.set_spacing(4);
+	//vbox.pack_start(menubar, PACK_SHRINK);
 	
 	// signals
 	menubar.connect.signal_activate().connect(sigc::mem_fun(*this, &MainWindow::on_connect_activate));
@@ -193,69 +202,67 @@ void MainWindow::on_ctrl_message_update() {
 
 void MainWindow::on_ctrl_device_update() {
 	fprintf(stderr, "MainWindow::on_ctrl_device_update()\n");
-	fprintf(stderr, "MainWindow::on_ctrl_device_update() %d devs: ", foamctrl.get_numdev());
-	for (int i=0; i<foamctrl.get_numdev(); i++) {
-		FoamControl::device_t dev = foamctrl.get_device(i);
-		fprintf(stderr, "%s - %s, ", dev.name.c_str(), dev.type.c_str());
-	}
-	fprintf(stderr, "\n");
+
+	// Need mutex because we change this in both fgui and foamcontrol, asynchronously.
+	pthread::mutexholder h(&(foamctrl.gui_mutex));
 	
-	// We remove devices from the GUI that are not known to foamctrl here. 
-	// We loop over devices in the GUI and if these do not appear in the 
-	// foamctrl list, we remove them.
-	devlist_t::iterator it;
-	for (it=devlist.begin(); it != devlist.end(); it++) {
-		// This GUI device is named it->first, has GUI element it->second.
+	DevicePage *tmppage=NULL;
+	FoamControl::device_t *tmpdev=NULL;
+	
+	// First remove superfluous pages. Check all notebook pages and see if they exist in FoamControl:
+	fprintf(stderr, "MainWindow::on_ctrl_device_update() deleting superfluous...\n");
+	for (pagelist_t::iterator it = pagelist.begin(); it != pagelist.end(); ++it) {
+		fprintf(stderr, "MainWindow::on_ctrl_device_update() %s\n", (it->first).c_str());
+		tmppage = (DevicePage *) it->second;
 		
-		// Find this device and remove it if it does not exist
-		int i=0;
-		for (i=0; i<foamctrl.get_numdev(); i++) {
-			FoamControl::device_t dev = foamctrl.get_device(i);
-			if (dev.name == it->first) // Found it! break here now
-				break;
+		// Check if this exists in foamctrl. If not, remove
+		tmpdev = foamctrl.get_device(tmppage);
+		if (tmpdev == NULL) {
+			fprintf(stderr, "MainWindow::on_ctrl_device_update() removing gui element\n");
+			notebook.remove_page(*(tmppage)); // removes GUI element
+			delete tmppage;
+			pagelist.erase(it);
 		}
-		if (i == foamctrl.get_numdev()) {
-			// If i equals foamctrl.get_numdev(), the device wasn't found, remove it from the GUI
-			//! @todo Add destructor to DevicePage to remove itself from the Notebook so we don't have to
-			notebook.remove_page(*(it->second)); // removes GUI element
-			delete it->second; // remove gui element itself
-			devlist.erase(it); // remove from devlist
-		}       
 	}
 	
+	// Check for each device from foamctrl if it is already a notebook page. If not, add.
+	fprintf(stderr, "MainWindow::on_ctrl_device_update() adding new pages...\n");
 	for (int i=0; i<foamctrl.get_numdev(); i++) {
-		FoamControl::device_t dev = foamctrl.get_device(i);
-		if (devlist.find(dev.name) != devlist.end())
-			continue; // Already exists, skip
+		tmpdev = foamctrl.get_device(i);
+		fprintf(stderr, "MainWindow::on_ctrl_device_update() %d/%d: %s - %s\n", i, foamctrl.get_numdev(), tmpdev->name.c_str(), tmpdev->type.c_str());
 		
-		// First check if type is sane
-		if (dev.type.substr(0,3) != "dev") {
-			fprintf(stderr, "MainWindow::on_ctrl_device_update() Type wrong!\n");
-			log.add(Log::ERROR, "Device type wrong, should start with 'dev' (was: " + dev.type + ")");
-			continue;
+		if (pagelist.find(tmpdev->name) == pagelist.end()) {
+			// This device is new! Init control and GUI element and add to mother GUI
+
+			if (tmpdev->type.substr(0, 13) == "dev.wfs.shwfs") {
+				fprintf(stderr, "MainWindow::on_ctrl_device_update() got shwfs device\n");
+				tmpdev->ctrl = (DeviceCtrl *) new ShwfsCtrl(log, foamctrl.host, foamctrl.port, tmpdev->name);
+				tmpdev->page = (DevicePage *) new ShwfsView((ShwfsCtrl *) tmpdev->ctrl, log, foamctrl, tmpdev->name);
+				log.add(Log::OK, "Added new SH-WFS device, type="+tmpdev->type+", name="+tmpdev->name+".");
+			}
+//			else if (tmpdev->type.substr(0, 7) == "dev.wfs") {
+//				fprintf(stderr, "MainWindow::on_ctrl_device_update() got generic wfs device\n");
+//				tmpdev->ctrl = (DeviceCtrl *) new WfsCtrl(log, foamctrl.host, foamctrl.port, tmpdev->name);
+//				tmpdev->page = (DevicePage *) new WfsView((WfsCtrl *) tmpdev->ctrl, log, foamctrl, tmpdev->name);
+//				log.add(Log::OK, "Added new generic WFS device, type="+tmpdev->type+", name="+tmpdev->name+".");
+//			}
+			else if (tmpdev->type.substr(0, 7) == "dev.cam") {
+				fprintf(stderr, "MainWindow::on_ctrl_device_update() got generic camera device\n");
+				tmpdev->ctrl = (DeviceCtrl *) new CamCtrl(log, foamctrl.host, foamctrl.port, tmpdev->name);
+				tmpdev->page = (DevicePage *) new CamView((CamCtrl *) tmpdev->ctrl, log, foamctrl, tmpdev->name);
+				log.add(Log::OK, "Added new generic camera, type="+tmpdev->type+", name="+tmpdev->name+".");
+			}
+			// Fallback, if we don't have a good GUI element for the device, use a generic device controller
+			else {
+				printf("%x:FoamControl::add_device() got dev\n", (int) pthread_self());
+				tmpdev->ctrl = (DeviceCtrl *) new DeviceCtrl(log, foamctrl.host, foamctrl.port, tmpdev->name);
+				tmpdev->page = (DevicePage *) new DevicePage((DeviceCtrl *) tmpdev->ctrl, log, foamctrl, tmpdev->name);
+				log.add(Log::OK, "Added new generic device, type="+tmpdev->type+", name="+tmpdev->name+".");
+			}
+			
+			notebook.append_page(*(tmpdev->page), "_" + tmpdev->name, tmpdev->name, true);
+			pagelist[tmpdev->name] = tmpdev->page;
 		}
-		// Then add specific devices first, and more general devices later
-		else if (dev.type.substr(0,7) == "dev.cam") {
-			fprintf(stderr, "MainWindow::on_ctrl_device_update() got generic camera device\n");
-			CamCtrl *tmpctrl = new CamCtrl(log, foamctrl.host, foamctrl.port, dev.name);
-			CamView *tmp = new CamView(tmpctrl, log, foamctrl, dev.name);
-			devlist[dev.name] = (DevicePage *) tmp;
-			log.add(Log::OK, "Added new generic camera, type="+dev.type+", name="+dev.name+".");
-		}
-		else if (dev.type.substr(0,3) == "dev") {
-			fprintf(stderr, "MainWindow::on_ctrl_device_update() got generic device\n");                    
-			DeviceCtrl *tmpctrl = new DeviceCtrl(log, foamctrl.host, foamctrl.port, dev.name);
-			DevicePage *tmp = new DevicePage(tmpctrl, log, foamctrl, dev.name);
-			devlist[dev.name] = (DevicePage *) tmp;
-			log.add(Log::OK, "Added new generic device, type="+dev.type+", name="+dev.name+".");
-		}
-		else {
-			fprintf(stderr, "MainWindow::on_ctrl_device_update() Type unknown!\n");
-			log.add(Log::WARNING, "Got unknown device type ("+dev.type+"), ignored.");
-			continue;
-		}
-		
-		notebook.append_page(*devlist[dev.name], "_" + dev.name, dev.name, true);
 	}
 	
 	show_all_children();
@@ -270,7 +277,7 @@ static void signal_handler(int s) {
 	
 	signal(s, SIG_DFL);
 	
-	fprintf(stderr, "Received %s signal, exitting\n", strsignal(s));
+	fprintf(stderr, "fgui.cc::signal_handler(): Received %s signal, exitting\n", strsignal(s));
 	
 	if(s == SIGILL || s == SIGABRT || s == SIGFPE || s == SIGSEGV || s == SIGBUS)
 		abort();
@@ -280,7 +287,7 @@ static void signal_handler(int s) {
 
 int main(int argc, char *argv[]) {
 	printf("FOAM Control (" PACKAGE_NAME " version " PACKAGE_VERSION " built " __DATE__ " " __TIME__ ")\n");
-	printf("Copyright (c) 2009--2010 %s\n", PACKAGE_BUGREPORT);
+	printf("Copyright (c) 2009--2011 %s\n", PACKAGE_BUGREPORT);
 
 	signal(SIGINT, signal_handler);
 	signal(SIGHUP, signal_handler);
@@ -296,6 +303,8 @@ int main(int argc, char *argv[]) {
 	
 	Gtk::Main kit(argc, argv);
 	Gtk::GL::init(argc, argv);
+	
+	glutInit(&argc, argv);
 	
  	MainWindow *window = new MainWindow();
 	Main::run(*window);

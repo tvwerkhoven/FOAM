@@ -1,6 +1,6 @@
 ## @file configure.ac
 ## @author Tim van Werkhoven (t.i.m.vanwerkhoven@xs4all.nl)
-## Copyright 2007-2010 Tim van Werkhoven (t.i.m.vanwerkhoven@xs4all.nl)
+## Copyright 2007-2011 Tim van Werkhoven (t.i.m.vanwerkhoven@xs4all.nl)
 
 AC_PREREQ(2.59)
 m4_include([version.m4])
@@ -10,7 +10,7 @@ AC_CONFIG_AUX_DIR([build-aux])
 
 AM_INIT_AUTOMAKE([AC_PACKAGE_NAME], [AC_PACKAGE_VERSION])
 
-AC_COPYRIGHT([Copyright (C) 2007-2010 Tim van Werkhoven <t.i.m.vanwerkhoven@xs4all.nl>])
+AC_COPYRIGHT([Copyright (C) 2007-2011 Tim van Werkhoven <t.i.m.vanwerkhoven@xs4all.nl>])
 AC_REVISION([GIT_REVISION])
 
 AC_CONFIG_SRCDIR(foam/foam.cc)
@@ -20,7 +20,6 @@ AC_CONFIG_FILES([
 Makefile
 foam/Makefile
 ui/Makefile
-lib/Makefile
 conf/Makefile
 data/Makefile
 testing/Makefile
@@ -28,6 +27,7 @@ testing/Makefile
 
 AC_GNU_SOURCE
 
+AC_PROG_CPP
 AC_PROG_CXX
 AC_PROG_CXXCPP
 AC_PROG_MAKE_SET
@@ -55,6 +55,11 @@ FOAMCONFDIR=$sysconfdir/foam
 AC_SUBST(FOAMDATADIR)
 AC_SUBST(FOAMCONFDIR)
 
+
+### Store & reset $(LIBS) to capture output of AC_SEARCH_LIBS
+OLDLIBS=$(LIBS)
+LIBS=
+
 ### These libraries are crucial for all targets
 AC_SEARCH_LIBS([sin],
 		[m],
@@ -66,29 +71,32 @@ AC_SEARCH_LIBS([pthread_create],
 		[],
 		[FOAM_FATAL=yes;FOAM_MISSING+=" pthread"])
 
+AC_SEARCH_LIBS([ffopen],
+		[cfitsio],
+  	[AC_DEFINE([HAVE_CFITSIO], [1], [CFITSIO supported.])],
+		[FOAM_FATAL=yes;FOAM_MISSING+=" cfitsio"])
+
 PKG_CHECK_MODULES(SIGC, [sigc++-2.0 >= 2.0], [],
 		[FOAM_FATAL=yes;FOAM_MISSING+=" sigc++-2.0"])
 
-PKG_CHECK_MODULES(GSL, [gsl], [],
-		[FOAM_FATAL=yes;FOAM_MISSING+=" gsl gslcblas"])
+PKG_CHECK_MODULES(GSL, [gsl >= 1.11], [AC_DEFINE([HAVE_GSL], [1], [GSL supported.])],
+		[FOAM_FATAL=yes;FOAM_MISSING+=" gsl gslcblas";])
 
-COMMON_CFLAGS="$SIGC_CFLAGS $GSL_CFLAGS"
-COMMON_LIBS="$SIGC_LIBS $GSL_LIBS"
+#PKG_CHECK_MODULES(FITSIO, [cfitsio], [AC_DEFINE([HAVE_CFITSIO], [1], [CFITSIO supported.])],
+#		[FOAM_FATAL=yes;FOAM_MISSING+=" cfitsio"])
+
+COMMON_CFLAGS="$SIGC_CFLAGS $GSL_CFLAGS $FITSIO_CFLAGS"
+COMMON_LIBS="$SIGC_LIBS $GSL_LIBS $FITSIO_LIBS $LIBS"
 AC_SUBST(COMMON_CFLAGS)
 AC_SUBST(COMMON_LIBS)
 
-### Miscellaneous optional libraries
-
-# cfitsio
-AC_SEARCH_LIBS([ffopen], [cfitsio], 
-		[have_fitsio=true],
-		[have_fitsio=false])
-AM_CONDITIONAL(HAVE_FITSIO, test x$have_fitsio = xtrue)
+# Reset LIBS
+LIBS=$(OLDLIBS)
 
 ### Hardware libraries
 
 # dc1394
-PKG_CHECK_MODULES(DC1394, [libdc1394-2],
+PKG_CHECK_MODULES(DC1394, [libdc1394-2 >= 2.0.2],
 		[have_dc1394=true],
 		[have_dc1394=false])
 
@@ -97,9 +105,9 @@ if test "$have_dc1394" = true ; then
 	case "$build" in
 		*-*-linux*)
 		# TODO: test this, do we need it?
-		AC_SEARCH_LIBS(raw1394_channel_modify, raw1394,
-				[have_dc1394=true],
-				[have_dc1394=false;AC_MSG_WARN(libraw1394 not found or too old (<1.2.0), required for libdc1394.)])
+		#AC_SEARCH_LIBS(raw1394_channel_modify, raw1394,
+		#		[have_dc1394=true],
+		#		[have_dc1394=false;AC_MSG_WARN(libraw1394 not found or too old (<1.2.0), required for libdc1394.)])
 		;;
 		*-*-darwin*)
 		AC_SEARCH_LIBS(IOMasterPort, IOKit,
@@ -175,10 +183,7 @@ AC_SUBST(LIBSIU)
 ###################################
 if test "$simstat" = true ; then
 	AC_MSG_NOTICE([*** Static simulation enabled, doesn't need extra libs])
-	simstatmissing=""
 		
-	SIMSTAT_CFLAGS=""
-	SIMSTAT_LIBS=""
 else 
 	AC_MSG_NOTICE([*** Static simulation disabled])
 fi
@@ -203,9 +208,9 @@ if test "$fullsim" = true ; then
 			[have_ics=true],
 			[have_ics=false])
 
-	PKG_CHECK_MODULES(FFTW, fftw3 > 3.2.0, [],
+	PKG_CHECK_MODULES(FFTW, fftw3 >= 3.1.2, [],
 		[AC_MSG_WARN([FOAM full sim needs fftw3.]);fullsim=false;fullsimmissing+=" fftw3"])
-
+	
 	FULLSIM_CFLAGS+=" $FFTW_CFLAGS"
 	FULLSIM_LIBS+=" $FFTW_LIBS"
 else 
@@ -228,7 +233,7 @@ if test "$gui" = true ; then
 	PKG_CHECK_MODULES(GTKMM, gtkmm-2.4 >= 2.6, [],
 		[AC_MSG_WARN([FOAM GUI needs gtkmm.]);gui=false;guimissing+=" gtkmm-2.4"])
 	
-	PKG_CHECK_MODULES(GTHREAD, gthread-2.0, [],
+	PKG_CHECK_MODULES(GTHREAD, gthread-2.0 >= 2.16.6, [],
 		[AC_MSG_WARN([FOAM GUI needs gthread-2.0.]);gui=false;guimissing+=" gthread-2.0"])
 	
 	### OpenGL for UI etc.
@@ -244,11 +249,12 @@ if test "$gui" = true ; then
 
 	if test "$no_gl" = yes || test  "$no_glu" = yes || test "$no_glut" = yes ; then
 		opengl=false;
-		AC_MSG_ERROR([OpenGL not found.]);
+		gui=false;
+		AC_MSG_WARN([FOAM GUI needs OpenGL]);
 	fi
 
-	PKG_CHECK_MODULES(GLEXTMM, gtkglextmm-1.2, [],
-		[AC_MSG_WARN([OpenGL needs gtkglextmm-1.2.]);gui=false;guimissing+=" gtkglextmm-1.2"])
+	PKG_CHECK_MODULES(GLEXTMM, gtkglextmm-1.2 >= 1.2.0, [],
+		[AC_MSG_WARN([FOAM GUI gtkglextmm-1.2.]);gui=false;guimissing+=" gtkglextmm-1.2"])
 
 	GUI_CFLAGS+=" $GTHREAD_CFLAGS $GTKMM_CFLAGS $GL_CFLAGS $GLU_CFLAGS $GLUT_CFLAGS $GLEXTMM_CFLAGS"
 	GUI_LIBS+=" $GTHREAD_LIBS $GTKMM_LIBS $GL_LIBS $GLU_LIBS $GLUT_LIBS $GLEXTMM_LIBS"
@@ -265,7 +271,7 @@ AM_CONDITIONAL([HAVE_OPENGL], [test "$opengl" = true])
 #############################
 
 if test "$FOAM_FATAL" = yes ; then
-	AC_MSG_ERROR([Cannot build FOAM! Missing libraries$FOAM_MISSING!])
+	AC_MSG_ERROR([Cannot build FOAM! Missing libraries:$FOAM_MISSING!])
 fi
 
 AC_MSG_NOTICE([===============Summary================])

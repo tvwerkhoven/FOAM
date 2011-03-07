@@ -30,7 +30,7 @@
 
 using namespace std;
 
-FW1394Camera::FW1394Camera(Io &io, foamctrl *ptc, string name, string port, Path &conffile, bool online):
+FW1394Camera::FW1394Camera(Io &io, foamctrl *const ptc, string name, string port, Path &conffile, bool online):
 Camera(io, ptc, name, FW1394cam_type, port, conffile, online) 
 {
 	io.msg(IO_DEB2, "FW1394Camera::FW1394Camera()");
@@ -77,7 +77,6 @@ Camera(io, ptc, name, FW1394cam_type, port, conffile, online)
 	res.x = cfg.getint(name+".width", 640);
 	res.y = cfg.getint(name+".height", 480);
 	depth = cfg.getint(name+".depth", 8);
-	dtype = UINT8;
 	
 	exposure = cam_get_exposure(); 
 	interval = cam_get_interval();
@@ -156,13 +155,13 @@ double FW1394Camera::cam_get_offset() {
 
 void FW1394Camera::cam_handler() { 
 	pthread::setcanceltype(PTHREAD_CANCEL_ASYNCHRONOUS);
-	//! @todo make this Mac compatible
-#ifndef __APPLE__
-	cpu_set_t cpuset;
-	CPU_ZERO(&cpuset);
-	CPU_SET(1, &cpuset);
-	pthread::setaffinity(&cpuset);
-#endif
+	//! @todo Re-implement this
+	//#ifndef __APPLE__
+//	cpu_set_t cpuset;
+//	CPU_ZERO(&cpuset);
+//	CPU_SET(1, &cpuset);
+	//pthread::setaffinity(&cpuset);
+	//#endif
 	
 	while (true) {
 		//! @todo Should mutex lock each time reading mode, or is this ok?

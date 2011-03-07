@@ -1,6 +1,6 @@
 /*
  deviceview.h -- generic device viewer
- Copyright (C) 2010 Tim van Werkhoven <t.i.m.vanwerkhoven@xs4all.nl>
+ Copyright (C) 2010--2011 Tim van Werkhoven <t.i.m.vanwerkhoven@xs4all.nl>
  
  This file is part of FOAM.
  
@@ -57,11 +57,15 @@ protected:
 	
 	string devname;											//!< Device name
 	
+	// This frame 
 	Frame devframe;											//!< Generic device controls Frame
 	HBox devhbox;												//!< Generic device controls HBox
 	ComboBoxText dev_cmds;							//!< All available commands for this device
 	LabeledEntry dev_val;								//!< Value or options for this command
 	Button dev_send;										//!< Send command
+	
+	Window extra_win;										//!< Window for extra information
+	VBox extra_vbox;										//!< VBox for extra_win
 	
 	void on_dev_send_activate();				//!< Callback for dev_send and dev_val
 
@@ -72,7 +76,7 @@ public:
 	virtual void on_message_update();		//!< Update GUI when DeviceCtrl::signal_message is called
 	virtual void on_connect_update();		//!< Update GUI when DeviceCtrl::signal_connect is called
 	virtual void on_commands_update();	//!< Hooks to DeviceCtrl::signal_commands
-	virtual void disable_gui();					//!< Disable GUI when disconnected @todo Should this be virtual? Could also be regular such that each class calls its own function
+	virtual void disable_gui();					//!< Disable GUI when disconnected
 	virtual void enable_gui();					//!< Enable GUI when connected
 	virtual void clear_gui();						//!< Clear GUI on init or reconnect
 };
@@ -81,7 +85,7 @@ public:
 
 /*!
  
- \page dev Devices: DevicePage and DeviceCtrl
+ \page dev_ui Devices: DevicePage and DeviceCtrl
  
  To control a Device, there are two relevant classes. DeviceCtrl connects to 
  the Device and sends & receives commands and data, while DevicePage is a
@@ -133,9 +137,8 @@ public:
  - One function for each of the events on_message and on_connect: these reflect the changes from FOAM in the GUI
  - clear_gui(), enable_gui() and disable_gui() are highly recommended to do exactly these things. Skeletons are already implemented in DevicePage.
  
- \section moreinfo More information
- 
- More information can be found on these pages:
- - \subpage dev "Devices UI"
+ \section dev_moreinfo See also
+ - \subpage dev_cam_ui "Camera device UI"
+ - \subpage dev_wfs_ui "Wavefront sensor device UI"
  
  */

@@ -1,6 +1,6 @@
 /*
  simseeing.h -- atmosphere/telescope simulator header
- Copyright (C) 2010 Tim van Werkhoven <t.i.m.vanwerkhoven@xs4all.nl>
+ Copyright (C) 2010--2011 Tim van Werkhoven <t.i.m.vanwerkhoven@xs4all.nl>
  
  This file is part of FOAM.
  
@@ -51,7 +51,7 @@ private:
 	
 	gsl_matrix *wfcrop;					//!< This will hold the cropped wavefront data
 	
-	gsl_matrix *load_wavefront(Path &f, bool norm=true); //!< Load wavefront data from disc. N.B. The returned matrix has to be freed on exit!
+	gsl_matrix *load_wavefront(const Path &f, const bool norm=true); //!< Load wavefront data from disc. N.B. The returned matrix has to be freed on exit!
 	
 public:
 	coord_t croppos;										//!< Lower-left position to crop out of wavefront
@@ -60,7 +60,7 @@ public:
 	coord_t windspeed;									//!< Windspeed in pixels/frame
 	wind_t windtype;										//!< Windtype used for seeing simulation
 	
-	SimSeeing(Io &io, foamctrl *ptc, string name, string port, Path &conffile);
+	SimSeeing(Io &io, foamctrl *const ptc, const string name, const string port, const Path &conffile);
 	~SimSeeing();
 		
 	gsl_matrix *get_wavefront(const double fac=1.0);

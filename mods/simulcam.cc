@@ -1,6 +1,6 @@
 /*
  simulcam.cc -- atmosphere/telescope simulator camera
- Copyright (C) 2010 Tim van Werkhoven <t.i.m.vanwerkhoven@xs4all.nl>
+ Copyright (C) 2010--2011 Tim van Werkhoven <t.i.m.vanwerkhoven@xs4all.nl>
  
  This file is part of FOAM.
  
@@ -18,8 +18,11 @@
  along with FOAM.	If not, see <http://www.gnu.org/licenses/>. 
  */
 
+#ifdef HAVE_CONFIG_H
+#include "autoconfig.h"
+#endif
+
 #include <unistd.h>
-#define __STDC_LIMIT_MACROS
 #include <stdint.h>
 #include <gsl/gsl_matrix.h>
 #include <math.h>
@@ -29,28 +32,40 @@
 #include "config.h"
 #include "pthread++.h"
 
+#include "devices.h"
 #include "simseeing.h"
 #include "camera.h"
 #include "simulcam.h"
 
-SimulCam::SimulCam(Io &io, foamctrl *ptc, string name, string port, Path &conffile, bool online):
+using namespace std;
+
+SimulCam::SimulCam(Io &io, foamctrl *const ptc, const string name, const string port, Path const &conffile, const bool online):
 Camera(io, ptc, name, simulcam_type, port, conffile, online),
 seeing(io, ptc, name + "-seeing", port, conffile),
-out_size(0), frame_out(NULL), telradius(1.0), telapt(NULL), noise(10.0), seeingfac(1.0),
+out_size(0), frame_out(NULL), telradius(1.0), telapt(NULL), telapt_fill(0.7),
+simtel(true), simmla(true),
 shwfs(io, ptc, name + "-shwfs", port, conffile, *this, false)
 {
 	io.msg(IO_DEB2, "SimulCam::SimulCam()");
 	// Register network commands with base device:
 	add_cmd("get noise");
 	add_cmd("set noise");
+	add_cmd("get noiseamp");
+	add_cmd("set noiseamp");
 	add_cmd("get seeingfac");
 	add_cmd("set seeingfac");
 	add_cmd("get windspeed");
 	add_cmd("set windspeed");
 	add_cmd("get windtype");
 	add_cmd("set windtype");
+	add_cmd("get telapt_fill");
+	add_cmd("set telapt_fill");
+	add_cmd("set simwf"); // Alias for 'seeingfac'. If this is 0, wf is multiplied by 0
+	add_cmd("set simtel");
+	add_cmd("set simmla");
 
-	noise = cfg.getdouble("noise", 10.0);
+	noise = cfg.getdouble("noise", 0.2);
+	noiseamp = cfg.getdouble("noiseamp", 0.2);
 	seeingfac = cfg.getdouble("seeingfac", 1.0);
 
 	if (seeing.cropsize.x != res.x || seeing.cropsize.y != res.y)
@@ -64,16 +79,15 @@ shwfs(io, ptc, name + "-shwfs", port, conffile, *this, false)
 
 
 SimulCam::~SimulCam() {
-	//! @todo stop simulator etc.
 	io.msg(IO_DEB2, "SimulCam::~SimulCam()");
+	cam_set_mode(Camera::OFF);
+	
 	cam_thr.cancel();
 	cam_thr.join();
 	
-	mode = Camera::OFF;
 }
 
-void SimulCam::on_message(Connection *conn, std::string line) {
-	io.msg(IO_DEB1, "SimulCam::on_message('%s')", line.c_str()); 
+void SimulCam::on_message(Connection *const conn, string line) {
 	string orig = line;
 	string command = popword(line);
 	bool parsed = true;
@@ -82,25 +96,25 @@ void SimulCam::on_message(Connection *conn, std::string line) {
 		string what = popword(line);
 	
 		if(what == "noise") {
-			conn->addtag("noise");
-			noise = popdouble(line);
-			netio.broadcast(format("ok noise %g", noise), "noise");
+			set_var(conn, "noise", popdouble(line), &noise, 0.0, 1.0, "Out of range");
+		} else if(what == "noiseamp") {
+			set_var(conn, "noiseamp", popdouble(line), &noiseamp);
+		} else if(what == "telapt_fill") {
+			set_var(conn, "telapt_fill", popdouble(line), &telapt_fill, 0.0, 1.0, "out of range");
 		} else if(what == "seeingfac") {
-			conn->addtag("seeingfac");
-			seeingfac = popdouble(line);
-			netio.broadcast(format("ok seeingfac %g", seeingfac), "seeingfac");
-		} else if(what == "telradius") {
-			conn->addtag("telradius");
-			telradius = popdouble(line);
-			netio.broadcast(format("ok telradius %g", telradius), "telradius");
+			set_var(conn, "seeingfac", popdouble(line), &seeingfac);
 		} else if(what == "windspeed") {
-			conn->addtag("windspeed");
-			int tmp = popint(line);
+			int tmpx = popint(line);
+			int tmpy = popint(line);
 			// Only accept in certain ranges (sanity check)
-			if (fabs(tmp) < res.x/2) seeing.windspeed.x = tmp;
-			tmp = popint(line);
-			if (fabs(tmp) < res.x/2) seeing.windspeed.y = tmp;
-			netio.broadcast(format("ok windspeed %d %d", seeing.windspeed.x, seeing.windspeed.y), "windspeed");
+			if (fabs(tmpx) > res.x/2 || fabs(tmpy) > res.y/2)
+				conn->write("error windspeed :values out of range");
+			else {
+				conn->addtag("windspeed");
+				seeing.windspeed.x = tmpx;
+				seeing.windspeed.y = tmpy;
+				netio.broadcast(format("ok windspeed %d %d", seeing.windspeed.x, seeing.windspeed.y), "windspeed");
+			}
 		} else if(what == "windtype") {
 			conn->addtag("windtype");
 			string tmp = popword(line);
@@ -114,27 +128,27 @@ void SimulCam::on_message(Connection *conn, std::string line) {
 			}
 			
 			netio.broadcast(format("ok windtype %s", tmp.c_str()), "windtype");
-		}
-		else
+		} else if(what == "simwf") {
+			set_var(conn, "simwf", popdouble(line), &seeingfac);
+		} else if(what == "simtel") {
+			set_var(conn, "simtel", popbool(line), &simtel);
+		} else if(what == "simmla") {
+			set_var(conn, "simmla", popbool(line), &simmla);
+		} else
 			parsed = false;
-	} 
-	else if (command == "get") {
+	} else if (command == "get") {
 		string what = popword(line);
 	
 		if(what == "noise") {
-			conn->addtag("noise");
-			conn->write(format("ok noise %lf", noise));
+			get_var(conn, "noise", noise);
+		} else if(what == "noiseamp") {
+			get_var(conn, "noiseamp", noiseamp);
 		} else if(what == "seeingfac") {
-			conn->addtag("seeingfac");
-			conn->write(format("ok seeingfac %lf", seeingfac));
-		} else if(what == "telradius") {
-			conn->addtag("telradius");
-			conn->write(format("ok telradius %lf", telradius));
+			get_var(conn, "seeingfac", seeingfac);
 		} else if(what == "windspeed") {
 			conn->addtag("windspeed");
 			netio.broadcast(format("ok windspeed %x %x", seeing.windspeed.x, seeing.windspeed.y), "windspeed");
-		}
-		else
+		} else
 			parsed = false;
 	}
 	else
@@ -151,7 +165,7 @@ void SimulCam::gen_telapt() {
 	if (!telapt) {							// Doesn't exist, callocate (all zeros is goed)
 		telapt = gsl_matrix_calloc(res.y, res.x);
 	}
-	else if (telapt->size1 != res.x || telapt->size2 != res.y) { // Wrong size, re-allocate
+	else if ((int) telapt->size1 != res.x || (int) telapt->size2 != res.y) { // Wrong size, re-allocate
 		gsl_matrix_free(telapt);
 		telapt = gsl_matrix_calloc(res.y, res.x);
 	}
@@ -168,7 +182,7 @@ void SimulCam::gen_telapt() {
 			pixj = ((float) j) - telapt->size2/2;
 			if (pixi*pixi + pixj*pixj < minradsq) {
 				sum++;
-				gsl_matrix_set (telapt, i, j, seeingfac);
+				gsl_matrix_set (telapt, i, j, 1.0);
 			}
 		}
 	}
@@ -179,14 +193,20 @@ gsl_matrix *SimulCam::simul_seeing() {
 	return wf;
 }
 
-void SimulCam::simul_telescope(gsl_matrix *im_in) {
+void SimulCam::simul_telescope(gsl_matrix *im_in) const {
+	if (!simtel)
+		return;
+	
 	io.msg(IO_DEB2, "SimulCam::simul_telescope()");
 	// Multiply wavefront with aperture
 	gsl_matrix_mul_elements (im_in, telapt);
 }
 
-void SimulCam::simul_wfs(gsl_matrix *wave_in) {
-	if (shwfs.mla.nsi <= 0) {
+void SimulCam::simul_wfs(gsl_matrix *wave_in) const {
+	if (!simmla)
+		return;
+	
+	if (shwfs.mlacfg.size() <= 0) {
 		io.msg(IO_WARN, "SimulCam::simul_wfs(): no microlenses defined?.");
 		return;
 	}
@@ -194,30 +214,65 @@ void SimulCam::simul_wfs(gsl_matrix *wave_in) {
 	io.msg(IO_DEB2, "SimulCam::simul_wfs()");
 	
 	// Apply fourier transform to subimages here
-	coord_t sallpos = shwfs.mla.ml[0].llpos;
-	coord_t sasize = shwfs.mla.ml[0].size;
+	coord_t sallpos(shwfs.mlacfg[0].lx, 
+									shwfs.mlacfg[0].ly);
+	coord_t sasize(shwfs.mlacfg[0].tx - shwfs.mlacfg[0].lx,
+								 shwfs.mlacfg[0].ty - shwfs.mlacfg[0].ly);
+	
 	// Get temporary memory
-	gsl_vector *workspace = gsl_vector_calloc(sasize.x * sasize.y * 4);
+	static gsl_vector *workspace = NULL;
+	if (!workspace) workspace = (gsl_vector *) gsl_vector_calloc(sasize.x * sasize.y * 4);
+	
 	// Setup FFTW parameters
-	fftw_complex *shdata = (fftw_complex *) fftw_malloc(sasize.y*2 * sasize.x*2 * sizeof(fftw_complex));
+	static fftw_complex *shdata = NULL;
+	if (!shdata) shdata = (fftw_complex *) fftw_malloc(sasize.y*2 * sasize.x*2 * sizeof *shdata);
+	
 	// Set memory to 0
 	for (int i=0; i< sasize.y*2 * sasize.x*2; i++)
 		shdata[i][0] = shdata[i][1] = 0.0;
+
+	//! @todo This has to be deleted somewhere
 	fftw_plan shplan = fftw_plan_dft_2d(sasize.y*2, sasize.x*2, shdata, shdata, FFTW_FORWARD, FFTW_MEASURE);
 	double tmp=0;
 	// Temporary matrices
 	gsl_matrix_view subap;
 	gsl_matrix *subapm;
+	gsl_matrix_view telapt_crop;
+	gsl_matrix *telapt_cropm;
 	
-	for (int n=0; n<shwfs.mla.nsi; n++) {
-		sallpos = shwfs.mla.ml[n].llpos;
-		sasize = shwfs.mla.ml[n].size;
-		
+	
+	for (size_t n=0; n<shwfs.mlacfg.size(); n++) {
+		sallpos.x = shwfs.mlacfg[n].lx;
+		sallpos.y = shwfs.mlacfg[n].ly;
+		sasize.x = shwfs.mlacfg[n].tx - shwfs.mlacfg[n].lx;
+		sasize.y = shwfs.mlacfg[n].ty - shwfs.mlacfg[n].ly;
+
 		// Crop out subaperture from larger frame, store as gsl_matrix_view
 		subap = gsl_matrix_submatrix(wave_in, sallpos.y, sallpos.x, sasize.y, sasize.x);
 		subapm = &(subap.matrix);
 		
-		if (workspace->size != sasize.x * sasize.y * 4) {
+		// Check if this subaperture is within the bounds of the telescope 
+		// aperture for at least telapt_fill. All values of telapt are either 0 or 
+		// seeingfac, see gen_telapt(). If the sum is higher than telapt_fill *
+		// sasize.y * sasize.x * seeingfac, accept this subaperture. Otherwise set
+		// to zero.
+		telapt_crop = gsl_matrix_submatrix(telapt, sallpos.y, sallpos.x, sasize.y, sasize.x);
+		telapt_cropm = &(telapt_crop.matrix);
+		
+		double tmp_sum = 0.0;
+		for (size_t i=0; i<telapt_cropm->size1; i++)
+			for (size_t j=0; j<telapt_cropm->size2; j++)
+				tmp_sum += gsl_matrix_get (telapt_cropm, i, j);
+
+		//! @bug this goes to zero
+		if (tmp_sum < telapt_fill * sasize.y * sasize.x) {
+			for (size_t i=0; i<subapm->size1; i++)
+				for (size_t j=0; j<subapm->size2; j++)
+					gsl_matrix_set (subapm, i, j, 0.0);
+			continue;
+		}
+		
+		if ((int) workspace->size != sasize.x * sasize.y * 4) {
 			// Re-alloc data if necessary (should be sasize, but this can vary per subap)
 			io.msg(IO_WARN, "SimulCam::simul_wfs() subap sizes unequal, re-allocating. Support might be flaky.");
 			// Re-alloc data
@@ -226,7 +281,7 @@ void SimulCam::simul_wfs(gsl_matrix *wave_in) {
 			// Re-alloc FFTW
 			fftw_destroy_plan(shplan);
 			fftw_free(shdata);
-			shdata = (fftw_complex *) fftw_malloc(sasize.y*2 * sasize.x*2 * sizeof(fftw_complex));
+			shdata = (fftw_complex *) fftw_malloc(sasize.y*2 * sasize.x*2 * sizeof *shdata);
 			// Set memory to 0
 			for (int i=0; i< sasize.y*2 * sasize.x*2; i++)
 				shdata[i][0] = shdata[i][1] = 0.0;
@@ -251,10 +306,12 @@ void SimulCam::simul_wfs(gsl_matrix *wave_in) {
 		fftw_execute(shplan);
 		
 		// now calculate the absolute squared value of that, store it in the subapt thing
-		// also find min and maximum heredouble tmp
+		// also find min and maximum here
 		for (int i=0; i<sasize.y/2; i++) {
 			for (int j=0; j<sasize.x/2; j++) {
-				// Calculate abs(E^2), store in original memory (per quadrant)
+				// Calculate abs(E^2), store in original memory (per quadrant).
+				// We need to move the data because we want the origin of the FFT to 
+				// be in the center of the matrix.
 				tmp = fabs(pow(shdata[i*sasize.x*2 + j][0], 2) + 
 									 pow(shdata[i*sasize.x*2 + j][1], 2));
 				gsl_matrix_set(subapm, sasize.y/2+i, sasize.x/2+j, tmp);
@@ -273,6 +330,7 @@ void SimulCam::simul_wfs(gsl_matrix *wave_in) {
 				//fprintf(stderr, "out: abs(%g^2+%g^2) = %g\n", shdata[i*sasize.y*2 + j][0], shdata[i*sasize.y*2 + j][1], tmp);
 			}
 		}
+		//! @bug The original wave_in is never set to zero everywhere, it is only overwritten with FFT'ed data in the subapertures, not in between the subapertures.
 	}
 }
 
@@ -283,18 +341,22 @@ uint8_t *SimulCam::simul_capture(gsl_matrix *frame_in) {
 	gsl_matrix_minmax(frame_in, &min, &max);
 	fac = 255.0/(max-min);
 	
-	size_t cursize = frame_in->size1 * frame_in->size2  * (sizeof(uint8_t));
+	size_t cursize = frame_in->size1 * frame_in->size2  * sizeof *frame_out;
 	if (out_size != cursize) {
 		io.msg(IO_DEB2, "SimulCam::simul_capture() reallocing memory, %zu != %zu", out_size, cursize);
 		out_size = cursize;
+		//! @todo frame_out needs to be free()'ed somewhere
 		frame_out = (uint8_t *) realloc(frame_out, out_size);
 	}
 	
-	// Copy and scale
+	// Copy and scale, add noise
 	double pix=0;
 	for (size_t i=0; i<frame_in->size1; i++)
 		for (size_t j=0; j<frame_in->size2; j++) {
-			pix = (double) ((gsl_matrix_get(frame_in, i, j) - min)*fac + drand48()*noise);
+			pix = (double) ((gsl_matrix_get(frame_in, i, j) - min)*fac);
+			// Add noise only in 'noise' fraction of the pixels, with 'noiseamp' amplitude
+			if (drand48() < noise) 
+				pix += drand48()*noiseamp*255.0;
 			frame_out[i*frame_in->size2 + j] = (uint8_t) clamp(((pix * exposure) + offset), 0.0, 1.0*UINT8_MAX);
 		}
 	//((wave_in->data[i*frame_in->tda + j]
@@ -303,7 +365,7 @@ uint8_t *SimulCam::simul_capture(gsl_matrix *frame_in) {
 }
 
 // From Camera::
-void SimulCam::cam_set_exposure(double value) {
+void SimulCam::cam_set_exposure(const double value) {
 	pthread::mutexholder h(&cam_mutex);
 	exposure = value;
 }
@@ -313,7 +375,7 @@ double SimulCam::cam_get_exposure() {
 	return exposure;
 }
 
-void SimulCam::cam_set_interval(double value) {
+void SimulCam::cam_set_interval(const double value) {
 	pthread::mutexholder h(&cam_mutex);
 	interval = value;
 }
@@ -322,7 +384,7 @@ double SimulCam::cam_get_interval() {
 	return interval;
 }
 
-void SimulCam::cam_set_gain(double value) {
+void SimulCam::cam_set_gain(const double value) {
 	pthread::mutexholder h(&cam_mutex);
 	gain = value;
 }
@@ -331,7 +393,7 @@ double SimulCam::cam_get_gain() {
 	return gain;
 }
 
-void SimulCam::cam_set_offset(double value) {
+void SimulCam::cam_set_offset(const double value) {
 	pthread::mutexholder h(&cam_mutex);
 	offset = value;
 }
@@ -361,6 +423,8 @@ void SimulCam::cam_handler() {
 				uint8_t *frame = simul_capture(wf);
 				
 				// Need to free gsl matrix if it is returned
+				//! @todo We use memory for wf and for frame. This should both be freed when returned. 
+				//! @todo 'frame' is the same memory each time, so this does not really queue a *new* image, it's the same memory.
 				gsl_matrix *ret = (gsl_matrix *) cam_queue(wf, frame);
 				if (ret)
 					gsl_matrix_free(ret);
@@ -372,7 +436,7 @@ void SimulCam::cam_handler() {
 			{
 				io.msg(IO_DEB1, "SimulCam::cam_handler() SINGLE");
 
-				gsl_matrix *wf = seeing.get_wavefront();
+				gsl_matrix *wf = simul_seeing();
 				simul_telescope(wf);
 				simul_wfs(wf);
 				uint8_t *frame = simul_capture(wf);
@@ -401,7 +465,7 @@ void SimulCam::cam_handler() {
 	}
 }
 
-void SimulCam::cam_set_mode(mode_t newmode) {
+void SimulCam::cam_set_mode(const mode_t newmode) {
 	if (newmode == mode)
 		return;
 	

@@ -24,6 +24,7 @@
 #include <dc1394/register.h>
 #include <dc1394/utils.h>
 #include <stdint.h>
+#include <stdlib.h>
 #include <vector>
 #include <stdexcept>
 #include <iostream>
@@ -121,7 +122,7 @@ public:
 	enumpair2() {
 		curr = 0;
 		size = 16;
-		enumarr = (int *) malloc(size * sizeof(int));
+		enumarr = (int *) malloc(size * sizeof *enumarr);
 		strarr = (std::string *) malloc(size * sizeof(std::string));
 	}
 	~enumpair2() {
@@ -359,17 +360,22 @@ class dc1394 {
 		}
 		~camera() { dc1394_camera_free(handle); }
 
-		/* General system functions */
+		// General system functions
 		void print_info(FILE *fd = stdout) { check(dc1394_camera_print_info(handle, fd)); }
 		void featprint(std::string featname, feature f, FILE *fd) {
-			if (feature_present(f)) {
-				if (feature_readable(f))
-					fprintf(fd, "%-34s: readable; r: %d--%d; val: %d\n", featname.c_str(), get_feature_min(f), get_feature_max(f), get_feature(f));
+			try {
+				if (feature_present(f)) {
+					if (feature_readable(f))
+						fprintf(fd, "%-34s: readable; r: %d--%d; val: %d\n", featname.c_str(), get_feature_min(f), get_feature_max(f), get_feature(f));
+					else
+						fprintf(fd, "%-34s: unreadable\n", featname.c_str());
+				}
 				else
-					fprintf(fd, "%-34s: unreadable\n", featname.c_str());
+					fprintf(fd, "%-34s: not present.\n", featname.c_str());
 			}
-			else
-				fprintf(fd, "%-34s: not present.\n", featname.c_str());
+			catch (std::runtime_error &e) {
+				fprintf(fd, "%-34s: caught exception.\n", featname.c_str());
+			}
 		}
 		void print_more_info(FILE *fd = stdout) { 
 			check(dc1394_camera_print_info(handle, fd)); 
@@ -438,16 +444,22 @@ class dc1394 {
 				for (j=0; j < modes.num; j++) {
 					if (modes.modes[j] == modei) {
 						fprintf(fd, "%-34s: supported\n", _dc1394->video_mode_p.getstr(modei).c_str());
-						dc1394_video_get_supported_framerates(handle, modes.modes[j], &framerates);
 						
-						fprintf(fd, "+-> Framerates: ");
-						for (int fpsi=DC1394_FRAMERATE_MIN; fpsi < DC1394_FRAMERATE_MAX; fpsi++) {
-							for (j=0; j < framerates.num; j++) {
-								if (framerates.framerates[j] == fpsi)
-									fprintf(fd, "%g ", _dc1394->framerate_p.getdbl(fpsi));
+						// Skip modes after FORMAT7 because these don't have framerates
+						if (modei >= DC1394_VIDEO_MODE_FORMAT7_0 )
+							continue;
+						
+						// Try to get supported framerates if possible
+						if (dc1394_video_get_supported_framerates(handle, modes.modes[j], &framerates) == DC1394_SUCCESS) {
+							fprintf(fd, "+-> Framerates: ");
+							for (int fpsi=DC1394_FRAMERATE_MIN; fpsi < DC1394_FRAMERATE_MAX; fpsi++) {
+								for (j=0; j < framerates.num; j++) {
+									if (framerates.framerates[j] == fpsi)
+										fprintf(fd, "%g ", _dc1394->framerate_p.getdbl(fpsi));
+								}
 							}
+							fprintf(fd, "\n");
 						}
-						fprintf(fd, "\n");
 					}
 				}
 				if (j == modes.num)
@@ -458,7 +470,7 @@ class dc1394 {
 		void set_broadcast(bool value = true) { check(dc1394_camera_set_broadcast(handle, (dc1394bool_t)value)); }
 		void reset_bus() { check(dc1394_reset_bus(handle)); }
 
-		/* Other functionalities */
+		// Other functionalities
 		void reset() { check(dc1394_camera_reset(handle)); }
 		void set_power(bool value = true) { check(dc1394_camera_set_power(handle, (dc1394switch_t)value)); }
 		uint64_t get_guid() { return handle->guid; }
@@ -466,7 +478,7 @@ class dc1394 {
 		std::string get_vendor() { return handle->vendor; }
 		std::string get_model() { return handle->model; }
 
-		/* Video functions */
+		// Video functions
 		void set_framerate(framerate value) { check(dc1394_video_set_framerate(handle, (dc1394framerate_t)value)); }
 		framerate get_framerate() { dc1394framerate_t value; check(dc1394_video_get_framerate(handle, &value)); return (framerate)value; }
 		void set_framerate_f(double fps) { 
@@ -488,7 +500,7 @@ class dc1394 {
 		void set_transmission(bool value = true) { check(dc1394_video_set_transmission(handle, (dc1394switch_t)value)); }
 		bool get_transmission() { dc1394switch_t value; check(dc1394_video_get_transmission(handle, &value)); return value; }
 
-		/* Features and registers */
+		// Features and registers
 		void set_feature(feature f, uint32_t value) { check(dc1394_feature_set_value(handle, (dc1394feature_t)f, value)); }
 		uint32_t get_feature(feature f) { uint32_t value; check(dc1394_feature_get_value(handle, (dc1394feature_t)f, &value)); return value; }
 		bool feature_present(feature f) { dc1394bool_t  value; check(dc1394_feature_is_present(handle, (dc1394feature_t)f, &value)); return value; }
@@ -496,13 +508,13 @@ class dc1394 {
 		uint32_t get_feature_min(feature f) { uint32_t min, max; check(dc1394_feature_get_boundaries(handle, (dc1394feature_t)f, &min, &max)); return min; }
 		uint32_t get_feature_max(feature f) { uint32_t min, max; check(dc1394_feature_get_boundaries(handle, (dc1394feature_t)f, &min, &max)); return max; }
 		
-		/* Register access */
+		// Register access
 		uint32_t get_register(uint64_t offset) { uint32_t value; check(dc1394_get_register(handle, offset, &value)); return value; }
 		void set_register(uint64_t offset, uint32_t value) { check(dc1394_set_register(handle, offset, value)); }
 		uint32_t get_control_register(uint64_t offset) { uint32_t value; check(dc1394_get_control_register(handle, offset, &value)); return value; }
 		void set_control_register(uint64_t offset, uint32_t value) { check(dc1394_set_control_register(handle, offset, value)); }
 
-		/* Capture functions */
+		// Capture functions
 		void capture_setup(uint32_t buffers) { check(dc1394_capture_setup(handle, buffers, DC1394_CAPTURE_FLAGS_DEFAULT)); }
 		void capture_stop() { check(dc1394_capture_stop(handle)); }
 		int get_capture_fileno() { return dc1394_capture_get_fileno(handle); }

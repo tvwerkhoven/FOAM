@@ -1,6 +1,6 @@
 /*
  imgcam.cc -- Dummy 'camera' with static images as source
- Copyright (C) 2009--2010 Tim van Werkhoven <t.i.m.vanwerkhoven@xs4all.nl>
+ Copyright (C) 2009--2011 Tim van Werkhoven <t.i.m.vanwerkhoven@xs4all.nl>
  
  This program is free software; you can redistribute it and/or modify
  it under the terms of the GNU General Public License as published by
@@ -17,13 +17,14 @@
  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+#ifdef HAVE_CONFIG_H
+#include "autoconfig.h"
+#endif
+
 #include <sys/time.h>
 #include <time.h>
 #include <math.h>
 #include <fcntl.h>
-#ifndef __STDC_LIMIT_MACROS
-#define __STDC_LIMIT_MACROS
-#endif
 #include <stdint.h>
 
 #include "config.h"
@@ -32,7 +33,10 @@
 
 #include "imgcam.h"
 
-ImgCamera::ImgCamera(Io &io, foamctrl *ptc, string name, string port, Path &conffile, bool online):
+using namespace std;
+
+
+ImgCamera::ImgCamera(Io &io, foamctrl *const ptc, const string name, const string port, Path const &conffile, const bool online):
 Camera(io, ptc, name, imgcam_type, port, conffile, online)
 {
 	io.msg(IO_DEB2, "ImgCamera::ImgCamera()");
@@ -110,10 +114,6 @@ void ImgCamera::update() {
 		usleep(diff.tv_sec * 1.0e6 + diff.tv_usec);
 }
 
-void ImgCamera::do_restart() {
-	io.msg(IO_INFO, "ImgCamera::do_restart()");
-}
-
 void ImgCamera::cam_handler() { 
 	pthread::setcanceltype(PTHREAD_CANCEL_ASYNCHRONOUS);
 	sleep(1);
@@ -143,7 +143,7 @@ void ImgCamera::cam_handler() {
 	}
 }
 
-void ImgCamera::cam_set_exposure(double value) {
+void ImgCamera::cam_set_exposure(const double value) {
 	pthread::mutexholder h(&cam_mutex);
 	exposure = value;
 }
@@ -152,7 +152,7 @@ double ImgCamera::cam_get_exposure() {
 	return exposure;
 }
 
-void ImgCamera::cam_set_interval(double value) {
+void ImgCamera::cam_set_interval(const double value) {
 	pthread::mutexholder h(&cam_mutex);
 	interval = value;
 }
@@ -161,7 +161,7 @@ double ImgCamera::cam_get_interval() {
 	return interval;
 }
 
-void ImgCamera::cam_set_gain(double value) {
+void ImgCamera::cam_set_gain(const double value) {
 	pthread::mutexholder h(&cam_mutex);
 	gain = value;
 }
@@ -170,7 +170,7 @@ double ImgCamera::cam_get_gain() {
 	return gain;
 }
 
-void ImgCamera::cam_set_offset(double value) {
+void ImgCamera::cam_set_offset(const double value) {
 	pthread::mutexholder h(&cam_mutex);
 	offset = value;
 }
@@ -186,4 +186,12 @@ void ImgCamera::cam_set_mode(const mode_t newmode) {
 	
 	mode = newmode;
 	mode_cond.broadcast();
+}
+
+void ImgCamera::do_restart() {
+	io.msg(IO_INFO, "ImgCamera::do_restart()");
+}
+
+void ImgCamera::on_message(Connection *const conn, string line) {
+	//io.msg(IO_INFO, "ImgCamera::on_message()");
 }

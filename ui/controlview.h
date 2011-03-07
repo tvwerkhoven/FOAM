@@ -1,6 +1,6 @@
 /*
  controlview.h -- FOAM GUI connection control pane
- Copyright (C) 2009--2010 Tim van Werkhoven <t.i.m.vanwerkhoven@xs4all.nl>
+ Copyright (C) 2009--2011 Tim van Werkhoven <t.i.m.vanwerkhoven@xs4all.nl>
  
  This file is part of FOAM.
  
@@ -16,12 +16,6 @@
  
  You should have received a copy of the GNU General Public License
  along with FOAM.  If not, see <http://www.gnu.org/licenses/>.
- */
-/*!
- @file controlview.h
- @author Tim van Werkhoven (t.i.m.vanwerkhoven@xs4all.nl)
- 
- @brief This is the FOAM connection control pane
  */
 
 #ifndef HAVE_CONTROLVIEW_H
@@ -52,6 +46,7 @@ class ControlPage: public VBox {
 	LabeledEntry port;
 	Button connect;											//!< Init connection, ControlPage::on_connect_clicked()
 	
+	HBox modecalibbox;
 	Frame modeframe;
 	HBox modebox;
 	SwitchButton mode_listen;						//!< Switch FOAM mode to listen, ControlPage::on_mode_listen_clicked()

@@ -1,6 +1,6 @@
 /*
  dummy.cc -- Dummy camera modules
- Copyright (C) 2010 Tim van Werkhoven <t.i.m.vanwerkhoven@xs4all.nl>
+ Copyright (C) 2010--2011 Tim van Werkhoven <t.i.m.vanwerkhoven@xs4all.nl>
  Copyright (C) 2006  Guus Sliepen <guus@sliepen.eu.org>
  
  This program is free software; you can redistribute it and/or modify
@@ -32,8 +32,9 @@
 
 using namespace std;
 
-DummyCamera::DummyCamera(Io &io, foamctrl *ptc, string name, string port, Path &conffile, bool online):
-Camera(io, ptc, name, dummycam_type, port, conffile, online)
+DummyCamera::DummyCamera(Io &io, foamctrl *const ptc, const string name, const string port, Path const &conffile, const bool online):
+Camera(io, ptc, name, dummycam_type, port, conffile, online),
+noise(0.001)
 {
 	io.msg(IO_DEB2, "DummyCamera::DummyCamera()");
 
@@ -41,12 +42,7 @@ Camera(io, ptc, name, dummycam_type, port, conffile, online)
 	add_cmd("hello world");
 
 	noise = cfg.getdouble("noise", 0.001);
-	
 	depth = 16;
-	interval = 0.25;
-	exposure = 0.3;
-	
-	dtype = UINT16;
 	
 	set_filename("dummycam-"+name);
 	
@@ -54,18 +50,24 @@ Camera(io, ptc, name, dummycam_type, port, conffile, online)
 					res.x, res.y, depth, noise, interval, exposure);
 	
 	// Start camera thread
-	mode = Camera::RUNNING;
+	mode = Camera::OFF;
 	cam_thr.create(sigc::mem_fun(*this, &DummyCamera::cam_handler));
 }
 
 DummyCamera::~DummyCamera() {
 	io.msg(IO_DEB2, "DummyCamera::~DummyCamera()");
+	
+	// Delete frames in buffer
+	for (int f=0; f<nframes; f++) {
+		free((uint16_t *) frames[f].data);
+		delete[] frames[f].histo;
+	}
+	
 	cam_thr.cancel();
 	cam_thr.join();
 }
 
-void DummyCamera::on_message(Connection *conn, std::string line) {
-	io.msg(IO_DEB1, "DummyCamera::on_message('%s')", line.c_str()); 
+void DummyCamera::on_message(Connection *const conn, string line) {
 	string orig = line;
 	string command = popword(line);
 	bool parsed = true;
@@ -96,7 +98,8 @@ void DummyCamera::update() {
 	
 	gettimeofday(&now, 0);
 	
-	uint16_t *image = (uint16_t *) malloc(res.x * res.y * depth/8);
+	// Allocate new memory for this frame.
+	uint16_t *image = (uint16_t *) malloc(res.x * res.y * sizeof *image);
 	if (!image)
 		throw exception("DummyCamera::update(): Could not allocate memory for framebuffer");	
 
@@ -115,10 +118,12 @@ void DummyCamera::update() {
 		}
 	}
 	
+	// Queue this frame, if the buffer is full, we will get the oldest one back
 	void *old = cam_queue(image, image, &now);
-	if(old) {
-		//io.msg(IO_DEB2, "Got old=%p\n", old);
-		//free((uint16_t *)old);
+	
+	if (old) {
+		io.msg(IO_DEB2, "DummyCamera::update(): got old frame=%p", old);
+		free((uint16_t *) old);
 	}
 	
 	// Make sure each update() takes at minimum interval seconds:
@@ -152,7 +157,8 @@ void DummyCamera::cam_handler() {
 				mode = Camera::OFF;
 				break;
 			case Camera::OFF:
-				io.msg(IO_INFO, "DummyCamera::cam_handler() OFF.");
+			case Camera::WAITING:
+				io.msg(IO_INFO, "DummyCamera::cam_handler() OFF/WAITING.");
 				// We wait until the mode changed
 				mode_mutex.lock();
 				mode_cond.wait(mode_mutex);
@@ -169,7 +175,7 @@ void DummyCamera::cam_handler() {
 	}
 }
 
-void DummyCamera::cam_set_exposure(double value) {
+void DummyCamera::cam_set_exposure(const double value) {
 	pthread::mutexholder h(&cam_mutex);
 	exposure = value;
 }
@@ -178,7 +184,7 @@ double DummyCamera::cam_get_exposure() {
 	return exposure;
 }
 
-void DummyCamera::cam_set_interval(double value) {
+void DummyCamera::cam_set_interval(const double value) {
 	pthread::mutexholder h(&cam_mutex);
 	interval = value;
 }
@@ -187,7 +193,7 @@ double DummyCamera::cam_get_interval() {
 	return interval;
 }
 
-void DummyCamera::cam_set_gain(double value) {
+void DummyCamera::cam_set_gain(const double value) {
 	pthread::mutexholder h(&cam_mutex);
 	gain = value;
 }
@@ -196,7 +202,7 @@ double DummyCamera::cam_get_gain() {
 	return gain;
 }
 
-void DummyCamera::cam_set_offset(double value) {
+void DummyCamera::cam_set_offset(const double value) {
 	pthread::mutexholder h(&cam_mutex);
 	offset = value;
 }

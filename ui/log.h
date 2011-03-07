@@ -1,6 +1,6 @@
 /*
  log.h -- FOAM GUI log class
- Copyright (C) 2009--2010 Tim van Werkhoven <t.i.m.vanwerkhoven@xs4all.nl>
+ Copyright (C) 2009--2011 Tim van Werkhoven <t.i.m.vanwerkhoven@xs4all.nl>
  
  This file is part of FOAM.
  
@@ -63,7 +63,7 @@ class Log {
 
 	Glib::RefPtr<Gtk::TextBuffer> &get_buffer();
 	Glib::ustring get_text();
-	void add(enum severity severity, const Glib::ustring &message);
+	void add(enum Log::severity severity, const Glib::ustring &message);
 };
 
 #endif // HAVE_LOG_H

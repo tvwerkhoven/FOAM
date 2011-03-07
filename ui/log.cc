@@ -1,6 +1,6 @@
 /*
  log.cc -- FOAM GUI log class
- Copyright (C) 2009--2010 Tim van Werkhoven <t.i.m.vanwerkhoven@xs4all.nl>
+ Copyright (C) 2009--2011 Tim van Werkhoven <t.i.m.vanwerkhoven@xs4all.nl>
  
  This file is part of FOAM.
  
@@ -40,7 +40,7 @@ Log::Log() {
 Log::~Log() {
 }
 
-void Log::add(enum severity severity, const Glib::ustring &message) {
+void Log::add(enum Log::severity severity, const Glib::ustring &message) {
 	{
 		pthread::mutexholder h(&mutex);
 		struct entry e;

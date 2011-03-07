@@ -1,6 +1,6 @@
 /*
  foam.h -- main FOAM header file, defines FOAM framework 
- Copyright (C) 2009--2010 Tim van Werkhoven <t.i.m.vanwerkhoven@xs4all.nl>
+ Copyright (C) 2009--2011 Tim van Werkhoven <t.i.m.vanwerkhoven@xs4all.nl>
  
  This file is part of FOAM.
  
@@ -17,14 +17,14 @@
  You should have received a copy of the GNU General Public License
  along with FOAM.  If not, see <http://www.gnu.org/licenses/>.
  */
-/*! 
-	@file foam.h
-	@author Tim van Werkhoven (t.i.m.vanwerkhoven@xs4all.nl)
-	@brief This is the main header file for FOAM.
-*/
 
 #ifndef HAVE_FOAM_H
 #define HAVE_FOAM_H
+
+#ifdef HAVE_CONFIG_H
+// Contains various library we have.
+#include "autoconfig.h"
+#endif
 
 #include <stdio.h>
 #include <math.h>
@@ -33,7 +33,8 @@
 #include <string>
 #include <stdexcept>
 
-#include "autoconfig.h"
+
+
 #include "foamtypes.h"
 #include "config.h"
 #include "protocol.h"
@@ -52,6 +53,31 @@ typedef Protocol::Server::Connection Connection;
  does not implement anything specifically for AO. A bare example 
  implementation is provided as foam-dummy to show the idea behind the 
  framework.
+ 
+ Command line arguments supported are:
+ - -c or --config: configuration file [FOAM_DEFAULTCONF]
+ - -v: increase verbosity
+ - -q: decrease verbosity
+ - --verb=LEVEL: set verbosity
+ - --nodaemon: don't start network daemon
+ - -h or --help: show help
+ - --version: show version info
+ 
+ The configuration file is read by foamctrl::parse(), see documentation there
+ about configuration variables supported.
+ 
+ Networking commands supported are:
+ 
+ - help (ok cmd help): show help
+ - exit or quit or bye (ok cmd <cmd>) [ok client disconnected]: disconnect client
+ - shutdown (ok cmd shutdown) [warn :shutting down now]: shutdown FOAM
+ - broadcast <msg> (ok cmd broadcast) [ok broadcast <msg> :from <client>]: broadcast msg to all clients
+ - verb <+|-|INT> [ok verb <LEVEL>]: set verbosity
+ - get mode (ok mode <mode>): get runmode
+ - get frames (ok frames <nframes>): get frames
+ - get devices (ok devices <ndev> <dev1> <dev1>): get devices, see Devices::getlist
+ - mode <mode> (ok cmd mode <mode>): set runmode
+ 
  */
 class FOAM {
 protected:
@@ -59,11 +85,8 @@ protected:
 	bool nodaemon;											//!< Run daemon or not
 	bool error;													//!< Error flag
 	Path conffile;											//!< Configuration file to use
-	Path execname;											//!< Executable name, i.e. Path(argv[0])
+	const Path execname;								//!< Executable name, i.e. Path(argv[0])
 
-	struct tm *tm_start;								//!< Start time
-	struct tm *tm_end;									//!< End time
-	
 	struct {
 		bool ok;													//!< Track whether a network command is ok or not
 	} netio;
@@ -75,25 +98,28 @@ protected:
 	
 	/*!
 	 @brief Run on new connection to FOAM
+	 
+	 @param [in] *conn Connection used for this event
+	 @param [in] status Connection status (connect or disconnect)
 	 */
-	void on_connect(Connection *connection, bool status);
+	virtual void on_connect(const Connection * const conn, const bool status) const;
 	
 	/*!
 	 @brief Run on new incoming message to FOAM
-	 @param [in] *connection connection the message was received on
-	 @param [in] line the message received
+	 @param [in] *conn Connection the message was received on
+	 @param [in] line The message received
 	 
 	 This is called when a new network message is received. Callback registred 
 	 through protocol. This routine is virtual and can (and should) be overloaded
 	 by the setup-specific child-class such that it can process setup-specific
 	 commands in addition to generic commands.
 	 */
-	virtual void on_message(Connection *connection, std::string line);
+	virtual void on_message(Connection * const conn, string line);
 
-	void show_clihelp(bool);						//!< Show help on command-line syntax.
-	int show_nethelp(Connection *connection, string topic, string rest); //!< Show help on network command usage
-	void show_version();								//!< Show version information
-	void show_welcome();								//!< Show welcome banner
+	void show_clihelp(const bool) const;//!< Show help on command-line syntax.
+	int show_nethelp(const Connection *const connection, string topic, string rest); //!< Show help on network command usage
+	void show_version() const;					//!< Show version information
+	void show_welcome() const;					//!< Show welcome banner
 	
 public:
 	FOAM(int argc, char *argv[]);
@@ -103,17 +129,17 @@ public:
 	DeviceManager *devices;							//!< Device/hardware management
 	Io io;															//!< Terminal diagnostics output
 	
-	bool has_error() { return error; }
+	bool has_error() const { return error; } //!< Return error status
 	
 	int init();													//!< Initialize FOAM setup
 	int parse_args(int argc, char *argv[]); //!< Parse command-line arguments
 	int load_config();									//!< Load FOAM configuration (from arguments)
-	int verify();												//!< Verify setup integrity (from configuration)
+	int verify() const;									//!< Verify setup integrity (from configuration)
 	void daemon();											//!< Start network daemon
 	int listen();												//!< Start main FOAM control loop
 	
-	string mode2str(aomode_t m);
-	aomode_t str2mode(string m);
+	string mode2str(const aomode_t m) const;
+	aomode_t str2mode(const string m) const;
 	
 	/*!
 	 @brief Load setup-specific modules

@@ -1,6 +1,6 @@
 /*
  shwfs.h -- Shack-Hartmann utilities class header file
- Copyright (C) 2009--2010 Tim van Werkhoven <t.i.m.vanwerkhoven@xs4all.nl>
+ Copyright (C) 2009--2011 Tim van Werkhoven <t.i.m.vanwerkhoven@xs4all.nl>
  
  This file is part of FOAM.
  
@@ -21,14 +21,17 @@
 #ifndef HAVE_SHWFS_H
 #define HAVE_SHWFS_H
 
+#include <vector>
+#include "types.h"
+
 #include "camera.h"
 #include "io.h"
 #include "wfs.h"
-
-const string shwfs_type = "shwfs";
-const int shwfs_maxlenses = 128;
+#include "shift.h"
 
 using namespace std;
+
+const string shwfs_type = "shwfs";
 
 // CLASS DEFINITION //
 /********************/
@@ -41,7 +44,24 @@ using namespace std;
  microlenses on the CCD). It is the subimages we are interested in when
  processing the CCD data.
  
- @todo Document this
+ \section shwfs_netio Camera net IO
+ 
+ Valid commends include:
+ - mla generate
+ - mla find
+ - mla store
+ - mla del [idx]
+ - mla add
+ - mla get [idx]
+ 
+ - get shifts
+ 
+ - calibrate
+ - measure
+ 
+ \section shwfs_cfg Configuration parameters
+ 
+
  */
 class Shwfs: public Wfs {
 	friend class SimulCam;
@@ -57,72 +77,111 @@ public:
 		CAL_PINHOLE
 	} wfs_cal_t;												//!< Different calibration methods
 	
-	typedef enum {
-		COG=0,
-		CORR
-	} mode_t;														//!< Different SHWFS operation modes
+	std::vector<vector_t> mlacfg;				//!< Microlens array configuration. Each element is a vector with the lower-left corner and upper-right corner of the subimage. Same order as shift_vec.
 	
-	typedef struct sh_subimg {
-		coord_t pos;											//!< Centroid position of this subimg
-		coord_t llpos;										//!< Lower-left position of this subimg (pos - size/2)
-		coord_t size;											//!< Subaperture size (pixels)
-		coord_t track;										//!< Subaperture tracking window size
-		sh_subimg(): pos(0,0), llpos(0,0), size(0,0), track(0,0) { ; }
-	} sh_simg_t;												//!< MLA subimage definition on CCD
-	
-	typedef struct sh_mla {
-		int nsi;													//!< Number of microlenses (subapertures)
-		float f;													//!< Microlens focal length
-		Shwfs::sh_simg_t *ml;							//!< Array of microlens positions
-		sh_mla(): nsi(0), f(-1.0), ml(NULL) { ; }
-	} sh_mla_t;													//!< Microlens array struct
-
 private:
-	sh_mla_t mla;												//!< Subimages coordinates & sizes
+	Shift shifts;												//!< Shift computation class. Does the heavy lifting.
+	gsl_vector_float *shift_vec;				//!< SHWFS shift vector. Shift for subimage N are elements N*2+0 and N*2+1. Same order as mlacfg @todo Make this a ring buffer
 	
+	Shift::method_t method;							//!< Data processing method (Center of Gravity, Correlation, etc)
+	
+	// Parameters for dynamic MLA grids:
 	int simaxr;													//!< Maximum radius to use, or edge erosion subimages
-	int simini;													//!< Minimum intensity in
+	float simini_f;											//!< Minimum intensity for a subimage as fraction of the max intensity in a frame
 	
-	mode_t mode;												//!< Data processing mode (Center of Gravity, Correlation, etc)
-	
+	// Parameters for static MLA grids:
 	coord_t sisize;											//!< Subimage size
 	coord_t sipitch;										//!< Pitch between subimages
-	fcoord_t sitrack;										//!< Size of track window (relative to sisize)
 	coord_t disp;												//!< Displacement of complete pattern
 	float overlap;											//!< Overlap required 
 	int xoff;														//!< Odd row offset between lenses
 	mlashape_t shape;										//!< MLA Shape (SQUARE or CIRCULAR)
 	
-	//coord_t *shifts;										//!< subap shifts @todo fix this properly
+	/*! @brief Find maximum intensity & index of img
+
+	 @param [in] *img Image to scan
+	 @param [in] nel Number of pixels in image
+	 @param [out] idx Index of maximum intensity pixel
+	 @return Maximum intensity
+	 */
+	template <class T> int _find_max(const T *const img, const size_t nel, size_t *idx);
 	
-	//template <class T> uint32_t _cog(T *img, int xpos, int ypos, int w, int h, int stride, uint32_t simini, fcoord_t& cog);
-	//template <class T> int _cogframe(T *img);
+	/*! @brief Represent the MLA configuration as one string
+	 
+	 @return <N> [idx x0 y0 x1 y1 [idx x0 y0 x1 y1 [...]]]
+	 */
+	string get_mla_str() const;
 	
-	int mla_subapsel();	
+	/*! @brief Set MLA configuration from string, return number of subaps, reverse of get_mla_str(). Output stored in mlacfg.
+	 
+	 @param [in] <N> [idx x0 y0 x1 y1 [idx x0 y0 x1 y1 [...]]]
+	 @return Number of subimages successfully added (might be != N)
+	 */
+	int set_mla_str(string mla_str);
+	
+	int mla_subapsel();
+	
+	//!< Calculate influence for each Zernike mode
+//	int calc_zern_infl(int nmodes);
+	//!< Calculate slopes (helper for calc_zern_infl())
+//	int calc_slope(gsl_matrix *tmp, std::vector<vector_t> &mlacfg, double *slope); 
+	
+	//!< Represent SHWFS shifts as a string [<N> [idx Sx0 Sy0 Sx1 Sy1 [idx Sx0 Sy0 Sx1 Sy1 [...]]]
+	string get_shifts_str() const;
 	
 public:
-	Shwfs(Io &io, foamctrl *ptc, string name, string port, Path &conffile, Camera &wfscam, bool online=true);
+	Shwfs(Io &io, foamctrl *const ptc, const string name, const string port, Path const &conffile, Camera &wfscam, const bool online=true);
 	~Shwfs();	
 	
 	/*! @brief Generate subaperture/subimage (sa/si) positions for a given configuration.
-	 
+
+	 @param [in] mlacfg The calculated subaperture pattern will be stored here
 	 @param [in] res Resolution of the sa pattern (before scaling) [pixels]
-	 @param [in] size size of the sa's [pixels]
-	 @param [in] pitch pitch of the sa's [pixels]
-	 @param [in] xoff the horizontal position offset of odd rows [fraction of pitch]
-	 @param [in] disp global displacement of the sa positions [pixels]
-	 @param [in] shape shape of the pattern, circular or square (see mlashape_t)
-	 @param [in] overlap how much overlap with aperture needed for inclusion (0--1)
-	 @param [out] *pattern the calculated subaperture pattern
-	 @return number of subapertures found
+	 @param [in] size Size of the sa's [pixels]
+	 @param [in] pitch Pitch of the sa's [pixels]
+	 @param [in] xoff The horizontal position offset of odd rows [fraction of pitch]
+	 @param [in] disp Global displacement of the sa positions [pixels]
+	 @param [in] shape Shape of the pattern, circular or square (see mlashape_t)
+	 @param [in] overlap How much overlap with aperture needed for inclusion (0--1)
+	 @return Number of subapertures found
 	 */
-	sh_simg_t *gen_mla_grid(coord_t res, coord_t size, coord_t pitch, int xoff, coord_t disp, mlashape_t shape, float overlap, int &nsubap);
+	int gen_mla_grid(std::vector<vector_t> &mlacfg, const coord_t res, const coord_t size, const coord_t pitch, const int xoff, const coord_t disp, const mlashape_t shape, const float overlap);
+
+	/*! @brief Find subaperture/subimage (sa/si) positions in a given frame.
+	 
+	 This function takes a frame from the camera and finds the brightest spots to use as MLA grid
+	 
+	 @param [in] mlacfg The calculated subaperture pattern will be stored here
+	 @param [in] size Size of the sa's [pixels]
+	 @param [in] mini_f Minimimum intensity a pixel has to have to consider it, as fraction of the maximum intensity.
+	 @param [in] nmax Maximum number of SA's to search
+	 @param [in] iter Number of iterations to do
+	 @return Number of subapertures found
+	 */
+	int find_mla_grid(std::vector<vector_t> &mlacfg, const coord_t size, const float mini_f=0.8, const int nmax=-1, const int iter=1);
 	
-	bool store_mla_grid(sh_mla_t mla, Path &f, bool overwrite=false);	//!< Store external MLA grid to disk, as CSV
-	bool store_mla_grid(Path &f, bool overwrite=false);	//!< Store this MLA grid to disk, as CSV
-//	virtual int verify(int);
-//	virtual int calibrate(int);
-//	virtual int measure(int);
+	//!< Store MLA grid to disk, as CSV
+	bool store_mla_grid(const bool overwrite=false) const;
+	
+	int mla_update_si(const int nx0, const int ny0, const int nx1, const int ny1, const int idx=-1);
+	int mla_del_si(const int idx);
+
+	//!< Convert shifts to basis functions
+	int shift_to_basis(const gsl_vector_float *const invec, const wfbasis basis, gsl_vector_float *outvec);
+	
+	// From Wfs::
+	virtual int measure();
+	virtual int calibrate();
+	
+	// From Devices::
+	virtual void on_message(Connection *const, string);
 };
 
 #endif // HAVE_SHWFS_H
+
+/*!
+ \page dev_wfs_shwfs Shack-Hartmann Wavefront sensor devices
+ 
+ The Shwfs class provides control for SH-wavefront sensors.
+ 
+ */ 

@@ -1,6 +1,6 @@
 /*
  camctrl.cc -- camera control class
- Copyright (C) 2010 Tim van Werkhoven <t.i.m.vanwerkhoven@xs4all.nl>
+ Copyright (C) 2010--2011 Tim van Werkhoven <t.i.m.vanwerkhoven@xs4all.nl>
  Copyright (C) 2010 Guus Sliepen
  
  This file is part of FOAM.
@@ -19,11 +19,6 @@
  along with FOAM.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-/*!
- @file camctrl.h
- @brief Camera UI control 
- */
-
 #ifndef HAVE_CAMCTRL_H
 #define HAVE_CAMCTRL_H
 
@@ -34,6 +29,8 @@
 #include "protocol.h"
 
 #include "devicectrl.h"
+
+using namespace std;
 
 /*!
  @brief Generic camera control class
@@ -63,29 +60,29 @@ public:
 	mode_t mode;
 	
 protected:
-	Protocol::Client monitorprotocol;		//!< Data channel for images
+	Protocol::Client monitorprotocol;		//!< Data connection for images (bulk data)
 
 	// Camera settings
 	double exposure;										//!< Camera exposure
 	double interval;										//!< Camera time between frames (inverse framerate)
 	double gain;												//!< Camera gain
 	double offset;											//!< Camera offset
-	int32_t width;											//!< Camera horizontal number of pixels
-	int32_t height;											//!< Camera vertical number of pixels
-	int32_t depth;											//!< Camera bitdepth
-	std::string filename;								//!< Filename camera will store data to
-	int32_t nstore;											//!< How many upcoming frames will be stored
+	int width;													//!< Camera horizontal number of pixels
+	int height;													//!< Camera vertical number of pixels
+	int depth;													//!< Camera bitdepth
+	string filename;										//!< Filename camera will store data to
+	size_t nstore;											//!< How many upcoming frames will be stored
 
 	// From DeviceCtrl::
-	virtual void on_message(std::string line);
+	virtual void on_message(string line);
 	virtual void on_connected(bool connected);
 
-	// For monitorprotocol
-	void on_monitor_message(std::string line);
+	// For monitorprotocol message handling
+	void on_monitor_message(string line);
 	void on_monitor_connected(bool connected);
 	
 public:
-	CamCtrl(Log &log, const std::string name, const std::string host, const std::string port);
+	CamCtrl(Log &log, const string name, const string host, const string port);
 	~CamCtrl();
 	
 	// From DeviceCtrl::
@@ -127,26 +124,27 @@ public:
 	} monitor;													//!< Stores frames from the camera. Note that these frames can be cropped and/or scaled wrt the original frame.
 	
 	// Get & set settings
-	double get_exposure() const;				//!< Get camera exposure
-	double get_interval() const;				//!< Get time between frames (inverse framerate)
-	double get_gain() const;						//!< Get gain
-	double get_offset() const;					//!< Get offset
-	int32_t get_width() const;					//!< Get horizontal number of pixels
-	int32_t get_height() const;					//!< Get vertical number of pixels
-	int32_t get_depth() const;					//!< Get camera bitdepth
-	std::string get_filename() const;		//!< Get filename
+	double get_exposure() const { return exposure; } //!< Get camera exposure
+	double get_interval() const { return interval; } //!< Get time between frames (inverse framerate)
+	double get_gain() const { return gain; } //!< Get gain
+	double get_offset() const { return offset; } //!< Get offset
+	int get_width() const { return width; } //!< Get horizontal number of pixels
+	int get_height() const { return height; } //!< Get vertical number of pixels
+	int get_depth() const { return depth; } //!< Get camera bitdepth
+	string get_filename() const { return filename; } //!< Get filename
+	
 	void get_thumbnail();								//!< Send request for a thumnail
 	mode_t get_mode() const { return mode; } //!< Get current camera mode
-	std::string get_modestr(const mode_t m) const; //!< Get a mode as a string
-	std::string get_modestr() { return get_modestr(mode); } //!< Get current camera mode as string
-	int32_t get_nstore() { return nstore; } //!< Get number of frames that will be stored
+	string get_modestr(const mode_t m) const; //!< Get a mode as a string
+	string get_modestr() { return get_modestr(mode); } //!< Get current camera mode as string
+	size_t get_nstore() { return nstore; } //!< Get number of frames that will be stored
 	
 	void set_exposure(double value);		//!< Set camera exposure
 	void set_interval(double value);		//!< Set time between frames (inverse framerate)
 	void set_gain(double value);				//!< Set gain
 	void set_offset(double value);			//!< Set offset
-	void set_filename(const std::string &filename); //!< Set filename
-	void set_fits(const std::string &fits); //!< Set FITS paramets that will be stored in the header
+	void set_filename(const string &filename); //!< Set filename
+	void set_fits(const string &fits);  //!< Set FITS paramets that will be stored in the header
 	void set_mode(const mode_t m);			//!< Change camera mode
 
 	// Take images

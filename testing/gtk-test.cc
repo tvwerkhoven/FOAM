@@ -1,10 +1,22 @@
 /*
- *  gtk-test.cc
- *  foam
- *
- *  Created by Tim on 20101124.
- *  Copyright 2010 Tim van Werkhoven. All rights reserved.
- *
+ gtk-test.cc -- test GTK
+ 
+ Copyright (C) 2010 Tim van Werkhoven <t.i.m.vanwerkhoven@xs4all.nl>
+ 
+ This file is part of FOAM.
+ 
+ FOAM is free software: you can redistribute it and/or modify
+ it under the terms of the GNU General Public License as published by
+ the Free Software Foundation, either version 2 of the License, or
+ (at your option) any later version.
+ 
+ FOAM is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ GNU General Public License for more details.
+ 
+ You should have received a copy of the GNU General Public License
+ along with FOAM.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 
@@ -70,15 +82,20 @@ class Testwindow: public Window {
 	VBox vbox;
 	HBox hbox;
 	
+	Window extrawin;
+	VBox extravbox;
+	Button b_extra;
+	SwitchButton tbutt2;
+	
 	Button b_ok;
 	Button b_warn;
 	Button b_err;
-	SwitchButton tbutt2;
 	
 public:
 	void on_b_ok();
 	void on_b_warn();
 	void on_b_err();
+	void on_b_extra();
 
 	void on_tbutton1();
 	void on_tbutton2();
@@ -88,37 +105,44 @@ public:
 };
 
 void Testwindow::on_b_ok() {
-	printf("on_button::signal_clicked()\n");
+	printf("Testwindow::on_b_ok()\n");
 	tbutt2.set_state(SwitchButton::OK);
 }
 void Testwindow::on_b_warn() {
-	printf("on_button::signal_clicked()\n");
+	printf("Testwindow::on_b_warn()\n");
 	tbutt2.set_state(SwitchButton::WARNING);
 }
 void Testwindow::on_b_err() {
-	printf("on_button::signal_clicked()\n");
+	printf("Testwindow::on_b_err()\n");
 	tbutt2.set_state(SwitchButton::ERROR);
+}
+
+void Testwindow::on_b_extra() {
+	printf("TestWindow::on_b_extra()\n");
 }
 
 void Testwindow::on_tbutton1() {
-	printf("on_tbutton::signal_clicked()\n");
+	printf("Testwindow::on_tbutton1()\n");
 	tbutt2.set_state(SwitchButton::WAITING);
 }
 void Testwindow::on_tbutton2() {
-	printf("on_tbutton::signal_activated()\n");
+	printf("Testwindow::on_tbutton2()\n");
 	tbutt2.set_state(SwitchButton::ERROR);
 }
 
-
 Testwindow::Testwindow():
-b_ok("Set OK"), b_warn("Set WARN"), b_err("Set ERR"), tbutt2() {
+b_ok("Set OK"), b_warn("Set WARN"), b_err("Set ERR"), b_extra("Extra"), tbutt2() {
 	set_title("Test window");
 	set_gravity(Gdk::GRAVITY_STATIC);
+	
+	extrawin.set_title("Extra window");
+	extrawin.set_gravity(Gdk::GRAVITY_STATIC);
 
 
 	b_ok.signal_clicked().connect( sigc::mem_fun(*this, &Testwindow::on_b_ok) );
 	b_warn.signal_clicked().connect( sigc::mem_fun(*this, &Testwindow::on_b_warn) );
 	b_err.signal_clicked().connect( sigc::mem_fun(*this, &Testwindow::on_b_err) );
+	b_extra.signal_clicked().connect( sigc::mem_fun(*this, &Testwindow::on_b_extra) );
 
 	tbutt2.signal_clicked().connect( sigc::mem_fun(*this, &Testwindow::on_tbutton1) );
 	tbutt2.signal_activate().connect( sigc::mem_fun(*this, &Testwindow::on_tbutton2) );
@@ -127,14 +151,23 @@ b_ok("Set OK"), b_warn("Set WARN"), b_err("Set ERR"), tbutt2() {
 	hbox.pack_start(b_warn, PACK_SHRINK);
 	hbox.pack_start(b_err, PACK_SHRINK);
 	
-	vbox.pack_start(tbutt2, PACK_SHRINK);
+	//vbox.pack_start(tbutt2, PACK_SHRINK);
 	vbox.pack_start(hbox, PACK_SHRINK);
+	
+	extravbox.pack_start(b_extra, PACK_SHRINK);
+	extravbox.pack_start(tbutt2, PACK_SHRINK);
+	
+	extrawin.add(extravbox);
 
 	add(vbox);
 
-	// finalize
+	// finalize windows & present
 
 	show_all_children();
+	
+	extrawin.show_all_children();
+	extrawin.present();
+
 }
 
 Testwindow::~Testwindow() {

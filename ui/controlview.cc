@@ -1,6 +1,6 @@
 /*
  controlview.h -- FOAM GUI connection control pane
- Copyright (C) 2009--2010 Tim van Werkhoven <t.i.m.vanwerkhoven@xs4all.nl>
+ Copyright (C) 2009--2011 Tim van Werkhoven <t.i.m.vanwerkhoven@xs4all.nl>
  
  This file is part of FOAM.
  
@@ -17,12 +17,6 @@
  You should have received a copy of the GNU General Public License
  along with FOAM.  If not, see <http://www.gnu.org/licenses/>.
  */
-/*!
- @file controlview.cc
- @author Tim van Werkhoven (t.i.m.vanwerkhoven@xs4all.nl)
- 
- @brief This is the FOAM connection control pane
- */
 
 #include "format.h"
 #include "foamcontrol.h"
@@ -37,6 +31,8 @@ connframe("Connection"), host("Hostname"), port("Port"), connect("Connect"),
 modeframe("Run mode"), mode_listen("Listen"), mode_open("Open loop"), mode_closed("Closed loop"), shutdown("Shutdown"),
 calibframe("Calibration"), calmode_lbl("Calibration mode: "), calib("Calibrate"),
 statframe("Status"), stat_mode("Mode: "), stat_ndev("# Dev: "), stat_nframes("# Frames: "), stat_lastcmd("Last cmd: ") {
+	
+	//set_spacing(4);
 	
 	// request minimum size for entry boxes
 	host.set_width_chars(24);
@@ -87,19 +83,20 @@ statframe("Status"), stat_mode("Mode: "), stat_ndev("# Dev: "), stat_nframes("# 
 	calibbox.pack_start(calib, PACK_SHRINK);
 	calibframe.add(calibbox);
 	
+	// Pack runmode and calibration mode in one HBox
+	modecalibbox.set_spacing(4);
+	modecalibbox.pack_start(modeframe, PACK_SHRINK);
+	modecalibbox.pack_start(calibframe, PACK_SHRINK);
+	
 	// Status row (mode, # dev, # frames)
 	statbox.set_spacing(4);
-	//! \todo statbox superfluous? can be removed?
-	//statbox.pack_start(stat_mode, PACK_SHRINK);
 	statbox.pack_start(stat_ndev, PACK_SHRINK);
 	statbox.pack_start(stat_nframes, PACK_SHRINK);
 	statbox.pack_start(stat_lastcmd, PACK_SHRINK);
 	statframe.add(statbox);
 	
-	set_spacing(4);
 	pack_start(connframe, PACK_SHRINK);
-	pack_start(modeframe, PACK_SHRINK);
-	pack_start(calibframe, PACK_SHRINK);
+	pack_start(modecalibbox, PACK_SHRINK);
 	pack_start(statframe, PACK_SHRINK);
 	
 	// register callback functions

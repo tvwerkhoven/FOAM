@@ -1,6 +1,6 @@
 /*
  wfc.h -- a wavefront corrector base class
- Copyright (C) 2009--2010 Tim van Werkhoven <t.i.m.vanwerkhoven@xs4all.nl>
+ Copyright (C) 2009--2011 Tim van Werkhoven <t.i.m.vanwerkhoven@xs4all.nl>
  
  This file is part of FOAM.
  
@@ -53,3 +53,9 @@ public:
 };
 
 #endif // HAVE_WFC_H
+
+/*!
+ \page dev_wfc Wavefront corrector devices
+ 
+ The Wfc class provides control for wavefront correctors.
+*/

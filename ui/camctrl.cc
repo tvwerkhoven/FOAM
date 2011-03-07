@@ -1,6 +1,6 @@
 /*
  camctrl.h -- camera control class
- Copyright (C) 2010 Tim van Werkhoven <t.i.m.vanwerkhoven@xs4all.nl>
+ Copyright (C) 2010--2011 Tim van Werkhoven <t.i.m.vanwerkhoven@xs4all.nl>
  Copyright (C) 2010 Guus Sliepen
  
  This file is part of FOAM.
@@ -19,11 +19,6 @@
  along with FOAM.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-/*!
- @file camctrl.cc
- @brief Camera UI control 
- */
-
 #include <iostream>
 #include <arpa/inet.h>
 #include <string>
@@ -38,24 +33,12 @@ using namespace std;
 
 CamCtrl::CamCtrl(Log &log, const string h, const string p, const string n):
 	DeviceCtrl(log, h, p, n),
-	monitorprotocol(host, port, devname)
+	monitorprotocol(host, port, devname),
+	mode(OFF), exposure(0.0), interval(0.0), gain(0.0), offset(0.0), 
+	width(0), height(0), depth(0), nstore(0)
 {
 	fprintf(stderr, "%x:CamCtrl::CamCtrl()\n", (int) pthread_self());
-	
-	ok = false;
-	mode = OFF;
-	errormsg = "Not connected";
-	
-	exposure = 0;
-	interval = 0;
-	gain = 0;
-	offset = 0;
-	width = 0;
-	height = 0;
-	depth = 0;
-	mode = OFF;
-	nstore = 0;
-	
+
 	monitorprotocol.slot_message = sigc::mem_fun(this, &CamCtrl::on_monitor_message);
 }
 
@@ -79,26 +62,22 @@ void CamCtrl::on_connected(bool conn) {
 		send_cmd("get interval");
 		send_cmd("get gain");
 		send_cmd("get offset");
-		send_cmd("get width");
-		send_cmd("get height");
-		send_cmd("get depth");
+		send_cmd("get resolution");
 		send_cmd("get filename");
 	}
 }
 
 void CamCtrl::on_message(string line) {
-	DeviceCtrl::on_message(line);
-	fprintf(stderr, "%x:CamCtrl::on_message(line=%s)\n", (int) pthread_self(), line.c_str());
-	
-	if (!ok) {
-		return;
-	}
-	// Discard first 'ok' or 'err' (DeviceCtrl::on_message() already parsed this)
+	// Save original line in case this function does not know what to do
+	string orig = line;
+	bool parsed = true;
+
+	// Discard first 'ok' or 'err' (DeviceCtrl::on_message_common() already parsed this)
 	string stat = popword(line);
 	
 	// Get command
 	string what = popword(line);
-
+	
 	if(what == "exposure")
 		exposure = popdouble(line);
 	else if(what == "interval")
@@ -113,7 +92,11 @@ void CamCtrl::on_message(string line) {
 		height = popint32(line);
 	else if(what == "depth")
 		depth = popint32(line);
-	else if(what == "store")
+	else if(what == "resolution") {
+		width = popint32(line);
+		height = popint32(line);
+		depth = popint32(line);
+	} else if(what == "store")
 		nstore = popint32(line);
 	else if(what == "filename")
 		filename = popword(line);
@@ -134,16 +117,17 @@ void CamCtrl::on_message(string line) {
 			ok = false;
 			errormsg = "Unexpected mode '" + m + "'";
 		}	
-	} else if(what == "thumbnail") {
+	} else if (what == "thumbnail") {
 		protocol.read(thumbnail, sizeof thumbnail);
 		signal_thumbnail();
 		return;
-	} else {
-		ok = false;
-		errormsg = "Unexpected response '" + what + "'";
-	}
-
-	signal_message();
+	} else
+		parsed = false;
+	
+	if (!parsed)
+		DeviceCtrl::on_message(orig);
+	else
+		signal_message();
 }
 
 //!< @bug If this function returns, there is a problem in camview.cc
@@ -217,16 +201,8 @@ void CamCtrl::on_monitor_message(string line) {
 }
 
 void CamCtrl::get_thumbnail() { send_cmd("thumbnail"); }
-double CamCtrl::get_exposure() const { return exposure; }
-double CamCtrl::get_interval() const { return interval; }
-double CamCtrl::get_gain() const { return gain; }
-double CamCtrl::get_offset() const { return offset; }
-int32_t CamCtrl::get_width() const { return width; }
-int32_t CamCtrl::get_height() const { return height; }
-int32_t CamCtrl::get_depth() const { return depth; }
-std::string CamCtrl::get_filename() const { return filename; }
 
-std::string CamCtrl::get_modestr(const mode_t m) const {
+string CamCtrl::get_modestr(const mode_t m) const {
 	if (m == OFF) return "OFF";
 	if (m == WAITING) return "WAITING";
 	if (m == SINGLE) return "SINGLE";
@@ -245,19 +221,19 @@ void CamCtrl::set_offset(double value) { send_cmd(format("set offset %lf", value
 void CamCtrl::set_filename(const string &filename) { send_cmd("set filename :" + filename); }
 void CamCtrl::set_fits(const string &fits) { send_cmd("set fits " + fits); }
 
-void CamCtrl::darkburst(int32_t count) {
+void CamCtrl::darkburst(int count) {
 	string command = format("dark %d", count);
 	mode = UNDEFINED;
 	send_cmd(command);
 }
 
-void CamCtrl::flatburst(int32_t count) {
+void CamCtrl::flatburst(int count) {
 	string command = format("flat %d", count);
 	mode = UNDEFINED;
 	send_cmd(command);
 }
 
-void CamCtrl::burst(int32_t count, int32_t fsel) {
+void CamCtrl::burst(int count, int fsel) {
 	string command = format("burst %d", count);
 	if(fsel > 1)
 		command += format(" select %d", fsel);

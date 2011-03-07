@@ -1,6 +1,6 @@
 /*
  devices.h -- base hardware handling classes
- Copyright (C) 2010 Tim van Werkhoven <t.i.m.vanwerkhoven@xs4all.nl>
+ Copyright (C) 2010--2011 Tim van Werkhoven <t.i.m.vanwerkhoven@xs4all.nl>
  
  This file is part of FOAM.
  
@@ -17,14 +17,14 @@
  You should have received a copy of the GNU General Public License
  along with FOAM.  If not, see <http://www.gnu.org/licenses/>.
  */
-/*! 
- @file devices.h
- @author Tim van Werkhoven (t.i.m.vanwerkhoven@xs4all.nl)
- @brief Generic device class, specific hardware controls are derived from this class.
- */
+
 
 #ifndef HAVE_DEVICES_H
 #define HAVE_DEVICES_H
+
+#ifdef HAVE_CONFIG_H
+#include "autoconfig.h"
+#endif
 
 #include <map>
 
@@ -34,6 +34,8 @@
 #include "path++.h"
 
 #include "foamctrl.h"
+
+using namespace std;
 
 typedef Protocol::Server::Connection Connection;
 
@@ -55,14 +57,14 @@ typedef Protocol::Server::Connection Connection;
 class Device {
 protected:
 	Io &io;
-	foamctrl *ptc;
-	string name;												//!< Device name
-	string type;												//!< Device type
-	string port;												//!< Port to listen on
+	foamctrl *const ptc;
+	const string name;									//!< Device name
+	const string type;									//!< Device type
+	const string port;									//!< Port to listen on
 	list<string> cmd_list;							//!< All commands this device supports
 	void add_cmd(string cmd) { cmd_list.push_back(cmd); } //!< Add command to list
 	
-	Path conffile;											//!< Configuration file
+	const Path conffile;								//!< Configuration file
 	config cfg;													//!< Interpreted configuration file
 	
 	Protocol::Server netio;							//!< Network connection
@@ -70,35 +72,78 @@ protected:
 
 	bool init();												//!< Initialisation (common for all constructors)
 	
+	/*! @brief Set variable, helper function for on_message
+	 
+	 N.B. Value should be castable to double, such that it can be formatted with %lf.
+	 
+	 @param [in] *conn Client connection
+	 @param [in] varname Variable name
+	 @param [in] value Value for this variable
+	 @param [in] *var Pointer to variable
+	 @param [in] min Minimum allowed value
+	 @param [in] max Maximum allowed value
+	 @param [in] errmsg Error message to send to Client if value is outside [min, max]
+	 */
+	template <class T> T set_var(Connection * const conn, const string varname, const T value, T* var, const T min=0, const T max=0, const string errmsg="") const {
+		if (conn)
+			conn->addtag(varname);
+		
+		if (errmsg != "" && (value > max || value < min)) {
+			if (conn)
+				conn->write("error " + varname + " :" + errmsg);
+				return *var;
+		}
+		else {
+			*var = value;
+			netio.broadcast(format("ok %s %le", varname.c_str(), (double) *var), varname);
+			return *var;
+		}
+	}
+
+	/*! @brief Get variable, helper function for on_message
+	 
+	 @param [in] *conn Client connection
+	 @param [in] varname Variable name
+	 @param [in] value Value for this variable
+	 @param [in] comment Comment to send along to Client (optional)
+	 */
+	void get_var(Connection * const conn, const string varname, const double value, const string comment="") const;
+
+	/*! 
+	 @brief Called when the device receives a message
+	 
+	 This virtual function is called when the Device receives data over the 
+	 network (i.e. commands etc.). The derived class parses this message first,
+	 and if it did not understand the command it will be passed down to the base
+	 class until it is known. If the base class (this class) does still not know
+	 this command, it is treated as 'unknown'.
+	 */
+	virtual void on_message(Connection * const conn, string line);
+	
+	//!< Common on_message functions go here.
+	void on_message_common(Connection * const conn, string line);
+	
+	/*! 
+	 @brief Called when something connects to this device
+	 */
+	virtual void on_connect(const Connection * const /*conn*/, const bool status) const { 
+		io.msg(IO_DEB2, "Device::on_connect(stat=%d)", (int) status); 
+	}	
 public:
 	class exception: public std::runtime_error {
 	public:
-		exception(const std::string reason): runtime_error(reason) {}
+		exception(const string reason): runtime_error(reason) {}
 	};
 	
-	Device(Io &io, foamctrl *ptc, string n, string t, string p, Path conf=string(""), bool online=true);
-//	Device(Io &io, foamctrl *ptc, string n, string t, string p, Path &conf);
-//	Device(Io &io, foamctrl *ptc, string n, string t, string p);
+	Device(Io &io, foamctrl *const ptc, const string n, const string t, const string p, const Path conf=string(""), const bool online=true);
 	virtual ~Device();
 	
 	
 	virtual int verify() { return 0; }	//!< Verify the integrity of the device
 	
-	/*! 
-	 @brief Called when the device receives a message
-	 */
-	virtual void on_message(Connection *conn, std::string line);
-	
-	/*! 
-	 @brief Called when something connects to this device
-	 */
-	virtual void on_connect(Connection */*conn*/, bool status) { 
-		io.msg(IO_DEB2, "Device::on_connect(stat=%d)", (int) status); 
-	}
-	
-	bool isonline() { return online; }
-	string getname() { return name; }
-	string gettype() { return type; }
+	bool isonline() const { return online; }
+	string getname() const { return name; }
+	string gettype() const { return type; }
 };
 
 /*!
@@ -112,13 +157,13 @@ private:
 	Io &io;
 	
 	typedef map<string, Device*> device_t;
-	device_t devices;
+	device_t devices;										//!< Simple list of devices, stored by name.
 	int ndev;														//!< Number of devices in the system
 	
 public:
 	class exception: public std::runtime_error {
 	public:
-		exception(const std::string reason): runtime_error(reason) {}
+		exception(const string reason): runtime_error(reason) {}
 	};
 	
 	/*! 
@@ -164,3 +209,49 @@ public:
 };
 
 #endif // HAVE_DEVICES_H
+
+/*!
+ \page devmngr DeviceManager
+ 
+ DeviceManager keeps track of which devices are connected to the system. The 
+ following methods are available:
+ - int DeviceManager::add(Device*) add device
+ - int DeviceManager::del(string) to manage the list. 
+ - Device* DeviceManager::get(string id) to get a device named 'id'
+ - int DeviceManager::getcount() get number of devices
+ - string DeviceManager::getlist(bool, bool) get list of devices
+ 
+ \section devmngr_related See also
+ - \ref dev "Devices info"
+
+*/
+
+/*!
+ \page dev Devices
+
+ In order to accomodate all kinds of hardware devices, the Device baseclass 
+ provides a template for all sorts of hardware (camera, wavefront sensor,
+ deformable mirrors, etc). Because of its genericity this class does not 
+ implement a lot itself, but rather depends on the derived classes to do
+ the work. Nonetheless, some basic functions (such as network I/O) are
+ provided here. All devices are stored in a DeviceManager class.
+
+ \section dev_derive Deriving a Device
+ 
+ To derive a Device class, one can use the following functions for overloading:
+ 
+ - Device::on_message(Connection * const, string)
+ - Device::on_connect(const Connection * const, const bool) const
+ - Device::verify()
+ 
+ but this is only necessary if one wants to extend the functionality.
+ 
+ \section dev_der Derived classes
+ - \subpage dev_cam "Camera device"
+ - \subpage dev_wfs "Wavefront sensor device"
+ - \subpage dev_wfc "Wavefront corrector device"
+
+ \section dev_related See also
+ - \ref devmngr "Device Manager info"
+
+*/

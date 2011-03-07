@@ -1,6 +1,6 @@
 /*
  fgui.h -- the FOAM GUI header file
- Copyright (C) 2009--2010 Tim van Werkhoven <t.i.m.vanwerkhoven@xs4all.nl>
+ Copyright (C) 2009--2011 Tim van Werkhoven <t.i.m.vanwerkhoven@xs4all.nl>
  
  This file is part of FOAM.
  
@@ -18,15 +18,12 @@
  along with FOAM.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-/*!
- @file fgui.h
- @author Tim van Werkhoven (t.i.m.vanwerkhoven@xs4all.nl)
- 
- @brief This is the FOAM control GUI header
- */
-
 #ifndef HAVE_FGUI_H
 #define HAVE_FGUI_H
+
+#ifdef HAVE_AUTOCONFIG_H
+#include "autoconfig.h"
+#endif
 
 #include <iostream>
 #include <string>
@@ -108,8 +105,9 @@ private:
 	
 	LogPage logpage;										//!< Shows log messages (see LogPage and Log)
 	ControlPage controlpage;						//!< Shows base controls (see FoamCtrl)
-	typedef std::map<std::string, DevicePage*> devlist_t; //!< \todo why do I need explicit std:: here??
-	devlist_t devlist;									//!< A list of devices to keep track of
+	
+	typedef std::map<const string, DevicePage*> pagelist_t;
+	pagelist_t pagelist;								//!< List all device pages here
 	
 	void on_about_activate();						//!< MainMenu::about button callback
 	void on_quit_activate();						//!< MainMenu::quit button callback
@@ -236,10 +234,10 @@ public:
  DeviceCtrl. These can be overloaded to provide more detailed control over a
  device.
  
- \section moreinfo More information
+ \section moreinfo See also
  
  More information can be found on these pages:
- - \subpage cam_dev "Camera devices UI"
+ - \subpage dev_ui "Devices UI"
  
 
  */

@@ -1,6 +1,6 @@
 /*
  foam.cc -- main FOAM framework file, glues everything together
- Copyright (C) 2008--2010 Tim van Werkhoven <t.i.m.vanwerkhoven@xs4all.nl>
+ Copyright (C) 2008--2011 Tim van Werkhoven <t.i.m.vanwerkhoven@xs4all.nl>
  
  This file is part of FOAM.
  
@@ -17,20 +17,19 @@
  You should have received a copy of the GNU General Public License
  along with FOAM.  If not, see <http://www.gnu.org/licenses/>.
  */
-/*! 
-	@file foam.cc
-	@author Tim van Werkhoven (t.i.m.vanwerkhoven@xs4all.nl)
 
-	@brief This is the main file for FOAM.
-
-	This is the framework for FOAM, it provides basic functionality and can be 
-	customized through deriving this main class to your specific needs. 
-*/
+//! @todo Handle signals properly, call shutdown()
+//! @bug FOAM quits when GUI quits, perhaps because of unhandled signals?
 
 // HEADERS //
 /***********/
 
+#ifdef HAVE_CONFIG_H
+// Contains various library we have.
+#include "autoconfig.h"
+#endif
 #include <getopt.h>
+
 #include "config.h"
 #include "io.h"
 #include "protocol.h"
@@ -39,7 +38,6 @@
 #include "foamtypes.h"
 #include "foamctrl.h"
 #include "devices.h"
-#include "autoconfig.h"
 #include "foam.h"
 
 using namespace std;
@@ -49,6 +47,7 @@ nodaemon(false), error(false), conffile(FOAM_DEFAULTCONF), execname(argv[0]),
 io(IO_DEB2)
 {
 	io.msg(IO_DEB2, "FOAM::FOAM()");
+	
 	devices = new DeviceManager(io);
 	
 	if (parse_args(argc, argv)) {
@@ -59,7 +58,30 @@ io(IO_DEB2)
 		error = true;
 		exit(-1);
 	}
+}
+
+FOAM::~FOAM() {
+	//! @bug FOAM quits when GUI disconnects
+	io.msg(IO_DEB2, "FOAM::~FOAM()");
 	
+	// Notify shutdown
+	io.msg(IO_WARN, "Shutting down FOAM now");
+  protocol->broadcast("warn :shutting down now");
+	
+	//! \todo disconnect clients gracefully here?			
+	
+	// Get the end time to see how long we've run
+	time_t end = time(NULL);
+	struct tm *loctime = localtime(&end);
+	char date[64];	
+	strftime(date, 64, "%A, %B %d %H:%M:%S, %Y (%Z).", loctime);
+	
+	// Last log message just before closing the logfiles
+	io.msg(IO_INFO, "Stopping FOAM at %s", date);
+	io.msg(IO_INFO, "Ran for %ld seconds, parsed %ld frames (%.1f FPS).", \
+					end-ptc->starttime, ptc->frames, ptc->frames/(float) (end-ptc->starttime));
+	
+	delete ptc;
 }
 
 int FOAM::init() {
@@ -83,36 +105,15 @@ int FOAM::init() {
 	return 0;
 }
 
-FOAM::~FOAM() {
-	io.msg(IO_DEB2, "FOAM::~FOAM()");
-	
-	// Notify shutdown
-	io.msg(IO_WARN, "Shutting down FOAM now");
-  protocol->broadcast("warn :shutting down now");
-	
-	//! \todo disconnect clients gracefully here?			
-	
-	// Get the end time to see how long we've run
-	time_t end = time(NULL);
-	struct tm *loctime = localtime(&end);
-	char date[64];	
-	strftime(date, 64, "%A, %B %d %H:%M:%S, %Y (%Z).", loctime);
-	
-	// Last log message just before closing the logfiles
-	io.msg(IO_INFO, "Stopping FOAM at %s", date);
-	io.msg(IO_INFO, "Ran for %ld seconds, parsed %ld frames (%.1f FPS).", \
-					end-ptc->starttime, ptc->frames, ptc->frames/(float) (end-ptc->starttime));
-}
-
-void FOAM::show_version() {
+void FOAM::show_version() const {
 	printf("FOAM (%s version %s, built %s %s)\n", PACKAGE_NAME, PACKAGE_VERSION, __DATE__, __TIME__);
-	printf("Copyright (c) 2007--2010 %s\n", PACKAGE_BUGREPORT);
+	printf("Copyright (c) 2007--2011 %s\n", PACKAGE_BUGREPORT);
 	printf("\nFOAM comes with ABSOLUTELY NO WARRANTY. This is free software,\n"
 				 "and you are welcome to redistribute it under certain conditions;\n"
 				 "see the file COPYING for details.\n");
 }
 
-void FOAM::show_clihelp(bool error = false) {
+void FOAM::show_clihelp(const bool error = false) const {
 	if(error)
 		io.msg(IO_ERR | IO_NOID, "Try '%s --help' for more information.\n", execname.c_str());
 	else {
@@ -122,19 +123,18 @@ void FOAM::show_clihelp(bool error = false) {
 					 "      --showthreads     Prefix logging with thread ID.\n"
 					 "  -q,                  Decrease verbosity level.\n"
 					 "      --nodaemon       Do not start network daemon.\n"
-					 "  -p, --pidfile=FILE   Write PID to FILE.\n"
 					 "  -h, --help           Display this help message.\n"
 					 "      --version        Display version information.\n\n");
 		printf("Report bugs to %s.\n", PACKAGE_BUGREPORT);
 	}
 }
 
-void FOAM::show_welcome() {
+void FOAM::show_welcome() const {
 	io.msg(IO_DEB2, "FOAM::show_welcome()");
 	
-	tm_start = localtime(&(ptc->starttime));
 	char date[64];
-	strftime (date, 64, "%A, %B %d %H:%M:%S, %Y (%Z).", tm_start);	
+	struct tm *tmp_tm = localtime(&(ptc->starttime));
+	strftime(date, 64, "%A, %B %d %H:%M:%S, %Y (%Z).", tmp_tm);	
 	
 	io.msg(IO_NOID|IO_INFO,"      ___           ___           ___           ___     \n\
      /\\  \\         /\\  \\         /\\  \\         /\\__\\    \n\
@@ -150,26 +150,24 @@ void FOAM::show_welcome() {
 	
 	io.msg(IO_INFO, "This is FOAM (version %s, built %s %s)", PACKAGE_VERSION, __DATE__, __TIME__);
 	io.msg(IO_INFO, "Starting at %s", date);
-	io.msg(IO_INFO, "Copyright (c) 2007--2010 %s", PACKAGE_BUGREPORT);
+	io.msg(IO_INFO, "Copyright (c) 2007--2011 %s", PACKAGE_BUGREPORT);
 }
 
 int FOAM::parse_args(int argc, char *argv[]) {
 	io.msg(IO_DEB2, "FOAM::parse_args()");
 	int r, option_index = 0;
-	execname = Path(argv[0]);
 	
 	static struct option const long_options[] = {
 		{"config", required_argument, NULL, 'c'},
 		{"help", no_argument, NULL, 'h'},
 		{"version", no_argument, NULL, 1},
 		{"verb", required_argument, NULL, 2},
-		{"pidfile", required_argument, NULL, 'p'},
 		{"nodaemon", no_argument, NULL, 3},
 		{"showthreads", no_argument, NULL, 4},
 		{NULL, 0, NULL, 0}
 	};
 	
-	while((r = getopt_long(argc, argv, "c:hvqp:", long_options, &option_index)) != EOF) {
+	while((r = getopt_long(argc, argv, "c:hvq", long_options, &option_index)) != EOF) {
 		switch(r) {
 			case 0:
 				break;
@@ -196,8 +194,6 @@ int FOAM::parse_args(int argc, char *argv[]) {
 					show_clihelp(true);
 					return -1;
 				}
-				break;
-			case 'p':												// pidfile placeholder
 				break;
 			case 3:													// Don't run daemon
 				nodaemon = true;
@@ -231,7 +227,7 @@ int FOAM::load_config() {
 	return 0;
 }
 
-int FOAM::verify() {	
+int FOAM::verify() const {	
 	// Check final configuration integrity
 	int ret = 0;
 	ret += ptc->verify();
@@ -366,7 +362,7 @@ int FOAM::mode_calib() {
 	return 0;
 }
 
-void FOAM::on_connect(Connection *connection, bool status) {
+void FOAM::on_connect(const Connection * const connection, const bool status) const {
   if (status) {
     connection->write(":client connected");
     io.msg(IO_DEB1, "Client connected from %s.", connection->getpeername().c_str());
@@ -377,7 +373,7 @@ void FOAM::on_connect(Connection *connection, bool status) {
   }
 }
 
-void FOAM::on_message(Connection *connection, std::string line) {
+void FOAM::on_message(Connection *const connection, string line) {
 	string cmd = popword(line);
 	//! @todo improve the delegation of on_message commands to derived classes. How do they know a command was or was not succesful?
 	
@@ -388,7 +384,7 @@ void FOAM::on_message(Connection *connection, std::string line) {
 			netio.ok = false;
   }
   else if (cmd == "exit" || cmd == "quit" || cmd == "bye") {
-		connection->write("ok cmd exit");
+		connection->write("ok cmd " + cmd);
     connection->server->broadcast("ok client disconnected");
     connection->close();
   }
@@ -413,9 +409,9 @@ void FOAM::on_message(Connection *connection, std::string line) {
 	}
   else if (cmd == "get") {
     string var = popword(line);
-		if (var == "frames") connection->write(format("ok var frames %d", ptc->frames));
-		else if (var == "mode") connection->write(format("ok var mode %s", mode2str(ptc->mode).c_str()));
-		else if (var == "devices") connection->write(format("ok var devices %s", devices->getlist().c_str()));
+		if (var == "frames") connection->write(format("ok frames %d", ptc->frames));
+		else if (var == "mode") connection->write(format("ok mode %s", mode2str(ptc->mode).c_str()));
+		else if (var == "devices") connection->write(format("ok devices %s", devices->getlist().c_str()));
 		else netio.ok = false;
 	}
   else if (cmd == "mode") {
@@ -444,7 +440,7 @@ void FOAM::on_message(Connection *connection, std::string line) {
   }
 }
 
-int FOAM::show_nethelp(Connection *connection, string topic, string /*rest*/) {
+int FOAM::show_nethelp(const Connection *const connection, string topic, string /*rest*/) {
 	if (topic.size() == 0) {
 		connection->write(\
 ":==== FOAM help ==========================\n"
@@ -484,7 +480,7 @@ int FOAM::show_nethelp(Connection *connection, string topic, string /*rest*/) {
 	return 0;
 }
 
-string FOAM::mode2str(aomode_t m) {
+string FOAM::mode2str(const aomode_t m) const {
 	switch (m) {
 		case AO_MODE_OPEN: return "open";
 		case AO_MODE_CLOSED: return "closed";
@@ -496,7 +492,7 @@ string FOAM::mode2str(aomode_t m) {
 	}
 }
 
-aomode_t FOAM::str2mode(string m) {
+aomode_t FOAM::str2mode(const string m) const {
 	if (m == "open") return AO_MODE_OPEN;
 	else if (m == "closed") return AO_MODE_CLOSED;
 	else if (m == "calib") return AO_MODE_CAL;
@@ -549,12 +545,10 @@ ALIASES += longname="Modular Adaptive Optics Framework"
 	FOAM uses a base class with the same name that can be derived to specific
 	configurations necessary for the AO system. Such a derived FOAM class can
 	then use various hardware controller classes to allow actual processing. 
-	Also the hardware controller classes are derived from a base 'device' class.
+	Also the hardware controller classes are derived from a base 'Device' class.
 	All devices together are stored in a DeviceManager class.
 	
 	See FOAM, Device, DeviceManager for more information.
- 
-	\todo Improve doc
  
 	\subsection struct-frame The Framework
 	
@@ -565,15 +559,16 @@ ALIASES += longname="Modular Adaptive Optics Framework"
 	The base class provides the following virtual functions to re-implement in
 	derived classes
 	
-	\li load_modules()
-	\li open_init()
-	\li open_loop()
-	\li open_finish()
-	\li closed_init()
-	\li closed_loop()
-	\li closed_finish()
-	\li calib()
-	\li on_message()
+	\li FOAM::load_modules()
+	\li FOAM::open_init()
+	\li FOAM::open_loop()
+	\li FOAM::open_finish()
+	\li FOAM::closed_init()
+	\li FOAM::closed_loop()
+	\li FOAM::closed_finish()
+	\li FOAM::calib()
+	\li FOAM::on_message(Connection* const, string) (optional)
+  \li FOAM::on_connect(const Connection * const, const bool) const (optional)
 	
 	See the documentation on the specific functions for more details on what 
 	these functions can be used for.
@@ -604,7 +599,7 @@ ALIASES += longname="Modular Adaptive Optics Framework"
 	program some software yourself. When doing so, please include Doxygen
 	compatible documentation in the source code like this one.
  
-	\todo Extend this doc
+	\todo Improve documentation on extending FOAM
 	
 	\subsection ownmake Adapt the build process
 	
@@ -621,6 +616,17 @@ ALIASES += longname="Modular Adaptive Optics Framework"
 	software. Look in the source code for clues on how it works, or connect
   to FOAM with telnet to look at it yourself.
  
-	\todo Extend this doc
+  Commands are sent to FOAM in plaintext, and upon succesfull reception of the 
+  command, an 'ok cmd <CMD>' will be given back. If the command was executed 
+  succesfully, this will be sent back as well, or if it concerns a state 
+  change of the system, it will broadcast the new setting to all connected 
+  clients. See each specific Device on which networking commands and replies 
+  are supported.
  
+ \section related See also
+ 
+	More information can be found on these pages:
+  - \subpage dev "Devices info"
+  - \subpage devmngr "Device Manager info"
+
 */

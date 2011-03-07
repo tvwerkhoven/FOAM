@@ -1,30 +1,7 @@
 ## @file ui/Makefile.am
 ## @author Tim van Werkhoven (t.i.m.vanwerkhoven@xs4all.nl)
 
-MODS_DIR = $(top_builddir)/mods
-LIB_DIR = $(top_builddir)/lib
-LIBSIU_DIR = $(top_srcdir)/$(LIBSIU)
-
-AM_CPPFLAGS = \
-        -I$(LIB_DIR) \
-        -I$(MODS_DIR) \
-        -I$(LIBSIU_DIR)
-
-# This is used to get the config directory as a define (see top-level Makefile.am)
-# TODO: check this
-AM_CPPFLAGS +=-DFOAM_DATADIR=\"$(FOAMDATADIR)\" \
-		$(COMMON_CFLAGS)
-
-if DEBUG
-AM_CPPFLAGS += -DFOAM_DEBUG=1
-endif DEBUG
-
-AM_CXXFLAGS = -pipe -Wall -Wextra \
-		-Wfatal-errors \
-		-O3 -ftree-vectorize \
-		-g
-
-AM_LDFLAGS = $(COMMON_LIBS) $(GUI_LIBS)
+include $(top_srcdir)/common.mk
 
 LDADD = $(LIBSIU_DIR)/libsocket.a \
 		$(LIBSIU_DIR)/libprotocol.a \
@@ -37,8 +14,9 @@ LDADD = $(LIBSIU_DIR)/libsocket.a \
 if GUI
 bin_PROGRAMS = foam-gui
 foam_gui_CPPFLAGS = $(GUI_CFLAGS) $(AM_CPPFLAGS)
-foam_gui_SOURCES = fgui.cc log.cc logview.cc about.cc foamcontrol.cc controlview.cc widgets.cc deviceview.cc devicectrl.cc camview.cc camctrl.cc
-foam_gui_SOURCES += fgui.h log.h logview.h about.h foamcontrol.h controlview.h widgets.h deviceview.h devicectrl.h camview.h camctrl.h
+foam_gui_LDFLAGS = $(COMMON_LIBS) $(GUI_LIBS) $(AM_LDFLAGS)
+foam_gui_SOURCES = fgui.cc log.cc logview.cc about.cc foamcontrol.cc controlview.cc widgets.cc deviceview.cc devicectrl.cc camview.cc camctrl.cc wfsview.cc wfsctrl.cc shwfsview.cc shwfsctrl.cc
+foam_gui_SOURCES += fgui.h log.h logview.h about.h foamcontrol.h controlview.h widgets.h deviceview.h devicectrl.h camview.h camctrl.h wfsview.h wfsctrl.h shwfsview.h shwfsctrl.h
 
 foamdatadir = $(FOAMDATADIR)
 nobase_dist_foamdata_DATA = FOAM-logo.svg FOAM-logo.png

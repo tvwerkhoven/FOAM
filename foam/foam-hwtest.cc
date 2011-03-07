@@ -1,6 +1,6 @@
 /*
  foam-hwtest.cc -- hardware test module
- Copyright (C) 2010 Tim van Werkhoven <t.i.m.vanwerkhoven@xs4all.nl>
+ Copyright (C) 2010--2011 Tim van Werkhoven <t.i.m.vanwerkhoven@xs4all.nl>
  
  This file is part of FOAM.
  
@@ -17,11 +17,6 @@
  You should have received a copy of the GNU General Public License
  along with FOAM.  If not, see <http://www.gnu.org/licenses/>.
  */
-/*! 
- @file foam-hwtest.c
- @author Tim van Werkhoven (t.i.m.vanwerkhoven@xs4all.nl)
- @brief Hardware testing mode, nothing fancy, just a scrapbook of hardware implementations.
-*/
 
 #include <iostream>
 #include <string>
@@ -34,6 +29,8 @@
 #include "fw1394cam.h"
 
 #include "foam-hwtest.h"
+
+using namespace std;
 
 // Global device list for easier access
 FW1394Camera *testcam;
@@ -132,7 +129,7 @@ int FOAM_hwtest::calib() {
 	return 0;
 }
 
-void FOAM_hwtest::on_message(Connection *connection, std::string line) {
+void FOAM_hwtest::on_message(Connection *connection, string line) {
 	io.msg(IO_DEB2, "FOAM_hwtest::on_message(line=%s)", line.c_str());
 	netio.ok = true;
 	
@@ -182,14 +179,10 @@ void FOAM_hwtest::on_message(Connection *connection, std::string line) {
 int main(int argc, char *argv[]) {
 	FOAM_hwtest foam(argc, argv);
 	
-	if (foam.has_error())
-		return foam.io.msg(IO_INFO, "Initialisation error.");
-	
 	if (foam.init())
-		return foam.io.msg(IO_ERR, "Configuration error.");
-		
+		exit(-1);
+
 	foam.io.msg(IO_INFO, "Running hwtest mode");
-	
 	foam.listen();
 	
 	return 0;

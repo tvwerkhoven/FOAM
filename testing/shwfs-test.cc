@@ -1,6 +1,6 @@
 /*
  shwfs-test.cc -- test shwfs class
- Copyright (C) 2010 Tim van Werkhoven <t.i.m.vanwerkhoven@xs4all.nl>
+ Copyright (C) 2010--2011 Tim van Werkhoven <t.i.m.vanwerkhoven@xs4all.nl>
  
  This file is part of FOAM.
  
@@ -46,6 +46,7 @@ int main(int argc, char *argv[]) {
 		Shwfs shwfs(io, &ptc, "shwfs-test", "12345", tmp, wfscam);
 		Path mlaout("./mla_grid");
 		shwfs.store_mla_grid(mlaout, true);
+		//! @bug Program exits with segmentation fault, why? Perhaps something in wfscam?
 	}
 	else {
 		io.msg(IO_INFO, "Have argc>1: will do simulcam with configuration file '%s'", argv[1]);

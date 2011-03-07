@@ -1,6 +1,6 @@
 /*
  deviceview.cc -- generic device viewer
- Copyright (C) 2010 Tim van Werkhoven <t.i.m.vanwerkhoven@xs4all.nl>
+ Copyright (C) 2010--2011 Tim van Werkhoven <t.i.m.vanwerkhoven@xs4all.nl>
  
  This file is part of FOAM.
  
@@ -34,14 +34,16 @@ devframe("Raw device control"), dev_val("value:"), dev_send("Send")
 {
 	printf("%x:DevicePage::DevicePage()\n", (int) pthread_self());
 		
-	// Add frames to parent VBox
-	set_spacing(4);
-		
 	clear_gui();
 	disable_gui();
 	
 	dev_send.signal_clicked().connect(sigc::mem_fun(*this, &DevicePage::on_dev_send_activate));
 	dev_val.entry.signal_activate().connect(sigc::mem_fun(*this, &DevicePage::on_dev_send_activate));
+	
+	// Init default values for extra_win
+	extra_win.set_title("FOAM " + devname);
+	extra_win.set_default_size(640, 480);
+	extra_win.set_gravity(Gdk::GRAVITY_STATIC);
 	
 	devhbox.set_spacing(4);
 	devhbox.pack_start(dev_cmds, PACK_SHRINK);
@@ -64,6 +66,10 @@ devframe("Raw device control"), dev_val("value:"), dev_send("Send")
 
 DevicePage::~DevicePage() {
 	fprintf(stderr, "%x:DevicePage::~DevicePage()\n", (int) pthread_self());
+
+	// Destruct device control (if present)
+	if (devctrl)
+		delete devctrl;
 }
 
 void DevicePage::enable_gui() {
@@ -87,18 +93,6 @@ void DevicePage::clear_gui() {
 	dev_cmds.clear_items();
 	dev_cmds.append_text("-");
 }
-
-//void DevicePage::init() {
-//	// This separate init() functions initializes devctrl when we are the parent 
-//	// class. Since this class can be derived, we cannot always start this, 
-//	// because it is device-dependent. For example: when CamView:: is started,
-//	// This class should not start a separate connection.
-//	
-//	// Start device controller
-//	devctrl = new DeviceCtrl(log, foamctrl.host, foamctrl.port, devname);
-//	
-//	// GUI update callback (from protocol thread to GUI thread)
-//}
 
 void DevicePage::on_dev_send_activate() {
 	printf("%x:DevicePage::on_dev_send_activate()\n", (int) pthread_self());

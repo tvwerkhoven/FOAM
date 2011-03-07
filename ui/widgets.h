@@ -56,11 +56,8 @@ public:
 	
 	void set_state(enum state s);
 	enum state get_state() { return state; }	//!< Get the state of this button
-	bool get_state(enum state s1) { return (state == s1); } //!< Convenience function for checking state
-	bool get_state(enum state s1, enum state s2) { return (state == s1 || state == s2); } //!< Convenience function for checking state
-	bool get_state(enum state s1, enum state s2, enum state s3) { return (state == s1 || state == s2 || state == s3); } //!< Convenience function for checking state
 	
-	SwitchButton(const Glib::ustring &lbl="Button");
+	SwitchButton(const Glib::ustring &lbl="SwitchButton");
 };
 
 class LabeledSpinEntry: public Gtk::HBox {

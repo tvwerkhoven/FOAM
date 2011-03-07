@@ -1,6 +1,6 @@
 /*
- wfsview.h -- FOAM GUI wavefront sensor pane
- Copyright (C) 2009--2010 Tim van Werkhoven <t.i.m.vanwerkhoven@xs4all.nl>
+ wfsview.h -- wavefront sensor control class
+ Copyright (C) 2010--2011 Tim van Werkhoven <t.i.m.vanwerkhoven@xs4all.nl>
  
  This file is part of FOAM.
  
@@ -17,80 +17,82 @@
  You should have received a copy of the GNU General Public License
  along with FOAM.  If not, see <http://www.gnu.org/licenses/>.
  */
-/*!
- @file wfsview.h
- @author Tim van Werkhoven (t.i.m.vanwerkhoven@xs4all.nl)
- 
- @brief This is the FOAM GUI wavefront sensor pane
- */
 
 #ifndef HAVE_WFSVIEW_H
 #define HAVE_WFSVIEW_H
 
 #include <gtkmm.h>
+#include <gdkmm/pixbuf.h>
+#include <gtkglmm.h>
 
-#include "log.h"
-#include "foamcontrol.h"
 #include "widgets.h"
 
-using namespace Gtk;
-using namespace std;
+#include "wfsctrl.h"
+#include "deviceview.h"
+#include "camview.h"
 
 /*!
- @brief This class gives information on one wavefront sensor
- @todo Document this
-*/
-class WfsInfo: public HBox {
-	FoamControl foamcontrol;
-	Log &log;
-
-	struct info_t {
-		int id;
-		//wfstype_t type;
-		string name;
-	} info;
-	
-	Label thumb;
-	Label wfs;
-	Label wfsid;
-	
-public:
-	WfsInfo(Log &log);
-	~WfsInfo() { };
-};
-
-/*!
- @brief This page gives an overview of all wavefront sensors
+ @brief Generic wavefront sensor GUI class
  
- This gives an overview of all wavefront sensors, with one global control 
- connection, and one for every wavefront sensor (issued through WfsInfo). At
- the top there will be some global information, then each WFS will have one 
- WfsInfo row in the VBox, and will display a thumbnail, name and id.
-*/
-class WfsPage: public VBox {
-	FoamControl foamcontrol;
-	Log &log;
+ This is the GUI element for WfsCtrl, it shows controls for wavefront sensors.
+ It mainly shows a graphical representation of the power in each wavefront 
+ mode.
+ */
+class WfsView: public DevicePage {
+protected:
+	WfsCtrl *wfsctrl;
 	
-	HBox status;
-	LabeledEntry numwfs;
+	VSeparator vsep0;
+	LabeledEntry wf_cam;								//!< Camera used for this wavefront sensor	
+	
+	Frame wfpow_frame;
+	HBox wfpow_hbox;
+	LabeledEntry wfpow_mode;						//!< Wavefront representation modes used (KL, Zernike, mirror, etc.)
+	Alignment wfpow_align;
+	EventBox wfpow_events;
+	Image wfpow_img;
+	Glib::RefPtr<Gdk::Pixbuf> wfpow_pixbuf;
+	
+	CamView *wfscam_ui;									//!< Camera GUI class
+	
+	virtual void do_wfspow_update();		//!< Update WF display
+	virtual void do_info_update();			//!< Update general info in GUI
+	virtual void do_cam_update();				//!< Update on WFS camera
+
+	// From DevicePage::
+	virtual void enable_gui();
+	virtual void disable_gui();
+	virtual void clear_gui();
 	
 public:
-	WfsPage(Log &log);
-	~WfsPage() { };
-
+	WfsView(WfsCtrl *wfsctrl, Log &log, FoamControl &foamctrl, string n);
+	~WfsView();
 };
+
 
 #endif // HAVE_WFSVIEW_H
 
+
 /*!
- \page dev_cam_wfs Wavefront sensor devices: WfsView & WfsCtrl
- 
+ \page dev_wfs_ui Wavefront sensor devices UI : WfsView & WfsCtrl
+
  \section wfsview_wfsview WfsView
+ 
+ Shows a basic GUI for a generic wavefront sensor. See WfsView
  
  \section wfsview_wfsctrl WfsCtrl
  
+ Controls a generic wavefront sensor. See WfsCtrl.
+ 
  \section wfsview_derived Derived classes
  
- The following classes are dervied from the Wavefront sensor device:
- - \subpage dev_cam_wfs_sh "Shack-Hartmann Wavefront sensor devices"
-*/
+ The following classes are derived from this class:
+ - \subpage dev_wfs_shwfs_ui "Shack-Hartmann Wavefront sensor device UI"
+ 
+ \section wfsview_derived Related classes
+ 
+ The following classes are closely related to this class:
+ - \ref dev_cam_ui "Camera device UI"
+ 
+ 
+ */

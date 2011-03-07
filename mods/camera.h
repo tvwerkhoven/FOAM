@@ -1,6 +1,6 @@
 /*
  camera.h -- generic camera input/output wrapper
- Copyright (C) 2009--2010 Tim van Werkhoven <t.i.m.vanwerkhoven@xs4all.nl>
+ Copyright (C) 2009--2011 Tim van Werkhoven <t.i.m.vanwerkhoven@xs4all.nl>
  
  This file is part of FOAM.
  
@@ -16,13 +16,6 @@
  
  You should have received a copy of the GNU General Public License
  along with FOAM.	If not, see <http://www.gnu.org/licenses/>. 
- */
-/*! 
- @file camera.h
- @author Tim van Werkhoven (t.i.m.vanwerkhoven@xs4all.nl) and Guus Sliepen (guus@sliepen.org)
- @brief Generic camera class.
- 
- This class extends the Device class and provides a base class for cameras. Does not implement anything itself.
  */
 
 #ifndef HAVE_CAM_H
@@ -52,10 +45,12 @@ const string cam_type = "cam";
  part is hardware I/O which is done by a seperate thread through 'handler' in
  the 'camthr' thread. Graphically:
  
+ <tt>
  Device --- netio --        --- netio ----
       \---- main --- Camera --- cam_thr --
 												  +---- proc_thr -
-												  \----	main -----
+													\----	main -----
+ </tt>
  
  \li netio gets input from outside (GUIs), reads from shared class
  \li cam_thr runs standalone, gets input from variables (configuration), 
@@ -115,9 +110,10 @@ const string cam_type = "cam";
  - depth (8): bitdepth of CCD
  
  
- @todo What to do with mode & state?
  */ 
 class Camera: public Device {
+	// Wfs is a friend class because it needs more access to the camera (also mutexes etc)
+	friend class Wfs;
 public:
 	typedef enum {
 		OFF = 0,
@@ -128,7 +124,7 @@ public:
 		ERROR
 	} mode_t;
 	
-	string mode2str(const mode_t &m) {
+	string mode2str(const mode_t &m) const {
 		if (m == OFF) return "OFF";
 		if (m == WAITING) return "WAITING";
 		if (m == SINGLE) return "SINGLE";
@@ -137,7 +133,7 @@ public:
 		if (m == ERROR) return "ERROR";
 		return "";
 	}
-	mode_t str2mode(const string &m) {
+	mode_t str2mode(const string &m) const {
 		if (m == "OFF") return OFF;
 		if (m == "WAITING") return WAITING;
 		if (m == "SINGLE") return SINGLE;
@@ -150,18 +146,20 @@ public:
 	//!< Data structure for storing frames, taken from filter_control by Guus Sliepen
 	typedef struct frame {
 		void *data;						//!< Generic data pointer, might be necessary for some hardware
-		void *image;					//!< Pointer to frame data
-		uint32_t *histo;
-		size_t id;
+		void *image;					//!< Pointer to frame data (unsigned int, 8 or 16 bpp)
+		uint32_t *histo;			//!< Histogram data (optional)
+		size_t id;						//!< Unique frame ID
+		size_t size;					//!< Size of 'image'
 		struct timeval tv;
 		
-		bool proc;						//!< Was the frame processed in time?
+		bool proc;						//!< Was the frame processed?
 		
 		frame() {
 			data = 0;
 			image = 0;
-			id = 0;
 			histo = 0;
+			id = 0;
+			size = 0;
 			proc = false;
 			avg = 0;
 			rms = 0;
@@ -188,29 +186,29 @@ protected:
 	pthread::mutex mode_mutex;		//!< Camera::mode change notification
 	
 	// These should be implemented in derived classes:
-	virtual void cam_handler() = 0;										//!< Camera handler
-	virtual void cam_set_exposure(double value) = 0;	//!< Set exposure in camera
-	virtual double cam_get_exposure() = 0;						//!< Get exposure from camera
-	virtual void cam_set_interval(double value) = 0;	//!< Set interval in camera
-	virtual double cam_get_interval() = 0;						//!< Get interval from camera
-	virtual void cam_set_gain(double value) = 0;			//!< Set gain in camera
-	virtual double cam_get_gain() = 0;								//!< Get gain from camera
-	virtual void cam_set_offset(double value) = 0;		//!< Set offset in camera
-	virtual double cam_get_offset() = 0;							//!< Get offset from camera
+	virtual void cam_handler() = 0;											//!< Camera handler
+	virtual void cam_set_exposure(const double value)=0;	//!< Set exposure in camera
+	virtual double cam_get_exposure() =0;						//!< Get exposure from camera
+	virtual void cam_set_interval(const double value)=0;	//!< Set interval in camera
+	virtual double cam_get_interval() =0;						//!< Get interval from camera
+	virtual void cam_set_gain(const double value)=0;			//!< Set gain in camera
+	virtual double cam_get_gain() =0;								//!< Get gain from camera
+	virtual void cam_set_offset(const double value)=0;		//!< Set offset in camera
+	virtual double cam_get_offset() =0;							//!< Get offset from camera
 
-	virtual void cam_set_mode(mode_t newmode) = 0;		//!< Set mode for cam_handler()
-	virtual void do_restart() = 0;
+	virtual void cam_set_mode(const mode_t newmode)=0; //!< Set mode for cam_handler()
+	virtual void do_restart()=0;
 
-	void *cam_queue(void *data, void *image, struct timeval *tv = 0); //!< Store frame in buffer, returns oldest frame if buffer is full
+	void *cam_queue(void *const data, void *const image, struct timeval *const tv = 0); //!< Store frame in buffer, returns oldest frame if buffer is full
 	void cam_proc();																	//!< Process frames (if necessary)
 
-	void calculate_stats(frame *frame);								//!< Calculate rms and such
+	void calculate_stats(frame *const frame) const;		//!< Calculate rms and such
 	bool accumburst(uint32_t *accum, size_t bcount);	//!< For dark/flat acquisition
 //	void statistics(Connection *conn, size_t bcount);	//!< Post back statistics
 	
-	Path makename(const string &base);								//!< Make filename from outputdir and filenamebase
-	Path makename() { return makename(filenamebase); }
-	bool store_frame(frame_t *frame);									//!< Store frame to disk
+	Path makename(const string &base) const;					//!< Make filename from outputdir and filenamebase
+	Path makename() const { return makename(filenamebase); }
+	bool store_frame(const frame_t *const frame) const;			///!< Store frame to disk
 	
 	uint8_t *get_thumbnail(Connection *conn);					//!< Get 32x32x8 thumnail
 	void grab(Connection *conn, int x1, int y1, int x2, int y2, int scale, bool do_df, bool do_histo);
@@ -239,7 +237,6 @@ protected:
 	
 	coord_t res;									//!< Camera pixel resolution
 	int depth;										//!< Camera pixel depth in bits
-	dtype_t dtype;								//!< Camera datatype @todo do we need this?
 
 	mode_t mode;									//!< Camera mode (see mode_t)
 	
@@ -247,9 +244,9 @@ protected:
 	Path outputdir;								//!< Output dir for saving files, absolute or relative to ptc->datadir
 	ssize_t nstore;								//!< Numebr of new frames to store (-1 for unlimited)
 
-	void fits_init_phdu(char *phdu);	//!< Init FITS header unit
-	bool fits_add_card(char *phdu, const string &key, const string &value); //!< Add FITS header card
-	bool fits_add_comment(char *phdu, const string &comment); //!< Add FITS comment
+	void fits_init_phdu(char *const phdu) const;	//!< Init FITS header unit
+	bool fits_add_card(char *phdu, const string &key, const string &value) const; //!< Add FITS header card
+	bool fits_add_comment(char *phdu, const string &comment) const; //!< Add FITS comment
 	
 	string fits_telescope;				//!< FITS header properties for saved files
 	string fits_observer;					//!< FITS header properties for saved files
@@ -258,46 +255,47 @@ protected:
 	string fits_comments;					//!< FITS header properties for saved files
 	
 public:
-	Camera(Io &io, foamctrl *ptc, string name, string type, string port, Path &conffile, bool online=true);
+	Camera(Io &io, foamctrl *const ptc, const string name, const string type, const string port, Path const &conffile, const bool online=true);
 	virtual ~Camera();
 
-	double get_exposure() { return exposure; }
-	double get_interval() { return interval; }
-	double get_gain() { return gain; }
-	double get_offset() { return offset; }
-	mode_t get_mode() { return mode; }
+	double get_exposure() const { return exposure; }
+	double get_interval() const { return interval; }
+	double get_gain() const { return gain; }
+	double get_offset() const { return offset; }
+	mode_t get_mode() const { return mode; }
 
-	int get_width() { return res.x; }
-	int get_height() { return res.y; }
-	coord_t get_res() { return res; }
-	int get_depth() { return depth; }
-	uint16_t get_maxval() { return (1 << depth); }
-	dtype_t get_dtype() { return dtype; }
+	int get_width() const { return res.x; }
+	int get_height() const { return res.y; }
+	coord_t get_res() const { return res; }
+	int get_depth() const { return depth; }
+	size_t get_maxval() const { return (1 << depth); }
 	
-	frame_t *get_frame(size_t id, bool wait = true);
-	frame_t *get_last_frame();
+	frame_t *get_frame(const size_t id, const bool wait = true);
+	frame_t *get_last_frame() const;
+	size_t get_count() const { return count; }
+	size_t get_bufsize() const { return nframes; }
 	
 	// From Devices::
 	virtual int verify() { return 0; }
-	virtual void on_message(Connection*, std::string);
+	virtual void on_message(Connection*, string);
 	
-	double set_exposure(double value);
-	int set_store(int value);
-	double set_interval(double value);
-	double set_gain(double value);
-	double set_offset(double value);
-	mode_t set_mode(mode_t mode);
+	double set_exposure(const double value);
+	int set_store(const int value);
+	double set_interval(const double value);
+	double set_gain(const double value);
+	double set_offset(const double value);
+	mode_t set_mode(const mode_t mode);
 protected:
-	void get_fits(Connection *conn);
+	void get_fits(const Connection *const conn) const ;
 	void set_fits(string line);
 public:
-	string set_fits_observer(string val);
-	string set_fits_target(string val);
-	string set_fits_comments(string val);
-	string set_filename(string value);
-	string set_outputdir(string value);
+	string set_fits_observer(const string val);
+	string set_fits_target(const string val);
+	string set_fits_comments(const string val);
+	string set_filename(const string value);
+	string set_outputdir(const string value);
 	
-	void store_frames(int n=-1) { nstore = n; }
+	void store_frames(const int n=-1) { nstore = n; }
 	
 	int darkburst(size_t bcount);
 	int flatburst(size_t bcount);
@@ -305,3 +303,16 @@ public:
 
 
 #endif /* HAVE_CAM_H */
+
+/*!
+ \page dev_cam Camera devices
+ 
+ The Camera class provides control for cameras.
+ 
+ \section dev_cam_der Derived classes
+ - \subpage dev_cam_dummy "Dummy camera device"
+ - \subpage dev_cam_fw1394 "FW1394 camera device"
+ - \subpage dev_cam_imgcam "Image camera device"
+ - \subpage dev_cam_simulcam "Simulation camera device"
+
+ */

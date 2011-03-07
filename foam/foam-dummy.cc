@@ -1,6 +1,6 @@
 /*
  FOAM_dummy.h -- dummy module
- Copyright (C) 2008--2010 Tim van Werkhoven <t.i.m.vanwerkhoven@xs4all.nl>
+ Copyright (C) 2008--2011 Tim van Werkhoven <t.i.m.vanwerkhoven@xs4all.nl>
  
  This file is part of FOAM.
  
@@ -17,17 +17,12 @@
  You should have received a copy of the GNU General Public License
  along with FOAM.  If not, see <http://www.gnu.org/licenses/>.
  */
-/*! 
-	@file foam-dummy.c
-	@author Tim van Werkhoven (t.i.m.vanwerkhoven@xs4all.nl)
-
-	@brief This is a dummy module to test the bare FOAM framework capabilities.
-*/
 
 // HEADERS //
 /***********/
 
 #include "foam.h"
+using namespace std;
 
 /*!
  @brief FOAM dummy implementation
@@ -36,6 +31,18 @@
  class, but does nothing else than report which function is being called.
  This class is a simple example of how to implement your own specific
  AO setup with FOAM.
+ 
+ FOAM is the base class that can be derived to specific AO setups. It provides
+ basic necessary functions to facilitate the control software itself, but
+ does not implement anything specifically for AO. A bare example 
+ implementation is provided as foam-dummy to show the idea behind the 
+ framework.
+ 
+ Extra command line arguments supported are:
+ - none
+ 
+ Extra networking commands supported are:
+ - none
  */
 class FOAM_dummy : public FOAM {
 public:
@@ -43,7 +50,7 @@ public:
 	virtual ~FOAM_dummy() { io.msg(IO_DEB2, "FOAM_dummy::~FOAM_dummy()"); } 
 	
 	virtual int load_modules() { io.msg(IO_DEB2, "FOAM_dummy::load_modules()"); return 0; } 
-	virtual void on_message(Connection *connection, std::string line) { FOAM::on_message(connection, line); io.msg(IO_DEB2, "FOAM_dummy::on_message()"); } 
+	virtual void on_message(Connection *connection, string line) { FOAM::on_message(connection, line); io.msg(IO_DEB2, "FOAM_dummy::on_message()"); } 
 		
 	virtual int closed_init() { io.msg(IO_DEB2, "FOAM_dummy::closed_init()"); return 0; }
 	virtual int closed_loop()  { io.msg(IO_DEB2, "FOAM_dummy::closed_loop()"); return 0; }
@@ -61,10 +68,10 @@ int main(int argc, char *argv[]) {
 	// Init FOAM_dummy class
 	FOAM_dummy foam(argc, argv);
 	
-	foam.init();
-	
+	if (foam.init())
+		exit(-1);
+
 	foam.io.msg(IO_INFO, "Running dummy mode");
-	
 	foam.listen();
 	
 	return 0;

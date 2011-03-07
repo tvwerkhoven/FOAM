@@ -1,6 +1,6 @@
 /*
  foamcontrol.cc -- FOAM control connection 
- Copyright (C) 2009--2010 Tim van Werkhoven <t.i.m.vanwerkhoven@xs4all.nl>
+ Copyright (C) 2009--2011 Tim van Werkhoven <t.i.m.vanwerkhoven@xs4all.nl>
  
  This file is part of FOAM.
  
@@ -17,12 +17,6 @@
  You should have received a copy of the GNU General Public License
  along with FOAM.  If not, see <http://www.gnu.org/licenses/>.
  */
-/*!
- @file foamcontrol.cc
- @author Tim van Werkhoven (t.i.m.vanwerkhoven@xs4all.nl)
- 
- @brief This is the FOAM control connection class
- */
 
 #include "foamcontrol.h"
 #include "controlview.h"
@@ -31,22 +25,10 @@
 
 using namespace Gtk;
 
-FoamControl::FoamControl(Log &log): log(log) {
+FoamControl::FoamControl(Log &log): 
+log(log),
+ok(false), errormsg("Not connected") {
 	printf("%x:FoamControl::FoamControl()\n", (int) pthread_self());
-	
-	ok = false;
-	errormsg = "Not connected";
-	
-	// Init variables
-	state.mode = AO_MODE_UNDEF;
-	state.numdev = 0;
-	state.devices[0].name = "undef";
-	state.devices[0].type = "undef";
-	state.numframes = 0;
-	state.numcal = 0;
-	state.calmodes[0] = "undef";
-	state.lastreply = "undef";
-	state.lastcmd = "undef";
 }
 
 int FoamControl::connect(const string &h, const string &p) {
@@ -146,25 +128,21 @@ void FoamControl::on_message(string line) {
 	ok = true;
 	string what = popword(line);
 	
-	if (what == "var") {
-		string var = popword(line);
-		if (var == "frames")
-			state.numframes = popint32(line);
-		else if (var == "mode")
-			state.mode = str2mode(popword(line));
-		else if (var == "calib") {
-			state.numcal = popint32(line);
-			for (int i=0; i<state.numcal; i++)
-				state.calmodes[i] = popword(line);
-		}
-		else if (var == "devices") {
-			state.numdev = popint32(line);
-			for (int i=0; i<state.numdev; i++) {
-				state.devices[i].name = popword(line);
-				state.devices[i].type = popword(line);
-			}
-			// Signal device update to main GUI thread
-			signal_device();
+	if (what == "frames")
+		state.numframes = popint32(line);
+	else if (what == "mode")
+		state.mode = str2mode(popword(line));
+	else if (what == "calib") {
+		state.numcal = popint32(line);
+		for (int i=0; i<state.numcal; i++)
+			state.calmodes[i] = popword(line);
+	}
+	else if (what == "devices") {
+		int tmp = popint32(line);
+		for (int i=0; i<tmp; i++) {
+			string name = popword(line);
+			string type = popword(line);
+			add_device(name, type);
 		}
 	}
 	else if (what == "cmd") {
@@ -176,10 +154,82 @@ void FoamControl::on_message(string line) {
 	else if (what == "mode") {
 		state.mode = str2mode(popword(line));
 	} else {
-		ok = false;
 		errormsg = "Unexpected response '" + what + "'";
 	}
 
 	signal_message();
 }
 
+// Device management
+
+bool FoamControl::add_device(const string name, const string type) {
+	printf("%x:FoamControl::add_device(%s, %s)\n", (int) pthread_self(), name.c_str(), type.c_str());
+	// Check if already exists
+	if (get_device(name) != NULL) {
+		printf("%x:FoamControl::add_device() Exists!\n", (int) pthread_self());
+		log.add(Log::ERROR, "Device " + name + " already exists, cannot add!");
+		return false;
+	}
+
+	if (type.substr(0,3) != "dev") {
+		printf("%x:FoamControl::add_device() Type wrong!\n", (int) pthread_self());
+		log.add(Log::ERROR, "Device type wrong, should start with 'dev' (was: " + type + ")");
+		return false;
+	}
+	
+	//! @todo check that this works
+	pthread::mutexholder h(&(gui_mutex));
+
+	// Does not exist, add and init
+	printf("%x:FoamControl::add_device() @ index %d\n", (int) pthread_self(), state.numdev);
+	device_t *newdev = &(state.devices[state.numdev]);
+	newdev->name = name;
+	newdev->type = type;
+	
+		
+	printf("%x:FoamControl::add_device() Ok\n", (int) pthread_self());
+	state.numdev++;
+	signal_device();
+	return true;
+}
+
+bool FoamControl::rem_device(const string name) {
+	printf("%x:FoamControl::rem_device(%s)\n", (int) pthread_self(), name.c_str());
+	
+	device_t *tmpdev = get_device(name);
+	if (tmpdev == NULL) {
+		printf("%x:FoamControl::rem_device() Does not exist!\n", (int) pthread_self());
+		return false;
+	}
+	
+	//! @todo check that this works
+	pthread::mutexholder h(&(gui_mutex));
+
+	
+	printf("%x:FoamControl::rem_device() Ok\n", (int) pthread_self());
+	state.numdev--;
+	signal_device();
+	return true;
+}
+
+FoamControl::device_t *FoamControl::get_device(const string name) {
+	printf("%x:FoamControl::get_device(%s)\n", (int) pthread_self(), name.c_str());
+
+	for (int i=0; i<state.numdev; i++) {
+		if (state.devices[i].name == name) 
+			return &(state.devices[i]);
+	}
+
+	return NULL;
+}
+
+FoamControl::device_t *FoamControl::get_device(const DevicePage *page) {
+	printf("%x:FoamControl::get_device(page)\n", (int) pthread_self());
+	
+	for (int i=0; i<state.numdev; i++) {
+		if (state.devices[i].page == page) 
+			return &(state.devices[i]);
+	}
+	
+	return NULL;	
+}

@@ -1,6 +1,6 @@
 /*
  logview.h -- FOAM GUI log viewing pane
- Copyright (C) 2009--2010 Tim van Werkhoven <t.i.m.vanwerkhoven@xs4all.nl>
+ Copyright (C) 2009--2011 Tim van Werkhoven <t.i.m.vanwerkhoven@xs4all.nl>
  
  This file is part of FOAM.
  
@@ -24,19 +24,22 @@
 #include <gtkmm.h>
 #include "log.h"
 
+using namespace std;
+using namespace Gtk;
+
 /*!
  @brief Logging display class
  @todo Document this
  */
-class LogPage: public Gtk::VBox {
-	Gtk::ScrolledWindow scroll;
-	Gtk::TextView view;
+class LogPage: public VBox {
+	ScrolledWindow scroll;
+	TextView view;
 	Log &log;
 
-	Gtk::HSeparator hsep;
-	Gtk::CheckButton debug;
+	HSeparator hsep;
+	CheckButton debug;
 
-	void on_view_size_allocate(Gtk::Allocation &);
+	void on_view_size_allocate(Allocation &);
 	void on_buffer_changed();
 	void on_debug_toggled();
 

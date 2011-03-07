@@ -1,16 +1,20 @@
 # Install the relevant configuration files to a subdir of the datadir
 foamdatadir = $(FOAMDATADIR)
-dist_foamdata_DATA =
+dist_foamdata_DATA = simstatic*.pgm wavefront.fits
 
-### STATIC SIMULATION MODE ###
-##############################
-if SIMSTAT
-
-dist_foamdata_DATA += simstatic*.pgm #simstatic*.fits
+# Make a crop from wavefront.fits. Don't include this in the rep. because
+# it's fairly large. Do crop the wavefront to get an asymmetric image which
+# is better for testing.
 
 # Loop over all pgms, convert only if fits does not exist.
 # @todo is this portable?
 all-local:
+	@echo -n Cropping wavefront...
+	@convert wavefront.fits wavefront.png
+	@convert wavefront.fits -depth 8 -crop 1024x768+0+128 wavefront-crop.fits
+	@convert wavefront-crop.fits wavefront-crop.png
+	@echo "done."
+	
 	@echo Converting datafiles...
 	@for f in *pgm; \
 		do \
@@ -18,5 +22,5 @@ all-local:
 	done;
 	@echo "done."
 
-endif SIMSTAT
-### END STATIC SIMULATION MODE ###
+
+

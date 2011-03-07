@@ -1,6 +1,6 @@
 /*
  simulcam.h -- atmosphere/telescope simulator camera header
- Copyright (C) 2010 Tim van Werkhoven <t.i.m.vanwerkhoven@xs4all.nl>
+ Copyright (C) 2010--2011 Tim van Werkhoven <t.i.m.vanwerkhoven@xs4all.nl>
  
  This file is part of FOAM.
  
@@ -22,7 +22,14 @@
 #ifndef HAVE_SIMULCAM_H
 #define HAVE_SIMULCAM_H
 
+#ifdef HAVE_CONFIG_H
+#include "autoconfig.h"
+#endif
+
 #include <stdint.h>
+#include <math.h>
+#include <fftw3.h>
+#include <gsl/gsl_vector.h>
 
 #include "config.h"
 #include "io.h"
@@ -45,7 +52,8 @@ const string simulcam_type = "simulcam";
  - wavefront_file: static FITS file which shows some wavefront
  - windspeed.x,y: windspeed by which the wavefront moves
  - windtype: 'random' or 'linear', method of scanning over the wavefront
- - noise: random additive noise for frames
+ - noise: fraction of CCD pixels covered with noise
+ - noiseamp: nosie amplitude as fraction of maximum
  - seeingfac: factor to multiply wavefront image with
  */
 class SimulCam: public Camera {
@@ -57,37 +65,49 @@ private:
 
 	double telradius;										//!< Telescope radius (fraction of CCD)
 	gsl_matrix *telapt;									//!< Telescope aperture mask
+	double telapt_fill;									//!< How much subaperture should be within the telescope aperture to be processed
 	
-	double noise;												//!< Noise factor for CCD
+	double noise;												//!< Noise fill factor for CCD
+	double noiseamp;										//!< Noise amplitude for CCD
 	double seeingfac;										//!< Multiplicative factor for wavefront screen.
+	bool simtel;												//!< Simulate telescope aperture or not
+	bool simmla;												//!< Simulate microlens array or not
 	
 public:
 	Shwfs shwfs;												//!< Reference to WFS we simulate (i.e. for configuration)
-	SimulCam(Io &io, foamctrl *ptc, string name, string port, Path &conffile, bool online=true);
+	SimulCam(Io &io, foamctrl *const ptc, const string name, const string port, Path const &conffile, const bool online=true);
 	~SimulCam();
 	
 	void gen_telapt();									//!< Generate telescope aperture with radius telradius. Inside this radius the mask has value 'seeingfac', outside it's 0.
 
 	gsl_matrix *simul_seeing();					//!< Simulate seeing: get wavefront and apply seeing factor.
-	void simul_telescope(gsl_matrix *wave_in); //!< Multiply input wavefront with telescope aperture mask from gen_telapt().
-	void simul_wfs(gsl_matrix *wave_in); //!< Simulate wavefront sensor optics given an input wavefront.
+	void simul_telescope(gsl_matrix *wave_in) const; //!< Multiply input wavefront with telescope aperture mask from gen_telapt().
+	void simul_wfs(gsl_matrix *wave_in) const; //!< Simulate wavefront sensor optics given an input wavefront.
 	uint8_t *simul_capture(gsl_matrix *frame_in);	//!< Simulate CCD frame capture (exposure, offset, etc.)
 	
 	// From Camera::
 	void cam_handler();
-	void cam_set_exposure(double value);
+	void cam_set_exposure(const double value);
 	double cam_get_exposure();
-	void cam_set_interval(double value);
+	void cam_set_interval(const double value);
 	double cam_get_interval();
-	void cam_set_gain(double value);
+	void cam_set_gain(const double value);
 	double cam_get_gain();
-	void cam_set_offset(double value);
+	void cam_set_offset(const double value);
 	double cam_get_offset();
 	
-	void cam_set_mode(mode_t newmode);
+	void cam_set_mode(const mode_t newmode);
 	void do_restart();
 	
-	void on_message(Connection*, std::string);
+	// From Devices::
+	void on_message(Connection *const conn, string);
 };
 
 #endif // HAVE_SIMULCAM_H
+
+/*!
+ \page dev_cam_simulcam Simulation camera devices
+ 
+ The SimulCam class is an end-to-end simulation camera.
+ 
+ */
