@@ -31,7 +31,7 @@ using namespace std;
 // Device class
 
 Device::Device(Io &io, foamctrl *const ptc, const string n, const string t, const string p, const Path conf, const bool online): 
-io(io), ptc(ptc), name(n), type("dev." + t), port(p), conffile(conf), netio(p, n), online(online)
+io(io), ptc(ptc), name(n), type("dev." + t), port(p), conffile(conf), netio(p, n), online(online), is_calib(false)
 { 
 	init();
 }
@@ -63,6 +63,8 @@ bool Device::init() {
 
 Device::~Device() {
 	io.msg(IO_DEB2, "Device::~Device()");
+	
+	//!< @todo do cfg.write() here
 }
 
 void Device::on_message_common(Connection * const conn, string line) {

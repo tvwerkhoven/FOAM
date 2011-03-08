@@ -72,7 +72,8 @@ protected:
 	config cfg;													//!< Interpreted configuration file
 	
 	Protocol::Server netio;							//!< Network connection
-	bool online;												//!< Online or not?
+	bool online;												//!< Online flag
+	bool is_calib;											//!< Is calibrated and ready for use
 
 	bool init();												//!< Initialisation (common for all constructors)
 	
