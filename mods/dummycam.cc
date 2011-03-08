@@ -58,7 +58,7 @@ DummyCamera::~DummyCamera() {
 	io.msg(IO_DEB2, "DummyCamera::~DummyCamera()");
 	
 	// Delete frames in buffer
-	for (int f=0; f<nframes; f++) {
+	for (size_t f=0; f<nframes; f++) {
 		free((uint16_t *) frames[f].data);
 		delete[] frames[f].histo;
 	}
