@@ -53,14 +53,18 @@ typedef Protocol::Server::Connection Connection;
  supported by this piece of hardware. Each time this class is (sub)derived,
  this should be updated. These commands are stored in cmd_list and things can
  be added with add_cmd(string).
+ 
+ @todo Add signal for measurement complete
  */
 class Device {
 protected:
 	Io &io;
 	foamctrl *const ptc;
+	
 	const string name;									//!< Device name
 	const string type;									//!< Device type
 	const string port;									//!< Port to listen on
+	
 	list<string> cmd_list;							//!< All commands this device supports
 	void add_cmd(string cmd) { cmd_list.push_back(cmd); } //!< Add command to list
 	
