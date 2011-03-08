@@ -24,38 +24,53 @@
 #include <string>
 #include <stdint.h>
 #include <sys/types.h>
+#include <gsl/gsl_vector.h>
+
 #include "types.h"
 #include "config.h"
 
+#include "devices.h"
+
+using namespace std;
+
+const string wfc_type = "wfc";
+
 /*!
  @brief Base wavefront corrector class. This will be overloaded with the specific WFC type
- @author Tim van Werkhoven (t.i.m.vanwerkhoven@xs4all.nl)
  */
-class Wfc {
+class Wfc: public Device {
+private:
+	// Common Wfc settings
+	int nact;														//!< Numeber of actuators in this device
+	gain_t gain;												//!< Operating gain for this device
+	gsl_vector_float *wfc_amp;					//!< (Requested) actuator amplitudes, should be between -1 and 1.
+
 public:
-	typedef enum {
-		ACT_ADD=0,
-		ACT_SET
-	} wfc_actmode_t;							//!< Mode to use for actuating (set or add)
+	// To be implemented by derived classes:
+	virtual int actuate(gsl_vector_float *wfcamp, const gain_t g) = 0; //!< Set Wfc in specific state using custom gain
+	virtual int actuate(gsl_vector_float *wfcamp) { return actuate(wfcamp, gain); }
 	
-	string name;									//!< WFC name
+	virtual int calibrate() = 0;						//!< Calibrate actuator
 	
-	int nact;											//!< Number of actuators
-	int wfctype;									//!< WFC type/model
+	// From Device::
+	virtual void on_message(Connection *const conn, string line) { Device::on_message(conn, line); }
 	
-	virtual int verify(int) = 0;
-	virtual int actuate(gsl_vector_float *ctrl, int) = 0;
-	virtual int caibrate(int) = 0;
-	
-	static Wfc *create(config &config);	//!< Initialize new wavefront corrector
-	
-	virtual ~Wfc() {}
+	virtual ~Wfc();
+	//!< Constructor for derived WFCs (i.e. SimWfc)
+	Wfc(Io &io, foamctrl *const ptc, const string name, const string type, const string port, Path const & conffile, const bool online=true);
 };
 
 #endif // HAVE_WFC_H
 
 /*!
- \page dev_wfc Wavefront corrector devices
+ \page dev_wfc Wavefront corrector (WFC) devices
  
  The Wfc class provides control for wavefront correctors.
+ 
+ \section dev_wfc_der Derived classes
+ - \subpage dev_wfc_sim "Simulated membrane deformable mirror"
+ 
+ \section dev_wfs_more See also
+ - \ref dev_wfs "Wavefront sensor devices"
+ 
 */

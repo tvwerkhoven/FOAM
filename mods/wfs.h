@@ -33,7 +33,7 @@
 
 using namespace std;
 
-static const string wfs_type = "wfs";
+const string wfs_type = "wfs";
 
 /*!
  @brief Base wavefront-sensor class. 
@@ -45,6 +45,9 @@ static const string wfs_type = "wfs";
  itself can be accessed through the reference &cam.
  */
 class Wfs: public Device {
+private:
+	void init();												//!< Common initialisation for constructors
+	
 public:	
 	enum wfbasis {
 		ZERNIKE=0,												//!< Zernike

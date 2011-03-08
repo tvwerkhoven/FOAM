@@ -29,29 +29,25 @@
 
 using namespace std;
 
+// Constructor / destructors
+
 Wfs::Wfs(Io &io, foamctrl *const ptc, const string name, const string port, Path const &conffile, Camera &wfscam, const bool online):
 Device(io, ptc, name, wfs_type, port, conffile, online),
 zernbasis(io, 0, wfscam.get_width()),
-is_calib(false),
 cam(wfscam)
 {	
 	io.msg(IO_DEB2, "Wfs::Wfs()");
-	
-	add_cmd("measuretest");
-	add_cmd("get modes");
-	add_cmd("get basis");
-	add_cmd("get calib");
-	add_cmd("get camera");
 }
 
 Wfs::Wfs(Io &io, foamctrl *const ptc, const string name, const string type, const string port, Path const &conffile, Camera &wfscam, const bool online):
 Device(io, ptc, name, wfs_type + "." + type, port, conffile, online),
 zernbasis(io, 0, wfscam.get_width()),
-is_calib(false),
 cam(wfscam)
 {	
 	io.msg(IO_DEB2, "Wfs::Wfs()");
-	
+}
+
+void Wfs::init() {
 	add_cmd("measuretest");
 	add_cmd("get modes");
 	add_cmd("get basis");
@@ -60,7 +56,7 @@ cam(wfscam)
 }
 
 Wfs::~Wfs() {
-		io.msg(IO_DEB2, "Wfs::~Wfs()");
+	io.msg(IO_DEB2, "Wfs::~Wfs()");
 }
 
 
