@@ -37,6 +37,7 @@ zernbasis(io, 0, wfscam.get_width()),
 cam(wfscam)
 {	
 	io.msg(IO_DEB2, "Wfs::Wfs()");
+	init();
 }
 
 Wfs::Wfs(Io &io, foamctrl *const ptc, const string name, const string type, const string port, Path const &conffile, Camera &wfscam, const bool online):
@@ -45,6 +46,7 @@ zernbasis(io, 0, wfscam.get_width()),
 cam(wfscam)
 {	
 	io.msg(IO_DEB2, "Wfs::Wfs()");
+	init();
 }
 
 void Wfs::init() {
