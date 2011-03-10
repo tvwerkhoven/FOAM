@@ -205,7 +205,7 @@ histoalign(0.5, 0.5, 0, 0), minval("Display min"), maxval("Display max"), e_avg(
 	// Finalize
 	show_all_children();
 		
-	on_histo_toggled();
+	histoframe.hide();
 			
 	camctrl->signal_monitor.connect(sigc::mem_fun(*this, &CamView::on_monitor_update));
 }
@@ -300,13 +300,16 @@ void CamView::do_update() {
 }
 
 void CamView::on_histo_toggled() {
-	// int fh=0;
-	//! @todo implement resize on histogram toggle
-	if(histo.get_active()) {
+	int w, h, fh;
+	extra_win.get_size(w, h);
+	
+	if (histo.get_active()) {
 		histoframe.show();
-		//fh = histoframe.get_height();
+		fh = histoframe.get_height();
+		extra_win.resize(w, h + fh);
 	} else {
-		//fh = histoframe.get_height();
+		fh = histoframe.get_height();
+		extra_win.resize(w, h - fh);
 		histoframe.hide();
 	}
 }
