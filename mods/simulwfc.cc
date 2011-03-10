@@ -84,7 +84,7 @@ int SimulWfc::calibrate() {
 	return 0;
 }
 
-int SimulWfc::actuate(gsl_vector_float *wfcamp, gain_t gain) {
+int SimulWfc::actuate(gsl_vector_float *wfcamp, gain_t /* gain */) {
 	//!< @todo Implement gain here
 	if (actpos.size() != wfcamp->size)
 		return io.msg(IO_ERR, "SimulWfc::actuate() # of actuator position != # of actuator amplitudes!");

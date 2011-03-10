@@ -190,6 +190,8 @@ int Zernike::zern_rad(gsl_matrix * const mat, const int m, const int n) {
 		gsl_matrix_scale(tmp, nom/denom);
 		gsl_matrix_add(mat, tmp);
 	}
+	
+	return 0;
 }
 
 int Zernike::gen_mode(gsl_matrix * const outmat, const int size, int j) {
@@ -267,7 +269,7 @@ gsl_matrix* Zernike::get_modesum(gsl_vector *amplitudes, bool crop) {
 	// Allocate output matrix, set to 0
 	gsl_matrix *out = gsl_matrix_calloc(basis.size, basis.size);
 	
-	if (amplitudes->size > basis.nmodes)
+	if (amplitudes->size > (size_t) basis.nmodes)
 		io.msg(IO_WARN, "Zernike::get_modesum(): len(amp_vector) > basis.nmodes!");
 	
 	// Calculate maximum mode to return

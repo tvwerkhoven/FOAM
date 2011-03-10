@@ -39,7 +39,7 @@ private:
 	typedef struct _zern_basis {
 		_zern_basis(): nmodes(0), size(0), is_calc(false), bfuncs(NULL), rho(NULL), phi(NULL), cropmask(NULL) { }
 		int nmodes;												//!< Number of basis functions
-		int size;													//!< Resolution of grid (always square, so only one int)
+		size_t size;											//!< Resolution of grid (always square, so only one int)
 		bool is_calc;											//!< Indicates whether basis functions are computed or not
 		gsl_matrix **bfuncs;							//!< Array of basisfunctions
 		gsl_matrix *rho;									//!< Matrix with radial coordinates as values

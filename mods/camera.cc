@@ -258,7 +258,7 @@ bool Camera::store_frame(const frame_t *const frame) const {
 	ssize_t ret = write(fd, phdu, sizeof phdu);
 	ret += write(fd, frame->image, res.x * res.y * depth/8);
 	close(fd);
-	if (ret != sizeof phdu + (res.x * res.y * depth/8))
+	if (ret != (ssize_t) sizeof phdu + (res.x * res.y * depth/8))
 		return io.msg(IO_ERR, "Camera::store_frame() Writing failed!");
 	
 	return true;
@@ -636,8 +636,8 @@ void Camera::grab(Connection *conn, int x1, int y1, int x2, int y2, int scale = 
 //		x2 = res.x / scale;
 //	if(y2 * scale > (int)res.y)
 //		y2 = res.y / scale;
-	
-	bool dxt1 = false;
+//	
+//	bool dxt1 = false;
 	void *buffer;
 	size_t size = (y2 - y1) * (x2 - x1) * (depth <= 8 ? 1 : 2);
 	uint16_t maxval = get_maxval();

@@ -33,8 +33,9 @@ using namespace std;
 
 CamCtrl::CamCtrl(Log &log, const string h, const string p, const string n):
 	DeviceCtrl(log, h, p, n),
+	mode(OFF), 
 	monitorprotocol(host, port, devname),
-	mode(OFF), exposure(0.0), interval(0.0), gain(0.0), offset(0.0), 
+	exposure(0.0), interval(0.0), gain(0.0), offset(0.0), 
 	width(0), height(0), depth(0), nstore(0)
 {
 	fprintf(stderr, "%x:CamCtrl::CamCtrl()\n", (int) pthread_self());

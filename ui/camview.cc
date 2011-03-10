@@ -300,13 +300,13 @@ void CamView::do_update() {
 }
 
 void CamView::on_histo_toggled() {
-	int w, h, fh;
+	// int fh=0;
 	//! @todo implement resize on histogram toggle
 	if(histo.get_active()) {
 		histoframe.show();
-		fh = histoframe.get_height();
+		//fh = histoframe.get_height();
 	} else {
-		fh = histoframe.get_height();
+		//fh = histoframe.get_height();
 		histoframe.hide();
 	}
 }
