@@ -82,7 +82,7 @@ histoalign(0.5, 0.5, 0, 0), minval("Display min"), maxval("Display max"), e_avg(
 	flipv.set_active(false);
 	crosshair.set_active(false);
 	grid.set_active(false);
-	histo.set_active(true);
+	histo.set_active(false);
 	
 	store_n.set_width_chars(4);
 	
@@ -268,7 +268,7 @@ void CamView::clear_gui() {
 	e_res.set_text("N/A");
 	e_mode.set_text("N/A");
 	e_stat.set_text("N/A");
-
+	
 	capture.set_state(SwitchButton::CLEAR);
 	display.set_state(SwitchButton::CLEAR);
 	store.set_state(SwitchButton::CLEAR);
