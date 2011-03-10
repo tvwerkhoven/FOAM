@@ -26,7 +26,7 @@
 #include "autoconfig.h"
 #endif
 
-#include <map>
+#include <vector>
 
 #include "io.h"
 #include "protocol.h"
@@ -42,12 +42,12 @@ typedef Protocol::Server::Connection Connection;
 /*!
  @brief Device class to handle devices in a generic fashion
  
- In order to accomodate all kinds of hardware devices, this baseclass 
+ In order to accomodate all kinds of hardware devices, this base class 
  provides a template for all sorts of hardware (camera, wavefront sensor,
- deformable mirrors, etc). Because of its genericity this class does not 
+ deformable mirrors, etc). Because of its generic nature this class does not 
  implement a lot itself, but rather depends on the derived classes to do
  the work. Nonetheless, some basic functions (such as network I/O) are
- provided here. All devices are stored in a DeviceManager class.
+ provided here. All devices are stored in a DeviceManager object.
  
  One thing that is supported by the Device class is a list of commands 
  supported by this piece of hardware. Each time this class is (sub)derived,
@@ -65,8 +65,8 @@ protected:
 	const string type;									//!< Device type
 	const string port;									//!< Port to listen on
 	
-	list<string> cmd_list;							//!< All commands this device supports
-	void add_cmd(string cmd) { cmd_list.push_back(cmd); } //!< Add command to list
+	vector<string> cmd_list;						//!< All commands this device supports
+	void add_cmd(const string cmd) { cmd_list.push_back(cmd); } //!< Add command to list
 	
 	const Path conffile;								//!< Configuration file
 	config cfg;													//!< Interpreted configuration file

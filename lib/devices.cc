@@ -77,19 +77,15 @@ void Device::on_message(Connection * const conn, string line) {
 	string orig = line;
 	
 	string command = popword(line);
-	if (command == "get") {
+	if (command == "get") {							// get ...
 		string what = popword(line);
-		if (what == "commands") {
+		if (what == "commands") {					// get commands
 			string devlist = "";
 			
-			list<string>::iterator it;
-			int ndev=0;
-			for (it=cmd_list.begin(); it!=cmd_list.end(); ++it) {
-				devlist += *it + ";";
-				ndev++;
-			}
+			for (size_t i=0; i < cmd_list.size(); i++)
+				devlist += cmd_list[i] + ";";
 			
-			conn->write(format("ok commands %d %s", ndev, devlist.c_str()));
+			conn->write(format("ok commands %d %s", (int) cmd_list.size(), devlist.c_str()));
 			return;
 		}
 	}
