@@ -176,7 +176,6 @@ private:
 	
 	typedef map<string, Device*> device_t;
 	device_t devices;										//!< Simple list of devices, stored by name.
-	int ndev;														//!< Number of devices in the system
 	
 public:
 	class exception: public std::runtime_error {
@@ -220,7 +219,7 @@ public:
 	 */
 	string getlist(bool showtype = true, bool showonline=true);
 	
-	int getcount() { return ndev; }			//!< Return the number of devices
+	size_t getcount() { return devices.size(); }			//!< Return the number of devices
 	
 	DeviceManager(Io &io);
 	~DeviceManager();

@@ -112,12 +112,13 @@ void Device::get_var(Connection * const conn, const string varname, const double
 
 // DeviceManager class
 
-DeviceManager::DeviceManager(Io &io): io(io), ndev(0) {
+DeviceManager::DeviceManager(Io &io): io(io) {
 	io.msg(IO_DEB2, "DeviceManager::DeviceManager()");
 }
 
 DeviceManager::~DeviceManager() {
 	io.msg(IO_DEB2, "DeviceManager::~DeviceManager()");
+
 	device_t::iterator it;
 	for (it=devices.begin() ; it != devices.end(); it++)
 		delete (*it).second;
@@ -131,7 +132,6 @@ int DeviceManager::add(Device *dev) {
 		return -1;
 	}
 	devices[id] = dev;
-	ndev++;
 	return 0;
 }
 
@@ -150,15 +150,13 @@ int DeviceManager::del(string id) {
 		return -1;
 	}
 	devices.erase(devices.find(id));
-	ndev--;
 	return 0;
 }
 
 string DeviceManager::getlist(bool showtype, bool showonline) {
-	device_t::iterator it;
-	int num=0;
 	string devlist = "";
-	for (it=devices.begin() ; it != devices.end(); it++) {
+	int num=0;
+	for (device_t::iterator it=devices.begin(); it != devices.end(); it++) {
 		// Skip devices that are not online if requested
 		if (!it->second->isonline() && showonline)
 			continue;
