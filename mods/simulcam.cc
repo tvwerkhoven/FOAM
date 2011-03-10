@@ -92,18 +92,18 @@ void SimulCam::on_message(Connection *const conn, string line) {
 	string command = popword(line);
 	bool parsed = true;
 	
-	if (command == "set") {
+	if (command == "set") {							// set ...
 		string what = popword(line);
 	
-		if(what == "noise") {
+		if(what == "noise") {							// set noise <double>
 			set_var(conn, "noise", popdouble(line), &noise, 0.0, 1.0, "Out of range");
-		} else if(what == "noiseamp") {
+		} else if(what == "noiseamp") {		// set noiseamp <double>
 			set_var(conn, "noiseamp", popdouble(line), &noiseamp);
-		} else if(what == "telapt_fill") {
+		} else if(what == "telapt_fill") { // set telapt_fill <double>
 			set_var(conn, "telapt_fill", popdouble(line), &telapt_fill, 0.0, 1.0, "out of range");
-		} else if(what == "seeingfac") {
+		} else if(what == "seeingfac") {	// set seeingfac <double>
 			set_var(conn, "seeingfac", popdouble(line), &seeingfac);
-		} else if(what == "windspeed") {
+		} else if(what == "windspeed") {	// set windspeed <int> <int>
 			int tmpx = popint(line);
 			int tmpy = popint(line);
 			// Only accept in certain ranges (sanity check)
@@ -115,7 +115,7 @@ void SimulCam::on_message(Connection *const conn, string line) {
 				seeing.windspeed.y = tmpy;
 				netio.broadcast(format("ok windspeed %d %d", seeing.windspeed.x, seeing.windspeed.y), "windspeed");
 			}
-		} else if(what == "windtype") {
+		} else if(what == "windtype") {		// set windtype <string>
 			conn->addtag("windtype");
 			string tmp = popword(line);
 			if (tmp == "linear")
@@ -128,26 +128,25 @@ void SimulCam::on_message(Connection *const conn, string line) {
 			}
 			
 			netio.broadcast(format("ok windtype %s", tmp.c_str()), "windtype");
-		} else if(what == "simwf") {
+		} else if(what == "simwf") {			// set simwfs <bool>
 			set_var(conn, "simwf", popdouble(line), &seeingfac);
-		} else if(what == "simtel") {
+		} else if(what == "simtel") {			// set simtel <bool>
 			set_var(conn, "simtel", popbool(line), &simtel);
-		} else if(what == "simmla") {
+		} else if(what == "simmla") {			// set simmla <bool>
 			set_var(conn, "simmla", popbool(line), &simmla);
 		} else
 			parsed = false;
-	} else if (command == "get") {
+	} else if (command == "get") {			// get ...
 		string what = popword(line);
 	
-		if(what == "noise") {
+		if(what == "noise") {							// get noise
 			get_var(conn, "noise", noise);
-		} else if(what == "noiseamp") {
+		} else if(what == "noiseamp") {		// get noiseamp
 			get_var(conn, "noiseamp", noiseamp);
-		} else if(what == "seeingfac") {
+		} else if(what == "seeingfac") {	// get seeingfac
 			get_var(conn, "seeingfac", seeingfac);
-		} else if(what == "windspeed") {
-			conn->addtag("windspeed");
-			netio.broadcast(format("ok windspeed %x %x", seeing.windspeed.x, seeing.windspeed.y), "windspeed");
+		} else if(what == "windspeed") {	// get windspeed
+			get_var(conn, "windspeed", format("ok windspeed %x %x", seeing.windspeed.x, seeing.windspeed.y));
 		} else
 			parsed = false;
 	}

@@ -72,10 +72,10 @@ void DummyCamera::on_message(Connection *const conn, string line) {
 	string command = popword(line);
 	bool parsed = true;
 	
-	if (command == "hello") {
+	if (command == "hello") {						// hello ...
 		string what = popword(line);
 		
-		if(what == "world") {
+		if(what == "world") {							// hello world
 			io.msg(IO_DEB1, "DummyCamera::on_message(): hello world!!!"); 
 			conn->write("ok :hello world back!");
 		} 
