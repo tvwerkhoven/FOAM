@@ -114,18 +114,31 @@ protected:
 	 */
 	void get_var(Connection * const conn, const string varname, const double value, const string comment="") const;
 
+	/*! @brief Get variable, helper function for on_message -- free-form version
+	 
+	 @param [in] *conn Client connection
+	 @param [in] varname Variable name
+	 @param [in] response Response for client
+	 */
+	void get_var(Connection * const conn, const string varname, const string response) const;
+	
 	/*! 
-	 @brief Called when the device receives a message
+	 @brief Callback for incoming network message
 	 
 	 This virtual function is called when the Device receives data over the 
 	 network (i.e. commands etc.). The derived class parses this message first,
 	 and if it did not understand the command it will be passed down to the base
-	 class until it is known. If the base class (this class) does still not know
-	 this command, it is treated as 'unknown'.
+	 class until it is known. If the base class (Device) does still not know
+	 this command, it is treated as 'unknown' and replies with an error.
 	 */
 	virtual void on_message(Connection * const conn, string line);
 	
-	//!< Common on_message functions go here.
+	/*! 
+	 @brief Common callback for incoming network message
+	 
+	 on_message_common() is called first when a message is received, followed by 
+	 a series of on_message() calls.
+	 */
 	void on_message_common(Connection * const conn, string line);
 	
 	/*! 

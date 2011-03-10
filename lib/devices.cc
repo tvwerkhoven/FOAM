@@ -94,15 +94,19 @@ void Device::on_message(Connection * const conn, string line) {
 	conn->write("error :Unknown command: " + orig);
 }
 
-void Device::get_var(Connection * const conn, const string varname, const double value, const string comment) const {
+void Device::get_var(Connection * const conn, const string varname, const string response) const {
 	if (!conn)
 		return;
 	
 	conn->addtag(varname);
+	conn->write(response);
+}
+
+void Device::get_var(Connection * const conn, const string varname, const double value, const string comment) const {
 	if (comment == "")
-		conn->write(format("ok %s %lf :%s", varname.c_str(), (double) value, comment.c_str()));
+		get_var(conn, varname, format("ok %s %lf :%s", varname.c_str(), (double) value, comment.c_str()));
 	else 
-		conn->write(format("ok %s %lf", varname.c_str(), (double) value));
+		get_var(conn, varname, format("ok %s %lf", varname.c_str(), (double) value));
 }
 
 
