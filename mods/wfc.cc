@@ -34,9 +34,43 @@ Wfc::Wfc(Io &io, foamctrl *const ptc, const string name, const string type, cons
 Device(io, ptc, name, wfc_type + "." + type, port, conffile, online),
 nact(0), gain(0.0, 0.0, 0.0), wfc_amp(NULL) {	
 	io.msg(IO_DEB2, "Wfc::Wfc()");
-
+	
+	add_cmd("set gain");
+	add_cmd("get gain");
 }
 
 Wfc::~Wfc() {
 	io.msg(IO_DEB2, "Wfc::~Wfc()");
+}
+
+void Wfc::on_message(Connection *const conn, string line) { 
+	string orig = line;
+	string command = popword(line);
+	bool parsed = true;
+	
+	if (command == "get") {							// get ...
+		string what = popword(line);
+		
+		if (what == "gain") {							// get gain
+			conn->addtag("gain");
+			conn->write(format("ok gain %g %g %g", gain.p, gain.i, gain.d));
+		} else
+			parsed = false;
+
+	} else if (command == "set") {			// set ...
+		string what = popword(line);
+		
+		if (what == "gain") {							// set gain <p> <i> <d>
+			conn->addtag("gain");
+			gain.p = popdouble(line);
+			gain.i = popdouble(line);
+			gain.d = popdouble(line);
+			netio.broadcast(format("ok gain %g %g %g", gain.p, gain.i, gain.d));
+		} else
+			parsed = false;
+	}
+		
+	// If not parsed here, call parent
+	if (parsed == false)
+		Device::on_message(conn, orig);
 }

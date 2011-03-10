@@ -53,7 +53,7 @@ public:
 	virtual int calibrate() = 0;						//!< Calibrate actuator
 	
 	// From Device::
-	virtual void on_message(Connection *const conn, string line) { Device::on_message(conn, line); }
+	virtual void on_message(Connection *const conn, string line);
 	
 	virtual ~Wfc();
 	//!< Constructor for derived WFCs (i.e. SimWfc)
