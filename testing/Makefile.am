@@ -46,6 +46,14 @@ bit32_test_CXXFLAGS = -m32 $(AM_CXXFLAGS)
 bit32_test_LDFLAGS = 
 bit32_test_LIBS =
 
+## Latencies test
+check_PROGRAMS += latencies-test
+
+latencies_test_SOURCES = latencies-test.cc
+latencies_test_CPPFLAGS = $(SIGC_CFLAGS) $(AM_CPPFLAGS)
+latencies_test_LDADD = $(LIBSIU_DIR)/libtime.a \
+		$(LDADD) $(SIGC_LIBS)
+
 if HWDEBUG
 # only do this if we want hardware debugging 
 # install the test programs in a foam-test subdir

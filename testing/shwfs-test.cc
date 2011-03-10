@@ -45,7 +45,7 @@ int main(int argc, char *argv[]) {
 		io.msg(IO_INFO, "Init Shwfs");
 		Shwfs shwfs(io, &ptc, "shwfs-test", "12345", tmp, wfscam);
 		Path mlaout("./mla_grid");
-		shwfs.store_mla_grid(mlaout, true);
+		shwfs.store_mla_grid(true);
 		//! @bug Program exits with segmentation fault, why? Perhaps something in wfscam?
 	}
 	else {
@@ -58,7 +58,7 @@ int main(int argc, char *argv[]) {
 		sleep(1);
 
 		Path mlaout("./mla_grid");
-		wfscam.shwfs.store_mla_grid(mlaout, true);
+		wfscam.shwfs.store_mla_grid(true);
 		
 // Take one frame and store it
 		wfscam.set_store(1);
