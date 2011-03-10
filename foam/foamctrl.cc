@@ -38,7 +38,7 @@ cfg(NULL),
 pidfile("/tmp/foam.pid"), 
 listenip("0.0.0.0"), 
 listenport("1025"),
-datadir("/tmp/"), 
+datadir("./"), 
 logfile("foam-log"),
 use_syslog(false), 
 syslog_prepend("foam"), 
@@ -74,7 +74,7 @@ int foamctrl::parse() {
 	cfg = new config(conffile);
 	
 	// Datadir (relative to progdir if relative)
-	datadir = progdir + cfg->getstring("datadir", "/tmp/");
+	datadir = progdir + cfg->getstring("datadir", "./foam-data/");
 	// Create subdirectory unique for this run
 	struct tm *tmp = gmtime(&starttime);
 	char tstamp[16];
