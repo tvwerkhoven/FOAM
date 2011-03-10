@@ -39,7 +39,15 @@ Wfs *wfs;
 int FOAM_FullSim::load_modules() {
 	io.msg(IO_DEB2, "FOAM_FullSim::load_modules()");
 	io.msg(IO_INFO, "This is the full simulation mode, enjoy.");
-		
+	
+	// Init Seeing simultion (atmosphere)
+	
+	// Init WFC simulation
+	
+	// Init camera simulation (using seeing and wfc)
+	
+	// Init WFS simulation (using camera)
+	
 	// Add Simulcam device
 	simcam = new SimulCam(io, ptc, "simcam", ptc->listenport, ptc->conffile);
 	devices->add((Device *) simcam);
@@ -61,7 +69,18 @@ int FOAM_FullSim::load_modules() {
 int FOAM_FullSim::open_init() {
 	io.msg(IO_DEB2, "FOAM_FullSim::open_init()");
 	
+	// Start camera
 	((SimulCam*) devices->get("simcam"))->set_mode(Camera::RUNNING);
+	
+	// Register processing after camera acquisition
+//	((SimulCam*) devices->get("simcam"))->signal_proc.connect(
+//																														((Shwfs*) devices->get("simshwfs"))->measure()
+//																														);
+//
+//	// Register processing after SHWFS processing
+//	((Shwfs*) devices->get("simshwfs"))->signal_proc.connect(
+//																														((SimulWfc*) devices->get("simwfc"))->actuate()
+//																														);
 	
 	return 0;
 }
