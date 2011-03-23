@@ -23,8 +23,10 @@
 
 #include <string>
 #include <map>
+#include <vector>
 #include <glibmm/dispatcher.h>
 
+#include "config.h"
 #include "protocol.h"
 #include "pthread++.h"
 #include "foamtypes.h"
@@ -80,6 +82,10 @@ private:
 	
 	Protocol::Client protocol;					//!< Connection used to FOAM
 	Log &log;														//!< Reference to MainWindow::log
+	config cfg;													//!< GUI configuration (position etc.)
+	
+	string execname;										//!< Executable name (argv[0])
+	string conffile;										//!< Configuration file
 
 	pthread::mutex mutex;
 	
@@ -101,13 +107,17 @@ private:
 	void on_message(string line);				//!< Callback for new messages from FOAM
 	void on_connected(bool conn);				//!< Callback for new connection to FOAM
 	
+	void show_version();
+	void show_clihelp(const bool error = false);
+	int parse_args(int argc, char *argv[]);
+	
 public:
 	string host;
 	string port;
 	
 	pthread::mutex gui_mutex;
 	
-	FoamControl(Log &log);
+	FoamControl(Log &log, int argc, char* argv[]);
 	~FoamControl() { };
 	
 	int connect(const string &host, const string &port);
