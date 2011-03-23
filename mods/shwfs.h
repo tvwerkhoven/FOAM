@@ -62,6 +62,10 @@ const string shwfs_type = "shwfs";
  \section shwfs_cfg Configuration parameters
  
 
+ \section shwfs_todo 
+
+ - @todo make shift_vec ringbuffer
+ 
  */
 class Shwfs: public Wfs {
 	friend class SimulCam;

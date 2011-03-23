@@ -110,7 +110,7 @@ Camera::~Camera() {
 	proc_thr.cancel();
 	proc_thr.join();
 	
-	// frames should be free()'ed by derived classes, they know how to
+	// frames themselves should be free()'ed by derived classes, they know how to
 	delete[] frames;
 }
 
@@ -337,6 +337,18 @@ Camera::frame_t *Camera::get_last_frame() const {
 		return 0;
 }
 
+Camera::frame_t *Camera::get_next_frame(const bool wait) const {
+	static size_t frameid = 0;
+	
+	// Get a newest frame every call, but never get the same frame
+	if (frameid == count)
+		frameid++;
+	else
+		frameid = count;
+	
+	return get_frame(frameid, wait);
+}
+
 Camera::frame_t *Camera::get_frame(const size_t id, const bool wait) {	
 	if(id >= count) {
 		if(wait) {
@@ -479,8 +491,8 @@ void Camera::on_message(Connection *const conn, string line) {
 
 double Camera::set_exposure(const double value) {	
 	cam_set_exposure(value);
-	accumfix();
 	netio.broadcast(format("ok exposure %lf", exposure), "exposure");
+	set_calib(false);
 	return exposure;
 }
 
@@ -493,18 +505,21 @@ double Camera::set_interval(const double value) {
 double Camera::set_gain(const double value) {
 	cam_set_gain(value);
 	netio.broadcast(format("ok gain %lf", gain), "gain");
+	set_calib(false);
 	return gain;
 }
 
 double Camera::set_offset(const double value) {
 	cam_set_offset(value);
 	netio.broadcast(format("ok offset %lf", offset), "offset");
+	set_calib(false);
 	return offset;
 }
 
 Camera::mode_t Camera::set_mode(const mode_t value) {
 	cam_set_mode(value);
 	netio.broadcast("ok mode " + mode2str(mode), "mode");
+	set_calib(false);
 	return mode;
 }
 
@@ -744,26 +759,6 @@ uint16_t Camera::df_correct(const uint16_t *in, size_t offset) {
 	return c;
 }
 
-
-void Camera::accumfix() {
-	io.msg(IO_DEB2, "Camera::accumfix()");
-	if (exposure != darkexp) {
-//		uint32_t *darkim = (uint32_t *) dark.image;
-//		for(size_t i = 0; i < res.x * res.y; i++)
-//			darkim[i] = 0;
-		dark.data = NULL;
-		darkexp = exposure;
-	}
-	
-	if (exposure != flatexp) {
-//		uint32_t *flatim = (uint32_t *) flat.image;
-//		for(size_t i = 0; i < res.x * res.y; i++)
-//			flatim[i] = 1.0;
-		flat.data = NULL;
-		flatexp = exposure;
-	}
-}
-
 int Camera::darkburst(size_t bcount) {
 	// Update dark count
 	if (bcount > 0)
@@ -771,11 +766,7 @@ int Camera::darkburst(size_t bcount) {
 		
 	io.msg(IO_DEB1, "Starting dark burst of %zu frames", ndark);
 	
-	//! @todo fix this
 	set_mode(RUNNING);
-//	state = WAITING;
-//	get_state(connection, true);
-//	set_state(WAITING, true);
 	
 	// Allocate memory for darkfield
 	uint32_t *accum = new uint32_t[res.x * res.y];
@@ -869,33 +860,3 @@ bool Camera::accumburst(uint32_t *accum, size_t bcount) {
 	return true;
 }
 
-//void Camera::statistics(Connection *conn, size_t bcount) {
-//	if (bcount < 1)
-//		bcount = 1;
-//	
-//	double avg = 0;
-//	double rms = 0;
-//	size_t rx = 0;
-//	
-//	{
-//		pthread::mutexholder h(&cam_mutex);
-//		size_t start = count;
-//		
-//		while(rx < bcount) {
-//			frame_t *f = get_frame(start + rx);
-//			if(!f)
-//				break;
-//			
-//			avg += f->avg;
-//			rms += f->rms * f->rms;
-//			
-//			rx++;
-//		}
-//	}
-//	
-//	avg /= rx;
-//	rms /= rx;
-//	rms = sqrt(rms);
-//	
-//	conn->write(format("ok statistics %lf %lf", avg, rms));
-//}
