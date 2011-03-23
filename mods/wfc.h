@@ -41,14 +41,21 @@ const string wfc_type = "wfc";
 class Wfc: public Device {
 private:
 	// Common Wfc settings
-	int nact;														//!< Numeber of actuators in this device
-	gain_t gain;												//!< Operating gain for this device
 	gsl_vector_float *wfc_amp;					//!< (Requested) actuator amplitudes, should be between -1 and 1.
 
 public:
+	int nact;														//!< Numeber of actuators in this device
+	gain_t gain;												//!< Operating gain for this device
+	
 	// To be implemented by derived classes:
-	virtual int actuate(gsl_vector_float *wfcamp, const gain_t g) = 0; //!< Set Wfc in specific state using custom gain
-	virtual int actuate(gsl_vector_float *wfcamp) { return actuate(wfcamp, gain); }
+	/*! @brief Set Wfc in specific state using custom gain
+	 
+	 @param [in] wfcamp Wfc amplitudes for each actuator [-1, 1]
+	 @param [in] g Gain for this actuation
+	 @param [in] block Block until Wfc is in requested position
+	 */
+	virtual int actuate(const gsl_vector_float *wfcamp, const gain_t g, const bool block=false) = 0;
+	virtual int actuate(const gsl_vector_float *wfcamp) { return actuate(wfcamp, gain); }
 	
 	virtual int calibrate() = 0;						//!< Calibrate actuator
 	

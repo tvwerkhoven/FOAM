@@ -85,6 +85,8 @@ SimulCam::~SimulCam() {
 	cam_thr.cancel();
 	cam_thr.join();
 	
+	if (frame_out)
+		free(frame_out);
 }
 
 void SimulCam::on_message(Connection *const conn, string line) {
@@ -344,21 +346,21 @@ uint8_t *SimulCam::simul_capture(gsl_matrix *frame_in) {
 	if (out_size != cursize) {
 		io.msg(IO_DEB2, "SimulCam::simul_capture() reallocing memory, %zu != %zu", out_size, cursize);
 		out_size = cursize;
-		//! @todo frame_out needs to be free()'ed somewhere
 		frame_out = (uint8_t *) realloc(frame_out, out_size);
 	}
 	
 	// Copy and scale, add noise
-	double pix=0;
-	for (size_t i=0; i<frame_in->size1; i++)
+	double pix=0.0, noise=0.0;
+	for (size_t i=0; i<frame_in->size1; i++) {
 		for (size_t j=0; j<frame_in->size2; j++) {
 			pix = (double) ((gsl_matrix_get(frame_in, i, j) - min)*fac);
-			// Add noise only in 'noise' fraction of the pixels, with 'noiseamp' amplitude
+			noise=0.0;
+			// Add noise only in 'noise' fraction of the pixels, with 'noiseamp' amplitude. Noise is independent of exposure here
 			if (drand48() < noise) 
-				pix += drand48()*noiseamp*255.0;
-			frame_out[i*frame_in->size2 + j] = (uint8_t) clamp(((pix * exposure) + offset), 0.0, 1.0*UINT8_MAX);
+				noise = drand48() * noiseamp * UINT8_MAX;
+			frame_out[i*frame_in->size2 + j] = (uint8_t) clamp(((pix * exposure) + noise + offset), 0.0, 1.0*UINT8_MAX);
 		}
-	//((wave_in->data[i*frame_in->tda + j]
+	}
 	
 	return frame_out;
 }

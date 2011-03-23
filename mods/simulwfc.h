@@ -61,8 +61,8 @@ public:
 	~SimulWfc();
 	
 	// From Wfc::
-	int actuate(gsl_vector_float *wfcamp, gain_t gain); //!< Set Wfc in specific state using custom gain
-	int calibrate();										//!< Calibrate actuator
+	int actuate(const gsl_vector_float *wfcamp, const gain_t gain, const bool block);
+	int calibrate();
 	
 	// From Devices::
 	void on_message(Connection *const conn, string);

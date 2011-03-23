@@ -76,7 +76,7 @@ public:
 	Camera &cam;												//!< Reference to the camera class used for this WFS
 	
 	// To be implemented:
-	virtual int measure();							//!< Measure abberations
+	virtual int measure(Camera::frame_t *frame); //!< Measure abberations
 	virtual int calibrate();						//!< Calibrate sensor, set up reference and mode basis
 	
 	// From Device::

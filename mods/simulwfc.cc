@@ -78,14 +78,13 @@ int SimulWfc::calibrate() {
 	// (Re-)allocate memory for Wfc pattern
 	wfc_sim = gsl_matrix_calloc(actres.y, actres.x);
 	
-	
 	is_calib = true;
 	
 	return 0;
 }
 
-int SimulWfc::actuate(gsl_vector_float *wfcamp, gain_t /* gain */) {
-	//!< @todo Implement gain here
+int SimulWfc::actuate(const gsl_vector_float *wfcamp, const gain_t /* gain */, const bool /* block */) {
+	//!< @todo Implement gain & block(?) here
 	if (actpos.size() != wfcamp->size)
 		return io.msg(IO_ERR, "SimulWfc::actuate() # of actuator position != # of actuator amplitudes!");
 	
@@ -93,6 +92,9 @@ int SimulWfc::actuate(gsl_vector_float *wfcamp, gain_t /* gain */) {
 		calibrate();
 	
 	gsl_matrix_set_zero(wfc_sim);
+	
+	if (wfcamp == NULL)									// if amplitude vector is NULL, set WFC 'flat'
+		return 0;
 	
 	for (size_t i=0; i<actpos.size(); i++) {
 		float amp = gsl_vector_float_get(wfcamp, i);
