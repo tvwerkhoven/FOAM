@@ -74,6 +74,7 @@ protected:
 	Protocol::Server netio;							//!< Network connection
 	bool online;												//!< Online flag
 	bool is_calib;											//!< Is calibrated and ready for use
+	bool is_ok;													//!< Device status OK & operational
 
 	bool init();												//!< Initialisation (common for all constructors)
 	

@@ -57,8 +57,12 @@ foamctrl::~foamctrl(void) {
 	
 	if (use_syslog) 
 		closelog();
-	if (cfg)
+	
+	// Store updated configuration
+	if (cfg) {
+		cfg->write(conffile + ".autosave");
 		delete cfg;
+	}
 }
 
 int foamctrl::parse() {
