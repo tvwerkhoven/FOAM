@@ -72,7 +72,6 @@ protected:
 	LabeledEntry e_gain;								//!< For gain, RW
 	LabeledEntry e_res;									//!< For resolution, RO
 	LabeledEntry e_mode;								//!< For mode, RO
-	LabeledEntry e_stat;								//!< For status, RO
 	
 	// Display stuff
 	HBox disphbox;

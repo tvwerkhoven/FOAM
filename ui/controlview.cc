@@ -258,9 +258,9 @@ void ControlPage::on_message_update() {
 	
 	// set values in calibmode select box
 	calmode_select.clear_items();
-	calmode_select.append_text(foamctrl.get_calmode(0));
-	for (int i=1; i<foamctrl.get_numcal(); i++)
+	//calmode_select.append_text(foamctrl.get_calmode(0));
+	for (size_t i=0; i<foamctrl.get_numcal(); i++)
 		calmode_select.append_text(foamctrl.get_calmode(i));
-	calmode_select.set_active_text(foamctrl.get_calmode(0));
+	//calmode_select.set_active_text(foamctrl.get_calmode(0));
 }
 

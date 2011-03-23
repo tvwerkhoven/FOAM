@@ -63,6 +63,7 @@ protected:
 	ComboBoxText dev_cmds;							//!< All available commands for this device
 	LabeledEntry dev_val;								//!< Value or options for this command
 	Button dev_send;										//!< Send command
+	LabeledEntry dev_stat;							//!< Device status, read only
 	
 	Window extra_win;										//!< Window for extra information
 	VBox extra_vbox;										//!< VBox for extra_win
