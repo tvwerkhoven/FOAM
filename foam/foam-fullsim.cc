@@ -172,48 +172,46 @@ int FOAM_FullSim::calib() {
 
 void FOAM_FullSim::on_message(Connection *const conn, string line) {
 	io.msg(IO_DEB2, "FOAM_FullSim::on_message(line=%s)", line.c_str());
-	netio.ok = true;
 	
-	// First let the parent process this
-	FOAM::on_message(conn, line);
-	
+	bool parsed = true;
+	string orig = line;
 	string cmd = popword(line);
 	
-	if (cmd == "help") {
+	if (cmd == "help") {								// help
 		string topic = popword(line);
+		parsed = false;
 		if (topic.size() == 0) {
 			conn->write(\
 												":==== full sim help =========================\n"
+												":get calibmodes:         List calibration modes\n"
 												":calib <mode>:           Calibrate AO system.");
 		}
-		else if (topic == "calib") {
+		else if (topic == "calib") {			// help calib
 			conn->write(\
 												":calib <mode>:           Calibrate AO system.\n"
+												":  mode=zero:            Set current WFS data as reference.\n"
 												":  mode=influence:       Measure wfs-wfc influence.");
 		}
-		else if (!netio.ok) {
-			conn->write("err cmd help :topic unkown");
-		}
 	}
-	else if (cmd == "get") {
+	else if (cmd == "get") {						// get ...
 		string what = popword(line);
-		if (what == "calib") {
-			conn->write("ok var calib 1 influence");
-		}
-		else if (!netio.ok) {
-			conn->write("err get var :var unkown");
-		}
+		if (what == "calibmodes")					// get calibmodes
+			conn->write("ok calibmodes 2 zero influence");
+		else
+			parsed = false;
 	}
-	else if (cmd == "calib") {
+	else if (cmd == "calib") {					// calib <mode>
 		string calmode = popword(line);
 		conn->write("ok cmd calib");
 		ptc->calib = calmode;
 		ptc->mode = AO_MODE_CAL;
-		mode_cond.signal();						// signal a change to the main thread
+		mode_cond.signal();								// signal a change to the main thread
 	}
-	else if (!netio.ok) {
-		conn->write("err cmd :cmd unkown");
-	}
+	else
+		parsed = false;
+	
+	if (!parsed)
+		FOAM::on_message(conn, orig);
 }
 
 int main(int argc, char *argv[]) {

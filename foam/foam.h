@@ -33,8 +33,6 @@
 #include <string>
 #include <stdexcept>
 
-
-
 #include "foamtypes.h"
 #include "config.h"
 #include "protocol.h"
