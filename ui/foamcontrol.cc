@@ -159,7 +159,7 @@ void FoamControl::on_connected(bool conn) {
 	
 	// Get basic system information
 	send_cmd("get mode");
-	send_cmd("get calib");
+	send_cmd("get calibmodes");
 	send_cmd("get devices");
 
 	signal_connect();
@@ -190,10 +190,11 @@ void FoamControl::on_message(string line) {
 		state.numframes = popint32(line);
 	else if (what == "mode")
 		state.mode = str2mode(popword(line));
-	else if (what == "calib") {
-		state.numcal = popint32(line);
-		for (int i=0; i<state.numcal; i++)
-			state.calmodes[i] = popword(line);
+	else if (what == "calibmodes") {
+		int tmp = popint32(line);
+		state.calmodes.clear();
+		for (int i=0; i<tmp; i++)
+			state.calmodes.push_back(popword(line));
 	}
 	else if (what == "devices") {
 		int tmp = popint32(line);

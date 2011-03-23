@@ -94,11 +94,10 @@ private:
 		int numdev;												//!< Number of devices connected
 		device_t devices[32];							//!< List of devices
 		uint64_t numframes;								//!< Number of frames processed
-		int numcal;												//!< Number of calibration modes
-		string calmodes[32];							//!< Different calibration modes
+		vector<string> calmodes;					//!< Different calibration modes
 		string lastreply;									//!< Last reply (stored in on_message())
 		string lastcmd;										//!< Last command issued to FOAM
-		state_t(): mode(AO_MODE_UNDEF), numdev(0), numframes(0), numcal(0), lastreply("undef"), lastcmd("undef") { ; }
+		state_t(): mode(AO_MODE_UNDEF), numdev(0), numframes(0), lastreply("undef"), lastcmd("undef") { ; }
 	} state;														//!< Basic state of the remote AO system
 	
 	bool ok;														//!< Status of the system
@@ -141,8 +140,8 @@ public:
 	aomode_t get_mode() const { return (const aomode_t) state.mode; }
 	string get_mode_str() const { return mode2str(state.mode); }
 
-	int get_numcal() const { return (const int) state.numcal; }
-	string get_calmode(const int i) const { return state.calmodes[i]; }
+	size_t get_numcal() const { return state.calmodes.size(); }
+	string get_calmode(const size_t i) const { return state.calmodes[i]; }
 
 	string get_lastreply() const { return state.lastreply; }
 	string get_lastcmd() const { return state.lastcmd; }
