@@ -55,7 +55,6 @@ public:
 	 @param [in] block Block until Wfc is in requested position
 	 */
 	virtual int actuate(const gsl_vector_float *wfcamp, const gain_t g, const bool block=false) = 0;
-	virtual int actuate(const gsl_vector_float *wfcamp) { return actuate(wfcamp, gain); }
 	
 	virtual int calibrate() = 0;						//!< Calibrate actuator
 	
