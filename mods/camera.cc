@@ -337,7 +337,7 @@ Camera::frame_t *Camera::get_last_frame() const {
 		return 0;
 }
 
-Camera::frame_t *Camera::get_next_frame(const bool wait) const {
+Camera::frame_t *Camera::get_next_frame(const bool wait) {
 	static size_t frameid = 0;
 	
 	// Get a newest frame every call, but never get the same frame

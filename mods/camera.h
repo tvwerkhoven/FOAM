@@ -220,7 +220,7 @@ protected:
 	
 	Path makename(const string &base) const;					//!< Make filename from outputdir and filenamebase
 	Path makename() const { return makename(filenamebase); }
-	bool store_frame(const frame_t *const frame) const;			///!< Store frame to disk
+	bool store_frame(const frame_t *const frame) const;	//!< Store frame to disk
 	
 	uint8_t *get_thumbnail(Connection *conn);					//!< Get 32x32x8 thumnail
 	void grab(Connection *conn, int x1, int y1, int x2, int y2, int scale, bool do_df, bool do_histo);
@@ -282,7 +282,7 @@ public:
 	size_t get_maxval() const { return (1 << depth); }
 	
 	frame_t *get_last_frame() const;
-	frame_t *get_next_frame(const bool wait=true) const;
+	frame_t *get_next_frame(const bool wait=true);
 	frame_t *get_frame(const size_t id, const bool wait=true);
 	size_t get_count() const { return count; }
 	size_t get_bufsize() const { return nframes; }
