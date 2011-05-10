@@ -29,7 +29,7 @@
 #include "config.h"
 
 #include "camera.h"
-#include "zernike.h"
+//#include "zernike.h"
 
 using namespace std;
 
@@ -52,32 +52,41 @@ public:
 	enum wfbasis {
 		ZERNIKE=0,												//!< Zernike
 		KL,																//!< Karhunen-Loéve 
-		MIRROR,														//!< Mirror modes
 		SENSOR,														//!< Sensor modes (e.g. shift vectors)
+		MIRROR,														//!< Mirror modes
 		UNDEFINED
 	};
 	
 	/*!
 	 @brief This holds information on the wavefront
 	 */
-	struct wavefront {
+	typedef struct wavefront {
 		wavefront() : wfamp(NULL), nmodes(0), basis(SENSOR) { ; }
 		gsl_vector_float *wfamp;					//!< Mode amplitudes
 		int nmodes;												//!< Number of modes
 		enum wfbasis basis;								//!< Basis functions used for this representation
-	};
+	} wf_info_t;
 	
-	Zernike zernbasis;									//!< Zernike polynomials basis
-	gsl_matrix_float *zerninfl;					//!< Influence matrix to convert WFS data to Zernike modes
+	//Zernike zernbasis;									//!< Zernike polynomials basis
+	//gsl_matrix_float *zerninfl;					//!< Influence matrix to convert WFS data to Zernike modes
 	
-	struct wavefront wf;								//!< Wavefront representation
+	wf_info_t wf;												//!< Wavefront representation
 	bool is_calib;											//!< Is calibrated & ready for use
 	
 	Camera &cam;												//!< Reference to the camera class used for this WFS
 	
-	// To be implemented:
-	virtual int measure(Camera::frame_t *frame); //!< Measure abberations
-	virtual int calibrate();						//!< Calibrate sensor, set up reference and mode basis
+	// To be implemented in derived classes:
+	/*! Measure wavefront aberraions using a camera frame
+	 
+	 @param [in] *frame Camera frame to process
+	 @return Wavefront information given *frame
+	 */
+	virtual wf_info_t* measure(Camera::frame_t *frame=NULL);
+	
+	/*! @brief Calibrate sensor, set up reference and mode basis
+	 
+	 */
+	virtual int calibrate();
 	
 	// From Device::
 	virtual void on_message(Connection *const conn, string line);
