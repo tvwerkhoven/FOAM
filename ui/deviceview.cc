@@ -30,7 +30,7 @@ using namespace Gtk;
 
 DevicePage::DevicePage(DeviceCtrl *devctrl, Log &log, FoamControl &foamctrl, string n): 
 devctrl(devctrl), foamctrl(foamctrl), log(log), devname(n),
-devframe("Raw device control"), dev_val("value:"), dev_send("Send")
+devframe("Raw device control"), dev_val("value:"), dev_send("Send"), dev_stat("Status")
 {
 	printf("%x:DevicePage::DevicePage()\n", (int) pthread_self());
 		
@@ -39,7 +39,11 @@ devframe("Raw device control"), dev_val("value:"), dev_send("Send")
 	
 	dev_send.signal_clicked().connect(sigc::mem_fun(*this, &DevicePage::on_dev_send_activate));
 	dev_val.entry.signal_activate().connect(sigc::mem_fun(*this, &DevicePage::on_dev_send_activate));
-	
+
+	dev_val.set_width_chars(12);
+	dev_stat.set_editable(false);
+	dev_stat.set_width_chars(24);
+
 	// Init default values for extra_win
 	extra_win.set_title("FOAM " + devname);
 	extra_win.set_default_size(640, 480);
@@ -49,6 +53,7 @@ devframe("Raw device control"), dev_val("value:"), dev_send("Send")
 	devhbox.pack_start(dev_cmds, PACK_SHRINK);
 	devhbox.pack_start(dev_val, PACK_SHRINK);
 	devhbox.pack_start(dev_send, PACK_SHRINK);
+	devhbox.pack_start(dev_stat, PACK_SHRINK);
 	devframe.add(devhbox);
 	
 	pack_start(devframe, PACK_SHRINK);
@@ -92,6 +97,7 @@ void DevicePage::clear_gui() {
 	fprintf(stderr, "%x:DevicePage::clear_gui()\n", (int) pthread_self());
 	dev_cmds.clear_items();
 	dev_cmds.append_text("-");
+	dev_stat.set_text("N/A");
 }
 
 void DevicePage::on_dev_send_activate() {
@@ -119,6 +125,15 @@ void DevicePage::on_commands_update() {
 
 void DevicePage::on_message_update() {
 	printf("%x:DevicePage::on_message_update()\n", (int) pthread_self());
+	
+	if (devctrl->is_ok() || devctrl->is_calib()) {
+		dev_stat.entry.modify_base(STATE_NORMAL, Gdk::Color("lightgreen"));
+		dev_stat.set_text("Ok");
+	}
+	else {
+		dev_stat.entry.modify_base(STATE_NORMAL, Gdk::Color("red"));
+		dev_stat.set_text("Err: " + devctrl->get_errormsg());
+	}	
 }
 
 void DevicePage::on_connect_update() {

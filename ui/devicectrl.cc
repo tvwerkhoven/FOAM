@@ -30,7 +30,7 @@ using namespace std;
 DeviceCtrl::DeviceCtrl(Log &log, const string h, const string p, const string n):
 	host(h), port(p), devname(n),
 	protocol(host, port, devname), log(log),
-	ok(false), init(false), errormsg("Not connected")
+	ok(false), calib(false), init(false), errormsg("Not connected")
 {
 	printf("%x:DeviceCtrl::DeviceCtrl(name=%s)\n", (int) pthread_self(), n.c_str());	
 	
@@ -98,10 +98,8 @@ void DeviceCtrl::on_message(string line) {
 		devcmds.sort();
 		signal_commands();
 		return;
-	} else {
-		ok = false;
-		errormsg = "Unexpected response '" + what + "'";
-	}
+	} else
+		log.add(Log::WARNING, "Unknown response: " + devname + ": <- " + stat + " " + what);
 
 	signal_message();
 }

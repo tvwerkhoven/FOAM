@@ -18,6 +18,10 @@
  along with FOAM.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <getopt.h>
+
+#include "autoconfig.h"
+
 #include "foamcontrol.h"
 #include "controlview.h"
 
@@ -25,10 +29,64 @@
 
 using namespace Gtk;
 
-FoamControl::FoamControl(Log &log): 
+FoamControl::FoamControl(Log &log, int argc, char *argv[]): 
 log(log),
+execname(""), conffile(""),
 ok(false), errormsg("Not connected") {
 	printf("%x:FoamControl::FoamControl()\n", (int) pthread_self());
+	if (parse_args(argc, argv))
+		exit(-1);
+}
+
+void FoamControl::show_version() {
+	printf("FOAM Control (%s version %s, built %s %s)\n", PACKAGE_NAME, PACKAGE_VERSION, __DATE__, __TIME__);
+	printf("Copyright (c) 2007--2011 %s\n", PACKAGE_BUGREPORT);
+	printf("\nFOAM Control comes with ABSOLUTELY NO WARRANTY. This is free software,\n"
+				 "and you are welcome to redistribute it under certain conditions;\n"
+				 "see the file COPYING for details.\n");
+}
+
+void FoamControl::show_clihelp(const bool error) {
+	if(error)
+		fprintf(stderr, "Try '%s --help' for more information.\n", execname.c_str());
+	else {
+		printf("Usage: %s [option]...\n\n", execname.c_str());
+		printf("  -c, --config=FILE    Read configuration from FILE.\n"
+					 "  -h, --help           Display this help message.\n"
+					 "      --version        Display version information.\n\n");
+		printf("Report bugs to %s.\n", PACKAGE_BUGREPORT);
+	}
+}
+
+int FoamControl::parse_args(int argc, char *argv[]) {
+	int r, option_index = 0;
+	
+	static struct option const long_options[] = {
+		{"config", required_argument, NULL, 'c'},
+		{"help", no_argument, NULL, 'h'},
+		{"version", no_argument, NULL, 1},
+		{NULL, 0, NULL, 0}
+	};
+	
+	while((r = getopt_long(argc, argv, "c:h", long_options, &option_index)) != EOF) {
+		switch(r) {
+			case 0:
+				break;
+			case 'c':												// Configuration file
+				conffile = string(optarg);
+				break;
+			case 1:													// Version info
+				show_version();
+				return -1;
+			case '?':												// Help
+			case 'h':												// Help
+			default:
+				show_clihelp();
+				return -1;
+		}
+	}
+	
+	return 0;
 }
 
 int FoamControl::connect(const string &h, const string &p) {
@@ -101,7 +159,7 @@ void FoamControl::on_connected(bool conn) {
 	
 	// Get basic system information
 	send_cmd("get mode");
-	send_cmd("get calib");
+	send_cmd("get calibmodes");
 	send_cmd("get devices");
 
 	signal_connect();
@@ -132,10 +190,11 @@ void FoamControl::on_message(string line) {
 		state.numframes = popint32(line);
 	else if (what == "mode")
 		state.mode = str2mode(popword(line));
-	else if (what == "calib") {
-		state.numcal = popint32(line);
-		for (int i=0; i<state.numcal; i++)
-			state.calmodes[i] = popword(line);
+	else if (what == "calibmodes") {
+		int tmp = popint32(line);
+		state.calmodes.clear();
+		for (int i=0; i<tmp; i++)
+			state.calmodes.push_back(popword(line));
 	}
 	else if (what == "devices") {
 		int tmp = popint32(line);

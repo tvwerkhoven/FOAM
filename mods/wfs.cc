@@ -24,32 +24,33 @@
 #include "types.h"
 #include "io.h"
 
-#include "zernike.h"
+//#include "zernike.h"
 #include "wfs.h"
+#include "camera.h"
 
 using namespace std;
 
+// Constructor / destructors
+
 Wfs::Wfs(Io &io, foamctrl *const ptc, const string name, const string port, Path const &conffile, Camera &wfscam, const bool online):
 Device(io, ptc, name, wfs_type, port, conffile, online),
-zernbasis(io, 0, wfscam.get_width()),
+//zernbasis(io, 0, wfscam.get_width()),
 cam(wfscam)
 {	
 	io.msg(IO_DEB2, "Wfs::Wfs()");
-	
-	add_cmd("measuretest");
-	add_cmd("get modes");
-	add_cmd("get basis");
-	add_cmd("get calib");
-	add_cmd("get camera");
+	init();
 }
 
 Wfs::Wfs(Io &io, foamctrl *const ptc, const string name, const string type, const string port, Path const &conffile, Camera &wfscam, const bool online):
 Device(io, ptc, name, wfs_type + "." + type, port, conffile, online),
-zernbasis(io, 0, wfscam.get_width()),
+//zernbasis(io, 0, wfscam.get_width()),
 cam(wfscam)
 {	
 	io.msg(IO_DEB2, "Wfs::Wfs()");
-	
+	init();
+}
+
+void Wfs::init() {
 	add_cmd("measuretest");
 	add_cmd("get modes");
 	add_cmd("get basis");
@@ -59,46 +60,38 @@ cam(wfscam)
 
 Wfs::~Wfs() {
 	io.msg(IO_DEB2, "Wfs::~Wfs()");
-
-	if (wf.wfamp)
-		gsl_vector_float_free(wf.wfamp);
 }
-
 
 void Wfs::on_message(Connection *const conn, string line) {
 	string orig = line;
 	string command = popword(line);
 	bool parsed = true;
 	
-	if (command == "measuretest") {
-		// Specifically call Wfs::measure() to fake a measurement
+	if (command == "measuretest") {			// measuretest
+		// Specifically call Wfs::measure() for fake 
 		Wfs::measure();
-		conn->write("ok measuretest");
-	} else if (command == "get") {
+		get_var(conn, "measuretest", "ok measuretest");
+	} else if (command == "get") {			// get ...
 		string what = popword(line);
 		
-		if (what == "modes") {
-			conn->addtag("modes");
+		if (what == "modes") {						// get modes
 			string moderep = "";
-			for (int n=0; n<wf.nmodes; n++) {
+			for (int n=0; n<wf.nmodes; n++)
 				moderep += format("%4f ", gsl_vector_float_get(wf.wfamp, n));
-			}
-			conn->write(format("ok modes %d %s", wf.nmodes, moderep.c_str()));
-		} else if (what == "camera") {
-			conn->addtag("camera");
-			conn->write("ok camera " + cam.name);
-		} else if (what == "calib") {
-			conn->addtag("calib");
-			conn->write(format("ok calib %d", is_calib));
-		} else if (what == "basis") {
-			conn->addtag("basis");
+
+			get_var(conn, "modes", format("ok modes %d %s", wf.nmodes, moderep.c_str()));
+		} else if (what == "camera") {		// get camera
+			get_var(conn, "camera", "ok camera " + cam.name);
+		} else if (what == "calib") {			// get calib
+			get_var(conn, "calib", format("ok calib %d", is_calib));
+		} else if (what == "basis") {			// get basis
 			string tmp;
 			if (wf.basis == ZERNIKE) tmp = "zernike";
 			else if (wf.basis == KL) tmp = "kl";
 			else if (wf.basis == MIRROR) tmp = "mirror";
 			else if (wf.basis == SENSOR) tmp = "sensor";
 			else tmp = "unknown";
-			conn->write(format("ok basis %s", tmp.c_str()));
+			get_var(conn, "basis", format("ok basis %s", tmp.c_str()));
  		}
 		else
 			parsed = false;
@@ -111,7 +104,7 @@ void Wfs::on_message(Connection *const conn, string line) {
 		Device::on_message(conn, orig);
 }
 
-int Wfs::measure() {
+Wfs::wf_info_t* Wfs::measure(Camera::frame_t *) {
 	io.msg(IO_DEB2, "Wfs::measure(), filling random");
 	if (!wf.wfamp) {
 		wf.nmodes = 16;
@@ -119,11 +112,11 @@ int Wfs::measure() {
 		wf.basis = SENSOR;
 	}
 	
-	for (int n=0; n<wf.nmodes; n++) {
+	for (int n=0; n<wf.nmodes; n++)
 		gsl_vector_float_set(wf.wfamp, n, drand48()*2.0-1.0);
-	}
 	
-	return 0;
+	//return 0;
+	return &wf;
 }
 
 int Wfs::calibrate() {

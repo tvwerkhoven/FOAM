@@ -70,7 +70,7 @@ file(""), croppos(0,0), cropsize(0,0), windspeed(10,10), windtype(LINEAR)
 	// N.B. This can lead to problems if the SimulCam resolution is higher than
 	// the wavefront source file, the crop size will be smaller than the camera 
 	// and the program will break.
-	if (wfsrc->size1 < cropsize.x || wfsrc->size2 < cropsize.y) {
+	if (wfsrc->size1 < (size_t) cropsize.x || wfsrc->size2 < (size_t) cropsize.y) {
 		io.msg(IO_WARN, "SimSeeing::setup() wavefront smaller than requested cropsize (%dx%d vs %dx%d), reducing size to half the wavefront size.", 
 					 wfsrc->size1, wfsrc->size2, cropsize.x, cropsize.y);
 		cropsize.x = 0.5*wfsrc->size1;
@@ -146,14 +146,12 @@ gsl_matrix *SimSeeing::get_wavefront(const double fac) {
 			
 		case LINEAR:
 		default:
-			// Check bounds, change wind if necessary.
-			if (croppos.x + windspeed.x >= (int) wfsrc->size2 - cropsize.x)
+			// Check bounds, revert wind if necessary
+			if (croppos.x + windspeed.x >= (int) wfsrc->size2 - cropsize.x ||
+					croppos.x + windspeed.x <= 0)
 				windspeed.x *= -1;
-			if (croppos.x + windspeed.x <= 0)
-				windspeed.x *= -1;
-			if (croppos.y + windspeed.y >= (int) wfsrc->size1 - cropsize.y)
-				windspeed.y *= -1;
-			if (croppos.y + windspeed.y <= 0)
+			if (croppos.y + windspeed.y >= (int) wfsrc->size1 - cropsize.y ||
+					croppos.y + windspeed.y <= 0)
 				windspeed.y *= -1;
 			
 			// Apply wind

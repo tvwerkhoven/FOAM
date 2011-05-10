@@ -85,6 +85,8 @@ SimulCam::~SimulCam() {
 	cam_thr.cancel();
 	cam_thr.join();
 	
+	if (frame_out)
+		free(frame_out);
 }
 
 void SimulCam::on_message(Connection *const conn, string line) {
@@ -92,18 +94,18 @@ void SimulCam::on_message(Connection *const conn, string line) {
 	string command = popword(line);
 	bool parsed = true;
 	
-	if (command == "set") {
+	if (command == "set") {							// set ...
 		string what = popword(line);
 	
-		if(what == "noise") {
+		if(what == "noise") {							// set noise <double>
 			set_var(conn, "noise", popdouble(line), &noise, 0.0, 1.0, "Out of range");
-		} else if(what == "noiseamp") {
+		} else if(what == "noiseamp") {		// set noiseamp <double>
 			set_var(conn, "noiseamp", popdouble(line), &noiseamp);
-		} else if(what == "telapt_fill") {
+		} else if(what == "telapt_fill") { // set telapt_fill <double>
 			set_var(conn, "telapt_fill", popdouble(line), &telapt_fill, 0.0, 1.0, "out of range");
-		} else if(what == "seeingfac") {
+		} else if(what == "seeingfac") {	// set seeingfac <double>
 			set_var(conn, "seeingfac", popdouble(line), &seeingfac);
-		} else if(what == "windspeed") {
+		} else if(what == "windspeed") {	// set windspeed <int> <int>
 			int tmpx = popint(line);
 			int tmpy = popint(line);
 			// Only accept in certain ranges (sanity check)
@@ -115,7 +117,7 @@ void SimulCam::on_message(Connection *const conn, string line) {
 				seeing.windspeed.y = tmpy;
 				netio.broadcast(format("ok windspeed %d %d", seeing.windspeed.x, seeing.windspeed.y), "windspeed");
 			}
-		} else if(what == "windtype") {
+		} else if(what == "windtype") {		// set windtype <string>
 			conn->addtag("windtype");
 			string tmp = popword(line);
 			if (tmp == "linear")
@@ -128,26 +130,25 @@ void SimulCam::on_message(Connection *const conn, string line) {
 			}
 			
 			netio.broadcast(format("ok windtype %s", tmp.c_str()), "windtype");
-		} else if(what == "simwf") {
+		} else if(what == "simwf") {			// set simwfs <bool>
 			set_var(conn, "simwf", popdouble(line), &seeingfac);
-		} else if(what == "simtel") {
+		} else if(what == "simtel") {			// set simtel <bool>
 			set_var(conn, "simtel", popbool(line), &simtel);
-		} else if(what == "simmla") {
+		} else if(what == "simmla") {			// set simmla <bool>
 			set_var(conn, "simmla", popbool(line), &simmla);
 		} else
 			parsed = false;
-	} else if (command == "get") {
+	} else if (command == "get") {			// get ...
 		string what = popword(line);
 	
-		if(what == "noise") {
+		if(what == "noise") {							// get noise
 			get_var(conn, "noise", noise);
-		} else if(what == "noiseamp") {
+		} else if(what == "noiseamp") {		// get noiseamp
 			get_var(conn, "noiseamp", noiseamp);
-		} else if(what == "seeingfac") {
+		} else if(what == "seeingfac") {	// get seeingfac
 			get_var(conn, "seeingfac", seeingfac);
-		} else if(what == "windspeed") {
-			conn->addtag("windspeed");
-			netio.broadcast(format("ok windspeed %x %x", seeing.windspeed.x, seeing.windspeed.y), "windspeed");
+		} else if(what == "windspeed") {	// get windspeed
+			get_var(conn, "windspeed", format("ok windspeed %x %x", seeing.windspeed.x, seeing.windspeed.y));
 		} else
 			parsed = false;
 	}
@@ -345,21 +346,21 @@ uint8_t *SimulCam::simul_capture(gsl_matrix *frame_in) {
 	if (out_size != cursize) {
 		io.msg(IO_DEB2, "SimulCam::simul_capture() reallocing memory, %zu != %zu", out_size, cursize);
 		out_size = cursize;
-		//! @todo frame_out needs to be free()'ed somewhere
 		frame_out = (uint8_t *) realloc(frame_out, out_size);
 	}
 	
 	// Copy and scale, add noise
-	double pix=0;
-	for (size_t i=0; i<frame_in->size1; i++)
+	double pix=0.0, noise=0.0;
+	for (size_t i=0; i<frame_in->size1; i++) {
 		for (size_t j=0; j<frame_in->size2; j++) {
 			pix = (double) ((gsl_matrix_get(frame_in, i, j) - min)*fac);
-			// Add noise only in 'noise' fraction of the pixels, with 'noiseamp' amplitude
+			noise=0.0;
+			// Add noise only in 'noise' fraction of the pixels, with 'noiseamp' amplitude. Noise is independent of exposure here
 			if (drand48() < noise) 
-				pix += drand48()*noiseamp*255.0;
-			frame_out[i*frame_in->size2 + j] = (uint8_t) clamp(((pix * exposure) + offset), 0.0, 1.0*UINT8_MAX);
+				noise = drand48() * noiseamp * UINT8_MAX;
+			frame_out[i*frame_in->size2 + j] = (uint8_t) clamp(((pix * exposure) + noise + offset), 0.0, 1.0*UINT8_MAX);
 		}
-	//((wave_in->data[i*frame_in->tda + j]
+	}
 	
 	return frame_out;
 }

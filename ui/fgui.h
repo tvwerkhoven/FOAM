@@ -123,7 +123,7 @@ public:
 	void on_ctrl_message_update();			//!< Connects to FoamControl::signal_message()
 	void on_ctrl_device_update();				//!< Connects to FoamControl::signal_device()
 	
-	MainWindow();
+	MainWindow(int argc, char* argv[]);
 	~MainWindow() {};
 };
 

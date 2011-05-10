@@ -30,6 +30,7 @@
 #include <gtkmm.h>
 #include <gtkmm/accelmap.h>
 #include <gtkglmm.h>
+#include <getopt.h>
 
 #include <string.h>
 
@@ -121,8 +122,8 @@ connect(Stock::CONNECT), quit(Stock::QUIT), about(Stock::ABOUT)
 
 // !!!: MainWindow starts here
 
-MainWindow::MainWindow():
-log(), foamctrl(log), 
+MainWindow::MainWindow(int argc, char *argv[]):
+log(), foamctrl(log, argc, argv), 
 aboutdialog(), notebook(), conndialog(foamctrl), 
 logpage(log), controlpage(log, foamctrl), 
 menubar(*this) 
@@ -271,6 +272,7 @@ void MainWindow::on_ctrl_device_update() {
 
 // !!!: General:Miscellaneous functions
 
+
 static void signal_handler(int s) {
 	if(s == SIGALRM || s == SIGPIPE)
 		return;
@@ -306,7 +308,7 @@ int main(int argc, char *argv[]) {
 	
 	glutInit(&argc, argv);
 	
- 	MainWindow *window = new MainWindow();
+ 	MainWindow *window = new MainWindow(argc, argv);
 	Main::run(*window);
 
 	delete window;

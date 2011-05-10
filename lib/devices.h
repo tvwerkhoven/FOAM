@@ -26,7 +26,7 @@
 #include "autoconfig.h"
 #endif
 
-#include <map>
+#include <vector>
 
 #include "io.h"
 #include "protocol.h"
@@ -42,34 +42,42 @@ typedef Protocol::Server::Connection Connection;
 /*!
  @brief Device class to handle devices in a generic fashion
  
- In order to accomodate all kinds of hardware devices, this baseclass 
+ In order to accomodate all kinds of hardware devices, this base class 
  provides a template for all sorts of hardware (camera, wavefront sensor,
- deformable mirrors, etc). Because of its genericity this class does not 
+ deformable mirrors, etc). Because of its generic nature this class does not 
  implement a lot itself, but rather depends on the derived classes to do
  the work. Nonetheless, some basic functions (such as network I/O) are
- provided here. All devices are stored in a DeviceManager class.
+ provided here. All devices are stored in a DeviceManager object.
  
  One thing that is supported by the Device class is a list of commands 
  supported by this piece of hardware. Each time this class is (sub)derived,
  this should be updated. These commands are stored in cmd_list and things can
  be added with add_cmd(string).
+ 
+ @todo Add signal for measurement complete
  */
 class Device {
 protected:
 	Io &io;
 	foamctrl *const ptc;
+	
 	const string name;									//!< Device name
 	const string type;									//!< Device type
 	const string port;									//!< Port to listen on
-	list<string> cmd_list;							//!< All commands this device supports
-	void add_cmd(string cmd) { cmd_list.push_back(cmd); } //!< Add command to list
+	
+	vector<string> cmd_list;						//!< All commands this device supports
+	void add_cmd(const string cmd) { cmd_list.push_back(cmd); } //!< Add command to list
 	
 	const Path conffile;								//!< Configuration file
 	config cfg;													//!< Interpreted configuration file
 	
 	Protocol::Server netio;							//!< Network connection
-	bool online;												//!< Online or not?
-	bool is_calib;											//!< Is calibrated & ready for use
+	bool online;												//!< Online flag
+	bool is_calib;											//!< Is calibrated and ready for use
+	bool is_ok;													//!< Device status OK & operational
+	
+	void set_status(bool newstat);			//!< Set device status (is_ok interface)
+	void set_calib(bool newcalib);			//!< Set calibration status (is_calib interface)
 
 	bool init();												//!< Initialisation (common for all constructors)
 	
@@ -110,18 +118,31 @@ protected:
 	 */
 	void get_var(Connection * const conn, const string varname, const double value, const string comment="") const;
 
+	/*! @brief Get variable, helper function for on_message -- free-form version
+	 
+	 @param [in] *conn Client connection
+	 @param [in] varname Variable name
+	 @param [in] response Response for client
+	 */
+	void get_var(Connection * const conn, const string varname, const string response) const;
+	
 	/*! 
-	 @brief Called when the device receives a message
+	 @brief Callback for incoming network message
 	 
 	 This virtual function is called when the Device receives data over the 
 	 network (i.e. commands etc.). The derived class parses this message first,
 	 and if it did not understand the command it will be passed down to the base
-	 class until it is known. If the base class (this class) does still not know
-	 this command, it is treated as 'unknown'.
+	 class until it is known. If the base class (Device) does still not know
+	 this command, it is treated as 'unknown' and replies with an error.
 	 */
 	virtual void on_message(Connection * const conn, string line);
 	
-	//!< Common on_message functions go here.
+	/*! 
+	 @brief Common callback for incoming network message
+	 
+	 on_message_common() is called first when a message is received, followed by 
+	 a series of on_message() calls.
+	 */
 	void on_message_common(Connection * const conn, string line);
 	
 	/*! 
@@ -159,7 +180,6 @@ private:
 	
 	typedef map<string, Device*> device_t;
 	device_t devices;										//!< Simple list of devices, stored by name.
-	int ndev;														//!< Number of devices in the system
 	
 public:
 	class exception: public std::runtime_error {
@@ -203,7 +223,7 @@ public:
 	 */
 	string getlist(bool showtype = true, bool showonline=true);
 	
-	int getcount() { return ndev; }			//!< Return the number of devices
+	size_t getcount() { return devices.size(); }			//!< Return the number of devices
 	
 	DeviceManager(Io &io);
 	~DeviceManager();

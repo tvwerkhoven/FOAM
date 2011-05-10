@@ -193,5 +193,5 @@ void ImgCamera::do_restart() {
 }
 
 void ImgCamera::on_message(Connection *const conn, string line) {
-	//io.msg(IO_INFO, "ImgCamera::on_message()");
+	Camera::on_message(conn, line);
 }

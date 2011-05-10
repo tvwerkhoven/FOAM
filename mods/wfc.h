@@ -24,38 +24,59 @@
 #include <string>
 #include <stdint.h>
 #include <sys/types.h>
+#include <gsl/gsl_vector.h>
+
 #include "types.h"
 #include "config.h"
 
+#include "devices.h"
+
+using namespace std;
+
+const string wfc_type = "wfc";
+
 /*!
  @brief Base wavefront corrector class. This will be overloaded with the specific WFC type
- @author Tim van Werkhoven (t.i.m.vanwerkhoven@xs4all.nl)
  */
-class Wfc {
+class Wfc: public Device {
+private:
+	// Common Wfc settings
+	gsl_vector_float *wfc_amp;					//!< (Requested) actuator amplitudes, should be between -1 and 1.
+
 public:
-	typedef enum {
-		ACT_ADD=0,
-		ACT_SET
-	} wfc_actmode_t;							//!< Mode to use for actuating (set or add)
+	int nact;														//!< Numeber of actuators in this device
+	gain_t gain;												//!< Operating gain for this device
 	
-	string name;									//!< WFC name
+	// To be implemented by derived classes:
+	/*! @brief Set Wfc in specific state using custom gain
+	 
+	 @param [in] wfcamp Wfc amplitudes for each actuator [-1, 1]
+	 @param [in] g Gain for this actuation
+	 @param [in] block Block until Wfc is in requested position
+	 */
+	virtual int actuate(const gsl_vector_float *wfcamp, const gain_t g, const bool block=false) = 0;
 	
-	int nact;											//!< Number of actuators
-	int wfctype;									//!< WFC type/model
+	virtual int calibrate() = 0;						//!< Calibrate actuator
 	
-	virtual int verify(int) = 0;
-	virtual int actuate(gsl_vector_float *ctrl, int) = 0;
-	virtual int caibrate(int) = 0;
+	// From Device::
+	virtual void on_message(Connection *const conn, string line);
 	
-	static Wfc *create(config &config);	//!< Initialize new wavefront corrector
-	
-	virtual ~Wfc() {}
+	virtual ~Wfc();
+	//!< Constructor for derived WFCs (i.e. SimWfc)
+	Wfc(Io &io, foamctrl *const ptc, const string name, const string type, const string port, Path const & conffile, const bool online=true);
 };
 
 #endif // HAVE_WFC_H
 
 /*!
- \page dev_wfc Wavefront corrector devices
+ \page dev_wfc Wavefront corrector (WFC) devices
  
  The Wfc class provides control for wavefront correctors.
+ 
+ \section dev_wfc_der Derived classes
+ - \subpage dev_wfc_sim "Simulated membrane deformable mirror"
+ 
+ \section dev_wfs_more See also
+ - \ref dev_wfs "Wavefront sensor devices"
+ 
 */

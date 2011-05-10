@@ -55,6 +55,7 @@ protected:
 	Log &log;
 	
 	bool ok;														//!< Hardware status
+	bool calib;													//!< Calibration status
 	uint32_t init;											//!< Initial setup complete?
 	string errormsg;										//!< Error message from hardware
 	string lastreply;										//!< Last reply we got from FOAM
@@ -91,6 +92,7 @@ public:
 	virtual void connect();							//!< Connect to FOAM. Does not happen immediately because we wait for the GUI to be ready (see DeviceView::)
 	
 	bool is_ok() const { return ok; }		//!< Return device status
+	bool is_calib() const { return calib; } //!< Return device calibration status
 	bool is_connected() { return protocol.is_connected(); } //!< Return device connection status
 	string get_lastreply() const { return lastreply; } //!< Return last reply from device
 	string get_errormsg() const { return errormsg; } //!< Get errormessage (if !is_ok()).

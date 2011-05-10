@@ -120,7 +120,7 @@ void FOAM::show_clihelp(const bool error = false) const {
 		printf("Usage: %s [option]...\n\n", execname.c_str());
 		printf("  -c, --config=FILE    Read configuration from FILE.\n"
 					 "  -v, --verb[=LEVEL]   Increase verbosity level or set it to LEVEL.\n"
-					 "      --showthreads     Prefix logging with thread ID.\n"
+					 "      --showthreads    Prefix logging with thread ID.\n"
 					 "  -q,                  Decrease verbosity level.\n"
 					 "      --nodaemon       Do not start network daemon.\n"
 					 "  -h, --help           Display this help message.\n"
@@ -362,42 +362,42 @@ int FOAM::mode_calib() {
 	return 0;
 }
 
-void FOAM::on_connect(const Connection * const connection, const bool status) const {
+void FOAM::on_connect(const Connection * const conn, const bool status) const {
   if (status) {
-    connection->write(":client connected");
-    io.msg(IO_DEB1, "Client connected from %s.", connection->getpeername().c_str());
+    conn->write(":client connected");
+    io.msg(IO_DEB1, "Client connected from %s.", conn->getpeername().c_str());
   }
   else {
-    connection->write(":client disconnected");
-    io.msg(IO_DEB1, "Client from %s disconnected.", connection->getpeername().c_str());
+    conn->write(":client disconnected");
+    io.msg(IO_DEB1, "Client from %s disconnected.", conn->getpeername().c_str());
   }
 }
 
-void FOAM::on_message(Connection *const connection, string line) {
+void FOAM::on_message(Connection *const conn, string line) {
 	string cmd = popword(line);
-	//! @todo improve the delegation of on_message commands to derived classes. How do they know a command was or was not succesful?
 	
 	if (cmd == "help") {
-		connection->write("ok cmd help");
+		conn->write("ok cmd help");
 		string topic = popword(line);
-    if (show_nethelp(connection, topic, line))
-			netio.ok = false;
+    if (show_nethelp(conn, topic, line))
+			conn->write("error help :unknown topic");
+
   }
   else if (cmd == "exit" || cmd == "quit" || cmd == "bye") {
-		connection->write("ok cmd " + cmd);
-    connection->server->broadcast("ok client disconnected");
-    connection->close();
+		conn->write("ok cmd " + cmd);
+    conn->server->broadcast("ok client disconnected");
+    conn->close();
   }
   else if (cmd == "shutdown") {
-		connection->write("ok cmd shutdown");
+		conn->write("ok cmd shutdown");
 		ptc->mode = AO_MODE_SHUTDOWN;
 		mode_cond.signal();						// signal a change to the threads
   }
   else if (cmd == "broadcast") {
-		connection->write("ok cmd broadcast");
-		connection->server->broadcast(format("ok broadcast %s :from %s", 
+		conn->write("ok cmd broadcast");
+		conn->server->broadcast(format("ok broadcast %s :from %s", 
 																				 line.c_str(),
-																				 connection->getpeername().c_str()));
+																				 conn->getpeername().c_str()));
 	}
   else if (cmd == "verb") {
 		string var = popword(line);
@@ -405,44 +405,46 @@ void FOAM::on_message(Connection *const connection, string line) {
 		else if (var == "-") io.decVerb();
 		else io.setVerb(var);
 		
-		connection->server->broadcast(format("ok verb %d", io.getVerb()));
+		conn->server->broadcast(format("ok verb %d", io.getVerb()));
 	}
   else if (cmd == "get") {
     string var = popword(line);
-		if (var == "frames") connection->write(format("ok frames %d", ptc->frames));
-		else if (var == "mode") connection->write(format("ok mode %s", mode2str(ptc->mode).c_str()));
-		else if (var == "devices") connection->write(format("ok devices %s", devices->getlist().c_str()));
-		else netio.ok = false;
+		if (var == "frames") 
+			conn->write(format("ok frames %d", ptc->frames));
+		else if (var == "mode")
+			conn->write(format("ok mode %s", mode2str(ptc->mode).c_str()));
+		else if (var == "devices")
+			conn->write(format("ok devices %s", devices->getlist().c_str()));
+		else 
+			conn->write("error get :unknown variable");
 	}
   else if (cmd == "mode") {
     string mode = popword(line);
 		if (mode == mode2str(AO_MODE_CLOSED)) {
-			connection->write("ok cmd mode closed");
+			conn->write("ok cmd mode closed");
 			ptc->mode = AO_MODE_CLOSED;
 			mode_cond.signal();						// signal a change to the threads
 		}
 		else if (mode == mode2str(AO_MODE_OPEN)) {
-			connection->write("ok cmd mode open");
+			conn->write("ok cmd mode open");
 			ptc->mode = AO_MODE_OPEN;
 			mode_cond.signal();						// signal a change to the threads
 		}
 		else if (mode == mode2str(AO_MODE_LISTEN)) {
-			connection->write("ok cmd mode listen");
+			conn->write("ok cmd mode listen");
 			ptc->mode = AO_MODE_LISTEN;
 			mode_cond.signal();						// signal a change to the threads
 		}
-		else {
-			connection->write("err cmd mode :mode unkown");
-		}
+		else
+			conn->write("error cmd mode :mode unkown");
   }
-  else {
-		netio.ok = false;
-  }
+  else
+		conn->write("error :unknown command");
 }
 
-int FOAM::show_nethelp(const Connection *const connection, string topic, string /*rest*/) {
+int FOAM::show_nethelp(const Connection *const conn, string topic, string /*rest*/) {
 	if (topic.size() == 0) {
-		connection->write(\
+		conn->write(\
 ":==== FOAM help ==========================\n"
 ":help [command]:         Help (on a certain command, if available).\n"
 ":mode <mode>:            close or open the loop.\n"
@@ -454,7 +456,7 @@ int FOAM::show_nethelp(const Connection *const connection, string topic, string 
 ":shutdown:               shutdown FOAM.");
 	}		
 	else if (topic == "mode") {
-		connection->write(\
+		conn->write(\
 ":mode <mode>:            Close or open the AO-loop.\n"
 ":  mode=open:            opens the loop and only records what's happening with\n"
 ":                        the AO system and does not actually drive anything.\n"
@@ -463,20 +465,19 @@ int FOAM::show_nethelp(const Connection *const connection, string topic, string 
 ":  mode=listen:          stops looping and waits for input from the users.");
 	}
 	else if (topic == "broadcast") {
-		connection->write(\
+		conn->write(\
 ":broadcast <msg>:        broadcast a message to all clients.");
 	}
 	else if (topic == "get") {
-		connection->write(\
+		conn->write(\
 											":get <var>:              read a system variable.\n"
 											":  mode:                 current mode of operation.\n"
 											":  devices:              list of devices.\n"
 											":  frames:               number of frames processed.");
 	}
-	else {
-		// Unknown topic
+	else // Unknown topic
 		return -1;
-	}
+
 	return 0;
 }
 

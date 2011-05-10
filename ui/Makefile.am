@@ -6,6 +6,7 @@ include $(top_srcdir)/common.mk
 LDADD = $(LIBSIU_DIR)/libsocket.a \
 		$(LIBSIU_DIR)/libprotocol.a \
 		$(LIBSIU_DIR)/libglviewer.a \
+		$(LIBSIU_DIR)/libconfig.a \
 		-lgthread-2.0
 
 ### FOAM GUI ###

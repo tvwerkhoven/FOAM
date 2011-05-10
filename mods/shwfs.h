@@ -22,6 +22,8 @@
 #define HAVE_SHWFS_H
 
 #include <vector>
+#include <gsl/gsl_matrix.h>
+#include <gsl/gsl_vector.h>
 #include "types.h"
 
 #include "camera.h"
@@ -62,6 +64,10 @@ const string shwfs_type = "shwfs";
  \section shwfs_cfg Configuration parameters
  
 
+ \section shwfs_todo 
+
+ - @todo make shift_vec ringbuffer
+ 
  */
 class Shwfs: public Wfs {
 	friend class SimulCam;
@@ -82,6 +88,20 @@ public:
 private:
 	Shift shifts;												//!< Shift computation class. Does the heavy lifting.
 	gsl_vector_float *shift_vec;				//!< SHWFS shift vector. Shift for subimage N are elements N*2+0 and N*2+1. Same order as mlacfg @todo Make this a ring buffer
+	gsl_vector_float *ref_vec;					//!< SHWFS reference shift vector. Use this as 'zero' value
+	gsl_matrix_float *infmat;						//!< Influence matrix, represents the influence of a Wfs on this Wfs
+
+	typedef std::map<float, gsl_vector_float *> act_map_t;
+	typedef std::map<int, act_map_t > inf_data_t; //!< Raw influence data, for each actuator (int actid), store a series of positions (float p) and measurements (gsl_vector_float *meas)
+	inf_data_t inf_data;
+
+	struct actmat {
+		gsl_matrix_float *mat;						//!< Actuation matrix = V . Sigma^-1 . U^T
+		gsl_matrix *U;										//!< SVD matrix U of infmat
+		gsl_vector *s;										//!< SVD vector s of infmat
+		gsl_matrix *Sigma;								//!< SVD matrix Sigma of infmat
+		gsl_matrix *V;										//!< SVD matrix V of infmat
+	};																	//!< Actuation matrix & related entitites
 	
 	Shift::method_t method;							//!< Data processing method (Center of Gravity, Correlation, etc)
 	
@@ -131,7 +151,7 @@ private:
 	
 public:
 	Shwfs(Io &io, foamctrl *const ptc, const string name, const string port, Path const &conffile, Camera &wfscam, const bool online=true);
-	~Shwfs();	
+	~Shwfs();
 	
 	/*! @brief Generate subaperture/subimage (sa/si) positions for a given configuration.
 
@@ -166,11 +186,63 @@ public:
 	int mla_update_si(const int nx0, const int ny0, const int nx1, const int ny1, const int idx=-1);
 	int mla_del_si(const int idx);
 
-	//!< Convert shifts to basis functions
+	/*! @brief Convert shifts to basis functions
+	 
+	 Based on 'invec', which is a vector of image shifts, calculated 'outvec', a
+	 vector of measurements in a specific basis. Basis can be things like 
+	 Zernike, Karhunen-Loéve, or simply 'sensor' modes.
+	 
+	 @param [in] *invec Inputvector of shift measurements
+	 @param [in] basis Basis to convert *invec to
+	 @param [out] *outvec Vector of measurements in specific basis
+	 */
 	int shift_to_basis(const gsl_vector_float *const invec, const wfbasis basis, gsl_vector_float *outvec);
+
+	/*! @brief Compute control vector 
+	 
+	 Calculate control vector for wavefront corrector based on previously 
+	 determined influence function.
+	 
+	 @param [in] *wf Wavefront information
+	 @return Computed control vector
+	 */
+	gsl_vector_float *comp_ctrlcmd(wf_info_t *wf);
+	
+	/*! @brief Build influece matrix
+	 
+	 Given a specific wfc actuation (wfcact), and the data that produces 
+	 (frame), compute part of the influence matrix.
+	 
+	 The influence matrix is a matrix that represents the influence of a Wfc
+	 on the measurements of a Wfs, i.e. given an arbitrary Wfc actuation vector,
+	 this matrix calculates the data vector that will be measured. The inverse
+	 is used to drive a Wfc given Wfs measurements and is called the actuation
+	 matrix.
+
+	 @param [in] *frame Captured camera frame
+	 @param [in] *wfcact WFC actuation resulting in *frame
+	 */
+	int build_infmat(Camera::frame_t *frame, int actid, float actpos);
+	
+	/*! @brief After getting enough data with build_infmat, construct the influence matrix
+	 */
+	int calc_infmat();
+	
+	/*! @brief Calculate actuation matrix to drive Wfc, using SVD
+	 
+	 @param [in] singval How much singular value to include (0 to 1)
+	 @param [in] basis Basis for which singval counts
+	 */	 
+	int calc_actmat(double singval, enum wfbasis basis = SENSOR);
+	
+	/*! @brief Set this measurement as reference or 'flat' wavefront
+	 
+	 @param [in] *frame Captured camera frame
+	 */
+	void set_reference(Camera::frame_t *frame);
 	
 	// From Wfs::
-	virtual int measure();
+	wf_info_t* measure(Camera::frame_t *frame=NULL);
 	virtual int calibrate();
 	
 	// From Devices::

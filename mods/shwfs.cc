@@ -205,7 +205,7 @@ void Shwfs::on_message(Connection *const conn, string line) {
 		calibrate();
 		conn->write("ok calibrate");
 	} else if (command == "measure") {
-		if (measure())
+		if (!measure(NULL))
 			conn->write("error measure :error in measure()");
 		else 
 			conn->write("ok measure");
@@ -218,37 +218,45 @@ void Shwfs::on_message(Connection *const conn, string line) {
 		Wfs::on_message(conn, orig);
 }
 
-int Shwfs::measure() {
-	if (!is_calib)
-		return io.msg(IO_ERR, "Shwfs::measure() calibrate sensor first!");
+Wfs::wf_info_t* Shwfs::measure(Camera::frame_t *frame) {
+	if (!is_calib) {
+		io.msg(IO_ERR, "Shwfs::measure() calibrate sensor first!");
+		return NULL;
+	}
 	
-	Camera::frame_t *tmp = cam.get_last_frame();
-
-	if (!tmp)
-		return io.msg(IO_ERR, "Shwfs::measure() couldn't get frame, is camera running?");
+	if (!frame) {
+		io.msg(IO_WARN, "Shwfs::measure() *frame not available? Auto-acquiring...");
+		frame = cam.get_last_frame();
+	}
 	
 	// Calculate shifts
-	
 	if (cam.get_depth() == 16) {
 		io.msg(IO_DEB2, "Shwfs::measure() got UINT16");
-		//shifts.calc_shifts((uint16_t *) tmp->image, cam.get_res(), (Shift::crop_t *) mlacfg.ml, mlacfg.size(), shift_vec, method);
+		//shifts.calc_shifts((uint16_t *) frame->image, cam.get_res(), (Shift::crop_t *) mlacfg.ml, mlacfg.size(), shift_vec, method);
 	}
 	else if (cam.get_depth() == 8) {
 		io.msg(IO_DEB2, "Shwfs::measure() got UINT8");
-		shifts.calc_shifts((uint8_t *) tmp->image, cam.get_res(), mlacfg, shift_vec, method);
+		shifts.calc_shifts((uint8_t *) frame->image, cam.get_res(), mlacfg, shift_vec, method);
 	}
-	else
-		return io.msg(IO_ERR, "Shwfs::measure() unknown camera datatype");
+	else {
+		io.msg(IO_ERR, "Shwfs::measure() unknown camera datatype");
+		return NULL;
+	}
 	
 	// Convert shifts to basisfunction
-	shift_to_basis(shift_vec, wf.basis, wf.wfamp);
+	//shift_to_basis(shift_vec, wf.basis, wf.wfamp);
 	
-	return 0;
+	// Copy to output
+	//! @todo where is this deleted?
+	gsl_vector_float_memcpy(wf.wfamp, shift_vec);
+	
+	return &wf;
 }
 
 int Shwfs::shift_to_basis(const gsl_vector_float *const invec, const wfbasis basis, gsl_vector_float *outvec) {
 	switch (basis) {
 		case SENSOR:
+			//! @todo where is this deleted?
 			gsl_vector_float_memcpy(outvec, invec);
 			break;
 		case ZERNIKE:
@@ -256,14 +264,69 @@ int Shwfs::shift_to_basis(const gsl_vector_float *const invec, const wfbasis bas
 		case MIRROR:
 		case UNDEFINED:
 		default:
+			//! @todo implement shift_to_basis for KL etc.
 			break;
 	}
 	
 	return 0;
-	
 }
+
+int Shwfs::build_infmat(Camera::frame_t *frame, int actid, float actpos) {
+	// Measure shifts
+	wf_info_t *m = measure(frame);
+	
+	
+	// Copy shifts for ourselves
+	gsl_vector_float *actinfl = gsl_vector_float_alloc(m->wfamp->size);
+	gsl_vector_float_memcpy(actinfl, m->wfamp);
+	
+	// For this actuator (actid) at this position (actpos), store the 
+	// measurements (actinfl), but only if actpos was not already measured.
+	if (inf_data[actid].find(actpos) == inf_data[actid].end())
+		inf_data[actid][actpos] = actinfl;
+	else
+		gsl_vector_float_free(actinfl);
+
+	return 0;
+}
+
+int Shwfs::calc_infmat() {
+	for (inf_data_t::iterator actit=inf_data.begin(); actit != inf_data.end(); actit++) {
+		// Analyzing actuator actit->first (== actid) with measurements actit->second
+		
+		std::map<float, gsl_vector_float *> actmap = actit->second;
+		for (act_map_t::iterator posit=actmap.begin(); posit != actmap.end(); posit++) {
+			// posit->first = actpos (float)
+			// posit->second = actinfl (gsl_vector_float *)
+			//! @todo implement
+		}
+		
+	}
+}
+
+int Shwfs::calc_actmat(double singval, enum wfbasis basis) {
+	//! @todo implement
+	
+	return 0;
+}
+
+gsl_vector_float *Shwfs::comp_ctrlcmd(wf_info_t *wf) {
+	//! @todo implement
+	
+	return NULL;
+}
+
+void Shwfs::set_reference(Camera::frame_t *frame) {
+	// Measure shifts
+	wf_info_t *m = measure(frame);
+
+	// Store these as reference positions
+	gsl_vector_float_memcpy(ref_vec, m->wfamp);
+}
+
 int Shwfs::calibrate() {
 	shift_vec = gsl_vector_float_calloc(mlacfg.size() * 2);
+	ref_vec = gsl_vector_float_calloc(mlacfg.size() * 2);
 	
 	switch (wf.basis) {
 		case SENSOR:
@@ -273,12 +336,12 @@ int Shwfs::calibrate() {
 			break;
 		case ZERNIKE:
 			//! @todo how many modes do we want if we're using Zernike? Is the same as the number of coordinates ok or not?
-			wf.nmodes = mlacfg.size() * 2;
-			wf.wfamp = gsl_vector_float_calloc(wf.nmodes);
-			zerninfl = gsl_matrix_float_calloc(mlacfg.size() * 2, wf.nmodes);
+//			wf.nmodes = mlacfg.size() * 2;
+//			wf.wfamp = gsl_vector_float_calloc(wf.nmodes);
+//			zerninfl = gsl_matrix_float_calloc(mlacfg.size() * 2, wf.nmodes);
 		case KL:
 		case MIRROR:
-			//! @todo Implement KL & mirror modes
+			//! @todo Implement Zernike, KL & mirror modes
 		case UNDEFINED:
 		default:
 			io.msg(IO_WARN, "Shwfs::calibrate(): This basis is not implemented yet");

@@ -23,6 +23,7 @@
 #endif
 
 #include "io.h"
+#include "config.h"
 #include "devices.h"
 #include "foamctrl.h"
 
@@ -31,7 +32,7 @@ using namespace std;
 // Device class
 
 Device::Device(Io &io, foamctrl *const ptc, const string n, const string t, const string p, const Path conf, const bool online): 
-io(io), ptc(ptc), name(n), type("dev." + t), port(p), conffile(conf), netio(p, n), online(online), is_calib(false)
+io(io), ptc(ptc), name(n), type("dev." + t), port(p), conffile(conf), netio(p, n), online(online), is_calib(false), is_ok(false)
 { 
 	init();
 }
@@ -63,6 +64,9 @@ bool Device::init() {
 
 Device::~Device() {
 	io.msg(IO_DEB2, "Device::~Device()");
+	
+	// Update master configuration with our (potentially changed) settings
+	ptc->cfg->update(&cfg);
 }
 
 void Device::on_message_common(Connection * const conn, string line) {
@@ -75,19 +79,15 @@ void Device::on_message(Connection * const conn, string line) {
 	string orig = line;
 	
 	string command = popword(line);
-	if (command == "get") {
+	if (command == "get") {							// get ...
 		string what = popword(line);
-		if (what == "commands") {
+		if (what == "commands") {					// get commands
 			string devlist = "";
 			
-			list<string>::iterator it;
-			int ndev=0;
-			for (it=cmd_list.begin(); it!=cmd_list.end(); ++it) {
-				devlist += *it + ";";
-				ndev++;
-			}
+			for (size_t i=0; i < cmd_list.size(); i++)
+				devlist += cmd_list[i] + ";";
 			
-			conn->write(format("ok commands %d %s", ndev, devlist.c_str()));
+			conn->write(format("ok commands %d %s", (int) cmd_list.size(), devlist.c_str()));
 			return;
 		}
 	}
@@ -96,26 +96,40 @@ void Device::on_message(Connection * const conn, string line) {
 	conn->write("error :Unknown command: " + orig);
 }
 
-void Device::get_var(Connection * const conn, const string varname, const double value, const string comment) const {
+void Device::get_var(Connection * const conn, const string varname, const string response) const {
 	if (!conn)
 		return;
 	
 	conn->addtag(varname);
-	if (comment == "")
-		conn->write(format("ok %s %lf :%s", varname.c_str(), (double) value, comment.c_str()));
-	else 
-		conn->write(format("ok %s %lf", varname.c_str(), (double) value));
+	conn->write(response);
 }
 
+void Device::get_var(Connection * const conn, const string varname, const double value, const string comment) const {
+	if (comment == "")
+		get_var(conn, varname, format("ok %s %lf :%s", varname.c_str(), (double) value, comment.c_str()));
+	else 
+		get_var(conn, varname, format("ok %s %lf", varname.c_str(), (double) value));
+}
+
+void Device::set_calib(bool newcalib) {
+	is_calib = newcalib;
+	netio.broadcast(format("ok calib %d", is_calib));
+}
+
+void Device::set_status(bool newstat) {
+	is_ok = newstat;
+	netio.broadcast(format("ok status %d", newstat));
+}
 
 // DeviceManager class
 
-DeviceManager::DeviceManager(Io &io): io(io), ndev(0) {
+DeviceManager::DeviceManager(Io &io): io(io) {
 	io.msg(IO_DEB2, "DeviceManager::DeviceManager()");
 }
 
 DeviceManager::~DeviceManager() {
 	io.msg(IO_DEB2, "DeviceManager::~DeviceManager()");
+
 	device_t::iterator it;
 	for (it=devices.begin() ; it != devices.end(); it++)
 		delete (*it).second;
@@ -129,7 +143,6 @@ int DeviceManager::add(Device *dev) {
 		return -1;
 	}
 	devices[id] = dev;
-	ndev++;
 	return 0;
 }
 
@@ -148,15 +161,13 @@ int DeviceManager::del(string id) {
 		return -1;
 	}
 	devices.erase(devices.find(id));
-	ndev--;
 	return 0;
 }
 
 string DeviceManager::getlist(bool showtype, bool showonline) {
-	device_t::iterator it;
-	int num=0;
 	string devlist = "";
-	for (it=devices.begin() ; it != devices.end(); it++) {
+	int num=0;
+	for (device_t::iterator it=devices.begin(); it != devices.end(); it++) {
 		// Skip devices that are not online if requested
 		if (!it->second->isonline() && showonline)
 			continue;

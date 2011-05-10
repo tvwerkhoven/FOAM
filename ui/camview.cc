@@ -48,7 +48,7 @@ ctrlframe("Camera controls"),
 dispframe("Display settings"),
 camframe("Camera " + devname),
 histoframe("Histogram"),
-capture("Capture"), display("Display"), store("Store"), e_exposure("Exp."), e_offset("Offset"), e_interval("Intv."), e_gain("Gain"), e_res("Res."), e_mode("Mode"), e_stat("Status"),
+capture("Capture"), display("Display"), store("Store"), e_exposure("Exp."), e_offset("Offset"), e_interval("Intv."), e_gain("Gain"), e_res("Res."), e_mode("Mode"),
 flipv("Flip V"), fliph("Flip H"), crosshair("X-hair"), grid("Grid"), histo("Histogram"), zoomin(Stock::ZOOM_IN), zoomout(Stock::ZOOM_OUT), zoom100(Stock::ZOOM_100), zoomfit(Stock::ZOOM_FIT), 
 histoalign(0.5, 0.5, 0, 0), minval("Display min"), maxval("Display max"), e_avg("Avg."), e_rms("RMS"), e_datamin("Min"), e_datamax("Max")
 {
@@ -75,14 +75,12 @@ histoalign(0.5, 0.5, 0, 0), minval("Display min"), maxval("Display max"), e_avg(
 	e_res.set_editable(false);
 	e_mode.set_width_chars(8);
 	e_mode.set_editable(false);
-	e_stat.set_width_chars(16);
-	e_stat.set_editable(false);
 	
 	fliph.set_active(false);
 	flipv.set_active(false);
 	crosshair.set_active(false);
 	grid.set_active(false);
-	histo.set_active(true);
+	histo.set_active(false);
 	
 	store_n.set_width_chars(4);
 	
@@ -112,7 +110,7 @@ histoalign(0.5, 0.5, 0, 0), minval("Display min"), maxval("Display max"), e_avg(
 	glarea.set_size_request(256, 256);	
 	
 	// signals
-	Glib::signal_timeout().connect(sigc::mem_fun(*this, &CamView::on_timeout), 1000.0/30.0);
+	Glib::signal_timeout().connect(sigc::mem_fun(*this, &CamView::on_timeout), 1000.0/10.0);
 	capture.signal_clicked().connect(sigc::mem_fun(*this, &CamView::on_capture_clicked));
 	display.signal_clicked().connect(sigc::mem_fun(*this, &CamView::on_display_clicked));
 	store.signal_clicked().connect(sigc::mem_fun(*this, &CamView::on_store_clicked));
@@ -151,7 +149,6 @@ histoalign(0.5, 0.5, 0, 0), minval("Display min"), maxval("Display max"), e_avg(
 	ctrlhbox.pack_start(e_gain, PACK_SHRINK);
 	ctrlhbox.pack_start(e_res, PACK_SHRINK);
 	ctrlhbox.pack_start(e_mode, PACK_SHRINK);
-	ctrlhbox.pack_start(e_stat, PACK_SHRINK);
 	ctrlframe.add(ctrlhbox);
 	
 	disphbox.set_spacing(4);
@@ -205,7 +202,7 @@ histoalign(0.5, 0.5, 0, 0), minval("Display min"), maxval("Display max"), e_avg(
 	// Finalize
 	show_all_children();
 		
-	on_histo_toggled();
+	histoframe.hide();
 			
 	camctrl->signal_monitor.connect(sigc::mem_fun(*this, &CamView::on_monitor_update));
 }
@@ -267,8 +264,7 @@ void CamView::clear_gui() {
 	e_gain.set_text("N/A");
 	e_res.set_text("N/A");
 	e_mode.set_text("N/A");
-	e_stat.set_text("N/A");
-
+	
 	capture.set_state(SwitchButton::CLEAR);
 	display.set_state(SwitchButton::CLEAR);
 	store.set_state(SwitchButton::CLEAR);
@@ -301,12 +297,15 @@ void CamView::do_update() {
 
 void CamView::on_histo_toggled() {
 	int w, h, fh;
-	//! @todo implement resize on histogram toggle
-	if(histo.get_active()) {
+	extra_win.get_size(w, h);
+	
+	if (histo.get_active()) {
 		histoframe.show();
 		fh = histoframe.get_height();
+		extra_win.resize(w, h + fh);
 	} else {
 		fh = histoframe.get_height();
+		extra_win.resize(w, h - fh);
 		histoframe.hide();
 	}
 }
@@ -486,15 +485,6 @@ void CamView::on_message_update() {
 		capture.set_state(SwitchButton::OK);
 	else
 		capture.set_state(SwitchButton::ERROR);
-	
-	if (camctrl->is_ok()) {
-		e_stat.entry.modify_base(STATE_NORMAL, Gdk::Color("lightgreen"));
-		e_stat.set_text("Ok");
-	}
-	else {
-		e_stat.entry.modify_base(STATE_NORMAL, Gdk::Color("red"));
-		e_stat.set_text("Err: " + camctrl->get_errormsg());
-	}	
 	
 	store_n.set_text(format("%d", camctrl->get_nstore()));
 	if (camctrl->get_nstore() == 0)

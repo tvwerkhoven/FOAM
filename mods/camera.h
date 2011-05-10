@@ -109,6 +109,18 @@ const string cam_type = "cam";
  - height (512): pixel height of CCD
  - depth (8): bitdepth of CCD
  
+ \section cam_calib Calibration
+ 
+ A camera is calibrated when dark & flat frames are available with the current
+ exposure settings (exposure, gain, offset).
+ 
+ \section cam_todo Todo
+ 
+ - Add 'camera calibrated' check. Need flat & dark, cannot store in one bool. -> is_calibrated() ?
+ - Store dark/flat bursts (as FITS)
+ - Save dark/flat filenames in configuration
+ - Re-load dark/flat bursts at start
+ - Implement guard-pixel watchers (for fast processing, i.e. SHWFS)
  
  */ 
 class Camera: public Device {
@@ -208,11 +220,10 @@ protected:
 	
 	Path makename(const string &base) const;					//!< Make filename from outputdir and filenamebase
 	Path makename() const { return makename(filenamebase); }
-	bool store_frame(const frame_t *const frame) const;			///!< Store frame to disk
+	bool store_frame(const frame_t *const frame) const;	//!< Store frame to disk
 	
 	uint8_t *get_thumbnail(Connection *conn);					//!< Get 32x32x8 thumnail
 	void grab(Connection *conn, int x1, int y1, int x2, int y2, int scale, bool do_df, bool do_histo);
-	void accumfix();
 
 	uint8_t df_correct(const uint8_t *in, size_t offset);
 	uint16_t df_correct(const uint16_t *in, size_t offset);
@@ -270,8 +281,9 @@ public:
 	int get_depth() const { return depth; }
 	size_t get_maxval() const { return (1 << depth); }
 	
-	frame_t *get_frame(const size_t id, const bool wait = true);
 	frame_t *get_last_frame() const;
+	frame_t *get_next_frame(const bool wait=true);
+	frame_t *get_frame(const size_t id, const bool wait=true);
 	size_t get_count() const { return count; }
 	size_t get_bufsize() const { return nframes; }
 	
