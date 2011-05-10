@@ -61,7 +61,8 @@ public:
 	~SimulWfc();
 	
 	// From Wfc::
-	int actuate(const gsl_vector_float *wfcamp, const gain_t gain, const bool block);
+	virtual int actuate(const gsl_vector_float *wfcamp, const gain_t gain, const bool block=false);
+	int actuate(const gsl_vector_float *wfcamp, const bool block=false) { return actuate(wfcamp, gain, block); }
 	int calibrate();
 	
 	// From Devices::
