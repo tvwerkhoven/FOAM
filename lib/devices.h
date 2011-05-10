@@ -75,6 +75,9 @@ protected:
 	bool online;												//!< Online flag
 	bool is_calib;											//!< Is calibrated and ready for use
 	bool is_ok;													//!< Device status OK & operational
+	
+	void set_status(bool newstat);			//!< Set device status (is_ok interface)
+	void set_calib(bool newcalib);			//!< Set calibration status (is_calib interface)
 
 	bool init();												//!< Initialisation (common for all constructors)
 	

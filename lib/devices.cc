@@ -23,6 +23,7 @@
 #endif
 
 #include "io.h"
+#include "config.h"
 #include "devices.h"
 #include "foamctrl.h"
 
@@ -65,7 +66,7 @@ Device::~Device() {
 	io.msg(IO_DEB2, "Device::~Device()");
 	
 	// Update master configuration with our (potentially changed) settings
-	ptc->cfg->update(cfg);
+	ptc->cfg->update(&cfg);
 }
 
 void Device::on_message_common(Connection * const conn, string line) {
@@ -110,6 +111,15 @@ void Device::get_var(Connection * const conn, const string varname, const double
 		get_var(conn, varname, format("ok %s %lf", varname.c_str(), (double) value));
 }
 
+void Device::set_calib(bool newcalib) {
+	is_calib = newcalib;
+	netio.broadcast(format("ok calib %d", is_calib));
+}
+
+void Device::set_status(bool newstat) {
+	is_ok = newstat;
+	netio.broadcast(format("ok status %d", newstat));
+}
 
 // DeviceManager class
 
