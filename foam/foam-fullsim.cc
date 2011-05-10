@@ -24,8 +24,13 @@
 #include "foam.h"
 #include "types.h"
 #include "io.h"
+
+#include "camera.h"
 #include "simulcam.h"
+#include "wfs.h"
 #include "shwfs.h"
+#include "wfc.h"
+#include "simulwfc.h"
 
 #include "foam-fullsim.h"
 
@@ -41,18 +46,17 @@ int FOAM_FullSim::load_modules() {
 	io.msg(IO_INFO, "This is the full simulation mode, enjoy.");
 	
 	// Init Seeing simultion (atmosphere)
+	//! @todo
 	
 	// Init WFC simulation
+	simwfc = new SimulWfc(io, ptc, "simwfc", ptc->listenport, ptc->conffile);
+	devices->add((Device *) simwfc);
 	
 	// Init camera simulation (using seeing and wfc)
-	
-	// Init WFS simulation (using camera)
-	
-	// Add Simulcam device
 	simcam = new SimulCam(io, ptc, "simcam", ptc->listenport, ptc->conffile);
 	devices->add((Device *) simcam);
-
-	// Add new Shwfs based on simulcam
+	
+	// Init WFS simulation (using camera)
 	simwfs = new Shwfs(io, ptc, "simshwfs", ptc->listenport, ptc->conffile, *simcam);
 	devices->add((Device *) simwfs);
 
@@ -75,8 +79,8 @@ int FOAM_FullSim::open_loop() {
 	
 	Camera::frame_t *frame = simcam->get_next_frame(true);
 	
-	gsl_vector_float *meas = simwfs->measure(frame);
-	gsl_vector_float *ctrlcmd = simwfs->comp_ctrlcmd(meas);
+	Shwfs::wf_info_t *wf_meas = simwfs->measure(frame);
+	gsl_vector_float *ctrlcmd = simwfs->comp_ctrlcmd(wf_meas);
 
 	usleep(0.1 * 1000000);
 	return 0;
@@ -106,10 +110,10 @@ int FOAM_FullSim::closed_loop() {
 
 	Camera::frame_t *frame = simcam->get_next_frame(true);
 	
-	gsl_vector_float *meas = simwfs->measure(frame);
-	gsl_vector_float *ctrlcmd = simwfs->comp_ctrlcmd(meas);
+	Shwfs::wf_info_t *wf_meas = simwfs->measure(frame);
+	gsl_vector_float *ctrlcmd = simwfs->comp_ctrlcmd(wf_meas);
 	
-	simwfc->actuate(ctrlcmd);
+	simwfc->actuate(ctrlcmd, gain_t(1,0,0), true);
 
 	usleep(0.1 * 1000000);
 	return 0;
@@ -141,15 +145,16 @@ int FOAM_FullSim::calib() {
 				gsl_vector_float_set(tmpact, i, p);
 				simwfc->actuate(tmpact, gain_t(1.0, 0.0, 0.0), true);
 				Camera::frame_t *frame = simcam->get_next_frame(true);
-				simwfs->build_influence(frame, tmpact);
+				simwfs->build_infmat(frame, i, p);
 			}
 			
 			// Set actuator back to 0
 			gsl_vector_float_set(tmpact, i, 0.0);
 		}
 		
-		// Calculate the final influence function 
-		simwfs->calc_influence();
+		// Calculate the final influence function
+		simwfs->calc_infmat();
+		simwfs->calc_infmat();
 	} 
 	else if (ptc->calib == "zero") {	// Calibrate reference/'flat' wavefront
 		// Start camera, set wavefront corrector to flat position
@@ -160,7 +165,7 @@ int FOAM_FullSim::calib() {
 		Camera::frame_t *frame = simcam->get_next_frame(true);
 		
 		// Set this frame as reference
-		simwfs->set_reference(frame, tmpact);
+		simwfs->set_reference(frame);
 	} 
 	else {
 		io.msg(IO_WARN, "FOAM_FullSim::calib unknown!");
