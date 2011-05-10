@@ -58,7 +58,7 @@ foamctrl::~foamctrl(void) {
 	if (use_syslog) 
 		closelog();
 	
-	// Store updated configuration
+	// Store updated configuration (in a different file)
 	if (cfg) {
 		cfg->write(conffile + ".autosave");
 		delete cfg;
