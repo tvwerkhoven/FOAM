@@ -57,6 +57,15 @@ const string simulcam_type = "simulcam";
  - windspeed.x,y: windspeed by which the wavefront moves
  - windtype: 'random' or 'linear', method of scanning over the wavefront
  - cropsize.x,y: size to crop wavefront field to (should be same as simulated camera)
+ 
+ Network commands:
+ - get/set noise: see above
+ - get/set noiseamp: see above
+ - get/set seeingfac: see above
+ - get/set windspeed: see above
+ - get/set telapt_fill: subaperture should have at least this fraction of light
+ - set simwf/simtel/simmla: enable (1) or disable (0) the simulation of the 
+   wavefront, telescope or microlens array respectively.
 */
 class SimulCam: public Camera {
 private:
