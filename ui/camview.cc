@@ -456,6 +456,7 @@ void CamView::do_full_update() {
 }
 
 void CamView::on_message_update() {
+	//! @bug LOCALE not set properly? problem with , and . in sending values
 	DevicePage::on_message_update();
 
 	// Set values in text entries
