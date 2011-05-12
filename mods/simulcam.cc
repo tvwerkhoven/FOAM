@@ -204,7 +204,6 @@ void SimulCam::simul_telescope(gsl_matrix *im_in) const {
 }
 
 void SimulCam::simul_wfs(gsl_matrix *wave_in) const {
-	//! @bug simulated wavefront speckles only appear in the upper half of the subimage?
 	if (!simmla)
 		return;
 	
@@ -266,7 +265,6 @@ void SimulCam::simul_wfs(gsl_matrix *wave_in) const {
 			for (size_t j=0; j<telapt_cropm->size2; j++)
 				tmp_sum += gsl_matrix_get (telapt_cropm, i, j);
 
-		//! @bug this goes to zero
 		if (tmp_sum < telapt_fill * sasize.y * sasize.x) {
 			for (size_t i=0; i<subapm->size1; i++)
 				for (size_t j=0; j<subapm->size2; j++)
@@ -294,52 +292,44 @@ void SimulCam::simul_wfs(gsl_matrix *wave_in) const {
 		for (int i=0; i< sasize.y*2 * sasize.x*2; i++)
 			shdata[i][0] = shdata[i][1] = 0.0;
 
-		// Copy data to linear array for FFT, with padding
+		// Copy input wavefront data (subapm) to linear array (shdata) for FFT, 
+		// with zero padding around the image.
 		for (int i=0; i<sasize.y; i++)
 			for (int j=0; j<sasize.x; j++) {
 				// Convert real wavefront to complex EM wave E \propto exp(-i phi) = cos(phi) + i sin(phi)
 				tmp = gsl_matrix_get(subapm, i, j);
-				shdata[(i+sasize.y/2)*2*sasize.x + (j+sasize.x)][0] = cos(tmp);
-				shdata[(i+sasize.y/2)*2*sasize.x + (j+sasize.x)][1] = sin(tmp);
+				shdata[(i+sasize.y/2)*sasize.x*2 + (j+sasize.x/2)][0] = cos(tmp);
+				shdata[(i+sasize.y/2)*sasize.x*2 + (j+sasize.x/2)][1] = sin(tmp);
 				//fprintf(stderr, "%g, cos: %g, \n", tmp, cos(tmp));
 			}
 		
 		// Execute this FFT
 		fftw_execute(shplan);
 		
-		// now calculate the absolute squared value of that, store it in the subapt thing
-		// also find min and maximum here
-		for (int i=0; i<sasize.y/2; i++) {
-			for (int j=0; j<sasize.x/2; j++) {
+		// now calculate the absolute squared value of the FFT output (i.e. the 
+		// power), store it in the subapm matrix. This is the image we see on the 
+		// screen (after adding noise etc.)
+		for (int i=sasize.y*1.5; i<sasize.y*2.5; i++) {
+			for (int j=sasize.x*1.5; j<sasize.x*2.5; j++) {
 				// Calculate abs(E^2), store in original memory (per quadrant).
 				// We need to move the data because we want the origin of the FFT to 
 				// be in the center of the matrix.
-				tmp = fabs(pow(shdata[i*sasize.x*2 + j][0], 2) + 
-									 pow(shdata[i*sasize.x*2 + j][1], 2));
-				gsl_matrix_set(subapm, sasize.y/2+i, sasize.x/2+j, tmp);
 				
-				tmp = fabs(pow(shdata[i*sasize.x*2 + j + sasize.x*2*3/4][0], 2) + 
-									 pow(shdata[i*sasize.x*2 + j + sasize.x*2*3/4][1], 2));
-				gsl_matrix_set(subapm, sasize.y/2+i, j, tmp);
-
-				tmp = fabs(pow(shdata[(i+sasize.y*3/4)*sasize.x*2 + j][0], 2) + 
-									 pow(shdata[(i+sasize.y*3/4)*sasize.x*2 + j][1], 2));
-				gsl_matrix_set(subapm, i, sasize.x/2+j, tmp);
-
-				tmp = fabs(pow(shdata[(i+sasize.y*3/4)*sasize.x*2 + j + sasize.x*2*3/4][0], 2) + 
-									 pow(shdata[(i+sasize.y*3/4)*sasize.x*2 + j + sasize.x*2*3/4][1], 2));
-				gsl_matrix_set(subapm, i, j, tmp);
+				// Bottom-left FFT quadrant goes to top-right IMG quadrant
+				tmp = fabs(pow(shdata[(i % (sasize.y*2))*sasize.x*2 + (j % (sasize.x*2))][0], 2) + 
+									 pow(shdata[(i % (sasize.y*2))*sasize.x*2 + (j % (sasize.x*2))][1], 2));
+				gsl_matrix_set(subapm, ((i - sasize.y/2) % sasize.y), ((j - sasize.x/2) % sasize.x), tmp);
 				//fprintf(stderr, "out: abs(%g^2+%g^2) = %g\n", shdata[i*sasize.y*2 + j][0], shdata[i*sasize.y*2 + j][1], tmp);
 			}
 		}
-		//! @bug The original wave_in is never set to zero everywhere, it is only overwritten with FFT'ed data in the subapertures, not in between the subapertures.
+		//! @bug The original input wavefront (wave_in) is never set to zero everywhere, it is only overwritten with FFT'ed data in the subapertures, not in between the subapertures.
 	}
 }
 
 
 uint8_t *SimulCam::simul_capture(gsl_matrix *frame_in) {
 	// Convert frame to uint8_t, scale properly
-	double min=0, max=0, fac, noisei;
+	double min=0, max=0, noisei=0, fac;
 	gsl_matrix_minmax(frame_in, &min, &max);
 	fac = 255.0/(max-min);
 	
