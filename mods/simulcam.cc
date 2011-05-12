@@ -204,6 +204,7 @@ void SimulCam::simul_telescope(gsl_matrix *im_in) const {
 }
 
 void SimulCam::simul_wfs(gsl_matrix *wave_in) const {
+	//! @bug simulated wavefront speckles only appear in the upper half of the subimage?
 	if (!simmla)
 		return;
 	
@@ -338,7 +339,7 @@ void SimulCam::simul_wfs(gsl_matrix *wave_in) const {
 
 uint8_t *SimulCam::simul_capture(gsl_matrix *frame_in) {
 	// Convert frame to uint8_t, scale properly
-	double min=0, max=0, fac;
+	double min=0, max=0, fac, noisei;
 	gsl_matrix_minmax(frame_in, &min, &max);
 	fac = 255.0/(max-min);
 	
@@ -357,8 +358,8 @@ uint8_t *SimulCam::simul_capture(gsl_matrix *frame_in) {
 			noise=0.0;
 			// Add noise only in 'noise' fraction of the pixels, with 'noiseamp' amplitude. Noise is independent of exposure here
 			if (drand48() < noise) 
-				noise = drand48() * noiseamp * UINT8_MAX;
-			frame_out[i*frame_in->size2 + j] = (uint8_t) clamp(((pix * exposure) + noise + offset), 0.0, 1.0*UINT8_MAX);
+				noisei = drand48() * noiseamp * UINT8_MAX;
+			frame_out[i*frame_in->size2 + j] = (uint8_t) clamp(((pix * exposure) + noisei + offset), 0.0, 1.0*UINT8_MAX);
 		}
 	}
 	
