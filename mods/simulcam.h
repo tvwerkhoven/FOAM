@@ -49,13 +49,15 @@ const string simulcam_type = "simulcam";
  a Shack-Hartmann wavefront sensor (i.e. the CCD).
  
  Configuration parameters:
- - wavefront_file: static FITS file which shows some wavefront
- - windspeed.x,y: windspeed by which the wavefront moves
- - windtype: 'random' or 'linear', method of scanning over the wavefront
  - noise: fraction of CCD pixels covered with noise
  - noiseamp: nosie amplitude as fraction of maximum
  - seeingfac: factor to multiply wavefront image with
- */
+ (for SimSeeing:)
+ - wavefront_file: static FITS file which shows some wavefront
+ - windspeed.x,y: windspeed by which the wavefront moves
+ - windtype: 'random' or 'linear', method of scanning over the wavefront
+ - cropsize.x,y: size to crop wavefront field to (should be same as simulated camera)
+*/
 class SimulCam: public Camera {
 private:
 	SimSeeing seeing;										//!< This class simulates the atmosphere

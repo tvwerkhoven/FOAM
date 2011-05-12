@@ -63,7 +63,7 @@ file(""), croppos(0,0), cropsize(0,0), windspeed(10,10), windtype(LINEAR)
 		cropsize.y = cfg.getint("cropsize.y");
 	}
 
-	// Load & sacle wavefront
+	// Load & scale wavefront
 	wfsrc = load_wavefront(file);
 		
 	// Check if cropsize makes sense.
