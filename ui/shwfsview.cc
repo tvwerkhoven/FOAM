@@ -142,7 +142,7 @@ void ShwfsView::clear_gui() {
 	subi_ly.set_text("");
 	subi_tx.set_text("");
 	subi_ty.set_text("");
-	subi_vecdelayi.set_text("1.0")
+	subi_vecdelayi.set_text("1.0");
 		
 	if (wfscam_ui) {
 		wfscam_ui->glarea.clearboxes();
