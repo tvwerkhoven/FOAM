@@ -232,7 +232,7 @@ void SimulCam::simul_wfs(gsl_matrix *wave_in) const {
 	for (int i=0; i< sasize.y*2 * sasize.x*2; i++)
 		shdata[i][0] = shdata[i][1] = 0.0;
 
-	//! @todo This has to be deleted somewhere
+	// This is deleted at the end of the routine
 	fftw_plan shplan = fftw_plan_dft_2d(sasize.y*2, sasize.x*2, shdata, shdata, FFTW_FORWARD, FFTW_MEASURE);
 	double tmp=0;
 	// Temporary matrices
@@ -273,7 +273,7 @@ void SimulCam::simul_wfs(gsl_matrix *wave_in) const {
 		}
 		
 		if ((int) workspace->size != sasize.x * sasize.y * 4) {
-			// Re-alloc data if necessary (should be sasize, but this can vary per subap)
+			// Re-alloc data if necessary (should be sasize, but this value can vary per subap)
 			io.msg(IO_WARN, "SimulCam::simul_wfs() subap sizes unequal, re-allocating. Support might be flaky.");
 			// Re-alloc data
 			gsl_vector_free(workspace);
@@ -324,6 +324,8 @@ void SimulCam::simul_wfs(gsl_matrix *wave_in) const {
 		}
 		//! @bug The original input wavefront (wave_in) is never set to zero everywhere, it is only overwritten with FFT'ed data in the subapertures, not in between the subapertures.
 	}
+	
+	fftw_destroy_plan(shplan);
 }
 
 
