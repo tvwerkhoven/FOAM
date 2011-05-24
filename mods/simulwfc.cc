@@ -53,13 +53,15 @@ Wfc(io, ptc, name, simulwfc_type, port, conffile, online)
 		
 		string actpos_file = cfg.getstring("actpos_file");
 		Csv reader(actpos_file);
-		for (size_t i=0; i<reader.csvdata.size(); i++)
+		for (size_t i=0; i<reader.csvdata.size(); i++) {
 			actpos.push_back( fcoord_t(reader.csvdata[i][0], reader.csvdata[i][1]) );
-	}
-	catch (std::runtime_error &e) {
+			io.msg(IO_DEB2, "SimulWfc::SimulWfc(): new actuator at (%f, %f)", 
+						 reader.csvdata[i][0], reader.csvdata[i][1]);
+		}
+		calibrate();
+	} catch (std::runtime_error &e) {
 		io.msg(IO_ERR | IO_FATAL, "SimulWfc: problem with configuration file: %s", e.what());
 	}
-	
 	
 }
 

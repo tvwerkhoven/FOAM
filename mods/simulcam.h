@@ -36,6 +36,7 @@
 
 #include "camera.h"
 #include "simseeing.h"
+#include "simulwfc.h"
 #include "shwfs.h"
 
 using namespace std;
@@ -70,6 +71,7 @@ const string simulcam_type = "simulcam";
 class SimulCam: public Camera {
 private:
 	SimSeeing seeing;										//!< This class simulates the atmosphere
+	SimulWfc simwfc;										//!< This class simulates a wavefront corrector
 	
 	size_t out_size;										//!< Size of frame_out
 	uint8_t *frame_out;									//!< Frame to store simulated image

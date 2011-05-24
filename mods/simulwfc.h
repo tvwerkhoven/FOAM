@@ -39,9 +39,9 @@ const string simulwfc_type = "simulwfc";
  peaks on top of eachother at the actuator locations.
  
  Configuration params:
- - actpos
- - actsize
- - actres
+ - actpos_file: csv file containing actuator positions
+ - actsize: 'size' of the actuator (broadness of influence)
+ - actres.x,y: size of the whole actuator (in CCD pixels). @todo get this from simulcam
  
  @todo document SimulWfc class
  */
@@ -52,13 +52,13 @@ private:
 	double actsize;											//!< 'Size' of actuators (stddev of gaussians). Should be around the same as the actuator pitch.
 	coord_t actres;											//!< Resolution of actuator pattern (i.e., number of pixels)
 	
-	gsl_matrix *wfc_sim;								//!< Simulated wavefront correction
-	
 	void add_gauss(gsl_matrix *wfc, const fcoord_t pos, const double stddev, const double amp); //!< Add a Gaussian to an existing matrix *wfc
 	
 public:
 	SimulWfc(Io &io, foamctrl *const ptc, const string name, const string port, Path const &conffile, const bool online=true);
 	~SimulWfc();
+	
+	gsl_matrix *wfc_sim;								//!< Simulated wavefront correction
 	
 	// From Wfc::
 	virtual int actuate(const gsl_vector_float *wfcamp, const gain_t gain, const bool block=false);
