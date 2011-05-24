@@ -351,7 +351,7 @@ uint8_t *SimulCam::simul_capture(gsl_matrix *frame_in) {
 			// Add noise only in 'noise' fraction of the pixels, with 'noiseamp' amplitude. Noise is independent of exposure here
 			if (drand48() < noise) 
 				noisei = drand48() * noiseamp * UINT8_MAX;
-			frame_out[i*frame_in->size2 + j] = (uint8_t) clamp(((pix * exposure) + noisei + offset), 0.0, 1.0*UINT8_MAX);
+			frame_out[i*frame_in->size2 + j] = (uint8_t) clamp(((pix * exposure) + noisei + offset) * gain, 0.0, 1.0*UINT8_MAX);
 		}
 	}
 	
