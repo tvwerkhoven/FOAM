@@ -46,9 +46,10 @@ seeing(io, ptc, name + "-seeing", port, conffile),
 simwfc(simwfc),
 out_size(0), frame_out(NULL), 
 telradius(1.0), telapt(NULL), telapt_fill(0.7),
-noise(0.0), noiseamp(0.0), mlafac(1.0),
-do_simtel(true), do_simmla(true), do_simwfc(true),
-shwfs(io, ptc, name + "-shwfs", port, conffile, *this, false)
+noise(0.0), noiseamp(0.0), mlafac(1.0), 
+shwfs(io, ptc, name + "-shwfs", port, conffile, *this, false),
+seeingfac(seeing.seeingfac),
+do_simtel(true), do_simmla(true), do_simwfc(true)
 {
 	io.msg(IO_DEB2, "SimulCam::SimulCam()");
 	// Register network commands with base device:

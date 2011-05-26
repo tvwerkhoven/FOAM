@@ -99,14 +99,16 @@ private:
 	double noiseamp;										//!< Noise amplitude for CCD
 	double mlafac;											//!< factor to multiply wavefront with before imaging, like image magnification
 	
-	bool do_simtel;											//!< Simulate telescope aperture or not
-	bool do_simmla;											//!< Simulate microlens array or not
-	bool do_simwfc;											//!< Simulate wavefront corrector or not
-	
 public:
 	Shwfs shwfs;												//!< Reference to WFS we simulate (i.e. for configuration)
 	SimulCam(Io &io, foamctrl *const ptc, const string name, const string port, Path const &conffile, SimulWfc &simwfc, const bool online=true);
 	~SimulCam();
+
+	double &seeingfac;									//!< Alias for seeing.seeingfac;
+	
+	bool do_simtel;											//!< Simulate telescope aperture or not
+	bool do_simmla;											//!< Simulate microlens array or not
+	bool do_simwfc;											//!< Simulate wavefront corrector or not
 	
 	void gen_telapt();									//!< Generate telescope aperture with radius telradius. Inside this radius the mask has value 1, outside it's 0.
 
