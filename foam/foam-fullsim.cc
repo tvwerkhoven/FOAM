@@ -37,23 +37,20 @@
 using namespace std;
 
 // Global device list for easier access
+SimulWfc *simwfc;
 SimulCam *simcam;
 Shwfs *simwfs;
-SimulWfc *simwfc;
 
 int FOAM_FullSim::load_modules() {
 	io.msg(IO_DEB2, "FOAM_FullSim::load_modules()");
 	io.msg(IO_INFO, "This is the full simulation mode, enjoy.");
 	
-	// Init Seeing simultion (atmosphere)
-	//! @todo
-	
 	// Init WFC simulation
 	simwfc = new SimulWfc(io, ptc, "simwfc", ptc->listenport, ptc->conffile);
 	devices->add((Device *) simwfc);
 	
-	// Init camera simulation (using seeing and wfc)
-	simcam = new SimulCam(io, ptc, "simcam", ptc->listenport, ptc->conffile);
+	// Init camera simulation (using simwfc)
+	simcam = new SimulCam(io, ptc, "simcam", ptc->listenport, ptc->conffile, *simwfc);
 	devices->add((Device *) simcam);
 	
 	// Init WFS simulation (using camera)
@@ -77,8 +74,11 @@ int FOAM_FullSim::open_init() {
 int FOAM_FullSim::open_loop() {
 	io.msg(IO_DEB2, "FOAM_FullSim::open_loop()");
 	
+	// Set random actuation on simulated wavefront corrector
+	simwfc->actuate_random();
+
 	Camera::frame_t *frame = simcam->get_next_frame(true);
-	
+
 	Shwfs::wf_info_t *wf_meas = simwfs->measure(frame);
 	gsl_vector_float *ctrlcmd = simwfs->comp_ctrlcmd(wf_meas);
 
