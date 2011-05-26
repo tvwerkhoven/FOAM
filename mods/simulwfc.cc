@@ -38,11 +38,12 @@
 using namespace std;
 
 SimulWfc::SimulWfc(Io &io, foamctrl *const ptc, const string name, const string port, Path const &conffile, const bool online):
-Wfc(io, ptc, name, simulwfc_type, port, conffile, online)
+Wfc(io, ptc, name, simulwfc_type, port, conffile, online),
+wfc_sim(NULL)
 {
 	io.msg(IO_DEB2, "SimulWfc::SimulWfc()");
 	
-	add_cmd("act");
+	add_cmd("simact");
 	
 	// Configure initial settings
 	//! @todo implement try ... catch clauses for all configuration loading
@@ -155,8 +156,10 @@ void SimulWfc::on_message(Connection *const conn, string line) {
 		string what = popword(line);
 		
 		parsed = false;
-	}
-	else
+	} else if (command == "simact") {		// simact
+		actuate_random();
+		conn->write("ok simact");
+	} else
 		parsed = false;
 	
 	// If not parsed here, call parent
