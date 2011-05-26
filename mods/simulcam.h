@@ -65,13 +65,15 @@ const string simulcam_type = "simulcam";
  - get/set seeingfac: see above
  - get/set windspeed: see above
  - get/set telapt_fill: subaperture should have at least this fraction of light
- - set simwf/simtel/simmla: enable (1) or disable (0) the simulation of the 
-   wavefront, telescope or microlens array respectively.
+ - set simwf: simulate wavefront (atmospheric seeing)
+ - set simtel: simulate telescope (aperture)
+ - set simmla: siulate microlens array to ccd
+ - set simwfc: simulate wavefront corrector device
 */
 class SimulCam: public Camera {
 private:
 	SimSeeing seeing;										//!< This class simulates the atmosphere
-	SimulWfc simwfc;										//!< This class simulates a wavefront corrector
+	SimulWfc &simwfc;										//!< This class simulates a wavefront corrector
 	
 	size_t out_size;										//!< Size of frame_out
 	uint8_t *frame_out;									//!< Frame to store simulated image
@@ -83,12 +85,13 @@ private:
 	double noise;												//!< Noise fill factor for CCD
 	double noiseamp;										//!< Noise amplitude for CCD
 	double seeingfac;										//!< Multiplicative factor for wavefront screen.
-	bool simtel;												//!< Simulate telescope aperture or not
-	bool simmla;												//!< Simulate microlens array or not
+	bool do_simtel;											//!< Simulate telescope aperture or not
+	bool do_simmla;											//!< Simulate microlens array or not
+	bool do_simwfc;											//!< Simulate wavefront corrector or not
 	
 public:
 	Shwfs shwfs;												//!< Reference to WFS we simulate (i.e. for configuration)
-	SimulCam(Io &io, foamctrl *const ptc, const string name, const string port, Path const &conffile, const bool online=true);
+	SimulCam(Io &io, foamctrl *const ptc, const string name, const string port, Path const &conffile, SimulWfc &simwfc, const bool online=true);
 	~SimulCam();
 	
 	void gen_telapt();									//!< Generate telescope aperture with radius telradius. Inside this radius the mask has value 'seeingfac', outside it's 0.
@@ -96,6 +99,7 @@ public:
 	gsl_matrix *simul_seeing();					//!< Simulate seeing: get wavefront and apply seeing factor.
 	void simul_telescope(gsl_matrix *wave_in) const; //!< Multiply input wavefront with telescope aperture mask from gen_telapt().
 	void simul_wfs(gsl_matrix *wave_in) const; //!< Simulate wavefront sensor optics given an input wavefront.
+	void simul_wfc(gsl_matrix *wave_in) const; //!< Simulate wavefront corrector by adding a correction to the input wave
 	uint8_t *simul_capture(gsl_matrix *frame_in);	//!< Simulate CCD frame capture (exposure, offset, etc.)
 	
 	// From Camera::

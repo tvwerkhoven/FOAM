@@ -40,12 +40,12 @@
 
 using namespace std;
 
-SimulCam::SimulCam(Io &io, foamctrl *const ptc, const string name, const string port, Path const &conffile, const bool online):
+SimulCam::SimulCam(Io &io, foamctrl *const ptc, const string name, const string port, Path const &conffile, SimulWfc &simwfc, const bool online):
 Camera(io, ptc, name, simulcam_type, port, conffile, online),
 seeing(io, ptc, name + "-seeing", port, conffile),
-simwfc(io, ptc, name + "-wfc", port, conffile),
+simwfc(simwfc),
 out_size(0), frame_out(NULL), telradius(1.0), telapt(NULL), telapt_fill(0.7),
-simtel(true), simmla(true),
+do_simtel(true), do_simmla(true), do_simwfc(true),
 shwfs(io, ptc, name + "-shwfs", port, conffile, *this, false)
 {
 	io.msg(IO_DEB2, "SimulCam::SimulCam()");
@@ -65,13 +65,16 @@ shwfs(io, ptc, name + "-shwfs", port, conffile, *this, false)
 	add_cmd("set simwf"); // Alias for 'seeingfac'. If this is 0, wf is multiplied by 0
 	add_cmd("set simtel");
 	add_cmd("set simmla");
+	add_cmd("set simwfc");
 
 	noise = cfg.getdouble("noise", 0.2);
 	noiseamp = cfg.getdouble("noiseamp", 0.2);
 	seeingfac = cfg.getdouble("seeingfac", 1.0);
-
+	
 	if (seeing.cropsize.x != res.x || seeing.cropsize.y != res.y)
 		throw std::runtime_error("SimulCam::SimulCam(): Camera resolution and seeing cropsize must be equal.");
+	if (simwfc.wfc_sim->size1 != res.x || simwfc.wfc_sim->size2 != res.y)
+		throw std::runtime_error("SimulCam::SimulCam(): Camera resolution and simulated wfc size must be equal.");
 	
 	// Get telescope aperture
 	gen_telapt();
@@ -135,9 +138,11 @@ void SimulCam::on_message(Connection *const conn, string line) {
 		} else if(what == "simwf") {			// set simwfs <bool>
 			set_var(conn, "simwf", popdouble(line), &seeingfac);
 		} else if(what == "simtel") {			// set simtel <bool>
-			set_var(conn, "simtel", popbool(line), &simtel);
+			set_var(conn, "simtel", popbool(line), &do_simtel);
 		} else if(what == "simmla") {			// set simmla <bool>
-			set_var(conn, "simmla", popbool(line), &simmla);
+			set_var(conn, "simmla", popbool(line), &do_simmla);
+		} else if(what == "simwfc") {			// set simwfc <bool>
+			set_var(conn, "simwfc", popbool(line), &do_simwfc);
 		} else
 			parsed = false;
 	} else if (command == "get") {			// get ...
@@ -197,7 +202,7 @@ gsl_matrix *SimulCam::simul_seeing() {
 }
 
 void SimulCam::simul_telescope(gsl_matrix *im_in) const {
-	if (!simtel)
+	if (!do_simtel)
 		return;
 	
 	io.msg(IO_DEB2, "SimulCam::simul_telescope()");
@@ -205,8 +210,17 @@ void SimulCam::simul_telescope(gsl_matrix *im_in) const {
 	gsl_matrix_mul_elements (im_in, telapt);
 }
 
+void SimulCam::simul_wfc(gsl_matrix *wave_in) const {
+	if (!do_simwfc)
+		return;
+	
+	io.msg(IO_DEB2, "SimulCam::simul_wfc()");
+	// Add wfc correction to input
+	gsl_matrix_mul_elements(wave_in, simwfc.wfc_sim);
+}
+	
 void SimulCam::simul_wfs(gsl_matrix *wave_in) const {
-	if (!simmla)
+	if (!do_simmla)
 		return;
 	
 	if (shwfs.mlacfg.size() <= 0) {
