@@ -45,7 +45,7 @@ Wfc(io, ptc, name, simulwfc_type, port, conffile, online)
 	add_cmd("act");
 	
 	// Configure initial settings
-	//! @todo implement try ... catch clauses for all configuration
+	//! @todo implement try ... catch clauses for all configuration loading
 	try {
 		actsize = cfg.getdouble("actsize", 0.2);
 		actres.x = cfg.getdouble("actresx", 512);
@@ -103,11 +103,23 @@ int SimulWfc::actuate(const gsl_vector_float *wfcamp, const gain_t /* gain */, c
 	
 	for (size_t i=0; i<actpos.size(); i++) {
 		float amp = gsl_vector_float_get(wfcamp, i);
-		io.msg(IO_WARN, "Wavefront corrector amplitude saturated, abs(%g) > 1!", amp);
+		//io.msg(IO_WARN, "Wavefront corrector amplitude saturated, abs(%g) > 1!", amp);
 		add_gauss(wfc_sim, actpos[i], actsize, clamp(amp, float(-1.0), float(1.0)));
 	}
 	
 	return 0;
+}
+
+int SimulWfc::actuate_random() {
+	if (!is_calib)
+		calibrate();
+	
+	gsl_matrix_set_zero(wfc_sim);
+	
+	for (size_t i=0; i<actpos.size(); i++)
+		add_gauss(wfc_sim, actpos[i], actsize, drand48()*2.0-1.0);
+	
+	return 0;	
 }
 
 void SimulWfc::add_gauss(gsl_matrix *wfc, const fcoord_t pos, const double stddev, const double amp) {
