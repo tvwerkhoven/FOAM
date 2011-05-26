@@ -70,7 +70,10 @@ wfc_sim(NULL)
 	} catch (...) { 
 		io.msg(IO_ERR | IO_FATAL, "SimulWfc: unknown error at initialisation.");
 	}
-
+	
+	// Set number of actuators
+	nact = actpos.size();
+	
 	// Calibrate to allocate memory
 	calibrate();
 	// Actuate random pattern to see if it's working
