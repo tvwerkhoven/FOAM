@@ -22,6 +22,7 @@
 #include <math.h>
 
 #include "config.h"
+#include "csv.h"
 #include "types.h"
 #include "camera.h"
 #include "io.h"
@@ -324,6 +325,17 @@ void Shwfs::set_reference(Camera::frame_t *frame) {
 
 	// Store these as reference positions
 	gsl_vector_float_memcpy(ref_vec, m->wfamp);
+	io.msg(IO_DEB2 | IO_NOLF, "Shwfs::set_reference() got: ");
+	for (size_t i=0; i<ref_vec->size; i++)
+		io.msg(IO_DEB2 | IO_NOLF | IO_NOID, "%.1f ", gsl_vector_float_get(ref_vec, i));
+	io.msg(IO_DEB2 | IO_NOLF, "\n");
+}
+
+void Shwfs::store_reference() {
+	string outfile = mkfname("ref_vec.csv").str();
+	io.msg(IO_DEB2, "Shwfs::store_reference() to " + outfile);
+	Csv refvecdat(ref_vec);
+	refvecdat.write(outfile, "Shwfs reference vector");
 }
 
 int Shwfs::calibrate() {

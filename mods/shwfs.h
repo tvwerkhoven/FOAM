@@ -241,6 +241,8 @@ public:
 	 */
 	void set_reference(Camera::frame_t *frame);
 	
+	void store_reference(); //!< Store reference vector to .csv file in ptc->datadir
+	
 	// From Wfs::
 	wf_info_t* measure(Camera::frame_t *frame=NULL);
 	virtual int calibrate();
