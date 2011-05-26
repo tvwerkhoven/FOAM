@@ -216,7 +216,7 @@ void SimulCam::simul_wfc(gsl_matrix *wave_in) const {
 	
 	io.msg(IO_DEB2, "SimulCam::simul_wfc()");
 	// Add wfc correction to input
-	gsl_matrix_mul_elements(wave_in, simwfc.wfc_sim);
+	gsl_matrix_add(wave_in, simwfc.wfc_sim);
 }
 	
 void SimulCam::simul_wfs(gsl_matrix *wave_in) const {
@@ -346,6 +346,7 @@ void SimulCam::simul_wfs(gsl_matrix *wave_in) const {
 
 
 uint8_t *SimulCam::simul_capture(gsl_matrix *frame_in) {
+	io.msg(IO_DEB2, "SimulCam::simul_capture()");
 	// Convert frame to uint8_t, scale properly
 	double min=0, max=0, noisei=0, fac;
 	gsl_matrix_minmax(frame_in, &min, &max);
@@ -428,6 +429,7 @@ void SimulCam::cam_handler() {
 			case Camera::RUNNING:
 			{
 				gsl_matrix *wf = simul_seeing();
+				simul_wfc(wf);
 				simul_telescope(wf);
 				simul_wfs(wf);
 				uint8_t *frame = simul_capture(wf);
@@ -447,6 +449,7 @@ void SimulCam::cam_handler() {
 				io.msg(IO_DEB1, "SimulCam::cam_handler() SINGLE");
 
 				gsl_matrix *wf = simul_seeing();
+				simul_wfc(wf);
 				simul_telescope(wf);
 				simul_wfs(wf);
 				uint8_t *frame = simul_capture(wf);
