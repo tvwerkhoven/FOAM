@@ -48,22 +48,33 @@ wfc_sim(NULL)
 	// Configure initial settings
 	//! @todo implement try ... catch clauses for all configuration loading
 	try {
-		actsize = cfg.getdouble("actsize", 0.2);
+		actsize = cfg.getdouble("actsize", 0.1);
 		actres.x = cfg.getdouble("actresx", 512);
 		actres.y = cfg.getdouble("actresy", 512);
 		
-		string actpos_file = cfg.getstring("actpos_file");
+		string actpos_file = ptc->confdir.str() + cfg.getstring("actpos_file");
+		io.msg(IO_DEB1, "SimulWfc::SimulWfc(): actsize: %f, res: %dx%d, file: %s", 
+					actsize, actres.x, actres.y, actpos_file.c_str());
+		
 		Csv reader(actpos_file);
 		for (size_t i=0; i<reader.csvdata.size(); i++) {
 			actpos.push_back( fcoord_t(reader.csvdata[i][0], reader.csvdata[i][1]) );
-			io.msg(IO_DEB2, "SimulWfc::SimulWfc(): new actuator at (%f, %f)", 
+			if (reader.csvdata[i][0] > 1 || reader.csvdata[i][1] > 1)
+				throw(std::runtime_error(format("WFC positions should be normalized from [0 to 1) in %s", actpos_file.c_str())));
+
+			io.msg(IO_DEB2, "SimulWfc::SimulWfc(): new actuator at (%g, %g)", 
 						 reader.csvdata[i][0], reader.csvdata[i][1]);
 		}
-		calibrate();
 	} catch (std::runtime_error &e) {
 		io.msg(IO_ERR | IO_FATAL, "SimulWfc: problem with configuration file: %s", e.what());
+	} catch (...) { 
+		io.msg(IO_ERR | IO_FATAL, "SimulWfc: unknown error at initialisation.");
 	}
-	
+
+	// Calibrate to allocate memory
+	calibrate();
+	// Actuate random pattern to see if it's working
+	actuate_random();
 }
 
 SimulWfc::~SimulWfc() {
@@ -112,6 +123,8 @@ int SimulWfc::actuate(const gsl_vector_float *wfcamp, const gain_t /* gain */, c
 }
 
 int SimulWfc::actuate_random() {
+	io.msg(IO_DEB2, "SimulWfc::actuate_random()");
+	
 	if (!is_calib)
 		calibrate();
 	
@@ -124,27 +137,37 @@ int SimulWfc::actuate_random() {
 }
 
 void SimulWfc::add_gauss(gsl_matrix *wfc, const fcoord_t pos, const double stddev, const double amp) {
-
+	io.msg(IO_DEB2, "SimulWfc::add_gauss(wf=%p, pos=(%.1f,%.1f), %g, %g)", 
+				 wfc, pos.x, pos.y, stddev, amp);
+	
+	double sum=0, count=0;
+	double cutoff = 0.05;
+	
+	// Gaussian function: A * exp( (x-x_0)^2 / (2*stddev^2) )
+	// Position 'pos' is normalized from 0 to 1
 	for (size_t i=0; i<wfc->size1; i++) {
 		double yi = i*1.0/actres.y;
-		double valy = exp((yi-pos.y)*(yi-pos.y)/(2*stddev*stddev));
+		double valy = exp(-1.0*(yi-pos.y)*(yi-pos.y)/(2.0*stddev*stddev));
 		
-		// Value = 0 and position > gaussian center: we're done
-		if (valy == 0 && yi > pos.y)
+		// Value < 0.05 and position > gaussian center: we're done
+		if (valy < cutoff && yi > pos.y)
 			break;
 		
-		// Only calculate x when y != 0
-		if (valy != 0) {
+		// Only calculate x when y > 0.05*amp
+		if (valy > cutoff) {
 			for (size_t j=0; j<wfc->size2; j++) {
 				double xi = j*1.0/actres.x;
-				double valx = exp((xi-pos.x)*(xi-pos.x)/(2*stddev*stddev));
+				double valx = exp(-1.0*(xi-pos.x)*(xi-pos.x)/(2.0*stddev*stddev));
+				if (valx < cutoff && xi > pos.x)
+					break;
 				double prev = gsl_matrix_get(wfc, i, j);
 				gsl_matrix_set (wfc, i, j, prev + amp * (valy*valx));
-				if (valx == 0 && xi > pos.x)
-					break;
+				sum += amp * (valy*valx);
+				count++;
 			}
 		}
 	}
+	io.msg(IO_DEB2, "SimulWfc::add_gauss() avg: %g, N: %g", sum/count, count);
 }
 
 void SimulWfc::on_message(Connection *const conn, string line) {
