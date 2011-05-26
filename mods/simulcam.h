@@ -47,22 +47,35 @@ const string simulcam_type = "simulcam";
  @brief Simulation class for seeing + camera
  
  SimulCam is derived from Camera. Given a static input wavefront, it simulates
- a Shack-Hartmann wavefront sensor (i.e. the CCD).
+ a Shack-Hartmann wavefront sensor (i.e. the CCD). 
+ 
+ It uses the SimSeeing class 
+ for generating wavefronts and the Shwfs for making appropriate subaperture 
+ patterns on this wavefront.
  
  Configuration parameters:
  - noise: fraction of CCD pixels covered with noise
  - noiseamp: nosie amplitude as fraction of maximum
- - seeingfac: factor to multiply wavefront image with
- (for SimSeeing:)
+ - mlafac: factor to multiply wavefront with before imaging, like image 
+		magnification (like seeingfac, except this also takes simulated correction 
+    into account)
+
+ Configuration parameters for Seeing:
  - wavefront_file: static FITS file which shows some wavefront
+ - seeingfac: factor to multiply wavefront distortion with (for SimSeeing:),
+ makes seeing worse.
  - windspeed.x,y: windspeed by which the wavefront moves
  - windtype: 'random' or 'linear', method of scanning over the wavefront
- - cropsize.x,y: size to crop wavefront field to (should be same as simulated camera)
- 
+ - cropsize.x,y: size to crop wavefront field to (should be same as simulated camera) 
+
+ Configuration parameters for Shwfs:
+ - See Shwfs::
+
  Network commands:
  - get/set noise: see above
  - get/set noiseamp: see above
  - get/set seeingfac: see above
+ - get/set mlafac: see above
  - get/set windspeed: see above
  - get/set telapt_fill: subaperture should have at least this fraction of light
  - set simwf: simulate wavefront (atmospheric seeing)
@@ -84,7 +97,8 @@ private:
 	
 	double noise;												//!< Noise fill factor for CCD
 	double noiseamp;										//!< Noise amplitude for CCD
-	double seeingfac;										//!< Multiplicative factor for wavefront screen.
+	double mlafac;											//!< factor to multiply wavefront with before imaging, like image magnification
+	
 	bool do_simtel;											//!< Simulate telescope aperture or not
 	bool do_simmla;											//!< Simulate microlens array or not
 	bool do_simwfc;											//!< Simulate wavefront corrector or not
@@ -94,7 +108,7 @@ public:
 	SimulCam(Io &io, foamctrl *const ptc, const string name, const string port, Path const &conffile, SimulWfc &simwfc, const bool online=true);
 	~SimulCam();
 	
-	void gen_telapt();									//!< Generate telescope aperture with radius telradius. Inside this radius the mask has value 'seeingfac', outside it's 0.
+	void gen_telapt();									//!< Generate telescope aperture with radius telradius. Inside this radius the mask has value 1, outside it's 0.
 
 	gsl_matrix *simul_seeing();					//!< Simulate seeing: get wavefront and apply seeing factor.
 	void simul_telescope(gsl_matrix *wave_in) const; //!< Multiply input wavefront with telescope aperture mask from gen_telapt().

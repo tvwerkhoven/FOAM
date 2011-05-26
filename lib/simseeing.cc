@@ -62,6 +62,9 @@ file(""), croppos(0,0), cropsize(0,0), windspeed(10,10), windtype(LINEAR)
 		cropsize.x = cfg.getint("cropsize.x");
 		cropsize.y = cfg.getint("cropsize.y");
 	}
+	
+	seeingfac = cfg.getdouble("seeingfac", 1.0);
+
 
 	// Load & scale wavefront
 	wfsrc = load_wavefront(file);
@@ -128,7 +131,7 @@ gsl_matrix *SimSeeing::load_wavefront(const Path &f, const bool norm) {
  *  Public methods
  */
 
-gsl_matrix *SimSeeing::get_wavefront(const double fac) {
+gsl_matrix *SimSeeing::get_wavefront() {
 	// Update new crop position (i.e. simulate wind)
 	switch (windtype) {
 		case RANDOM:
@@ -160,7 +163,7 @@ gsl_matrix *SimSeeing::get_wavefront(const double fac) {
 			break;
 	}
 
-	return get_wavefront(croppos.x, croppos.y, cropsize.x, cropsize.y, fac);
+	return get_wavefront(croppos.x, croppos.y, cropsize.x, cropsize.y, seeingfac);
 }
 
 gsl_matrix *SimSeeing::get_wavefront(const size_t x0, const size_t y0, const size_t w, const size_t h, const double fac) {
