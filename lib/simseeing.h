@@ -35,7 +35,8 @@ const string simseeing_type = "simseeing";
 /*!
  @brief This class simulates seeing by an atmosphere.
  
- This class is offline (no network connection).
+ This class is offline (no network connection), and is controlled from the
+ SimulCam class.
  */
 class SimSeeing: public Device {
 public:

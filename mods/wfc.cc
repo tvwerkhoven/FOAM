@@ -32,7 +32,7 @@
 
 Wfc::Wfc(Io &io, foamctrl *const ptc, const string name, const string type, const string port, Path const & conffile, const bool online):
 Device(io, ptc, name, wfc_type + "." + type, port, conffile, online),
-nact(0), gain(0.0, 0.0, 0.0), wfc_amp(NULL) {	
+wfc_amp(NULL), nact(0), gain(0.0, 0.0, 0.0) {	
 	io.msg(IO_DEB2, "Wfc::Wfc()");
 	
 	add_cmd("set gain");

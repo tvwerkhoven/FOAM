@@ -302,6 +302,8 @@ int Shwfs::calc_infmat() {
 		}
 		
 	}
+	
+	return 0;
 }
 
 int Shwfs::calc_actmat(double singval, enum wfbasis basis) {

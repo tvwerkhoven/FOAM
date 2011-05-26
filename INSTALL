@@ -37,7 +37,7 @@ followed by the regular installation procedure:
 - make
 
 For information about specific platforms and compilers see the
-INSTALL file.
+INSTALL.default file.
 
 Testing
 =======

@@ -53,6 +53,7 @@ private:
 	VBox subi_vbox13;
 	VSeparator vsep3;
 	VBox subi_vbox14;
+	HBox subi_hbox141;
 	
 	ComboBoxText subi_select;						//!< List of subimages
 	LabeledEntry subi_lx;								//!< Subimage coordinate lower x
@@ -68,6 +69,8 @@ private:
 	Button subi_find;										//!< Find subimage pattern
 	
 	SwitchButton subi_vecs;							//!< Display shift vectors or not
+	LabeledEntry subi_vecdelayi;				//!< Display shift vectors every X seconds
+	float subi_vecdelay;								//!< Delay for displaying shift vectors (in seconds)
 
 	// From DeviceView::
 	virtual void enable_gui();

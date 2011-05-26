@@ -34,16 +34,18 @@
 
 #include "devices.h"
 #include "simseeing.h"
+#include "simulwfc.h"
 #include "camera.h"
 #include "simulcam.h"
 
 using namespace std;
 
-SimulCam::SimulCam(Io &io, foamctrl *const ptc, const string name, const string port, Path const &conffile, const bool online):
+SimulCam::SimulCam(Io &io, foamctrl *const ptc, const string name, const string port, Path const &conffile, SimulWfc &simwfc, const bool online):
 Camera(io, ptc, name, simulcam_type, port, conffile, online),
 seeing(io, ptc, name + "-seeing", port, conffile),
+simwfc(simwfc),
 out_size(0), frame_out(NULL), telradius(1.0), telapt(NULL), telapt_fill(0.7),
-simtel(true), simmla(true),
+do_simtel(true), do_simmla(true), do_simwfc(true),
 shwfs(io, ptc, name + "-shwfs", port, conffile, *this, false)
 {
 	io.msg(IO_DEB2, "SimulCam::SimulCam()");
@@ -63,13 +65,16 @@ shwfs(io, ptc, name + "-shwfs", port, conffile, *this, false)
 	add_cmd("set simwf"); // Alias for 'seeingfac'. If this is 0, wf is multiplied by 0
 	add_cmd("set simtel");
 	add_cmd("set simmla");
+	add_cmd("set simwfc");
 
 	noise = cfg.getdouble("noise", 0.2);
 	noiseamp = cfg.getdouble("noiseamp", 0.2);
 	seeingfac = cfg.getdouble("seeingfac", 1.0);
-
+	
 	if (seeing.cropsize.x != res.x || seeing.cropsize.y != res.y)
 		throw std::runtime_error("SimulCam::SimulCam(): Camera resolution and seeing cropsize must be equal.");
+	if (simwfc.wfc_sim->size1 != res.x || simwfc.wfc_sim->size2 != res.y)
+		throw std::runtime_error("SimulCam::SimulCam(): Camera resolution and simulated wfc size must be equal.");
 	
 	// Get telescope aperture
 	gen_telapt();
@@ -133,9 +138,11 @@ void SimulCam::on_message(Connection *const conn, string line) {
 		} else if(what == "simwf") {			// set simwfs <bool>
 			set_var(conn, "simwf", popdouble(line), &seeingfac);
 		} else if(what == "simtel") {			// set simtel <bool>
-			set_var(conn, "simtel", popbool(line), &simtel);
+			set_var(conn, "simtel", popbool(line), &do_simtel);
 		} else if(what == "simmla") {			// set simmla <bool>
-			set_var(conn, "simmla", popbool(line), &simmla);
+			set_var(conn, "simmla", popbool(line), &do_simmla);
+		} else if(what == "simwfc") {			// set simwfc <bool>
+			set_var(conn, "simwfc", popbool(line), &do_simwfc);
 		} else
 			parsed = false;
 	} else if (command == "get") {			// get ...
@@ -195,7 +202,7 @@ gsl_matrix *SimulCam::simul_seeing() {
 }
 
 void SimulCam::simul_telescope(gsl_matrix *im_in) const {
-	if (!simtel)
+	if (!do_simtel)
 		return;
 	
 	io.msg(IO_DEB2, "SimulCam::simul_telescope()");
@@ -203,8 +210,17 @@ void SimulCam::simul_telescope(gsl_matrix *im_in) const {
 	gsl_matrix_mul_elements (im_in, telapt);
 }
 
+void SimulCam::simul_wfc(gsl_matrix *wave_in) const {
+	if (!do_simwfc)
+		return;
+	
+	io.msg(IO_DEB2, "SimulCam::simul_wfc()");
+	// Add wfc correction to input
+	gsl_matrix_add(wave_in, simwfc.wfc_sim);
+}
+	
 void SimulCam::simul_wfs(gsl_matrix *wave_in) const {
-	if (!simmla)
+	if (!do_simmla)
 		return;
 	
 	if (shwfs.mlacfg.size() <= 0) {
@@ -232,7 +248,7 @@ void SimulCam::simul_wfs(gsl_matrix *wave_in) const {
 	for (int i=0; i< sasize.y*2 * sasize.x*2; i++)
 		shdata[i][0] = shdata[i][1] = 0.0;
 
-	//! @todo This has to be deleted somewhere
+	// This is deleted at the end of the routine
 	fftw_plan shplan = fftw_plan_dft_2d(sasize.y*2, sasize.x*2, shdata, shdata, FFTW_FORWARD, FFTW_MEASURE);
 	double tmp=0;
 	// Temporary matrices
@@ -265,7 +281,6 @@ void SimulCam::simul_wfs(gsl_matrix *wave_in) const {
 			for (size_t j=0; j<telapt_cropm->size2; j++)
 				tmp_sum += gsl_matrix_get (telapt_cropm, i, j);
 
-		//! @bug this goes to zero
 		if (tmp_sum < telapt_fill * sasize.y * sasize.x) {
 			for (size_t i=0; i<subapm->size1; i++)
 				for (size_t j=0; j<subapm->size2; j++)
@@ -274,7 +289,7 @@ void SimulCam::simul_wfs(gsl_matrix *wave_in) const {
 		}
 		
 		if ((int) workspace->size != sasize.x * sasize.y * 4) {
-			// Re-alloc data if necessary (should be sasize, but this can vary per subap)
+			// Re-alloc data if necessary (should be sasize, but this value can vary per subap)
 			io.msg(IO_WARN, "SimulCam::simul_wfs() subap sizes unequal, re-allocating. Support might be flaky.");
 			// Re-alloc data
 			gsl_vector_free(workspace);
@@ -293,52 +308,47 @@ void SimulCam::simul_wfs(gsl_matrix *wave_in) const {
 		for (int i=0; i< sasize.y*2 * sasize.x*2; i++)
 			shdata[i][0] = shdata[i][1] = 0.0;
 
-		// Copy data to linear array for FFT, with padding
+		// Copy input wavefront data (subapm) to linear array (shdata) for FFT, 
+		// with zero padding around the image.
 		for (int i=0; i<sasize.y; i++)
 			for (int j=0; j<sasize.x; j++) {
 				// Convert real wavefront to complex EM wave E \propto exp(-i phi) = cos(phi) + i sin(phi)
 				tmp = gsl_matrix_get(subapm, i, j);
-				shdata[(i+sasize.y/2)*2*sasize.x + (j+sasize.x)][0] = cos(tmp);
-				shdata[(i+sasize.y/2)*2*sasize.x + (j+sasize.x)][1] = sin(tmp);
+				shdata[(i+sasize.y/2)*sasize.x*2 + (j+sasize.x/2)][0] = cos(tmp);
+				shdata[(i+sasize.y/2)*sasize.x*2 + (j+sasize.x/2)][1] = sin(tmp);
 				//fprintf(stderr, "%g, cos: %g, \n", tmp, cos(tmp));
 			}
 		
 		// Execute this FFT
 		fftw_execute(shplan);
 		
-		// now calculate the absolute squared value of that, store it in the subapt thing
-		// also find min and maximum here
-		for (int i=0; i<sasize.y/2; i++) {
-			for (int j=0; j<sasize.x/2; j++) {
+		// now calculate the absolute squared value of the FFT output (i.e. the 
+		// power), store it in the subapm matrix. This is the image we see on the 
+		// screen (after adding noise etc.)
+		for (int i=sasize.y*1.5; i<sasize.y*2.5; i++) {
+			for (int j=sasize.x*1.5; j<sasize.x*2.5; j++) {
 				// Calculate abs(E^2), store in original memory (per quadrant).
 				// We need to move the data because we want the origin of the FFT to 
 				// be in the center of the matrix.
-				tmp = fabs(pow(shdata[i*sasize.x*2 + j][0], 2) + 
-									 pow(shdata[i*sasize.x*2 + j][1], 2));
-				gsl_matrix_set(subapm, sasize.y/2+i, sasize.x/2+j, tmp);
 				
-				tmp = fabs(pow(shdata[i*sasize.x*2 + j + sasize.x*2*3/4][0], 2) + 
-									 pow(shdata[i*sasize.x*2 + j + sasize.x*2*3/4][1], 2));
-				gsl_matrix_set(subapm, sasize.y/2+i, j, tmp);
-
-				tmp = fabs(pow(shdata[(i+sasize.y*3/4)*sasize.x*2 + j][0], 2) + 
-									 pow(shdata[(i+sasize.y*3/4)*sasize.x*2 + j][1], 2));
-				gsl_matrix_set(subapm, i, sasize.x/2+j, tmp);
-
-				tmp = fabs(pow(shdata[(i+sasize.y*3/4)*sasize.x*2 + j + sasize.x*2*3/4][0], 2) + 
-									 pow(shdata[(i+sasize.y*3/4)*sasize.x*2 + j + sasize.x*2*3/4][1], 2));
-				gsl_matrix_set(subapm, i, j, tmp);
+				// Bottom-left FFT quadrant goes to top-right IMG quadrant
+				tmp = fabs(pow(shdata[(i % (sasize.y*2))*sasize.x*2 + (j % (sasize.x*2))][0], 2) + 
+									 pow(shdata[(i % (sasize.y*2))*sasize.x*2 + (j % (sasize.x*2))][1], 2));
+				gsl_matrix_set(subapm, ((i - sasize.y/2) % sasize.y), ((j - sasize.x/2) % sasize.x), tmp);
 				//fprintf(stderr, "out: abs(%g^2+%g^2) = %g\n", shdata[i*sasize.y*2 + j][0], shdata[i*sasize.y*2 + j][1], tmp);
 			}
 		}
-		//! @bug The original wave_in is never set to zero everywhere, it is only overwritten with FFT'ed data in the subapertures, not in between the subapertures.
+		//! @bug The original input wavefront (wave_in) is never set to zero everywhere, it is only overwritten with FFT'ed data in the subapertures, not in between the subapertures.
 	}
+	
+	fftw_destroy_plan(shplan);
 }
 
 
 uint8_t *SimulCam::simul_capture(gsl_matrix *frame_in) {
+	io.msg(IO_DEB2, "SimulCam::simul_capture()");
 	// Convert frame to uint8_t, scale properly
-	double min=0, max=0, fac;
+	double min=0, max=0, noisei=0, fac;
 	gsl_matrix_minmax(frame_in, &min, &max);
 	fac = 255.0/(max-min);
 	
@@ -357,8 +367,8 @@ uint8_t *SimulCam::simul_capture(gsl_matrix *frame_in) {
 			noise=0.0;
 			// Add noise only in 'noise' fraction of the pixels, with 'noiseamp' amplitude. Noise is independent of exposure here
 			if (drand48() < noise) 
-				noise = drand48() * noiseamp * UINT8_MAX;
-			frame_out[i*frame_in->size2 + j] = (uint8_t) clamp(((pix * exposure) + noise + offset), 0.0, 1.0*UINT8_MAX);
+				noisei = drand48() * noiseamp * UINT8_MAX;
+			frame_out[i*frame_in->size2 + j] = (uint8_t) clamp(((pix * exposure) + noisei + offset) * gain, 0.0, 1.0*UINT8_MAX);
 		}
 	}
 	
@@ -419,6 +429,7 @@ void SimulCam::cam_handler() {
 			case Camera::RUNNING:
 			{
 				gsl_matrix *wf = simul_seeing();
+				simul_wfc(wf);
 				simul_telescope(wf);
 				simul_wfs(wf);
 				uint8_t *frame = simul_capture(wf);
@@ -438,6 +449,7 @@ void SimulCam::cam_handler() {
 				io.msg(IO_DEB1, "SimulCam::cam_handler() SINGLE");
 
 				gsl_matrix *wf = simul_seeing();
+				simul_wfc(wf);
 				simul_telescope(wf);
 				simul_wfs(wf);
 				uint8_t *frame = simul_capture(wf);

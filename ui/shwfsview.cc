@@ -32,7 +32,8 @@ WfsView((WfsCtrl *) ctrl, log, foamctrl, n), shwfsctrl(ctrl),
 shwfs_addnew("Add new"),
 subi_frame("Subimages"),
 subi_lx("X_0"), subi_ly("Y_0"), subi_tx("X_1"), subi_ty("Y_1"), 
-subi_update("Update"), subi_del("Del"), subi_add("Add"), subi_regen("Regen pattern"), subi_find("Find pattern"), subi_vecs("Show shifts")
+subi_update("Update"), subi_del("Del"), subi_add("Add"), subi_regen("Regen pattern"), subi_find("Find pattern"), 
+subi_vecs("Show shifts"), subi_vecdelayi("Delay", "s")
 {
 	fprintf(stderr, "%x:ShwfsView::ShwfsView()\n", (int) pthread_self());
 	
@@ -41,6 +42,7 @@ subi_update("Update"), subi_del("Del"), subi_add("Add"), subi_regen("Regen patte
 	subi_ly.set_width_chars(6);
 	subi_tx.set_width_chars(6);
 	subi_ty.set_width_chars(6);
+	subi_vecdelayi.set_width_chars(4);
 	
 	// Signals & callbacks
 	subi_select.signal_changed().connect(sigc::mem_fun(*this, &ShwfsView::on_subi_select_changed));
@@ -52,9 +54,10 @@ subi_update("Update"), subi_del("Del"), subi_add("Add"), subi_regen("Regen patte
 	subi_find.signal_clicked().connect(sigc::mem_fun(*this, &ShwfsView::on_subi_find_clicked));
 	
 	subi_vecs.signal_clicked().connect(sigc::mem_fun(*this, &ShwfsView::on_subi_vecs_clicked));
+	//subi_vecdelayi.entry.signal_activate().connect(sigc::mem_fun(*this, &ShwfsView::on_subi_vecs_clicked));
 	
 	shwfsctrl->signal_sh_shifts.connect(sigc::mem_fun(*this, &ShwfsView::do_sh_shifts_update));
-	Glib::signal_timeout().connect(sigc::mem_fun(*this, &ShwfsView::on_timeout), 1000.0/1.0);
+	Glib::signal_timeout().connect(sigc::mem_fun(*this, &ShwfsView::on_timeout), 1000.0/30.0);
 	
 	// Add widgets
 	// Subimage/ MLA pattern controls
@@ -76,7 +79,9 @@ subi_update("Update"), subi_del("Del"), subi_add("Add"), subi_regen("Regen patte
 	subi_vbox13.pack_start(subi_regen, PACK_SHRINK);
 	subi_vbox13.pack_start(subi_find, PACK_SHRINK);
 	
-	subi_vbox14.pack_start(subi_vecs, PACK_SHRINK);
+	subi_hbox141.pack_start(subi_vecs, PACK_SHRINK);
+	subi_hbox141.pack_start(subi_vecdelayi, PACK_SHRINK);
+	subi_vbox14.pack_start(subi_hbox141, PACK_SHRINK);
 	
 	subi_hbox1.pack_start(subi_vbox11, PACK_SHRINK);
 	subi_hbox1.pack_start(vsep1, PACK_SHRINK);
@@ -111,7 +116,7 @@ void ShwfsView::enable_gui() {
 	subi_add.set_sensitive(true);
 	subi_regen.set_sensitive(true);
 	subi_find.set_sensitive(true);
-	subi_vecs.set_sensitive(true);	
+	subi_vecs.set_sensitive(true);
 }
 
 void ShwfsView::disable_gui() {
@@ -137,6 +142,7 @@ void ShwfsView::clear_gui() {
 	subi_ly.set_text("");
 	subi_tx.set_text("");
 	subi_ty.set_text("");
+	subi_vecdelayi.set_text("1.0");
 		
 	if (wfscam_ui) {
 		wfscam_ui->glarea.clearboxes();
@@ -249,6 +255,11 @@ void ShwfsView::on_subi_find_clicked() {
 
 void ShwfsView::on_subi_vecs_clicked() {
 	fprintf(stderr, "%x:ShwfsView::on_subi_vecs_clicked()\n", (int) pthread_self());
+	
+	// Get (new) update delay
+	//! @todo is this legal/safe? subi_vecdelayi.get_text().c_str()
+	subi_vecdelay = strtof(subi_vecdelayi.get_text().c_str(), NULL);
+	
 	// If the button is clear: start acquisition, otherwise: set button to clear (and stop acquisition)
 	if (subi_vecs.get_state() == SwitchButton::CLEAR) {
 		shwfsctrl->cmd_get_shifts();
@@ -260,10 +271,15 @@ void ShwfsView::on_subi_vecs_clicked() {
 }
 
 bool ShwfsView::on_timeout() {
-	// If button is clear we don't want shifts, if waiting we're expecting new shifts soon
-	if (subi_vecs.get_state() == SwitchButton::OK) {
+	// This function fires 30 times/s, if we do not want that many updates we can throttle it with subi_vecdelay
+	static struct timeval now, last;
+	gettimeofday(&now, NULL);
+	// If button is 'clear' we don't want shifts, if 'waiting' we're expecting new shifts soon, otherwise if button is 'OK': get new shifts
+	if (subi_vecs.get_state() == SwitchButton::OK && 
+			((now.tv_sec - last.tv_sec) + (now.tv_usec - last.tv_usec)/1000000.) > subi_vecdelay) {
 		subi_vecs.set_state(SwitchButton::WAITING);
 		shwfsctrl->cmd_get_shifts();
+		gettimeofday(&last, NULL);
 	}
 	return true;
 }

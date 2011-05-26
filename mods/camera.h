@@ -326,5 +326,6 @@ public:
  - \subpage dev_cam_fw1394 "FW1394 camera device"
  - \subpage dev_cam_imgcam "Image camera device"
  - \subpage dev_cam_simulcam "Simulation camera device"
+ - \subpage dev_cam_andor "Andor iXon camera device"
 
  */
