@@ -166,6 +166,7 @@ int FOAM_FullSim::calib() {
 		
 		// Set this frame as reference
 		simwfs->set_reference(frame);
+		simwfs->store_reference();
 	} 
 	else {
 		io.msg(IO_WARN, "FOAM_FullSim::calib unknown!");
