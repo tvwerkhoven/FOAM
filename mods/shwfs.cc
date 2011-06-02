@@ -20,6 +20,11 @@
 
 #include <stdint.h>
 #include <math.h>
+#include <gsl/gsl_matrix.h>
+#include <gsl/gsl_vector.h>
+#include <gsl/gsl_blas.h>
+#include <gsl/gsl_linalg.h>
+
 
 #include "config.h"
 #include "csv.h"
@@ -295,11 +300,11 @@ void Shwfs::init_infmat(string wfcname, size_t nact, vector <float> &actpos) {
 	// Init actuation matrices
 	calib[wfcname].actmat.mat = gsl_matrix_float_calloc(nact, calib[wfcname].nmeas);
 
-	calib[wfcname].actmat.s = gsl_vector_calloc(nact);
+	calib[wfcname].actmat.s = gsl_vector_float_calloc(nact);
 
-	calib[wfcname].actmat.U = gsl_matrix_calloc(calib[wfcname].nmeas, nact);
-	calib[wfcname].actmat.Sigma = gsl_matrix_calloc(nact, nact);
-	calib[wfcname].actmat.V = gsl_matrix_calloc(nact, nact);
+	calib[wfcname].actmat.U = gsl_matrix_float_calloc(calib[wfcname].nmeas, nact);
+	calib[wfcname].actmat.Sigma = gsl_matrix_float_calloc(nact, nact);
+	calib[wfcname].actmat.V = gsl_matrix_float_calloc(nact, nact);
 	
 	calib[wfcname].init = true;
 }
@@ -349,8 +354,9 @@ int Shwfs::calc_infmat(string wfcname) {
 	}
 	 */
 	
-	gsl_matrix_float *avgslope = calib[wfcname].meas.infmat
+	gsl_matrix_float *avgslope = calib[wfcname].meas.infmat;
 	gsl_matrix_float *diffmat = gsl_matrix_float_calloc(calib[wfcname].nmeas, calib[wfcname].nact);
+	double dact;
 	
 	for (size_t i=0; i<calib[wfcname].meas.actpos.size()-1; i++) {
 		gsl_matrix_float_memcpy(diffmat, calib[wfcname].meas.measmat[i+1]);
@@ -377,8 +383,66 @@ int Shwfs::calc_infmat(string wfcname) {
 }
 
 int Shwfs::calc_actmat(string wfcname, double singval, enum wfbasis basis) {
-	//! @todo implement
+	// calib[wfcname].meas.infmat
+	// calib[wfcname].actmat.mat
+	// calib[wfcname].actmat.U
 	
+	// Make matrix aliases
+	gsl_matrix_float *infmat = calib[wfcname].meas.infmat;
+	gsl_matrix_float *mat = calib[wfcname].actmat.mat;
+	gsl_matrix_float *U = calib[wfcname].actmat.U;
+	gsl_matrix_float *Sigma = calib[wfcname].actmat.Sigma;
+	gsl_vector_float *s = calib[wfcname].actmat.s;
+	gsl_matrix_float *V = calib[wfcname].actmat.V;
+	
+	// Copy matrix
+	gsl_matrix_float_memcpy(U, infmat);
+	gsl_vector_float *workvec = gsl_vector_float_calloc(calib[wfcname].nact);
+	
+	// Singular value decompose this matrix:
+	gsl_linalg_SV_decomp(U, V, s, workvec);
+	
+	// Calculate sum of singular values
+	double sum=0, sum2=0;
+	for (size_t j=0; j < s->size; j++)
+		sum += gsl_vector_float_get(s, j);
+	
+	// Calculate various condition cutoffs
+	int acc85=0, acc90=0, acc95=0;
+	for (size_t j=0; j < s->size; j++) {
+		sum2 += gsl_vector_float_get(s, j);
+		if (sum2/sum < 0.85) acc85++;
+		if (sum2/sum < 0.9) acc90++;
+		if (sum2/sum < 0.95) acc95++;
+	}
+	io.msg(IO_XNFO, "Shwfs::calc_actmat(): SVD condition: %g, nmodes: %zu\n", 
+				 gsl_vector_float_get(s, 0)/
+				 gsl_vector_float_get(s, s->size-1), 
+				 s->size);
+	
+	// Fill singular value *matrix* Sigma
+	sum2 = 0.0;
+	for (size_t j=0; j < s->size; j++) {
+		double sval = gsl_vector_float_get(s, j);
+		sum2 += sval;
+		if (sum2/sum < singval) 
+			gsl_matrix_float_set(Sigma, j, j, 1.0/sval);
+	}
+	
+	// Calculate explicit pseudo-inverse matrix of infmat
+	gsl_matrix_float *workmat = gsl_matrix_float_calloc(mat->size1, mat->size2);
+
+	gsl_blas_sgemm (CblasNoTrans, CblasTrans, 1.0, Sigma, U, 0.0, workmat);
+	// Calculate mat3a_inv = mat3a_v mat3a_tmp
+	gsl_blas_sgemm (CblasNoTrans, CblasNoTrans, 1.0, V, workmat, 0.0, mat);
+	
+	// Test inversion, calculate mat * infmat:
+	gsl_matrix_float_free(workmat);
+	workmat = gsl_matrix_float_calloc(Sigma->size1, Sigma->size2);
+	gsl_blas_sgemm (CblasNoTrans, CblasNoTrans, 1.0, mat, infmat, 0.0, workmat);
+	
+	// Clear temporary vectors/matrices
+	gsl_vector_float_free(workvec);
 	return 0;
 }
 

@@ -115,10 +115,10 @@ private:
 		
 		struct _actmat {
 			gsl_matrix_float *mat;					//!< Actuation matrix = V . Sigma^-1 . U^T (size (nact, nmeas))
-			gsl_matrix *U;									//!< SVD matrix U of infmat (size (nmeas, nact))
-			gsl_vector *s;									//!< SVD vector s of infmat (size (nact, 1))
-			gsl_matrix *Sigma;							//!< SVD matrix Sigma of infmat (size (nact, nact))
-			gsl_matrix *V;									//!< SVD matrix V of infmat (size (nact, nact))
+			gsl_matrix_float *U;						//!< SVD matrix U of infmat (size (nmeas, nact))
+			gsl_vector_float *s;						//!< SVD vector s of infmat (size (nact, 1))
+			gsl_matrix_float *Sigma;				//!< SVD matrix Sigma of infmat (size (nact, nact))
+			gsl_matrix_float *V;						//!< SVD matrix V of infmat (size (nact, nact))
 		} actmat;													//!< Actuation matrix & related entitites
 		
 	} infdata_t;
