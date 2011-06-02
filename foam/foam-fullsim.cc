@@ -166,6 +166,9 @@ int FOAM_FullSim::calib() {
 		// Calculate the final influence function
 		simwfs->calc_infmat(simwfc->getname());
 		
+		// Calculate forward matrix
+		simwfs->calc_actmat(simwfc->getname(), 1.0);
+		
 		// Restore seeing
 		simcam->seeingfac = old_seeingfac;
 		//simcam->do_simmla = old_do_simmla;
