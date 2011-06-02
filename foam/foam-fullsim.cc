@@ -136,8 +136,13 @@ int FOAM_FullSim::calib() {
 	if (ptc->calib == "influence") {		// Calibrate influence function
 		// Init actuation vector & positions, camera, 
 		gsl_vector_float *tmpact = gsl_vector_float_calloc(simwfc->nact);
-		float actpos[3] = {-1.0, 0.0, 1.0};
+		vector <float> actpos;
+		actpos.push_back(-1.0);
+		//actpos.push_back(0.3);
+		actpos.push_back(1.0);
 
+		simwfs->init_infmat(simwfc->getname(), simwfc->nact, actpos);
+		
 		simcam->set_mode(Camera::RUNNING);
 		
 		// Disable seeing during calibration
@@ -146,12 +151,12 @@ int FOAM_FullSim::calib() {
 		
 		// Loop over all actuators, actuate according to actpos
 		for (int i = 0; i < simwfc->nact; i++) {
-			for (int p = 0; p < 3; p++) {
+			for (size_t p = 0; p < actpos.size(); p++) {
 				// Set actuator to actpos[p], measure, store
 				gsl_vector_float_set(tmpact, i, actpos[p]);
 				simwfc->actuate(tmpact, gain_t(1.0, 0.0, 0.0), true);
 				Camera::frame_t *frame = simcam->get_next_frame(true);
-				simwfs->build_infmat(frame, i, actpos[p]);
+				simwfs->build_infmat(simwfc->getname(), frame, i, p);
 			}
 			
 			// Set actuator back to 0
@@ -159,7 +164,7 @@ int FOAM_FullSim::calib() {
 		}
 		
 		// Calculate the final influence function
-		simwfs->calc_infmat();
+		simwfs->calc_infmat(simwfc->getname());
 		
 		// Restore seeing
 		simcam->seeingfac = old_seeingfac;
