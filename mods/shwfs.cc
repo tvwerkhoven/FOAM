@@ -272,42 +272,111 @@ int Shwfs::shift_to_basis(const gsl_vector_float *const invec, const wfbasis bas
 	return 0;
 }
 
-int Shwfs::build_infmat(Camera::frame_t *frame, int actid, float actpos) {
+void Shwfs::init_infmat(string wfcname, size_t nact, vector <float> &actpos) {
+	// Store number of actuator positions
+	calib[wfcname].meas.actpos = actpos;
+	size_t nactpos = actpos.size();
+	
+	if (nactpos < 2) {
+		io.msg(IO_WARN, "Shwfs::build_infmat(): Cannot calibrate with <2 positions.");
+		return;
+	}
+	
+	calib[wfcname].nact = nact;
+	calib[wfcname].nmeas = mlacfg.size() * 2;
+	
+	// Init influence measurement data
+	for (size_t i=0; i<nactpos; i++) {
+		gsl_matrix_float *tmp = gsl_matrix_float_calloc(calib[wfcname].nmeas, nact);
+		calib[wfcname].meas.measmat.push_back(tmp);
+	}
+	calib[wfcname].meas.infmat = gsl_matrix_float_calloc(calib[wfcname].nmeas, nact);
+
+	// Init actuation matrices
+	calib[wfcname].actmat.mat = gsl_matrix_float_calloc(nact, calib[wfcname].nmeas);
+
+	calib[wfcname].actmat.s = gsl_vector_calloc(nact);
+
+	calib[wfcname].actmat.U = gsl_matrix_calloc(calib[wfcname].nmeas, nact);
+	calib[wfcname].actmat.Sigma = gsl_matrix_calloc(nact, nact);
+	calib[wfcname].actmat.V = gsl_matrix_calloc(nact, nact);
+	
+	calib[wfcname].init = true;
+}
+	
+int Shwfs::build_infmat(string wfcname, Camera::frame_t *frame, int actid, int actposid) {
+	if (!calib[wfcname].init) {
+		io.msg(IO_WARN, "Shwfs::build_infmat(): Call Shwfs::init_infmat() first.");
+		return 0;
+	}
+	
 	// Measure shifts
 	wf_info_t *m = measure(frame);
 	
-	
-	// Copy shifts for ourselves
-	gsl_vector_float *actinfl = gsl_vector_float_alloc(m->wfamp->size);
-	gsl_vector_float_memcpy(actinfl, m->wfamp);
-	
-	// For this actuator (actid) at this position (actpos), store the 
-	// measurements (actinfl), but only if actpos was not already measured.
-	if (inf_data[actid].find(actpos) == inf_data[actid].end())
-		inf_data[actid][actpos] = actinfl;
-	else
-		gsl_vector_float_free(actinfl);
-
-	return 0;
+	// Copy to measmat
+	gsl_matrix_float *measmat = calib[wfcname].meas.measmat[actposid];
+	for (size_t i=0; i<m->wfamp->size; i++)
+		gsl_matrix_float_set(measmat, i, actid, gsl_vector_float_get(m->wfamp, i));
+			
+	return (int) m->wfamp->size;
 }
 
-int Shwfs::calc_infmat() {
-	for (inf_data_t::iterator actit=inf_data.begin(); actit != inf_data.end(); actit++) {
-		// Analyzing actuator actit->first (== actid) with measurements actit->second
-		
-		std::map<float, gsl_vector_float *> actmap = actit->second;
-		for (act_map_t::iterator posit=actmap.begin(); posit != actmap.end(); posit++) {
-			// posit->first = actpos (float)
-			// posit->second = actinfl (gsl_vector_float *)
-			//! @todo implement
-		}
-		
+int Shwfs::calc_infmat(string wfcname) {
+	if (!calib[wfcname].init) {
+		io.msg(IO_WARN, "Shwfs::build_infmat(): Call Shwfs::init_infmat() first.");
+		return 0;
 	}
+
+	/*
+	 This code is similar to the matrix method below, but this one might be more
+	 illustrative
+	 
+	// Loop over all actuators
+	float dmeas, dact;
+	for (size_t actn=0; actn<calib[wfcname].nact; actn++) {
+		// Loop over all measurements
+		for (size_t measn=0; measn<calib[wfcname].nmeas; measn++) {
+			// For this (actuator, measurement) pair, calculate the average slope
+			float avgslope = 0.0;
+			for (size_t i=0; i<calib[wfcname].meas.actpos.size()-1; i++) {
+				dmeas = gsl_matrix_float_get(calib[wfcname].meas.measmat[i+1], measn, actn) - gsl_matrix_float_get(calib[wfcname].meas.measmat[i], measn, actn);
+				dact = calib[wfcname].meas.actpos[i+1] - calib[wfcname].meas.actpos[i];
+				avgslope += dmeas/dact;
+			}
+			avgslope /= (calib[wfcname].meas.actpos.size()-1.0);
+			gsl_matrix_float_set(calib[wfcname].meas.infmat, measn, actn, avgslope);
+		}
+	}
+	 */
+	
+	gsl_matrix_float *avgslope = calib[wfcname].meas.infmat
+	gsl_matrix_float *diffmat = gsl_matrix_float_calloc(calib[wfcname].nmeas, calib[wfcname].nact);
+	
+	for (size_t i=0; i<calib[wfcname].meas.actpos.size()-1; i++) {
+		gsl_matrix_float_memcpy(diffmat, calib[wfcname].meas.measmat[i+1]);
+		gsl_matrix_float_sub (diffmat, calib[wfcname].meas.measmat[i]);
+		
+		dact = calib[wfcname].meas.actpos[i+1] - calib[wfcname].meas.actpos[i];
+		gsl_matrix_float_scale(diffmat, 1.0/dact);
+		gsl_matrix_float_add (avgslope, diffmat);
+	}
+	gsl_matrix_float_scale(avgslope, 1.0/(calib[wfcname].meas.actpos.size()-1));
+	
+	gsl_matrix_float_free(diffmat);
+	
+	// Store to disk
+	Path outf; FILE *fd;
+	outf = mkfname(wfcname + format("_infmat_%d_%d.csv", 
+																	calib[wfcname].meas.infmat->size1, 
+																	calib[wfcname].meas.infmat->size2));
+	fd = fopen(outf.c_str(), "w+");
+	gsl_matrix_float_fprintf (fd, calib[wfcname].meas.infmat, "%g");
+	fclose(fd);
 	
 	return 0;
 }
 
-int Shwfs::calc_actmat(double singval, enum wfbasis basis) {
+int Shwfs::calc_actmat(string wfcname, double singval, enum wfbasis basis) {
 	//! @todo implement
 	
 	return 0;

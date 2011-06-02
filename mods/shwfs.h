@@ -89,19 +89,50 @@ private:
 	Shift shifts;												//!< Shift computation class. Does the heavy lifting.
 	gsl_vector_float *shift_vec;				//!< SHWFS shift vector. Shift for subimage N are elements N*2+0 and N*2+1. Same order as mlacfg @todo Make this a ring buffer
 	gsl_vector_float *ref_vec;					//!< SHWFS reference shift vector. Use this as 'zero' value
-	gsl_matrix_float *infmat;						//!< Influence matrix, represents the influence of a Wfs on this Wfs
-
-	typedef std::map<float, gsl_vector_float *> act_map_t;
-	typedef std::map<int, act_map_t > inf_data_t; //!< Raw influence data, for each actuator (int actid), store a series of positions (float p) and measurements (gsl_vector_float *meas)
-	inf_data_t inf_data;
-
-	struct actmat {
-		gsl_matrix_float *mat;						//!< Actuation matrix = V . Sigma^-1 . U^T
-		gsl_matrix *U;										//!< SVD matrix U of infmat
-		gsl_vector *s;										//!< SVD vector s of infmat
-		gsl_matrix *Sigma;								//!< SVD matrix Sigma of infmat
-		gsl_matrix *V;										//!< SVD matrix V of infmat
-	};																	//!< Actuation matrix & related entitites
+	
+	
+//	typedef std::map<float, gsl_vector_float *> act_map_t;
+//	typedef std::map<int, act_map_t > inf_data_t; //!< Raw influence data, for each actuator (int actid), store a series of positions (float p) and measurements (gsl_vector_float *meas)
+//	inf_data_t inf_data;
+	
+	// Alternative:
+	//	typedef std::map<int, vector <fcoord_t>> act_map_t;
+	//	typedef std::map<int, act_map_t > inf_data_t; //!< Raw influence data, for each actuator (int actid), store each measurement (int measurement_id) and a vector of all actuator signals and corresponding measurements
+	//	inf_data_t inf_data;								//!< Raw influence data: inf_data[act_id][measurement_id] is a vector of (actuator signal, subap measurement) vectors. Note that each subap has two measurement_id (x and y).
+	
+	// Alternative2:
+	typedef struct infdata {
+		infdata(): init(false), nact(0), nmeas(0) {  }
+		bool init;
+		size_t nact;
+		size_t nmeas;
+		
+		struct _meas {
+			std::vector<float> actpos;			//!< Actuator positions (voltages) applied for each measmat
+			std::vector<gsl_matrix_float *> measmat; //!< Matrices with raw measurements for infmat (should be (nmeas, nact), nmeas > nact)
+			gsl_matrix_float *infmat;				//!< Influence matrix, represents the influence of a WFC on this Wfs (should be (nmeas, nact))
+		} meas;														//!< Influence measurements
+		
+		struct _actmat {
+			gsl_matrix_float *mat;					//!< Actuation matrix = V . Sigma^-1 . U^T (size (nact, nmeas))
+			gsl_matrix *U;									//!< SVD matrix U of infmat (size (nmeas, nact))
+			gsl_vector *s;									//!< SVD vector s of infmat (size (nact, 1))
+			gsl_matrix *Sigma;							//!< SVD matrix Sigma of infmat (size (nact, nact))
+			gsl_matrix *V;									//!< SVD matrix V of infmat (size (nact, nact))
+		} actmat;													//!< Actuation matrix & related entitites
+		
+	} infdata_t;
+	
+	std::map<std::string, infdata_t> calib;	//!< Calibration data for a specific WFC.
+	// calib.meas.actpos
+	// calib.meas.measmat[N]
+	// calib.meas.infmat
+	// calib.actmat.mat
+	// calib.actmat.U	
+	// Reminder about (GSL) matrices: 
+	// Matrix (10,5) X vector (5,1) gives a (10,1) vector
+	// Matrix (10,5) X matrix (5,4) gives a (10,4) matrix
+	// See <http://www.gnu.org/software/gsl/manual/html_node/Singular-Value-Decomposition.html>	
 	
 	Shift::method_t method;							//!< Data processing method (Center of Gravity, Correlation, etc)
 	
@@ -208,6 +239,21 @@ public:
 	 */
 	gsl_vector_float *comp_ctrlcmd(wf_info_t *wf);
 	
+	/*! @brief Initialize influence matrix, allocate memory
+	 
+	 Before we can measure the influence function of a WFC-WFS pair, we need to
+	 allocate some memory. This is done here. 
+	 
+	 First, we need a specific wfcname to calibrate against. Then we need the 
+	 number of actuators in that WFC and finally we need the positions that will
+	 be actuated.
+	 
+	 @param [in] wfcname Name of the WFC this WFS is calibrated with
+	 @param [in] nact Number of actuators in the WFC
+	 @param [in] &actpos List of positions that will be actuated
+	 */
+	void init_infmat(string wfcname, size_t nact, vector <float> &actpos);
+	
 	/*! @brief Build influece matrix
 	 
 	 Given a specific wfc actuation (wfcact), and the data that produces 
@@ -219,21 +265,26 @@ public:
 	 is used to drive a Wfc given Wfs measurements and is called the actuation
 	 matrix.
 
+	 @param [in] wfcname Name of the WFC this WFS is calibrated with
 	 @param [in] *frame Captured camera frame
-	 @param [in] *wfcact WFC actuation resulting in *frame
+	 @param [in] actid ID of the actuated actuator
+	 @param [in] actposid ID of the position the actuator was set to (in calib[].meas.actpos)
 	 */
-	int build_infmat(Camera::frame_t *frame, int actid, float actpos);
-	
+	int build_infmat(string wfcname, Camera::frame_t *frame, int actid, int actposid);
+
 	/*! @brief After getting enough data with build_infmat, construct the influence matrix
+	 
+	 @param [in] wfcname Name of the WFC this WFS is calibrated with
 	 */
-	int calc_infmat();
+	int calc_infmat(string wfcname);
 	
 	/*! @brief Calculate actuation matrix to drive Wfc, using SVD
 	 
+	 @param [in] wfcname Name of the WFC this WFS is calibrated with
 	 @param [in] singval How much singular value to include (0 to 1)
 	 @param [in] basis Basis for which singval counts
 	 */	 
-	int calc_actmat(double singval, enum wfbasis basis = SENSOR);
+	int calc_actmat(string wfcname, double singval, enum wfbasis basis = SENSOR);
 	
 	/*! @brief Set this measurement as reference or 'flat' wavefront
 	 
