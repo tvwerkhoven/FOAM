@@ -33,7 +33,7 @@ To install FOAM when checking out from the git repository, please first run:
 followed by the regular installation procedure:
 
 - ./configure --help
-- ./confgiure
+- ./configure
 - make
 
 For information about specific platforms and compilers see the
