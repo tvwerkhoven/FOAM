@@ -20,10 +20,12 @@
 
 #include <math.h>
 #include <string>
+#include <gsl/gsl_matrix.h>
 
 #ifdef HAVE_CONFIG_H
 #include "autoconfig.h"
 #endif
+
 
 #include "io.h"
 #include "config.h"
