@@ -134,15 +134,14 @@ void CamCtrl::on_message(string line) {
 //!< @bug If this function returns, there is a problem in camview.cc
 void CamCtrl::on_monitor_message(string line) {
 	fprintf(stderr, "%x:CamCtrl::on_monitor_message(line=%s)\n", (int) pthread_self(), line.c_str());
-	// Line has to start with 'ok image'
+	// Line has to start with 'ok', or there is an error
 	if(popword(line) != "ok") {
 		log.add(Log::ERROR, "image grab error (err=" + line + ")");
 		return;
 	}
-	if(popword(line) != "image") {
-		log.add(Log::ERROR, "no image from grab (err=" + line + ")");
+	// Second word should be 'image' (but can also be calib or status form Device base class)
+	if(popword(line) != "image")
 		return;
-	}
 
 	// The rest of the line is: <size> <x1> <y1> <x2> <y2> <scale> [histogram] [avg] [rms]
 	size_t size = popsize(line);
