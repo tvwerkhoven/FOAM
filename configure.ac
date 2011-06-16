@@ -57,7 +57,7 @@ AC_SUBST(FOAMCONFDIR)
 
 
 ### Store & reset $(LIBS) to capture output of AC_SEARCH_LIBS
-OLDLIBS=$(LIBS)
+OLDLIBS=$LIBS
 LIBS=
 
 ### These libraries are crucial for all targets
@@ -91,7 +91,7 @@ AC_SUBST(COMMON_CFLAGS)
 AC_SUBST(COMMON_LIBS)
 
 # Reset LIBS
-LIBS=$(OLDLIBS)
+LIBS=$OLDLIBS
 
 ### Hardware libraries
 

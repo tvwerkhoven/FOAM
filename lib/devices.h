@@ -163,6 +163,8 @@ public:
 	
 	virtual int verify() { return 0; }	//!< Verify the integrity of the device
 	
+	Path mkfname(string identifier) const { return ptc->datadir + Path(type + "." + name + "_" + identifier); } //!< Make filename for data output
+	
 	bool isonline() const { return online; }
 	string getname() const { return name; }
 	string gettype() const { return type; }

@@ -37,6 +37,12 @@ const string simseeing_type = "simseeing";
  
  This class is offline (no network connection), and is controlled from the
  SimulCam class.
+ 
+ Configuration parameters:
+ - None, works through SimulCam
+ 
+ Network commands:
+ - None, offline device
  */
 class SimSeeing: public Device {
 public:
@@ -61,10 +67,12 @@ public:
 	coord_t windspeed;									//!< Windspeed in pixels/frame
 	wind_t windtype;										//!< Windtype used for seeing simulation
 	
+	double seeingfac;										//!< Multiplicative factor for wavefront screen.
+	
 	SimSeeing(Io &io, foamctrl *const ptc, const string name, const string port, const Path &conffile);
 	~SimSeeing();
 		
-	gsl_matrix *get_wavefront(const double fac=1.0);
+	gsl_matrix *get_wavefront();
 	gsl_matrix *get_wavefront(const size_t x0, const size_t y0, const size_t w, const size_t h, const double fac=1.0);
 };
 

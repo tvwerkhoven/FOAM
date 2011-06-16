@@ -247,6 +247,7 @@ void ShwfsView::on_subi_regen_clicked() {
 }
 
 void ShwfsView::on_subi_find_clicked() {
+	//! @todo Implement mla find with parameters: mla find [sisize] [simini_f] [nmax] [iter]
 	fprintf(stderr, "%x:ShwfsView::on_subi_find_clicked()\n", (int) pthread_self());
 	
 	// Find subimage pattern heuristically

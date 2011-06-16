@@ -21,6 +21,8 @@
 #ifndef HAVE_SIMULWFC_H
 #define HAVE_SIMULWFC_H
 
+#include <gsl/gsl_matrix.h>
+
 #include "io.h"
 #include "config.h"
 #include "pthread++.h"

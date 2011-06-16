@@ -44,9 +44,12 @@ SimulCam::SimulCam(Io &io, foamctrl *const ptc, const string name, const string 
 Camera(io, ptc, name, simulcam_type, port, conffile, online),
 seeing(io, ptc, name + "-seeing", port, conffile),
 simwfc(simwfc),
-out_size(0), frame_out(NULL), telradius(1.0), telapt(NULL), telapt_fill(0.7),
-do_simtel(true), do_simmla(true), do_simwfc(true),
-shwfs(io, ptc, name + "-shwfs", port, conffile, *this, false)
+out_size(0), frame_out(NULL), 
+telradius(1.0), telapt(NULL), telapt_fill(0.7),
+noise(0.0), noiseamp(0.0), mlafac(1.0), 
+shwfs(io, ptc, name + "-shwfs", port, conffile, *this, false),
+seeingfac(seeing.seeingfac),
+do_simtel(true), do_simmla(true), do_simwfc(true)
 {
 	io.msg(IO_DEB2, "SimulCam::SimulCam()");
 	// Register network commands with base device:
@@ -56,6 +59,8 @@ shwfs(io, ptc, name + "-shwfs", port, conffile, *this, false)
 	add_cmd("set noiseamp");
 	add_cmd("get seeingfac");
 	add_cmd("set seeingfac");
+	add_cmd("get mlafac");
+	add_cmd("set mlafac");
 	add_cmd("get windspeed");
 	add_cmd("set windspeed");
 	add_cmd("get windtype");
@@ -69,7 +74,7 @@ shwfs(io, ptc, name + "-shwfs", port, conffile, *this, false)
 
 	noise = cfg.getdouble("noise", 0.2);
 	noiseamp = cfg.getdouble("noiseamp", 0.2);
-	seeingfac = cfg.getdouble("seeingfac", 1.0);
+	mlafac = cfg.getdouble("mlafac", 25.0);
 	
 	if (seeing.cropsize.x != res.x || seeing.cropsize.y != res.y)
 		throw std::runtime_error("SimulCam::SimulCam(): Camera resolution and seeing cropsize must be equal.");
@@ -109,7 +114,9 @@ void SimulCam::on_message(Connection *const conn, string line) {
 		} else if(what == "telapt_fill") { // set telapt_fill <double>
 			set_var(conn, "telapt_fill", popdouble(line), &telapt_fill, 0.0, 1.0, "out of range");
 		} else if(what == "seeingfac") {	// set seeingfac <double>
-			set_var(conn, "seeingfac", popdouble(line), &seeingfac);
+			set_var(conn, "seeingfac", popdouble(line), &(seeing.seeingfac));
+		} else if(what == "mlafac") {	// set mlafac <double>
+			set_var(conn, "mlafac", popdouble(line), &mlafac);
 		} else if(what == "windspeed") {	// set windspeed <int> <int>
 			int tmpx = popint(line);
 			int tmpy = popint(line);
@@ -136,7 +143,7 @@ void SimulCam::on_message(Connection *const conn, string line) {
 			
 			netio.broadcast(format("ok windtype %s", tmp.c_str()), "windtype");
 		} else if(what == "simwf") {			// set simwfs <bool>
-			set_var(conn, "simwf", popdouble(line), &seeingfac);
+			set_var(conn, "simwf", popdouble(line), &(seeing.seeingfac));
 		} else if(what == "simtel") {			// set simtel <bool>
 			set_var(conn, "simtel", popbool(line), &do_simtel);
 		} else if(what == "simmla") {			// set simmla <bool>
@@ -153,7 +160,9 @@ void SimulCam::on_message(Connection *const conn, string line) {
 		} else if(what == "noiseamp") {		// get noiseamp
 			get_var(conn, "noiseamp", noiseamp);
 		} else if(what == "seeingfac") {	// get seeingfac
-			get_var(conn, "seeingfac", seeingfac);
+			get_var(conn, "seeingfac", seeing.seeingfac);
+		} else if(what == "mlafac") {			// get mlafac
+			get_var(conn, "mlafac", mlafac);
 		} else if(what == "windspeed") {	// get windspeed
 			get_var(conn, "windspeed", format("ok windspeed %x %x", seeing.windspeed.x, seeing.windspeed.y));
 		} else
@@ -197,7 +206,7 @@ void SimulCam::gen_telapt() {
 }
 
 gsl_matrix *SimulCam::simul_seeing() {
-	gsl_matrix *wf = seeing.get_wavefront(seeingfac);
+	gsl_matrix *wf = seeing.get_wavefront();
 	return wf;
 }
 
@@ -229,6 +238,9 @@ void SimulCam::simul_wfs(gsl_matrix *wave_in) const {
 	}
 	
 	io.msg(IO_DEB2, "SimulCam::simul_wfs()");
+	
+	// Multiply with mlafac for 'magnification'
+	gsl_matrix_scale(wave_in, mlafac);
 	
 	// Apply fourier transform to subimages here
 	coord_t sallpos(shwfs.mlacfg[0].lx, 
@@ -270,7 +282,7 @@ void SimulCam::simul_wfs(gsl_matrix *wave_in) const {
 		
 		// Check if this subaperture is within the bounds of the telescope 
 		// aperture for at least telapt_fill. All values of telapt are either 0 or 
-		// seeingfac, see gen_telapt(). If the sum is higher than telapt_fill *
+		// 1, see gen_telapt(). If the sum is higher than telapt_fill *
 		// sasize.y * sasize.x * seeingfac, accept this subaperture. Otherwise set
 		// to zero.
 		telapt_crop = gsl_matrix_submatrix(telapt, sallpos.y, sallpos.x, sasize.y, sasize.x);
