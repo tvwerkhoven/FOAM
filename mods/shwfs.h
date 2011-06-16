@@ -209,7 +209,7 @@ public:
 	 @param [in] iter Number of iterations to do
 	 @return Number of subapertures found
 	 */
-	int find_mla_grid(std::vector<vector_t> &mlacfg, const coord_t size, const float mini_f=0.8, const int nmax=-1, const int iter=1);
+	int find_mla_grid(std::vector<vector_t> &mlacfg, const coord_t size, const float mini_f=0.6, const int nmax=-1, const int iter=1);
 	
 	//!< Store MLA grid to disk, as CSV
 	bool store_mla_grid(const bool overwrite=false) const;
@@ -284,7 +284,7 @@ public:
 	 @param [in] singval How much singular value to include (0 to 1)
 	 @param [in] basis Basis for which singval counts
 	 */	 
-	int calc_actmat(string wfcname, double singval, enum wfbasis basis = SENSOR);
+	int calc_actmat(string wfcname, double singval=1.0, enum wfbasis basis = SENSOR);
 	
 	/*! @brief Set this measurement as reference or 'flat' wavefront
 	 

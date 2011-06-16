@@ -91,7 +91,7 @@ method(Shift::COG)
 	
 	// Other paramters:
 	simaxr = cfg.getint("simaxr", -1);
-	simini_f = cfg.getdouble("simini_f", 0.8);
+	simini_f = cfg.getdouble("simini_f", 0.6);
 	
 	// Generate MLA grid
 	gen_mla_grid(mlacfg, cam.get_res(), sisize, sipitch, xoff, disp, shape, overlap);
@@ -226,8 +226,8 @@ void Shwfs::on_message(Connection *const conn, string line) {
 
 Wfs::wf_info_t* Shwfs::measure(Camera::frame_t *frame) {
 	if (!is_calib) {
-		io.msg(IO_ERR, "Shwfs::measure() calibrate sensor first!");
-		return NULL;
+		io.msg(IO_WARN, "Shwfs::measure() device not calibrated, should not be.");
+		calibrate();
 	}
 	
 	if (!frame) {
@@ -386,7 +386,7 @@ int Shwfs::calc_infmat(string wfcname) {
 	Path outf; FILE *fd;
 	outf = mkfname(wfcname + format("_infmat_%d_%d.csv", infmat->size1, infmat->size2));
 	fd = fopen(outf.c_str(), "w+");
-	gsl_matrix_fprintf (fd, infmat, "%g");
+	gsl_matrix_fprintf (fd, infmat, "%.12g");
 	fclose(fd);
 	
 	return 0;
@@ -415,9 +415,17 @@ int Shwfs::gsl_linalg_SV_decomp_float(gsl_matrix_float *U, gsl_matrix_float *V, 
 
 
 int Shwfs::calc_actmat(string wfcname, double singval, enum wfbasis basis) {
+	io.msg(IO_XNFO, "Shwfs::calc_actmat(): calc'ing for wfc '%s' with singval cutoff %g.",
+				 wfcname.c_str(), singval);
+	// Using input:
 	// calib[wfcname].meas.infmat
+	// Calculating:
 	// calib[wfcname].actmat.mat
 	// calib[wfcname].actmat.U
+	// calib[wfcname].actmat.s
+	// calib[wfcname].actmat.Sigma
+	// calib[wfcname].actmat.V
+	
 	
 	// Make matrix aliases
 	gsl_matrix_float *mat = calib[wfcname].actmat.mat;
@@ -428,24 +436,49 @@ int Shwfs::calc_actmat(string wfcname, double singval, enum wfbasis basis) {
 	gsl_vector *s = calib[wfcname].actmat.s;
 	gsl_matrix *V = calib[wfcname].actmat.V;
 	
-	gsl_matrix *mat_d = gsl_matrix_calloc(mat->size1, mat->size2);
-	gsl_vector *workvec = gsl_vector_alloc(s->size);
+	gsl_matrix *actmat_d = gsl_matrix_calloc(mat->size1, mat->size2);
+	gsl_vector *workvec = gsl_vector_calloc(s->size);
 
-	// Copy matrix
+	// Copy input matrix to U (which will be overwritten by gsl_linalg_SV_decomp())
 	gsl_matrix_memcpy(U, infmat);
 	
 	// Singular value decompose this matrix:
 	gsl_linalg_SV_decomp(U, V, s, workvec);
 	
+	// Store decomposition to disk
+	Path outf; FILE *fd;
+//	outf = mkfname(wfcname + format("_infmat2_%zu_%zu.csv", infmat->size1, infmat->size2));
+//	fd = fopen(outf.c_str(), "w+");
+//	gsl_matrix_fprintf (fd, infmat, "%.12g");
+//	fclose(fd);
+	
+	outf = mkfname(wfcname + format("_singval_%zu.csv", s->size));
+	fd = fopen(outf.c_str(), "w+");
+	gsl_vector_fprintf (fd, s, "%.12g");
+	fclose(fd);
+	
+	outf = mkfname(wfcname + format("_U_%zu_%zu.csv", U->size1, U->size2));
+	fd = fopen(outf.c_str(), "w+");
+	gsl_matrix_fprintf (fd, U, "%.12g");
+	fclose(fd);
+	
+	outf = mkfname(wfcname + format("_V_%zu_%zu.csv", V->size1, V->size2));
+	fd = fopen(outf.c_str(), "w+");
+	gsl_matrix_fprintf (fd, V, "%.12g");
+	fclose(fd);	
+	
 	// Calculate sum of singular values
-	double sum=0, sum2=0;
+	double sum=0;
 	for (size_t j=0; j < s->size; j++)
 		sum += gsl_vector_get(s, j);
 	
 	// Calculate various condition cutoffs
 	int acc85=0, acc90=0, acc95=0;
+	double sum2=0;
 	for (size_t j=0; j < s->size; j++) {
-		sum2 += gsl_vector_get(s, j);
+		double sval = gsl_vector_get(s, j);
+		sum2 += sval;
+//		io.msg(IO_DEB1, "Shwfs::calc_actmat(): singval %zu: %g (cumsum: %g)",  j, sval, sum2/sum);
 		if (sum2/sum < 0.85) acc85++;
 		if (sum2/sum < 0.9) acc90++;
 		if (sum2/sum < 0.95) acc95++;
@@ -454,61 +487,108 @@ int Shwfs::calc_actmat(string wfcname, double singval, enum wfbasis basis) {
 				 gsl_vector_get(s, 0)/
 				 gsl_vector_get(s, s->size-1), 
 				 s->size);
+	io.msg(IO_XNFO, "Shwfs::calc_actmat(): cond 0.85 @ %d, 0.90 @ %d, 0.95 @ %d modes", 
+				 acc85, acc90, acc95);
 	
-	// Fill singular value *matrix* Sigma
+	// Fill singular value *matrix* Sigma and store to disk
 	sum2 = 0.0;
 	for (size_t j=0; j < s->size; j++) {
 		double sval = gsl_vector_get(s, j);
 		sum2 += sval;
-		if (sum2/sum < singval) 
-			gsl_matrix_set(Sigma, j, j, 1.0/sval);
+		if (sval != 0) sval = 1.0/sval;
+		
+		gsl_matrix_set(Sigma, j, j, sval);
+		//if (sum2/sum <= singval)
 	}
 	
-	// Calculate explicit pseudo-inverse matrix of infmat
-	gsl_matrix *workmat = gsl_matrix_calloc(mat->size1, mat->size2);
-
-	gsl_blas_dgemm (CblasNoTrans, CblasTrans, 1.0, Sigma, U, 0.0, workmat);
-	// Calculate mat3a_inv = mat3a_v mat3a_tmp
-	gsl_blas_dgemm (CblasNoTrans, CblasNoTrans, 1.0, V, workmat, 0.0, mat_d);
+	outf = mkfname(wfcname + format("_Sigma_%zu_%zu.csv", Sigma->size1, Sigma->size2));
+	fd = fopen(outf.c_str(), "w+");
+	gsl_matrix_fprintf (fd, Sigma, "%.12g");
+	fclose(fd);
 	
-	// Test inversion, calculate mat * infmat:
+	// Calculate explicit pseudo-inverse matrix of infmat, store in actmat. The 
+	// pseudo-inverse is given by actmat = V . Sigma . U^T
+	gsl_matrix *workmat = gsl_matrix_calloc(mat->size1, mat->size2);
+	
+	// First calculate workmat = (Sigma . U^T)
+	gsl_blas_dgemm (CblasNoTrans, CblasTrans, 1.0, Sigma, U, 0.0, workmat);
+	// Then calculate actmat_d = (V . workmat)
+	gsl_blas_dgemm (CblasNoTrans, CblasNoTrans, 1.0, V, workmat, 0.0, actmat_d);
+	
+	// Store inverse matrix to disk
+	outf = mkfname(wfcname + format("_actmat_%zu_%zu.csv", actmat_d->size1, actmat_d->size2));
+	fd = fopen(outf.c_str(), "w+");
+	gsl_matrix_fprintf (fd, actmat_d, "%.12g");
+	fclose(fd);
+	
+	// Test inversion, calculate (mat . infmat):
 	gsl_matrix_free(workmat);
-	workmat = gsl_matrix_calloc(Sigma->size1, Sigma->size2);
-	gsl_blas_dgemm (CblasNoTrans, CblasNoTrans, 1.0, mat_d, infmat, 0.0, workmat);
+	workmat = gsl_matrix_calloc(actmat_d->size1, infmat->size2);
+	gsl_blas_dgemm (CblasNoTrans, CblasNoTrans, 1.0, actmat_d, infmat, 0.0, workmat);
+	
+	// Store pseudo-ident matrix to disk
+	outf = mkfname(wfcname + format("_pseudo-ident_%zu_%zu.csv", workmat->size1, workmat->size2));
+	fd = fopen(outf.c_str(), "w+");
+	gsl_matrix_fprintf (fd, workmat, "%.12g");
+	fclose(fd);
 	
 	// Sum all elements in workmat (should be sum(identity(workmat->size1)) = workmat->size1)
-	sum=-workmat->size1;
+	sum=0;
 	for (size_t i=0; i<workmat->size1; i++)
 		for (size_t j=0; j<workmat->size2; j++)
 			sum += gsl_matrix_get(workmat, i, j);
 	
-	io.msg(IO_XNFO, "Shwfs::calc_actmat(): inversion quality: %g, %g/elem.", sum, sum/(workmat->size2*workmat->size1));	
+	sum -= workmat->size1;
 	
-	// Copy mat_d (double) to mat (float)
+	io.msg(IO_XNFO, "Shwfs::calc_actmat(): avg inversion error: %g.", 
+				 sum/(workmat->size2*workmat->size1));	
+	
+	// Test matrix-vector multiplications
+	
+	// Allocate vectors
+	gsl_vector *vecin = gsl_vector_calloc(infmat->size2);
+	gsl_vector *vecout = gsl_vector_calloc(infmat->size1);
+	gsl_vector *vecrec = gsl_vector_calloc(infmat->size2);
+	gsl_vector *vecrec2 = gsl_vector_calloc(infmat->size2);
+	
+	for (size_t i=0; i<vecin->size; i++)
+		gsl_vector_set(vecin, i, drand48()*2.0-1.0);
+	
+	// Forward calculate
+	gsl_blas_dgemv(CblasNoTrans, 1.0, infmat, vecin, 0.0, vecout);
+	
+	// Backward calculate:
+	gsl_linalg_SV_solve (U, V, s, vecout, vecrec);
+	
+	// Backward calculate with explicit matrix:
+	gsl_blas_dgemv(CblasNoTrans, 1.0, actmat_d, vecout, 0.0, vecrec2);
+	
+	// Print vectors
+	double qual1=0, qual2=0;
+	for (size_t j=0; j < vecin->size; j++) {
+		qual1 += gsl_vector_get(vecin, j)/gsl_vector_get(vecrec, j);
+		qual2 += gsl_vector_get(vecin, j)/gsl_vector_get(vecrec2, j);
+	}
+	qual1 /= vecin->size; qual2 /= vecin->size;
+
+	io.msg(IO_XNFO, "Shwfs::calc_actmat(): average rel. error: %g and %g.",
+				 1.-qual1, 1.-qual2);
+	
+	// Copy actmat_d (double) to mat (float)
 	for (size_t i=0; i<mat->size1; i++)
 		for (size_t j=0; j<mat->size2; j++)
-			gsl_matrix_float_set(mat, i, j, gsl_matrix_get(mat_d, i, j));
-	
-	// Store matrices to disk
-	Path outf; FILE *fd;
-	outf = mkfname(wfcname + format("_actmat_%zu_%zu.csv", mat_d->size1, mat_d->size2));
-	fd = fopen(outf.c_str(), "w+");
-	gsl_matrix_fprintf (fd, mat_d, "%g");
-	fclose(fd);
-	
-	outf = mkfname(wfcname + format("_singval_%zu.csv", s->size));
-	fd = fopen(outf.c_str(), "w+");
-	gsl_vector_fprintf (fd, s, "%g");
-	fclose(fd);
-	
+			gsl_matrix_float_set(mat, i, j, gsl_matrix_get(actmat_d, i, j));
+
 	// Free temporary matrices
 	gsl_matrix_free(workmat);
-	gsl_matrix_free(mat_d);
+	gsl_matrix_free(actmat_d);
 
 	return 0;
 }
 
 gsl_vector_float *Shwfs::comp_ctrlcmd(wf_info_t *wf) {
+	if (!wf)
+		return NULL;
 	//! @todo implement
 	
 	return NULL;
@@ -517,6 +597,8 @@ gsl_vector_float *Shwfs::comp_ctrlcmd(wf_info_t *wf) {
 void Shwfs::set_reference(Camera::frame_t *frame) {
 	// Measure shifts
 	wf_info_t *m = measure(frame);
+	if (!m)
+		return;
 
 	// Store these as reference positions
 	gsl_vector_float_memcpy(ref_vec, m->wfamp);
@@ -531,16 +613,28 @@ void Shwfs::store_reference() {
 	io.msg(IO_DEB2, "Shwfs::store_reference() to " + outfile);
 	Csv refvecdat(ref_vec);
 	refvecdat.write(outfile, "Shwfs reference vector");
+
+	Path outf; FILE *fd;
+	outf = mkfname(format("_ref_vec_%zu.csv", ref_vec->size));
+	fd = fopen(outf.c_str(), "w+");
+	gsl_vector_float_fprintf (fd, ref_vec, "%.12g");
+	fclose(fd);
 }
 
 int Shwfs::calibrate() {
+	if (shift_vec) 
+		gsl_vector_float_free(shift_vec);
 	shift_vec = gsl_vector_float_calloc(mlacfg.size() * 2);
+	if (ref_vec) 
+		gsl_vector_float_free(ref_vec);
 	ref_vec = gsl_vector_float_calloc(mlacfg.size() * 2);
 	
 	switch (wf.basis) {
 		case SENSOR:
 			io.msg(IO_XNFO, "Shwfs::calibrate(): Calibrating for basis 'SENSOR'");
 			wf.nmodes = mlacfg.size() * 2;
+			if (wf.wfamp)
+				gsl_vector_float_free(wf.wfamp);
 			wf.wfamp = gsl_vector_float_calloc(wf.nmodes);
 			break;
 		case ZERNIKE:
@@ -614,6 +708,9 @@ int Shwfs::gen_mla_grid(std::vector<vector_t> &mlacfg, const coord_t res, const 
 	io.msg(IO_XNFO, "Shwfs::gen_mla_grid(): Found %d subapertures.", (int) mlacfg.size());
 	netio.broadcast("ok mla " + get_mla_str(), "mla");
 	
+	// Re-calibrate with new settings
+	calibrate();
+	
 	return (int) mlacfg.size();
 }
 
@@ -671,7 +768,7 @@ int Shwfs::find_mla_grid(std::vector<vector_t> &mlacfg, const coord_t size, cons
 	
 	if (f == NULL) {
 		io.msg(IO_WARN, "Shwfs::find_mla_grid() Could not get frame, is the camera running?");
-		return NULL;
+		return 0;
 	}
 	
 	vector_t tmpsi;
@@ -691,8 +788,12 @@ int Shwfs::find_mla_grid(std::vector<vector_t> &mlacfg, const coord_t size, cons
 	}
 	// Minimum intensity
 	int mini = maxi * mini_f;
+	if (mini <= 0) {
+		io.msg(IO_WARN, "Shwfs::find_mla_grid() I_min < 0, something went wrong, aborting.");
+		return 0;
+	}
+	
 	io.msg(IO_DEB2, "Shwfs::find_mla_grid(maxi=%d, mini_f=%g, mini=%d)", maxi, mini_f, mini);
-
 	
 	// Find maximum intensity pixels & set area around it to zero until there is 
 	// no more maximum above mini or we have reached nmax subapertures
@@ -719,11 +820,18 @@ int Shwfs::find_mla_grid(std::vector<vector_t> &mlacfg, const coord_t size, cons
 										 int(maxidx / cam.get_width()) + size.y/2);
 		mlacfg.push_back(tmpsi);
 		
-		io.msg(IO_DEB2, "Shwfs::find_mla_grid(): new! I: %d, idx: %zu, llpos: (%d,%d)", maxi, maxidx, tmpsi.lx, tmpsi.ly);
+		//! @bug Routine seems to block with idx = 0, I=0 sometimes, does not quit when
+		io.msg(IO_DEB2, "Shwfs::find_mla_grid(): new! I: %d, idx: %zu, llpos: (%d,%d), (#: %d/%d)", 
+					 maxi, maxidx, tmpsi.lx, tmpsi.ly, (int) mlacfg.size(), nmax);
 
 		// If we have enough subimages, done
 		if ((int) mlacfg.size() == nmax)
 			break;
+		if ((int) mlacfg.size() >= cam.get_width()*cam.get_height()/size.x/size.y) {
+			io.msg(IO_WARN, "Shwfs::find_mla_grid() subaperture detection overflow, aborting!");
+			mlacfg.clear();
+			return 0;
+		}
 		
 		// Set the current subimage to zero such that we don't detect it next time
 		int xran[] = {max(0, tmpsi.lx), min(cam.get_width(), tmpsi.tx)};
@@ -754,10 +862,13 @@ int Shwfs::find_mla_grid(std::vector<vector_t> &mlacfg, const coord_t size, cons
 	size_t ecount = cam.get_count();
 	if (ecount - bcount >= cam.get_bufsize()) {
 		//! @todo This poses possible problems, what to do?
-		io.msg(IO_WARN, "Shwfs::find_mla_grid(): got camera buffer overflow, data might be inaccurate");
+		io.msg(IO_WARN, "Shwfs::find_mla_grid(): got camera buffer overflow, data might be inaccurate!");
 	}
 	
 	netio.broadcast("ok mla " + get_mla_str(), "mla");
+	// Re-calibrate with new settings
+	calibrate();
+
 	return (int) mlacfg.size();
 }
 
@@ -778,6 +889,9 @@ int Shwfs::mla_update_si(const int nx0, const int ny0, const int nx1, const int 
 			mlacfg[idx] = vector_t(nx0, ny0, nx1, ny1);
 		else
 			mlacfg.push_back(vector_t(nx0, ny0, nx1, ny1));
+		
+		is_calib = false;
+		calibrate();
 
 		netio.broadcast("ok mla " + get_mla_str(), "mla");
 		return 0;
@@ -790,6 +904,8 @@ int Shwfs::mla_update_si(const int nx0, const int ny0, const int nx1, const int 
 int Shwfs::mla_del_si(const int idx) {
 	if (idx >=0 && idx < (int) mlacfg.size()) {
 		mlacfg.erase(mlacfg.begin() + idx);
+		is_calib = false;
+		calibrate();
 		netio.broadcast("ok mla " + get_mla_str(), "mla");
 		return 0;
 	}
@@ -844,6 +960,8 @@ int Shwfs::set_mla_str(string mla_str) {
 		mlacfg.push_back(vector_t(x0, y0, x1, y1));
 	}
 	
+	calibrate();
+
 	netio.broadcast("ok mla " + get_mla_str(), "mla");
 	return (int) mlacfg.size();
 }
