@@ -1,0 +1,16 @@
+FOAM - Modular Adative Optics Framework
+=======================================
+
+This is the developer documentation for FOAM.
+
+Code repository
+===============
+
+The main code repository is at github, <https://github.com/tvwerkhoven/FOAM/>
+s
+Coding standards
+================
+
+Coding standards are fairly generic. Regarding technicalities:
+- Indent with tabs, visually represented as two spaces
+- Save files encoded as utf-8
