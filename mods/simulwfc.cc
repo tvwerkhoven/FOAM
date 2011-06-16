@@ -76,8 +76,6 @@ wfc_sim(NULL)
 	
 	// Calibrate to allocate memory
 	calibrate();
-	// Actuate random pattern to see if it's working
-	actuate_random();
 }
 
 SimulWfc::~SimulWfc() {
