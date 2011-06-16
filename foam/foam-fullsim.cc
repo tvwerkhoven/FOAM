@@ -167,7 +167,7 @@ int FOAM_FullSim::calib() {
 		simwfs->calc_infmat(simwfc->getname());
 		
 		// Calculate forward matrix
-		simwfs->calc_actmat(simwfc->getname(), 1.0);
+		simwfs->calc_actmat(simwfc->getname());
 		
 		// Restore seeing
 		simcam->seeingfac = old_seeingfac;
