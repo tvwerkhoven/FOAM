@@ -250,7 +250,7 @@ Wfs::wf_info_t* Shwfs::measure(Camera::frame_t *frame) {
 	}
 	
 	// Convert shifts to basisfunction
-	//shift_to_basis(shift_vec, wf.basis, wf.wfamp);
+	gsl_vector_float_sub(shift_vec, ref_vec);
 	
 	// Copy to output
 	//! @todo where is this deleted?
@@ -586,12 +586,16 @@ int Shwfs::calc_actmat(string wfcname, double singval, enum wfbasis basis) {
 	return 0;
 }
 
-gsl_vector_float *Shwfs::comp_ctrlcmd(wf_info_t *wf) {
-	if (!wf)
+gsl_vector_float *Shwfs::comp_ctrlcmd(string wfcname, gsl_vector_float *shift, gsl_vector_float *act) {
+	if (calib.find(wfcname) == calib.end())
 		return NULL;
-	//! @todo implement
+	if (!is_calib)
+		calibrate();
 	
-	return NULL;
+	// Compute vector
+	gsl_blas_sgemv(CblasNoTrans, 1.0, calib[wfcname].actmat.mat, shift, 0.0, act);
+
+	return act;
 }
 
 void Shwfs::set_reference(Camera::frame_t *frame) {

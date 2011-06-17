@@ -237,7 +237,7 @@ public:
 	 @param [in] *wf Wavefront information
 	 @return Computed control vector
 	 */
-	gsl_vector_float *comp_ctrlcmd(wf_info_t *wf);
+	gsl_vector_float *comp_ctrlcmd(string wfcname, gsl_vector_float *shift, gsl_vector_float *act);
 	
 	/*! @brief Initialize influence matrix, allocate memory
 	 
