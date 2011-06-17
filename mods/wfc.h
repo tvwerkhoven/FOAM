@@ -39,11 +39,10 @@ const string wfc_type = "wfc";
  @brief Base wavefront corrector class. This will be overloaded with the specific WFC type
  */
 class Wfc: public Device {
-private:
+public:
 	// Common Wfc settings
 	gsl_vector_float *wfc_amp;					//!< (Requested) actuator amplitudes, should be between -1 and 1.
-
-public:
+	
 	int nact;														//!< Numeber of actuators in this device
 	gain_t gain;												//!< Operating gain for this device
 	
