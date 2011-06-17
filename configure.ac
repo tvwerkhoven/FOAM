@@ -23,6 +23,7 @@ ui/Makefile
 conf/Makefile
 data/Makefile
 testing/Makefile
+docs/Makefile
 ])
 
 AC_GNU_SOURCE
@@ -132,6 +133,11 @@ AC_ARG_ENABLE([docs],
 		AC_HELP_STRING([--disable-docs], [don't compile documentation]),
 		[test "$enableval" = no && docs=disabled], [])
 
+extdocs=false
+AC_ARG_ENABLE([extdocs],
+		AC_HELP_STRING([--enable-extdocs], [compile extended documentation]),
+		[test "$enableval" = yes && extdocs=true], [extdocs=disabled])
+
 simstat=true
 AC_ARG_ENABLE([simstat],
 		AC_HELP_STRING([--disable-simstat], [don't build static simulation mode]),
@@ -197,6 +203,10 @@ if test "$docs" = true ; then
 else
 	AC_MSG_NOTICE([*** Not compiling documentation])
 fi
+
+AM_CONDITIONAL([HAVE_DOCS], [test "$docs" = true])
+AM_CONDITIONAL([HAVE_EXTDOCS], [test "$extdocs" = true])
+
 
 ### STATIC SIMULATION MODE LIBS ###
 ###################################
