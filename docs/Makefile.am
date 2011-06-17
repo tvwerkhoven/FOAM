@@ -2,13 +2,13 @@
 
 if HAVE_DOCS
 if HAVE_EXTDOCS
-html-local:
+all-local:
 	@echo -n Building extended documentation...
 	@doxygen doxyfile-debug
 	@echo "done."
 
 else
-html-local:
+all-local:
 	@echo -n Building documentation...
 	@doxygen doxyfile
 	@echo "done."
