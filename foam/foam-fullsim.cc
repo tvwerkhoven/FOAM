@@ -80,7 +80,7 @@ int FOAM_FullSim::open_loop() {
 	Camera::frame_t *frame = simcam->get_next_frame(true);
 
 	Shwfs::wf_info_t *wf_meas = simwfs->measure(frame);
-	gsl_vector_float *ctrlcmd = simwfs->comp_ctrlcmd(wf_meas);
+	simwfs->comp_ctrlcmd(simwfc->getname(), wf_meas->wfamp, simwfc->wfc_amp);
 
 	usleep(0.1 * 1000000);
 	return 0;
@@ -107,13 +107,15 @@ int FOAM_FullSim::closed_init() {
 
 int FOAM_FullSim::closed_loop() {
 	io.msg(IO_DEB2, "FOAM_FullSim::closed_loop()");
-
+	
+	// Measure wavefront error with SHWFS
 	Camera::frame_t *frame = simcam->get_next_frame(true);
-	
 	Shwfs::wf_info_t *wf_meas = simwfs->measure(frame);
-	gsl_vector_float *ctrlcmd = simwfs->comp_ctrlcmd(wf_meas);
 	
-	simwfc->actuate(ctrlcmd, gain_t(1,0,0), true);
+	// Calculte mirror 
+	simwfs->comp_ctrlcmd(simwfc->getname(), wf_meas->wfamp, simwfc->wfc_amp);
+	
+	simwfc->actuate(simwfc->wfc_amp, gain_t(1,0,0), true);
 
 	usleep(0.1 * 1000000);
 	return 0;
