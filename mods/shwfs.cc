@@ -769,13 +769,20 @@ int Shwfs::find_mla_grid(std::vector<vector_t> &mlacfg, const coord_t size, cons
 	is_calib = false;
 
 	// Store current camera count, get last frame
-	size_t bcount = cam.get_count();
 	Camera::frame_t *f = cam.get_last_frame();
+	void *image;
+	size_t imsize;
 	
 	if (f == NULL) {
 		io.msg(IO_WARN, "Shwfs::find_mla_grid() Could not get frame, is the camera running?");
 		return 0;
+	} else {
+		// Copy frame for ourselves
+		imsize = f->size;
+		image = malloc(imsize);
+		memcpy(image, f->image, imsize);
 	}
+
 	
 	vector_t tmpsi;
 	mlacfg.clear();
@@ -786,11 +793,9 @@ int Shwfs::find_mla_grid(std::vector<vector_t> &mlacfg, const coord_t size, cons
 	int maxi = 0;
 	
 	if (cam.get_depth() <= 8) {
-		uint8_t *image = (uint8_t *)f->image;
-		maxi = _find_max(image, f->size, &maxidx);
+		maxi = _find_max((uint8_t *)image, imsize, &maxidx);
 	} else {
-		uint16_t *image = (uint16_t *)f->image;
-		maxi = _find_max(image, f->size/2, &maxidx);
+		maxi = _find_max((uint16_t *)image, imsize/2, &maxidx);
 	}
 	// Minimum intensity
 	int mini = maxi * mini_f;
@@ -808,11 +813,9 @@ int Shwfs::find_mla_grid(std::vector<vector_t> &mlacfg, const coord_t size, cons
 		maxi = 0;
 		
 		if (cam.get_depth() <= 8) {
-			uint8_t *image = (uint8_t *)f->image;
-			maxi = _find_max(image, f->size, &maxidx);
+			maxi = _find_max((uint8_t *)image, imsize, &maxidx);
 		} else {
-			uint16_t *image = (uint16_t *)f->image;
-			maxi = _find_max(image, f->size/2, &maxidx);
+			maxi = _find_max((uint16_t *)image, imsize/2, &maxidx);
 		}
 		
 		// Intensity too low, done
@@ -844,15 +847,15 @@ int Shwfs::find_mla_grid(std::vector<vector_t> &mlacfg, const coord_t size, cons
 		int yran[] = {max(0, tmpsi.ly), min(cam.get_height(), tmpsi.ty)};
 		
 		if (cam.get_depth() <= 8) {
-			uint8_t *image = (uint8_t *)f->image;
+			uint8_t *cimg = (uint8_t *)image;
 			for (int y=yran[0]; y<yran[1]; y++)
 				for (int x=xran[0]; x<xran[1]; x++)
-					image[y*cam.get_width() + x] = 0;
+					cimg[y*cam.get_width() + x] = 0;
 		} else {
-			uint16_t *image = (uint16_t *)f->image;
+			uint16_t *cimg = (uint16_t *)image;
 			for (int y=yran[0]; y<yran[1]; y++)
 				for (int x=xran[0]; x<xran[1]; x++)
-					image[y*cam.get_width() + x] = 0;
+					cimg[y*cam.get_width() + x] = 0;
 		}
 	}
 	
@@ -863,17 +866,11 @@ int Shwfs::find_mla_grid(std::vector<vector_t> &mlacfg, const coord_t size, cons
 		io.msg(IO_WARN, "Shwfs::find_mla_grid(): iter not yet implemented");
 	}
 	
-	// Get latest camera count. If the difference between begin and end is 
-	// bigger than the size of the camera ringbuffer, we were too slow
-	size_t ecount = cam.get_count();
-	if (ecount - bcount >= cam.get_bufsize()) {
-		//! @todo This poses possible problems, what to do?
-		io.msg(IO_WARN, "Shwfs::find_mla_grid(): got camera buffer overflow, data might be inaccurate!");
-	}
-	
 	netio.broadcast("ok mla " + get_mla_str(), "mla");
 	// Re-calibrate with new settings
 	calibrate();
+	
+	free(image);
 
 	return (int) mlacfg.size();
 }
