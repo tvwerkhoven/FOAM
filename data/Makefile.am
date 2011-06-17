@@ -10,9 +10,9 @@ dist_foamdata_DATA = simstatic*.pgm wavefront.fits
 # @todo is this portable?
 all-local:
 	@echo -n Cropping wavefront...
-	@convert wavefront.fits wavefront.png
-	@convert wavefront.fits -depth 8 -crop 1024x768+0+128 wavefront-crop.fits
-	@convert wavefront-crop.fits wavefront-crop.png
+	@if [ ! -f wavefront.png ]; then convert wavefront.fits wavefront.png; fi
+	@if [ ! -f wavefront-crop.fits ]; then convert wavefront.fits -depth 8 -crop 1024x768+0+128 wavefront-crop.fits; fi
+	@if [ ! -f wavefront-crop.png ]; then convert wavefront-crop.fits wavefront-crop.png; fi
 	@echo "done."
 	
 	@echo Converting datafiles...
