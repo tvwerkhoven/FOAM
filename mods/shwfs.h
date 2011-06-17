@@ -231,10 +231,13 @@ public:
 
 	/*! @brief Compute control vector 
 	 
-	 Calculate control vector for wavefront corrector based on previously 
-	 determined influence function.
+	 Calculate control vector for a specific wavefront corrector based on 
+	 previously determined influence function (from build_infmat() and
+	 calc_actmat()).
 	 
-	 @param [in] *wf Wavefront information
+	 @param [in] wfcname Name of the wavefront corrector to be used.
+	 @param [in] *shift Vector of measured shifts
+	 @param [out] *act Generalized actuator commands for wfcname (pre-allocated)
 	 @return Computed control vector
 	 */
 	gsl_vector_float *comp_ctrlcmd(string wfcname, gsl_vector_float *shift, gsl_vector_float *act);
@@ -281,7 +284,7 @@ public:
 	/*! @brief Calculate actuation matrix to drive Wfc, using SVD
 	 
 	 @param [in] wfcname Name of the WFC this WFS is calibrated with
-	 @param [in] singval How much singular value to include (0 to 1)
+	 @param [in] singval How much singular value to include (0 to 1, 0.8 or lower is generally not recommended)
 	 @param [in] basis Basis for which singval counts
 	 */	 
 	int calc_actmat(string wfcname, double singval=1.0, enum wfbasis basis = SENSOR);
