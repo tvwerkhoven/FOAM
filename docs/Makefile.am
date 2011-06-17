@@ -15,21 +15,33 @@ all-local:
 
 endif # HAVE_EXTDOCS
 
-# Install man pages using Automake directives
-man3_MANS = man/man3/*.3
-
-install-html-local:
-	@echo -n Installing documentation to $(htmldir)...
+install-data-local:
+	@echo -n Installing html documentation to $(htmldir) ...
 	@mkdir -p $(htmldir)
 	@cp -r html $(htmldir)
 	@echo "done."
-	
+#	@echo -n Installing man pages to $(mandir) ...
+#	@mkdir -p $(mandir)/man3
+#	@cp -r man/man3/*3 $(mandir)/man3
+#	@echo "done."
+
+# Use automake directive to install / uninstall man pages
+# @todo Problem: man3_MANS executed *before* -local targets, and thus 
+# man/man3/* files do not exist yet. This hack fixes that by making sure one 
+# file (that will be generated anyway) already exists.
+man/man3/*.3:
+	@mkdir -p man/man3/
+	@touch man/man3/FOAM.3
+
+man3_MANS = man/man3/*.3
+
 endif # HAVE_DOCS
 
 clean-local:
 	@echo -n Cleaning up documentatation...
-	@rm -r html/
-	@rm -r latex/
+	@if [ -d man ]; then rm -r man; fi 
+	@if [ -d html ]; then rm -r html; fi 
+	@if [ -d latex ]; then rm -r latex; fi 
 	@echo "done."
 
 # Always remove documentation: maybe the user re-configured after installing 
