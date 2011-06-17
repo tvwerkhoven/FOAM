@@ -628,6 +628,11 @@ void Shwfs::store_reference() {
 }
 
 int Shwfs::calibrate() {
+	if (mlacfg.size() == 0) {
+		io.msg(IO_XNFO, "Shwfs::calibrate(): cannot calibrate without subapertures defined.");
+		return -1;
+	}
+	
 	if (shift_vec) 
 		gsl_vector_float_free(shift_vec);
 	shift_vec = gsl_vector_float_calloc(mlacfg.size() * 2);
