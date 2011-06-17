@@ -63,6 +63,7 @@ method(Shift::COG)
 	add_cmd("calibrate");
 	add_cmd("measure");
 	
+	//! @todo Move microlens array configuration to separate class
 	mlacfg.reserve(128);
 	
 	// Micro lens array parameters:	
