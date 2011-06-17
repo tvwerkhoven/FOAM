@@ -43,6 +43,15 @@ Wfc::~Wfc() {
 	io.msg(IO_DEB2, "Wfc::~Wfc()");
 }
 
+int Wfc::calibrate() {
+	// Allocate memory for control command
+	if (nact > 0)
+		wfc_amp = gsl_vector_float_calloc(nact);
+	
+	is_calib = true;
+	return 0;
+}
+
 void Wfc::on_message(Connection *const conn, string line) { 
 	string orig = line;
 	string command = popword(line);

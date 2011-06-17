@@ -90,7 +90,6 @@ private:
 	gsl_vector_float *shift_vec;				//!< SHWFS shift vector. Shift for subimage N are elements N*2+0 and N*2+1. Same order as mlacfg @todo Make this a ring buffer
 	gsl_vector_float *ref_vec;					//!< SHWFS reference shift vector. Use this as 'zero' value
 	
-	
 //	typedef std::map<float, gsl_vector_float *> act_map_t;
 //	typedef std::map<int, act_map_t > inf_data_t; //!< Raw influence data, for each actuator (int actid), store a series of positions (float p) and measurements (gsl_vector_float *meas)
 //	inf_data_t inf_data;
@@ -108,12 +107,14 @@ private:
 		size_t nmeas;
 		
 		struct _meas {
+			_meas(): infmat(NULL) { }
 			std::vector<float> actpos;			//!< Actuator positions (voltages) applied for each measmat
 			std::vector<gsl_matrix_float *> measmat; //!< Matrices with raw measurements for infmat (should be (nmeas, nact), nmeas > nact)
 			gsl_matrix *infmat;							//!< Influence matrix, represents the influence of a WFC on this Wfs (should be (nmeas, nact))
 		} meas;														//!< Influence measurements
 		
 		struct _actmat {
+			_actmat(): mat(NULL), U(NULL), s(NULL), Sigma(NULL), V(NULL) { }
 			gsl_matrix_float *mat;					//!< Actuation matrix = V . Sigma^-1 . U^T (size (nact, nmeas))
 			gsl_matrix *U;									//!< SVD matrix U of infmat (size (nmeas, nact))
 			gsl_vector *s;									//!< SVD vector s of infmat (size (nact, 1))

@@ -88,34 +88,35 @@ SimulWfc::~SimulWfc() {
 }
 
 int SimulWfc::calibrate() {
-	// 'Calibrate' simulator
+	// 'Calibrate' simulator (allocate memory)
 
 	if (wfc_sim)
 		gsl_matrix_free(wfc_sim);
 	
 	// (Re-)allocate memory for Wfc pattern
 	wfc_sim = gsl_matrix_calloc(actres.y, actres.x);
-	
-	is_calib = true;
-	
+
+	// Call calibrate() in base class (for wfc_amp)
+	Wfc::calibrate();
+
 	return 0;
 }
 
-int SimulWfc::actuate(const gsl_vector_float *wfcamp, const gain_t /* gain */, const bool /* block */) {
+int SimulWfc::actuate(const gsl_vector_float *ctrl, const gain_t /* gain */, const bool /* block */) {
 	//!< @todo Implement gain & block(?) here
 	if (!is_calib)
 		calibrate();
 	
 	gsl_matrix_set_zero(wfc_sim);
 	
-	if (wfcamp == NULL)									// if amplitude vector is NULL, set WFC 'flat'
+	if (ctrl == NULL)									// if amplitude vector is NULL, set WFC 'flat'
 		return 0;
 	
-	if (actpos.size() != wfcamp->size)
+	if (actpos.size() != ctrl->size)
 		return io.msg(IO_ERR, "SimulWfc::actuate() # of actuator position != # of actuator amplitudes!");
 		
 	for (size_t i=0; i<actpos.size(); i++) {
-		float amp = gsl_vector_float_get(wfcamp, i);
+		float amp = gsl_vector_float_get(ctrl, i);
 		//io.msg(IO_WARN, "Wavefront corrector amplitude saturated, abs(%g) > 1!", amp);
 		add_gauss(wfc_sim, actpos[i], actsize, clamp(amp, float(-1.0), float(1.0)));
 	}

@@ -55,7 +55,7 @@ public:
 	 */
 	virtual int actuate(const gsl_vector_float *wfcamp, const gain_t g, const bool block=false) = 0;
 	
-	virtual int calibrate() = 0;						//!< Calibrate actuator
+	virtual int calibrate();						//!< Calibrate actuator
 	
 	// From Device::
 	virtual void on_message(Connection *const conn, string line);
