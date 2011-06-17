@@ -482,9 +482,11 @@ void SimulCam::cam_handler() {
 			default:
 				io.msg(IO_INFO, "SimulCam::cam_handler() OFF/WAITING/UNKNOWN.");
 				// We wait until the mode changed
-				mode_mutex.lock();
-				mode_cond.wait(mode_mutex);
-				mode_mutex.unlock();
+				
+				{
+					pthread::mutexholder h(&mode_mutex);
+					mode_cond.wait(mode_mutex);
+				}
 				break;
 		}
 	}

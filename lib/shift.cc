@@ -61,15 +61,18 @@ void Shift::_worker_func() {
 	float shift[2];
 
 	while (true) {
-		work_mutex.lock();
-		io.msg(IO_XNFO, "Shift::_worker_func() worker %d waiting...", id);
-		work_cond.wait(work_mutex);
-		work_mutex.unlock();
+		{
+			pthread::mutexholder h(&work_mutex);
+			io.msg(IO_XNFO, "Shift::_worker_func() worker %d waiting...", id);
+			work_cond.wait(work_mutex);
+		}
 		
 		while (true) {
-			workpool.mutex.lock();
-			int myjob = workpool.jobid--;
-			workpool.mutex.unlock();
+			int myjob=0;
+			{
+				pthread::mutexholder h(&workpool.mutex);
+				myjob = workpool.jobid--;
+			}
 			if (myjob < 0)
 				break;
 			
@@ -86,11 +89,13 @@ void Shift::_worker_func() {
 		
 		//pthread::mutexholder h(workpool.mutex);
 		//! @todo use mutexholders
-		workpool.mutex.lock();
-		// Increment thread done counter, broadcast signal if we are the last thread
-		if (++(workpool.done) == nworker-1)
-			work_done_cond.broadcast();
-		workpool.mutex.unlock();
+		
+		{
+			pthread::mutexholder h(&workpool.mutex);
+			// Increment thread done counter, broadcast signal if we are the last thread
+			if (++(workpool.done) == nworker-1)
+				work_done_cond.broadcast();
+		}
 	}
 }
 
@@ -148,9 +153,8 @@ bool Shift::calc_shifts(const uint8_t *img, const coord_t res, const std::vector
 	
 	// Wait until the work is completed
 	if (wait) {
-		work_done_mutex.lock();
+		pthread::mutexholder h(&work_done_mutex);
 		work_done_cond.wait(work_done_mutex);
-		work_done_mutex.unlock();
 	}
 	
 	return true;

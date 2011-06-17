@@ -346,6 +346,7 @@ Camera::frame_t *Camera::get_next_frame(const bool wait) {
 	else
 		frameid = count;
 	
+	pthread::mutexholder h(&cam_mutex);
 	return get_frame(frameid, wait);
 }
 

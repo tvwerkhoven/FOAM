@@ -281,9 +281,12 @@ public:
 	int get_depth() const { return depth; }
 	size_t get_maxval() const { return (1 << depth); }
 	
-	frame_t *get_last_frame() const;
 	frame_t *get_next_frame(const bool wait=true);
+	frame_t *get_last_frame() const;
+protected:
+	//! @todo Not allowed to call this from outside, cam_mutex needs to be locked outside this function
 	frame_t *get_frame(const size_t id, const bool wait=true);
+public:
 	size_t get_count() const { return count; }
 	size_t get_bufsize() const { return nframes; }
 	
