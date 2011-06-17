@@ -124,32 +124,32 @@ AM_CONDITIONAL(HAVE_DC1394, test x$have_dc1394 = xtrue)
 
 dummy=true
 AC_ARG_ENABLE([dummy],
-		AC_HELP_STRING([--disable-dummy], [build dummy mode]),
+		AC_HELP_STRING([--disable-dummy], [don't build dummy mode]),
 		[test "$enableval" = no && dummy=disabled], [])
 
 docs=true
 AC_ARG_ENABLE([docs],
-		AC_HELP_STRING([--disable-docs], [compile documentation]),
+		AC_HELP_STRING([--disable-docs], [don't compile documentation]),
 		[test "$enableval" = no && docs=disabled], [])
 
 simstat=true
 AC_ARG_ENABLE([simstat],
-		AC_HELP_STRING([--disable-simstat], [build static simulation mode]),
+		AC_HELP_STRING([--disable-simstat], [don't build static simulation mode]),
 		[test "$enableval" = no && simstat=disabled], [])
 
 fullsim=true
 AC_ARG_ENABLE([fullsim],
-		AC_HELP_STRING([--disable-fullsim], [build full simulation mode]),
+		AC_HELP_STRING([--disable-fullsim], [don't build full simulation mode]),
 		[test "$enableval" = no && fullsim=disabled], [])
 
 debug=true
 AC_ARG_ENABLE([debug],
-		AC_HELP_STRING([--disable-debug], [disable debugging mode]),
+		AC_HELP_STRING([--disable-debug], [don't disable debugging mode]),
 		[test "$enableval" = no && debug=disabled], [])
 
 gui=true
 AC_ARG_ENABLE([gui],
-		AC_HELP_STRING([--disable-gui], [build gui]),
+		AC_HELP_STRING([--disable-gui], [don't build gui]),
 		[test "$enableval" = no && gui=disabled], [])
 
 AC_ARG_ENABLE([hwdebug],
@@ -165,7 +165,6 @@ AC_ARG_WITH([libsiu],
 		[LIBSIU="libsiu"])
 		
 # @todo test LIBSIU presence
-# @todo test LIBSIU presence
 if test -d $LIBSIU ; then
 	AC_MSG_NOTICE([*** Found libsiu in $LIBSIU.])
 else
@@ -178,6 +177,26 @@ fi
 AM_CONDITIONAL([DEBUG], [test "$debug" = true])
 AM_CONDITIONAL([HWDEBUG], [test "$hwdebug" = true])
 AC_SUBST(LIBSIU)
+
+### DOCUMENTATION BUILD CHECKS ###
+##################################
+
+if test "$docs" = true ; then
+	AC_CHECK_PROG(have_doxygen, doxygen, yes, no)
+	if test "$have_doxygen" = no; then docsmissing+=" doxygen"; fi
+	
+	AC_CHECK_PROG(have_dot, dot, yes, no)
+	if test "$have_dot" = no; then docsmissing+=" dot"; fi
+	
+	if test "$have_dot" = no || test  "$have_doxygen" = no ; then
+		docs=false;
+		AC_MSG_WARN([FOAM docs need doxygen & dot programs to compile]);
+	else
+		AC_MSG_NOTICE([*** Compiling documentation])
+	fi
+else
+	AC_MSG_NOTICE([*** Not compiling documentation])
+fi
 
 ### STATIC SIMULATION MODE LIBS ###
 ###################################
@@ -328,6 +347,15 @@ if test "$hwdebug" = true ; then
 	AC_MSG_NOTICE([Hardware debug targets:  available])
 else
 	AC_MSG_NOTICE([Hardware debug targets:  disabled])
+fi
+
+if test "$docs" = true ; then
+	AC_MSG_NOTICE([FOAM docs:               available])
+elif test "$simstat" = disabled; then
+	AC_MSG_NOTICE([FOAM docs:               disabled])
+else
+	AC_MSG_NOTICE([FOAM docs:               not available])
+	AC_MSG_NOTICE([FOAM docs:               missing:$docsmissing])
 fi
 
 AC_MSG_NOTICE([======================================])
