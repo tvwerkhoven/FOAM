@@ -520,7 +520,6 @@ double Camera::set_offset(const double value) {
 Camera::mode_t Camera::set_mode(const mode_t value) {
 	cam_set_mode(value);
 	netio.broadcast("ok mode " + mode2str(mode), "mode");
-	set_calib(false);
 	return mode;
 }
 
