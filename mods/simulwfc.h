@@ -62,7 +62,7 @@ public:
 	
 	gsl_matrix *wfc_sim;								//!< Simulated wavefront correction
 
-	int actuate_random();								//!< Random actuation (for testing only)
+	gsl_vector_float *actuate_random(); //!< Random actuation (for testing only)
 
 	// From Wfc::
 	virtual int actuate(const gsl_vector_float *wfcamp, const gain_t gain, const bool block=false);

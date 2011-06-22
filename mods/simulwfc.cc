@@ -122,18 +122,13 @@ int SimulWfc::actuate(const gsl_vector_float *ctrl, const gain_t /* gain */, con
 	return 0;
 }
 
-int SimulWfc::actuate_random() {
+gsl_vector_float *SimulWfc::actuate_random() {
 	io.msg(IO_DEB2, "SimulWfc::actuate_random()");
+	for (size_t i=0; i<wfc_amp->size; i++)
+		gsl_vector_float_set(wfc_amp, i, drand48()*2.0-1.0);
 	
-	if (!get_calib())
-		calibrate();
-	
-	gsl_matrix_set_zero(wfc_sim);
-	
-	for (size_t i=0; i<actpos.size(); i++)
-		add_gauss(wfc_sim, actpos[i], actsize, drand48()*2.0-1.0);
-	
-	return 0;	
+	actuate(wfc_amp, gain_t(1,0,0), true);
+	return wfc_amp;	
 }
 
 void SimulWfc::add_gauss(gsl_matrix *wfc, const fcoord_t pos, const double stddev, const double amp) {
