@@ -40,6 +40,7 @@
 using namespace std;
 using namespace Gtk;
 
+//! @bug High framerate: clicking 'display' to stop displaying does not work properly.
 
 
 CamView::CamView(CamCtrl *camctrl, Log &log, FoamControl &foamctrl, string n): 
