@@ -45,9 +45,11 @@ Wfc::~Wfc() {
 
 int Wfc::calibrate() {
 	// Allocate memory for control command
-	if (nact > 0)
-		wfc_amp = gsl_vector_float_calloc(nact);
-	
+	if (wfc_amp)
+		gsl_vector_float_free(wfc_amp);
+		
+	wfc_amp = gsl_vector_float_calloc(nact);
+
 	set_calib(true);
 	return 0;
 }
