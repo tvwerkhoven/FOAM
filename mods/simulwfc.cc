@@ -104,7 +104,7 @@ int SimulWfc::calibrate() {
 
 int SimulWfc::actuate(const gsl_vector_float *ctrl, const gain_t /* gain */, const bool /* block */) {
 	//!< @todo Implement gain & block(?) here
-	if (!is_calib)
+	if (!get_calib())
 		calibrate();
 	
 	gsl_matrix_set_zero(wfc_sim);
@@ -127,7 +127,7 @@ int SimulWfc::actuate(const gsl_vector_float *ctrl, const gain_t /* gain */, con
 int SimulWfc::actuate_random() {
 	io.msg(IO_DEB2, "SimulWfc::actuate_random()");
 	
-	if (!is_calib)
+	if (!get_calib())
 		calibrate();
 	
 	gsl_matrix_set_zero(wfc_sim);

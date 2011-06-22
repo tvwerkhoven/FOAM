@@ -48,7 +48,7 @@ int Wfc::calibrate() {
 	if (nact > 0)
 		wfc_amp = gsl_vector_float_calloc(nact);
 	
-	is_calib = true;
+	set_calib(true);
 	return 0;
 }
 

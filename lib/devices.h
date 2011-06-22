@@ -57,6 +57,10 @@ typedef Protocol::Server::Connection Connection;
  @todo Add signal for measurement complete
  */
 class Device {
+private:
+	// These should be accessed through get/set functions to notify the GUI
+	bool is_calib;											//!< Is calibrated and ready for use
+	bool is_ok;													//!< Device status OK & operational
 protected:
 	Io &io;
 	foamctrl *const ptc;
@@ -73,11 +77,11 @@ protected:
 	
 	Protocol::Server netio;							//!< Network connection
 	bool online;												//!< Online flag
-	bool is_calib;											//!< Is calibrated and ready for use
-	bool is_ok;													//!< Device status OK & operational
 	
 	void set_status(bool newstat);			//!< Set device status (is_ok interface)
+	bool get_status() { return is_ok; }	//!< Get device status
 	void set_calib(bool newcalib);			//!< Set calibration status (is_calib interface)
+	bool get_calib() { return is_calib; } //!< Get calibration status
 
 	bool init();												//!< Initialisation (common for all constructors)
 	

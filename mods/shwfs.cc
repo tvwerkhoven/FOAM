@@ -228,7 +228,7 @@ void Shwfs::on_message(Connection *const conn, string line) {
 }
 
 Wfs::wf_info_t* Shwfs::measure(Camera::frame_t *frame) {
-	if (!is_calib) {
+	if (!get_calib()) {
 		io.msg(IO_WARN, "Shwfs::measure() device not calibrated, should not be.");
 		calibrate();
 	}
@@ -592,7 +592,7 @@ int Shwfs::calc_actmat(string wfcname, double singval, enum wfbasis basis) {
 gsl_vector_float *Shwfs::comp_ctrlcmd(string wfcname, gsl_vector_float *shift, gsl_vector_float *act) {
 	if (calib.find(wfcname) == calib.end())
 		return NULL;
-	if (!is_calib)
+	if (!get_calib())
 		calibrate();
 	
 	// Compute vector
@@ -664,7 +664,7 @@ int Shwfs::calibrate() {
 			break;
 	}
 	
-	is_calib = true;
+	Wfs::calibrate();
 	return 0;
 }
 
@@ -672,7 +672,7 @@ int Shwfs::calibrate() {
 int Shwfs::gen_mla_grid(std::vector<vector_t> &mlacfg, const coord_t res, const coord_t size, const coord_t pitch, const int xoff, const coord_t disp, const mlashape_t shape, const float overlap) {
 	io.msg(IO_DEB2, "Shwfs::gen_mla_grid()");
 	
-	is_calib = false;
+	set_calib(false);
 
 	// How many subapertures would fit in the requested size 'res':
 	int sa_range_y = (int) ((res.y/2)/pitch.x + 1);
@@ -772,7 +772,7 @@ bool Shwfs::store_mla_grid(const bool overwrite) const {
 int Shwfs::find_mla_grid(std::vector<vector_t> &mlacfg, const coord_t size, const float mini_f, const int nmax, const int iter) {
 	io.msg(IO_DEB2, "Shwfs::find_mla_grid()");
 
-	is_calib = false;
+	set_calib(false);
 
 	// Store current camera count, get last frame
 	Camera::frame_t *f = cam.get_last_frame();
@@ -899,7 +899,7 @@ int Shwfs::mla_update_si(const int nx0, const int ny0, const int nx1, const int 
 		else
 			mlacfg.push_back(vector_t(nx0, ny0, nx1, ny1));
 		
-		is_calib = false;
+		set_calib(false);
 		calibrate();
 
 		netio.broadcast("ok mla " + get_mla_str(), "mla");
@@ -913,7 +913,7 @@ int Shwfs::mla_update_si(const int nx0, const int ny0, const int nx1, const int 
 int Shwfs::mla_del_si(const int idx) {
 	if (idx >=0 && idx < (int) mlacfg.size()) {
 		mlacfg.erase(mlacfg.begin() + idx);
-		is_calib = false;
+		set_calib(false);
 		calibrate();
 		netio.broadcast("ok mla " + get_mla_str(), "mla");
 		return 0;
@@ -955,7 +955,7 @@ int Shwfs::set_mla_str(string mla_str) {
 	int nsi = popint(mla_str);
 	int x0, y0, x1, y1;
 	
-	is_calib = false;
+	set_calib(false);
 	
 	mlacfg.clear();
 	for (int i=0; i<nsi; i++) {

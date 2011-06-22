@@ -83,7 +83,7 @@ void Wfs::on_message(Connection *const conn, string line) {
 		} else if (what == "camera") {		// get camera
 			get_var(conn, "camera", "ok camera " + cam.name);
 		} else if (what == "calib") {			// get calib
-			get_var(conn, "calib", format("ok calib %d", is_calib));
+			get_var(conn, "calib", format("ok calib %d", get_calib()));
 		} else if (what == "basis") {			// get basis
 			string tmp;
 			if (wf.basis == ZERNIKE) tmp = "zernike";
@@ -122,8 +122,8 @@ Wfs::wf_info_t* Wfs::measure(Camera::frame_t *) {
 
 int Wfs::calibrate() {
 	io.msg(IO_DEB2, "Wfs::calibrate()");
-	is_calib = true;
-
+	
+	set_calib(true);
 	return 0;
 }
 
