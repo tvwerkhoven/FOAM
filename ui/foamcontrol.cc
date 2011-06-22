@@ -172,8 +172,12 @@ void FoamControl::on_message(string line) {
 	state.lastreply = line;
 	
 	string stat = popword(line);
-
-	if (stat != "ok") {
+	
+	// FOAM may receive broadcast messages from Devices, which are prefixed by 
+	// the device name like: '<devname> <status> <command> [parameters]' 
+	// e.g. 'simcam ok is_calib 0'.
+	// Thus: stat should be 'ok' OR the name of a device. Otherwise an error occurred.
+	if (stat != "ok" && get_device(stat) == NULL) {
 		ok = false;
 		log.add(Log::ERROR, "FOAM: <- " + state.lastreply);
 		signal_message();
@@ -182,9 +186,8 @@ void FoamControl::on_message(string line) {
 	
 	log.add(Log::OK, "FOAM: <- " + state.lastreply);
 
-	
-	ok = true;
 	string what = popword(line);
+	ok = true;
 	
 	if (what == "frames")
 		state.numframes = popint32(line);
