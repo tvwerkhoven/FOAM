@@ -97,9 +97,7 @@ int SimulWfc::calibrate() {
 	wfc_sim = gsl_matrix_calloc(actres.y, actres.x);
 
 	// Call calibrate() in base class (for wfc_amp)
-	Wfc::calibrate();
-
-	return 0;
+	return Wfc::calibrate();
 }
 
 int SimulWfc::actuate(const gsl_vector_float *ctrl, const gain_t /* gain */, const bool /* block */) {
