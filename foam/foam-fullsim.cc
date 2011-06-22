@@ -76,12 +76,29 @@ int FOAM_FullSim::open_loop() {
 	
 	// Set random actuation on simulated wavefront corrector
 	simwfc->actuate_random();
+	string act_patt = "";
+	for (size_t i=0; i<simwfc->wfc_amp->size; i++)
+		act_patt += format("%.3g ", gsl_vector_float_get(simwfc->wfc_amp, i));
+	io.msg(IO_INFO, "FOAM_FullSim::act: %s", act_patt.c_str());
+
+	for (size_t i=0; i<simwfc->wfc_amp->size; i++)
+		gsl_vector_float_set(simwfc->wfc_amp, i, 0.0);
 
 	Camera::frame_t *frame = simcam->get_next_frame(true);
 
 	Shwfs::wf_info_t *wf_meas = simwfs->measure(frame);
-	simwfs->comp_ctrlcmd(simwfc->getname(), wf_meas->wfamp, simwfc->wfc_amp);
+	act_patt = "";
+	for (size_t i=0; i<wf_meas->wfamp->size; i++)
+		act_patt += format("%.3g ", gsl_vector_float_get(wf_meas->wfamp, i));
+	io.msg(IO_INFO, "FOAM_FullSim::wfs: %s", act_patt.c_str());
 
+	simwfs->comp_ctrlcmd(simwfc->getname(), wf_meas->wfamp, simwfc->wfc_amp);
+	
+	act_patt = "";
+	for (size_t i=0; i<simwfc->wfc_amp->size; i++)
+		act_patt += format("%.3g ", gsl_vector_float_get(simwfc->wfc_amp, i));
+	io.msg(IO_INFO, "FOAM_FullSim::rec: %s", act_patt.c_str());
+	
 	usleep(0.1 * 1000000);
 	return 0;
 }
