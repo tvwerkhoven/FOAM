@@ -23,6 +23,9 @@
  @brief This is the FOAM control GUI, consisting mostly of MainWindow::
  */
 
+//! @bug crashes when running on expoao directly after connecting? Program received signal SIGSEGV, Segmentation fault. / 0x00007ffff2e8092e in XF86DRIQueryVersion () from /usr/lib/libGL.so.1
+
+
 #ifdef HAVE_CONFIG_H
 #include "autoconfig.h"
 #endif
