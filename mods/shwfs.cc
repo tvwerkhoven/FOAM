@@ -590,6 +590,7 @@ int Shwfs::calc_actmat(string wfcname, double singval, enum wfbasis basis) {
 }
 
 gsl_vector_float *Shwfs::comp_ctrlcmd(string wfcname, gsl_vector_float *shift, gsl_vector_float *act) {
+	//! @todo comp_ctrlcmd() does not know whether the matrix calib[wfcname].actmat.mat is proper or not. Need better calibration tracking, not at device level but at the top level of the program perhaps.
 	if (calib.find(wfcname) == calib.end())
 		return NULL;
 	if (!get_calib())
