@@ -272,7 +272,8 @@ public:
  - Device::on_connect(const Connection * const, const bool) const
  - Device::verify()
  
- but this is only necessary if one wants to extend the functionality.
+ but this is only necessary if one wants to extend the functionality. If you 
+ *do* overload these functions, the base functions also have to be called.
  
  \section dev_der Derived classes
  - \subpage dev_cam "Camera device"
