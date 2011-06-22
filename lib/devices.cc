@@ -34,6 +34,7 @@ using namespace std;
 Device::Device(Io &io, foamctrl *const ptc, const string n, const string t, const string p, const Path conf, const bool online): 
 io(io), ptc(ptc), name(n), type("dev." + t), port(p), conffile(conf), netio(p, n), online(online), is_calib(false), is_ok(false)
 { 
+	//! @todo This init() can just be placed here?
 	init();
 }
 

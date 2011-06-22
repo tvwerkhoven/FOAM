@@ -83,6 +83,7 @@ protected:
 	void set_calib(bool newcalib);			//!< Set calibration status (is_calib interface)
 	bool get_calib() { return is_calib; } //!< Get calibration status
 
+	//! @todo Might not be necessary?
 	bool init();												//!< Initialisation (common for all constructors)
 	
 	/*! @brief Set variable, helper function for on_message
@@ -164,7 +165,7 @@ public:
 	Device(Io &io, foamctrl *const ptc, const string n, const string t, const string p, const Path conf=string(""), const bool online=true);
 	virtual ~Device();
 	
-	
+	//! @todo obsolete, can go away (no use now)
 	virtual int verify() { return 0; }	//!< Verify the integrity of the device
 	
 	Path mkfname(string identifier) const { return ptc->datadir + Path(type + "." + name + "_" + identifier); } //!< Make filename for data output
