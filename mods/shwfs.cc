@@ -104,6 +104,30 @@ method(Shift::COG)
 
 Shwfs::~Shwfs() {
 	io.msg(IO_DEB2, "Shwfs::~Shwfs()");
+	
+	gsl_vector_float_free(shift_vec);
+	gsl_vector_float_free(ref_vec);
+	
+	std::map<std::string, infdata_t>::iterator it;
+	for (it=calib.begin(); it != calib.end(); it++ ) {
+		//cout << (*it).first << " => " << (*it).second << endl;
+		infdata_t curdat = (*it).second;
+		
+		// Delete calib[wfcname].meas.measmat array
+		std::vector<gsl_matrix_float *> tmpvec = curdat.meas.measmat;
+		std::vector<gsl_matrix_float *>::iterator vit;
+		for (vit=tmpvec.begin(); vit < tmpvec.end(); vit++ )
+			gsl_matrix_float_free(*vit);
+		
+		gsl_matrix_free(curdat.meas.infmat);
+		gsl_matrix_float_free(curdat.meas.infmat_f);
+		
+		gsl_matrix_float_free(curdat.actmat.mat);
+		gsl_matrix_free(curdat.actmat.U);
+		gsl_vector_free(curdat.actmat.s);
+		gsl_matrix_free(curdat.actmat.Sigma);
+		gsl_matrix_free(curdat.actmat.V);
+	}
 }
 
 void Shwfs::on_message(Connection *const conn, string line) {
@@ -291,6 +315,7 @@ void Shwfs::init_infmat(string wfcname, size_t nact, vector <float> &actpos) {
 		calib[wfcname].meas.measmat.push_back(tmp);
 	}
 	calib[wfcname].meas.infmat = gsl_matrix_calloc(calib[wfcname].nmeas, nact);
+	calib[wfcname].meas.infmat_f = gsl_matrix_float_calloc(calib[wfcname].nmeas, nact);
 
 	// Init actuation matrices
 	calib[wfcname].actmat.mat = gsl_matrix_float_calloc(nact, calib[wfcname].nmeas);
@@ -350,8 +375,8 @@ int Shwfs::calc_infmat(string wfcname) {
 	 */
 	
 	// Init temporary matrices
-	gsl_matrix_float *avgslope_s = gsl_matrix_float_calloc(calib[wfcname].nmeas, calib[wfcname].nact);
 	gsl_matrix_float *diffmat = gsl_matrix_float_calloc(calib[wfcname].nmeas, calib[wfcname].nact);
+	gsl_matrix_float *infmat_f = calib[wfcname].meas.infmat_f;
 	double dact=0.0;
 	
 	// For each measurement position-pair, calculate the slope this generates 
@@ -363,19 +388,18 @@ int Shwfs::calc_infmat(string wfcname) {
 		
 		dact = calib[wfcname].meas.actpos[i+1] - calib[wfcname].meas.actpos[i];
 		gsl_matrix_float_scale(diffmat, 1.0/dact);
-		gsl_matrix_float_add (avgslope_s, diffmat);
+		gsl_matrix_float_add (infmat_f, diffmat);
 	}
-	gsl_matrix_float_scale(avgslope_s, 1.0/(calib[wfcname].meas.actpos.size()-1));
+	gsl_matrix_float_scale(infmat_f, 1.0/(calib[wfcname].meas.actpos.size()-1));
 	
-	// Copy avgslope_s (float) to infmat (double)
+	// Copy infmat_f (float) to infmat (double)
 	gsl_matrix *infmat = calib[wfcname].meas.infmat;
 	for (size_t i=0; i<infmat->size1; i++)
 		for (size_t j=0; j<infmat->size2; j++)
-			gsl_matrix_set(infmat, i, j, gsl_matrix_float_get(avgslope_s, i, j));
+			gsl_matrix_set(infmat, i, j, gsl_matrix_float_get(infmat_f, i, j));
 	
 	// Free temporary matrices
 	gsl_matrix_float_free(diffmat);
-	gsl_matrix_float_free(avgslope_s);
 	
 	// Store influence matrix to disk
 	Path outf; FILE *fd;
@@ -627,11 +651,9 @@ int Shwfs::calibrate() {
 		return -1;
 	}
 	
-	if (shift_vec) 
-		gsl_vector_float_free(shift_vec);
+	gsl_vector_float_free(shift_vec);
 	shift_vec = gsl_vector_float_calloc(mlacfg.size() * 2);
-	if (ref_vec) 
-		gsl_vector_float_free(ref_vec);
+	gsl_vector_float_free(ref_vec);
 	ref_vec = gsl_vector_float_calloc(mlacfg.size() * 2);
 	
 	switch (wf.basis) {

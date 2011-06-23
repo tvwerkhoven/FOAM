@@ -97,10 +97,11 @@ private:
 		size_t nmeas;
 		
 		struct _meas {
-			_meas(): infmat(NULL) { }
+			_meas(): infmat(NULL), infmat_f(NULL) { }
 			std::vector<float> actpos;			//!< Actuator positions (voltages) applied for each measmat
 			std::vector<gsl_matrix_float *> measmat; //!< Matrices with raw measurements for infmat (should be (nmeas, nact), nmeas > nact)
 			gsl_matrix *infmat;							//!< Influence matrix, represents the influence of a WFC on this Wfs (should be (nmeas, nact))
+			gsl_matrix_float *infmat_f;			//!< Influence matrix stored as float
 		} meas;														//!< Influence measurements
 		
 		struct _actmat {
