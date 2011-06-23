@@ -92,8 +92,10 @@ void Shift::_worker_func() {
 		{
 			pthread::mutexholder h(&workpool.mutex);
 			// Increment thread done counter, broadcast signal if we are the last thread
-			if (++(workpool.done) == nworker-1)
+			if (++(workpool.done) == nworker-1) {
+				io.msg(IO_XNFO, "Shift::_worker_func() worker %d broadcasting...", id);
 				work_done_cond.broadcast();
+			}
 		}
 	}
 }
@@ -151,6 +153,7 @@ bool Shift::calc_shifts(const uint8_t *img, const coord_t res, const std::vector
 	work_cond.broadcast();
 	
 	// Wait until the work is completed
+	//! @bug Race condition here, work might be done before we wait() on the mutex!
 	if (wait) {
 		pthread::mutexholder h(&work_done_mutex);
 		work_done_cond.wait(work_done_mutex);
