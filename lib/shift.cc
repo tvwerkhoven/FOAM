@@ -89,9 +89,6 @@ void Shift::_worker_func() {
 			//usleep(20*1000);
 		}
 		
-		//pthread::mutexholder h(workpool.mutex);
-		//! @todo use mutexholders
-		
 		{
 			pthread::mutexholder h(&workpool.mutex);
 			// Increment thread done counter, broadcast signal if we are the last thread
