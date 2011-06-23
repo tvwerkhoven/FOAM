@@ -466,10 +466,6 @@ int Shwfs::calc_actmat(string wfcname, double singval, enum wfbasis basis) {
 	
 	// Store decomposition to disk
 	Path outf; FILE *fd;
-//	outf = mkfname(wfcname + format("_infmat2_%zu_%zu.csv", infmat->size1, infmat->size2));
-//	fd = fopen(outf.c_str(), "w+");
-//	gsl_matrix_fprintf (fd, infmat, "%.12g");
-//	fclose(fd);
 	
 	outf = mkfname(wfcname + format("_singval_%zu.csv", s->size));
 	fd = fopen(outf.c_str(), "w+");
