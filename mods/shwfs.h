@@ -90,16 +90,6 @@ private:
 	gsl_vector_float *shift_vec;				//!< SHWFS shift vector. Shift for subimage N are elements N*2+0 and N*2+1. Same order as mlacfg @todo Make this a ring buffer
 	gsl_vector_float *ref_vec;					//!< SHWFS reference shift vector. Use this as 'zero' value
 	
-//	typedef std::map<float, gsl_vector_float *> act_map_t;
-//	typedef std::map<int, act_map_t > inf_data_t; //!< Raw influence data, for each actuator (int actid), store a series of positions (float p) and measurements (gsl_vector_float *meas)
-//	inf_data_t inf_data;
-	
-	// Alternative:
-	//	typedef std::map<int, vector <fcoord_t>> act_map_t;
-	//	typedef std::map<int, act_map_t > inf_data_t; //!< Raw influence data, for each actuator (int actid), store each measurement (int measurement_id) and a vector of all actuator signals and corresponding measurements
-	//	inf_data_t inf_data;								//!< Raw influence data: inf_data[act_id][measurement_id] is a vector of (actuator signal, subap measurement) vectors. Note that each subap has two measurement_id (x and y).
-	
-	// Alternative2:
 	typedef struct infdata {
 		infdata(): init(false), nact(0), nmeas(0) {  }
 		bool init;
@@ -125,11 +115,6 @@ private:
 	} infdata_t;
 	
 	std::map<std::string, infdata_t> calib;	//!< Calibration data for a specific WFC.
-	// calib.meas.actpos
-	// calib.meas.measmat[N]
-	// calib.meas.infmat
-	// calib.actmat.mat
-	// calib.actmat.U	
 	// Reminder about (GSL) matrices: 
 	// Matrix (10,5) X vector (5,1) gives a (10,1) vector
 	// Matrix (10,5) X matrix (5,4) gives a (10,4) matrix
@@ -172,11 +157,6 @@ private:
 	int set_mla_str(string mla_str);
 	
 	int mla_subapsel();
-	
-	//!< Calculate influence for each Zernike mode
-//	int calc_zern_infl(int nmodes);
-	//!< Calculate slopes (helper for calc_zern_infl())
-//	int calc_slope(gsl_matrix *tmp, std::vector<vector_t> &mlacfg, double *slope); 
 	
 	//!< Represent SHWFS shifts as a string [<N> [idx Sx0 Sy0 Sx1 Sy1 [idx Sx0 Sy0 Sx1 Sy1 [...]]]
 	string get_shifts_str() const;
@@ -230,7 +210,7 @@ public:
 	 */
 	int shift_to_basis(const gsl_vector_float *const invec, const wfbasis basis, gsl_vector_float *outvec);
 
-	/*! @brief Compute control vector 
+	/*! @brief Given shifts, compute control vector 
 	 
 	 Calculate control vector for a specific wavefront corrector based on 
 	 previously determined influence function (from build_infmat() and
@@ -296,7 +276,7 @@ public:
 	 */
 	void set_reference(Camera::frame_t *frame);
 	
-	void store_reference(); //!< Store reference vector to .csv file in ptc->datadir
+	void store_reference(); //!< Store reference vector to a .csv file in ptc->datadir
 	
 	// From Wfs::
 	wf_info_t* measure(Camera::frame_t *frame=NULL);

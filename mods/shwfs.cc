@@ -43,7 +43,6 @@ using namespace std;
 // PUBLIC FUNCTIONS //
 /********************/
 
-
 Shwfs::Shwfs(Io &io, foamctrl *const ptc, const string name, const string port, Path const &conffile, Camera &wfscam, const bool online):
 Wfs(io, ptc, name, shwfs_type, port, conffile, wfscam, online),
 shifts(io, 4),
@@ -107,40 +106,7 @@ Shwfs::~Shwfs() {
 	io.msg(IO_DEB2, "Shwfs::~Shwfs()");
 }
 
-//int Shwfs::calc_zern_infl(int nmodes) {
-//	// Re-compute Zernike basis functions if necessary
-//	if (nmodes > zernbasis.get_nmodes() || cam.get_width() != zernbasis.get_size())
-//		zernbasis.setup(nmodes, cam.get_width());
-//	
-//	// Calculate the slope in each of the subapertures for each wavefront mode
-//	double slope[2];
-//	for (int m=0; m <= nmodes; m++) {
-//		gsl_matrix *tmp = zernbasis.get_mode(m);
-//		calc_slope(tmp, mlacfg, slope);
-//		
-//		//! @todo implement this
-//		
-//	}
-//	return 0;
-//}
-//
-//int Shwfs::calc_slope(gsl_matrix *tmp, std::vector<vector_t> &mlacfg, double *slope) {
-//	double sum;
-//	for (size_t si=0; si < mlacfg.size(); si++) {
-//		sum=0;
-//		for (int x=mlacfg[i].lx; x < mlacfg[i].tx; x++) {
-//			for (int y=mlacfg[i].ly; y < mlacfg[i].ty; y++) {
-//				// Calculate (x,y)-slope in each subaperture
-//				//! @todo implement this
-//				gsl_matrix_get(tmp, y, x);
-//			}
-//		}
-//	}
-//	return 0;
-//}
-
 void Shwfs::on_message(Connection *const conn, string line) {
-	
 	string orig = line;
 	string command = popword(line);
 	bool parsed = true;
@@ -281,12 +247,38 @@ int Shwfs::shift_to_basis(const gsl_vector_float *const invec, const wfbasis bas
 }
 
 void Shwfs::init_infmat(string wfcname, size_t nact, vector <float> &actpos) {
+	// First delete all data...
+	if (calib.find(wfcname) != calib.end()) {
+		io.msg(IO_DEB1, "Shwfs::init_infmat(): free()'ing old data.");
+		
+		calib[wfcname].meas.actpos.clear();
+		// Delete calib[wfcname].meas.measmat array
+		std::vector<gsl_matrix_float *> tmpvec = calib[wfcname].meas.measmat;
+		std::vector<gsl_matrix_float *>::iterator vit;
+		for (vit=tmpvec.begin(); vit < tmpvec.end(); vit++ )
+			gsl_matrix_float_free(*vit);
+		calib[wfcname].meas.measmat.clear();
+		
+		gsl_matrix_free(calib[wfcname].meas.infmat);
+		gsl_matrix_float_free(calib[wfcname].meas.infmat_f);
+		
+		// Free() .actmat matrices
+		gsl_matrix_float_free(calib[wfcname].actmat.mat);
+		gsl_matrix_free(calib[wfcname].actmat.U);
+		gsl_vector_free(calib[wfcname].actmat.s);
+		gsl_matrix_free(calib[wfcname].actmat.Sigma);
+		gsl_matrix_free(calib[wfcname].actmat.V);
+		
+		// Finally erase this entry from the map
+		calib.erase(wfcname);
+	}
+	
 	// Store number of actuator positions
 	calib[wfcname].meas.actpos = actpos;
 	size_t nactpos = actpos.size();
 	
 	if (nactpos < 2) {
-		io.msg(IO_WARN, "Shwfs::build_infmat(): Cannot calibrate with <2 positions.");
+		io.msg(IO_WARN, "Shwfs::init_infmat(): Cannot calibrate with <2 positions.");
 		return;
 	}
 	
@@ -331,7 +323,7 @@ int Shwfs::build_infmat(string wfcname, Camera::frame_t *frame, int actid, int a
 
 int Shwfs::calc_infmat(string wfcname) {
 	if (!calib[wfcname].init) {
-		io.msg(IO_WARN, "Shwfs::build_infmat(): Call Shwfs::init_infmat() first.");
+		io.msg(IO_WARN, "Shwfs::calc_infmat(): Call Shwfs::init_infmat() first.");
 		return 0;
 	}
 
