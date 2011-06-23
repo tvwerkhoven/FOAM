@@ -618,6 +618,18 @@ gsl_vector_float *Shwfs::comp_ctrlcmd(string wfcname, gsl_vector_float *shift, g
 	return act;
 }
 
+gsl_vector_float *Shwfs::comp_shift(string wfcname, gsl_vector_float *act, gsl_vector_float *shift) {
+	if (calib.find(wfcname) == calib.end())
+		return NULL;
+	if (!get_calib())
+		calibrate();
+	
+	// Compute vector
+	gsl_blas_sgemv(CblasNoTrans, 1.0, calib[wfcname].meas.infmat_f, act, 0.0, shift);
+	
+	return shift;
+}
+
 void Shwfs::set_reference(Camera::frame_t *frame) {
 	// Measure shifts
 	wf_info_t *m = measure(frame);

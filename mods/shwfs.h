@@ -224,6 +224,20 @@ public:
 	 */
 	gsl_vector_float *comp_ctrlcmd(string wfcname, gsl_vector_float *shift, gsl_vector_float *act);
 	
+	/*! @brief Given a control vector, calculate shifts
+	 
+	 This is meant for debugging purposes only. Given a calculated control 
+	 vector, this routine calculates the shifts that will be generated if the
+	 WFC were to apply it, given the actuation matrix. It serves as a test to
+	 see if the back-calculated shifts correspond to the measured shifts.
+	 
+	 @param [in] wfcname Name of the wavefront corrector to be used.
+	 @param [in] *act Generalized actuator commands for wfcname 
+	 @param [out] *shift Vector of calculated shifts (pre-allocated)
+	 @return Vector of calculated shifts
+	 */
+	gsl_vector_float *comp_shift(string wfcname, gsl_vector_float *act, gsl_vector_float *shift);
+	
 	/*! @brief Initialize influence matrix, allocate memory
 	 
 	 Before we can measure the influence function of a WFC-WFS pair, we need to
