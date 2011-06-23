@@ -608,8 +608,9 @@ gsl_vector_float *Shwfs::comp_ctrlcmd(string wfcname, gsl_vector_float *shift, g
 	if (!get_calib())
 		calibrate();
 	
-	// Compute vector
-	gsl_blas_sgemv(CblasNoTrans, 1.0, calib[wfcname].actmat.mat, shift, 0.0, act);
+	// Compute vector. We apply -1 here because the matrix is the pseudo inverse
+	// of infmat, while it should be of -infmat.
+	gsl_blas_sgemv(CblasNoTrans, -1.0, calib[wfcname].actmat.mat, shift, 0.0, act);
 
 	return act;
 }
