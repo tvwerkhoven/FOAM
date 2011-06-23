@@ -609,7 +609,8 @@ gsl_vector_float *Shwfs::comp_ctrlcmd(string wfcname, gsl_vector_float *shift, g
 		calibrate();
 	
 	// Compute vector. We apply -1 here because the matrix is the pseudo inverse
-	// of infmat, while it should be of -infmat.
+	// of infmat, while it should be of -infmat. Alternative explanation: we 
+	// need to *correct* the shifts measured, not reproduce them
 	gsl_blas_sgemv(CblasNoTrans, -1.0, calib[wfcname].actmat.mat, shift, 0.0, act);
 
 	return act;
