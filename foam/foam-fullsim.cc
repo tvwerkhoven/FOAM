@@ -169,15 +169,17 @@ int FOAM_FullSim::calib() {
 
 		simwfs->init_infmat(simwfc->getname(), simwfc->nact, actpos);
 		
-		simcam->set_mode(Camera::RUNNING);
-		
+		io.msg(IO_XNFO, "FOAM_FullSim::calib() Start camera...");
 		// Disable seeing during calibration
 		double old_seeingfac = simcam->seeingfac; simcam->seeingfac = 0.0;
-		//bool old_do_simmla = simcam->do_simmla; simcam->do_simmla = false;
+		simcam->set_mode(Camera::RUNNING);
 		
 		// Loop over all actuators, actuate according to actpos
+		io.msg(IO_XNFO, "FOAM_FullSim::calib() Start calibration loop...");
 		for (int i = 0; i < simwfc->nact; i++) {
 			for (size_t p = 0; p < actpos.size(); p++) {
+				if (ptc->mode != AO_MODE_CAL)
+					goto influence_break;
 				// Set actuator to actpos[p], measure, store
 				gsl_vector_float_set(tmpact, i, actpos[p]);
 				simwfc->actuate(tmpact, gain_t(1.0, 0.0, 0.0), true);
@@ -189,30 +191,36 @@ int FOAM_FullSim::calib() {
 			gsl_vector_float_set(tmpact, i, 0.0);
 		}
 		
+		io.msg(IO_XNFO, "FOAM_FullSim::calib() Process data...");
 		// Calculate the final influence function
 		simwfs->calc_infmat(simwfc->getname());
 		
 		// Calculate forward matrix
 		simwfs->calc_actmat(simwfc->getname());
 		
+		influence_break:
 		// Restore seeing
 		simcam->seeingfac = old_seeingfac;
 		//simcam->do_simmla = old_do_simmla;
 		simcam->set_mode(Camera::OFF);
+		gsl_vector_float_free(tmpact);
 	} 
 	else if (ptc->calib == "zero") {	// Calibrate reference/'flat' wavefront
-		// Start camera, set wavefront corrector to flat position
-		simcam->set_mode(Camera::RUNNING);
+		// Set wavefront corrector to flat position, start camera
+		simwfc->actuate(NULL, true);
 
+		io.msg(IO_XNFO, "FOAM_FullSim::calib() Start camera...");
 		// Disable seeing & wfc during calibration
 		double old_seeingfac = simcam->seeingfac; simcam->seeingfac = 0.0;
 		bool old_do_simwfc = simcam->do_simwfc; simcam->do_simwfc = false;
+
+		simcam->set_mode(Camera::RUNNING);
 		
-		simwfc->actuate(NULL, true);
-		
+		io.msg(IO_XNFO, "FOAM_FullSim::calib() Measure reference...");
 		// Get next frame (wait for it)
 		Camera::frame_t *frame = simcam->get_next_frame(true);
 		
+		io.msg(IO_XNFO, "FOAM_FullSim::calib() Process data...");
 		// Set this frame as reference
 		simwfs->set_reference(frame);
 		simwfs->store_reference();
@@ -226,6 +234,7 @@ int FOAM_FullSim::calib() {
 		io.msg(IO_WARN, "FOAM_FullSim::calib unknown!");
 		return -1;
 	}
+	io.msg(IO_XNFO, "FOAM_FullSim::calib() Complete");
 
 	return 0;
 }
