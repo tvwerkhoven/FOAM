@@ -70,8 +70,8 @@ private:
 	pthread::mutex work_mutex;					//!< Mutex used to limit access to frame data
 	pthread::cond work_cond;						//!< Cond used to signal threads about new frames
 	
-	pthread::cond work_done_cond;				//!< Signal for work completed
 	pthread::mutex work_done_mutex;			//!< Signal for work completed
+	pthread::cond work_done_cond;				//!< Cond used for work completed
 
 	int nworker;												//!< Number of workers requested
 	int workid;													//!< Worker counter

@@ -86,14 +86,16 @@ void Shift::_worker_func() {
 			//! @todo might give problems with 64 bit systems? Better to reserve a block per thread?
 			gsl_vector_float_set(workpool.shifts, myjob*2+0, shift[0]);
 			gsl_vector_float_set(workpool.shifts, myjob*2+1, shift[1]);
-			//usleep(20*1000);
 		}
 		
 		{
 			pthread::mutexholder h(&workpool.mutex);
 			// Increment thread done counter, broadcast signal if we are the last thread
 			if (++(workpool.done) == nworker-1) {
-				io.msg(IO_XNFO, "Shift::_worker_func() worker %d broadcasting...", id);
+				io.msg(IO_XNFO, "Shift::_worker_func() worker %d unlocking...", id);
+				// Lock the work_done_mutex, then broadcast the signal. The 
+				// mutexholder will go out of scope and unlock automatically
+				pthread::mutexholder h(&work_done_mutex);
 				work_done_cond.broadcast();
 			}
 		}
@@ -111,7 +113,8 @@ void Shift::_calc_cog(const uint8_t *img, const coord_t &res, const vector_t &cr
 		// j is the vertical counter, store the beginning of the current row here:
 		p = (uint8_t *) img;
 		p += (j*res.x) + crop.lx;
-		//  img = data origin, j * res.x skips a few rows, crop.llpos.x gives the offset for the current row.
+		// img = data origin, j * res.x skips a few rows, crop.llpos.x gives the 
+		// offset for the current row.
 		for (int i=crop.lx; i<crop.tx; i++) {
 			// Skip pixels with too low an intensity
 			if (*p < mini) {
@@ -149,15 +152,16 @@ bool Shift::calc_shifts(const uint8_t *img, const coord_t res, const std::vector
 	workpool.jobid = crops.size()-1;
 	workpool.done = 0;
 	
-	// Signal all workers
-	work_cond.broadcast();
-	
-	// Wait until the work is completed
-	//! @bug Race condition here, work might be done before we wait() on the mutex!
-	if (wait) {
+	{ 
+		// lock work_done_mutex, then broadcast work to all workers.
 		pthread::mutexholder h(&work_done_mutex);
-		work_done_cond.wait(work_done_mutex);
+		work_cond.broadcast();
+		
+		// Wait until the work is completed, with the mutex locked. The associated
+		// mutex will unlock automatically when mutexholder goes out of scope
+		if (wait)
+			work_done_cond.wait(work_done_mutex);
 	}
-	
+		
 	return true;
 }
