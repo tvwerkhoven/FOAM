@@ -27,6 +27,8 @@
 #include <gsl/gsl_matrix.h>
 #include <math.h>
 #include <fftw3.h>
+#include <sys/resource.h>
+#include <sys/time.h>
 
 #include "io.h"
 #include "config.h"
@@ -427,13 +429,18 @@ double SimulCam::cam_get_offset() {
 
 void SimulCam::cam_handler() { 
 	pthread::setcanceltype(PTHREAD_CANCEL_ASYNCHRONOUS);
-	//! @todo make this Mac compatible
-#ifndef __APPLE__
-	cpu_set_t cpuset;
-	CPU_ZERO(&cpuset);
-	CPU_SET(1, &cpuset);
-	// pthread::setaffinity(&cpuset);
-#endif
+	
+	// Set priority for this thread lower.
+	struct sched_param param;
+	int policy;
+	pthread_getschedparam(pthread_self(), &policy, &param);
+	io.msg(IO_DEB1, "SimulCam::cam_handler() Decreasing prio. Before: %d.", param.sched_priority);
+	
+	param.sched_priority -= 10;
+	policy = SCHED_OTHER;
+	pthread_setschedparam(pthread_self(), policy, &param);
+	pthread_getschedparam(pthread_self(), &policy, &param);
+	io.msg(IO_DEB1, "SimulCam::cam_handler() Decreasing prio. After: %d.", param.sched_priority);
 	
 	while (true) {
 		//! @todo Should mutex lock each time reading mode, or is this ok?
