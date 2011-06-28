@@ -52,6 +52,7 @@ private:
 	Io &io;															//!< Message IO
 	
 	typedef struct jobinfo {
+		jobinfo() : img(NULL), refimg(NULL), shifts(NULL) { }
 		method_t method;
 		int bpp;													//!< Image bitdepth (8 for uint8_t, 16 for uint16_t)
 		uint8_t *img;											//!< Image to process
