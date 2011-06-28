@@ -67,12 +67,16 @@ do_simtel(true), do_simmla(true), do_simwfc(true)
 	add_cmd("set windspeed");
 	add_cmd("get windtype");
 	add_cmd("set windtype");
+	add_cmd("get wfcerr_retain");
+	add_cmd("set wfcerr_retain");
 	add_cmd("get telapt_fill");
 	add_cmd("set telapt_fill");
-	add_cmd("set simwf"); // Alias for 'seeingfac'. If this is 0, wf is multiplied by 0
-	add_cmd("set simtel");
-	add_cmd("set simmla");
-	add_cmd("set simwfc");
+	
+	add_cmd("set simwf");				// Do seeing simulation
+	add_cmd("set simtel");			// Do telescope simulation (i.e. circular crop)
+	add_cmd("set simwfcerr");		// Do wavefront corrector error simulation
+	add_cmd("set simmla");			// Do MLA simulation (i.e. lenslet array)
+	add_cmd("set simwfc");			// Do wavefront correction
 
 	noise = cfg.getdouble("noise", 0.2);
 	noiseamp = cfg.getdouble("noiseamp", 0.2);
@@ -113,8 +117,6 @@ void SimulCam::on_message(Connection *const conn, string line) {
 			set_var(conn, "noise", popdouble(line), &noise, 0.0, 1.0, "Out of range");
 		} else if(what == "noiseamp") {		// set noiseamp <double>
 			set_var(conn, "noiseamp", popdouble(line), &noiseamp);
-		} else if(what == "telapt_fill") { // set telapt_fill <double>
-			set_var(conn, "telapt_fill", popdouble(line), &telapt_fill, 0.0, 1.0, "out of range");
 		} else if(what == "seeingfac") {	// set seeingfac <double>
 			set_var(conn, "seeingfac", popdouble(line), &(seeing.seeingfac));
 		} else if(what == "mlafac") {	// set mlafac <double>

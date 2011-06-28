@@ -170,9 +170,6 @@ void SimulWfc::on_message(Connection *const conn, string line) {
 		string what = popword(line);
 		
 		parsed = false;
-	} else if (command == "simact") {		// simact
-		actuate_random();
-		conn->write("ok simact");
 	} else
 		parsed = false;
 	

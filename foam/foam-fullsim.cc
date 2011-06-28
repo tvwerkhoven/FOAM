@@ -48,7 +48,7 @@ int FOAM_FullSim::load_modules() {
 	// Init WFC simulation
 	simwfc = new SimulWfc(io, ptc, "simwfc", ptc->listenport, ptc->conffile);
 	devices->add((Device *) simwfc);
-	
+
 	// Init camera simulation (using simwfc)
 	simcam = new SimulCam(io, ptc, "simcam", ptc->listenport, ptc->conffile, *simwfc);
 	devices->add((Device *) simcam);
