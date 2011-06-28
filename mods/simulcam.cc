@@ -260,7 +260,7 @@ void SimulCam::simul_wfcerr(gsl_matrix *const wave_in) {
 	
 	// Generate random actuation
 	for (size_t i=0; i<wfcerr_act->size; i++)
-		gsl_vector_float_set(wfcerr_act, i, rand()*2.0-1.0);
+		gsl_vector_float_set(wfcerr_act, i, simple_rand()*2.0-1.0);
 
 	simwfcerr.update_control(wfcerr_act, gain_t(1.0-wfcerr_retain, 0, 0), wfcerr_retain);
 	simwfcerr.actuate();
@@ -420,8 +420,8 @@ void SimulCam::simul_capture(const gsl_matrix *const im_in, uint8_t *const frame
 			pix = (double) ((gsl_matrix_get(im_in, i, j) - min)*fac);
 			noise=0.0;
 			// Add noise only in 'noise' fraction of the pixels, with 'noiseamp' amplitude. Noise is independent of exposure here
-			if (rand() < noise) 
-				noisei = rand() * noiseamp * UINT8_MAX;
+			if (simple_rand() < noise) 
+				noisei = simple_rand() * noiseamp * UINT8_MAX;
 			frame_out[i*im_in->size2 + j] = (uint8_t) clamp(((pix * exposure) + noisei + offset) * gain, 0.0, 1.0*UINT8_MAX);
 		}
 	}

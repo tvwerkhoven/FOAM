@@ -114,7 +114,7 @@ Wfs::wf_info_t* Wfs::measure(Camera::frame_t *) {
 	}
 	
 	for (int n=0; n<wf.nmodes; n++)
-		gsl_vector_float_set(wf.wfamp, n, rand()*2.0-1.0);
+		gsl_vector_float_set(wf.wfamp, n, drand48()*2.0-1.0);
 	
 	//return 0;
 	return &wf;

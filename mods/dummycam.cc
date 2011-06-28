@@ -108,7 +108,7 @@ void DummyCamera::update() {
 	int mul = (1 << depth) - 1;
 	for(size_t y = 0; y < (size_t) res.y; y++) {
 		for(size_t x = 0; x < (size_t) res.x; x++) {
-			double value = rand() * noise + (sin(M_PI * x / res.x) + 1 + sin((y + offset) * 100));
+			double value = simple_rand() * noise + (sin(M_PI * x / res.x) + 1 + sin((y + offset) * 100));
 			value *= exposure;
 			if(value < 0)
 				value = 0;

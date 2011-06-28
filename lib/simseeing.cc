@@ -135,8 +135,8 @@ int SimSeeing::get_wavefront(gsl_matrix *wf_out) {
 	// Update new crop position (i.e. simulate wind)
 	switch (windtype) {
 		case RANDOM:
-			croppos.x += (rand()-0.5) * windspeed.x;
-			croppos.y += (rand()-0.5) * windspeed.y;
+			croppos.x += (simple_rand()-0.5) * windspeed.x;
+			croppos.y += (simple_rand()-0.5) * windspeed.y;
 			// Check bounds
 			croppos.x = clamp(croppos.x, (int) 0, (int) wfsrc->size2 - cropsize.x);
 			croppos.y = clamp(croppos.y, (int) 0, (int) wfsrc->size1 - cropsize.y);
@@ -144,8 +144,8 @@ int SimSeeing::get_wavefront(gsl_matrix *wf_out) {
 		case DRIFTING:
 			// Random drift, use a slowly changing crop vector
 			//! @todo randomness is hardcoded here, need to fix as a configuration
-			windspeed.x += (rand()-0.5) * 10.0;
-			windspeed.y += (rand()-0.5) * 10.0;
+			windspeed.x += (simple_rand()-0.5) * 10.0;
+			windspeed.y += (simple_rand()-0.5) * 10.0;
 			
 		case LINEAR:
 		default:
