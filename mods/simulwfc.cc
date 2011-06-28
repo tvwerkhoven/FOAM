@@ -20,6 +20,7 @@
 
 #include <math.h>
 #include <string>
+#include <gsl/gsl_blas.h>
 
 #ifdef HAVE_CONFIG_H
 #include "autoconfig.h"
@@ -39,6 +40,7 @@ using namespace std;
 
 SimulWfc::SimulWfc(Io &io, foamctrl *const ptc, const string name, const string port, Path const &conffile, const bool online):
 Wfc(io, ptc, name, simulwfc_type, port, conffile, online),
+min_actvec_amp(0.01),
 wfc_sim(NULL)
 {
 	io.msg(IO_DEB2, "SimulWfc::SimulWfc()");
@@ -72,7 +74,7 @@ wfc_sim(NULL)
 	}
 	
 	// Set number of actuators
-	nact = actpos.size();
+	set_nact(actpos.size());
 	
 	// Calibrate to allocate memory
 	calibrate();
@@ -85,55 +87,42 @@ SimulWfc::~SimulWfc() {
 	cfg.set("actsize", actsize);
 	cfg.set("actresx", actres.x);
 	cfg.set("actresy", actres.y);
+
+	gsl_matrix_free(wfc_sim);
 }
 
 int SimulWfc::calibrate() {
 	// 'Calibrate' simulator (allocate memory)
 
-	if (wfc_sim)
-		gsl_matrix_free(wfc_sim);
-	
 	// (Re-)allocate memory for Wfc pattern
+	gsl_matrix_free(wfc_sim);
 	wfc_sim = gsl_matrix_calloc(actres.y, actres.x);
-
+	
 	// Call calibrate() in base class (for wfc_amp)
 	return Wfc::calibrate();
 }
 
-int SimulWfc::actuate(const gsl_vector_float *ctrl, const gain_t /* gain */, const bool /* block */) {
-	//!< @todo Implement gain & block(?) here
-	if (!get_calib())
-		calibrate();
-	
+int SimulWfc::actuate(const bool block) {
 	gsl_matrix_set_zero(wfc_sim);
 	
-	if (ctrl == NULL)									// if amplitude vector is NULL, set WFC 'flat'
+	if (actpos.size() != ctrlparams.target->size)
+		return io.msg(IO_ERR, "SimulWfc::actuate() # of actuator position != # of actuator amplitudes!");
+
+	float amp_abssum = gsl_blas_sasum(ctrlparams.target);
+	if (amp_abssum < min_actvec_amp)						// if vector amplitude is small, set WFC 'flat'
 		return 0;
 	
-	if (actpos.size() != ctrl->size)
-		return io.msg(IO_ERR, "SimulWfc::actuate() # of actuator position != # of actuator amplitudes!");
-		
 	for (size_t i=0; i<actpos.size(); i++) {
-		float amp = gsl_vector_float_get(ctrl, i);
-		//io.msg(IO_WARN, "Wavefront corrector amplitude saturated, abs(%g) > 1!", amp);
+		float amp = gsl_vector_float_get(ctrlparams.target, i);
 		add_gauss(wfc_sim, actpos[i], actsize, clamp(amp, float(-1.0), float(1.0)));
 	}
 	
 	return 0;
 }
 
-gsl_vector_float *SimulWfc::actuate_random() {
-	io.msg(IO_DEB2, "SimulWfc::actuate_random()");
-	for (size_t i=0; i<wfc_amp->size; i++)
-		gsl_vector_float_set(wfc_amp, i, drand48()*2.0-1.0);
-	
-	actuate(wfc_amp, gain_t(1,0,0), true);
-	return wfc_amp;	
-}
-
-void SimulWfc::add_gauss(gsl_matrix *wfc, const fcoord_t pos, const double stddev, const double amp) {
+void SimulWfc::add_gauss(gsl_matrix *const wfc, const fcoord_t pos, const double stddev, const double amp) {
 	double sum=0, count=0;
-	double cutoff = 0.05;
+	const double cutoff = 0.05;
 	
 	// Gaussian function: A * exp( (x-x_0)^2 / (2*stddev^2) )
 	// Position 'pos' is normalized from 0 to 1

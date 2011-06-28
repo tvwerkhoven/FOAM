@@ -45,13 +45,13 @@ using namespace std;
 SimulCam::SimulCam(Io &io, foamctrl *const ptc, const string name, const string port, Path const &conffile, SimulWfc &simwfc, const bool online):
 Camera(io, ptc, name, simulcam_type, port, conffile, online),
 seeing(io, ptc, name + "-seeing", port, conffile),
+simwfcerr(io, ptc, name + "-wfcerr", port, conffile),
 simwfc(simwfc),
-out_size(0), frame_out(NULL), 
+out_size(0), frame_out(NULL), frame_raw(NULL),
 telradius(1.0), telapt(NULL), telapt_fill(0.7),
 noise(0.0), noiseamp(0.0), mlafac(1.0), 
 shwfs(io, ptc, name + "-shwfs", port, conffile, *this, false),
-seeingfac(seeing.seeingfac),
-do_simtel(true), do_simmla(true), do_simwfc(true)
+do_simwf(true), do_simtel(true), do_simwfcerr(false), do_simmla(true), do_simwfc(true)
 {
 	io.msg(IO_DEB2, "SimulCam::SimulCam()");
 	// Register network commands with base device:
@@ -87,8 +87,11 @@ do_simtel(true), do_simmla(true), do_simwfc(true)
 	if (simwfc.wfc_sim->size1 != res.x || simwfc.wfc_sim->size2 != res.y)
 		throw std::runtime_error("SimulCam::SimulCam(): Camera resolution and simulated wfc size must be equal.");
 	
+	// Setup memory etc.
+	setup();
+	
 	// Get telescope aperture
-	gen_telapt();
+	gen_telapt(telapt, telradius);
 	
 	cam_thr.create(sigc::mem_fun(*this, &SimulCam::cam_handler));
 }
@@ -101,8 +104,8 @@ SimulCam::~SimulCam() {
 	cam_thr.cancel();
 	cam_thr.join();
 	
-	if (frame_out)
-		free(frame_out);
+	free(frame_out);
+	gsl_matrix_free(frame_raw);
 }
 
 void SimulCam::on_message(Connection *const conn, string line) {
@@ -146,10 +149,16 @@ void SimulCam::on_message(Connection *const conn, string line) {
 			}
 			
 			netio.broadcast(format("ok windtype %s", tmp.c_str()), "windtype");
+		} else if(what == "wfcerr_retain") { // set wfcerr_retain <double>
+			set_var(conn, "wfcerr_retain", popdouble(line), &wfcerr_retain, 0.0, 1.0, "out of range");
+		} else if(what == "telapt_fill") { // set telapt_fill <double>
+			set_var(conn, "telapt_fill", popdouble(line), &telapt_fill, 0.0, 1.0, "out of range");
 		} else if(what == "simwf") {			// set simwfs <bool>
-			set_var(conn, "simwf", popdouble(line), &(seeing.seeingfac));
+			set_var(conn, "simwf", popbool(line), &do_simwf);
 		} else if(what == "simtel") {			// set simtel <bool>
 			set_var(conn, "simtel", popbool(line), &do_simtel);
+		} else if(what == "simwfcerr") {	// set simwfcerr <bool>
+			set_var(conn, "simwfcerr", popbool(line), &do_simwfcerr);
 		} else if(what == "simmla") {			// set simmla <bool>
 			set_var(conn, "simmla", popbool(line), &do_simmla);
 		} else if(what == "simwfc") {			// set simwfc <bool>
@@ -169,6 +178,12 @@ void SimulCam::on_message(Connection *const conn, string line) {
 			get_var(conn, "mlafac", mlafac);
 		} else if(what == "windspeed") {	// get windspeed
 			get_var(conn, "windspeed", format("ok windspeed %x %x", seeing.windspeed.x, seeing.windspeed.y));
+		} else if(what == "windtype") {		// get windtype
+			get_var(conn, "windtype", seeing.windtype);
+		} else if(what == "wfcerr_retain") {	// get wfcerr_retain
+			get_var(conn, "wfcerr_retain", wfcerr_retain);
+		} else if(what == "telapt_fill") { // get telapt_fill
+			get_var(conn, "telapt_fill", telapt_fill);
 		} else
 			parsed = false;
 	}
@@ -180,59 +195,90 @@ void SimulCam::on_message(Connection *const conn, string line) {
 		Camera::on_message(conn, orig);
 }
 
-void SimulCam::gen_telapt() {
+void SimulCam::setup() {
+	// Memory for wavefront / image
+	gsl_matrix_free(frame_raw);
+	frame_raw = gsl_matrix_calloc(res.y, res.x);
+
+	// Memory for telescope aperture
+	gsl_matrix_free(telapt);
+	telapt = gsl_matrix_calloc(res.y, res.x);
+	
+	// Memory for wfcerror actuation
+	gsl_vector_float_free(wfcerr_act);
+	wfcerr_act = gsl_vector_float_calloc(simwfcerr.get_nact());
+	
+	// Output frame (8 bit int)
+	free(frame_out);
+	out_size = frame_raw->size1 * frame_raw->size2  * sizeof *frame_out;
+	frame_out = (uint8_t *) calloc(1, out_size);
+}
+
+void SimulCam::gen_telapt(gsl_matrix *const apt, const double rad) const {
 	io.msg(IO_XNFO, "SimulCam::gen_telapt(): init");
 	
-	if (!telapt) {							// Doesn't exist, callocate (all zeros is goed)
-		telapt = gsl_matrix_calloc(res.y, res.x);
-	}
-	else if ((int) telapt->size1 != res.x || (int) telapt->size2 != res.y) { // Wrong size, re-allocate
-		gsl_matrix_free(telapt);
-		telapt = gsl_matrix_calloc(res.y, res.x);
-	}
-	
 	// Calculate aperture size
-	float minradsq = pow(((double) min(telapt->size1, telapt->size2))*telradius/2.0, 2);
+	float minradsq = pow(((double) min(apt->size1, apt->size2))*rad/2.0, 2);
 	
 	float pixi, pixj;
 	double sum=0;
-	for (size_t i=0; i<telapt->size1; i++) {
-		for (size_t j=0; j<telapt->size2; j++) {
+	for (size_t i=0; i<apt->size1; i++) {
+		for (size_t j=0; j<apt->size2; j++) {
 			// If a pixel falls within the aperture radius, set it to 1
-			pixi = ((float) i) - telapt->size1/2;
-			pixj = ((float) j) - telapt->size2/2;
+			pixi = ((float) i) - apt->size1/2;
+			pixj = ((float) j) - apt->size2/2;
 			if (pixi*pixi + pixj*pixj < minradsq) {
 				sum++;
-				gsl_matrix_set (telapt, i, j, 1.0);
+				gsl_matrix_set (apt, i, j, 1.0);
 			}
 		}
 	}
 }
 
-gsl_matrix *SimulCam::simul_seeing() {
-	gsl_matrix *wf = seeing.get_wavefront();
-	return wf;
+int SimulCam::simul_seeing(gsl_matrix *const wave_in) {
+	if (!do_simwf)
+		return 0;
+	
+	io.msg(IO_DEB1, "SimulCam::simul_seeing()");
+	return seeing.get_wavefront(wave_in);
 }
 
-void SimulCam::simul_telescope(gsl_matrix *im_in) const {
+void SimulCam::simul_telescope(gsl_matrix *const wave_in) const {
 	if (!do_simtel)
 		return;
 	
-	io.msg(IO_DEB2, "SimulCam::simul_telescope()");
-	// Multiply wavefront with aperture
-	gsl_matrix_mul_elements (im_in, telapt);
+	io.msg(IO_DEB1, "SimulCam::simul_telescope()");
+	// Multiply wavefront with aperture element-wise
+	gsl_matrix_mul_elements (wave_in, telapt);
 }
 
-void SimulCam::simul_wfc(gsl_matrix *wave_in) const {
+void SimulCam::simul_wfcerr(gsl_matrix *const wave_in) {
+	if (!do_simwfcerr)
+		return;
+	
+	io.msg(IO_DEB1, "SimulCam::simul_wfcerr()");
+	
+	// Generate random actuation
+	for (size_t i=0; i<wfcerr_act->size; i++)
+		gsl_vector_float_set(wfcerr_act, i, rand()*2.0-1.0);
+
+	simwfcerr.update_control(wfcerr_act, gain_t(1.0-wfcerr_retain, 0, 0), wfcerr_retain);
+	simwfcerr.actuate();
+	
+	// Add simulated wfc error to input
+	gsl_matrix_add(wave_in, simwfcerr.wfc_sim);
+}
+
+void SimulCam::simul_wfc(gsl_matrix *const wave_in) const {
 	if (!do_simwfc)
 		return;
 	
-	io.msg(IO_DEB2, "SimulCam::simul_wfc()");
+	io.msg(IO_DEB1, "SimulCam::simul_wfc()");
 	// Add wfc correction to input
 	gsl_matrix_add(wave_in, simwfc.wfc_sim);
 }
 	
-void SimulCam::simul_wfs(gsl_matrix *wave_in) const {
+void SimulCam::simul_wfs(gsl_matrix *const wave_in) const {
 	if (!do_simmla)
 		return;
 	
@@ -241,7 +287,7 @@ void SimulCam::simul_wfs(gsl_matrix *wave_in) const {
 		return;
 	}
 	
-	io.msg(IO_DEB2, "SimulCam::simul_wfs()");
+	io.msg(IO_DEB1, "SimulCam::simul_wfs()");
 	
 	// Multiply with mlafac for 'magnification'
 	gsl_matrix_scale(wave_in, mlafac);
@@ -360,35 +406,25 @@ void SimulCam::simul_wfs(gsl_matrix *wave_in) const {
 	fftw_destroy_plan(shplan);
 }
 
-
-uint8_t *SimulCam::simul_capture(gsl_matrix *frame_in) {
-	io.msg(IO_DEB2, "SimulCam::simul_capture()");
+void SimulCam::simul_capture(const gsl_matrix *const im_in, uint8_t *const frame_out) const {
+	io.msg(IO_DEB1, "SimulCam::simul_capture()");
 	// Convert frame to uint8_t, scale properly
 	double min=0, max=0, noisei=0, fac;
-	gsl_matrix_minmax(frame_in, &min, &max);
+	gsl_matrix_minmax(im_in, &min, &max);
 	fac = 255.0/(max-min);
-	
-	size_t cursize = frame_in->size1 * frame_in->size2  * sizeof *frame_out;
-	if (out_size != cursize) {
-		io.msg(IO_DEB2, "SimulCam::simul_capture() reallocing memory, %zu != %zu", out_size, cursize);
-		out_size = cursize;
-		frame_out = (uint8_t *) realloc(frame_out, out_size);
-	}
 	
 	// Copy and scale, add noise
 	double pix=0.0, noise=0.0;
-	for (size_t i=0; i<frame_in->size1; i++) {
-		for (size_t j=0; j<frame_in->size2; j++) {
-			pix = (double) ((gsl_matrix_get(frame_in, i, j) - min)*fac);
+	for (size_t i=0; i<im_in->size1; i++) {
+		for (size_t j=0; j<im_in->size2; j++) {
+			pix = (double) ((gsl_matrix_get(im_in, i, j) - min)*fac);
 			noise=0.0;
 			// Add noise only in 'noise' fraction of the pixels, with 'noiseamp' amplitude. Noise is independent of exposure here
-			if (drand48() < noise) 
-				noisei = drand48() * noiseamp * UINT8_MAX;
-			frame_out[i*frame_in->size2 + j] = (uint8_t) clamp(((pix * exposure) + noisei + offset) * gain, 0.0, 1.0*UINT8_MAX);
+			if (rand() < noise) 
+				noisei = rand() * noiseamp * UINT8_MAX;
+			frame_out[i*im_in->size2 + j] = (uint8_t) clamp(((pix * exposure) + noisei + offset) * gain, 0.0, 1.0*UINT8_MAX);
 		}
 	}
-	
-	return frame_out;
 }
 
 // From Camera::
@@ -440,27 +476,30 @@ void SimulCam::cam_handler() {
 	
 	param.sched_priority -= 10;
 	policy = SCHED_OTHER;
-	pthread_setschedparam(pthread_self(), policy, &param);
+	int rc = pthread_setschedparam(pthread_self(), policy, &param);
 	pthread_getschedparam(pthread_self(), &policy, &param);
-	io.msg(IO_DEB1, "SimulCam::cam_handler() Decreasing prio. After: %d.", param.sched_priority);
+	io.msg(IO_DEB1, "SimulCam::cam_handler() Decreasing prio. After: %d (code: %d).", param.sched_priority, rc);
 	
 	while (true) {
 		//! @todo Should mutex lock each time reading mode, or is this ok?
 		switch (mode) {
 			case Camera::RUNNING:
 			{
-				gsl_matrix *wf = simul_seeing();
-				simul_wfc(wf);
-				simul_telescope(wf);
-				simul_wfs(wf);
-				uint8_t *frame = simul_capture(wf);
 				
-				// Need to free gsl matrix if it is returned
+				simul_seeing(frame_raw);
+				simul_wfcerr(frame_raw);
+				simul_wfc(frame_raw);
+				simul_telescope(frame_raw);
+				simul_wfs(frame_raw);
+				simul_capture(frame_raw, frame_out);
+				
 				//! @todo We use memory for wf and for frame. This should both be freed when returned. 
+				//get_buffer(&frame_raw);
+				//get_buffer(&frame_out);
 				//! @todo 'frame' is the same memory each time, so this does not really queue a *new* image, it's the same memory.
-				gsl_matrix *ret = (gsl_matrix *) cam_queue(wf, frame);
-				if (ret)
-					gsl_matrix_free(ret);
+				gsl_matrix *ret = (gsl_matrix *) cam_queue(frame_raw, frame_out);
+				//if (ret)
+				//	gsl_matrix_free(ret);
 				
 				usleep(interval * 1000000);
 				break;
@@ -469,16 +508,16 @@ void SimulCam::cam_handler() {
 			{
 				io.msg(IO_DEB1, "SimulCam::cam_handler() SINGLE");
 
-				gsl_matrix *wf = simul_seeing();
-				simul_wfc(wf);
-				simul_telescope(wf);
-				simul_wfs(wf);
-				uint8_t *frame = simul_capture(wf);
+				simul_seeing(frame_raw);
+				simul_wfcerr(frame_raw);
+				simul_wfc(frame_raw);
+				simul_telescope(frame_raw);
+				simul_wfs(frame_raw);
+				simul_capture(frame_raw, frame_out);
 				
-				// Need to free gsl matrix if it is returned
-				gsl_matrix *ret = (gsl_matrix *) cam_queue(wf, frame);
-				if (ret)
-					gsl_matrix_free(ret);
+				gsl_matrix *ret = (gsl_matrix *) cam_queue(frame_raw, frame_out);
+				//if (ret)
+				//	gsl_matrix_free(ret);
 				
 				usleep(interval * 1000000);
 

@@ -131,7 +131,7 @@ gsl_matrix *SimSeeing::load_wavefront(const Path &f, const bool norm) {
  *  Public methods
  */
 
-gsl_matrix *SimSeeing::get_wavefront() {
+int SimSeeing::get_wavefront(gsl_matrix *wf_out) {
 	// Update new crop position (i.e. simulate wind)
 	switch (windtype) {
 		case RANDOM:
@@ -163,20 +163,23 @@ gsl_matrix *SimSeeing::get_wavefront() {
 			break;
 	}
 
-	return get_wavefront(croppos.x, croppos.y, cropsize.x, cropsize.y, seeingfac);
+	return get_wavefront(wf_out, croppos.x, croppos.y, cropsize.x, cropsize.y, seeingfac);
 }
 
-gsl_matrix *SimSeeing::get_wavefront(const size_t x0, const size_t y0, const size_t w, const size_t h, const double fac) {
-	io.msg(IO_DEB2, "SimSeeing::get_wavefront(%zu, %zu, %zu, %zu)", x0, y0, w, h);
+int SimSeeing::get_wavefront(gsl_matrix *wf_out, const size_t x0, const size_t y0, const size_t w, const size_t h, const double fac) const {
+	io.msg(IO_DEB2, "SimSeeing::get_wavefront(%p, %zu, %zu, %zu, %zu, %g)", wf_out, x0, y0, w, h, fac);
+	// Get crop from wavefront as submatrix 
 	gsl_matrix_view tmp = gsl_matrix_submatrix(wfsrc, y0, x0, h, w);
-	// Allocate new memory to store WF crop & copy data
-	gsl_matrix *wfcrop = gsl_matrix_alloc(h, w);
-	gsl_matrix_memcpy (wfcrop, &(tmp.matrix));
+	// Copy this to wf_out
+	io.msg(IO_DEB2, "SimSeeing::get_wavefront() cpy from %p: %zu*%zu to %p: %zu*%zu", 
+				 &(tmp.matrix), tmp.matrix.size1, tmp.matrix.size2,
+				 wf_out, wf_out->size1, wf_out->size2);
+	gsl_matrix_memcpy(wf_out, &(tmp.matrix));
 	
 	// Apply scaling if requested (unequal to one)
 	if (fac != 1.0)
-		gsl_matrix_scale(wfcrop, fac);
-	
-	return wfcrop;
+		gsl_matrix_scale(wf_out, fac);
+
+	return 0;
 }
 

@@ -71,9 +71,22 @@ public:
 	
 	SimSeeing(Io &io, foamctrl *const ptc, const string name, const string port, const Path &conffile);
 	~SimSeeing();
-		
-	gsl_matrix *get_wavefront();
-	gsl_matrix *get_wavefront(const size_t x0, const size_t y0, const size_t w, const size_t h, const double fac=1.0);
+	
+	/* @brief Get a crop of the wavefront, automatically propagating the wind if requested.
+	 
+	 @param [out] wf_out Matrix to store the wavefront, pre-allocated
+	 */
+	int get_wavefront(gsl_matrix *wf_out);
+	/* @brief Get a crop of the wavefront at specific coordinates
+	 
+	 @param [out] wf_out Matrix to store the wavefront, pre-allocated
+	 @param [in] x0 x-coordinate of the crop-origin
+	 @param [in] y0 y-coordinate of the crop-origin
+	 @param [in] w width of the crop
+	 @param [in] h height of the crop
+	 @param [in] fac Multiplicative factor to apply to wavefront
+	 */
+	int get_wavefront(gsl_matrix *wf_out, const size_t x0, const size_t y0, const size_t w, const size_t h, const double fac=1.0) const;
 };
 
 #endif // HAVE_SIMSEEING_H

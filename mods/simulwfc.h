@@ -38,23 +38,26 @@ const string simulwfc_type = "simulwfc";
  @brief Simulation class for wavefront corrector (membrane mirror)
  
  SimulWfc (dev.wfc.simulwfc) simulates a 'membrane mirror' by adding gaussian
- peaks on top of eachother at the actuator locations.
+ peaks on top of eachother at the actuator locations specified in a file.
  
  Configuration params:
  - actpos_file: csv file containing actuator positions
  - actsize: 'size' of the actuator (broadness of influence)
  - actres.x,y: size of the whole actuator (in CCD pixels). @todo get this from simulcam
  
- @todo document SimulWfc class
- */
+ Network commands:
+ - none
+*/
 class SimulWfc: public Wfc {
 private:
 	std::vector<fcoord_t> actpos;				//!< List of actuator positions (in normalized coordinates from 0 to 1)
 	string actpos_f;										//!< File containing actuator positions (for actpos)
 	double actsize;											//!< 'Size' of actuators (stddev of gaussians). Should be around the same as the actuator pitch.
 	coord_t actres;											//!< Resolution of actuator pattern (i.e., number of pixels)
+
+	const float min_actvec_amp;					//!< Minimum actuation vector amplitude in order to simulate
 	
-	void add_gauss(gsl_matrix *wfc, const fcoord_t pos, const double stddev, const double amp); //!< Add a Gaussian to an existing matrix *wfc
+	void add_gauss(gsl_matrix *const wfc, const fcoord_t pos, const double stddev, const double amp); //!< Add a Gaussian to an existing matrix *wfc
 	
 public:
 	SimulWfc(Io &io, foamctrl *const ptc, const string name, const string port, Path const &conffile, const bool online=true);
@@ -62,11 +65,8 @@ public:
 	
 	gsl_matrix *wfc_sim;								//!< Simulated wavefront correction
 
-	gsl_vector_float *actuate_random(); //!< Random actuation (for testing only)
-
 	// From Wfc::
-	virtual int actuate(const gsl_vector_float *wfcamp, const gain_t gain, const bool block=false);
-	int actuate(const gsl_vector_float *wfcamp, const bool block=false) { return actuate(wfcamp, gain, block); }
+	int actuate(const bool block=false);
 	int calibrate();
 	
 	// From Devices::
