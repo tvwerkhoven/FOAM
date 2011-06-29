@@ -207,7 +207,7 @@ void MainWindow::on_ctrl_message_update() {
 void MainWindow::on_ctrl_device_update() {
 	fprintf(stderr, "MainWindow::on_ctrl_device_update()\n");
 
-	// Need mutex because we change this in both fgui and foamcontrol, asynchronously.
+	// Need mutex because we change this in both MainWindow:: fgui.cc and FoamControl::, asynchronously.
 	pthread::mutexholder h(&(foamctrl.gui_mutex));
 	
 	DevicePage *tmppage=NULL;
@@ -266,6 +266,7 @@ void MainWindow::on_ctrl_device_update() {
 			
 			notebook.append_page(*(tmpdev->page), "_" + tmpdev->name, tmpdev->name, true);
 			pagelist[tmpdev->name] = tmpdev->page;
+			printf("%x:FoamControl::add_device() added dev\n", (int) pthread_self());
 		}
 	}
 	
