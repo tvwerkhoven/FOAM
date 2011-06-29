@@ -116,6 +116,7 @@ histoalign(0.5, 0.5, 0, 0), minval("Display min"), maxval("Display max"), e_avg(
 	capture.signal_clicked().connect(sigc::mem_fun(*this, &CamView::on_capture_clicked));
 	display.signal_clicked().connect(sigc::mem_fun(*this, &CamView::on_display_clicked));
 	store.signal_clicked().connect(sigc::mem_fun(*this, &CamView::on_store_clicked));
+	store_n.signal_activate().connect(sigc::mem_fun(*this, &CamView::on_store_clicked));
 
 	e_exposure.entry.signal_activate().connect(sigc::mem_fun(*this, &CamView::on_info_change));
 	e_offset.entry.signal_activate().connect(sigc::mem_fun(*this, &CamView::on_info_change));
@@ -555,18 +556,25 @@ void CamView::on_display_clicked() {
 }
 
 void CamView::on_store_clicked() {
-	// If 'store' state is waiting, we are already storing frames...
-	if (store.get_state() != SwitchButton::WAITING)
-		return;
-		
-	int nstore = atoi(store_n.get_text().c_str());
+	// Store activated (via button store or entry store_n):
+	// - store CLEAR: start storing
+	// - store WAITING: store in progress, stop storing
+	// - store ERROR: abort
+	// - store OK: unused
+	
+	int nstore = (int) strtol(store_n.get_text().c_str(), NULL, 0);
 	fprintf(stderr, "%x:CamView::on_store_clicked() n=%d\n", (int) pthread_self(), nstore);
 	
-	// If the value 'nstore' is valid, 
-	if (nstore > 0 || nstore == -1) {
-		camctrl->store(nstore);
-		store.set_state(SwitchButton::WAITING);
+	if (store.get_state() == SwitchButton::CLEAR) {
+		// If the value 'nstore' is valid, 
+		if (nstore > 0 || nstore == -1) {
+			camctrl->store(nstore);
+			store.set_state(SwitchButton::WAITING);
+		}
 	}
+	else
+		camctrl->store(0);
+	
 }
 
 bool CamView::on_histo_clicked(GdkEventButton *event) {
