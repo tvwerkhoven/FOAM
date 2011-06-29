@@ -230,6 +230,7 @@ int FOAM_FullSim::calib() {
 		io.msg(IO_XNFO, "FOAM_FullSim::calib() Start camera...");
 		// Disable seeing & wfc during calibration
 		double old_seeingfac = simcam->get_seeingfac(); simcam->set_seeingfac(0.0);
+		bool old_do_wfcerr = simcam->do_simwfcerr; simcam->do_simwfcerr = false;
 		bool old_do_simwfc = simcam->do_simwfc; simcam->do_simwfc = false;
 
 		simcam->set_mode(Camera::RUNNING);
@@ -244,9 +245,10 @@ int FOAM_FullSim::calib() {
 		simwfs->store_reference();
 		
 		// Restore seeing & wfc
+		simcam->set_mode(Camera::OFF);
 		simcam->set_seeingfac(old_seeingfac);
 		simcam->do_simwfc = old_do_simwfc;
-		simcam->set_mode(Camera::OFF);
+		simcam->do_simwfcerr = old_do_wfcerr;
 		gsl_vector_float_free(tmpact);
 	} 
 	else {
