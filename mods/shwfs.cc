@@ -643,13 +643,13 @@ void Shwfs::set_reference(Camera::frame_t *frame) {
 }
 
 void Shwfs::store_reference() {
-	string outfile = mkfname("ref_vec.csv").str();
-	io.msg(IO_DEB2, "Shwfs::store_reference() to " + outfile);
-	Csv refvecdat(ref_vec);
-	refvecdat.write(outfile, "Shwfs reference vector");
+//	string outfile = mkfname("ref_vec.csv").str();
+//	io.msg(IO_DEB2, "Shwfs::store_reference() to " + outfile);
+//	Csv refvecdat(ref_vec);
+//	refvecdat.write(outfile, "Shwfs reference vector");
 
 	Path outf; FILE *fd;
-	outf = mkfname(format("_ref_vec_%zu.csv", ref_vec->size));
+	outf = mkfname(format("ref_vec_%zu.csv", ref_vec->size));
 	fd = fopen(outf.c_str(), "w+");
 	gsl_vector_float_fprintf (fd, ref_vec, "%.12g");
 	fclose(fd);
