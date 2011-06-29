@@ -100,6 +100,9 @@ fits_telescope("undef"), fits_observer("undef"), fits_instrument("undef"), fits_
 	io.msg(IO_XNFO, "Camera::Camera(): %dx%dx%d, exp:%g, int:%g, gain:%g, off:%g",
 				 res.x, res.y, depth, exposure, interval, gain, offset);
 	
+	// Set output dir because this class might store files.
+	set_outputdir("");
+
 	proc_thr.create(sigc::mem_fun(*this, &Camera::cam_proc));
 }
 

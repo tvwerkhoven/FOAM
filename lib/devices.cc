@@ -32,7 +32,7 @@ using namespace std;
 // Device class
 
 Device::Device(Io &io, foamctrl *const ptc, const string n, const string t, const string p, const Path conf, const bool online): 
-is_calib(false), is_ok(false), io(io), ptc(ptc), name(n), type("dev." + t), port(p), conffile(conf), netio(p, n), online(online), outputdir(ptc->datadir)
+is_calib(false), is_ok(false), outputdir(ptc->datadir), io(io), ptc(ptc), name(n), type("dev." + t), port(p), conffile(conf), netio(p, n), online(online)
 { 
 	//! @todo This init() can just be placed here?
 	init();
@@ -61,8 +61,6 @@ bool Device::init() {
 	
 	// Always listen, also for offline devices. In that latter case, simply don't parse any data.
 	netio.listen();
-
-	set_outputdir("");
 
 	return true;
 }

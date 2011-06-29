@@ -61,6 +61,9 @@ private:
 	// These should be accessed through get/set functions to notify the GUI
 	bool is_calib;											//!< Is calibrated and ready for use
 	bool is_ok;													//!< Device status OK & operational
+
+	Path outputdir;											//!< Output directory for this device in case of multiple data files. This is always a subdir of ptc->datadir.
+
 protected:
 	Io &io;
 	foamctrl *const ptc;
@@ -78,7 +81,6 @@ protected:
 	Protocol::Server netio;							//!< Network connection
 	bool online;												//!< Online flag
 	
-	Path outputdir;											//!< Output directory for this device in case of multiple data files. This is always a subdir of ptc->datadir.
 	
 	void set_status(bool newstat);			//!< Set device status (is_ok interface)
 	bool get_status() { return is_ok; }	//!< Get device status
