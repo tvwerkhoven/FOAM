@@ -339,19 +339,21 @@ void SimulCam::simul_wfs(gsl_matrix *const wave_in) const {
 		// 1, see gen_telapt(). If the sum is higher than telapt_fill *
 		// sasize.y * sasize.x * seeingfac, accept this subaperture. Otherwise set
 		// to zero.
-		telapt_crop = gsl_matrix_submatrix(telapt, sallpos.y, sallpos.x, sasize.y, sasize.x);
-		telapt_cropm = &(telapt_crop.matrix);
-		
-		double tmp_sum = 0.0;
-		for (size_t i=0; i<telapt_cropm->size1; i++)
-			for (size_t j=0; j<telapt_cropm->size2; j++)
-				tmp_sum += gsl_matrix_get (telapt_cropm, i, j);
+		if (do_simtel) {
+			telapt_crop = gsl_matrix_submatrix(telapt, sallpos.y, sallpos.x, sasize.y, sasize.x);
+			telapt_cropm = &(telapt_crop.matrix);
+			
+			double tmp_sum = 0.0;
+			for (size_t i=0; i<telapt_cropm->size1; i++)
+				for (size_t j=0; j<telapt_cropm->size2; j++)
+					tmp_sum += gsl_matrix_get (telapt_cropm, i, j);
 
-		if (tmp_sum < telapt_fill * sasize.y * sasize.x) {
-			for (size_t i=0; i<subapm->size1; i++)
-				for (size_t j=0; j<subapm->size2; j++)
-					gsl_matrix_set (subapm, i, j, 0.0);
-			continue;
+			if (tmp_sum < telapt_fill * sasize.y * sasize.x) {
+				for (size_t i=0; i<subapm->size1; i++)
+					for (size_t j=0; j<subapm->size2; j++)
+						gsl_matrix_set (subapm, i, j, 0.0);
+				continue;
+			}
 		}
 		
 		if ((int) workspace->size != sasize.x * sasize.y * 4) {
