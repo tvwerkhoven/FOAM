@@ -132,9 +132,12 @@ void Camera::cam_proc() {
 		calculate_stats(frame);
 
 		if (nstore == -1 || nstore > 0) {
-			nstore--;
-			if (store_frame(frame))
+			io.msg(IO_DEB2, "Camera::cam_proc() nstore=%d", nstore);
+			if (store_frame(frame)) {
+				nstore--;
 				netio.broadcast(format("ok store %d", nstore), "store");
+				io.msg(IO_DEB2, "Camera::cam_proc() nstore--", nstore);
+			}
 		}
 		
 		// Flag frame as processed
@@ -202,7 +205,7 @@ bool Camera::store_frame(const frame_t *const frame) const {
 	// Open file
 	int fd = open(filename.c_str(), O_WRONLY | O_CREAT | O_EXCL, 0644);
 	if (fd < 0)
-		return false;
+		return io.msg(IO_ERR, "Camera::store_frame() Error opening file!");
 	
 	// Get time & date
 	struct timeval tv;

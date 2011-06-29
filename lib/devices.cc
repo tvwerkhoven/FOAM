@@ -52,7 +52,7 @@ bool Device::init() {
 		if (_type != type) 
 			throw exception("Device::Device(): Type should be " + type + " for this Device (" + _type + ")!");
 	}
-
+	
 	if (online) {
 		netio.slot_message = sigc::mem_fun(this, &Device::on_message_common);
 		netio.slot_connected = sigc::mem_fun(this, &Device::on_connect);
