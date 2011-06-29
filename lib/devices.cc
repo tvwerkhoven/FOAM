@@ -42,6 +42,8 @@ bool Device::init() {
 	io.msg(IO_XNFO, "Device::Device(): Create new device, name=%s, type=%s", 
 				 name.c_str(), type.c_str());
 	
+	add_cmd("get commands");
+
 	// Only parse config file if we have one
 	if (conffile.isset()) {
 		cfg.parse(conffile, name);
@@ -80,6 +82,7 @@ void Device::on_message_common(Connection * const conn, string line) {
 
 void Device::on_message(Connection * const conn, string line) { 
 	string orig = line;
+	bool parsed = true;
 	
 	string command = popword(line);
 	if (command == "get") {							// get ...
@@ -91,12 +94,29 @@ void Device::on_message(Connection * const conn, string line) {
 				devlist += cmd_list[i] + ";";
 			
 			conn->write(format("ok commands %d %s", (int) cmd_list.size(), devlist.c_str()));
-			return;
+//		} else if(what == "outputdir") {
+//			conn->addtag("outputdir");
+//			conn->write("ok outputdir :" + outputdir.str());
+		} else {
+			parsed = false;
 		}
+	} else if (command == "set") {
+		string what = popword(line);
+//		if (what == "outputdir") {
+//			conn->addtag("outputdir");
+//			string dir = popword(line);
+//			if (set_outputdir(dir))
+//				conn->write("error :directory "+dir+" not usable");
+//		} else {
+		parsed = false;
+//		}
+	} else {
+		parsed = false;
 	}
 	
 	// Command is not known, give an error message back
-	conn->write("error :Unknown command: " + orig);
+	if (!parsed)
+		conn->write("error :Unknown command: " + orig);
 }
 
 void Device::get_var(Connection * const conn, const string varname, const string response) const {
