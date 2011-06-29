@@ -32,7 +32,7 @@ using namespace std;
 // Device class
 
 Device::Device(Io &io, foamctrl *const ptc, const string n, const string t, const string p, const Path conf, const bool online): 
-is_calib(false), is_ok(false), io(io), ptc(ptc), name(n), type("dev." + t), port(p), conffile(conf), netio(p, n), online(online)
+is_calib(false), is_ok(false), io(io), ptc(ptc), name(n), type("dev." + t), port(p), conffile(conf), netio(p, n), online(online), outputdir(ptc->datadir)
 { 
 	//! @todo This init() can just be placed here?
 	init();
@@ -59,7 +59,9 @@ bool Device::init() {
 	
 	// Always listen, also for offline devices. In that latter case, simply don't parse any data.
 	netio.listen();
-	
+
+	set_outputdir("");
+
 	return true;
 }
 
@@ -121,6 +123,27 @@ void Device::set_status(bool newstat) {
 	is_ok = newstat;
 	netio.broadcast(format("ok status %d", newstat));
 }
+
+int Device::set_outputdir(const string identifier) {
+	// This automatically prefixes ptc->datadir if 'identifier' is not absolute
+	Path tmp = ptc->datadir + string(type + "." + name + identifier);
+
+	//! @todo Make recursive mkdir() here
+	if (!tmp.exists()) {// Does not exist, create
+		if (mkdir(tmp.c_str(), 0755)) // mkdir() returned !0, error
+			return 1;
+	}
+	else {	// Directory exists, check if readable
+		if (tmp.access(R_OK | W_OK | X_OK))
+			return 2;
+	}
+
+	outputdir = tmp;
+	netio.broadcast("ok outputdir :" + outputdir.str(), "outputdir");
+	return 0;
+}
+
+
 
 // DeviceManager class
 

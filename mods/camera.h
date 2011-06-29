@@ -84,7 +84,6 @@ const string cam_type = "cam";
  \li gain
  \li offset
  \li filename
- \li outputdir
  \li fits
  \li mode
  
@@ -252,7 +251,6 @@ protected:
 	mode_t mode;									//!< Camera mode (see mode_t)
 	
 	string filenamebase;					//!< Base filename, input for makename()
-	Path outputdir;								//!< Output dir for saving files, absolute or relative to ptc->datadir
 	ssize_t nstore;								//!< Numebr of new frames to store (-1 for unlimited)
 
 	void fits_init_phdu(char *const phdu) const;	//!< Init FITS header unit
@@ -308,7 +306,6 @@ public:
 	string set_fits_target(const string val);
 	string set_fits_comments(const string val);
 	string set_filename(const string value);
-	string set_outputdir(const string value);
 	
 	void store_frames(const int n=-1) { nstore = n; }
 	

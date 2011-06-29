@@ -78,6 +78,8 @@ protected:
 	Protocol::Server netio;							//!< Network connection
 	bool online;												//!< Online flag
 	
+	Path outputdir;											//!< Output directory for this device in case of multiple data files. This is always a subdir of ptc->datadir.
+	
 	void set_status(bool newstat);			//!< Set device status (is_ok interface)
 	bool get_status() { return is_ok; }	//!< Get device status
 	void set_calib(bool newcalib);			//!< Set calibration status (is_calib interface)
@@ -168,7 +170,9 @@ public:
 	//! @todo obsolete, can go away (no use now)
 	virtual int verify() { return 0; }	//!< Verify the integrity of the device
 	
-	Path mkfname(string identifier) const { return ptc->datadir + Path(type + "." + name + "_" + identifier); } //!< Make filename for data output
+	Path mkfname(const string identifier) const { return ptc->datadir + Path(type + "." + name + "_" + identifier); } //!< Make filename for single data file output
+	int set_outputdir(const string identifier); //!< Set output directory for multiple datafiles (e.g. camera output)
+	Path get_outputdir() const { return outputdir; } //!< Get output directory
 	
 	bool isonline() const { return online; }
 	string getname() const { return name; }
