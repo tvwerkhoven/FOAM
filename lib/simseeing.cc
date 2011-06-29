@@ -167,13 +167,13 @@ int SimSeeing::get_wavefront(gsl_matrix *wf_out) {
 }
 
 int SimSeeing::get_wavefront(gsl_matrix *wf_out, const size_t x0, const size_t y0, const size_t w, const size_t h, const double fac) const {
-	io.msg(IO_DEB2, "SimSeeing::get_wavefront(%p, %zu, %zu, %zu, %zu, %g)", wf_out, x0, y0, w, h, fac);
+//	io.msg(IO_DEB2, "SimSeeing::get_wavefront(%p, %zu, %zu, %zu, %zu, %g)", wf_out, x0, y0, w, h, fac);
 	// Get crop from wavefront as submatrix 
 	gsl_matrix_view tmp = gsl_matrix_submatrix(wfsrc, y0, x0, h, w);
 	// Copy this to wf_out
-	io.msg(IO_DEB2, "SimSeeing::get_wavefront() cpy from %p: %zu*%zu to %p: %zu*%zu", 
-				 &(tmp.matrix), tmp.matrix.size1, tmp.matrix.size2,
-				 wf_out, wf_out->size1, wf_out->size2);
+//	io.msg(IO_DEB2, "SimSeeing::get_wavefront() cpy from %p: %zu*%zu to %p: %zu*%zu", 
+//				 &(tmp.matrix), tmp.matrix.size1, tmp.matrix.size2,
+//				 wf_out, wf_out->size1, wf_out->size2);
 	gsl_matrix_memcpy(wf_out, &(tmp.matrix));
 	
 	// Apply scaling if requested (unequal to one)
