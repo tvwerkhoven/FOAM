@@ -41,6 +41,7 @@ using namespace std;
 using namespace Gtk;
 
 //! @bug High framerate: clicking 'display' to stop displaying does not work properly.
+//! @todo Frame grabbing can be improved, we only need a subsection when zoomed in.
 
 
 CamView::CamView(CamCtrl *camctrl, Log &log, FoamControl &foamctrl, string n): 
@@ -420,7 +421,10 @@ void CamView::do_histo_update() {
 }
 
 bool CamView::on_timeout() {
-	// If 'display' is in OK state, we want a new frame (if clear: we dont want frames, if waiting: we still expect a new frame, if error: error!)
+	// Frame capture timed out, perhaps we need a new frame depending on 'display' state:
+	// -> if WAITING: we're already waiting for a frame, pass
+	// -> if OK: we are displaying a frame, get a new one & set to WAITING
+	// -> if ERROR or CLEAR: don't do anything
 	if (display.get_state() == SwitchButton::OK) {
 		camctrl->grab(0, 0, camctrl->get_width(), camctrl->get_height(), 1, false);
 		display.set_state(SwitchButton::WAITING);
@@ -431,7 +435,13 @@ bool CamView::on_timeout() {
 
 void CamView::on_monitor_update() {
 	// New image has arrived, display & update 'display' state
-	display.set_state(SwitchButton::OK);
+	// -> if WAITING: we wanted the frame, update button to OK
+	// -> if OK: no action necessary
+	// -> if ERROR or CLEAR: don't do anything
+	
+	if (display.get_state() == SwitchButton::WAITING)
+		display.set_state(SwitchButton::OK);
+
 	do_full_update();
 }
 
@@ -533,10 +543,11 @@ void CamView::on_capture_clicked() {
 }
 
 void CamView::on_display_clicked() {
-	// Click the 'display' button: if clear & not waiting: request new frame, otherwise, stop grabbing
+	// Click the 'display' button: 
+	// -> if CLEAR: request frame, set button to WAITING
+	// -> if WAITING, OK or ERROR: stop capture 
 	if (display.get_state() == SwitchButton::CLEAR) {
-		//!< @todo Can do a smarter grab here, we only need a subsection...
-		camctrl->grab(0, 0, camctrl->get_width(), camctrl->get_height(), 1, false);
+ 		camctrl->grab(0, 0, camctrl->get_width(), camctrl->get_height(), 1, false);
 		display.set_state(SwitchButton::WAITING);
 	}
 	else
