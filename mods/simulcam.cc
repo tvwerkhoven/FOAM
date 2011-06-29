@@ -235,6 +235,10 @@ void SimulCam::gen_telapt(gsl_matrix *const apt, const double rad) const {
 	}
 }
 
+void SimulCam::simul_init(gsl_matrix *const wave_in) {
+	gsl_matrix_set_zero(wave_in);
+}
+
 int SimulCam::simul_seeing(gsl_matrix *const wave_in) {
 	if (!do_simwf)
 		return 0;
@@ -485,7 +489,7 @@ void SimulCam::cam_handler() {
 		switch (mode) {
 			case Camera::RUNNING:
 			{
-				
+				simul_init(frame_raw);
 				simul_seeing(frame_raw);
 				simul_wfcerr(frame_raw);
 				simul_wfc(frame_raw);
@@ -508,6 +512,7 @@ void SimulCam::cam_handler() {
 			{
 				io.msg(IO_DEB1, "SimulCam::cam_handler() SINGLE");
 
+				simul_init(frame_raw);
 				simul_seeing(frame_raw);
 				simul_wfcerr(frame_raw);
 				simul_wfc(frame_raw);

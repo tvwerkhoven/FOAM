@@ -156,10 +156,16 @@ public:
 	 */
 	void gen_telapt(gsl_matrix *const apt, const double rad) const;
 
+
+	/*! @brief Initialise simulation by zero'ing out matrix
+	 
+	 @param [out] *wave_out Mtrix to initialise
+	 */
+	void simul_init(gsl_matrix *const wave_in);
+	
 	/*! @brief Simulate atmospheric seeing given pre-allocated matrix
 	 
 	 Uses SimulSeeing for generation of the simulated perturbed wavefront.
-	 
 	 @param [out] *wave_out Will hold a simulated wavefront
 	 */
 	int simul_seeing(gsl_matrix *const wave_out);
