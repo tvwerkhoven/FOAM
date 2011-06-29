@@ -26,6 +26,9 @@ AM_CPPFLAGS += -DHAVE_INLINE
 #AM_CPPFLAGS += -DFOAM_DEBUG=1
 #endif DEBUG
 
-
-AM_CXXFLAGS = -Wall -Wextra -Wfatal-errors -O3 -ftree-vectorize -ggdb
+# Debug flags
+AM_CXXFLAGS = -Wall -Wextra -Wfatal-errors -O1 -ggdb -fno-inline
+# Speed flags
+#AM_CXXFLAGS = -Wall -Wextra -Wfatal-errors -O3 -ftree-vectorize
 		
+	
