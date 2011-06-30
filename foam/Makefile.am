@@ -41,20 +41,27 @@ foam_simstat_SOURCES = foam-simstatic.cc \
 		$(FRAME_SRC) \
 		$(MODS_DIR)/camera.cc \
 		$(MODS_DIR)/dummycam.cc \
-		$(MODS_DIR)/imgcam.cc
+		$(MODS_DIR)/imgcam.cc \
+		$(MODS_DIR)/wfs.cc \
+		$(MODS_DIR)/shwfs.cc \
+		$(LIB_DIR)/shift.cc
 
 # Header files are part of the sources as well
 foam_simstat_SOURCES += foam-simstatic.h \
 		$(FRAME_HDR) \
 		$(MODS_DIR)/camera.h \
 		$(MODS_DIR)/dummycam.h \
-		$(MODS_DIR)/imgcam.h
+		$(MODS_DIR)/imgcam.h \
+		$(MODS_DIR)/wfs.h \
+		$(MODS_DIR)/shwfs.h \
+		$(LIB_DIR)/shift.h
 
 # Some CPP flags
 foam_simstat_CPPFLAGS = -DFOAM_DEFAULTCONF=\"$(FOAMCONFDIR)/foam-simstat.cfg\" \
 		$(SIMSTAT_CFLAGS) $(AM_CPPFLAGS)
 
 foam_simstat_LDADD = $(LIBSIU_DIR)/libimgdata.a \
+		$(LIBSIU_DIR)/libcsv.a \
 		$(LDADD)
 
 # specific flags and libraries
