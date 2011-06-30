@@ -125,6 +125,7 @@ void Camera::cam_proc() {
 			pthread::mutexholder h(&proc_mutex);
 			io.msg(IO_DEB2, "Camera::cam_proc() waiting...");
 			proc_cond.wait(proc_mutex);
+//#error This should not GO immediately when the class is instanced!
 			io.msg(IO_DEB2, "Camera::cam_proc() go!...");
 		}
 		
@@ -149,10 +150,7 @@ void Camera::cam_proc() {
 		frame->proc = true;
 		
 		// Notify all threads waiting for new frames now
-		{
-			pthread::mutexholder h(&cam_mutex);
-			cam_cond.broadcast();
-		}
+		cam_cond.broadcast();
 	}
 }
 
