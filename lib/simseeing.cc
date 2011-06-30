@@ -105,8 +105,8 @@ gsl_matrix *SimSeeing::load_wavefront(const Path &f, const bool norm) {
 		throw exception("SimSeeing::load_wavefront() cannot read wavefront file: " + file.str() + "!");
 	
 	ImgData wftmp(io, file, ImgData::AUTO);
-	if (wftmp.err) {
-		io.msg(IO_ERR, "SimSeeing::load_wavefront() ImgData returned an error: %d", wftmp.err);
+	if (wftmp.geterr() != ImgData::ERR_NO_ERROR) {
+		io.msg(IO_ERR, "SimSeeing::load_wavefront() ImgData returned an error: %d", wftmp.geterr());
 		return NULL;
 	}
 	
