@@ -123,7 +123,9 @@ void Camera::cam_proc() {
 		// Always wait for proc_cond broadcasts
 		{
 			pthread::mutexholder h(&proc_mutex);
+			io.msg(IO_DEB2, "Camera::cam_proc() waiting...");
 			proc_cond.wait(proc_mutex);
+			io.msg(IO_DEB2, "Camera::cam_proc() go!...");
 		}
 		
 		// Lock cam_mut before handling the data
@@ -364,7 +366,7 @@ Camera::frame_t *Camera::get_frame(const size_t id, const bool wait) {
 	if(id >= count) {
 		if(wait) {
 			while(id >= count) {
-				cam_cond.wait(cam_mutex);		// This mutex must be locked elsewhere before calling get_frame()
+				cam_cond.wait(cam_mutex);		// This mutex must be locked elsewhere before calling get_frame()!!
 			}
 		} else {
 			return 0;
