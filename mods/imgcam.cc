@@ -68,10 +68,10 @@ noise(10.0), img(NULL), frame(NULL)
 	
 	update();
 	
-	io.msg(IO_INFO, "ImgCamera init success, got %dx%dx%d frame, noise=%g, intv=%g, exp=%g.", 
+	io.msg(IO_INFO, "ImgCamera: init success, got %dx%dx%d frame, noise=%g, intv=%g, exp=%g.", 
 				 res.x, res.y, depth, noise, interval, exposure);
 	if (img->stats.init)
-		io.msg(IO_INFO, "Range = %d--%d, sum=%lld", img->stats.min, img->stats.max, img->stats.sum);
+		io.msg(IO_INFO, "ImgCamera: Range = %d--%d, sum=%lld", img->stats.min, img->stats.max, img->stats.sum);
 }
 
 ImgCamera::~ImgCamera() {
@@ -190,7 +190,10 @@ void ImgCamera::cam_set_mode(const mode_t newmode) {
 		return;
 	
 	mode = newmode;
-	mode_cond.broadcast();
+	{
+		pthread::mutexholder h(&mode_mutex);
+		mode_cond.broadcast();
+	}				
 }
 
 void ImgCamera::do_restart() {

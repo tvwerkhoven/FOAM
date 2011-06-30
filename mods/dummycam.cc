@@ -218,5 +218,8 @@ void DummyCamera::cam_set_mode(const mode_t newmode) {
 		return;
 	
 	mode = newmode;
-	mode_cond.broadcast();
+	{
+		pthread::mutexholder h(&mode_mutex);
+		mode_cond.broadcast();
+	}				
 }
