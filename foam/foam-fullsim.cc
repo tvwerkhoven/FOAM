@@ -296,7 +296,10 @@ void FOAM_FullSim::on_message(Connection *const conn, string line) {
 		conn->write("ok cmd calib");
 		ptc->calib = calmode;
 		ptc->mode = AO_MODE_CAL;
-		mode_cond.signal();								// signal a change to the main thread
+		{
+			pthread::mutexholder h(&mode_mutex);
+			mode_cond.signal();						// signal a change to the threads
+		}
 	}
 	else
 		parsed = false;

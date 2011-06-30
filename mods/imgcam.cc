@@ -134,12 +134,12 @@ void ImgCamera::cam_handler() {
 			default:
 				io.msg(IO_INFO, "ImgCamera::cam_handler() OFF/CONFIG/UNKNOWN");
 				// We wait until the mode changed
-				mode_mutex.lock();
-				mode_cond.wait(mode_mutex);
-				mode_mutex.unlock();
+				{
+					pthread::mutexholder h(&mode_mutex);
+					mode_cond.wait(mode_mutex);
+				}				
 				break;
 		}
-		
 	}
 }
 

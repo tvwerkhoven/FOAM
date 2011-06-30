@@ -160,9 +160,10 @@ void DummyCamera::cam_handler() {
 			case Camera::WAITING:
 				io.msg(IO_INFO, "DummyCamera::cam_handler() OFF/WAITING.");
 				// We wait until the mode changed
-				mode_mutex.lock();
+			{
+				pthread::mutexholder h(&mode_mutex);
 				mode_cond.wait(mode_mutex);
-				mode_mutex.unlock();
+			}
 				break;
 			case Camera::CONFIG:
 				io.msg(IO_DEB1, "DummyCamera::cam_handler() CONFIG");

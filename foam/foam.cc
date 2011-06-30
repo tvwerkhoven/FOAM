@@ -262,9 +262,10 @@ int FOAM::listen() {
 				io.msg(IO_INFO, "FOAM::listen() Entering listen loop.");
 				// We wait until the mode changed
 				protocol->broadcast("ok mode listen");
-				mode_mutex.lock();
-				mode_cond.wait(mode_mutex);
-				mode_mutex.unlock();
+				{
+					pthread::mutexholder h(&mode_mutex);
+					mode_cond.wait(mode_mutex);
+				}
 				break;
 			case AO_MODE_SHUTDOWN:
 				io.msg(IO_DEB1, "FOAM::listen() AO_MODE_SHUTDOWN");
@@ -391,7 +392,10 @@ void FOAM::on_message(Connection *const conn, string line) {
   else if (cmd == "shutdown") {
 		conn->write("ok cmd shutdown");
 		ptc->mode = AO_MODE_SHUTDOWN;
-		mode_cond.signal();						// signal a change to the threads
+		{
+			pthread::mutexholder h(&mode_mutex);
+			mode_cond.signal();						// signal a change to the threads
+		}
   }
   else if (cmd == "broadcast") {
 		conn->write("ok cmd broadcast");
@@ -423,17 +427,26 @@ void FOAM::on_message(Connection *const conn, string line) {
 		if (mode == mode2str(AO_MODE_CLOSED)) {
 			conn->write("ok cmd mode closed");
 			ptc->mode = AO_MODE_CLOSED;
-			mode_cond.signal();						// signal a change to the threads
+			{
+				pthread::mutexholder h(&mode_mutex);
+				mode_cond.signal();						// signal a change to the threads
+			}
 		}
 		else if (mode == mode2str(AO_MODE_OPEN)) {
 			conn->write("ok cmd mode open");
 			ptc->mode = AO_MODE_OPEN;
-			mode_cond.signal();						// signal a change to the threads
+			{
+				pthread::mutexholder h(&mode_mutex);
+				mode_cond.signal();						// signal a change to the threads
+			}
 		}
 		else if (mode == mode2str(AO_MODE_LISTEN)) {
 			conn->write("ok cmd mode listen");
 			ptc->mode = AO_MODE_LISTEN;
-			mode_cond.signal();						// signal a change to the threads
+			{
+				pthread::mutexholder h(&mode_mutex);
+				mode_cond.signal();						// signal a change to the threads
+			}
 		}
 		else
 			conn->write("error cmd mode :mode unkown");

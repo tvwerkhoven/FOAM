@@ -223,14 +223,20 @@ void FW1394Camera::cam_set_mode(mode_t newmode) {
 			// Start camera
 			camera->set_transmission(true);
 			mode = newmode;
-			mode_cond.broadcast();
+			{
+				pthread::mutexholder h(&mode_mutex);
+				mode_cond.broadcast();
+			}
 			break;
 		case Camera::WAITING:
 		case Camera::OFF:
 			// Stop camera
 			camera->set_transmission(false);
 			mode = newmode;
-			mode_cond.broadcast();
+			{
+				pthread::mutexholder h(&mode_mutex);
+				mode_cond.broadcast();
+			}
 			break;
 		case Camera::CONFIG:
 			io.msg(IO_INFO, "FW1394::cam_set_mode(%s) mode not supported.", mode2str(newmode).c_str());

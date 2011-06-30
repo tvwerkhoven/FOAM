@@ -147,7 +147,10 @@ void Camera::cam_proc() {
 		frame->proc = true;
 		
 		// Notify all threads waiting for new frames now
-		cam_cond.broadcast();
+		{
+			pthread::mutexholder h(&cam_mutex);
+			cam_cond.broadcast();
+		}
 	}
 }
 
@@ -329,7 +332,10 @@ void *Camera::cam_queue(void * const data, void * const image, struct timeval *c
 	else
 		gettimeofday(&frame->tv, 0);
 	
-	proc_cond.signal();			// Signal one waiting thread about the new frame
+	{
+		pthread::mutexholder h(&proc_mutex);
+		proc_cond.signal();			// Signal one waiting thread about the new frame
+	}
 	
 	return old;
 }
