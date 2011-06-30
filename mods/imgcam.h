@@ -49,7 +49,7 @@ class ImgCamera: public Camera {
 private:
 	double noise;												//!< Simulated noise intensity
 	ImgData *img;												//!< Use ImgData utils to load frames
-	uint16_t *frame;										//!< Frame stored here
+	uint16_t *frame;										//!< Frame is stored here
 	
 public:
 	ImgCamera(Io &io, foamctrl *const ptc, const string name, const string port, Path const &conffile, const bool online=true);

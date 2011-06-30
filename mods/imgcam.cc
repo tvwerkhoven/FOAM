@@ -37,23 +37,27 @@ using namespace std;
 
 
 ImgCamera::ImgCamera(Io &io, foamctrl *const ptc, const string name, const string port, Path const &conffile, const bool online):
-Camera(io, ptc, name, imgcam_type, port, conffile, online)
+Camera(io, ptc, name, imgcam_type, port, conffile, online),
+noise(10.0), img(NULL), frame(NULL)
 {
 	io.msg(IO_DEB2, "ImgCamera::ImgCamera()");
 	// Register network commands with base device:
 	// No extra commands
 
-	Path file = cfg.getstring(name + ".imagefile");
-	if (!file.isabs()) file = ptc->datadir + file;
+	Path file = cfg.getstring("imagefile");
+	file = ptc->confdir + file;
 	
 	io.msg(IO_DEB2, "imagefile = %s", file.c_str());
-	noise = cfg.getdouble(name+".noise", 10.0);
-	interval = cfg.getdouble(name+".interval", 0.25);
-	exposure = cfg.getdouble(name+".exposure", 1.0);
+	noise = cfg.getdouble("noise", 10.0);
+	interval = cfg.getdouble("interval", 0.25);
+	exposure = cfg.getdouble("exposure", 1.0);
 	
 	mode = Camera::OFF;
 	
 	img = new ImgData(io, file, ImgData::FITS);
+	if (img->geterr() != ImgData::ERR_NO_ERROR)
+		throw exception("ImgCamera::ImgCamera(): Could not load image");
+
 	img->calcstats();
 	
 	res.x = img->getwidth();
@@ -73,6 +77,7 @@ Camera(io, ptc, name, imgcam_type, port, conffile, online)
 ImgCamera::~ImgCamera() {
 	io.msg(IO_DEB2, "ImgCamera::~ImgCamera()");
 	delete img;
+	free(frame);
 }
 
 void ImgCamera::update() {
@@ -83,40 +88,40 @@ void ImgCamera::update() {
 	gettimeofday(&now, 0);
 	
 	uint16_t *p = frame;
-	
-	int mul = (1 << depth) - 1;
-	for(size_t y = 0; y < (size_t) res.y; y++) {
-		for(size_t x = 0; x < (size_t) res.x; x++) {
-			double value = simple_rand() * noise + img->getpixel(x, y) * exposure;
-			value *= exposure;
-			if(value < 0)
-				value = 0;
-			if(value > 1)
-				value = 1;
-			*p++ = (uint16_t)(value * mul) & mul;
+
+	// Only process frame if necessary...
+	if (noise != 0 & exposure != 0) {
+		int mul = (1 << depth) - 1;
+		for(size_t y = 0; y < (size_t) res.y; y++) {
+			for(size_t x = 0; x < (size_t) res.x; x++) {
+				double value = simple_rand() * noise + img->getpixel(x, y) * exposure;
+				value *= exposure;
+				if(value < 0)
+					value = 0;
+				if(value > 1)
+					value = 1;
+				*p++ = (uint16_t)(value * mul) & mul;
+			}
 		}
 	}
 	
 	void *old = cam_queue(frame, frame, &now);
-	if(old) {
-		//io.msg(IO_DEB2, "Got old=%p\n", old);
-		//free((uint16_t *)old);
+	
+	if (interval > 0) {
+		// Make sure each update() takes at minimum interval seconds:
+		diff.tv_sec = 0;
+		diff.tv_usec = interval * 1.0e6;
+		timeradd(&now, &diff, &next);
+		
+		gettimeofday(&now, 0);
+		timersub(&next, &now, &diff);
+		if(diff.tv_sec >= 0)
+			usleep(diff.tv_sec * 1.0e6 + diff.tv_usec);
 	}
-	
-	// Make sure each update() takes at minimum interval seconds:
-	diff.tv_sec = 0;
-	diff.tv_usec = interval * 1.0e6;
-	timeradd(&now, &diff, &next);
-	
-	gettimeofday(&now, 0);
-	timersub(&next, &now, &diff);
-	if(diff.tv_sec >= 0)
-		usleep(diff.tv_sec * 1.0e6 + diff.tv_usec);
 }
 
 void ImgCamera::cam_handler() { 
 	pthread::setcanceltype(PTHREAD_CANCEL_ASYNCHRONOUS);
-	sleep(1);
 	
 	while (true) {
 		switch (mode) {
