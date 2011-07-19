@@ -67,6 +67,10 @@ cooltemp(30), cooler_on(false)
 AndorCam::~AndorCam() {
 	io.msg(IO_DEB2, "AndorCam::~AndorCam()");
 	
+	// Acquisition off
+	// Close shutter
+	// Warm CCD
+	
 	// Delete frames in buffer if necessary
 
 	// Stop capture thread
@@ -120,6 +124,9 @@ void AndorCam::cam_handler() {
 			case Camera::RUNNING:
 				io.msg(IO_DEB1, "AndorCam::cam_handler() RUNNING");
 				//! @todo Implement data acquisition in Andor SDK
+				// open shutter
+				// start acquisition
+				
 				break;
 			case Camera::SINGLE:
 				io.msg(IO_DEB1, "AndorCam::cam_handler() SINGLE");
@@ -129,6 +136,9 @@ void AndorCam::cam_handler() {
 			case Camera::OFF:
 			case Camera::WAITING:
 				io.msg(IO_INFO, "AndorCam::cam_handler() OFF/WAITING.");
+				// stop acquisition
+				// close shutter
+
 				// We wait until the mode changed
 				mode_mutex.lock();
 				mode_cond.wait(mode_mutex);
