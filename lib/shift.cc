@@ -55,17 +55,31 @@ Shift::~Shift() {
 }
 
 void Shift::_worker_func() {
-	work_mutex.lock();
-	int id = _worker_getid();
-	io.msg(IO_XNFO, "Shift::_worker_func() new worker (id=%d n=%d)", id, nworker);
-	work_mutex.unlock();
-
 	float shift[2];
+	int id=0;
+	{
+		pthread::mutexholder h(&work_mutex);
+		id = _worker_getid();
+		io.msg(IO_XNFO, "Shift::_worker_func() new worker (id=%d n=%d)", id, nworker);
+	}
+	
 
 	while (true) {
 		{
-			pthread::mutexholder h(&work_mutex);
-			io.msg(IO_XNFO, "Shift::_worker_func() worker %d waiting...", id);
+			pthread::mutexholder h1(&work_mutex);
+			{
+				pthread::mutexholder h2(&workpool.mutex);
+				io.msg(IO_DEB2, "Shift::_worker_func() worker %d done: %d, nworker: %d...", id, workpool.done, nworker);
+				// Increment thread done counter, broadcast signal if we are the last thread
+				if (++(workpool.done) == nworker) {
+					io.msg(IO_DEB2, "Shift::_worker_func() worker %d unlocking...", id);
+					// Lock the work_done_mutex, then broadcast the signal. The 
+					// mutexholder will go out of scope and unlock automatically
+					pthread::mutexholder h3(&work_done_mutex);
+					work_done_cond.broadcast();
+				}
+			}		
+			io.msg(IO_DEB2, "Shift::_worker_func() worker %d waiting...", id);
 			work_cond.wait(work_mutex);
 		}
 		
@@ -86,18 +100,6 @@ void Shift::_worker_func() {
 			//! @todo might give problems with 64 bit systems? Better to reserve a block per thread?
 			gsl_vector_float_set(workpool.shifts, myjob*2+0, shift[0]);
 			gsl_vector_float_set(workpool.shifts, myjob*2+1, shift[1]);
-		}
-		
-		{
-			pthread::mutexholder h(&workpool.mutex);
-			// Increment thread done counter, broadcast signal if we are the last thread
-			if (++(workpool.done) == nworker-1) {
-				io.msg(IO_XNFO, "Shift::_worker_func() worker %d unlocking...", id);
-				// Lock the work_done_mutex, then broadcast the signal. The 
-				// mutexholder will go out of scope and unlock automatically
-				pthread::mutexholder h(&work_done_mutex);
-				work_done_cond.broadcast();
-			}
 		}
 	}
 }
@@ -154,8 +156,12 @@ bool Shift::calc_shifts(const uint8_t *img, const coord_t res, const std::vector
 	
 	{ 
 		// lock work_done_mutex, then broadcast work to all workers.
-		pthread::mutexholder h(&work_done_mutex);
-		work_cond.broadcast();
+		pthread::mutexholder h1(&work_done_mutex);
+		
+		{
+			pthread::mutexholder h2(&work_mutex);
+			work_cond.broadcast();
+		}
 		
 		// Wait until the work is completed, with the mutex locked. The associated
 		// mutex will unlock automatically when mutexholder goes out of scope
