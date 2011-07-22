@@ -26,6 +26,7 @@
 #include "autoconfig.h"
 #endif
 
+#include "utils.h"
 #include "io.h"
 #include "config.h"
 #include "csv.h"

@@ -30,7 +30,7 @@
 #include <fcntl.h>
 
 #include "io.h"
-#include "types.h"
+#include "utils.h"
 #include "config.h"
 #include "path++.h"
 

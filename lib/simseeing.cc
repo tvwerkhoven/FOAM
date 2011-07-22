@@ -22,7 +22,7 @@
 #include <gsl/gsl_matrix.h>
 
 #include "io.h"
-#include "types.h"
+#include "utils.h"
 #include "imgdata.h"
 #include "foamctrl.h"
 

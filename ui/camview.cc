@@ -32,7 +32,7 @@
 #include <stdlib.h>
 #include <math.h>
 
-#include "types.h"
+#include "utils.h"
 #include "camctrl.h"
 #include "glviewer.h"
 #include "camview.h"

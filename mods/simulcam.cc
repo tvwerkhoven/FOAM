@@ -30,6 +30,7 @@
 #include <sys/resource.h>
 #include <sys/time.h>
 
+#include "utils.h"
 #include "io.h"
 #include "config.h"
 #include "pthread++.h"

@@ -27,6 +27,7 @@
 #include <fcntl.h>
 #include <stdint.h>
 
+#include "utils.h"
 #include "config.h"
 #include "io.h"
 #include "imgdata.h"

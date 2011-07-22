@@ -18,7 +18,7 @@
  along with FOAM.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "types.h"
+#include "utils.h"
 
 #include "deviceview.h"
 #include "devicectrl.h"

@@ -22,6 +22,7 @@
 #include <time.h>
 #include <math.h>
 
+#include "utils.h"
 #include "pthread++.h"
 #include "config.h"
 #include "path++.h"
