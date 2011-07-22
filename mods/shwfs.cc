@@ -433,7 +433,7 @@ int Shwfs::gsl_linalg_SV_decomp_float(gsl_matrix_float *U, gsl_matrix_float *V, 
  */
 
 
-int Shwfs::calc_actmat(string wfcname, double singval, enum wfbasis basis) {
+int Shwfs::calc_actmat(string wfcname, double singval, enum wfbasis /*basis*/) {
 	io.msg(IO_XNFO, "Shwfs::calc_actmat(): calc'ing for wfc '%s' with singval cutoff %g.",
 				 wfcname.c_str(), singval);
 	// Using input:

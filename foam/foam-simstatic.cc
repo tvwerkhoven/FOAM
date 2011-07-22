@@ -100,13 +100,11 @@ int FOAM_simstatic::closed_init() {
 }
 
 int FOAM_simstatic::closed_loop() {
-	//io.msg(IO_DEB2, "FOAM_simstatic::closed_loop()");
 	Camera::frame_t *frame = imgcama->get_last_frame();
 	
 	// Propagate simulated frame through system (WFS, algorithms, WFC)
 	Shwfs::wf_info_t *wf_meas = simwfs->measure(frame);
 	
-	// TODO
 	simwfs->comp_ctrlcmd("fakewfc", wf_meas->wfamp, NULL);
 	return 0;
 }

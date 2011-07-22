@@ -106,7 +106,8 @@ void ImgCamera::update() {
 		}
 	}
 	
-	void *old = cam_queue(frame, frame, &now);
+  cam_queue(frame, frame, &now);
+	//void *old = cam_queue(frame, frame, &now);
 	
 	if (interval > 0) {
 		// Make sure each update() takes at minimum interval seconds:
