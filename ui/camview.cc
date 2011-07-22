@@ -54,7 +54,7 @@ capture("Capture"), display("Display"), store("Store"), e_exposure("Exp."), e_of
 flipv("Flip V"), fliph("Flip H"), crosshair("X-hair"), grid("Grid"), histo("Histogram"), zoomin(Stock::ZOOM_IN), zoomout(Stock::ZOOM_OUT), zoom100(Stock::ZOOM_100), zoomfit(Stock::ZOOM_FIT), 
 histoalign(0.5, 0.5, 0, 0), minval("Display min"), maxval("Display max"), e_avg("Avg."), e_rms("RMS"), e_datamin("Min"), e_datamax("Max")
 {
-	fprintf(stderr, "%x:CamView::CamView()\n", (int) pthread_self());
+	log.term(format("%s", __PRETTY_FUNCTION__));
 	
 	lastupdate = 0;
 	waitforupdate = false;
@@ -212,12 +212,12 @@ histoalign(0.5, 0.5, 0, 0), minval("Display min"), maxval("Display max"), e_avg(
 
 CamView::~CamView() {
 	//!< @todo store (gui) configuration here?
-	fprintf(stderr, "%x:CamView::~CamView()\n", (int) pthread_self());
+	log.term(format("%s", __PRETTY_FUNCTION__));
 }
 
 void CamView::enable_gui() {
 	DevicePage::enable_gui();
-	fprintf(stderr, "%x:CamView::enable_gui()\n", (int) pthread_self());
+	log.term(format("%s", __PRETTY_FUNCTION__));
 	
 	e_exposure.set_sensitive(true);
 	e_offset.set_sensitive(true);
@@ -238,7 +238,7 @@ void CamView::enable_gui() {
 
 void CamView::disable_gui() {
 	DevicePage::disable_gui();
-	fprintf(stderr, "%x:CamView::disable_gui()\n", (int) pthread_self());
+	log.term(format("%s", __PRETTY_FUNCTION__));
 	
 	e_exposure.set_sensitive(false);
 	e_offset.set_sensitive(false);
@@ -259,7 +259,7 @@ void CamView::disable_gui() {
 
 void CamView::clear_gui() {
 	DevicePage::clear_gui();
-	fprintf(stderr, "%x:CamView::clear_gui()\n", (int) pthread_self());
+	log.term(format("%s", __PRETTY_FUNCTION__));
 	
 	e_exposure.set_text("N/A");
 	e_offset.set_text("N/A");
@@ -508,7 +508,7 @@ void CamView::on_message_update() {
 }
 
 void CamView::on_info_change() {
-	fprintf(stderr, "%x:CamView::on_info_change()\n", (int) pthread_self());
+	log.term(format("%s", __PRETTY_FUNCTION__));
 	camctrl->set_exposure(strtod(e_exposure.get_text().c_str(), NULL));
 	camctrl->set_offset(strtod(e_offset.get_text().c_str(), NULL));
 	camctrl->set_interval(strtod(e_interval.get_text().c_str(), NULL));
@@ -534,11 +534,11 @@ void CamView::on_capture_clicked() {
 	// Click the 'capture' button: if running, disable, otherwise start camera
 	if (camctrl->get_mode() == CamCtrl::RUNNING || 
 			camctrl->get_mode() == CamCtrl::SINGLE) {
-		fprintf(stderr, "%x:CamView::on_capture_update(): Stopping camera.\n", (int) pthread_self());
+        log.term(format("%s Stop cam", __PRETTY_FUNCTION__));
 		camctrl->set_mode(CamCtrl::WAITING);
 	}
 	else {
-		fprintf(stderr, "%x:CamView::on_capture_update(): Starting camera.\n", (int) pthread_self());
+        log.term(format("%s Start cam", __PRETTY_FUNCTION__));
 		camctrl->set_mode(CamCtrl::RUNNING);
 	}
 }
@@ -563,7 +563,7 @@ void CamView::on_store_clicked() {
 	// - store OK: unused
 	
 	int nstore = (int) strtol(store_n.get_text().c_str(), NULL, 0);
-	fprintf(stderr, "%x:CamView::on_store_clicked() n=%d\n", (int) pthread_self(), nstore);
+	log.term(format("%s (%d)", __PRETTY_FUNCTION__, nstore));
 	
 	if (store.get_state() == SwitchButton::CLEAR) {
 		// If the value 'nstore' is valid, 

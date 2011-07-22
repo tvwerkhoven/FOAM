@@ -38,13 +38,13 @@ CamCtrl::CamCtrl(Log &log, const string h, const string p, const string n):
 	exposure(0.0), interval(0.0), gain(0.0), offset(0.0), 
 	width(0), height(0), depth(0), nstore(0)
 {
-	fprintf(stderr, "%x:CamCtrl::CamCtrl()\n", (int) pthread_self());
+	log.term(format("%s", __PRETTY_FUNCTION__));
 
 	monitorprotocol.slot_message = sigc::mem_fun(this, &CamCtrl::on_monitor_message);
 }
 
 CamCtrl::~CamCtrl() {
-	fprintf(stderr, "%x:CamCtrl::~CamCtrl()\n", (int) pthread_self());
+	log.term(format("%s", __PRETTY_FUNCTION__));
 	set_mode(OFF);
 }
 
@@ -55,7 +55,7 @@ void CamCtrl::connect() {
 
 void CamCtrl::on_connected(bool conn) {
 	DeviceCtrl::on_connected(conn);
-	fprintf(stderr, "%x:CamCtrl::on_connected(conn=%d)\n", (int) pthread_self(), conn);
+	log.term(format("%s (%d)", __PRETTY_FUNCTION__, conn));
 	
 	if (conn) {
 		send_cmd("get mode");
@@ -133,7 +133,8 @@ void CamCtrl::on_message(string line) {
 
 //!< @bug If this function returns, there is a problem in camview.cc
 void CamCtrl::on_monitor_message(string line) {
-	fprintf(stderr, "%x:CamCtrl::on_monitor_message(line=%s)\n", (int) pthread_self(), line.c_str());
+	log.term(format("%s (%s)", __PRETTY_FUNCTION__, line.c_str()));
+
 	// Line has to start with 'ok', or there is an error
 	if(popword(line) != "ok") {
 		log.add(Log::ERROR, "image grab error (err=" + line + ")");

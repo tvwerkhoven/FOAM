@@ -33,7 +33,7 @@ FoamControl::FoamControl(Log &log, int argc, char *argv[]):
 log(log),
 execname(""), conffile(""),
 ok(false), errormsg("Not connected") {
-	printf("%x:FoamControl::FoamControl()\n", (int) pthread_self());
+	log.term(format("%s", __PRETTY_FUNCTION__));
 	if (parse_args(argc, argv))
 		exit(-1);
 }
@@ -92,7 +92,8 @@ int FoamControl::parse_args(int argc, char *argv[]) {
 int FoamControl::connect(const string &h, const string &p) {
 	host = h;
 	port = p;
-	printf("%x:FoamControl::connect(%s, %s)\n", (int) pthread_self(), host.c_str(), port.c_str());
+	log.term(format("%s(%s, %s)\n", __PRETTY_FUNCTION__, host.c_str(), port.c_str()));
+
 	
 	if (protocol.is_connected()) 
 		return -1;
@@ -108,7 +109,8 @@ int FoamControl::connect(const string &h, const string &p) {
 //!< @bug This does not disable the GUI, after protocol.disconnect, there is no call to on_connected? Does protocol do this at all on disconnect? Solved with on_connected(protocol.is_connected());?
 //!< @todo This should propagate through the whole GUI, also the device tabs
 int FoamControl::disconnect() {
-	printf("%x:FoamControl::disconnect(conn=%d)\n", (int) pthread_self(), protocol.is_connected());
+	log.term(format("%s(%d)", __PRETTY_FUNCTION__, protocol.is_connected()));
+
 	if (protocol.is_connected()) {
 		protocol.disconnect();
 		//!< @todo Is this necessary?
@@ -122,13 +124,14 @@ void FoamControl::send_cmd(const string &cmd) {
 	state.lastcmd = cmd;
 	protocol.write(cmd);
 	log.add(Log::DEBUG, "FOAM: -> " + cmd);
-	printf("%x:FoamControl::sent cmd: %s\n", (int) pthread_self(), cmd.c_str());
+	log.term(format("%s(%s)", __PRETTY_FUNCTION__, cmd.c_str()));
+
 }
 
 void FoamControl::set_mode(aomode_t mode) {
 	if (!protocol.is_connected()) return;
 	
-	printf("%x:FoamControl::set_mode(%s)\n", (int) pthread_self(), mode2str(mode).c_str());
+	log.term(format("%s(%s)", __PRETTY_FUNCTION__, mode2str(mode).c_str()));
 	
 	switch (mode) {
 		case AO_MODE_LISTEN:
@@ -146,7 +149,7 @@ void FoamControl::set_mode(aomode_t mode) {
 }
 
 void FoamControl::on_connected(bool conn) {
-	printf("%x:FoamControl::on_connected(bool=%d)\n", (int) pthread_self(), conn);
+	log.term(format("%s(%d)", __PRETTY_FUNCTION__, conn));
 
 	if (!conn) {
 		ok = false;
@@ -167,7 +170,7 @@ void FoamControl::on_connected(bool conn) {
 }
 
 void FoamControl::on_message(string line) {
-	printf("%x:FoamControl::on_message(string=%s)\n", (int) pthread_self(), line.c_str());
+	log.term(format("%s(%s)", __PRETTY_FUNCTION__, line.c_str()));
 
 	state.lastreply = line;
 	
@@ -225,16 +228,16 @@ void FoamControl::on_message(string line) {
 // Device management
 
 bool FoamControl::add_device(const string name, const string type) {
-	printf("%x:FoamControl::add_device(%s, %s)\n", (int) pthread_self(), name.c_str(), type.c_str());
+	log.term(format("%s(%s,%s)", __PRETTY_FUNCTION__, name.c_str(), type.c_str()));
 	// Check if already exists
 	if (get_device(name) != NULL) {
-		printf("%x:FoamControl::add_device() Exists!\n", (int) pthread_self());
+		log.term(format("%s Exists!", __PRETTY_FUNCTION__));
 		log.add(Log::ERROR, "Device " + name + " already exists, cannot add!");
 		return false;
 	}
 
 	if (type.substr(0,3) != "dev") {
-		printf("%x:FoamControl::add_device() Type wrong!\n", (int) pthread_self());
+		log.term(format("%s Type wrong!", __PRETTY_FUNCTION__));
 		log.add(Log::ERROR, "Device type wrong, should start with 'dev' (was: " + type + ")");
 		return false;
 	}
@@ -243,24 +246,24 @@ bool FoamControl::add_device(const string name, const string type) {
 	pthread::mutexholder h(&(gui_mutex));
 
 	// Does not exist, add and init
-	printf("%x:FoamControl::add_device() @ index %d\n", (int) pthread_self(), state.numdev);
+	log.term(format("%s @ index %d", __PRETTY_FUNCTION__, state.numdev));
 	device_t *newdev = &(state.devices[state.numdev]);
 	newdev->name = name;
 	newdev->type = type;
 	
 		
-	printf("%x:FoamControl::add_device() Ok\n", (int) pthread_self());
+	log.term(format("%s Ok", __PRETTY_FUNCTION__));
 	state.numdev++;
 	signal_device();
 	return true;
 }
 
 bool FoamControl::rem_device(const string name) {
-	printf("%x:FoamControl::rem_device(%s)\n", (int) pthread_self(), name.c_str());
+	log.term(format("%s (%s)", __PRETTY_FUNCTION__, name.c_str()));
 	
 	device_t *tmpdev = get_device(name);
 	if (tmpdev == NULL) {
-		printf("%x:FoamControl::rem_device() Does not exist!\n", (int) pthread_self());
+		log.term(format("%s Does not exist!", __PRETTY_FUNCTION__));
 		return false;
 	}
 	
@@ -268,14 +271,14 @@ bool FoamControl::rem_device(const string name) {
 	pthread::mutexholder h(&(gui_mutex));
 
 	
-	printf("%x:FoamControl::rem_device() Ok\n", (int) pthread_self());
+	log.term(format("%s Ok", __PRETTY_FUNCTION__));
 	state.numdev--;
 	signal_device();
 	return true;
 }
 
 FoamControl::device_t *FoamControl::get_device(const string name) {
-	printf("%x:FoamControl::get_device(%s)\n", (int) pthread_self(), name.c_str());
+	log.term(format("%s", __PRETTY_FUNCTION__));
 
 	for (int i=0; i<state.numdev; i++) {
 		if (state.devices[i].name == name) 
@@ -286,7 +289,7 @@ FoamControl::device_t *FoamControl::get_device(const string name) {
 }
 
 FoamControl::device_t *FoamControl::get_device(const DevicePage *page) {
-	printf("%x:FoamControl::get_device(page)\n", (int) pthread_self());
+	log.term(format("%s", __PRETTY_FUNCTION__));
 	
 	for (int i=0; i<state.numdev; i++) {
 		if (state.devices[i].page == page) 

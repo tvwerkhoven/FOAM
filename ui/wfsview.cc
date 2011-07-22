@@ -36,7 +36,7 @@ wfpow_frame("Wavefront info"),
 wfpow_mode("Basis"), wfpow_align(0.5, 0.5, 0, 0),
 wfscam_ui(NULL)
 {
-	fprintf(stderr, "%x:WfsView::WfsView()\n", (int) pthread_self());
+	log.term(format("%s", __PRETTY_FUNCTION__));
 	
 	wfpow_pixbuf = Gdk::Pixbuf::create(Gdk::COLORSPACE_RGB, false, 8, 480, 100);
 	wfpow_pixbuf->fill(0xFFFFFF00);
@@ -84,24 +84,24 @@ wfscam_ui(NULL)
 }
 
 WfsView::~WfsView() {
-	fprintf(stderr, "%x:WfsView::~WfsView()\n", (int) pthread_self());
+	log.term(format("%s", __PRETTY_FUNCTION__));
 }
 
 void WfsView::enable_gui() {
 	DevicePage::enable_gui();
-	fprintf(stderr, "%x:WfsView::enable_gui()\n", (int) pthread_self());
+	log.term(format("%s", __PRETTY_FUNCTION__));
 
 }
 
 void WfsView::disable_gui() {
 	DevicePage::disable_gui();
-	fprintf(stderr, "%x:WfsView::disable_gui()\n", (int) pthread_self());
+	log.term(format("%s", __PRETTY_FUNCTION__));
 	
 }
 
 void WfsView::clear_gui() {
 	DevicePage::clear_gui();
-	fprintf(stderr, "%x:WfsView::clear_gui()\n", (int) pthread_self());
+	log.term(format("%s", __PRETTY_FUNCTION__));
 	
 	wf_cam.set_text("N/A");
 	
