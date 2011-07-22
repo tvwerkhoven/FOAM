@@ -30,6 +30,8 @@
 using namespace Gtk;
 using namespace std;
 
+const float CONTROLVIEW_UPD_RATE = 2.0;
+
 /*!
  @brief GUI for base connection to FOAM
  
@@ -72,6 +74,8 @@ class ControlPage: public VBox {
 	HBox devbox;
 	LabeledEntry *dev_devlist;
 	
+  bool on_timeout();                  //!< Callback for continuous updating
+  
 	void on_connect_clicked();					//!< Callback for ControlPage::connect
 	
 	void on_mode_listen_clicked();			//!< Callback for ControlPage::mode_listen

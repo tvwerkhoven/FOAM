@@ -113,6 +113,10 @@ statframe("Status"), stat_mode("Mode: "), stat_ndev("# Dev: "), stat_nframes("# 
 	foamctrl.signal_connect.connect(sigc::mem_fun(*this, &ControlPage::on_connect_update));
 	foamctrl.signal_message.connect(sigc::mem_fun(*this, &ControlPage::on_message_update));
 	
+	// Start timeout signal to update some things continuously
+	Glib::signal_timeout().connect(sigc::mem_fun(*this, &ControlPage::on_timeout), 1000.0/CONTROLVIEW_UPD_RATE);
+
+	
 	// Show GUI & update contents
 	show_all_children();
 	on_message_update();
@@ -265,3 +269,9 @@ void ControlPage::on_message_update() {
 	//calmode_select.set_active_text(foamctrl.get_calmode(0));
 }
 
+bool ControlPage::on_timeout() {
+	// Update 'frames' counter now
+	foamctrl.send_cmd("get frames");
+	
+	return true;
+}
