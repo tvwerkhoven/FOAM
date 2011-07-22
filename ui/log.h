@@ -28,8 +28,10 @@
 #include "pthread++.h"
 
 /*!
- @brief Logging class
- @todo Document this
+ @brief Graphical logging class
+ 
+ GTK element using a Gtk::TextBuffer::TagTable to show timestamped logging
+ messages in a GUI. This class is thread safe.
  */
 class Log {
 	public:
@@ -62,8 +64,9 @@ class Log {
 	~Log();
 
 	Glib::RefPtr<Gtk::TextBuffer> &get_buffer();
-	Glib::ustring get_text();
-	void add(enum Log::severity severity, const Glib::ustring &message);
+	Glib::ustring get_text(); //!< Return the text in the log buffer
+	void add(enum Log::severity severity, const Glib::ustring &message); //!< Add message to the log buffer.
+	void term(std::string msg, bool showthread=true, FILE *stream=stderr); //!< Print message to a terminal (for higher volume/debugging purposes)
 };
 
 #endif // HAVE_LOG_H
