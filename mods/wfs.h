@@ -43,6 +43,16 @@ const string wfs_type = "wfs";
  specific routines. The Wfs class is independent of the camera used and
  only provides the data processing/interpretation of the camera. The camera
  itself can be accessed through the reference &cam.
+ 
+ \section shwfs_netio Camera net IO
+ - measuretest: force fake measurements being produced (to test GUI etc.)
+ - calibrate: calibrate device (mostly allocate memory etc.)
+ - measure: force manual measurement (should normally be done by FOAM itself)
+
+ - get basis: return the basis functions used for measurement (i.e. shifts, zernike, KL)
+ - get modes: return N modes as <N> <M#1> <M#2> ... <M#N>. 'Modes' can be 
+ - get calib: 
+
  */
 class Wfs: public Device {
 private:
