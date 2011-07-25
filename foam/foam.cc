@@ -529,8 +529,33 @@ ALIASES += name="FOAM"
 ALIASES += longname="Modular Adaptive Optics Framework"
 */
 
-/*!	\mainpage FOAM 
 
+/*!	\mainpage FOAM docs
+ 
+  This is the FOAM documentation. It includes both developer documentation as
+  well as user manuals.
+ 
+  More information can be found on these pages:
+  - \subpage userdocs "User manual"
+  - \subpage devdocs "Developer docs"
+ 
+*/
+
+/*!
+  \page userdocs User docs
+ 
+  You can find various user documentation here.
+ 
+  There are several FOAM modules that are used for testing. These are:
+ 
+  - \subpage ud_foamdum "FOAM dummy"
+  - \subpage ud_foamfs "FOAM full-simulation"
+  - \subpage ud_foamss "FOAM static-simulation"
+*/
+
+/*!
+  \page devdocs Developer docs
+ 
 	\section aboutdoc About this document
 	
 	This is the (developer) documentation for FOAM, the Modular Adaptive 
@@ -642,5 +667,6 @@ ALIASES += longname="Modular Adaptive Optics Framework"
 	More information can be found on these pages:
   - \subpage dev "Devices info"
   - \subpage devmngr "Device Manager info"
+  - \subpage fgui "FOAM GUI"
 
 */
