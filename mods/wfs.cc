@@ -51,6 +51,9 @@ cam(wfscam)
 }
 
 void Wfs::init() {
+  add_cmd("calibrate");
+  add_cmd("measure");
+  
 	add_cmd("measuretest");
 	add_cmd("get modes");
 	add_cmd("get basis");
@@ -71,6 +74,14 @@ void Wfs::on_message(Connection *const conn, string line) {
 		// Specifically call Wfs::measure() for fake 
 		Wfs::measure();
 		get_var(conn, "measuretest", "ok measuretest");
+	} else if (command == "calibrate") {  // calibrate
+		calibrate();
+		conn->write("ok calibrate");
+	} else if (command == "measure") {  // measure
+		if (!measure(NULL))
+			conn->write("error measure :error in measure()");
+		else 
+			conn->write("ok measure");
 	} else if (command == "get") {			// get ...
 		string what = popword(line);
 		

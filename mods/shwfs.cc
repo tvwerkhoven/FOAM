@@ -200,14 +200,6 @@ void Shwfs::on_message(Connection *const conn, string line) {
 		string what = popword(line);
 		
 		parsed = false;
-	} else if (command == "calibrate") {
-		calibrate();
-		conn->write("ok calibrate");
-	} else if (command == "measure") {
-		if (!measure(NULL))
-			conn->write("error measure :error in measure()");
-		else 
-			conn->write("ok measure");
 	} else {
 		parsed = false;
 	}
