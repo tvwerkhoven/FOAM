@@ -103,7 +103,7 @@ int SimulWfc::calibrate() {
 	return Wfc::calibrate();
 }
 
-int SimulWfc::actuate(const bool block) {
+int SimulWfc::actuate(const bool /*block*/) {
 	gsl_matrix_set_zero(wfc_sim);
 	
 	if (actpos.size() != ctrlparams.target->size)

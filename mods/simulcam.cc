@@ -85,7 +85,7 @@ do_simwf(true), do_simtel(true), do_simwfcerr(false), do_simmla(true), do_simwfc
 	
 	if (seeing.cropsize.x != res.x || seeing.cropsize.y != res.y)
 		throw std::runtime_error("SimulCam::SimulCam(): Camera resolution and seeing cropsize must be equal.");
-	if (simwfc.wfc_sim->size1 != res.x || simwfc.wfc_sim->size2 != res.y)
+	if (simwfc.wfc_sim->size1 != (size_t) res.x || simwfc.wfc_sim->size2 != (size_t) res.y)
 		throw std::runtime_error("SimulCam::SimulCam(): Camera resolution and simulated wfc size must be equal.");
 	
 	// Setup memory etc.
@@ -504,7 +504,8 @@ void SimulCam::cam_handler() {
 				//get_buffer(&frame_raw);
 				//get_buffer(&frame_out);
 				//! @todo 'frame' is the same memory each time, so this does not really queue a *new* image, it's the same memory.
-				gsl_matrix *ret = (gsl_matrix *) cam_queue(frame_raw, frame_out);
+        //cam_queue(frame_raw, frame_out);
+				//gsl_matrix *ret = (gsl_matrix *) cam_queue(frame_raw, frame_out);
 				//if (ret)
 				//	gsl_matrix_free(ret);
 				
@@ -523,7 +524,8 @@ void SimulCam::cam_handler() {
 				simul_wfs(frame_raw);
 				simul_capture(frame_raw, frame_out);
 				
-				gsl_matrix *ret = (gsl_matrix *) cam_queue(frame_raw, frame_out);
+        cam_queue(frame_raw, frame_out);
+				//gsl_matrix *ret = (gsl_matrix *) cam_queue(frame_raw, frame_out);
 				//if (ret)
 				//	gsl_matrix_free(ret);
 				

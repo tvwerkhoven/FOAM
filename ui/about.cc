@@ -247,7 +247,7 @@ static const char GPL[] =
 "POSSIBILITY OF SUCH DAMAGES.\n";
 
 
-void AboutFOAMGui::on_response(int id) {
+void AboutFOAMGui::on_response(int) {
 	hide();
 }
 
