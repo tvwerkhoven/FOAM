@@ -50,10 +50,10 @@ noise(10.0), img(NULL), frame(NULL)
 	
 	io.msg(IO_DEB2, "imagefile = %s", file.c_str());
 	noise = cfg.getdouble("noise", 10.0);
-	interval = cfg.getdouble("interval", 0.25);
-	exposure = cfg.getdouble("exposure", 1.0);
+  //	interval = cfg.getdouble("interval", 0.25);
+  //	exposure = cfg.getdouble("exposure", 1.0);
 	
-	mode = Camera::OFF;
+	//mode = Camera::OFF;
 	
 	img = new ImgData(io, file, ImgData::FITS);
 	if (img->geterr() != ImgData::ERR_NO_ERROR)
@@ -91,7 +91,7 @@ void ImgCamera::update() {
 	uint16_t *p = frame;
 
 	// Only process frame if necessary...
-	if (noise != 0 & exposure != 0) {
+	if (noise != 0 || exposure != 0) {
 		int mul = (1 << depth) - 1;
 		for(size_t y = 0; y < (size_t) res.y; y++) {
 			for(size_t x = 0; x < (size_t) res.x; x++) {
