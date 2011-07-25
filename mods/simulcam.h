@@ -73,9 +73,8 @@ const string simulcam_type = "simulcam";
     into account)
 
  Configuration parameters for Seeing:
- - wavefront_file: static FITS file which shows some wavefront
- - seeingfac: factor to multiply wavefront distortion with (for SimSeeing:),
- makes seeing worse.
+ - wavefront_file: SimSeeing::file
+ - seeingfac: SimSeeing:seeingfac
  - windspeed.x,y: windspeed by which the wavefront moves
  - windtype: 'random', 'linear' or 'drifting' method of scanning over the wavefront
  - cropsize.x,y: size to crop wavefront field to (should be same as simulated camera) 
@@ -159,7 +158,7 @@ public:
 
 	/*! @brief Initialise simulation by zero'ing out matrix
 	 
-	 @param [out] *wave_out Mtrix to initialise
+	 @param [out] *wave_in Matrix to initialise
 	 */
 	void simul_init(gsl_matrix *const wave_in);
 	
