@@ -99,7 +99,6 @@ public:
  The Wfc class provides control for wavefront correctors.
  
  \section dev_wfc_der Derived classes
- - \subpage dev_wfc_sim "Simulated membrane deformable mirror"
  - \subpage dev_wfc_simulwfc "Simulate wavefront corrector"
  
  \section dev_wfs_more See also
