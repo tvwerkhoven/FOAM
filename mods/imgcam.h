@@ -43,7 +43,17 @@ const string imgcam_type = "imgcam";
 /*!
  @brief Fake camera taking image files as input
  
- @todo Document this
+ This class extends the Camera class and serves static images from disk as
+ 'camera' images. It is used in \ref ud_foamss "static simulation" as 'camera'
+ device. ImgCamera is fairly simple and does not extend much 
+ 
+ \section imgcam_cfg Configuration parameters
+ 
+ The ImgCamera class extends the Camera class configuration with the following 
+ parameters:
+
+ - imagefile: image file to use for simulation (relative to confdir)
+ - noise (10.0): how much noise to add to the image (rand() * noise + img * exposure)
  */
 class ImgCamera: public Camera {
 private:
