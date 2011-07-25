@@ -2,7 +2,8 @@ FOAM - Modular Adative Optics Framework
 =======================================
 
 FOAM follows standard installation routines. If you checked this source
-out from git though, you need to take a few extra steps.
+out from git though, you need to take a few extra steps. For information 
+about specific platforms and compilers see the INSTALL.default file.
 
 LibSIU
 ======
@@ -35,21 +36,24 @@ followed by the regular installation procedure:
 - ./configure --help
 - ./configure
 - make
+- make install
+
+To make the test programs as well, run
+
+- make check
 
 For information about specific platforms and compilers see the
 INSTALL.default file.
 
-Testing
-=======
+For more information on running or testing the software, see the README file.
 
-You can test FOAM with the different simulations modes. One begin the full 
-simulation, the other static.
+Documentation
+=============
 
-To test, run: 
+The FOAM sourcecode is highlighted with Doxygen-compatible comments. To 
+extract this information and present it in a easily navigatable format, run:
 
-- ./foam/foam-fullsim -c conf/foam-fullsim.cfg
+- make all
 
-or
-
-- ./foam/foam-simstat -c conf/foam-simstat2.cfg
-
+in the source root. The documentation will then be available in HTML and 
+LaTeX formats in docs/
