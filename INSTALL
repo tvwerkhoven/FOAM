@@ -56,4 +56,19 @@ extract this information and present it in a easily navigatable format, run:
 - make all
 
 in the source root. The documentation will then be available in HTML and 
-LaTeX formats in docs/
+LaTeX formats in docs/.
+
+N.B. To generate documentation you need doxygen and graphviz to generate 
+call-graphs!
+
+If you need more extensive documentation, run
+
+- ./configure --enable-extdocs
+
+before make all to enable more verbose documentation. The difference is in 
+whether the more verbose docs/doxyfile-debug or the somewhat less 
+frightening docs/doxyfile is used while generating docs. You can also manually
+make the documentation by running
+
+- cd docs
+- doxygen [doxyfile-debug|doxyfile]
