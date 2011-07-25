@@ -43,7 +43,6 @@ using namespace std;
  This FOAM implementation provides a complete end-to-end simulation of the 
  atmosphere, the telescope, the wavefront correctors and -sensors.
  
- 
  Extra command line arguments supported are:
  - none
  
@@ -73,3 +72,36 @@ public:
 
 #endif // HAVE_FOAM_FULLSIM_H
 
+/*!	\page ud_foamfs FOAM full-simulation
+ 
+ \section ffs_aboutdoc About this document
+ 
+ This is the (user) documentation for FOAM full-simulation, a simulation 
+ module included with FOAM. This describes how to use and test it, not how
+ to extend it yourself.
+ 
+ \section ffs_aboutfoamfs About FOAM full-simulation
+ 
+ This module is capable of simulating a simple end-to-end adaptive optics 
+ setup. It includes simulation of the wavefront, wind, telescope, deformable 
+ mirror, microlens array optics and camera noise. The system is fully 
+ functional and can run in open- or closed-loop. It is meant as a testcase for
+ FOAM and used mostly for debugging, but can also be used as a showcase. The
+ simulation is probably too simple to use in a wider context.
+ 
+ \section ffs_simu Simulation procedure
+ 
+ Most simulation is done by SimulCam::, although
+
+ \subsection ffs_sim1 Wavefront simulation
+
+ The start is a static wavefront map store on disk. This is read by SimSeeing
+ which also takes care of 'wind' on the wavefront. Although the wavefront is 
+ static, a subsection of this map is cropped and the cropwindow is moved over
+ the bigger wavefront map, simulation wind. The wind type can be changed via 
+ SimSeeing::windtype and SimSeeing::windspeed.
+ 
+ \subsection ffs_sim1 Telescope simulation
+ 
+
+ */
