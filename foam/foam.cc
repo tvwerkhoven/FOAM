@@ -549,8 +549,8 @@ ALIASES += longname="Modular Adaptive Optics Framework"
   There are several FOAM modules that are used for testing. These are:
  
   - \subpage ud_foamdum "FOAM dummy"
-  - \subpage ud_foamfs "FOAM full-simulation"
   - \subpage ud_foamss "FOAM static-simulation"
+  - \subpage ud_foamfs "FOAM full-simulation"
 */
 
 /*!
