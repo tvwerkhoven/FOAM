@@ -43,30 +43,34 @@ const string shwfs_type = "shwfs";
  
  Note the difference between subapertures (i.e. the physical microlenses 
  usually used in SHWFS) and subimages (i.e. the images formed by the 
- microlenses on the CCD). It is the subimages we are interested in when
- processing the CCD data.
+ microlenses on the CCD). It is the _subimages_ we are interested in when
+ processing the CCD data, but the subapertures are the physical apertures 
+ (usually lenses) which split up the main telescope aperture. 
+ 
+ This class extends on Wfs:: see the base class for more information.
  
  \section shwfs_netio Camera net IO
  
  Valid commends include:
- - mla generate
- - mla find
- - mla store
- - mla del [idx]
- - mla add
- - mla get [idx]
+ - mla generate: generate microlens array (MLA) pattern
+ - mla find: heuristically find MLA
+ - mla store: store MLA pattern to disk
+ - mla del <idx>: delete MLA subimage 'idx'
+ - mla add <lx> <ly> <tx> <ty>: add MLA subimage with given coordinates
+ - mla get <idx>: get MLA subimage coordinates
  
- - get shifts
- 
- - calibrate
- - measure
+ - get shifts: return measured shift vectors
  
  \section shwfs_cfg Configuration parameters
  
-
- \section shwfs_todo 
-
- - @todo make shift_vec ringbuffer
+ - sisize{x,y}: Shwfs::sisize
+ - sipitch{x,y}: Shwfs::sipitch
+ - disp{x,y}: Shwfs::disp
+ - overlap: Shwfs::overlap
+ - xoff: Shwfs::xoff
+ - shape: Shwfs::shapestr
+ - simaxr: Shwfs::simaxr
+ - simini_f: Shwfs::simini_f
  
  */
 class Shwfs: public Wfs {
@@ -128,12 +132,12 @@ private:
 	float simini_f;											//!< Minimum intensity for a subimage as fraction of the max intensity in a frame
 	
 	// Parameters for static MLA grids:
-	coord_t sisize;											//!< Subimage size
-	coord_t sipitch;										//!< Pitch between subimages
-	coord_t disp;												//!< Displacement of complete pattern
-	float overlap;											//!< Overlap required 
-	int xoff;														//!< Odd row offset between lenses
-	mlashape_t shape;										//!< MLA Shape (SQUARE or CIRCULAR)
+	coord_t sisize;											//!< Subimage size in pixels
+	coord_t sipitch;										//!< Pitch between subimages in pixels (if sipitch == Shwfs::sisize, the subimages are exactly adjacent to eachother)
+	coord_t disp;												//!< Displacement of whole subimage pattern in pixels
+	float overlap;											//!< Minimum amount a subimage should be inside the crop area in order to be taken into account.
+	int xoff;														//!< Odd row offset between lenses in pixels
+	mlashape_t shape;										//!< MLA cropping shape (SQUARE or CIRCULAR)
 	
 	/*! @brief Find maximum intensity & index of img
 
@@ -152,7 +156,7 @@ private:
 	
 	/*! @brief Set MLA configuration from string, return number of subaps, reverse of get_mla_str(). Output stored in mlacfg.
 	 
-	 @param [in] <N> [idx x0 y0 x1 y1 [idx x0 y0 x1 y1 [...]]]
+	 @param [in] mla_str <N> [idx x0 y0 x1 y1 [idx x0 y0 x1 y1 [...]]]
 	 @return Number of subimages successfully added (might be != N)
 	 */
 	int set_mla_str(string mla_str);
