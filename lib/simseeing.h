@@ -54,7 +54,7 @@ public:
 	
 private:
 	gsl_matrix *wfsrc;					//!< Holds the wavefront data (can be bigger than wfsize)
-	Path file;									//!< If type = 'file', this is the full path
+	Path file;                          //!< Source file for wavefront simulation. Should be bigger than crop window.
 	
 	gsl_matrix *wfcrop;					//!< This will hold the cropped wavefront data
 	
@@ -67,7 +67,7 @@ public:
 	coord_t windspeed;									//!< Windspeed in pixels/frame
 	wind_t windtype;										//!< Windtype used for seeing simulation
 	
-	double seeingfac;										//!< Multiplicative factor for wavefront screen.
+	double seeingfac;										//!< Multiplicative factor for wavefront screen. Makes seeing better or worse.
 	
 	SimSeeing(Io &io, foamctrl *const ptc, const string name, const string port, const Path &conffile);
 	~SimSeeing();
