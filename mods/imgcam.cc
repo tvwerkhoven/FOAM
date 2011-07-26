@@ -50,11 +50,7 @@ noise(10.0), img(NULL), frame(NULL)
 	
 	io.msg(IO_DEB2, "imagefile = %s", file.c_str());
 	noise = cfg.getdouble("noise", 10.0);
-  //	interval = cfg.getdouble("interval", 0.25);
-  //	exposure = cfg.getdouble("exposure", 1.0);
-	
-	//mode = Camera::OFF;
-	
+
 	img = new ImgData(io, file, ImgData::FITS);
 	if (img->geterr() != ImgData::ERR_NO_ERROR)
 		throw exception("ImgCamera::ImgCamera(): Could not load image");

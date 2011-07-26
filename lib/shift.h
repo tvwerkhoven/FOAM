@@ -39,11 +39,6 @@
 class Shift {
 public:
 	typedef enum {
-		UINT8=0,													//!< uint8_t datatype
-		UINT16,														//!< uint16_t datatype
-	} dtype_t;
-	
-	typedef enum {
 		COG=0,														//!< Center of Gravity method
 		CORR,															//!< Cross-correlation method
 	} method_t;													//!< Different image shift calculation methods

@@ -34,12 +34,12 @@
 
 SimSeeing::SimSeeing(Io &io, foamctrl *const ptc, const string name, const string port, const Path &conffile):
 Device(io, ptc, name, simseeing_type, port, conffile, false),
-file(""), croppos(0,0), cropsize(0,0), windspeed(10,10), windtype(LINEAR)
+wffile(""), croppos(0,0), cropsize(0,0), windspeed(10,10), windtype(LINEAR)
 {
 	io.msg(IO_DEB2, "SimSeeing::SimSeeing()");
 	
 	// Setup seeing parameters
-	file = ptc->confdir + cfg.getstring("wavefront_file");
+	wffile = ptc->confdir + cfg.getstring("wavefront_file");
 	
 	if (cfg.exists("windspeed"))
 		windspeed.x = windspeed.y = cfg.getint("windspeed");
@@ -98,13 +98,13 @@ SimSeeing::~SimSeeing() {
  */
 
 gsl_matrix *SimSeeing::load_wavefront(const Path &f, const bool norm) {
-	file = f;
-	io.msg(IO_DEB2, "SimSeeing::load_wavefront(), file=%s", file.c_str());
+	wffile = f;
+	io.msg(IO_DEB2, "SimSeeing::load_wavefront(), file=%s", wffile.c_str());
 	
-	if (!file.r())
-		throw exception("SimSeeing::load_wavefront() cannot read wavefront file: " + file.str() + "!");
+	if (!wffile.r())
+		throw exception("SimSeeing::load_wavefront() cannot read wavefront file: " + wffile.str() + "!");
 	
-	ImgData wftmp(io, file, ImgData::AUTO);
+	ImgData wftmp(io, wffile, ImgData::AUTO);
 	if (wftmp.geterr() != ImgData::ERR_NO_ERROR) {
 		io.msg(IO_ERR, "SimSeeing::load_wavefront() ImgData returned an error: %d", wftmp.geterr());
 		return NULL;

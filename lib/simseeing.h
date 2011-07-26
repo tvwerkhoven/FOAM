@@ -53,10 +53,8 @@ public:
 	} wind_t;														//!< Possible simulated windtypes
 	
 private:
-	gsl_matrix *wfsrc;					//!< Holds the wavefront data (can be bigger than wfsize)
-	Path file;                          //!< Source file for wavefront simulation. Should be bigger than crop window.
-	
-	gsl_matrix *wfcrop;					//!< This will hold the cropped wavefront data
+	gsl_matrix *wfsrc;                  //!< Holds the wavefront data from SimSeeing::wffile
+	Path wffile;                        //!< Source file for wavefront simulation. Should be bigger than crop window size (SimSeeing::cropsize).
 	
 	gsl_matrix *load_wavefront(const Path &f, const bool norm=true); //!< Load wavefront data from disc. N.B. The returned matrix has to be freed on exit!
 	
