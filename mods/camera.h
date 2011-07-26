@@ -62,10 +62,10 @@ const string cam_type = "cam";
  
  \section cam_cap Capture process
  
- \li cam_thr captures frame (needs to be implemented in cam_handler()), calls cam_queue()
+ \li cam_thr captures frame (needs to be implemented in derived classes in cam_handler()), calls cam_queue()
  \li cam_queue() locks cam_mut
  
- \section cam_netio Camera net IO
+ \section cam_netio Network IO
  
  Valid commends include:
  
@@ -84,7 +84,6 @@ const string cam_type = "cam";
  \li gain
  \li offset
  \li filename
- \li outputdir
  \li fits
  \li mode
  
@@ -98,16 +97,16 @@ const string cam_type = "cam";
  
  The Camera class supports the following configuration parameters, with 
  defaults between brackets:
- - nframes (8): number of frames in the buffer
- - ndark (10): number of darkframes to take
- - nflat (10): number of flatframes to take
- - interval (1.0): inverse framerate
- - exposure (1.0): exposure in seconds
- - gain (1.0): linear CCD gain
- - offset (0.0): offset to add to frame
- - width (512): pixel width of CCD
- - height (512): pixel height of CCD
- - depth (8): bitdepth of CCD
+ - nframes (8): Camera::nframes
+ - ndark (10): Camera::ndark
+ - nflat (10): Camera::nflat
+ - interval (1.0): Camera::interval
+ - exposure (1.0): Camera::exposure
+ - gain (1.0): Camera::gain
+ - offset (0.0): Camera::offset
+ - width (512): Camera::res
+ - height (512): Camera::res
+ - depth (8): Camera::depth
  
  \section cam_calib Calibration
  
@@ -161,7 +160,7 @@ public:
 		void *image;					//!< Pointer to frame data (unsigned int, 8 or 16 bpp)
 		uint32_t *histo;			//!< Histogram data (optional)
 		size_t id;						//!< Unique frame ID
-		size_t size;					//!< Size of 'image'
+		size_t size;					//!< Byte size of 'image'
 		struct timeval tv;
 		
 		bool proc;						//!< Was the frame processed?
@@ -234,25 +233,24 @@ protected:
 	size_t timeouts;							//!< Number of timeouts that occurred
 	
 	//! @todo incorporate dark/flat into struct or class?
-	size_t ndark;									//!< Number of frames used in darkframe
-	size_t nflat;									//!< Number of frames used in flatframe
-	frame_t dark;									//!< Dark frame, dark.image is a sum of ndark frames, type is uint32_t.
-	frame_t flat;									//!< Flat frame, flat.image is a sum of nflat frames, type is uint32_t.
-	double darkexp;								//!< Exposure used for darkexp
-	double flatexp;								//!< Exposure used for flatexp
+	size_t ndark;									//!< Number of frames used in Camera::darkframe
+	size_t nflat;									//!< Number of frames used in Camera::flatframe
+	frame_t dark;									//!< Dark frame, dark.image is a sum of Camera::ndark frames, type is uint32_t.
+	frame_t flat;									//!< Flat frame, flat.image is a sum of Camera::nflat frames, type is uint32_t.
+	double darkexp;								//!< Exposure used for darkimage
+	double flatexp;								//!< Exposure used for flatimage
 
 	double interval;							//!< Frame time (exposure + readout)
 	double exposure;							//!< Exposure time
 	double gain;									//!< Camera gain
-	double offset;								//!< @todo What is this?
+	double offset;								//!< Constant offset added to frames
 	
 	coord_t res;									//!< Camera pixel resolution
 	int depth;										//!< Camera pixel depth in bits
 
-	mode_t mode;									//!< Camera mode (see mode_t)
+	mode_t mode;									//!< Camera mode (see Camera::mode_t)
 	
 	string filenamebase;					//!< Base filename, input for makename()
-	Path outputdir;								//!< Output dir for saving files, absolute or relative to ptc->datadir
 	ssize_t nstore;								//!< Numebr of new frames to store (-1 for unlimited)
 
 	void fits_init_phdu(char *const phdu) const;	//!< Init FITS header unit
@@ -281,9 +279,12 @@ public:
 	int get_depth() const { return depth; }
 	size_t get_maxval() const { return (1 << depth); }
 	
-	frame_t *get_last_frame() const;
 	frame_t *get_next_frame(const bool wait=true);
+	frame_t *get_last_frame() const;
+protected:
+	//! @todo Not allowed to call this from outside, cam_mutex needs to be locked outside this function
 	frame_t *get_frame(const size_t id, const bool wait=true);
+public:
 	size_t get_count() const { return count; }
 	size_t get_bufsize() const { return nframes; }
 	
@@ -305,7 +306,6 @@ public:
 	string set_fits_target(const string val);
 	string set_fits_comments(const string val);
 	string set_filename(const string value);
-	string set_outputdir(const string value);
 	
 	void store_frames(const int n=-1) { nstore = n; }
 	

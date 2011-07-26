@@ -22,6 +22,7 @@
 #include <time.h>
 #include <math.h>
 
+#include "utils.h"
 #include "pthread++.h"
 #include "config.h"
 #include "path++.h"
@@ -108,7 +109,7 @@ void DummyCamera::update() {
 	int mul = (1 << depth) - 1;
 	for(size_t y = 0; y < (size_t) res.y; y++) {
 		for(size_t x = 0; x < (size_t) res.x; x++) {
-			double value = drand48() * noise + (sin(M_PI * x / res.x) + 1 + sin((y + offset) * 100));
+			double value = simple_rand() * noise + (sin(M_PI * x / res.x) + 1 + sin((y + offset) * 100));
 			value *= exposure;
 			if(value < 0)
 				value = 0;
@@ -160,9 +161,10 @@ void DummyCamera::cam_handler() {
 			case Camera::WAITING:
 				io.msg(IO_INFO, "DummyCamera::cam_handler() OFF/WAITING.");
 				// We wait until the mode changed
-				mode_mutex.lock();
+			{
+				pthread::mutexholder h(&mode_mutex);
 				mode_cond.wait(mode_mutex);
-				mode_mutex.unlock();
+			}
 				break;
 			case Camera::CONFIG:
 				io.msg(IO_DEB1, "DummyCamera::cam_handler() CONFIG");
@@ -217,5 +219,8 @@ void DummyCamera::cam_set_mode(const mode_t newmode) {
 		return;
 	
 	mode = newmode;
-	mode_cond.broadcast();
+	{
+		pthread::mutexholder h(&mode_mutex);
+		mode_cond.broadcast();
+	}				
 }

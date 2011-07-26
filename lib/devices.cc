@@ -32,8 +32,9 @@ using namespace std;
 // Device class
 
 Device::Device(Io &io, foamctrl *const ptc, const string n, const string t, const string p, const Path conf, const bool online): 
-io(io), ptc(ptc), name(n), type("dev." + t), port(p), conffile(conf), netio(p, n), online(online), is_calib(false), is_ok(false)
+is_calib(false), is_ok(false), outputdir(ptc->datadir), io(io), ptc(ptc), name(n), type("dev." + t), port(p), conffile(conf), netio(p, n), online(online)
 { 
+	//! @todo This init() can just be placed here?
 	init();
 }
 
@@ -41,6 +42,8 @@ bool Device::init() {
 	io.msg(IO_XNFO, "Device::Device(): Create new device, name=%s, type=%s", 
 				 name.c_str(), type.c_str());
 	
+	add_cmd("get commands");
+
 	// Only parse config file if we have one
 	if (conffile.isset()) {
 		cfg.parse(conffile, name);
@@ -49,7 +52,7 @@ bool Device::init() {
 		if (_type != type) 
 			throw exception("Device::Device(): Type should be " + type + " for this Device (" + _type + ")!");
 	}
-
+	
 	if (online) {
 		netio.slot_message = sigc::mem_fun(this, &Device::on_message_common);
 		netio.slot_connected = sigc::mem_fun(this, &Device::on_connect);
@@ -58,7 +61,7 @@ bool Device::init() {
 	
 	// Always listen, also for offline devices. In that latter case, simply don't parse any data.
 	netio.listen();
-	
+
 	return true;
 }
 
@@ -77,6 +80,7 @@ void Device::on_message_common(Connection * const conn, string line) {
 
 void Device::on_message(Connection * const conn, string line) { 
 	string orig = line;
+	bool parsed = true;
 	
 	string command = popword(line);
 	if (command == "get") {							// get ...
@@ -88,12 +92,29 @@ void Device::on_message(Connection * const conn, string line) {
 				devlist += cmd_list[i] + ";";
 			
 			conn->write(format("ok commands %d %s", (int) cmd_list.size(), devlist.c_str()));
-			return;
+//		} else if(what == "outputdir") {
+//			conn->addtag("outputdir");
+//			conn->write("ok outputdir :" + outputdir.str());
+		} else {
+			parsed = false;
 		}
+	} else if (command == "set") {
+		string what = popword(line);
+//		if (what == "outputdir") {
+//			conn->addtag("outputdir");
+//			string dir = popword(line);
+//			if (set_outputdir(dir))
+//				conn->write("error :directory "+dir+" not usable");
+//		} else {
+		parsed = false;
+//		}
+	} else {
+		parsed = false;
 	}
 	
 	// Command is not known, give an error message back
-	conn->write("error :Unknown command: " + orig);
+	if (!parsed)
+		conn->write("error :Unknown command: " + orig);
 }
 
 void Device::get_var(Connection * const conn, const string varname, const string response) const {
@@ -120,6 +141,27 @@ void Device::set_status(bool newstat) {
 	is_ok = newstat;
 	netio.broadcast(format("ok status %d", newstat));
 }
+
+int Device::set_outputdir(const string identifier) {
+	// This automatically prefixes ptc->datadir if 'identifier' is not absolute
+	Path tmp = ptc->datadir + string(type + "." + name + identifier);
+
+	//! @todo Make recursive mkdir() here
+	if (!tmp.exists()) {// Does not exist, create
+		if (mkdir(tmp.c_str(), 0755)) // mkdir() returned !0, error
+			return 1;
+	}
+	else {	// Directory exists, check if readable
+		if (tmp.access(R_OK | W_OK | X_OK))
+			return 2;
+	}
+
+	outputdir = tmp;
+	netio.broadcast("ok outputdir :" + outputdir.str(), "outputdir");
+	return 0;
+}
+
+
 
 // DeviceManager class
 

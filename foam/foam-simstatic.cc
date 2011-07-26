@@ -27,29 +27,30 @@
 
 #include "foam.h"
 #include "devices.h"
-#include "dummycam.h"
 #include "imgcam.h"
 #include "camera.h"
+#include "shwfs.h"
+#include "wfs.h"
 
 #include "foam-simstatic.h"
 
 using namespace std;
 
 // Global device list for easier access
-DummyCamera *testcam;
-ImgCamera *imgcamb;
+ImgCamera *imgcama;
+Shwfs *simwfs;
 
 int FOAM_simstatic::load_modules() {
 	io.msg(IO_DEB2, "FOAM_simstatic::load_modules()");
 	io.msg(IO_INFO, "This is the simstatic prime module, enjoy.");
 		
 	// Add ImgCam device
-	testcam = new DummyCamera(io, ptc, "dummycam", ptc->listenport, ptc->conffile);
-	devices->add((Device *) testcam);
-	imgcamb = new ImgCamera(io, ptc, "imgcamB", ptc->listenport, ptc->conffile);
-	devices->add((Device *) imgcamb);
-//	imgcamc = new ImgCamera(io, "imgcamC", ptc->listenport, ptc->cfg);
-//	devices->add((Device *) imgcamc);
+	imgcama = new ImgCamera(io, ptc, "imgcamA", ptc->listenport, ptc->conffile);
+	devices->add((Device *) imgcama);
+	
+	// Init WFS simulation (using camera)
+	simwfs = new Shwfs(io, ptc, "simshwfs", ptc->listenport, ptc->conffile, *imgcama);
+	devices->add((Device *) simwfs);
 	
 	return 0;
 }
@@ -60,26 +61,29 @@ int FOAM_simstatic::load_modules() {
 int FOAM_simstatic::open_init() {
 	io.msg(IO_DEB2, "FOAM_simstatic::open_init()");
 	
-	((DummyCamera*) devices->get("dummycam"))->set_mode(Camera::RUNNING);
-	
+	//((DummyCamera*) devices->get("dummycam"))->set_mode(Camera::RUNNING);
+	imgcama->set_mode(Camera::RUNNING);
 	return 0;
 }
 
 int FOAM_simstatic::open_loop() {
 	io.msg(IO_DEB2, "FOAM_simstatic::open_loop()");
-	static DummyCamera *tmpcam = ((DummyCamera*) devices->get("dummycam"));
+	Camera::frame_t *frame = imgcama->get_last_frame();
 	
-	usleep(1000000);
-	Camera::frame_t *frame = tmpcam->get_last_frame();
+	// Propagate simulated frame through system (WFS, algorithms, WFC)
+	Shwfs::wf_info_t *wf_meas = simwfs->measure(frame);
 	
+	// TODO
+	simwfs->comp_ctrlcmd("fakewfc", wf_meas->wfamp, NULL);
+
+	usleep(1.0 * 1000000);
 	return 0;
 }
 
 int FOAM_simstatic::open_finish() {
 	io.msg(IO_DEB2, "FOAM_simstatic::open_finish()");
 	
-	((DummyCamera*) devices->get("dummycam"))->set_mode(Camera::OFF);
-
+	imgcama->set_mode(Camera::OFF);
 	return 0;
 }
 
@@ -96,9 +100,12 @@ int FOAM_simstatic::closed_init() {
 }
 
 int FOAM_simstatic::closed_loop() {
-	io.msg(IO_DEB2, "FOAM_simstatic::closed_loop()");
-
-	usleep(10);
+	Camera::frame_t *frame = imgcama->get_last_frame();
+	
+	// Propagate simulated frame through system (WFS, algorithms, WFC)
+	Shwfs::wf_info_t *wf_meas = simwfs->measure(frame);
+	
+	simwfs->comp_ctrlcmd("fakewfc", wf_meas->wfamp, NULL);
 	return 0;
 }
 
@@ -168,7 +175,10 @@ void FOAM_simstatic::on_message(Connection *connection, string line) {
 		connection->write("ok cmd calib");
 		ptc->calib = calmode;
 		ptc->mode = AO_MODE_CAL;
-		mode_cond.signal();						// signal a change to the main thread
+		{
+			pthread::mutexholder h(&mode_mutex);
+			mode_cond.signal();						// signal a change to the threads
+		}
 	}
 	else if (!netio.ok) {
 		connection->write("err cmd :cmd unkown");

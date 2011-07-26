@@ -53,6 +53,21 @@ void Log::add(enum Log::severity severity, const Glib::ustring &message) {
 	signal_update();
 }
 
+void Log::term(string msg, bool showthread, FILE *stream) {
+	if (showthread) {
+		pthread_t pt = pthread_self();
+		unsigned char *ptc = (unsigned char*)(void*)(&pt);
+		char thrid[2+2*sizeof(pt)+1];
+		sprintf(thrid, "0x");
+		for (size_t i=0; i<sizeof(pt); i++)
+			sprintf(thrid, "%s%02x", thrid, (unsigned)(ptc[i]));
+		
+		fprintf(stream, "(%s) %s", thrid, msg.c_str());
+	} else {
+		fprintf(stream, msg.c_str());
+	}
+}
+
 Glib::RefPtr<TextBuffer> &Log::get_buffer() {
 	return buffer;
 }

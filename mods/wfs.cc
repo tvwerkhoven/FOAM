@@ -51,6 +51,9 @@ cam(wfscam)
 }
 
 void Wfs::init() {
+  add_cmd("calibrate");
+  add_cmd("measure");
+  
 	add_cmd("measuretest");
 	add_cmd("get modes");
 	add_cmd("get basis");
@@ -71,6 +74,14 @@ void Wfs::on_message(Connection *const conn, string line) {
 		// Specifically call Wfs::measure() for fake 
 		Wfs::measure();
 		get_var(conn, "measuretest", "ok measuretest");
+	} else if (command == "calibrate") {  // calibrate
+		calibrate();
+		conn->write("ok calibrate");
+	} else if (command == "measure") {  // measure
+		if (!measure(NULL))
+			conn->write("error measure :error in measure()");
+		else 
+			conn->write("ok measure");
 	} else if (command == "get") {			// get ...
 		string what = popword(line);
 		
@@ -83,7 +94,7 @@ void Wfs::on_message(Connection *const conn, string line) {
 		} else if (what == "camera") {		// get camera
 			get_var(conn, "camera", "ok camera " + cam.name);
 		} else if (what == "calib") {			// get calib
-			get_var(conn, "calib", format("ok calib %d", is_calib));
+			get_var(conn, "calib", format("ok calib %d", get_calib()));
 		} else if (what == "basis") {			// get basis
 			string tmp;
 			if (wf.basis == ZERNIKE) tmp = "zernike";
@@ -121,8 +132,8 @@ Wfs::wf_info_t* Wfs::measure(Camera::frame_t *) {
 
 int Wfs::calibrate() {
 	io.msg(IO_DEB2, "Wfs::calibrate()");
-	is_calib = true;
-
+	
+	set_calib(true);
 	return 0;
 }
 

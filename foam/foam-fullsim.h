@@ -43,7 +43,6 @@ using namespace std;
  This FOAM implementation provides a complete end-to-end simulation of the 
  atmosphere, the telescope, the wavefront correctors and -sensors.
  
- 
  Extra command line arguments supported are:
  - none
  
@@ -73,3 +72,50 @@ public:
 
 #endif // HAVE_FOAM_FULLSIM_H
 
+/*!	\page ud_foamfs FOAM full-simulation
+ 
+ \section ffs_aboutdoc About this document
+ 
+ This is the (user) documentation for FOAM full-simulation, a simulation 
+ module included with FOAM. This describes how to use and test it, not how
+ to extend it yourself.
+ 
+ \section ffs_aboutfoamfs About FOAM full-simulation
+ 
+ This module is capable of simulating a simple end-to-end adaptive optics 
+ setup. It includes simulation of the wavefront, wind, telescope, deformable 
+ mirror, microlens array optics and camera noise. The system is fully 
+ functional and can run in open- or closed-loop. It is meant as a testcase for
+ FOAM and used mostly for debugging, but can also be used as a showcase. The
+ simulation is probably too simple to use in a wider context.
+ 
+ \section ffs_simu Simulation procedure
+ 
+ Most simulation is done by SimulCam::, although this class delegates work to
+ SimSeeing::, SimulWfc:: and Shwfs:: classes as well. See the relevant classes
+ for more information.
+
+ \section ffs_usage Usage
+ 
+ To run FOAM full-simulation, call:
+ 
+ - ./foam/foam-fullsim -c conf/foam-fullsim.cfg
+
+ and connect to it (preferably with the foam-gui):
+ 
+ - ./ui/foam-gui
+ - connect to 'localhost' port '1025' (default)
+ 
+ From the GUI you can run in 'Listen', 'Open loop' or 'Closed loop' mode.
+ 
+ - Listen: does nothing and waits for commands
+ - Open loop: simulates the image and calculates image shifts
+ - Closed loop: open loop +simulate wavefront correction as well
+ 
+ For more information on the devices that full simulation uses, see:
+ - \ref dev_cam_simulcam
+ - \ref dev_wfc_simulwfc
+ - \ref dev_wfs_shwfs
+
+ 
+ */

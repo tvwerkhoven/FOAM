@@ -30,7 +30,7 @@
 #include <fcntl.h>
 
 #include "io.h"
-#include "types.h"
+#include "utils.h"
 #include "config.h"
 #include "path++.h"
 
@@ -46,7 +46,7 @@ darkexp(1.0), flatexp(1.0),
 interval(1.0), exposure(1.0), gain(1.0), offset(0.0), 
 res(0,0), depth(-1),
 mode(Camera::OFF),
-filenamebase("FOAM"), outputdir(ptc->datadir), nstore(0),
+filenamebase("FOAM"), nstore(0),
 fits_telescope("undef"), fits_observer("undef"), fits_instrument("undef"), fits_target("undef"), fits_comments("undef")
 {
 	io.msg(IO_DEB2, "Camera::Camera()");
@@ -59,7 +59,6 @@ fits_telescope("undef"), fits_observer("undef"), fits_instrument("undef"), fits_
 	add_cmd("set gain");
 	add_cmd("set offset");
 	add_cmd("set filename");
-	add_cmd("set outputdir");
 	add_cmd("set fits");
 	add_cmd("get mode");
 	add_cmd("get exposure");
@@ -71,7 +70,6 @@ fits_telescope("undef"), fits_observer("undef"), fits_instrument("undef"), fits_
 	add_cmd("get depth");
 	add_cmd("get resolution");
 	add_cmd("get filename");
-	add_cmd("get outputdir");
 	add_cmd("get fits");
 	add_cmd("thumbnail");
 	add_cmd("grab");
@@ -102,6 +100,9 @@ fits_telescope("undef"), fits_observer("undef"), fits_instrument("undef"), fits_
 	io.msg(IO_XNFO, "Camera::Camera(): %dx%dx%d, exp:%g, int:%g, gain:%g, off:%g",
 				 res.x, res.y, depth, exposure, interval, gain, offset);
 	
+	// Set output dir because this class might store files.
+	set_outputdir("");
+
 	proc_thr.create(sigc::mem_fun(*this, &Camera::cam_proc));
 }
 
@@ -122,7 +123,10 @@ void Camera::cam_proc() {
 		// Always wait for proc_cond broadcasts
 		{
 			pthread::mutexholder h(&proc_mutex);
+			io.msg(IO_DEB2, "Camera::cam_proc() waiting...");
 			proc_cond.wait(proc_mutex);
+//#error This should not GO immediately when the class is instanced!
+			io.msg(IO_DEB2, "Camera::cam_proc() go!...");
 		}
 		
 		// Lock cam_mut before handling the data
@@ -134,9 +138,12 @@ void Camera::cam_proc() {
 		calculate_stats(frame);
 
 		if (nstore == -1 || nstore > 0) {
-			nstore--;
-			if (store_frame(frame))
+			io.msg(IO_DEB2, "Camera::cam_proc() nstore=%d", nstore);
+			if (store_frame(frame)) {
+				nstore--;
 				netio.broadcast(format("ok store %d", nstore), "store");
+				io.msg(IO_DEB2, "Camera::cam_proc() nstore--", nstore);
+			}
 		}
 		
 		// Flag frame as processed
@@ -204,7 +211,7 @@ bool Camera::store_frame(const frame_t *const frame) const {
 	// Open file
 	int fd = open(filename.c_str(), O_WRONLY | O_CREAT | O_EXCL, 0644);
 	if (fd < 0)
-		return false;
+		return io.msg(IO_ERR, "Camera::store_frame() Error opening file!");
 	
 	// Get time & date
 	struct timeval tv;
@@ -325,7 +332,10 @@ void *Camera::cam_queue(void * const data, void * const image, struct timeval *c
 	else
 		gettimeofday(&frame->tv, 0);
 	
-	proc_cond.signal();			// Signal one waiting thread about the new frame
+	{
+		pthread::mutexholder h(&proc_mutex);
+		proc_cond.signal();			// Signal one waiting thread about the new frame
+	}
 	
 	return old;
 }
@@ -346,6 +356,7 @@ Camera::frame_t *Camera::get_next_frame(const bool wait) {
 	else
 		frameid = count;
 	
+	pthread::mutexholder h(&cam_mutex);
 	return get_frame(frameid, wait);
 }
 
@@ -353,7 +364,7 @@ Camera::frame_t *Camera::get_frame(const size_t id, const bool wait) {
 	if(id >= count) {
 		if(wait) {
 			while(id >= count) {
-				cam_cond.wait(cam_mutex);		// This mutex must be locked elsewhere before calling get_frame()
+				cam_cond.wait(cam_mutex);		// This mutex must be locked elsewhere before calling get_frame()!!
 			}
 		} else {
 			return 0;
@@ -400,11 +411,6 @@ void Camera::on_message(Connection *const conn, string line) {
 		} else if(what == "filename") {
 			conn->addtag("filename");
 			set_filename(popword(line));
-		} else if(what == "outputdir") {
-			conn->addtag("outputdir");
-			string dir = popword(line);
-			if (set_outputdir(dir) == "")
-				conn->write("error :directory "+dir+" not usable");
 		} else if(what == "fits") {
 			set_fits(line);
 			get_fits(conn);
@@ -441,9 +447,6 @@ void Camera::on_message(Connection *const conn, string line) {
 		} else if(what == "filename") {
 			conn->addtag("filename");
 			conn->write("ok filename :" + filenamebase);
-		} else if(what == "outputdir") {
-			conn->addtag("outputdir");
-			conn->write("ok outputdir :" + outputdir.str());
 		} else if(what == "fits") {
 			get_fits(conn);
 		} else {
@@ -519,7 +522,6 @@ double Camera::set_offset(const double value) {
 Camera::mode_t Camera::set_mode(const mode_t value) {
 	cam_set_mode(value);
 	netio.broadcast("ok mode " + mode2str(mode), "mode");
-	set_calib(false);
 	return mode;
 }
 
@@ -561,34 +563,14 @@ string Camera::set_filename(const string value) {
 	return filenamebase;
 }
 
-string Camera::set_outputdir(const string value) {
-	// This automatically prefixes ptc->datadir if 'value' is not absolute
-	Path tmp = ptc->datadir + value;
-	
-	if (!tmp.exists()) {// Does not exist, create
-		if (mkdir(value.c_str(), 0755)) // mkdir() returned !0, error
-			return "";
-	}
-	else {	// Directory exists, check if readable
-		if (tmp.access(R_OK | W_OK | X_OK))
-			return "";
-	}
-	
-	outputdir = tmp;
-	netio.broadcast("ok outputdir :" + outputdir.str(), "outputdir");
-	return outputdir.str();
-}
-
 Path Camera::makename(const string &base) const {
 	struct timeval tv;
 	struct tm tm;
 	gettimeofday(&tv, 0);
 	gmtime_r(&tv.tv_sec, &tm);
 	
-	Path result = outputdir + format("%4d-%02d-%02d/", 1900 + tm.tm_year, 1 + tm.tm_mon, tm.tm_mday);
-	mkdir(result.c_str(), 0755);
+	Path result = get_outputdir() + format("%s%s_%08d.%06d-%08d.fits", base.c_str(), name.c_str(), tv.tv_sec, tv.tv_usec, count);
 	
-	result += (base + format("_%s_%08d.%06d-%08d.fits", name.c_str(), tv.tv_sec, tv.tv_usec, count));
 	return result;
 }
 

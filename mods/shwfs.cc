@@ -24,6 +24,7 @@
 #include <gsl/gsl_vector.h>
 #include <gsl/gsl_blas.h>
 #include <gsl/gsl_linalg.h>
+#include <string.h>
 
 
 #include "config.h"
@@ -42,10 +43,10 @@ using namespace std;
 // PUBLIC FUNCTIONS //
 /********************/
 
-
 Shwfs::Shwfs(Io &io, foamctrl *const ptc, const string name, const string port, Path const &conffile, Camera &wfscam, const bool online):
 Wfs(io, ptc, name, shwfs_type, port, conffile, wfscam, online),
 shifts(io, 4),
+shift_vec(NULL), ref_vec(NULL),
 method(Shift::COG)
 {
 	io.msg(IO_DEB2, "Shwfs::Shwfs()");
@@ -62,6 +63,7 @@ method(Shift::COG)
 	add_cmd("calibrate");
 	add_cmd("measure");
 	
+	//! @todo Move microlens array configuration to separate class
 	mlacfg.reserve(128);
 	
 	// Micro lens array parameters:	
@@ -102,42 +104,33 @@ method(Shift::COG)
 
 Shwfs::~Shwfs() {
 	io.msg(IO_DEB2, "Shwfs::~Shwfs()");
+	
+	gsl_vector_float_free(shift_vec);
+	gsl_vector_float_free(ref_vec);
+	
+	std::map<std::string, infdata_t>::iterator it;
+	for (it=calib.begin(); it != calib.end(); it++ ) {
+		//cout << (*it).first << " => " << (*it).second << endl;
+		infdata_t curdat = (*it).second;
+		
+		// Delete calib[wfcname].meas.measmat array
+		std::vector<gsl_matrix_float *> tmpvec = curdat.meas.measmat;
+		std::vector<gsl_matrix_float *>::iterator vit;
+		for (vit=tmpvec.begin(); vit < tmpvec.end(); vit++ )
+			gsl_matrix_float_free(*vit);
+		
+		gsl_matrix_free(curdat.meas.infmat);
+		gsl_matrix_float_free(curdat.meas.infmat_f);
+		
+		gsl_matrix_float_free(curdat.actmat.mat);
+		gsl_matrix_free(curdat.actmat.U);
+		gsl_vector_free(curdat.actmat.s);
+		gsl_matrix_free(curdat.actmat.Sigma);
+		gsl_matrix_free(curdat.actmat.V);
+	}
 }
 
-//int Shwfs::calc_zern_infl(int nmodes) {
-//	// Re-compute Zernike basis functions if necessary
-//	if (nmodes > zernbasis.get_nmodes() || cam.get_width() != zernbasis.get_size())
-//		zernbasis.setup(nmodes, cam.get_width());
-//	
-//	// Calculate the slope in each of the subapertures for each wavefront mode
-//	double slope[2];
-//	for (int m=0; m <= nmodes; m++) {
-//		gsl_matrix *tmp = zernbasis.get_mode(m);
-//		calc_slope(tmp, mlacfg, slope);
-//		
-//		//! @todo implement this
-//		
-//	}
-//	return 0;
-//}
-//
-//int Shwfs::calc_slope(gsl_matrix *tmp, std::vector<vector_t> &mlacfg, double *slope) {
-//	double sum;
-//	for (size_t si=0; si < mlacfg.size(); si++) {
-//		sum=0;
-//		for (int x=mlacfg[i].lx; x < mlacfg[i].tx; x++) {
-//			for (int y=mlacfg[i].ly; y < mlacfg[i].ty; y++) {
-//				// Calculate (x,y)-slope in each subaperture
-//				//! @todo implement this
-//				gsl_matrix_get(tmp, y, x);
-//			}
-//		}
-//	}
-//	return 0;
-//}
-
 void Shwfs::on_message(Connection *const conn, string line) {
-	
 	string orig = line;
 	string command = popword(line);
 	bool parsed = true;
@@ -207,14 +200,6 @@ void Shwfs::on_message(Connection *const conn, string line) {
 		string what = popword(line);
 		
 		parsed = false;
-	} else if (command == "calibrate") {
-		calibrate();
-		conn->write("ok calibrate");
-	} else if (command == "measure") {
-		if (!measure(NULL))
-			conn->write("error measure :error in measure()");
-		else 
-			conn->write("ok measure");
 	} else {
 		parsed = false;
 	}
@@ -225,7 +210,7 @@ void Shwfs::on_message(Connection *const conn, string line) {
 }
 
 Wfs::wf_info_t* Shwfs::measure(Camera::frame_t *frame) {
-	if (!is_calib) {
+	if (!get_calib()) {
 		io.msg(IO_WARN, "Shwfs::measure() device not calibrated, should not be.");
 		calibrate();
 	}
@@ -250,7 +235,7 @@ Wfs::wf_info_t* Shwfs::measure(Camera::frame_t *frame) {
 	}
 	
 	// Convert shifts to basisfunction
-	//shift_to_basis(shift_vec, wf.basis, wf.wfamp);
+	gsl_vector_float_sub(shift_vec, ref_vec);
 	
 	// Copy to output
 	//! @todo where is this deleted?
@@ -278,12 +263,38 @@ int Shwfs::shift_to_basis(const gsl_vector_float *const invec, const wfbasis bas
 }
 
 void Shwfs::init_infmat(string wfcname, size_t nact, vector <float> &actpos) {
+	// First delete all data...
+	if (calib.find(wfcname) != calib.end()) {
+		io.msg(IO_DEB1, "Shwfs::init_infmat(): free()'ing old data.");
+		
+		calib[wfcname].meas.actpos.clear();
+		// Delete calib[wfcname].meas.measmat array
+		std::vector<gsl_matrix_float *> tmpvec = calib[wfcname].meas.measmat;
+		std::vector<gsl_matrix_float *>::iterator vit;
+		for (vit=tmpvec.begin(); vit < tmpvec.end(); vit++ )
+			gsl_matrix_float_free(*vit);
+		calib[wfcname].meas.measmat.clear();
+		
+		gsl_matrix_free(calib[wfcname].meas.infmat);
+		gsl_matrix_float_free(calib[wfcname].meas.infmat_f);
+		
+		// Free() .actmat matrices
+		gsl_matrix_float_free(calib[wfcname].actmat.mat);
+		gsl_matrix_free(calib[wfcname].actmat.U);
+		gsl_vector_free(calib[wfcname].actmat.s);
+		gsl_matrix_free(calib[wfcname].actmat.Sigma);
+		gsl_matrix_free(calib[wfcname].actmat.V);
+		
+		// Finally erase this entry from the map
+		calib.erase(wfcname);
+	}
+	
 	// Store number of actuator positions
 	calib[wfcname].meas.actpos = actpos;
 	size_t nactpos = actpos.size();
 	
 	if (nactpos < 2) {
-		io.msg(IO_WARN, "Shwfs::build_infmat(): Cannot calibrate with <2 positions.");
+		io.msg(IO_WARN, "Shwfs::init_infmat(): Cannot calibrate with <2 positions.");
 		return;
 	}
 	
@@ -296,6 +307,7 @@ void Shwfs::init_infmat(string wfcname, size_t nact, vector <float> &actpos) {
 		calib[wfcname].meas.measmat.push_back(tmp);
 	}
 	calib[wfcname].meas.infmat = gsl_matrix_calloc(calib[wfcname].nmeas, nact);
+	calib[wfcname].meas.infmat_f = gsl_matrix_float_calloc(calib[wfcname].nmeas, nact);
 
 	// Init actuation matrices
 	calib[wfcname].actmat.mat = gsl_matrix_float_calloc(nact, calib[wfcname].nmeas);
@@ -328,7 +340,7 @@ int Shwfs::build_infmat(string wfcname, Camera::frame_t *frame, int actid, int a
 
 int Shwfs::calc_infmat(string wfcname) {
 	if (!calib[wfcname].init) {
-		io.msg(IO_WARN, "Shwfs::build_infmat(): Call Shwfs::init_infmat() first.");
+		io.msg(IO_WARN, "Shwfs::calc_infmat(): Call Shwfs::init_infmat() first.");
 		return 0;
 	}
 
@@ -355,8 +367,8 @@ int Shwfs::calc_infmat(string wfcname) {
 	 */
 	
 	// Init temporary matrices
-	gsl_matrix_float *avgslope_s = gsl_matrix_float_calloc(calib[wfcname].nmeas, calib[wfcname].nact);
 	gsl_matrix_float *diffmat = gsl_matrix_float_calloc(calib[wfcname].nmeas, calib[wfcname].nact);
+	gsl_matrix_float *infmat_f = calib[wfcname].meas.infmat_f;
 	double dact=0.0;
 	
 	// For each measurement position-pair, calculate the slope this generates 
@@ -368,19 +380,18 @@ int Shwfs::calc_infmat(string wfcname) {
 		
 		dact = calib[wfcname].meas.actpos[i+1] - calib[wfcname].meas.actpos[i];
 		gsl_matrix_float_scale(diffmat, 1.0/dact);
-		gsl_matrix_float_add (avgslope_s, diffmat);
+		gsl_matrix_float_add (infmat_f, diffmat);
 	}
-	gsl_matrix_float_scale(avgslope_s, 1.0/(calib[wfcname].meas.actpos.size()-1));
+	gsl_matrix_float_scale(infmat_f, 1.0/(calib[wfcname].meas.actpos.size()-1));
 	
-	// Copy avgslope_s (float) to infmat (double)
+	// Copy infmat_f (float) to infmat (double)
 	gsl_matrix *infmat = calib[wfcname].meas.infmat;
 	for (size_t i=0; i<infmat->size1; i++)
 		for (size_t j=0; j<infmat->size2; j++)
-			gsl_matrix_set(infmat, i, j, gsl_matrix_float_get(avgslope_s, i, j));
+			gsl_matrix_set(infmat, i, j, gsl_matrix_float_get(infmat_f, i, j));
 	
 	// Free temporary matrices
 	gsl_matrix_float_free(diffmat);
-	gsl_matrix_float_free(avgslope_s);
 	
 	// Store influence matrix to disk
 	Path outf; FILE *fd;
@@ -414,7 +425,7 @@ int Shwfs::gsl_linalg_SV_decomp_float(gsl_matrix_float *U, gsl_matrix_float *V, 
  */
 
 
-int Shwfs::calc_actmat(string wfcname, double singval, enum wfbasis basis) {
+int Shwfs::calc_actmat(string wfcname, double singval, enum wfbasis /*basis*/) {
 	io.msg(IO_XNFO, "Shwfs::calc_actmat(): calc'ing for wfc '%s' with singval cutoff %g.",
 				 wfcname.c_str(), singval);
 	// Using input:
@@ -447,10 +458,6 @@ int Shwfs::calc_actmat(string wfcname, double singval, enum wfbasis basis) {
 	
 	// Store decomposition to disk
 	Path outf; FILE *fd;
-//	outf = mkfname(wfcname + format("_infmat2_%zu_%zu.csv", infmat->size1, infmat->size2));
-//	fd = fopen(outf.c_str(), "w+");
-//	gsl_matrix_fprintf (fd, infmat, "%.12g");
-//	fclose(fd);
 	
 	outf = mkfname(wfcname + format("_singval_%zu.csv", s->size));
 	fd = fopen(outf.c_str(), "w+");
@@ -586,12 +593,31 @@ int Shwfs::calc_actmat(string wfcname, double singval, enum wfbasis basis) {
 	return 0;
 }
 
-gsl_vector_float *Shwfs::comp_ctrlcmd(wf_info_t *wf) {
-	if (!wf)
+gsl_vector_float *Shwfs::comp_ctrlcmd(string wfcname, gsl_vector_float *shift, gsl_vector_float *act) {
+	//! @todo comp_ctrlcmd() does not know whether the matrix calib[wfcname].actmat.mat is proper or not. Need better calibration tracking, not at device level but at the top level of the program perhaps.
+	if (calib.find(wfcname) == calib.end())
 		return NULL;
-	//! @todo implement
+	if (!get_calib())
+		calibrate();
 	
-	return NULL;
+	// Compute vector. We apply -1 here because the matrix is the pseudo inverse
+	// of infmat, while it should be of -infmat. Alternative explanation: we 
+	// need to *correct* the shifts measured, not reproduce them
+	gsl_blas_sgemv(CblasNoTrans, -1.0, calib[wfcname].actmat.mat, shift, 0.0, act);
+
+	return act;
+}
+
+gsl_vector_float *Shwfs::comp_shift(string wfcname, gsl_vector_float *act, gsl_vector_float *shift) {
+	if (calib.find(wfcname) == calib.end())
+		return NULL;
+	if (!get_calib())
+		calibrate();
+	
+	// Compute vector
+	gsl_blas_sgemv(CblasNoTrans, 1.0, calib[wfcname].meas.infmat_f, act, 0.0, shift);
+	
+	return shift;
 }
 
 void Shwfs::set_reference(Camera::frame_t *frame) {
@@ -609,24 +635,27 @@ void Shwfs::set_reference(Camera::frame_t *frame) {
 }
 
 void Shwfs::store_reference() {
-	string outfile = mkfname("ref_vec.csv").str();
-	io.msg(IO_DEB2, "Shwfs::store_reference() to " + outfile);
-	Csv refvecdat(ref_vec);
-	refvecdat.write(outfile, "Shwfs reference vector");
+//	string outfile = mkfname("ref_vec.csv").str();
+//	io.msg(IO_DEB2, "Shwfs::store_reference() to " + outfile);
+//	Csv refvecdat(ref_vec);
+//	refvecdat.write(outfile, "Shwfs reference vector");
 
 	Path outf; FILE *fd;
-	outf = mkfname(format("_ref_vec_%zu.csv", ref_vec->size));
+	outf = mkfname(format("ref_vec_%zu.csv", ref_vec->size));
 	fd = fopen(outf.c_str(), "w+");
 	gsl_vector_float_fprintf (fd, ref_vec, "%.12g");
 	fclose(fd);
 }
 
 int Shwfs::calibrate() {
-	if (shift_vec) 
-		gsl_vector_float_free(shift_vec);
+	if (mlacfg.size() == 0) {
+		io.msg(IO_XNFO, "Shwfs::calibrate(): cannot calibrate without subapertures defined.");
+		return -1;
+	}
+	
+	gsl_vector_float_free(shift_vec);
 	shift_vec = gsl_vector_float_calloc(mlacfg.size() * 2);
-	if (ref_vec) 
-		gsl_vector_float_free(ref_vec);
+	gsl_vector_float_free(ref_vec);
 	ref_vec = gsl_vector_float_calloc(mlacfg.size() * 2);
 	
 	switch (wf.basis) {
@@ -652,7 +681,7 @@ int Shwfs::calibrate() {
 			break;
 	}
 	
-	is_calib = true;
+	Wfs::calibrate();
 	return 0;
 }
 
@@ -660,7 +689,7 @@ int Shwfs::calibrate() {
 int Shwfs::gen_mla_grid(std::vector<vector_t> &mlacfg, const coord_t res, const coord_t size, const coord_t pitch, const int xoff, const coord_t disp, const mlashape_t shape, const float overlap) {
 	io.msg(IO_DEB2, "Shwfs::gen_mla_grid()");
 	
-	is_calib = false;
+	set_calib(false);
 
 	// How many subapertures would fit in the requested size 'res':
 	int sa_range_y = (int) ((res.y/2)/pitch.x + 1);
@@ -760,16 +789,23 @@ bool Shwfs::store_mla_grid(const bool overwrite) const {
 int Shwfs::find_mla_grid(std::vector<vector_t> &mlacfg, const coord_t size, const float mini_f, const int nmax, const int iter) {
 	io.msg(IO_DEB2, "Shwfs::find_mla_grid()");
 
-	is_calib = false;
+	set_calib(false);
 
 	// Store current camera count, get last frame
-	size_t bcount = cam.get_count();
 	Camera::frame_t *f = cam.get_last_frame();
+	void *image;
+	size_t imsize;
 	
 	if (f == NULL) {
 		io.msg(IO_WARN, "Shwfs::find_mla_grid() Could not get frame, is the camera running?");
 		return 0;
+	} else {
+		// Copy frame for ourselves
+		imsize = f->size;
+		image = malloc(imsize);
+		memcpy(image, f->image, imsize);
 	}
+
 	
 	vector_t tmpsi;
 	mlacfg.clear();
@@ -780,11 +816,9 @@ int Shwfs::find_mla_grid(std::vector<vector_t> &mlacfg, const coord_t size, cons
 	int maxi = 0;
 	
 	if (cam.get_depth() <= 8) {
-		uint8_t *image = (uint8_t *)f->image;
-		maxi = _find_max(image, f->size, &maxidx);
+		maxi = _find_max((uint8_t *)image, imsize, &maxidx);
 	} else {
-		uint16_t *image = (uint16_t *)f->image;
-		maxi = _find_max(image, f->size/2, &maxidx);
+		maxi = _find_max((uint16_t *)image, imsize/2, &maxidx);
 	}
 	// Minimum intensity
 	int mini = maxi * mini_f;
@@ -802,11 +836,9 @@ int Shwfs::find_mla_grid(std::vector<vector_t> &mlacfg, const coord_t size, cons
 		maxi = 0;
 		
 		if (cam.get_depth() <= 8) {
-			uint8_t *image = (uint8_t *)f->image;
-			maxi = _find_max(image, f->size, &maxidx);
+			maxi = _find_max((uint8_t *)image, imsize, &maxidx);
 		} else {
-			uint16_t *image = (uint16_t *)f->image;
-			maxi = _find_max(image, f->size/2, &maxidx);
+			maxi = _find_max((uint16_t *)image, imsize/2, &maxidx);
 		}
 		
 		// Intensity too low, done
@@ -838,15 +870,15 @@ int Shwfs::find_mla_grid(std::vector<vector_t> &mlacfg, const coord_t size, cons
 		int yran[] = {max(0, tmpsi.ly), min(cam.get_height(), tmpsi.ty)};
 		
 		if (cam.get_depth() <= 8) {
-			uint8_t *image = (uint8_t *)f->image;
+			uint8_t *cimg = (uint8_t *)image;
 			for (int y=yran[0]; y<yran[1]; y++)
 				for (int x=xran[0]; x<xran[1]; x++)
-					image[y*cam.get_width() + x] = 0;
+					cimg[y*cam.get_width() + x] = 0;
 		} else {
-			uint16_t *image = (uint16_t *)f->image;
+			uint16_t *cimg = (uint16_t *)image;
 			for (int y=yran[0]; y<yran[1]; y++)
 				for (int x=xran[0]; x<xran[1]; x++)
-					image[y*cam.get_width() + x] = 0;
+					cimg[y*cam.get_width() + x] = 0;
 		}
 	}
 	
@@ -857,17 +889,11 @@ int Shwfs::find_mla_grid(std::vector<vector_t> &mlacfg, const coord_t size, cons
 		io.msg(IO_WARN, "Shwfs::find_mla_grid(): iter not yet implemented");
 	}
 	
-	// Get latest camera count. If the difference between begin and end is 
-	// bigger than the size of the camera ringbuffer, we were too slow
-	size_t ecount = cam.get_count();
-	if (ecount - bcount >= cam.get_bufsize()) {
-		//! @todo This poses possible problems, what to do?
-		io.msg(IO_WARN, "Shwfs::find_mla_grid(): got camera buffer overflow, data might be inaccurate!");
-	}
-	
 	netio.broadcast("ok mla " + get_mla_str(), "mla");
 	// Re-calibrate with new settings
 	calibrate();
+	
+	free(image);
 
 	return (int) mlacfg.size();
 }
@@ -890,7 +916,7 @@ int Shwfs::mla_update_si(const int nx0, const int ny0, const int nx1, const int 
 		else
 			mlacfg.push_back(vector_t(nx0, ny0, nx1, ny1));
 		
-		is_calib = false;
+		set_calib(false);
 		calibrate();
 
 		netio.broadcast("ok mla " + get_mla_str(), "mla");
@@ -904,7 +930,7 @@ int Shwfs::mla_update_si(const int nx0, const int ny0, const int nx1, const int 
 int Shwfs::mla_del_si(const int idx) {
 	if (idx >=0 && idx < (int) mlacfg.size()) {
 		mlacfg.erase(mlacfg.begin() + idx);
-		is_calib = false;
+		set_calib(false);
 		calibrate();
 		netio.broadcast("ok mla " + get_mla_str(), "mla");
 		return 0;
@@ -946,7 +972,7 @@ int Shwfs::set_mla_str(string mla_str) {
 	int nsi = popint(mla_str);
 	int x0, y0, x1, y1;
 	
-	is_calib = false;
+	set_calib(false);
 	
 	mlacfg.clear();
 	for (int i=0; i<nsi; i++) {

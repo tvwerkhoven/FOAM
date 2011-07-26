@@ -113,6 +113,10 @@ statframe("Status"), stat_mode("Mode: "), stat_ndev("# Dev: "), stat_nframes("# 
 	foamctrl.signal_connect.connect(sigc::mem_fun(*this, &ControlPage::on_connect_update));
 	foamctrl.signal_message.connect(sigc::mem_fun(*this, &ControlPage::on_message_update));
 	
+	// Start timeout signal to update some things continuously
+	Glib::signal_timeout().connect(sigc::mem_fun(*this, &ControlPage::on_timeout), 1000.0/CONTROLVIEW_UPD_RATE);
+
+	
 	// Show GUI & update contents
 	show_all_children();
 	on_message_update();
@@ -167,7 +171,7 @@ void ControlPage::enable_gui() {
 }
 
 void ControlPage::on_connect_clicked() {
-	printf("%x:ControlPage::on_connect_clicked()\n", (int) pthread_self());
+	log.term(format("%s", __PRETTY_FUNCTION__));
 	if (foamctrl.is_connected()) {
 		log.add(Log::NORMAL, "Trying to disconnect");
 		foamctrl.disconnect();
@@ -179,37 +183,38 @@ void ControlPage::on_connect_clicked() {
 }
 
 void ControlPage::on_mode_listen_clicked() {
-	printf("%x:ControlPage::on_mode_listen_clicked()\n", (int) pthread_self());
+	log.term(format("%s", __PRETTY_FUNCTION__));
 	log.add(Log::NORMAL, "Setting mode listen...");
 	foamctrl.set_mode(AO_MODE_LISTEN);
 }
 
 void ControlPage::on_mode_closed_clicked() {
-	printf("%x:ControlPage::on_mode_closed_clicked()\n", (int) pthread_self());
+	log.term(format("%s", __PRETTY_FUNCTION__));
 	log.add(Log::NORMAL, "Setting mode closed...");
 	foamctrl.set_mode(AO_MODE_CLOSED);
 }
 
 void ControlPage::on_mode_open_clicked() {
-	printf("%x:ControlPage::on_mode_open_clicked()\n", (int) pthread_self());
+	log.term(format("%s", __PRETTY_FUNCTION__));
 	log.add(Log::NORMAL, "Setting mode open...");
 	foamctrl.set_mode(AO_MODE_OPEN);
 }
 
 void ControlPage::on_shutdown_clicked() {
-	printf("%x:ControlPage::on_shutdown_clicked()\n", (int) pthread_self());
+	log.term(format("%s", __PRETTY_FUNCTION__));
 	log.add(Log::NORMAL, "Trying to shutdown");
 	foamctrl.shutdown();
 }
 
 void ControlPage::on_calib_clicked() {
-	printf("%x:ControlPage::on_calmode_changed()\n", (int) pthread_self());
+	log.term(format("%s", __PRETTY_FUNCTION__));
 	log.add(Log::NORMAL, "Trying to calibrate");
 	foamctrl.calibrate(calmode_select.get_active_text());
 }
 
 void ControlPage::on_connect_update() {
-	printf("%x:ControlPage::on_connect_update(conn=%d)\n", (int) pthread_self(), foamctrl.is_connected());
+    log.term(format("%s (conn=%d)", __PRETTY_FUNCTION__, foamctrl.is_connected()));
+
 	if (foamctrl.is_connected()) {
 		log.add(Log::OK, "Connected to " + foamctrl.getpeername());
 		connect.set_label("Disconnect");
@@ -223,7 +228,7 @@ void ControlPage::on_connect_update() {
 }
 
 void ControlPage::on_message_update() {
-	printf("%x:ControlPage::on_message_update()\n", (int) pthread_self());
+	log.term(format("%s", __PRETTY_FUNCTION__));
 	
 	// reset mode buttons
 	mode_listen.set_state(SwitchButton::CLEAR);
@@ -264,3 +269,9 @@ void ControlPage::on_message_update() {
 	//calmode_select.set_active_text(foamctrl.get_calmode(0));
 }
 
+bool ControlPage::on_timeout() {
+	// Update 'frames' counter now
+	foamctrl.send_cmd("get frames");
+	
+	return true;
+}

@@ -30,19 +30,43 @@
 #include "types.h"
 
 /*!
- @brief Image shift calculation class (for SHWFS)
+ @brief Image shift calculation class
  
  This is a generic class for calculating 2-dimensional shifts over 
  (subsections) of images. This is primarily meant for Shack-Hartmann wavefront
- sensors, but can hopefully be used in other applications as well.
+ sensors (Shwfs::), but can be used in other applications as well.
+ 
+ \section shift_usage Shift usage
+ 
+ calc_shifts() is the public method to be used for calculating image shifts.
+ This method fills Shift::workpool with the relevant information and then
+ signals the worker threads using 
+ 
+ \section shift_threads Shift thread model
+ 
+ When a Shift instance is created, several worker threads are started 
+ (stored in Shift::workers). These threads each call _worker_getid() in turn,
+ which is guarded by Shift::work_mutex. Once each thread has its unique ID,
+ they wait on Shift::work_cond.
+ 
+ When calc_shifts() is called, Shift::workpool is filled with the job info. 
+ Then Shift::work_mutex is locked and Shift::work_cond is broadcasted, but 
+ before the broadcast is sent Shift::work_done_mutex is locked by 
+ calc_shifts().
+ 
+ As the workers are woken up, they fetch work from Shift::workpool (guarded by 
+ Shift::workpool.mutex). When a worker is done and there is no more work in 
+ the pool, it increments Shift::workpool.done. If the current thread is the 
+ last thread to finish, it broadcasts Shift::work_done_cond to signal the
+ main thread that the work is done.
+ 
+ Since calc_shifts() locked Shift::work_done_mutex before broadcasting the 
+ work, this ensures that the workers don't signal the main thread before it 
+ is ready for it (which might happen when the work is processed very quickly).
+ 
  */
 class Shift {
 public:
-	typedef enum {
-		UINT8=0,													//!< uint8_t datatype
-		UINT16,														//!< uint16_t datatype
-	} dtype_t;
-	
 	typedef enum {
 		COG=0,														//!< Center of Gravity method
 		CORR,															//!< Cross-correlation method
@@ -52,15 +76,16 @@ private:
 	Io &io;															//!< Message IO
 	
 	typedef struct jobinfo {
+		jobinfo() : img(NULL), refimg(NULL), shifts(NULL) { }
 		method_t method;
 		int bpp;													//!< Image bitdepth (8 for uint8_t, 16 for uint16_t)
-		uint8_t *img;											//!< Image to process
+		uint8_t *img;											//!< Image data to process
 		coord_t res;											//!< Image size (width x height)
 		uint8_t *refimg;									//!< Reference image (for method=CORR)
 		uint8_t mini;											//!< Minimum intensity to consider (for method=COG)
 		std::vector<vector_t> crops;			//!< Crop fields within the bigger image
 		gsl_vector_float *shifts;					//!< Pre-allocated output vector
-		pthread::mutex mutex;							//!< Lock for jobid
+		pthread::mutex mutex;							//!< Lock for jobid and done
 		int jobid;												//!< Next crop field to process
 		int done;													//!< Number of worker threads done
 	} job_t;
@@ -70,8 +95,8 @@ private:
 	pthread::mutex work_mutex;					//!< Mutex used to limit access to frame data
 	pthread::cond work_cond;						//!< Cond used to signal threads about new frames
 	
-	pthread::cond work_done_cond;				//!< Signal for work completed
 	pthread::mutex work_done_mutex;			//!< Signal for work completed
+	pthread::cond work_done_cond;				//!< Cond used for work completed
 
 	int nworker;												//!< Number of workers requested
 	int workid;													//!< Worker counter
@@ -91,7 +116,7 @@ private:
 	void _calc_cog(const uint8_t *img, const coord_t &res, const vector_t &crop, float *vec, const uint8_t mini=0);
 	
 public:
-	Shift(Io &io, const int nthr=4);
+	Shift(Io &io, const int nthr=1);
 	~Shift();
 	
 	/*! @brief Calculate shifts in a series of crop fields within an image

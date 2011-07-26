@@ -27,6 +27,7 @@
 #include <fcntl.h>
 #include <stdint.h>
 
+#include "utils.h"
 #include "config.h"
 #include "io.h"
 #include "imgdata.h"
@@ -37,23 +38,23 @@ using namespace std;
 
 
 ImgCamera::ImgCamera(Io &io, foamctrl *const ptc, const string name, const string port, Path const &conffile, const bool online):
-Camera(io, ptc, name, imgcam_type, port, conffile, online)
+Camera(io, ptc, name, imgcam_type, port, conffile, online),
+noise(10.0), img(NULL), frame(NULL)
 {
 	io.msg(IO_DEB2, "ImgCamera::ImgCamera()");
 	// Register network commands with base device:
 	// No extra commands
 
-	Path file = cfg.getstring(name + ".imagefile");
-	if (!file.isabs()) file = ptc->datadir + file;
+	Path file = cfg.getstring("imagefile");
+	file = ptc->confdir + file;
 	
 	io.msg(IO_DEB2, "imagefile = %s", file.c_str());
-	noise = cfg.getdouble(name+".noise", 10.0);
-	interval = cfg.getdouble(name+".interval", 0.25);
-	exposure = cfg.getdouble(name+".exposure", 1.0);
-	
-	mode = Camera::OFF;
-	
+	noise = cfg.getdouble("noise", 10.0);
+
 	img = new ImgData(io, file, ImgData::FITS);
+	if (img->geterr() != ImgData::ERR_NO_ERROR)
+		throw exception("ImgCamera::ImgCamera(): Could not load image");
+
 	img->calcstats();
 	
 	res.x = img->getwidth();
@@ -64,15 +65,16 @@ Camera(io, ptc, name, imgcam_type, port, conffile, online)
 	
 	update();
 	
-	io.msg(IO_INFO, "ImgCamera init success, got %dx%dx%d frame, noise=%g, intv=%g, exp=%g.", 
+	io.msg(IO_INFO, "ImgCamera: init success, got %dx%dx%d frame, noise=%g, intv=%g, exp=%g.", 
 				 res.x, res.y, depth, noise, interval, exposure);
 	if (img->stats.init)
-		io.msg(IO_INFO, "Range = %d--%d, sum=%lld", img->stats.min, img->stats.max, img->stats.sum);
+		io.msg(IO_INFO, "ImgCamera: Range = %d--%d, sum=%lld", img->stats.min, img->stats.max, img->stats.sum);
 }
 
 ImgCamera::~ImgCamera() {
 	io.msg(IO_DEB2, "ImgCamera::~ImgCamera()");
 	delete img;
+	free(frame);
 }
 
 void ImgCamera::update() {
@@ -83,40 +85,41 @@ void ImgCamera::update() {
 	gettimeofday(&now, 0);
 	
 	uint16_t *p = frame;
-	
-	int mul = (1 << depth) - 1;
-	for(size_t y = 0; y < (size_t) res.y; y++) {
-		for(size_t x = 0; x < (size_t) res.x; x++) {
-			double value = drand48() * noise + img->getpixel(x, y) * exposure;
-			value *= exposure;
-			if(value < 0)
-				value = 0;
-			if(value > 1)
-				value = 1;
-			*p++ = (uint16_t)(value * mul) & mul;
+
+	// Only process frame if necessary...
+	if (noise != 0 || exposure != 0) {
+		int mul = (1 << depth) - 1;
+		for(size_t y = 0; y < (size_t) res.y; y++) {
+			for(size_t x = 0; x < (size_t) res.x; x++) {
+				double value = simple_rand() * noise + img->getpixel(x, y) * exposure;
+				value *= exposure;
+				if(value < 0)
+					value = 0;
+				if(value > 1)
+					value = 1;
+				*p++ = (uint16_t)(value * mul) & mul;
+			}
 		}
 	}
 	
-	void *old = cam_queue(frame, frame, &now);
-	if(old) {
-		//io.msg(IO_DEB2, "Got old=%p\n", old);
-		//free((uint16_t *)old);
+  cam_queue(frame, frame, &now);
+	//void *old = cam_queue(frame, frame, &now);
+	
+	if (interval > 0) {
+		// Make sure each update() takes at minimum interval seconds:
+		diff.tv_sec = 0;
+		diff.tv_usec = interval * 1.0e6;
+		timeradd(&now, &diff, &next);
+		
+		gettimeofday(&now, 0);
+		timersub(&next, &now, &diff);
+		if(diff.tv_sec >= 0)
+			usleep(diff.tv_sec * 1.0e6 + diff.tv_usec);
 	}
-	
-	// Make sure each update() takes at minimum interval seconds:
-	diff.tv_sec = 0;
-	diff.tv_usec = interval * 1.0e6;
-	timeradd(&now, &diff, &next);
-	
-	gettimeofday(&now, 0);
-	timersub(&next, &now, &diff);
-	if(diff.tv_sec >= 0)
-		usleep(diff.tv_sec * 1.0e6 + diff.tv_usec);
 }
 
 void ImgCamera::cam_handler() { 
 	pthread::setcanceltype(PTHREAD_CANCEL_ASYNCHRONOUS);
-	sleep(1);
 	
 	while (true) {
 		switch (mode) {
@@ -134,12 +137,12 @@ void ImgCamera::cam_handler() {
 			default:
 				io.msg(IO_INFO, "ImgCamera::cam_handler() OFF/CONFIG/UNKNOWN");
 				// We wait until the mode changed
-				mode_mutex.lock();
-				mode_cond.wait(mode_mutex);
-				mode_mutex.unlock();
+				{
+					pthread::mutexholder h(&mode_mutex);
+					mode_cond.wait(mode_mutex);
+				}				
 				break;
 		}
-		
 	}
 }
 
@@ -185,7 +188,10 @@ void ImgCamera::cam_set_mode(const mode_t newmode) {
 		return;
 	
 	mode = newmode;
-	mode_cond.broadcast();
+	{
+		pthread::mutexholder h(&mode_mutex);
+		mode_cond.broadcast();
+	}				
 }
 
 void ImgCamera::do_restart() {

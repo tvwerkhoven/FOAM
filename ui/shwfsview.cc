@@ -35,7 +35,7 @@ subi_lx("X_0"), subi_ly("Y_0"), subi_tx("X_1"), subi_ty("Y_1"),
 subi_update("Update"), subi_del("Del"), subi_add("Add"), subi_regen("Regen pattern"), subi_find("Find pattern"), 
 subi_vecs("Show shifts"), subi_vecdelayi("Delay", "s")
 {
-	fprintf(stderr, "%x:ShwfsView::ShwfsView()\n", (int) pthread_self());
+	log.term(format("%s", __PRETTY_FUNCTION__));
 	
 	// Widget properties
 	subi_lx.set_width_chars(6);
@@ -103,12 +103,12 @@ subi_vecs("Show shifts"), subi_vecdelayi("Delay", "s")
 }
 
 ShwfsView::~ShwfsView() {
-	fprintf(stderr, "%x:ShwfsView::~ShwfsView()\n", (int) pthread_self());
+	log.term(format("%s", __PRETTY_FUNCTION__));
 }
 
 void ShwfsView::enable_gui() {
 	WfsView::enable_gui();
-	fprintf(stderr, "%x:ShwfsView::enable_gui()\n", (int) pthread_self());
+	log.term(format("%s", __PRETTY_FUNCTION__));
 	
 	subi_select.set_sensitive(true);
 	subi_update.set_sensitive(true);
@@ -121,7 +121,7 @@ void ShwfsView::enable_gui() {
 
 void ShwfsView::disable_gui() {
 	WfsView::disable_gui();
-	fprintf(stderr, "%x:ShwfsView::disable_gui()\n", (int) pthread_self());
+	log.term(format("%s", __PRETTY_FUNCTION__));
 	
 	subi_select.set_sensitive(false);
 	subi_update.set_sensitive(false);
@@ -134,7 +134,7 @@ void ShwfsView::disable_gui() {
 
 void ShwfsView::clear_gui() {
 	WfsView::clear_gui();
-	fprintf(stderr, "%x:ShwfsView::clear_gui()\n", (int) pthread_self());
+	log.term(format("%s", __PRETTY_FUNCTION__));
 	
 	subi_select.clear_items();
 	subi_select.append_text("-");
@@ -171,11 +171,12 @@ void ShwfsView::on_subi_select_changed() {
 }
 
 void ShwfsView::on_subi_add_clicked() {
-	fprintf(stderr, "%x:ShwfsView::on_subi_add_clicked()\n", (int) pthread_self());
+	log.term(format("%s", __PRETTY_FUNCTION__));
 	
 	string tmp = subi_select.get_active_text();
 	if (tmp != shwfs_addnew) {
-		fprintf(stderr, "%x:ShwfsView::on_subi_add_clicked() Select '%s' first to add new subimages\n", (int) pthread_self(), shwfs_addnew.c_str());
+        log.term(format("%s Select '%s' first to add new subimgs", __PRETTY_FUNCTION__, shwfs_addnew.c_str()));
+
 		return;
 	}
 
@@ -196,7 +197,7 @@ void ShwfsView::on_subi_add_clicked() {
 }
 
 void ShwfsView::on_subi_del_clicked() {
-	fprintf(stderr, "%x:ShwfsView::on_subi_del_clicked()\n", (int) pthread_self());
+	log.term(format("%s", __PRETTY_FUNCTION__));
 	
 	// Get current selected item, convert to int
 	string tmp = subi_select.get_active_text();
@@ -211,7 +212,7 @@ void ShwfsView::on_subi_del_clicked() {
 }
 
 void ShwfsView::on_subi_update_clicked() {
-	fprintf(stderr, "%x:ShwfsView::on_subi_update_clicked()\n", (int) pthread_self());
+	log.term(format("%s", __PRETTY_FUNCTION__));
 	
 	string tmp;
 	
@@ -240,7 +241,7 @@ void ShwfsView::on_subi_update_clicked() {
 }
 
 void ShwfsView::on_subi_regen_clicked() {
-	fprintf(stderr, "%x:ShwfsView::on_subi_regen_clicked()\n", (int) pthread_self());
+	log.term(format("%s", __PRETTY_FUNCTION__));
 	
 	// Re-generate subimage pattern
 	shwfsctrl->mla_regen_pattern();
@@ -248,14 +249,14 @@ void ShwfsView::on_subi_regen_clicked() {
 
 void ShwfsView::on_subi_find_clicked() {
 	//! @todo Implement mla find with parameters: mla find [sisize] [simini_f] [nmax] [iter]
-	fprintf(stderr, "%x:ShwfsView::on_subi_find_clicked()\n", (int) pthread_self());
+	log.term(format("%s", __PRETTY_FUNCTION__));
 	
 	// Find subimage pattern heuristically
 	shwfsctrl->mla_find_pattern();
 }
 
 void ShwfsView::on_subi_vecs_clicked() {
-	fprintf(stderr, "%x:ShwfsView::on_subi_vecs_clicked()\n", (int) pthread_self());
+	log.term(format("%s", __PRETTY_FUNCTION__));
 	
 	// Get (new) update delay
 	//! @todo is this legal/safe? subi_vecdelayi.get_text().c_str()
@@ -286,7 +287,7 @@ bool ShwfsView::on_timeout() {
 }
 
 void ShwfsView::do_sh_shifts_update() {
-	fprintf(stderr, "%x:ShwfsView::do_sh_shifts_update()\n", (int) pthread_self());
+	log.term(format("%s", __PRETTY_FUNCTION__));
 	subi_vecs.set_state(SwitchButton::OK);
 		
 	// Add image shift vectors to glarea
@@ -306,7 +307,7 @@ void ShwfsView::do_sh_shifts_update() {
 
 void ShwfsView::do_info_update() {
 	WfsView::do_info_update();
-	fprintf(stderr, "%x:ShwfsView::do_info_update()\n", (int) pthread_self());
+	log.term(format("%s", __PRETTY_FUNCTION__));
 
 	// Add list of subimages to dropdown box
 	subi_select.clear_items();

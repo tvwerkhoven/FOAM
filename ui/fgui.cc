@@ -23,6 +23,8 @@
  @brief This is the FOAM control GUI, consisting mostly of MainWindow::
  */
 
+//! @bug crashes when running on expoao directly after connecting? Program received signal SIGSEGV, Segmentation fault. / 0x00007ffff2e8092e in XF86DRIQueryVersion () from /usr/lib/libGL.so.1
+
 #ifdef HAVE_CONFIG_H
 #include "autoconfig.h"
 #endif
@@ -204,7 +206,7 @@ void MainWindow::on_ctrl_message_update() {
 void MainWindow::on_ctrl_device_update() {
 	fprintf(stderr, "MainWindow::on_ctrl_device_update()\n");
 
-	// Need mutex because we change this in both fgui and foamcontrol, asynchronously.
+	// Need mutex because we change this in both MainWindow:: fgui.cc and FoamControl::, asynchronously.
 	pthread::mutexholder h(&(foamctrl.gui_mutex));
 	
 	DevicePage *tmppage=NULL;
@@ -248,14 +250,15 @@ void MainWindow::on_ctrl_device_update() {
 //				log.add(Log::OK, "Added new generic WFS device, type="+tmpdev->type+", name="+tmpdev->name+".");
 //			}
 			else if (tmpdev->type.substr(0, 7) == "dev.cam") {
-				fprintf(stderr, "MainWindow::on_ctrl_device_update() got generic camera device\n");
+                log.term(format("%s got generic cam dev", __PRETTY_FUNCTION__));
+
 				tmpdev->ctrl = (DeviceCtrl *) new CamCtrl(log, foamctrl.host, foamctrl.port, tmpdev->name);
 				tmpdev->page = (DevicePage *) new CamView((CamCtrl *) tmpdev->ctrl, log, foamctrl, tmpdev->name);
 				log.add(Log::OK, "Added new generic camera, type="+tmpdev->type+", name="+tmpdev->name+".");
 			}
 			// Fallback, if we don't have a good GUI element for the device, use a generic device controller
 			else {
-				printf("%x:FoamControl::add_device() got dev\n", (int) pthread_self());
+                log.term(format("%s got dev", __PRETTY_FUNCTION__));
 				tmpdev->ctrl = (DeviceCtrl *) new DeviceCtrl(log, foamctrl.host, foamctrl.port, tmpdev->name);
 				tmpdev->page = (DevicePage *) new DevicePage((DeviceCtrl *) tmpdev->ctrl, log, foamctrl, tmpdev->name);
 				log.add(Log::OK, "Added new generic device, type="+tmpdev->type+", name="+tmpdev->name+".");
@@ -263,6 +266,7 @@ void MainWindow::on_ctrl_device_update() {
 			
 			notebook.append_page(*(tmpdev->page), "_" + tmpdev->name, tmpdev->name, true);
 			pagelist[tmpdev->name] = tmpdev->page;
+            log.term(format("%s added dev", __PRETTY_FUNCTION__));
 		}
 	}
 	

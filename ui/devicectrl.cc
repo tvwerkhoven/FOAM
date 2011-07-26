@@ -32,7 +32,7 @@ DeviceCtrl::DeviceCtrl(Log &log, const string h, const string p, const string n)
 	protocol(host, port, devname), log(log),
 	ok(false), calib(false), init(false), errormsg("Not connected")
 {
-	printf("%x:DeviceCtrl::DeviceCtrl(name=%s)\n", (int) pthread_self(), n.c_str());	
+	log.term(format("%s(name=%s)", __PRETTY_FUNCTION__, n.c_str()));
 	
 	// Open control connection, register basic callbacks
 	protocol.slot_message = sigc::mem_fun(this, &DeviceCtrl::on_message_common);
@@ -44,7 +44,7 @@ DeviceCtrl::~DeviceCtrl() {
 }
 
 void DeviceCtrl::connect() {
-	printf("%x:DeviceCtrl::connect(): connecting to %s:%s@%s\n", (int) pthread_self(), host.c_str(), port.c_str(), devname.c_str());
+	log.term(format("%s (%s:%s, %s)", __PRETTY_FUNCTION__, host.c_str(), port.c_str(), devname.c_str()));
 	protocol.connect();
 }
 
@@ -52,11 +52,11 @@ void DeviceCtrl::send_cmd(const string &cmd) {
 	lastcmd = cmd;
 	protocol.write(cmd);
 	log.add(Log::DEBUG, devname + ": -> " + cmd);
-	printf("%x:DeviceCtrl::sent cmd: %s\n", (int) pthread_self(), cmd.c_str());
+	log.term(format("%s (%s)", __PRETTY_FUNCTION__, cmd.c_str()));
 }
 
 void DeviceCtrl::on_message_common(string line) {
-	printf("%x:DeviceCtrl::on_message_common(line=%s)\n", (int) pthread_self(), line.c_str());
+	log.term(format("%s (%s)", __PRETTY_FUNCTION__, line.c_str()));
 	// Save line for passing to on_message()
 	string orig = line;
 	string stat = popword(line);
@@ -105,7 +105,8 @@ void DeviceCtrl::on_message(string line) {
 }
 
 void DeviceCtrl::on_connected(bool conn) {
-	printf("%x:DeviceCtrl::on_connected(status=%d)\n", (int) pthread_self(), conn);	
+	log.term(format("%s (%d)", __PRETTY_FUNCTION__, conn));
+
 	if (conn)
 		send_cmd("get commands");
 	else {

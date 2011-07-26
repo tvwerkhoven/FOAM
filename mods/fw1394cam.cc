@@ -48,7 +48,7 @@ Camera(io, ptc, name, FW1394cam_type, port, conffile, online)
 	camera->set_power(true);
 	
 	// Set iso-speed: the transmission speed in megabit per second (1600 and 3200 only for future implementations)
-	int iso_speed = cfg.getint(name+".iso_speed", 400);
+	int iso_speed = cfg.getint("iso_speed", 400);
 	if (!_dc1394.check_isospeed((int) iso_speed)) {
 		io.msg(IO_WARN, "FW1394Camera:: iso_speed should be 2^n*100 for 0<=n<5! (was %d) Defaulting to 400.", iso_speed);
 		iso_speed = 400;
@@ -56,11 +56,11 @@ Camera(io, ptc, name, FW1394cam_type, port, conffile, online)
 	camera->set_iso_speed((dc1394::iso_speed) _dc1394.iso_speed_p.getenum((int) iso_speed));
 
 	// Set video mode, either fixed format or free FORMAT_7 mode. Default to VGA mono 8 bit.
-	std::string vid_mode = cfg.getstring(name+".video_mode", "VIDEO_MODE_640x480_MONO8");
+	std::string vid_mode = cfg.getstring("video_mode", "VIDEO_MODE_640x480_MONO8");
 	camera->set_video_mode((dc1394::video_mode) _dc1394.video_mode_p.getenum(vid_mode));
 
 	// Set framerate
-	double fps = cfg.getdouble(name+".framerate", 30.);
+	double fps = cfg.getdouble("framerate", 30.);
 	if (!_dc1394.check_framerate(fps)) {
 		io.msg(IO_WARN, "FW1394Camera:: Framerate should be 2^n*1.875 for 0<=n<7! (was %g) Defaulting to 15fps.", fps);
 		fps = 30.;
@@ -72,12 +72,7 @@ Camera(io, ptc, name, FW1394cam_type, port, conffile, online)
 	camera->set_control_register(0x80c, 0x82040040);
 	// What's this?
 	camera->capture_setup(nframes + 10);
-	mode = Camera::WAITING;
 
-	res.x = cfg.getint(name+".width", 640);
-	res.y = cfg.getint(name+".height", 480);
-	depth = cfg.getint(name+".depth", 8);
-	
 	exposure = cam_get_exposure(); 
 	interval = cam_get_interval();
 	gain = cam_get_gain();
@@ -223,14 +218,20 @@ void FW1394Camera::cam_set_mode(mode_t newmode) {
 			// Start camera
 			camera->set_transmission(true);
 			mode = newmode;
-			mode_cond.broadcast();
+			{
+				pthread::mutexholder h(&mode_mutex);
+				mode_cond.broadcast();
+			}
 			break;
 		case Camera::WAITING:
 		case Camera::OFF:
 			// Stop camera
 			camera->set_transmission(false);
 			mode = newmode;
-			mode_cond.broadcast();
+			{
+				pthread::mutexholder h(&mode_mutex);
+				mode_cond.broadcast();
+			}
 			break;
 		case Camera::CONFIG:
 			io.msg(IO_INFO, "FW1394::cam_set_mode(%s) mode not supported.", mode2str(newmode).c_str());

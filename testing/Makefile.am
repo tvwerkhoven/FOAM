@@ -94,9 +94,11 @@ check_PROGRAMS += shwfs-test
 shwfs_test_SOURCES = shwfs-test.cc \
 		$(MODS_DIR)/shwfs.cc \
 		$(MODS_DIR)/wfs.cc \
+    $(MODS_DIR)/wfc.cc \
 		$(MODS_DIR)/dummycam.cc \
 		$(MODS_DIR)/camera.cc \
 		$(MODS_DIR)/simulcam.cc \
+    $(MODS_DIR)/simulwfc.cc \
 		$(LIB_DIR)/shift.cc \
 		$(LIB_DIR)/devices.cc \
 		$(LIB_DIR)/simseeing.cc \
@@ -108,6 +110,7 @@ shwfs_test_CPPFLAGS = $(SIGC_CFLAGS) $(AM_CPPFLAGS)
 shwfs_test_LDADD = $(COMMON_LIBS) \
 		$(SIGC_LIBS) \
 		$(FFTW_LIBS) \
+    $(LIBSIU_DIR)/libcsv.a \
 		$(LIBSIU_DIR)/libio.a \
 		$(LIBSIU_DIR)/libpath.a \
 		$(LIBSIU_DIR)/libprotocol.a \

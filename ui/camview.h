@@ -62,8 +62,8 @@ protected:
 	// Need: darkflat, fsel, tiptilt, capture, thumb, ...?
 	HBox ctrlhbox;
 	SwitchButton capture;								//!< Start/stop capturing frames, CamView::on_capture_clicked()
-	SwitchButton display;								//!< Start/stop displaying frames, CamView::on_display_clicked()
-	SwitchButton store;									//!< Start/stop storing frames on the camera, CamView::on_store_clicked()
+	SwitchButton display;								//!< Start/stop displaying frames, CamView::on_display_clicked(). OK: frame just updated. WAITING: frame requested. CLEAR: don't display. ERROR: something went wrong, stop display.
+	SwitchButton store;									//!< Start/stop storing frames on the camera, CamView::on_store_clicked().  CLEAR: not storing. WAITING: store in progress. ERROR: something went wrong, abort. OK: unused
 	Entry store_n;											//!< How many frames to store when clicking CamView:store
 	VSeparator ctrl_vsep;
 	LabeledEntry e_exposure;						//!< For exposure time, RW
@@ -121,7 +121,7 @@ protected:
 	void on_zoomout_activate();					//!< Zoom out
 	void on_capture_clicked();					//!< (De-)activate camera when user presses CamView::capture button.
 	void on_display_clicked();					//!< (De-)activate camera frame grabbing when user presses CamView::display button.
-	void on_store_clicked();						//!< Called when user clicks CamView::store
+	void on_store_clicked();						//!< Called when user clicks CamView::store or activates CamView::store_n
 	void on_info_change();							//!< Propagate user changed settings in GUI to camera
 	
 	void on_histo_toggled();

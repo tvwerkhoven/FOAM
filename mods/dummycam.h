@@ -33,10 +33,25 @@
 using namespace std;
 const string dummycam_type = "dummycam";
 
+/*! @brief Simplest Camera implementation
+ 
+ DummyCamera provides a simple Camera implementation which can be used for
+ testing. The 'images' it generates are a sine pattern overlayed with random
+ noise.
+ 
+ \section dummycamera_cfg Configuration
+ 
+ - noise: see DummyCamera::noise
+
+ \section dummycamera_netio Network IO
+ 
+ - hello world: connectivity test, should return 'ok :hello world back!'
+ 
+ */
 class DummyCamera: public Camera {
 private:
 	void update();
-	double noise;
+	double noise;                           //! Amplitude of the noise added to the image
 	
 public:
 	DummyCamera(Io &io, foamctrl *const ptc, const string name, const string port, Path const &conffile, const bool online=true);

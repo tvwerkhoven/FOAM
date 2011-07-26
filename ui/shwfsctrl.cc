@@ -36,13 +36,13 @@ using namespace std;
 ShwfsCtrl::ShwfsCtrl(Log &log, const string h, const string p, const string n):
 	WfsCtrl(log, h, p, n)
 {
-	fprintf(stderr, "%x:ShwfsCtrl::ShwfsCtrl()\n", (int) pthread_self());
+	log.term(format("%s", __PRETTY_FUNCTION__));
 	
 	mlacfg.reserve(128);
 }
 
 ShwfsCtrl::~ShwfsCtrl() {
-	fprintf(stderr, "%x:ShwfsCtrl::~ShwfsCtrl()\n", (int) pthread_self());
+	log.term(format("%s", __PRETTY_FUNCTION__));
 }
 
 void ShwfsCtrl::connect() {
@@ -51,11 +51,10 @@ void ShwfsCtrl::connect() {
 
 void ShwfsCtrl::on_connected(bool conn) {
 	WfsCtrl::on_connected(conn);
-	fprintf(stderr, "%x:ShwfsCtrl::on_connected(conn=%d)\n", (int) pthread_self(), conn);
-	
-	if (conn) {
+	log.term(format("%s (%d)", __PRETTY_FUNCTION__, conn));
+
+	if (conn)
 		cmd_get_mla();
-	}
 }
 
 void ShwfsCtrl::on_message(string line) {

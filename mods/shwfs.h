@@ -43,30 +43,34 @@ const string shwfs_type = "shwfs";
  
  Note the difference between subapertures (i.e. the physical microlenses 
  usually used in SHWFS) and subimages (i.e. the images formed by the 
- microlenses on the CCD). It is the subimages we are interested in when
- processing the CCD data.
+ microlenses on the CCD). It is the <i>subimages</i> we are interested in when
+ processing the CCD data, but the subapertures are the physical apertures 
+ (usually lenses) which split up the main telescope aperture. 
  
- \section shwfs_netio Camera net IO
+ This class extends on Wfs:: see the base class for more information.
+ 
+ \section shwfs_netio Network IO
  
  Valid commends include:
- - mla generate
- - mla find
- - mla store
- - mla del [idx]
- - mla add
- - mla get [idx]
+ - mla generate: generate microlens array (MLA) pattern
+ - mla find: heuristically find MLA
+ - mla store: store MLA pattern to disk
+ - mla del <idx>: delete MLA subimage 'idx'
+ - mla add <lx> <ly> <tx> <ty>: add MLA subimage with given coordinates
+ - mla get <idx>: get MLA subimage coordinates
  
- - get shifts
- 
- - calibrate
- - measure
+ - get shifts: return measured shift vectors
  
  \section shwfs_cfg Configuration parameters
  
-
- \section shwfs_todo 
-
- - @todo make shift_vec ringbuffer
+ - sisize{x,y}: Shwfs::sisize
+ - sipitch{x,y}: Shwfs::sipitch
+ - disp{x,y}: Shwfs::disp
+ - overlap: Shwfs::overlap
+ - xoff: Shwfs::xoff
+ - shape: Shwfs::shape
+ - simaxr: Shwfs::simaxr
+ - simini_f: Shwfs::simini_f
  
  */
 class Shwfs: public Wfs {
@@ -90,17 +94,6 @@ private:
 	gsl_vector_float *shift_vec;				//!< SHWFS shift vector. Shift for subimage N are elements N*2+0 and N*2+1. Same order as mlacfg @todo Make this a ring buffer
 	gsl_vector_float *ref_vec;					//!< SHWFS reference shift vector. Use this as 'zero' value
 	
-	
-//	typedef std::map<float, gsl_vector_float *> act_map_t;
-//	typedef std::map<int, act_map_t > inf_data_t; //!< Raw influence data, for each actuator (int actid), store a series of positions (float p) and measurements (gsl_vector_float *meas)
-//	inf_data_t inf_data;
-	
-	// Alternative:
-	//	typedef std::map<int, vector <fcoord_t>> act_map_t;
-	//	typedef std::map<int, act_map_t > inf_data_t; //!< Raw influence data, for each actuator (int actid), store each measurement (int measurement_id) and a vector of all actuator signals and corresponding measurements
-	//	inf_data_t inf_data;								//!< Raw influence data: inf_data[act_id][measurement_id] is a vector of (actuator signal, subap measurement) vectors. Note that each subap has two measurement_id (x and y).
-	
-	// Alternative2:
 	typedef struct infdata {
 		infdata(): init(false), nact(0), nmeas(0) {  }
 		bool init;
@@ -108,12 +101,15 @@ private:
 		size_t nmeas;
 		
 		struct _meas {
+			_meas(): infmat(NULL), infmat_f(NULL) { }
 			std::vector<float> actpos;			//!< Actuator positions (voltages) applied for each measmat
 			std::vector<gsl_matrix_float *> measmat; //!< Matrices with raw measurements for infmat (should be (nmeas, nact), nmeas > nact)
 			gsl_matrix *infmat;							//!< Influence matrix, represents the influence of a WFC on this Wfs (should be (nmeas, nact))
+			gsl_matrix_float *infmat_f;			//!< Influence matrix stored as float
 		} meas;														//!< Influence measurements
 		
 		struct _actmat {
+			_actmat(): mat(NULL), U(NULL), s(NULL), Sigma(NULL), V(NULL) { }
 			gsl_matrix_float *mat;					//!< Actuation matrix = V . Sigma^-1 . U^T (size (nact, nmeas))
 			gsl_matrix *U;									//!< SVD matrix U of infmat (size (nmeas, nact))
 			gsl_vector *s;									//!< SVD vector s of infmat (size (nact, 1))
@@ -124,11 +120,6 @@ private:
 	} infdata_t;
 	
 	std::map<std::string, infdata_t> calib;	//!< Calibration data for a specific WFC.
-	// calib.meas.actpos
-	// calib.meas.measmat[N]
-	// calib.meas.infmat
-	// calib.actmat.mat
-	// calib.actmat.U	
 	// Reminder about (GSL) matrices: 
 	// Matrix (10,5) X vector (5,1) gives a (10,1) vector
 	// Matrix (10,5) X matrix (5,4) gives a (10,4) matrix
@@ -141,12 +132,12 @@ private:
 	float simini_f;											//!< Minimum intensity for a subimage as fraction of the max intensity in a frame
 	
 	// Parameters for static MLA grids:
-	coord_t sisize;											//!< Subimage size
-	coord_t sipitch;										//!< Pitch between subimages
-	coord_t disp;												//!< Displacement of complete pattern
-	float overlap;											//!< Overlap required 
-	int xoff;														//!< Odd row offset between lenses
-	mlashape_t shape;										//!< MLA Shape (SQUARE or CIRCULAR)
+	coord_t sisize;											//!< Subimage size in pixels
+	coord_t sipitch;										//!< Pitch between subimages in pixels (if sipitch == Shwfs::sisize, the subimages are exactly adjacent to eachother)
+	coord_t disp;												//!< Displacement of whole subimage pattern in pixels
+	float overlap;											//!< Minimum amount a subimage should be inside the crop area in order to be taken into account.
+	int xoff;														//!< Odd row offset between lenses in pixels
+	mlashape_t shape;										//!< MLA cropping shape ('square' for SQUARE or 'circular' CIRCULAR)
 	
 	/*! @brief Find maximum intensity & index of img
 
@@ -165,17 +156,12 @@ private:
 	
 	/*! @brief Set MLA configuration from string, return number of subaps, reverse of get_mla_str(). Output stored in mlacfg.
 	 
-	 @param [in] <N> [idx x0 y0 x1 y1 [idx x0 y0 x1 y1 [...]]]
+	 @param [in] mla_str <N> [idx x0 y0 x1 y1 [idx x0 y0 x1 y1 [...]]]
 	 @return Number of subimages successfully added (might be != N)
 	 */
 	int set_mla_str(string mla_str);
 	
 	int mla_subapsel();
-	
-	//!< Calculate influence for each Zernike mode
-//	int calc_zern_infl(int nmodes);
-	//!< Calculate slopes (helper for calc_zern_infl())
-//	int calc_slope(gsl_matrix *tmp, std::vector<vector_t> &mlacfg, double *slope); 
 	
 	//!< Represent SHWFS shifts as a string [<N> [idx Sx0 Sy0 Sx1 Sy1 [idx Sx0 Sy0 Sx1 Sy1 [...]]]
 	string get_shifts_str() const;
@@ -229,15 +215,32 @@ public:
 	 */
 	int shift_to_basis(const gsl_vector_float *const invec, const wfbasis basis, gsl_vector_float *outvec);
 
-	/*! @brief Compute control vector 
+	/*! @brief Given shifts, compute control vector 
 	 
-	 Calculate control vector for wavefront corrector based on previously 
-	 determined influence function.
+	 Calculate control vector for a specific wavefront corrector based on 
+	 previously determined influence function (from build_infmat() and
+	 calc_actmat()).
 	 
-	 @param [in] *wf Wavefront information
+	 @param [in] wfcname Name of the wavefront corrector to be used.
+	 @param [in] *shift Vector of measured shifts
+	 @param [out] *act Generalized actuator commands for wfcname (pre-allocated)
 	 @return Computed control vector
 	 */
-	gsl_vector_float *comp_ctrlcmd(wf_info_t *wf);
+	gsl_vector_float *comp_ctrlcmd(string wfcname, gsl_vector_float *shift, gsl_vector_float *act);
+	
+	/*! @brief Given a control vector, calculate shifts
+	 
+	 This is meant for debugging purposes only. Given a calculated control 
+	 vector, this routine calculates the shifts that will be generated if the
+	 WFC were to apply it, given the actuation matrix. It serves as a test to
+	 see if the back-calculated shifts correspond to the measured shifts.
+	 
+	 @param [in] wfcname Name of the wavefront corrector to be used.
+	 @param [in] *act Generalized actuator commands for wfcname 
+	 @param [out] *shift Vector of calculated shifts (pre-allocated)
+	 @return Vector of calculated shifts
+	 */
+	gsl_vector_float *comp_shift(string wfcname, gsl_vector_float *act, gsl_vector_float *shift);
 	
 	/*! @brief Initialize influence matrix, allocate memory
 	 
@@ -281,7 +284,7 @@ public:
 	/*! @brief Calculate actuation matrix to drive Wfc, using SVD
 	 
 	 @param [in] wfcname Name of the WFC this WFS is calibrated with
-	 @param [in] singval How much singular value to include (0 to 1)
+	 @param [in] singval How much singular value to include (0 to 1, 0.8 or lower is generally not recommended)
 	 @param [in] basis Basis for which singval counts
 	 */	 
 	int calc_actmat(string wfcname, double singval=1.0, enum wfbasis basis = SENSOR);
@@ -292,7 +295,7 @@ public:
 	 */
 	void set_reference(Camera::frame_t *frame);
 	
-	void store_reference(); //!< Store reference vector to .csv file in ptc->datadir
+	void store_reference(); //!< Store reference vector to a .csv file in ptc->datadir
 	
 	// From Wfs::
 	wf_info_t* measure(Camera::frame_t *frame=NULL);

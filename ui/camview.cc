@@ -32,7 +32,7 @@
 #include <stdlib.h>
 #include <math.h>
 
-#include "types.h"
+#include "utils.h"
 #include "camctrl.h"
 #include "glviewer.h"
 #include "camview.h"
@@ -40,6 +40,8 @@
 using namespace std;
 using namespace Gtk;
 
+//! @bug High framerate: clicking 'display' to stop displaying does not work properly.
+//! @todo Frame grabbing can be improved, we only need a subsection when zoomed in.
 
 
 CamView::CamView(CamCtrl *camctrl, Log &log, FoamControl &foamctrl, string n): 
@@ -52,7 +54,7 @@ capture("Capture"), display("Display"), store("Store"), e_exposure("Exp."), e_of
 flipv("Flip V"), fliph("Flip H"), crosshair("X-hair"), grid("Grid"), histo("Histogram"), zoomin(Stock::ZOOM_IN), zoomout(Stock::ZOOM_OUT), zoom100(Stock::ZOOM_100), zoomfit(Stock::ZOOM_FIT), 
 histoalign(0.5, 0.5, 0, 0), minval("Display min"), maxval("Display max"), e_avg("Avg."), e_rms("RMS"), e_datamin("Min"), e_datamax("Max")
 {
-	fprintf(stderr, "%x:CamView::CamView()\n", (int) pthread_self());
+	log.term(format("%s", __PRETTY_FUNCTION__));
 	
 	lastupdate = 0;
 	waitforupdate = false;
@@ -114,6 +116,7 @@ histoalign(0.5, 0.5, 0, 0), minval("Display min"), maxval("Display max"), e_avg(
 	capture.signal_clicked().connect(sigc::mem_fun(*this, &CamView::on_capture_clicked));
 	display.signal_clicked().connect(sigc::mem_fun(*this, &CamView::on_display_clicked));
 	store.signal_clicked().connect(sigc::mem_fun(*this, &CamView::on_store_clicked));
+	store_n.signal_activate().connect(sigc::mem_fun(*this, &CamView::on_store_clicked));
 
 	e_exposure.entry.signal_activate().connect(sigc::mem_fun(*this, &CamView::on_info_change));
 	e_offset.entry.signal_activate().connect(sigc::mem_fun(*this, &CamView::on_info_change));
@@ -209,12 +212,12 @@ histoalign(0.5, 0.5, 0, 0), minval("Display min"), maxval("Display max"), e_avg(
 
 CamView::~CamView() {
 	//!< @todo store (gui) configuration here?
-	fprintf(stderr, "%x:CamView::~CamView()\n", (int) pthread_self());
+	log.term(format("%s", __PRETTY_FUNCTION__));
 }
 
 void CamView::enable_gui() {
 	DevicePage::enable_gui();
-	fprintf(stderr, "%x:CamView::enable_gui()\n", (int) pthread_self());
+	log.term(format("%s", __PRETTY_FUNCTION__));
 	
 	e_exposure.set_sensitive(true);
 	e_offset.set_sensitive(true);
@@ -235,7 +238,7 @@ void CamView::enable_gui() {
 
 void CamView::disable_gui() {
 	DevicePage::disable_gui();
-	fprintf(stderr, "%x:CamView::disable_gui()\n", (int) pthread_self());
+	log.term(format("%s", __PRETTY_FUNCTION__));
 	
 	e_exposure.set_sensitive(false);
 	e_offset.set_sensitive(false);
@@ -256,7 +259,7 @@ void CamView::disable_gui() {
 
 void CamView::clear_gui() {
 	DevicePage::clear_gui();
-	fprintf(stderr, "%x:CamView::clear_gui()\n", (int) pthread_self());
+	log.term(format("%s", __PRETTY_FUNCTION__));
 	
 	e_exposure.set_text("N/A");
 	e_offset.set_text("N/A");
@@ -419,7 +422,10 @@ void CamView::do_histo_update() {
 }
 
 bool CamView::on_timeout() {
-	// If 'display' is in OK state, we want a new frame (if clear: we dont want frames, if waiting: we still expect a new frame, if error: error!)
+	// Frame capture timed out, perhaps we need a new frame depending on 'display' state:
+	// -> if WAITING: we're already waiting for a frame, pass
+	// -> if OK: we are displaying a frame, get a new one & set to WAITING
+	// -> if ERROR or CLEAR: don't do anything
 	if (display.get_state() == SwitchButton::OK) {
 		camctrl->grab(0, 0, camctrl->get_width(), camctrl->get_height(), 1, false);
 		display.set_state(SwitchButton::WAITING);
@@ -430,7 +436,13 @@ bool CamView::on_timeout() {
 
 void CamView::on_monitor_update() {
 	// New image has arrived, display & update 'display' state
-	display.set_state(SwitchButton::OK);
+	// -> if WAITING: we wanted the frame, update button to OK
+	// -> if OK: no action necessary
+	// -> if ERROR or CLEAR: don't do anything
+	
+	if (display.get_state() == SwitchButton::WAITING)
+		display.set_state(SwitchButton::OK);
+
 	do_full_update();
 }
 
@@ -496,7 +508,7 @@ void CamView::on_message_update() {
 }
 
 void CamView::on_info_change() {
-	fprintf(stderr, "%x:CamView::on_info_change()\n", (int) pthread_self());
+	log.term(format("%s", __PRETTY_FUNCTION__));
 	camctrl->set_exposure(strtod(e_exposure.get_text().c_str(), NULL));
 	camctrl->set_offset(strtod(e_offset.get_text().c_str(), NULL));
 	camctrl->set_interval(strtod(e_interval.get_text().c_str(), NULL));
@@ -522,20 +534,21 @@ void CamView::on_capture_clicked() {
 	// Click the 'capture' button: if running, disable, otherwise start camera
 	if (camctrl->get_mode() == CamCtrl::RUNNING || 
 			camctrl->get_mode() == CamCtrl::SINGLE) {
-		fprintf(stderr, "%x:CamView::on_capture_update(): Stopping camera.\n", (int) pthread_self());
+        log.term(format("%s Stop cam", __PRETTY_FUNCTION__));
 		camctrl->set_mode(CamCtrl::WAITING);
 	}
 	else {
-		fprintf(stderr, "%x:CamView::on_capture_update(): Starting camera.\n", (int) pthread_self());
+        log.term(format("%s Start cam", __PRETTY_FUNCTION__));
 		camctrl->set_mode(CamCtrl::RUNNING);
 	}
 }
 
 void CamView::on_display_clicked() {
-	// Click the 'display' button: if clear & not waiting: request new frame, otherwise, stop grabbing
+	// Click the 'display' button: 
+	// -> if CLEAR: request frame, set button to WAITING
+	// -> if WAITING, OK or ERROR: stop capture 
 	if (display.get_state() == SwitchButton::CLEAR) {
-		//!< @todo Can do a smarter grab here, we only need a subsection...
-		camctrl->grab(0, 0, camctrl->get_width(), camctrl->get_height(), 1, false);
+ 		camctrl->grab(0, 0, camctrl->get_width(), camctrl->get_height(), 1, false);
 		display.set_state(SwitchButton::WAITING);
 	}
 	else
@@ -543,18 +556,25 @@ void CamView::on_display_clicked() {
 }
 
 void CamView::on_store_clicked() {
-	// If 'store' state is waiting, we are already storing frames...
-	if (store.get_state() != SwitchButton::WAITING)
-		return;
-		
-	int nstore = atoi(store_n.get_text().c_str());
-	fprintf(stderr, "%x:CamView::on_store_clicked() n=%d\n", (int) pthread_self(), nstore);
+	// Store activated (via button store or entry store_n):
+	// - store CLEAR: start storing
+	// - store WAITING: store in progress, stop storing
+	// - store ERROR: abort
+	// - store OK: unused
 	
-	// If the value 'nstore' is valid, 
-	if (nstore > 0 || nstore == -1) {
-		camctrl->store(nstore);
-		store.set_state(SwitchButton::WAITING);
+	int nstore = (int) strtol(store_n.get_text().c_str(), NULL, 0);
+	log.term(format("%s (%d)", __PRETTY_FUNCTION__, nstore));
+	
+	if (store.get_state() == SwitchButton::CLEAR) {
+		// If the value 'nstore' is valid, 
+		if (nstore > 0 || nstore == -1) {
+			camctrl->store(nstore);
+			store.set_state(SwitchButton::WAITING);
+		}
 	}
+	else
+		camctrl->store(0);
+	
 }
 
 bool CamView::on_histo_clicked(GdkEventButton *event) {

@@ -32,7 +32,7 @@ DevicePage::DevicePage(DeviceCtrl *devctrl, Log &log, FoamControl &foamctrl, str
 devctrl(devctrl), foamctrl(foamctrl), log(log), devname(n),
 devframe("Raw device control"), dev_val("value:"), dev_send("Send"), dev_stat("Status")
 {
-	printf("%x:DevicePage::DevicePage()\n", (int) pthread_self());
+	log.term(format("%s", __PRETTY_FUNCTION__));
 		
 	clear_gui();
 	disable_gui();
@@ -70,7 +70,7 @@ devframe("Raw device control"), dev_val("value:"), dev_send("Send"), dev_stat("S
 }
 
 DevicePage::~DevicePage() {
-	fprintf(stderr, "%x:DevicePage::~DevicePage()\n", (int) pthread_self());
+	log.term(format("%s", __PRETTY_FUNCTION__));
 
 	// Destruct device control (if present)
 	if (devctrl)
@@ -78,7 +78,7 @@ DevicePage::~DevicePage() {
 }
 
 void DevicePage::enable_gui() {
-	fprintf(stderr, "%x:DevicePage::enable_gui()\n", (int) pthread_self());
+	log.term(format("%s", __PRETTY_FUNCTION__));
 	
 	dev_cmds.set_sensitive(true);
 	dev_val.set_sensitive(true);
@@ -86,7 +86,7 @@ void DevicePage::enable_gui() {
 }
 
 void DevicePage::disable_gui() {
-	fprintf(stderr, "%x:DevicePage::disable_gui()\n", (int) pthread_self());
+	log.term(format("%s", __PRETTY_FUNCTION__));
 	
 	dev_cmds.set_sensitive(false);
 	dev_val.set_sensitive(false);
@@ -94,14 +94,16 @@ void DevicePage::disable_gui() {
 }
 
 void DevicePage::clear_gui() {
-	fprintf(stderr, "%x:DevicePage::clear_gui()\n", (int) pthread_self());
+	log.term(format("%s", __PRETTY_FUNCTION__));
+
 	dev_cmds.clear_items();
 	dev_cmds.append_text("-");
 	dev_stat.set_text("N/A");
 }
 
 void DevicePage::on_dev_send_activate() {
-	printf("%x:DevicePage::on_dev_send_activate()\n", (int) pthread_self());
+	log.term(format("%s", __PRETTY_FUNCTION__));
+
 	// Send command from dev_cmds and dev_val
 	string cmd = dev_cmds.get_active_text();
 	cmd += " " + dev_val.get_text();
@@ -109,7 +111,8 @@ void DevicePage::on_dev_send_activate() {
 }
 
 void DevicePage::on_commands_update() {
-	printf("%x:DevicePage::on_commands_update()\n", (int) pthread_self());
+	log.term(format("%s", __PRETTY_FUNCTION__));
+
 	// Update list of device commands
 	dev_cmds.clear_items();
 	
@@ -124,7 +127,7 @@ void DevicePage::on_commands_update() {
 }
 
 void DevicePage::on_message_update() {
-	printf("%x:DevicePage::on_message_update()\n", (int) pthread_self());
+	log.term(format("%s", __PRETTY_FUNCTION__));
 	
 	if (devctrl->is_ok() || devctrl->is_calib()) {
 		dev_stat.entry.modify_base(STATE_NORMAL, Gdk::Color("lightgreen"));
@@ -137,7 +140,8 @@ void DevicePage::on_message_update() {
 }
 
 void DevicePage::on_connect_update() {
-	printf("%x:DevicePage::on_connect_update(conn=%d)\n", (int) pthread_self(), devctrl->is_connected());
+	log.term(format("%s (%d)", __PRETTY_FUNCTION__, devctrl->is_connected()));
+
 	if (devctrl->is_connected())
 		enable_gui();
 	else

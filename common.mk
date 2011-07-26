@@ -17,14 +17,18 @@ AM_CPPFLAGS += \
 				$(COMMON_CFLAGS)
 
 # GSL flags
-AM_CPPFLAGS += -DHAVE_INLINE \
-		-DGSL_RANGE_CHECK_OFF
+AM_CPPFLAGS += -DHAVE_INLINE 
+#\
+#		-DGSL_RANGE_CHECK_OFF
 
 
 #if DEBUG
 #AM_CPPFLAGS += -DFOAM_DEBUG=1
 #endif DEBUG
 
-
-AM_CXXFLAGS = -Wall -Wextra -Wfatal-errors -O3 -ftree-vectorize -ggdb
+# Debug flags
+AM_CXXFLAGS = -Wall -Wextra -Wfatal-errors -O1 -ggdb -fno-inline
+# Speed flags
+#AM_CXXFLAGS = -Wall -Wextra -Wfatal-errors -O3 -ftree-vectorize
 		
+	

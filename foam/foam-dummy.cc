@@ -76,3 +76,18 @@ int main(int argc, char *argv[]) {
 	
 	return 0;
 }
+
+/*!	\page ud_foamdum FOAM dummy
+ 
+ \section fd_aboutdoc About this document
+ 
+ This is the (user) documentation for FOAM dummy, a bare code skeleton showing
+ how the FOAM framework is supposed to be used.
+ 
+ \section ffs_aboutfoamfs About FOAM dummy
+ 
+ This module does not do anything and only implements the absolutely necessary
+ functions to make it 'work'. It can be used as a test case to see if the code
+ compiles properly and does not contain any obvious bugs.
+  
+*/

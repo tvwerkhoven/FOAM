@@ -33,6 +33,21 @@
 const string FW1394cam_type = "FW1394cam";
 using namespace std;
 
+/*! @brief IEEE 1394 camera implementation
+ 
+ FW1394Camera provides a Camera implementation for IEEE 1394 cameras.
+ 
+ \section fw1394camera_cfg Configuration
+ 
+ - iso_speed (400): ISO speed for the camera
+ - video_mode (VIDEO_MODE_640x480_MONO8): Video mode to run in
+ - framerate (30): Framerate
+ 
+ \section fw1394camera_netio Network IO
+ 
+ - none
+ 
+ */
 class FW1394Camera: public Camera {
 private:
 	// 1394-specific hardware instructions

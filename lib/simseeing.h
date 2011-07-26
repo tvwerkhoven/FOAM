@@ -33,10 +33,16 @@ using namespace std;
 const string simseeing_type = "simseeing";
 
 /*!
- @brief This class simulates seeing by an atmosphere.
+ @brief This class simulates seeing by an atmosphere by using a static input wavefront.
  
  This class is offline (no network connection), and is controlled from the
  SimulCam class.
+ 
+ This class start with a static wavefront map stored on disk. This is read by 
+ into memory using ImgData from libsiu. Given SimSeeing::cropsize,
+ SimSeeing::windspeed and SimSeeing::windtype, this class crops out a 
+ subsection of the static wavefront map. By moving this crop window over the 
+ wavefront map, we can simulate wind and the seeing will change accordingly.
  
  Configuration parameters:
  - None, works through SimulCam
@@ -47,33 +53,53 @@ const string simseeing_type = "simseeing";
 class SimSeeing: public Device {
 public:
 	typedef enum {
-		RANDOM=0,													//!< random walk around the wavefront
-		LINEAR,														//!< linearly move over the wavefront 
-		DRIFTING													//!< drift over the wavefront, combination of linear and random
+		RANDOM=0,													//!< Random walk around the wavefront (SimSeeing::windspeed is 'amplitude')
+		LINEAR,														//!< Linearly move over the wavefront  (SimSeeing::windspeed is 'speed')
+		DRIFTING													//!< Like LINEAR', except SimSeeing::windspeed changes stochastically.
 	} wind_t;														//!< Possible simulated windtypes
 	
 private:
-	gsl_matrix *wfsrc;					//!< Holds the wavefront data (can be bigger than wfsize)
-	Path file;									//!< If type = 'file', this is the full path
+	gsl_matrix *wfsrc;                  //!< Holds the wavefront data from SimSeeing::wffile
+	Path wffile;                        //!< Source file for wavefront simulation. Should be bigger than crop window size (SimSeeing::cropsize).
 	
-	gsl_matrix *wfcrop;					//!< This will hold the cropped wavefront data
-	
-	gsl_matrix *load_wavefront(const Path &f, const bool norm=true); //!< Load wavefront data from disc. N.B. The returned matrix has to be freed on exit!
+  /*! @brief Load wavefront data from disc. 
+   
+   N.B. The returned matrix has to be freed on exit!
+   
+   @param [in] f Path to wavefront file
+   @param [in] norm Normalize wavefront file (scale between 0 to 1)
+   
+   @return gsl_matrix containing the wavefront. Should be freed by the caller!
+   */
+	gsl_matrix *load_wavefront(const Path &f, const bool norm=true); //!< 
 	
 public:
-	coord_t croppos;										//!< Lower-left position to crop out of wavefront
-	coord_t cropsize;										//!< Size of the wavefront to return
+	coord_t croppos;										//!< Lower-left position of the wavefront crop window
+	coord_t cropsize;										//!< Size of the wavefront crop window to return
 	
-	coord_t windspeed;									//!< Windspeed in pixels/frame
-	wind_t windtype;										//!< Windtype used for seeing simulation
+	coord_t windspeed;									//!< Windspeed in pixels/frame (depending on type)
+	wind_t windtype;										//!< Windtype used for seeing simulation. See wind_t for different types.
 	
-	double seeingfac;										//!< Multiplicative factor for wavefront screen.
+	double seeingfac;										//!< Multiplicative factor for wavefront screen. Makes seeing better or worse.
 	
 	SimSeeing(Io &io, foamctrl *const ptc, const string name, const string port, const Path &conffile);
 	~SimSeeing();
-		
-	gsl_matrix *get_wavefront();
-	gsl_matrix *get_wavefront(const size_t x0, const size_t y0, const size_t w, const size_t h, const double fac=1.0);
+	
+	/* @brief Get a crop of the wavefront, automatically propagating the wind if requested.
+	 
+	 @param [out] wf_out Matrix to store the wavefront, pre-allocated
+	 */
+	int get_wavefront(gsl_matrix *wf_out);
+	/* @brief Get a crop of the wavefront at specific coordinates
+	 
+	 @param [out] wf_out Matrix to store the wavefront, pre-allocated
+	 @param [in] x0 x-coordinate of the crop-origin
+	 @param [in] y0 y-coordinate of the crop-origin
+	 @param [in] w width of the crop
+	 @param [in] h height of the crop
+	 @param [in] fac Multiplicative factor to apply to wavefront
+	 */
+	int get_wavefront(gsl_matrix *wf_out, const size_t x0, const size_t y0, const size_t w, const size_t h, const double fac=1.0) const;
 };
 
 #endif // HAVE_SIMSEEING_H
