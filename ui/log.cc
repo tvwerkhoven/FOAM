@@ -62,9 +62,9 @@ void Log::term(string msg, bool showthread, FILE *stream) {
 		for (size_t i=0; i<sizeof(pt); i++)
 			sprintf(thrid, "%s%02x", thrid, (unsigned)(ptc[i]));
 		
-		fprintf(stream, "(%s) %s", thrid, msg.c_str());
+		fprintf(stream, "(%s) %s\n", thrid, msg.c_str());
 	} else {
-		fprintf(stream, msg.c_str());
+		fprintf(stream, "%s\n", msg.c_str());
 	}
 }
 
