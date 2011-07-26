@@ -262,11 +262,11 @@ void ControlPage::on_message_update() {
 	stat_lastcmd.set_text(foamctrl.get_lastreply());
 	
 	// set values in calibmode select box
+  Glib::ustring curitem = calmode_select.get_active_text();
 	calmode_select.clear_items();
-	//calmode_select.append_text(foamctrl.get_calmode(0));
 	for (size_t i=0; i<foamctrl.get_numcal(); i++)
 		calmode_select.append_text(foamctrl.get_calmode(i));
-	//calmode_select.set_active_text(foamctrl.get_calmode(0));
+	calmode_select.set_active_text(curitem);
 }
 
 bool ControlPage::on_timeout() {
