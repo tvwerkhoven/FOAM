@@ -193,7 +193,6 @@ void FoamControl::on_message(string line) {
 	ok = true;
 	
 	if (what == "frames") {
-		
 		state.numframes = popint32(line);
 	} else if (what == "mode")
 		state.mode = str2mode(popword(line));

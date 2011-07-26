@@ -42,11 +42,19 @@
 
 using namespace std;
 
+FOAM* foamref;
+
 FOAM::FOAM(int argc, char *argv[]):
 nodaemon(false), error(false), conffile(FOAM_DEFAULTCONF), execname(argv[0]),
 io(IO_DEB2)
 {
 	io.msg(IO_DEB2, "FOAM::FOAM()");
+	
+	// Global reference to this object (for signal handling)
+	foamref = this;
+	
+	// Install signal handlers
+	init_sighandle();
 	
 	devices = new DeviceManager(io);
 	
@@ -60,8 +68,51 @@ io(IO_DEB2)
 	}
 }
 
+static void sighandle(int sig, siginfo_t *siginfo, void */*context*/) {
+	fprintf(stderr, "sighandle() Warning! Got signal: %d, sending PID: %ld, UID: %ld\n",
+					sig, (long)siginfo->si_pid, (long)siginfo->si_uid);
+
+	// If the signal is dangerous, stop FOAM here.
+	if (sig == SIGTERM ||
+			sig == SIGINT ||
+			sig == SIGSEGV ||
+			sig == SIGBUS) {
+		delete foamref;
+	}
+}
+
+int FOAM::init_sighandle() {
+	struct sigaction act;
+	
+	memset (&act, 0, sizeof(act));
+	
+	// Use the sa_sigaction field because the handles has two additional parameters
+	act.sa_sigaction = &sighandle;
+	// The SA_SIGINFO flag tells sigaction() to use the sa_sigaction field, not sa_handler.
+	act.sa_flags = SA_SIGINFO | SA_RESETHAND;
+	
+	io.msg(IO_DEB2, "FOAM::init_sighandle() installing signal handlers");
+
+	if (sigaction(SIGTERM, &act, 0)
+			|| sigaction(SIGINT, &act, 0)
+			|| sigaction(SIGSEGV, &act, 0)
+			|| sigaction(SIGBUS, &act, 0)) {
+		perror ("FOAM::init_sighandle(): sigaction");
+		return 1;
+	}
+	
+	// Never reset these handlers
+	act.sa_flags = SA_SIGINFO;
+	
+	if (sigaction(SIGPIPE, &act, 0)) {
+		perror ("FOAM::init_sighandle(): sigaction");
+		return 1;
+	}
+	
+	return 0;
+}
+
 FOAM::~FOAM() {
-	//! @bug FOAM quits when GUI disconnects
 	io.msg(IO_DEB2, "FOAM::~FOAM()");
 	
 	// Notify shutdown
@@ -87,6 +138,25 @@ FOAM::~FOAM() {
 int FOAM::init() {
 	io.msg(IO_DEB2, "FOAM::init()");
 	
+	// Install signal mask
+	io.msg(IO_DEB2, "FOAM::init() installing signal mask");
+
+	sigset_t mask;
+	sigset_t orig_mask;
+	
+	sigemptyset(&mask);
+	sigaddset(&mask, SIGINT); // 'user' stuff
+	sigaddset(&mask, SIGTERM);
+	sigaddset(&mask, SIGPIPE);
+	
+	sigaddset(&mask, SIGSEGV); // 'bad' stuff, try to do a clean exit
+	sigaddset(&mask, SIGBUS);
+	
+	if (sigprocmask(SIG_BLOCK, &mask, &orig_mask) < 0) {
+		perror ("FOAM::init() sigprocmask");
+		return 1;
+	}
+	
 	// Start networking thread
 	if (!nodaemon)
 		daemon();	
@@ -101,6 +171,13 @@ int FOAM::init() {
 	
 	// Show banner
 	show_welcome();
+	
+	// Restore signal mask
+	io.msg(IO_DEB2, "FOAM::init() restoring signal mask");
+	if (sigprocmask(SIG_SETMASK, &orig_mask, NULL) < 0) {
+		perror ("FOAM::init() sigprocmask");
+		return 1;
+	}
 	
 	return 0;
 }

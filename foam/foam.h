@@ -78,6 +78,14 @@ typedef Protocol::Server::Connection Connection;
  
  */
 class FOAM {
+private:
+	int init_sighandle();								//!< Install signal handlers
+
+	void show_clihelp(const bool) const;//!< Show help on command-line syntax.
+	int show_nethelp(const Connection *const connection, string topic, string rest); //!< Show help on network command usage
+	void show_version() const;					//!< Show version information
+	void show_welcome() const;					//!< Show welcome banner
+	
 protected:
 	// Properties set at start
 	bool nodaemon;											//!< Run daemon or not
@@ -114,11 +122,6 @@ protected:
 	 */
 	virtual void on_message(Connection * const conn, string line);
 
-	void show_clihelp(const bool) const;//!< Show help on command-line syntax.
-	int show_nethelp(const Connection *const connection, string topic, string rest); //!< Show help on network command usage
-	void show_version() const;					//!< Show version information
-	void show_welcome() const;					//!< Show welcome banner
-	
 public:
 	FOAM(int argc, char *argv[]);
 	virtual ~FOAM() = 0;
