@@ -45,7 +45,7 @@ using namespace std;
 
 Shwfs::Shwfs(Io &io, foamctrl *const ptc, const string name, const string port, Path const &conffile, Camera &wfscam, const bool online):
 Wfs(io, ptc, name, shwfs_type, port, conffile, wfscam, online),
-shifts(io, 4),
+shifts(io, 1),
 shift_vec(NULL), ref_vec(NULL),
 method(Shift::COG)
 {
