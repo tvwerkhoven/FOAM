@@ -745,7 +745,7 @@ int Shwfs::gen_mla_grid(std::vector<vector_t> &mlacfg, const coord_t res, const 
 
 bool Shwfs::store_mla_grid(const bool overwrite) const {
 	// Make path from fileid 
-	Path f = ptc->datadir + format("shwfs_mla_cfg_n=%03d.csv", mlacfg.size());
+	Path f = ptc->outdir + format("shwfs_mla_cfg_n=%03d.csv", mlacfg.size());
 	
 	if (f.exists() && !overwrite) {
 		io.msg(IO_WARN, "Shwfs::store_mla_grid(): Cannot store MLA grid, file exists.");

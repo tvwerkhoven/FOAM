@@ -55,11 +55,11 @@ wfc_sim(NULL)
 		actres.x = cfg.getdouble("actresx", 512);
 		actres.y = cfg.getdouble("actresy", 512);
 		
-		string actpos_file = ptc->confdir.str() + cfg.getstring("actpos_file");
+		Path actpos_file = ptc->datadir + Path(cfg.getstring("actpos_file"));
 		io.msg(IO_DEB1, "SimulWfc::SimulWfc(): actsize: %f, res: %dx%d, file: %s", 
 					actsize, actres.x, actres.y, actpos_file.c_str());
 		
-		Csv reader(actpos_file);
+		Csv reader(actpos_file.str());
 		for (size_t i=0; i<reader.csvdata.size(); i++) {
 			actpos.push_back( fcoord_t(reader.csvdata[i][0], reader.csvdata[i][1]) );
 			if (reader.csvdata[i][0] > 1 || reader.csvdata[i][1] > 1)

@@ -172,7 +172,7 @@ public:
 	//! @todo obsolete, can go away (no use now)
 	virtual int verify() { return 0; }	//!< Verify the integrity of the device
 	
-	Path mkfname(const string identifier) const { return ptc->datadir + Path(type + "." + name + "_" + identifier); } //!< Make filename for single data file output
+	Path mkfname(const string identifier) const { return ptc->outdir + Path(type + "." + name + "_" + identifier); } //!< Make filename for single data file output
 	int set_outputdir(const string identifier); //!< Set output directory for multiple datafiles (e.g. camera output)
 	Path get_outputdir() const { return outputdir; } //!< Get output directory
 	

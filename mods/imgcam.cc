@@ -46,7 +46,7 @@ noise(10.0), img(NULL), frame(NULL)
 	// No extra commands
 
 	Path file = cfg.getstring("imagefile");
-	file = ptc->confdir + file;
+	file = ptc->datadir + file;
 	
 	io.msg(IO_DEB2, "imagefile = %s", file.c_str());
 	noise = cfg.getdouble("noise", 10.0);

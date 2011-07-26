@@ -36,6 +36,15 @@
  startup it reads the general configuration from a file using 
  foamctrl::parse().
  
+ Supported configuration parameters include: (with defaults between square brackets)
+ - datadir (relative to system data dir) [system dir]
+ - outdir (relative to progdir if set)
+ - listenip [0.0.0.0]
+ - listenport [1025]
+ - use_syslog [false]
+ - syslog_prepend [foam]
+ - logfile (relative to outdir) [foam.log]
+ 
  */
 class foamctrl {
 private:
@@ -48,18 +57,7 @@ public:
 	foamctrl(Io &io, Path const file=Path(""));
 	~foamctrl(void);
 	
-	/*! @brief Parse configuration file
-	 
-	 Supported fields include: (with defaults between square brackets)
-	 - datadir (relative to working dir) [/tmp/]
-	 - pidfile (relative to datadir) [foam.pid]
-	 - listenip [0.0.0.0]
-	 - listenport [1025]
-	 - use_syslog [false]
-	 - syslog_prepend [foam]
-	 - logfile (relative to datadir) [foam.log]
-	 */
-	int parse();
+	int parse();									//!< Parse configuration file. See foamctrl:: for more info.
 	int verify();									//!< Verify whether settings are sane
 	int error() const { return err; } //!< Return error status
 	
@@ -73,7 +71,8 @@ public:
 	string listenip;							//!< IP to listen on (def: 0.0.0.0)
 	string listenport;						//!< port to listen on (def: 1025)
 	
-	Path datadir;									//!< path to data directory (relative to progdir) (def: /tmp/)
+	Path datadir;									//!< path to data directory (to read configuration data from, such as wavefront files etc.)
+	Path outdir;									//!< path to data output directory (to store data)
 	
 	Path logfile;									//!< file to log info messages to (def: none)
 	
