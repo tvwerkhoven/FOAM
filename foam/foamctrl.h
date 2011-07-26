@@ -32,7 +32,7 @@
  @brief Stores the control state of the AO system
  
  This class is used to store several variables indicating the state of the AO 
- system, including logging, networking, terminal I/O, pidfiles, etc. At 
+ system, including logging, networking, terminal I/O, etc. At 
  startup it reads the general configuration from a file using 
  foamctrl::parse().
  
@@ -66,7 +66,6 @@ public:
 	Path conffile;								//!< Configuration file used
 	Path confdir;									//!< Configuration dir (used for other config files)
 	config *cfg;									//!< Parsed configuration settings
-	Path pidfile;									//!< file to store PID to (def: /tmp/foam.pid)
 	
 	string listenip;							//!< IP to listen on (def: 0.0.0.0)
 	string listenport;						//!< port to listen on (def: 1025)

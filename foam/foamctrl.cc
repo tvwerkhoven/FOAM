@@ -35,7 +35,6 @@ foamctrl::foamctrl(Io &io, Path const file):
 err(0), io(io),
 conffile(file), 
 cfg(NULL),
-pidfile("/tmp/foam.pid"), 
 listenip("0.0.0.0"), 
 listenport("1025"),
 datadir("./"), 
