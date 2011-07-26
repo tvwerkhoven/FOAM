@@ -7,10 +7,26 @@ Code repository
 ===============
 
 The main code repository is at github, <https://github.com/tvwerkhoven/FOAM/>
-s
+
 Coding standards
 ================
 
 Coding standards are fairly generic. Regarding technicalities:
+
 - Indent with tabs, visually represented as two spaces
 - Save files encoded as utf-8
+- line width preferably 78 chars (exceptions ok for long one-line doxygen 
+  comments)
+
+Documentation
+=============
+
+Document derived Device classes with the following sections:
+
+- Feneral docs on the class
+- Device network commands
+- Device configuration commands
+
+In all cases, refer to the (private) class variables for further documentation
+to prevent redundancy.
+

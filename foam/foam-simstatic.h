@@ -85,9 +85,10 @@ public:
  This module is capable of operating like a 'real' AO system without hardware.
  It uses a static frame as input from the camera, and does not drive any
  electronics such as a deformable mirror or tip-tilt mirror. The computational
- load is the same, however, such that 
+ load is the same, however, such that it can be used to test and improve the 
+ performance that a real system with hardware would have.
  
- \section fss_simu Simulation procedure
+ \section fss_simp Simulation procedure
  
  Static simulation is performed as follows:
  

@@ -91,17 +91,31 @@ public:
  
  \section ffs_simu Simulation procedure
  
- Most simulation is done by SimulCam::, although
+ Most simulation is done by SimulCam::, although this class delegates work to
+ SimSeeing::, SimulWfc:: and Shwfs:: classes as well. See the relevant classes
+ for more information.
 
- \subsection ffs_sim1 Wavefront simulation
-
- The start is a static wavefront map store on disk. This is read by SimSeeing
- which also takes care of 'wind' on the wavefront. Although the wavefront is 
- static, a subsection of this map is cropped and the cropwindow is moved over
- the bigger wavefront map, simulation wind. The wind type can be changed via 
- SimSeeing::windtype and SimSeeing::windspeed.
+ \section ffs_usage Usage
  
- \subsection ffs_sim1 Telescope simulation
+ To run FOAM full-simulation, call:
  
+ - ./foam/foam-fullsim -c conf/foam-fullsim.cfg
 
+ and connect to it (preferably with the foam-gui):
+ 
+ - ./ui/foam-gui
+ - connect to 'localhost' port '1025' (default)
+ 
+ From the GUI you can run in 'Listen', 'Open loop' or 'Closed loop' mode.
+ 
+ - Listen: does nothing and waits for commands
+ - Open loop: simulates the image and calculates image shifts
+ - Closed loop: open loop +simulate wavefront correction as well
+ 
+ For more information on the devices that full simulation uses, see:
+ - \ref dev_cam_simulcam
+ - \ref dev_wfc_simulwfc
+ - \ref dev_wfs_shwfs
+
+ 
  */

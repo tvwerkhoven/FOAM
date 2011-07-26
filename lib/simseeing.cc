@@ -67,12 +67,12 @@ wffile(""), croppos(0,0), cropsize(0,0), windspeed(10,10), windtype(LINEAR)
 
 
 	// Load & scale wavefront
-	wfsrc = load_wavefront(file);
+	wfsrc = load_wavefront(wffile);
 		
 	// Check if cropsize makes sense.
 	// N.B. This can lead to problems if the SimulCam resolution is higher than
-	// the wavefront source file, the crop size will be smaller than the camera 
-	// and the program will break.
+	// the wavefront source wffile, the crop size will be smaller than the 
+  // camera and the program will break.
 	if (wfsrc->size1 < (size_t) cropsize.x || wfsrc->size2 < (size_t) cropsize.y) {
 		io.msg(IO_WARN, "SimSeeing::setup() wavefront smaller than requested cropsize (%dx%d vs %dx%d), reducing size to half the wavefront size.", 
 					 wfsrc->size1, wfsrc->size2, cropsize.x, cropsize.y);

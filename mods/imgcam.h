@@ -47,19 +47,23 @@ const string imgcam_type = "imgcam";
  'camera' images. It is used in \ref ud_foamss "static simulation" as 'camera'
  device. ImgCamera is fairly simple and does not extend much 
  
- \section imgcam_cfg Configuration parameters
+ \section imgcamera_cfg Configuration parameters
  
  The ImgCamera class extends the Camera class configuration with the following 
  parameters:
 
  - imagefile: image file to use for simulation (relative to confdir)
- - noise (10.0): how much noise to add to the image (rand() * noise + img * exposure)
+ - noise (10.0): ImgCamera::noise
+ 
+ \section imgcamera_netio Network IO
+ - none
+
  */
 class ImgCamera: public Camera {
 private:
-	double noise;												//!< Simulated noise intensity
-	ImgData *img;												//!< Use ImgData utils to load frames
-	uint16_t *frame;										//!< Frame is stored here
+	double noise;												//!< Simulated noise intensity (rand() * noise + img * exposure)
+	ImgData *img;												//!< ImgData utils are used to load frames
+	uint16_t *frame;										//!< Source image is stored here
 	
 public:
 	ImgCamera(Io &io, foamctrl *const ptc, const string name, const string port, Path const &conffile, const bool online=true);

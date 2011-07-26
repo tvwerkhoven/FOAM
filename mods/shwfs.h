@@ -43,13 +43,13 @@ const string shwfs_type = "shwfs";
  
  Note the difference between subapertures (i.e. the physical microlenses 
  usually used in SHWFS) and subimages (i.e. the images formed by the 
- microlenses on the CCD). It is the _subimages_ we are interested in when
+ microlenses on the CCD). It is the <i>subimages</i> we are interested in when
  processing the CCD data, but the subapertures are the physical apertures 
  (usually lenses) which split up the main telescope aperture. 
  
  This class extends on Wfs:: see the base class for more information.
  
- \section shwfs_netio Camera net IO
+ \section shwfs_netio Network IO
  
  Valid commends include:
  - mla generate: generate microlens array (MLA) pattern
@@ -68,7 +68,7 @@ const string shwfs_type = "shwfs";
  - disp{x,y}: Shwfs::disp
  - overlap: Shwfs::overlap
  - xoff: Shwfs::xoff
- - shape: Shwfs::shapestr
+ - shape: Shwfs::shape
  - simaxr: Shwfs::simaxr
  - simini_f: Shwfs::simini_f
  
@@ -137,7 +137,7 @@ private:
 	coord_t disp;												//!< Displacement of whole subimage pattern in pixels
 	float overlap;											//!< Minimum amount a subimage should be inside the crop area in order to be taken into account.
 	int xoff;														//!< Odd row offset between lenses in pixels
-	mlashape_t shape;										//!< MLA cropping shape (SQUARE or CIRCULAR)
+	mlashape_t shape;										//!< MLA cropping shape ('square' for SQUARE or 'circular' CIRCULAR)
 	
 	/*! @brief Find maximum intensity & index of img
 

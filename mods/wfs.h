@@ -44,14 +44,20 @@ const string wfs_type = "wfs";
  only provides the data processing/interpretation of the camera. The camera
  itself can be accessed through the reference &cam.
  
- \section shwfs_netio Camera net IO
+ \section wfs_netio Network IO
+ 
  - measuretest: force fake measurements being produced (to test GUI etc.)
  - calibrate: calibrate device (mostly allocate memory etc.)
  - measure: force manual measurement (should normally be done by FOAM itself)
 
  - get basis: return the basis functions used for measurement (i.e. shifts, zernike, KL)
  - get modes: return N modes as <N> <M#1> <M#2> ... <M#N>. 'Modes' can be 
- - get calib: 
+ - get calib: get calibration state
+ - get camera: return camera name associated with this WFS
+ 
+ \section wfs_cfg Configuration
+ 
+ - none
 
  */
 class Wfs: public Device {
@@ -74,8 +80,8 @@ public:
 		wavefront() : wfamp(NULL), nmodes(0), basis(SENSOR) { ; }
 		gsl_vector_float *wfamp;					//!< Mode amplitudes
 		int nmodes;												//!< Number of modes
-		enum wfbasis basis;								//!< Basis functions used for this representation
-	} wf_info_t;
+		enum wfbasis basis;								//!< Basis functions used for this representation (see Wfs::wfbasis)
+	} wf_info_t;                        //!< Capture all wavefront information in flexible format
 	
 	//Zernike zernbasis;									//!< Zernike polynomials basis
 	//gsl_matrix_float *zerninfl;					//!< Influence matrix to convert WFS data to Zernike modes

@@ -37,6 +37,17 @@ const string wfc_type = "wfc";
 
 /*!
  @brief Base wavefront corrector class. This will be overloaded with the specific WFC type
+ 
+ \section wfc_netio Network IO
+ 
+ Valid commends include:
+ - set gain \<p\> \<i\> \<d\>: change PID gain for WFC
+ - get gain: return current gain
+ 
+ \section wfc_cfg Configuration parameters
+ 
+ - none
+
  */
 class Wfc: public Device {
 private:

@@ -51,15 +51,15 @@ typedef Protocol::Server::Connection Connection;
  
  One thing that is supported by the Device class is a list of commands 
  supported by this piece of hardware. Each time this class is (sub)derived,
- this should be updated. These commands are stored in cmd_list and things can
- be added with add_cmd(string).
+ this should be updated. These commands are stored in Device::cmd_list and 
+ things can be added with add_cmd().
  
  @todo Add signal for measurement complete
  */
 class Device {
 private:
 	// These should be accessed through get/set functions to notify the GUI
-	bool is_calib;											//!< Is calibrated and ready for use
+	bool is_calib;											//!< Device calibrated and ready for use
 	bool is_ok;													//!< Device status OK & operational
 
 	Path outputdir;											//!< Output directory for this device in case of multiple data files. This is always a subdir of ptc->datadir.
@@ -68,8 +68,8 @@ protected:
 	Io &io;
 	foamctrl *const ptc;
 	
-	const string name;									//!< Device name
-	const string type;									//!< Device type
+	const string name;									//!< Device name (must be unique)
+	const string type;									//!< Device type (hierarchical, like dev.cam.simcam)
 	const string port;									//!< Port to listen on
 	
 	vector<string> cmd_list;						//!< All commands this device supports
@@ -79,13 +79,13 @@ protected:
 	config cfg;													//!< Interpreted configuration file
 	
 	Protocol::Server netio;							//!< Network connection
-	bool online;												//!< Online flag
+	bool online;												//!< Online flag, indicates whether this Device listens to network commands or not.
 	
 	
-	void set_status(bool newstat);			//!< Set device status (is_ok interface)
-	bool get_status() { return is_ok; }	//!< Get device status
-	void set_calib(bool newcalib);			//!< Set calibration status (is_calib interface)
-	bool get_calib() { return is_calib; } //!< Get calibration status
+	void set_status(bool newstat);			//!< Set Device::is_ok
+	bool get_status() { return is_ok; }	//!< Get Device::is_ok
+	void set_calib(bool newcalib);			//!< Set Device::is_calib
+	bool get_calib() { return is_calib; } //!< Get Device::is_calib
 
 	//! @todo Might not be necessary?
 	bool init();												//!< Initialisation (common for all constructors)
