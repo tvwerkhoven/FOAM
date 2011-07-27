@@ -85,6 +85,7 @@ void SigHandle::handler() {
 					// These signals are not fatal, ignore them
 				case SIGPIPE:
 				case SIGFPE:
+				case SIGHUP:
 					ign_count++;
 					fprintf(stderr, "SigHandle::handler() ignoring sig %d (#%zu)\n", 
 									sig, ign_count);
@@ -139,7 +140,6 @@ FOAM::~FOAM() {
 	
 	// Delete network thread, disconnect clients
 	//! @todo This does not disconnect clients
-	delete protocol;
 	
 	if (ptc->mode != AO_MODE_SHUTDOWN)
 		stopfoam();
@@ -156,8 +156,9 @@ FOAM::~FOAM() {
 				 end-ptc->starttime, ptc->frames, ptc->frames/(float) (end-ptc->starttime));
 	
 	// Delete objects created on the heap (stack?)
-	delete ptc;
 	delete devices;
+	//delete protocol;
+	//delete ptc;
 	io.msg(IO_INFO, "FOAM succesfully quit");
 }
 
