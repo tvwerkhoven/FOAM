@@ -43,6 +43,13 @@ using namespace std;
 
 typedef Protocol::Server::Connection Connection;
 
+/*! Signal handling class 
+ 
+	At the start (constructor), block all signals in main thread, which is 
+ inherited in child threads. Then start a new signal handling thread in the 
+ background which listens with sigwait() for any signal. Depending on the 
+ signal received, call slot function ign_func() or quit_func(). 
+ */
 class SigHandle {
   int handled_signal;				//!< Holds the last handled signal
 	
@@ -69,18 +76,17 @@ public:
 	~SigHandle();
 };
 
-
-
 /*!
  @brief Main FOAM class
  
  FOAM is the base class that can be derived to specific AO setups. It provides
  basic necessary functions to facilitate the control software itself, but
  does not implement anything specifically for AO. A bare example 
- implementation is provided as foam-dummy to show the idea behind the 
+ implementation is provided as FOAM_Dummy to show the idea behind the 
  framework.
  
- Command line arguments supported are:
+ \section foam_cmdline Command line arguments
+ 
  - -c or --config: configuration file [FOAM_DEFAULTCONF]
  - -v: increase verbosity
  - -q: decrease verbosity
@@ -89,9 +95,13 @@ public:
  - -h or --help: show help
  - --version: show version info
  
+ \section foam_cfg Configuration parameters
+ 
  The configuration file is read by foamctrl::parse(), see documentation there
  about configuration variables supported.
  
+ \section foam_netio Network IO
+
  Networking commands supported are:
  
  - help (ok cmd help): show help
@@ -100,10 +110,30 @@ public:
  - broadcast <msg> (ok cmd broadcast) [ok broadcast <msg> :from <client>]: broadcast msg to all clients
  - verb <+|-|INT> [ok verb <LEVEL>]: set verbosity
  - get mode (ok mode <mode>): get runmode
- - get frames (ok frames <nframes>): get frames
- - get devices (ok devices <ndev> <dev1> <dev1>): get devices, see Devices::getlist
+ - get frames (ok frames <nframes>): get foamctrl::frames
+ - get devices (ok devices <ndev> <dev1> <dev1>): get devices, see DeviceManager::getlist
  - mode <mode> (ok cmd mode <mode>): set runmode
  
+ \section foam_stop Shutting down
+
+ When a signal is received (or any other asynchronous event takes place), the
+ following takes place:
+ 
+ -# Set foamctrl::mode to AO_MODE_SHUTDOWN and signal this with 
+ FOAM::mode_cond. 
+ -# Use FOAM::stop_mutex as check to see if the main FOAM::listen() thread has
+ stopped. 
+ -# Once FOAM::listen() stops, it returns to main() which then exits, calling 
+ the FOAM destructor. 
+ -# From FOAM::~FOAM, we can now safely clean up the rest of the program since 
+ we are now running synchronously (i.e. the main thread has been instructed to 
+ stop).
+ 
+ This solution allows the main listen() thread to finish its last iteration of 
+ FOAM::open_loop() and FOAM::open_finish() such that in a real system the
+ hardware can be stopped gracefully. Furthermore, since all destructors are 
+ called (from FOAM::~FOAM, when the system is already stopped), these can also
+ handle device-specific stop instructions.
  */
 class FOAM {
 private:

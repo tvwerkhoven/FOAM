@@ -173,6 +173,7 @@ void FOAM::stopfoam() {
 	
 	io.msg(IO_INFO, "FOAM::stopfoam() waiting for main loop to stop...");
 	pthread::mutexholder h(&stop_mutex);
+	io.msg(IO_INFO, "FOAM::stopfoam() main loop stoped...");
 }
 
 int FOAM::init() {
