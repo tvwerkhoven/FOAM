@@ -63,6 +63,7 @@ foamctrl::~foamctrl(void) {
 		cfg->write(conffile + ".autosave");
 		delete cfg;
 	}
+	io.msg(IO_DEB2, "foamctrl::~foamctrl() complete");
 }
 
 int foamctrl::parse() {

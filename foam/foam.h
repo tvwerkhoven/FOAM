@@ -43,6 +43,34 @@ using namespace std;
 
 typedef Protocol::Server::Connection Connection;
 
+class SigHandle {
+  int handled_signal;				//!< Holds the last handled signal
+	
+	size_t ign_count;					//!< Amount of ignore signals received
+	size_t quit_count;				//!< Amount of quit signals received (used to check if quit is in progress)
+	
+	pthread::mutex sig_mutex; //!< Mutex for handled_signal
+	
+	void handler();						//!< Signal handler routine, uses sigwait() to parse system signals
+	pthread::thread handler_thr; //!< Thread for handler()
+	
+public:
+	sigc::slot<void> ign_func;	//!< Slot to call for signals to be ignored (can be empty)
+	sigc::slot<void> quit_func; //!< Slot to call for signals to quit on (can be empty, global stop function is better)
+
+	size_t get_ign_count() { return ign_count; }
+	size_t get_quit_count() { return quit_count; }
+	bool is_quitting() { return (quit_count > 0); }
+	
+	int get_sig() { pthread::mutexholder h(&sig_mutex); return handled_signal; }
+	string get_sig_info() { pthread::mutexholder h(&sig_mutex); return strsignal(handled_signal); }
+	
+  SigHandle(bool blockall=true);
+	~SigHandle();
+};
+
+
+
 /*!
  @brief Main FOAM class
  
@@ -86,6 +114,8 @@ private:
 	void show_version() const;					//!< Show version information
 	void show_welcome() const;					//!< Show welcome banner
 	
+	SigHandle sighandler;								//!< Signal handler object
+	
 protected:
 	// Properties set at start
 	bool nodaemon;											//!< Run daemon or not
@@ -101,6 +131,8 @@ protected:
 	
 	pthread::mutex mode_mutex;					//!< Network thread <-> main thread mutex/cond pair
 	pthread::cond mode_cond;						//!< Network thread <-> main thread mutex/cond pair
+	
+	pthread::mutex stop_mutex;					//!< Mutex used to check if main loop has completed
 	
 	/*!
 	 @brief Run on new connection to FOAM
@@ -125,6 +157,7 @@ protected:
 public:
 	FOAM(int argc, char *argv[]);
 	virtual ~FOAM() = 0;
+	void stopfoam();										//!< Common cleanup code, used to stop on signals
 	
 	foamctrl *ptc;											//!< AO control class
 	DeviceManager *devices;							//!< Device/hardware management
