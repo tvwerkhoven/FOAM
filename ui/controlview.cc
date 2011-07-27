@@ -271,7 +271,7 @@ void ControlPage::on_message_update() {
 
 bool ControlPage::on_timeout() {
 	// Update 'frames' counter now
-	foamctrl.send_cmd("get frames");
+	//foamctrl.send_cmd("get frames");
 	
 	return true;
 }

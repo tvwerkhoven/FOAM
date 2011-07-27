@@ -500,14 +500,8 @@ void SimulCam::cam_handler() {
 				simul_wfs(frame_raw);
 				simul_capture(frame_raw, frame_out);
 				
-				//! @todo We use memory for wf and for frame. This should both be freed when returned. 
-				//get_buffer(&frame_raw);
-				//get_buffer(&frame_out);
-				//! @todo 'frame' is the same memory each time, so this does not really queue a *new* image, it's the same memory.
-        //cam_queue(frame_raw, frame_out);
-				//gsl_matrix *ret = (gsl_matrix *) cam_queue(frame_raw, frame_out);
-				//if (ret)
-				//	gsl_matrix_free(ret);
+				//! @todo frame_raw/frame_out is the same memory each time, so this does not really queue a *new* image, it's the same memory.
+				cam_queue(frame_raw, frame_out);
 				
 				usleep(interval * 1000000);
 				break;
@@ -524,10 +518,7 @@ void SimulCam::cam_handler() {
 				simul_wfs(frame_raw);
 				simul_capture(frame_raw, frame_out);
 				
-        cam_queue(frame_raw, frame_out);
-				//gsl_matrix *ret = (gsl_matrix *) cam_queue(frame_raw, frame_out);
-				//if (ret)
-				//	gsl_matrix_free(ret);
+				cam_queue(frame_raw, frame_out);
 				
 				usleep(interval * 1000000);
 

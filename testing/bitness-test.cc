@@ -20,7 +20,9 @@
  */
 
 #include <stdio.h>
+#ifndef __STDC_FORMAT_MACROS
 #define __STDC_FORMAT_MACROS
+#endif
 #include <stdint.h>
 
 int main() {
@@ -48,7 +50,7 @@ int main() {
 	ai = (1 << 31) - 1;
 	
 	printf("(int) size_t(2^31-1): %zu -> %d\n", as, (int) as);
-	printf("(size_t) int(2^31-1): %d -> %d\n", ai, (size_t) ai);
+	printf("(size_t) int(2^31-1): %d -> %zu\n", ai, (size_t) ai);
 	
 	return 0;
 }

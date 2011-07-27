@@ -35,4 +35,4 @@ To test, run:
 
 or
 
-./foam/foam-simstat -c conf/foam-simstat2.cfg
+./foam/foam-simstat -c conf/foam-simstat.cfg

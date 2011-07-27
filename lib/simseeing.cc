@@ -39,7 +39,7 @@ wffile(""), croppos(0,0), cropsize(0,0), windspeed(10,10), windtype(LINEAR)
 	io.msg(IO_DEB2, "SimSeeing::SimSeeing()");
 	
 	// Setup seeing parameters
-	wffile = ptc->confdir + cfg.getstring("wavefront_file");
+	wffile = ptc->datadir + cfg.getstring("wavefront_file");
 	
 	if (cfg.exists("windspeed"))
 		windspeed.x = windspeed.y = cfg.getint("windspeed");

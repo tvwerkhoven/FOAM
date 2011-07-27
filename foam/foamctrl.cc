@@ -35,10 +35,10 @@ foamctrl::foamctrl(Io &io, Path const file):
 err(0), io(io),
 conffile(file), 
 cfg(NULL),
-pidfile("/tmp/foam.pid"), 
 listenip("0.0.0.0"), 
 listenport("1025"),
 datadir("./"), 
+outdir("./"), 
 logfile("foam-log"),
 use_syslog(false), 
 syslog_prepend("foam"), 
@@ -63,6 +63,7 @@ foamctrl::~foamctrl(void) {
 		cfg->write(conffile + ".autosave");
 		delete cfg;
 	}
+	io.msg(IO_DEB2, "foamctrl::~foamctrl() complete");
 }
 
 int foamctrl::parse() {
@@ -77,20 +78,24 @@ int foamctrl::parse() {
 	io.msg(IO_INFO, "Confdir: '%s', file: '%s'", confdir.c_str(), conffile.basename().c_str());
 	cfg = new config(conffile);
 	
-	// Datadir (relative to progdir if relative)
-	datadir = progdir + cfg->getstring("datadir", "./foam-data/");
-	// Create subdirectory unique for this run
+	// Datadir: always system default
+	datadir = FOAM_DATADIR;
+	io.msg(IO_INFO, "Datadir: '%s'.", datadir.c_str());
+
+	// Outdir, store data here. Create subdirectory unique for this run
+	// if not set: use FOAM_DATADIR as root
+	// if set: relative to progdir (if relative), else absolute as root
+	if (cfg->exists("outdir"))
+		outdir = progdir + cfg->getstring("outdir");
+	else 
+		outdir = FOAM_DATADIR;
+
 	struct tm *tmp = gmtime(&starttime);
 	char tstamp[16];
 	strftime(tstamp, sizeof(tstamp), "%Y%m%d_%H%M%S", tmp);
-	datadir += format("FOAM_data_%s/", tstamp);
-	make_path(datadir.c_str());
-	
-	io.msg(IO_INFO, "Datadir: '%s'.", datadir.c_str());
-
-	// PID file (relative to confdir)
-	pidfile = confdir + cfg->getstring("pidfile", "foam.pid");
-	io.msg(IO_INFO, "Pidfile: '%s'.", pidfile.c_str());
+	outdir += format("FOAM_data_%s/", tstamp);
+	make_path(outdir.c_str());
+	io.msg(IO_INFO, "Output dir: '%s'.", outdir.c_str());	
 	
 	// Daemon settings
 	listenip = cfg->getstring("listenip", "0.0.0.0");
@@ -109,7 +114,7 @@ int foamctrl::parse() {
 	logfile = cfg->getstring("logfile", "foam.log");
 	if (logfile.length()) {
 		// If a log file was given, init the logging to datadir
-		logfile = datadir + logfile;
+		logfile = outdir + logfile;
 		io.setLogfile(logfile);
 		io.msg(IO_INFO, "Logfile: %s.", logfile.c_str());
 	}

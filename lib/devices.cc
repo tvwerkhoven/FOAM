@@ -32,7 +32,7 @@ using namespace std;
 // Device class
 
 Device::Device(Io &io, foamctrl *const ptc, const string n, const string t, const string p, const Path conf, const bool online): 
-is_calib(false), is_ok(false), outputdir(ptc->datadir), io(io), ptc(ptc), name(n), type("dev." + t), port(p), conffile(conf), netio(p, n), online(online)
+is_calib(false), is_ok(false), outputdir(ptc->outdir), io(io), ptc(ptc), name(n), type("dev." + t), port(p), conffile(conf), netio(p, n), online(online)
 { 
 	//! @todo This init() can just be placed here?
 	init();
@@ -143,11 +143,11 @@ void Device::set_status(bool newstat) {
 }
 
 int Device::set_outputdir(const string identifier) {
-	// This automatically prefixes ptc->datadir if 'identifier' is not absolute
-	Path tmp = ptc->datadir + string(type + "." + name + identifier);
+	// This automatically prefixes outputdir if 'identifier' is not absolute
+	Path tmp = outputdir + string(type + "." + name + identifier);
 
 	//! @todo Make recursive mkdir() here
-	if (!tmp.exists()) {// Does not exist, create
+	if (!tmp.exists()) { // Does not exist, create
 		if (mkdir(tmp.c_str(), 0755)) // mkdir() returned !0, error
 			return 1;
 	}

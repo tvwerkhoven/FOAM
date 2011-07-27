@@ -52,7 +52,7 @@ const string imgcam_type = "imgcam";
  The ImgCamera class extends the Camera class configuration with the following 
  parameters:
 
- - imagefile: image file to use for simulation (relative to confdir)
+ - imagefile: image file to use for simulation (relative to ptc->datadir)
  - noise (10.0): ImgCamera::noise
  
  \section imgcamera_netio Network IO

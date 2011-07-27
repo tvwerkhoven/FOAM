@@ -42,11 +42,82 @@
 
 using namespace std;
 
+SigHandle::SigHandle(bool blockall):
+handled_signal(-1) {
+	fprintf(stderr, "SigHandle::SigHandle()\n");
+	sigset_t signal_set;
+	
+	// Block all signals if requested
+	fprintf(stderr, "SigHandle::SigHandle() blocking signals...\n");
+	if (blockall) {
+		sigfillset(&signal_set);
+		pthread_sigmask(SIG_BLOCK, &signal_set, NULL);
+	}
+	
+	// create the signal handling thread (from pthread++.h)
+	fprintf(stderr, "SigHandle::SigHandle() creating handler...\n");
+	handler_thr.create(sigc::mem_fun(*this, &SigHandle::handler));
+}
+
+SigHandle::~SigHandle() {
+	handler_thr.cancel();
+	handler_thr.join();
+}
+
+void SigHandle::handler() {
+	sigset_t signal_set;
+	int sig=0;
+	
+	while (1) {
+		// Wait for any signal
+		fprintf(stderr, "SigHandle::handler() waiting for any signal...\n");
+		sigfillset(&signal_set);
+		sigwait(&signal_set, &sig);
+		
+		{
+			{ 
+				pthread::mutexholder h(&sig_mutex);
+				handled_signal = sig;
+			}
+			fprintf(stderr, "SigHandle::handler() got signal: %s\n", strsignal(sig));
+			// Decide what to do with the signal
+			switch (sig) {
+					// These signals are not fatal, ignore them
+				case SIGPIPE:
+				case SIGFPE:
+				case SIGHUP:
+					ign_count++;
+					fprintf(stderr, "SigHandle::handler() ignoring sig %d (#%zu)\n", 
+									sig, ign_count);
+					ign_func();
+					break;
+					// These signals are dangerous, stop the program
+				case SIGQUIT:
+				case SIGINT:
+				default:
+					quit_count++;
+					fprintf(stderr, "SigHandle::handler() quitting sig %d (#%zu)\n", 
+									sig, quit_count);
+					quit_func();
+
+					// If quit signal is received twice or more, brutally exit
+					if (quit_count > 1)
+						exit(-1);
+					break;
+			}
+		}
+	}
+}
+
+
 FOAM::FOAM(int argc, char *argv[]):
+sighandler(),
 nodaemon(false), error(false), conffile(FOAM_DEFAULTCONF), execname(argv[0]),
 io(IO_DEB2)
 {
 	io.msg(IO_DEB2, "FOAM::FOAM()");
+	
+	sighandler.quit_func = sigc::mem_fun(*this, &FOAM::stopfoam);
 	
 	devices = new DeviceManager(io);
 	
@@ -60,15 +131,18 @@ io(IO_DEB2)
 	}
 }
 
+
 FOAM::~FOAM() {
-	//! @bug FOAM quits when GUI disconnects
 	io.msg(IO_DEB2, "FOAM::~FOAM()");
-	
 	// Notify shutdown
 	io.msg(IO_WARN, "Shutting down FOAM now");
   protocol->broadcast("warn :shutting down now");
 	
-	//! \todo disconnect clients gracefully here?			
+	// Delete network thread, disconnect clients
+	//! @todo This does not disconnect clients
+	
+	if (ptc->mode != AO_MODE_SHUTDOWN)
+		stopfoam();
 	
 	// Get the end time to see how long we've run
 	time_t end = time(NULL);
@@ -79,9 +153,28 @@ FOAM::~FOAM() {
 	// Last log message just before closing the logfiles
 	io.msg(IO_INFO, "Stopping FOAM at %s", date);
 	io.msg(IO_INFO, "Ran for %ld seconds, parsed %ld frames (%.1f FPS).", \
-					end-ptc->starttime, ptc->frames, ptc->frames/(float) (end-ptc->starttime));
+				 end-ptc->starttime, ptc->frames, ptc->frames/(float) (end-ptc->starttime));
 	
-	delete ptc;
+	// Delete objects created on the heap (stack?)
+	delete devices;
+	//delete protocol;
+	//delete ptc;
+	io.msg(IO_INFO, "FOAM succesfully quit");
+}
+
+void FOAM::stopfoam() {
+	io.msg(IO_INFO, "FOAM::stopfoam() stopping on signal: %s", sighandler.get_sig_info().c_str());
+	
+	// Set mode to SHUTDOWN, such that the running program can stop
+	ptc->mode = AO_MODE_SHUTDOWN;
+	{
+		pthread::mutexholder h(&mode_mutex);
+		mode_cond.signal();						// signal a change to the threads
+	}
+	
+	io.msg(IO_INFO, "FOAM::stopfoam() waiting for main loop to stop...");
+	pthread::mutexholder h(&stop_mutex);
+	io.msg(IO_INFO, "FOAM::stopfoam() main loop stoped...");
 }
 
 int FOAM::init() {
@@ -243,7 +336,9 @@ void FOAM::daemon() {
   protocol->listen();
 }
 
-int FOAM::listen() {	
+int FOAM::listen() {
+	// Lock this mutex such that the main thread knows we are still running
+	pthread::mutexholder h1(&stop_mutex);
 	while (true) {
 		switch (ptc->mode) {
 			case AO_MODE_OPEN:
