@@ -106,14 +106,13 @@ int FoamControl::connect(const string &h, const string &p) {
 	return 0;
 }
 
-//!< @bug This does not disable the GUI, after protocol.disconnect, there is no call to on_connected? Does protocol do this at all on disconnect? Solved with on_connected(protocol.is_connected());?
 //!< @todo This should propagate through the whole GUI, also the device tabs
 int FoamControl::disconnect() {
-	log.term(format("%s(%d)", __PRETTY_FUNCTION__, protocol.is_connected()));
+	log.term(format("%s(conn=%d)", __PRETTY_FUNCTION__, protocol.is_connected()));
 
 	if (protocol.is_connected()) {
 		protocol.disconnect();
-		//!< @todo Is this necessary?
+		// Call on_connected() to handle other disconnect tasks for the GUI
 		on_connected(protocol.is_connected());
 	}
 	
@@ -149,9 +148,10 @@ void FoamControl::set_mode(aomode_t mode) {
 }
 
 void FoamControl::on_connected(bool conn) {
-	log.term(format("%s(%d)", __PRETTY_FUNCTION__, conn));
+	log.term(format("%s(conn=%d)", __PRETTY_FUNCTION__, conn));
 
 	if (!conn) {
+		protocol.disconnect();
 		ok = false;
 		errormsg = "Not connected";
 		signal_connect();
