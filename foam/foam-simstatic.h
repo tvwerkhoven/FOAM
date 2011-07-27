@@ -101,7 +101,7 @@ public:
  
  To use this module, first start it up like:
  
- - ./foam/foam-simstat -c conf/foam-simstat2.cfg
+ - ./foam/foam-simstat -c conf/foam-simstat.cfg
  
  and connect to it (preferably with the foam-gui):
  
