@@ -67,8 +67,8 @@ noise(10.0), img(NULL), frame(NULL)
 	
 	io.msg(IO_INFO, "ImgCamera: init success, got %dx%dx%d frame, noise=%g, intv=%g, exp=%g.", 
 				 res.x, res.y, depth, noise, interval, exposure);
-	if (img->stats.init)
-		io.msg(IO_INFO, "ImgCamera: Range = %d--%d, sum=%lld", img->stats.min, img->stats.max, img->stats.sum);
+	if (img->have_stats())
+		io.msg(IO_INFO, "ImgCamera: Range = %g--%g, sum=%lld", img->get_minval(), img->get_maxval(), img->get_sum());
 }
 
 ImgCamera::~ImgCamera() {
