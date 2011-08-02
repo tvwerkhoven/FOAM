@@ -4,5 +4,5 @@
 VER=`git describe HEAD 2>/dev/null`
 if [ "$VER" ] ; then
 	echo "m4_define([GIT_REVISION], [`echo $VER | tr -d '\n'`])" > version.m4
-	test -f docs/doxyfile-debug.base &&  gsed -s "s/^PROJECT_NUMBER.*/PROJECT_NUMBER = $VER/" docs/doxyfile-debug.base > docs/doxyfile-debug
+	test -f docs/doxyfile-debug.base &&  sed -e "s/^PROJECT_NUMBER.*/PROJECT_NUMBER = $VER/" docs/doxyfile-debug.base > docs/doxyfile-debug
 fi
