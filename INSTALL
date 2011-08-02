@@ -5,6 +5,35 @@ FOAM follows standard installation routines. If you checked this source
 out from git though, you need to take a few extra steps. For information 
 about specific platforms and compilers see the INSTALL.default file.
 
+Prerequisites
+=============
+
+FOAM depends on a number of other libraries. A custom library that is required 
+is LibSIU (see below).
+
+A list of other requirements FOAM has:
+
+- libm, pthread (should be available on all POSIX systems)
+- cfitsio
+- sigc++-2.0 >= 2.0
+- libgsl >= 1.11
+
+Other libraries that are used by specific parts of FOAM:
+
+* Full simulation
+
+- libz (optional, for LibSIU::ImgData)
+- libics (optional, for LibSIU::ImgData)
+- fftw3 >= 3.1.2
+
+* Gui
+
+- gtkmm-2.4 >= 2.6
+- gthread-2.0 >= 2.16.6
+- opengl, glu, glut
+- gtkglextmm-1.2 >= 1.2.0
+
+
 LibSIU
 ======
 
