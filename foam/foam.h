@@ -33,6 +33,8 @@
 #include <string>
 #include <stdexcept>
 
+#include <perflogger.h>
+
 #include "foamtypes.h"
 #include "config.h"
 #include "protocol.h"
@@ -137,8 +139,6 @@ public:
  */
 class FOAM {
 private:
-	int init_sighandle();								//!< Install signal handlers
-
 	void show_clihelp(const bool) const;//!< Show help on command-line syntax.
 	int show_nethelp(const Connection *const connection, string topic, string rest); //!< Show help on network command usage
 	void show_version() const;					//!< Show version information
@@ -164,6 +164,9 @@ protected:
 	
 	pthread::mutex stop_mutex;					//!< Mutex used to check if main loop has completed
 	
+	PerfLog open_perf;									//!< Open-loop performance
+	PerfLog closed_perf;								//!< Closed-loop performance
+
 	/*!
 	 @brief Run on new connection to FOAM
 	 

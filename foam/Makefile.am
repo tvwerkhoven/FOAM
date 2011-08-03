@@ -13,6 +13,7 @@ LDADD = $(LIBSIU_DIR)/libsocket.a \
 		$(LIBSIU_DIR)/libio.a \
 		$(LIBSIU_DIR)/libconfig.a \
 		$(LIBSIU_DIR)/libprotocol.a \
+		$(LIBSIU_DIR)/libperflogger.a \
 		$(LIBSIU_DIR)/libpath.a
 		
 

@@ -151,9 +151,8 @@ FOAM::~FOAM() {
 	strftime(date, 64, "%A, %B %d %H:%M:%S, %Y (%Z).", loctime);
 	
 	// Last log message just before closing the logfiles
-	io.msg(IO_INFO, "Stopping FOAM at %s", date);
-	io.msg(IO_INFO, "Ran for %ld seconds, parsed %ld frames (%.1f FPS).", \
-				 end-ptc->starttime, ptc->frames, ptc->frames/(float) (end-ptc->starttime));
+	io.msg(IO_INFO, "Stopping FOAM at %s, ran for %d seconds.", 
+				 date, end-ptc->starttime);
 	
 	// Delete objects created on the heap (stack?)
 	delete devices;
@@ -388,12 +387,14 @@ int FOAM::mode_open() {
 	protocol->broadcast("ok mode open");
 	
 	while (ptc->mode == AO_MODE_OPEN) {
+		// Log performance (time, latency)
+		open_perf.addlog(0);
+
 		if (open_loop()) {
 			io.msg(IO_WARN, "FOAM::open_loop() failed");
 			ptc->mode = AO_MODE_LISTEN;
 			return -1;
 		}
-		ptc->frames++;	// increment the amount of frames parsed
 	}
 	
 	if (open_finish()) {		// check if we can finish
@@ -419,12 +420,12 @@ int FOAM::mode_closed() {
 	
 	// Run closed loop
 	while (ptc->mode == AO_MODE_CLOSED) {
+		closed_perf.addlog(0);
 		if (closed_loop()) {
 			io.msg(IO_WARN, "FOAM::closed_loop() failed.");
 			ptc->mode = AO_MODE_LISTEN;
 			return -1;
-		}		
-		ptc->frames++;
+		}
 	}
 	
 	// Finish closed loop
@@ -508,9 +509,7 @@ void FOAM::on_message(Connection *const conn, string line) {
 	}
   else if (cmd == "get") {
     string var = popword(line);
-		if (var == "frames") 
-			conn->write(format("ok frames %d", ptc->frames));
-		else if (var == "mode")
+		if (var == "mode")
 			conn->write(format("ok mode %s", mode2str(ptc->mode).c_str()));
 		else if (var == "devices")
 			conn->write(format("ok devices %s", devices->getlist().c_str()));
@@ -580,8 +579,7 @@ int FOAM::show_nethelp(const Connection *const conn, string topic, string /*rest
 		conn->write(\
 											":get <var>:              read a system variable.\n"
 											":  mode:                 current mode of operation.\n"
-											":  devices:              list of devices.\n"
-											":  frames:               number of frames processed.");
+											":  devices:              list of devices.");
 	}
 	else // Unknown topic
 		return -1;

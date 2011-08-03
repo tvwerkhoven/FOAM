@@ -51,8 +51,8 @@ private:
 	int err;											//!< Error flag
 	Io &io;												//!< Terminal logging
 	
-	void make_path(const char *dir);
-	
+	void make_path(const char *dir); //!< Make directories for a full path
+		
 public:
 	foamctrl(Io &io, Path const file=Path(""));
 	~foamctrl(void);
@@ -83,7 +83,6 @@ public:
 	
 	time_t starttime;							//!< FOAM start timestamp
 	time_t lasttime;							//!< Last frame timestamp
-	size_t frames;								//!< Number of frames parsed
 };
 
 #endif // HAVE_FOAMCTRL_H

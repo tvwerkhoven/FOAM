@@ -44,8 +44,7 @@ use_syslog(false),
 syslog_prepend("foam"), 
 mode(AO_MODE_LISTEN), 
 calib(""),
-starttime(time(NULL)), 
-frames(0)
+starttime(time(NULL))
 { 
 	io.msg(IO_DEB2, "foamctrl::foamctrl(file=%s)", conffile.c_str());
 	if (conffile.length())
