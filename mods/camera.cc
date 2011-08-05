@@ -111,7 +111,12 @@ Camera::~Camera() {
 	proc_thr.cancel();
 	proc_thr.join();
 	
-	// frames themselves should be free()'ed by derived classes, they know how to
+	// Delete the camera ringbuffer here. The only memory we free here is the
+	// array of *references* to frames and the histogram memory. The image data
+	// itself (frames.data and frames.image) should be free'd by the derived 
+	// classes because we don't know what kind of object it is here.
+	for (size_t i=0; i<nframes; i++)
+		delete frames[i].histo;
 	delete[] frames;
 }
 
