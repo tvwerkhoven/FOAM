@@ -156,8 +156,8 @@ FOAM::~FOAM() {
 	
 	// Delete objects created on the heap (stack?)
 	delete devices;
-	//delete protocol;
-	//delete ptc;
+	delete protocol;
+	delete ptc;
 	io.msg(IO_INFO, "FOAM succesfully quit");
 }
 
