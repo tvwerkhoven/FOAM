@@ -154,8 +154,12 @@ FOAM::~FOAM() {
 	io.msg(IO_INFO, "Stopping FOAM at %s, ran for %d seconds.", 
 				 date, end-ptc->starttime);
 	
-	// Delete objects created on the heap (stack?)
+	// Delete devices, wait a bit to give the devices time to quit (mostly for Protocol objects used)
+	//! @todo This should block in a more proper way instead of sleeping
 	delete devices;
+	usleep(0.5 * 1e6);
+	
+	// Delete network IO
 	delete protocol;
 	delete ptc;
 	io.msg(IO_INFO, "FOAM succesfully quit");
