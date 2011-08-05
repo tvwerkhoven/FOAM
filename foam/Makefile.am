@@ -14,7 +14,8 @@ LDADD = $(LIBSIU_DIR)/libsocket.a \
 		$(LIBSIU_DIR)/libconfig.a \
 		$(LIBSIU_DIR)/libprotocol.a \
 		$(LIBSIU_DIR)/libperflogger.a \
-		$(LIBSIU_DIR)/libpath.a
+		$(LIBSIU_DIR)/libpath.a \
+		$(LIBSIU_DIR)/libsighandle.a
 		
 
 # Basic framework files which are always needed

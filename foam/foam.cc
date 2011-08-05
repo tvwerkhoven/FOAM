@@ -30,10 +30,11 @@
 #endif
 #include <getopt.h>
 
-#include "config.h"
-#include "io.h"
-#include "protocol.h"
-#include "pthread++.h"
+#include <config.h>
+#include <io.h>
+#include <protocol.h>
+#include <pthread++.h>
+#include <sighandle.h>
 
 #include "foamtypes.h"
 #include "foamctrl.h"
@@ -42,76 +43,7 @@
 
 using namespace std;
 
-SigHandle::SigHandle(bool blockall):
-handled_signal(-1), ign_count(0), quit_count(0) {
-	fprintf(stderr, "SigHandle::SigHandle()\n");
-	sigset_t signal_set;
-	
-	// Block all signals if requested
-	fprintf(stderr, "SigHandle::SigHandle() blocking signals...\n");
-	if (blockall) {
-		sigfillset(&signal_set);
-		pthread_sigmask(SIG_BLOCK, &signal_set, NULL);
-	}
-	
-	// create the signal handling thread (from pthread++.h)
-	fprintf(stderr, "SigHandle::SigHandle() creating handler...\n");
-	handler_thr.create(sigc::mem_fun(*this, &SigHandle::handler));
-}
-
-SigHandle::~SigHandle() {
-	handler_thr.cancel();
-	handler_thr.join();
-}
-
-void SigHandle::handler() {
-	sigset_t signal_set;
-	int sig=0;
-	
-	while (1) {
-		// Wait for any signal
-		fprintf(stderr, "SigHandle::handler() waiting for any signal...\n");
-		sigfillset(&signal_set);
-		sigwait(&signal_set, &sig);
-		
-		{
-			{ 
-				pthread::mutexholder h(&sig_mutex);
-				handled_signal = sig;
-			}
-			fprintf(stderr, "SigHandle::handler() got signal: %s\n", strsignal(sig));
-			// Decide what to do with the signal
-			switch (sig) {
-					// These signals are not fatal, ignore them
-				case SIGPIPE:
-				case SIGFPE:
-				case SIGHUP:
-					ign_count++;
-					fprintf(stderr, "SigHandle::handler() ignoring sig %d (#%zu)\n", 
-									sig, ign_count);
-					ign_func();
-					break;
-					// These signals are dangerous, stop the program
-				case SIGQUIT:
-				case SIGINT:
-				default:
-					quit_count++;
-					fprintf(stderr, "SigHandle::handler() quitting sig %d (#%zu)\n", 
-									sig, quit_count);
-					quit_func();
-
-					// If quit signal is received twice or more, brutally exit
-					if (quit_count > 1)
-						exit(-1);
-					break;
-			}
-		}
-	}
-}
-
-
 FOAM::FOAM(int argc, char *argv[]):
-sighandler(),
 nodaemon(false), error(false), conffile(FOAM_DEFAULTCONF), execname(argv[0]),
 io(IO_DEB2)
 {

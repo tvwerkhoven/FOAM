@@ -26,62 +26,28 @@
 #include "autoconfig.h"
 #endif
 
+// C & C++ headers
 #include <stdio.h>
 #include <math.h>
 #include <pthread.h>
 
-#ifndef _GNU_SOURCE
-// For strsignal(3)
-#define _GNU_SOURCE
-#endif
-#include <string.h>
 #include <string>
 #include <stdexcept>
 
+// libsiu headers
 #include <perflogger.h>
+#include <sighandle.h>
+#include <protocol.h>
+#include <config.h>
 
+// FOAM headers
 #include "foamtypes.h"
-#include "config.h"
-#include "protocol.h"
 #include "foamctrl.h"
 #include "devices.h"
 
 using namespace std;
 
 typedef Protocol::Server::Connection Connection;
-
-/*! Signal handling class 
- 
-	At the start (constructor), block all signals in main thread, which is 
- inherited in child threads. Then start a new signal handling thread in the 
- background which listens with sigwait() for any signal. Depending on the 
- signal received, call slot function ign_func() or quit_func(). 
- */
-class SigHandle {
-  int handled_signal;				//!< Holds the last handled signal
-	
-	size_t ign_count;					//!< Amount of ignore signals received
-	size_t quit_count;				//!< Amount of quit signals received (used to check if quit is in progress)
-	
-	pthread::mutex sig_mutex; //!< Mutex for handled_signal
-	
-	void handler();						//!< Signal handler routine, uses sigwait() to parse system signals
-	pthread::thread handler_thr; //!< Thread for handler()
-	
-public:
-	sigc::slot<void> ign_func;	//!< Slot to call for signals to be ignored (can be empty)
-	sigc::slot<void> quit_func; //!< Slot to call for signals to quit on (can be empty, global stop function is better)
-
-	size_t get_ign_count() { return ign_count; }
-	size_t get_quit_count() { return quit_count; }
-	bool is_quitting() { return (quit_count > 0); }
-	
-	int get_sig() { pthread::mutexholder h(&sig_mutex); return handled_signal; }
-	string get_sig_info() { pthread::mutexholder h(&sig_mutex); return strsignal(handled_signal); }
-	
-  SigHandle(bool blockall=true);
-	~SigHandle();
-};
 
 /*!
  @brief Main FOAM class
