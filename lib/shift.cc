@@ -68,6 +68,7 @@ void Shift::_worker_func() {
 		{
 			pthread::mutexholder h1(&work_mutex);
 			{
+				//! @todo This check is also performed the first time that _worker_func() runs, while this is not necessary. Move this code to the end of this loop?
 				pthread::mutexholder h2(&workpool.mutex);
 				io.msg(IO_DEB2, "Shift::_worker_func() worker %d done: %d, nworker: %d...", id, workpool.done, nworker);
 				// Increment thread done counter, broadcast signal if we are the last thread
