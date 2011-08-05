@@ -105,8 +105,11 @@ SimulCam::~SimulCam() {
 	cam_thr.cancel();
 	cam_thr.join();
 	
-	free(frame_out);
 	gsl_matrix_free(frame_raw);
+	gsl_matrix_free(telapt);
+	gsl_vector_float_free(wfcerr_act);
+	
+	free(frame_out);
 }
 
 void SimulCam::on_message(Connection *const conn, string line) {
