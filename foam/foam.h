@@ -34,6 +34,7 @@
 // For strsignal(3)
 #define _GNU_SOURCE
 #endif
+#include <string.h>
 #include <string>
 #include <stdexcept>
 
