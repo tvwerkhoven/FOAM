@@ -43,7 +43,7 @@
 using namespace std;
 
 SigHandle::SigHandle(bool blockall):
-handled_signal(-1) {
+handled_signal(-1), ign_count(0), quit_count(0) {
 	fprintf(stderr, "SigHandle::SigHandle()\n");
 	sigset_t signal_set;
 	
