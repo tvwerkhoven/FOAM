@@ -116,7 +116,7 @@ Camera::~Camera() {
 	// itself (frames.data and frames.image) should be free'd by the derived 
 	// classes because we don't know what kind of object it is here.
 	for (size_t i=0; i<nframes; i++)
-		delete frames[i].histo;
+		delete[] frames[i].histo;
 	delete[] frames;
 }
 
