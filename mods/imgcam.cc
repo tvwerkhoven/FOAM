@@ -59,7 +59,9 @@ noise(10.0), img(NULL), frame(NULL)
 	
 	res.x = img->getwidth();
 	res.y = img->getheight();
-	depth = img->getbpp();
+	// Depth is always 16 for ImgCamera. If the input data has a different 
+	// format, it is cast to uint16_t.
+	depth = 16;
 	
 	frame = (uint16_t *) malloc(res.x * res.y * depth/8);
 	
@@ -97,7 +99,7 @@ void ImgCamera::update() {
 					value = 0;
 				if(value > 1)
 					value = 1;
-				*p++ = (uint16_t)(value * mul) & mul;
+				p[y*res.x + x] = (uint16_t)(value * mul) & mul;
 			}
 		}
 	}
