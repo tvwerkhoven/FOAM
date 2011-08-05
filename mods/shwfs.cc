@@ -662,8 +662,8 @@ int Shwfs::calibrate() {
 		case SENSOR:
 			io.msg(IO_XNFO, "Shwfs::calibrate(): Calibrating for basis 'SENSOR'");
 			wf.nmodes = mlacfg.size() * 2;
-			if (wf.wfamp)
-				gsl_vector_float_free(wf.wfamp);
+			
+			gsl_vector_float_free(wf.wfamp);
 			wf.wfamp = gsl_vector_float_calloc(wf.nmodes);
 			break;
 		case ZERNIKE:
@@ -800,7 +800,7 @@ int Shwfs::find_mla_grid(std::vector<vector_t> &mlacfg, const coord_t size, cons
 		io.msg(IO_WARN, "Shwfs::find_mla_grid() Could not get frame, is the camera running?");
 		return 0;
 	} else {
-		// Copy frame for ourselves
+		// Copy frame for ourselves while we are looking for a grid. This prevents the camera from overwriting the frame we are using
 		imsize = f->size;
 		image = malloc(imsize);
 		memcpy(image, f->image, imsize);
