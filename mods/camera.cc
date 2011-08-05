@@ -97,8 +97,8 @@ fits_telescope("undef"), fits_observer("undef"), fits_instrument("undef"), fits_
 	res.x = cfg.getint("width", 768);
 	depth = cfg.getint("depth", 8);
 
-	io.msg(IO_XNFO, "Camera::Camera(): %dx%dx%d, exp:%g, int:%g, gain:%g, off:%g",
-				 res.x, res.y, depth, exposure, interval, gain, offset);
+	//io.msg(IO_XNFO, "Camera::Camera(): %dx%dx%d, exp:%g, int:%g, gain:%g, off:%g",
+	//			 res.x, res.y, depth, exposure, interval, gain, offset);
 	
 	// Set output dir because this class might store files.
 	set_outputdir("");
@@ -125,8 +125,6 @@ void Camera::cam_proc() {
 			pthread::mutexholder h(&proc_mutex);
 			io.msg(IO_DEB2, "Camera::cam_proc() waiting...");
 			proc_cond.wait(proc_mutex);
-//#error This should not GO immediately when the class is instanced!
-			io.msg(IO_DEB2, "Camera::cam_proc() go!...");
 		}
 		
 		// Lock cam_mut before handling the data
