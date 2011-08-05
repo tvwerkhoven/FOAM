@@ -30,6 +30,10 @@
 #include <math.h>
 #include <pthread.h>
 
+#ifndef _GNU_SOURCE
+// For strsignal(3)
+#define _GNU_SOURCE
+#endif
 #include <string>
 #include <stdexcept>
 
