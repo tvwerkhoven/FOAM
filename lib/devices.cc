@@ -48,8 +48,10 @@ bool Device::init() {
 	if (conffile.isset()) {
 		cfg.parse(conffile, name);
 	
-		string _type = cfg.getstring("type");
-		if (_type != type) 
+		string _type = cfg.getstring("type", "notype");
+		if (_type == "notype")
+			io.msg(IO_WARN, "Device::Device(): not checking device type for device '%s' (should be '%s'), be careful!", name.c_str(), type.c_str());
+		else if (_type != type) 
 			throw exception("Device::Device(): Type should be " + type + " for this Device (" + _type + ")!");
 	}
 	
