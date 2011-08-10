@@ -32,19 +32,20 @@ TESTS_ENVIRONMENT = $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) \
 TESTS = $(autotools_test_SOURCES)
 
 ## Bitness test
-check_PROGRAMS += bit64-test bit32-test bitdef-test
+#check_PROGRAMS += bit64-test bit32-test bitdef-test
+check_PROGRAMS += bitdef-test
 
 bitdef_test_SOURCES = bitness-test.cc
 bitdef_test_LDFLAGS = 
 bitdef_test_LIBS = 
-bit64_test_SOURCES = $(bitdef_test_SOURCES)
-bit64_test_CXXFLAGS = -m64 $(AM_CXXFLAGS)
-bit64_test_LDFLAGS = 
-bit64_test_LIBS = 
-bit32_test_SOURCES = $(bitdef_test_SOURCES)
-bit32_test_CXXFLAGS = -m32 $(AM_CXXFLAGS)
-bit32_test_LDFLAGS = 
-bit32_test_LIBS =
+#bit64_test_SOURCES = $(bitdef_test_SOURCES)
+#bit64_test_CXXFLAGS = -m64 $(AM_CXXFLAGS)
+#bit64_test_LDFLAGS = 
+#bit64_test_LIBS = 
+#bit32_test_SOURCES = $(bitdef_test_SOURCES)
+#bit32_test_CXXFLAGS = -m32 $(AM_CXXFLAGS)
+#bit32_test_LDFLAGS = 
+#bit32_test_LIBS =
 
 ## Latencies test
 check_PROGRAMS += latencies-test
@@ -64,6 +65,25 @@ dc1394_test_SOURCES = dc1394-test.cc
 dc1394_test_CPPFLAGS = $(DC1394_CFLAGS) $(AM_CPPFLAGS)
 dc1394_test_LDADD = $(LDADD) $(DC1394_LIBS)
 endif HAVE_DC1394
+
+if HAVE_ANDORCAM
+check_PROGRAMS += andorcam-test
+
+andorcam_test_SOURCES = andorcam-test.cc \
+		$(MODS_DIR)/andor.cc \
+		$(MODS_DIR)/camera.cc \
+		$(LIB_DIR)/devices.cc \
+		../foam/foamctrl.cc
+
+andorcam_test_CPPFLAGS = $(SIGC_CFLAGS) $(AM_CPPFLAGS)
+andorcam_test_LDADD = $(LIBSIU_DIR)/libio.a \
+		$(LIBSIU_DIR)/libconfig.a \
+		$(LIBSIU_DIR)/libprotocol.a \
+		$(LIBSIU_DIR)/libpath.a \
+		$(LDADD) $(SIGC_LIBS) $(ANDORCAM_LIBS)
+
+endif HAVE_ANDORCAM
+
 endif HWDEBUG
 
 if DEBUG
