@@ -20,12 +20,19 @@
 #ifndef HAVE_ANDOR_H
 #define HAVE_ANDOR_H
 
+#include <stdio.h>
 #include <stdint.h>
+#include <map>
+#include <vector>
+
+#include <atmcdLXd.h> // For Andor camera
 
 #include "config.h"
 #include "io.h"
 #include "path++.h"
 
+#include "foam.h"
+#include "foamctrl.h"
 #include "camera.h"
 
 using namespace std;
@@ -38,20 +45,65 @@ const string andor_type = "andorcam";
  
  Configuration parameters:
  - cooltemp: default requested cooling temperature
+ 
+ @todo document AndorCam class
+ @todo add cool temperature ranges
+ @todo add capabilities checks
+ @todo add capabilities printing
  */
 class AndorCam: public Camera {
 private:
+	std::map< int, std::string > error_desc; //!< Error descriptions (from Andor SDK)
 	
-	int cooltemp;												//!< Andor requested cooling temperature
-	int coolrange[2];										//!< Andor cooling temperature range
-	bool cooler_on;											//!< Cooler status
+	std::vector< unsigned short* > img_buffer; //!< Local image buffer
 	
-	int cam_set_cooltemp(const int value); //!< Set requested cooling temperature
-	void cam_get_coolrange();						//!< Get cooling temperature range
+	AndorCapabilities caps;							//!< Andor camera capabilities
+	std::vector< string > caps_vec;			//!< Andor camera capabilities, human readable
+
+	// Cooling settings
+	struct cooling {
+		cooling(): operating(false), status(DRV_TEMP_OFF) { }
+		int range[2];											//!< Camera cooling temperature range
+		int target;												//!< Requested cooling temperature
+		int current;											//!< Current camera temperature
+		int status;												//!< Cooler status: DRV_TEMP_OFF, DRV_TEMP_STABILIZED, DRV_TEMP_NOT_REACHED, DRV_TEMP_DRIFT, DRV_TEMP_NOT_STABILIZED
+		bool operating;										//!< Cooler on/off status
+	};
 	
+	struct cooling cool_info;						//!< Camera cooling info
+	
+	string andordir;										//!< Andor configuration file directory (i.e. /usr/local/etc/andor)
+	
+	// Interal functions go here (should not be exposed as API ever)
+	void read_capabilities(AndorCapabilities *caps, std::vector< string > &cvec); //!< Read capabilities from *caps into a human readable vector of strings in cvec
+	int get_cooltempstat(int what=0);		//!< Get camera cooler temperature (what == 0) or status (what != 0)
+	void init_errors();									//!< Initialize error_desc array of human readable error descriptions
+	int initialize();										//!< Initialize standard Andor camera features
+	
+	// Additional funcionality for this Camera (probably only used in this class):
+	void cam_get_capabilities();				//!< Get camera capabilities
+	
+	void cam_get_coolrange(int *mintemp, int *maxtemp); //!< Get cooling temperature range
+	void cam_get_coolrange();						//!< Get cooling temperature range, store in cool_info
+	bool cam_get_cooleron();						//!< Get cooler status
+	void cam_set_cooltarget(const int value); //!< Set new cooler temperature target
+	int cam_get_cooltemp();									//!< Get current camera temperature
+	int cam_get_coolstatus();								//!< Get current cooler status (DRV_TEMP_OFF, DRV_TEMP_STABILIZED, DRV_TEMP_NOT_REACHED, DRV_TEMP_DRIFT, DRV_TEMP_NOT_STABILIZED)
+	void cam_set_cooler(bool status=true); //!< Turn cooler on or off
+	
+	void cam_set_gain_mode(const int mode); //!< Set EM gain mode (0: DAC 0--255, 1: DAC 0--4095, 2: Linear, 3: Real EM gain)
+	
+	void cam_set_shift_speed(const int hs, const int vs, const int vamp); //!< Set horizontal and vertical shift speed and vertical shift amplitude.
+		
 public:
 	AndorCam(Io &io, foamctrl *const ptc, const string name, const string port, Path const &conffile, const bool online=true);
 	~AndorCam();
+	
+	void set_temperature(const int temp) { cam_set_cooltarget(temp); }
+	int get_temperature() { return cam_get_cooltemp(); }
+	
+	std::vector< string > get_andor_caps() { return caps_vec; }
+	void print_andor_caps(FILE *fd=stdout);
 	
 	// From Camera::
 	void cam_handler();
