@@ -1,21 +1,7 @@
 ## @file testing/Makefile.am
 ## @author Tim van Werkhoven (t.i.m.vanwerkhoven@xs4all.nl)
 
-
-MODS_DIR = $(top_builddir)/mods
-LIB_DIR = $(top_builddir)/lib
-LIBSIU_DIR = $(top_srcdir)/$(LIBSIU)
-
-AM_CPPFLAGS = -D__STDC_FORMAT_MACROS \
-		-D__STDC_LIMIT_MACROS \
-		-DFOAM_DATADIR=\"$(FOAMDATADIR)\"
-
-AM_CPPFLAGS += \
-        -I$(LIB_DIR) \
-        -I$(MODS_DIR) \
-        -I$(LIBSIU_DIR)
-								
-#AM_LDFLAGS =
+include $(top_srcdir)/common.mk
 
 if HAVE_MACOSX
 #AM_LDFLAGS += -framework CoreFoundation -framework Carbon
