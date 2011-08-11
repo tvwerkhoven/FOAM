@@ -41,7 +41,7 @@ using namespace std;
 
 Camera::Camera(Io &io, foamctrl *const ptc, const string name, const string type, const string port, Path const &conffile, const bool online):
 Device(io, ptc, name, cam_type + "." + type, port, conffile, online),
-do_proc(false), nframes(-1), count(0), timeouts(0), ndark(10), nflat(10), 
+do_proc(true), nframes(-1), count(0), timeouts(0), ndark(10), nflat(10), 
 darkexp(1.0), flatexp(1.0),
 interval(1.0), exposure(1.0), gain(1.0), offset(0.0), 
 res(0,0), depth(-1),
@@ -128,7 +128,7 @@ void Camera::cam_proc() {
 		// Always wait for proc_cond broadcasts
 		{
 			pthread::mutexholder h(&proc_mutex);
-//			io.msg(IO_DEB2, "Camera::cam_proc() waiting...");
+			io.msg(IO_DEB2, "Camera::cam_proc() waiting...");
 			proc_cond.wait(proc_mutex);
 		}
 		
@@ -643,15 +643,16 @@ void Camera::grab(Connection *conn, int x1, int y1, int x2, int y2, int scale = 
 //	bool dxt1 = false;
 	void *buffer;
 	size_t size = (y2 - y1) * (x2 - x1) * (depth <= 8 ? 1 : 2);
-	uint16_t maxval = get_maxval();
-	uint8_t lookup[maxval];
-	for(int i = 0; i < maxval / 2; i++)
-		lookup[i] = pow(i, 7.0 / (depth - 1));
-	for(int i = maxval / 2; i < maxval; i++)
-		lookup[i] = 128 + pow(i - maxval / 2, 7.0 / (depth - 1));
+	size_t maxval = get_maxval();
+//	uint8_t lookup[maxval];
+//	for(size_t i = 0; i < maxval / 2; i++)
+//		lookup[i] = pow(i, 7.0 / (depth - 1));
+//	for(size_t i = maxval / 2; i < maxval; i++)
+//		lookup[i] = 128 + pow(i - maxval / 2, 7.0 / (depth - 1));
 	
 	{
 		//! @todo locks frame when sending over network?
+		io.msg(IO_DEB2, "Camera::grab() waiting for cam_mutex...");
 		pthread::mutexholder h(&cam_mutex);
 		frame_t *f = get_frame(count);
 		if(!f)
@@ -670,6 +671,7 @@ void Camera::grab(Connection *conn, int x1, int y1, int x2, int y2, int scale = 
 		
 		// zero copy if possible
 		if(!do_df && scale == 1 && x1 == 0 && x2 == (int)res.x && y1 == 0 && y2 == (int)res.y) {
+			io.msg(IO_DEB2, "Camera::grab() 0copy");
 			conn->write(format("ok image %zu %d %d %d %d %d", size, x1, y1, x2, y2, scale) + extra);
 			conn->write(f->image, size);
 			goto finish;
@@ -712,9 +714,11 @@ void Camera::grab(Connection *conn, int x1, int y1, int x2, int y2, int scale = 
 		free(buffer);
 		
 	finish:
+		io.msg(IO_DEB2, "Camera::grab() finish: %p & %d & %zu & %zu", f->histo, do_histo, sizeof *f->histo, maxval);
 		if(f->histo && do_histo)
 			conn->write(f->histo, sizeof *f->histo * maxval);
 	}
+	io.msg(IO_DEB2, "Camera::grab() complete!");
 }
 
 uint8_t Camera::df_correct(const uint8_t *in, size_t offset) {
