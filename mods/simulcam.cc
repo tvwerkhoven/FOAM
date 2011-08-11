@@ -444,7 +444,7 @@ void SimulCam::cam_set_exposure(const double value) {
 }
 
 double SimulCam::cam_get_exposure() {
-	pthread::mutexholder h(&cam_mutex);
+//	pthread::mutexholder h(&cam_mutex);
 	return exposure;
 }
 

@@ -270,6 +270,7 @@ protected:
 		if (d<=16) return 16;
 		if (d<=32) return 32;
 		if (d<=64) return 64;
+		return -1;
 	}
 		
 	

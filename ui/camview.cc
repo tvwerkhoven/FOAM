@@ -335,7 +335,7 @@ int CamView::histo_scale_func(int max) {
 
 void CamView::do_histo_update() {	
 	int pixels = 0;											// Number of pixels
-	int max = 1 << camctrl->get_depth(); // Maximum intensity in image
+	size_t max = 1 << camctrl->get_depth(); // Maximum intensity in image
 	double sum = 0;
 	double sumsquared = 0;
 	double rms = max;
@@ -404,8 +404,8 @@ void CamView::do_histo_update() {
 	}
 	
 	// Make vertical bars (red and cyan) at minval and maxval:
-	int x1 = clamp(minval.get_value_as_int() * 256 / max, 0, 255);
-	int x2 = clamp(maxval.get_value_as_int() * 256 / max, 0, 255);
+	int x1 = clamp(minval.get_value_as_int() * 256 / max, (size_t) 0, (size_t) 255);
+	int x2 = clamp(maxval.get_value_as_int() * 256 / max, (size_t) 0, (size_t) 255);
 	
 	for(int y = 0; y < 100; y += 2) {
 		uint8_t *p = out + 3 * (x1 + 256 * y);
@@ -427,7 +427,7 @@ bool CamView::on_timeout() {
 	// -> if OK: we are displaying a frame, get a new one & set to WAITING
 	// -> if ERROR or CLEAR: don't do anything
 	if (display.get_state() == SwitchButton::OK) {
-		camctrl->grab(0, 0, camctrl->get_width(), camctrl->get_height(), 1, false);
+		camctrl->grab(0, 0, camctrl->get_width(), camctrl->get_height(), 1, false, histo.get_active());
 		display.set_state(SwitchButton::WAITING);
 	}
 
@@ -549,7 +549,7 @@ void CamView::on_display_clicked() {
 	// -> if CLEAR: request frame, set button to WAITING
 	// -> if WAITING, OK or ERROR: stop capture 
 	if (display.get_state() == SwitchButton::CLEAR) {
- 		camctrl->grab(0, 0, camctrl->get_width(), camctrl->get_height(), 1, false);
+ 		camctrl->grab(0, 0, camctrl->get_width(), camctrl->get_height(), 1, false, histo.get_active());
 		display.set_state(SwitchButton::WAITING);
 	}
 	else

@@ -251,8 +251,10 @@ void CamCtrl::burst(int count, int fsel) {
 
 void CamCtrl::store(int nstore) { send_cmd(format("store %d", nstore)); }
 
-void CamCtrl::grab(int x1, int y1, int x2, int y2, int scale, bool darkflat) {
-	string command = format("grab %d %d %d %d %d histogram", x1, y1, x2, y2, scale);
+void CamCtrl::grab(int x1, int y1, int x2, int y2, int scale, bool darkflat, bool histo) {
+	string command = format("grab %d %d %d %d %d", x1, y1, x2, y2, scale);
+	if (histo)
+		command += " histogram";
 	if(darkflat)
 		command += " darkflat";
 	monitorprotocol.write(command);
