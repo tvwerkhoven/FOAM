@@ -83,7 +83,7 @@ int FOAM_simstatic::open_loop() {
 int FOAM_simstatic::open_finish() {
 	io.msg(IO_DEB2, "FOAM_simstatic::open_finish()");
 	
-	imgcama->set_mode(Camera::OFF);
+	imgcama->set_mode(Camera::WAITING);
 	return 0;
 }
 
