@@ -19,7 +19,17 @@
 
 #include <string>
 #include <vector>
+#include <stdexcept>
 
+#ifdef __GNUC__
+#  if(__GNUC__ > 3 || __GNUC__ ==3)
+#	define _GNUC3_
+#  endif
+#endif
+#include <stdlib.h>
+#include <unistd.h>
+#include <string.h>
+#include <pthread.h>
 #include <atmcdLXd.h> // For Andor camera
 
 #include "pthread++.h"
@@ -55,29 +65,13 @@ Camera(io, ptc, name, andor_type, port, conffile, online)
 	ret = initialize();
 	if (ret != DRV_SUCCESS) {
 		io.msg(IO_ERR, "AndorCam::AndorCam() Could not initialize andor camera, error: %d, %s", ret, error_desc[ret].c_str());
-		throw("Could not initialize andor camera! error: %d, %s", ret, error_desc[ret].c_str());
+		throw std::runtime_error(format("Could not initialize andor camera! error: %d, %s", ret, error_desc[ret].c_str()));
 	}
 	io.msg(IO_INFO, "AndorCam::AndorCam() init complete!");
 	
 	// Get camera capabilities
 	cam_get_capabilities();
 
-	// Set custom properties
-	int xpix=0, ypix=0;
-	ret = GetDetector(&xpix, &ypix);
-	if (ret != DRV_SUCCESS) 
-		io.msg(IO_ERR, "AndorCam::AndorCam() GetDetector error: %d, %s", ret, error_desc[ret].c_str());
-	res.x = xpix; res.y = ypix;
-	io.msg(IO_INFO, "AndorCam::AndorCam() GetDetector: %d x %d!", res.x, res.y);
-
-	ret = SetImage(1, 1, 1, res.x, 1, res.y);
-	if (ret != DRV_SUCCESS) 
-		io.msg(IO_ERR, "AndorCam::AndorCam() SetImage error: %d, %s", ret, error_desc[ret].c_str());
-	
-	ret = GetBitDepth(0, &depth);
-	if (ret != DRV_SUCCESS) 
-		io.msg(IO_ERR, "AndorCam::AndorCam() GetBitDepth error: %d, %s", ret, error_desc[ret].c_str());
-	
 	// Get cooling temperature range
 	io.msg(IO_DEB1, "AndorCam::AndorCam() setting cooling...");
 	cam_get_coolrange();
@@ -102,7 +96,7 @@ Camera(io, ptc, name, andor_type, port, conffile, online)
 		
 	// Setup image buffers
 	img_buffer.resize(nframes);
-	for (int i=0; i<nframes; i++)
+	for (size_t i=0; i<nframes; i++)
 		img_buffer.at(i) = new unsigned short[res.x * res.y];
 	
 	// Set filename prefix for saved frames
@@ -112,7 +106,7 @@ Camera(io, ptc, name, andor_type, port, conffile, online)
 				 res.x, res.y, depth, interval, exposure);
 	
 	// Start camera thread
-	mode = Camera::WAITING;
+	cam_set_mode(Camera::WAITING);
 	cam_thr.create(sigc::mem_fun(*this, &AndorCam::cam_handler));
 }
 
@@ -120,33 +114,30 @@ AndorCam::~AndorCam() {
 	io.msg(IO_DEB2, "AndorCam::~AndorCam()");
 	
 	// Acquisition off
+	io.msg(IO_DEB2, "AndorCam::~AndorCam() joining cam_handler() thread");
 	cam_set_mode(Camera::OFF);
-	
-	// Warm CCD
-	int temp = cam_get_cooltemp();
-	if (temp < 5 && temp != -999) {
-		io.msg(IO_INFO, "AndorCam::~AndorCam() waiting for camera to warm up (temp == %d < 5).", temp);
-    cam_set_cooler(false);
-		sleep(1);
-		
-		while (temp < 5 && temp != -999) {
-			temp = cam_get_cooltemp();
-			io.msg(IO_INFO, "AndorCam::~AndorCam() waiting for camera to warm up (temp == %d < 5).", temp);
-			sleep(1);
-		}
-  }
+	// Stop capture thread
+	cam_thr.cancel();
+	cam_thr.join();
 
+	// Disable cooler, warm up CCD
+	cam_set_cooler(false);
+	int temp = cam_get_cooltemp();
+	while (temp < 5) {
+		temp = cam_get_cooltemp();
+		io.msg(IO_INFO, "AndorCam::~AndorCam() waiting for camera to warm up (temp == %d < 5).", temp);
+		sleep(1);
+	}
 	io.msg(IO_INFO, "AndorCam::~AndorCam() camera warmed up (temp == %d >= 5).", temp);
 	
+	io.msg(IO_INFO, "AndorCam::~AndorCam() Shutting down");
 	ShutDown();
 	
+	io.msg(IO_INFO, "AndorCam::~AndorCam() Releasing memory");
 	// Delete frames in buffer if necessary
 	for (size_t i=0; i < img_buffer.size(); i++)
 		delete[] img_buffer.at(i);
 	
-	// Stop capture thread
-	cam_thr.cancel();
-	cam_thr.join();
 }
 
 void AndorCam::init_errors() {
@@ -303,7 +294,21 @@ int AndorCam::initialize() {
 	snprintf(cfgdir, andordir.size()+1, "%s", andordir.c_str());
 	error = Initialize(cfgdir);
 	if (error != DRV_SUCCESS) return error;
-		
+	sleep(2); // From Andor SDK generic.cpp
+	
+	// Set custom properties
+	int xpix=0, ypix=0;
+	error = GetDetector(&xpix, &ypix);
+	if (error != DRV_SUCCESS) return error;
+	
+	res.x = xpix; res.y = ypix;
+	
+	int tdepth=0;
+	error = GetBitDepth(0, &tdepth);
+	if (error != DRV_SUCCESS) return error;
+	depth = conv_depth(tdepth);
+	io.msg(IO_INFO, "AndorCam::AndorCam() GetDetector: %d x %d @ %d.", res.x, res.y, depth);
+	
 	// Cooling settings
 	error = SetFanMode(0);							// 0 = turn fan on
 	if (error != DRV_SUCCESS) return error;
@@ -313,15 +318,19 @@ int AndorCam::initialize() {
 	if (error != DRV_SUCCESS) return error;
 	
 	// Acquisition settings
+	error = SetTriggerMode(0); 					// 0 = internal trigger
+	if (error != DRV_SUCCESS) return error;
 	error = SetAcquisitionMode(5);			// 5 = run till abort
 	if (error != DRV_SUCCESS) return error;
 	error = SetReadMode(4);							// 4 = read full image
 	if (error != DRV_SUCCESS) return error;
-	error = SetTriggerMode(0); 					// 0 = internal trigger
-	if (error != DRV_SUCCESS) return error;
 	
 	// Set cycle time as fast as possible
 	error = SetKineticCycleTime(0.0);
+	if (error != DRV_SUCCESS) return error;
+	
+	// Set image cropping (no cropping)
+	error = SetImage(1, 1, 1, res.x, 1, res.y);
 	if (error != DRV_SUCCESS) return error;
 	
 	return DRV_SUCCESS;
@@ -338,8 +347,7 @@ void AndorCam::on_message(Connection *const conn, string line) {
 		if (what == "cooling") {					// get cooling
 			conn->addtag("cooling");
 			conn->write(format("ok cooling %d", cool_info.target));
-		} 
-		else
+		} else
 			parsed = false;
 	} else if (command == "set") {			// set ...
 		string what = popword(line);
@@ -351,7 +359,8 @@ void AndorCam::on_message(Connection *const conn, string line) {
 				cam_set_cooltarget(temp);
 			else
 				conn->write(format("error :temperature invalid, should be [%d, %d]", cool_info.range[0], cool_info.range[1]));
-		}
+		} else
+			parsed = false;
 	} else
 		parsed = false;
 	
@@ -365,9 +374,8 @@ void AndorCam::do_restart() {
 }
 
 void AndorCam::cam_handler() { 
-	pthread::setcanceltype(PTHREAD_CANCEL_ASYNCHRONOUS);
-	sleep(1);
-	
+	io.msg(IO_DEB1, "AndorCam::cam_handler()");
+	//pthread::setcanceltype(PTHREAD_CANCEL_ASYNCHRONOUS);	
 	int ret=0;
 	
 	while (mode != Camera::OFF) {
@@ -376,11 +384,14 @@ void AndorCam::cam_handler() {
 				io.msg(IO_DEB1, "AndorCam::cam_handler() RUNNING");
 
 				// Open shutter
-				SetShutter(1, 1, 0, 0);
+				ret = SetShutter(1, 1, 50, 50);
+				if (ret != DRV_SUCCESS)
+					io.msg(IO_WARN, "AndorCam::cam_handler(R) SetShutter: %s", error_desc[ret].c_str());
+
 				// Start acquisition
 				ret = StartAcquisition();
 				if (ret != DRV_SUCCESS) {
-					io.msg(IO_ERR, "AndorCam::cam_handler() cannot start: %s", error_desc[ret].c_str());
+					io.msg(IO_ERR, "AndorCam::cam_handler(R) StartAcquisition: %s", error_desc[ret].c_str());
 					mode = Camera::ERROR;
 					break;
 				}
@@ -389,18 +400,26 @@ void AndorCam::cam_handler() {
 					// Wait for a new frame for maximum 10000 ms
 					ret = WaitForAcquisitionTimeOut(10000);
 					
-					if (ret != DRV_SUCCESS) {
-						io.msg(IO_WARN, "AndorCam::cam_handler() no new data in 10 seconds? %s", error_desc[ret].c_str());
-					} else {
+					if (ret == DRV_SUCCESS) {
+//						io.msg(IO_DEB2, "AndorCam::cam_handler(R) new data!");
 						// Try to get new frame data						
 						ret = GetMostRecentImage16(img_buffer.at(count % nframes), (unsigned long) (res.x * res.y));
-						if (ret != DRV_SUCCESS) {
-							io.msg(IO_WARN, "AndorCam::cam_handler() GetMostRecentImage16 error %s", error_desc[ret].c_str());
-						} else {
+						if (ret == DRV_SUCCESS) {
 							void *queue_ret = cam_queue(img_buffer.at(count % nframes), img_buffer.at(count % nframes));
+//							io.msg(IO_DEB2, "AndorCam::cam_handler(R) data[0]: %d data[-1]: %d!",
+//										 img_buffer.at(count % nframes)[0], img_buffer.at(count % nframes)[res.x * res.y - 1]);
+							
+//							if (queue_ret != NULL)
+//								io.msg(IO_XNFO, "AndorCam::cam_handler(R) cam_queue returned old frame");
 							//! @todo handle returned data?
-						}
+					} else {
+						io.msg(IO_WARN, "AndorCam::cam_handler(R) GetMostRecentImage16 error %s", error_desc[ret].c_str());
 					}
+
+					} else {
+						io.msg(IO_WARN, "AndorCam::cam_handler(R) no new data in 10 seconds? %s", error_desc[ret].c_str());
+					}
+
 				}
 				
 				// Abort acquisition and close shutter
@@ -421,29 +440,31 @@ void AndorCam::cam_handler() {
 				// Abort acquisition
 				ret = AbortAcquisition();
 				if (ret != DRV_SUCCESS && ret != DRV_IDLE)
-					io.msg(IO_WARN, "AndorCam::cam_handler() AbortAcquisition error: %s", error_desc[ret].c_str());
+					io.msg(IO_WARN, "AndorCam::cam_handler(W) AbortAcquisition: %s", error_desc[ret].c_str());
 
 				// Close shutter
 				SetShutter(1, 2, 0, 0);
 				if (ret != DRV_SUCCESS)
-					io.msg(IO_WARN, "AndorCam::cam_handler() SetShutter error: %s", error_desc[ret].c_str());
+					io.msg(IO_WARN, "AndorCam::cam_handler(W) SetShutter: %s", error_desc[ret].c_str());
 
-				// We wait until the mode changed
-				if (mode == Camera::WAITING) {
+				// We wait until the mode changed (for WAITING), or until the thread is canceled (for OFF)
+				{
+					io.msg(IO_INFO, "AndorCam::cam_handler(W) waiting...");
 					pthread::mutexholder h(&mode_mutex);
 					mode_cond.wait(mode_mutex);
 				}
 				break;
 			case Camera::CONFIG:
-				io.msg(IO_DEB1, "AndorCam::cam_handler() CONFIG");
+				io.msg(IO_DEB1, "AndorCam::cam_handler(C) CONFIG");
 				break;
 			default:
 				io.msg(IO_ERR, "AndorCam::cam_handler() UNKNOWN!");
 				break;
 		}
 	}
-	io.msg(IO_INFO, "AndorCam::cam_handler() complete, joining thread");
-	pthread::exit();
+	io.msg(IO_INFO, "AndorCam::cam_handler() complete, end");
+	//! @todo quit thread properly here?
+	//pthread::exit();
 }
 
 void AndorCam::cam_set_exposure(const double value) {
@@ -478,7 +499,7 @@ void AndorCam::cam_set_interval(const double value) {
 	int ret = 0;
 	{
 		pthread::mutexholder h(&cam_mutex);
-		ret = SetKineticCycleTime(0.0);
+		ret = SetKineticCycleTime(value);
 	}
 	if (ret != DRV_SUCCESS)
 		io.msg(IO_ERR, "AndorCam::cam_set_interval() failed to set kinetic cycle time: %s", error_desc[ret].c_str());
@@ -543,7 +564,7 @@ double AndorCam::cam_get_gain() {
 	return (double) gain;
 }
 
-void AndorCam::cam_set_offset(const double value) {
+void AndorCam::cam_set_offset(const double /*value*/) {
 	//pthread::mutexholder h(&cam_mutex);
 	//! @todo Implement cam_set_offset in Andor SDK
 }
@@ -558,13 +579,12 @@ void AndorCam::cam_set_mode(const mode_t newmode) {
 	if (newmode == mode)
 		return;
 	
-	int ret=0;
-	
 	switch (newmode) {
 		case Camera::RUNNING:
 		case Camera::SINGLE:
 		case Camera::WAITING:
 		case Camera::OFF:
+			io.msg(IO_INFO, "AndorCam::cam_set_mode(%s) setting.", mode2str(newmode).c_str());
 			mode = newmode;
 		{
 			pthread::mutexholder h(&mode_mutex);
@@ -844,9 +864,9 @@ void AndorCam::read_capabilities(AndorCapabilities *caps, std::vector< string> &
 	for (i = 0; i < npg; i++) {
 		GetPreAmpGain(i, &pg);
 		if (i == 0)
-			preamp_gains += format("%d", pg);
+			preamp_gains += format("%g", pg);
 		else
-			preamp_gains += format(", %d", pg);
+			preamp_gains += format(", %g", pg);
 	}
 	
 	cvec.push_back("Pre Amp Gain Factors: " + preamp_gains);
@@ -875,9 +895,9 @@ void AndorCam::read_capabilities(AndorCapabilities *caps, std::vector< string> &
 	for (i = 0; i < nhse; i++) {
 		GetHSSpeed(0, 0, i, &hss);
 		if (i == 0)
-			hor_shifts_em += format("%g", vss);
+			hor_shifts_em += format("%g", hss);
 		else
-			hor_shifts_em += format(", %g", vss);
+			hor_shifts_em += format(", %g", hss);
 	}
 	
 	cvec.push_back("Horizontal Shift Speeds (EM): " + hor_shifts_em);
@@ -885,9 +905,9 @@ void AndorCam::read_capabilities(AndorCapabilities *caps, std::vector< string> &
 	for (i = 0; i < nhsc; i++) {
 		GetHSSpeed(1, 0, i, &hss);
 		if (i == 0)
-			hor_shifts_c += format("%g", vss);
+			hor_shifts_c += format("%g", hss);
 		else
-			hor_shifts_c += format(", %g", vss);
+			hor_shifts_c += format(", %g", hss);
 	}
 	
 	cvec.push_back("Horizontal Shift Speeds (C): " + hor_shifts_c);
