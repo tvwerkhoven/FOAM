@@ -112,7 +112,7 @@ int FOAM_FullSim::open_loop() {
 int FOAM_FullSim::open_finish() {
 	io.msg(IO_DEB2, "FOAM_FullSim::open_finish()");
 	
-	simcam->set_mode(Camera::OFF);
+	simcam->set_mode(Camera::WAITING);
 	
 	return 0;
 }
