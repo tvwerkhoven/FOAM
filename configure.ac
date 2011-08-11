@@ -96,6 +96,35 @@ AC_SUBST(COMMON_LIBS)
 # Reset LIBS
 LIBS=$OLDLIBS
 
+### CHECK FOR OPTIONAL LIBRARIES ###
+####################################
+
+OLDLIBS=$LIBS
+LIBS=
+
+# Optional libraries, for libimgdata.a.
+# @todo this should be handled by libsiu (through .pc file?)
+AC_SEARCH_LIBS([deflate], [z],
+		[have_z=true],
+		[have_z=false])
+
+AC_SEARCH_LIBS([IcsOpen], [ics],
+		[have_ics=true],
+		[have_ics=false])
+
+LIBIMGDATA_CFLAGS=""
+LIBIMGDATA_LIBS="$LIBS"
+AC_SUBST(LIBIMGDATA_CFLAGS)
+AC_SUBST(LIBIMGDATA_LIBS)
+
+# Reset LIBS
+LIBS=$OLDLIBS
+
+# for fullsim, expoao etc.
+PKG_CHECK_MODULES([FFTW], [fftw3 >= 3.1.2], 
+		[have_fftw=true],
+		[have_fftw=false])
+
 ### INSPECT BUILD TARGETS ###
 #############################
 
@@ -123,6 +152,11 @@ fullsim=true
 AC_ARG_ENABLE([fullsim],
 		AC_HELP_STRING([--disable-fullsim], [don't build full simulation mode]),
 		[test "$enableval" = no && fullsim=disabled], [])
+
+expoao=true
+AC_ARG_ENABLE([expoao],
+		AC_HELP_STRING([--disable-expoao], [don't build expoao mode]),
+		[test "$enableval" = no && expoao=disabled], [])
 
 debug=true
 AC_ARG_ENABLE([debug],
@@ -162,7 +196,10 @@ AC_SUBST(LIBSIU)
 
 ### CHECK FOR HARDWARE LIBRARIES ###
 ####################################
+
 AC_MSG_NOTICE([*** Checking hardware capabilities.])
+
+AC_MSG_NOTICE([* 1394 camera support.])
 
 # Check 1394 camera libraries dc1394
 PKG_CHECK_MODULES(DC1394, [libdc1394-2 >= 2.0.2],
@@ -189,6 +226,8 @@ AM_CONDITIONAL(HAVE_DC1394, test x$have_dc1394 = xtrue)
 
 # Check Andor camera libraries (should have atmcdLXd.h and libandor.so)
 
+AC_MSG_NOTICE([* Andor camera support.])
+
 AC_CHECK_HEADERS([atmcdLXd.h], 
 		[have_andor_h=true], 
 		[have_andor_h=false;hwandor_missing+=" atmcdLXd.h"])
@@ -213,6 +252,10 @@ if test "$have_andor_h" = false || test  "$have_andor_lib" = false ; then
 fi
 
 AM_CONDITIONAL(HAVE_ANDORCAM, test x$have_andor = xtrue)
+
+AC_MSG_NOTICE([* Alpao DM support.])
+
+# alpoa DM lib check goes here
 
 ### DOCUMENTATION BUILD CHECKS ###
 ##################################
@@ -255,24 +298,19 @@ AM_CONDITIONAL([SIMSTAT], [test "$simstat" = true])
 ### FULL SIMULATION MODE LIBS ###
 #################################
 if test "$fullsim" = true ; then
-	AC_MSG_NOTICE([*** Full simulation enabled, checking for extra libs])
+	AC_MSG_NOTICE([*** Full simulation enabled, checking for libs])
 	fullsimmissing=""
 	
-	# Optional libraries, for libimgdata.a.
-	# @todo this should be handled by libsiu (through .pc file?)
-	AC_SEARCH_LIBS([deflate], [z],
-		[have_z=true],
-		[have_z=false])
+	# Check if we have the required libraries (only fftw3 here)
+	if test "$have_fftw" = false; then fullsimmissing+=" fftw3"; fi
 
-	AC_SEARCH_LIBS([IcsOpen], [ics],
-			[have_ics=true],
-			[have_ics=false])
-
-	PKG_CHECK_MODULES(FFTW, fftw3 >= 3.1.2, [],
-		[AC_MSG_WARN([FOAM full sim needs fftw3.]);fullsim=false;fullsimmissing+=" fftw3"])
-	
-	FULLSIM_CFLAGS+=" $FFTW_CFLAGS"
-	FULLSIM_LIBS+=" $FFTW_LIBS"
+	# if $fullsimmissing is not empty, then something went wrong...
+	if test "$fullsimmissing" != ""; then
+		fullsim=false;
+	else
+		FULLSIM_CFLAGS+=" $FFTW_CFLAGS $LIBIMGDATA_CFLAGS"
+		FULLSIM_LIBS+=" $FFTW_LIBS $LIBIMGDATA_LIBS"
+	fi
 else 
 	AC_MSG_NOTICE([*** Full simulation disabled])
 fi
@@ -281,6 +319,31 @@ AC_SUBST(FULLSIM_CFLAGS)
 AC_SUBST(FULLSIM_LIBS)
 AM_CONDITIONAL([FULLSIM], [test "$fullsim" = true])
 
+
+### EXPOAO BUILD TARGET LIBS ###
+################################
+if test "$expoao" = true ; then
+	AC_MSG_NOTICE([*** Expoao target enabled, checking for libs])
+	expoaomissing=""
+
+	# Check if we have the required libraries (fftw3, andorcam)
+	if test "$have_fftw" = false; then expoaomissing+=" fftw3"; fi
+	if test "$have_andor" = false; then expoaomissing+=" andor"; fi
+
+	# if $expoaomissing is not empty, then something went wrong...
+	if test "$expoaomissing" != ""; then
+		expoao=false;
+	else
+		EXPOAO_CFLAGS+=" $FFTW_CFLAGS $LIBIMGDATA_CFLAGS"
+		EXPOAO_LIBS+=" $FFTW_LIBS $LIBIMGDATA_LIBS"
+	fi
+else 
+	AC_MSG_NOTICE([*** Expoao target disabled])
+fi
+
+AC_SUBST(EXPOAO_CFLAGS)
+AC_SUBST(EXPOAO_LIBS)
+AM_CONDITIONAL([EXPOAO], [test "$expoao" = true])
 
 ### GUI LIBRARIES ###
 #####################
