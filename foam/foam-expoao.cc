@@ -26,7 +26,7 @@
 #include "io.h"
 
 #include "camera.h"
-#include "andorcam.h"
+#include "andor.h"
 #include "wfs.h"
 #include "shwfs.h"
 #include "wfc.h"
@@ -64,7 +64,8 @@ int FOAM_ExpoAO::load_modules() {
 int FOAM_ExpoAO::open_init() {
 	io.msg(IO_DEB2, "FOAM_ExpoAO::open_init()");
 	
-	simcam->set_mode(Camera::RUNNING);
+	ixoncam->set_proc_frames(true);
+	ixoncam->set_mode(Camera::RUNNING);
 	
 	return 0;
 }
@@ -96,7 +97,7 @@ int FOAM_ExpoAO::open_loop() {
 int FOAM_ExpoAO::open_finish() {
 	io.msg(IO_DEB2, "FOAM_ExpoAO::open_finish()");
 	
-	FOAM_ExpoAO::open_init();
+	ixoncam->set_mode(Camera::WAITING);
 	
 	return 0;
 }
@@ -107,7 +108,8 @@ int FOAM_ExpoAO::open_finish() {
 int FOAM_ExpoAO::closed_init() {
 	io.msg(IO_DEB2, "FOAM_ExpoAO::closed_init()");
 	
-	simcam->set_mode(Camera::RUNNING);
+	ixoncam->set_proc_frames(false);
+	ixoncam->set_mode(Camera::RUNNING);
 	
 	return 0;
 }
@@ -138,7 +140,7 @@ int FOAM_ExpoAO::closed_loop() {
 int FOAM_ExpoAO::closed_finish() {
 	io.msg(IO_DEB2, "FOAM_ExpoAO::closed_finish()");
 	
-	FOAM_ExpoAO::open_finish();
+	ixoncam->set_mode(Camera::WAITING);
 
 	return 0;
 }
@@ -168,8 +170,8 @@ int FOAM_ExpoAO::calib() {
 		ixonwfs->store_reference();
 		
 		// Restore seeing & wfc
-		simcam->set_mode(Camera::WAITING);
-		gsl_vector_float_free(tmpact);
+		ixoncam->set_mode(Camera::WAITING);
+		//gsl_vector_float_free(tmpact);
 	} 
 	else {
 		io.msg(IO_WARN, "FOAM_ExpoAO::calib unknown!");
@@ -193,7 +195,7 @@ void FOAM_ExpoAO::on_message(Connection *const conn, string line) {
 		parsed = false;
 		if (topic.size() == 0) {
 			conn->write(\
-												":==== full sim help =========================\n"
+												":==== expoao help =========================\n"
 												":get calibmodes:         List calibration modes\n"
 												":calib <mode>:           Calibrate AO system.");
 		}
