@@ -100,7 +100,7 @@ Camera(io, ptc, name, andor_type, port, conffile, online)
 		img_buffer.at(i) = new unsigned short[res.x * res.y];
 	
 	// Set filename prefix for saved frames
-	set_filename("andorcam-"+name);
+	set_filename("andor-");
 	
 	io.msg(IO_INFO, "AndorCam init success, got %dx%dx%d frame, intv=%g, exp=%g.", 
 				 res.x, res.y, depth, interval, exposure);
@@ -122,6 +122,12 @@ AndorCam::~AndorCam() {
 	// Stop capture thread
 	cam_thr.cancel();
 	cam_thr.join();
+	sleep(1);
+	
+	// Abort acquisition and close shutter
+	AbortAcquisition();
+	SetShutter(1, 2, 0, 0);
+	sleep(1);
 
 	// Disable cooler, warm up CCD
 	cam_set_cooler(false);
@@ -400,20 +406,20 @@ void AndorCam::cam_handler() {
 				}
 				
 				while (mode == Camera::RUNNING) {
-					// Wait for a new frame for maximum 10000 ms
-					ret = WaitForAcquisitionTimeOut(10000);
+					// Wait for a new frame for maximum 1000 ms
+					ret = WaitForAcquisitionTimeOut(2500);
 					
 					if (ret == DRV_SUCCESS) {
-//						io.msg(IO_DEB2, "AndorCam::cam_handler(R) new data!");
+						io.msg(IO_DEB2, "AndorCam::cam_handler(R) new data!");
 						// Try to get new frame data						
 						ret = GetMostRecentImage16(img_buffer.at(count % nframes), (unsigned long) (res.x * res.y));
 						if (ret == DRV_SUCCESS) {
 							void *queue_ret = cam_queue(img_buffer.at(count % nframes), img_buffer.at(count % nframes));
-//							io.msg(IO_DEB2, "AndorCam::cam_handler(R) data[0]: %d data[-1]: %d!",
-//										 img_buffer.at(count % nframes)[0], img_buffer.at(count % nframes)[res.x * res.y - 1]);
+							io.msg(IO_DEB2, "AndorCam::cam_handler(R) data[0]: %d data[100]: %d!",
+										 img_buffer.at(count % nframes)[0], img_buffer.at(count % nframes)[100]);
 							
-//							if (queue_ret != NULL)
-//								io.msg(IO_XNFO, "AndorCam::cam_handler(R) cam_queue returned old frame");
+							if (queue_ret != NULL)
+								io.msg(IO_XNFO, "AndorCam::cam_handler(R) cam_queue returned old frame");
 							//! @todo handle returned data?
 					} else {
 						io.msg(IO_WARN, "AndorCam::cam_handler(R) GetMostRecentImage16 error %s", error_desc[ret].c_str());
