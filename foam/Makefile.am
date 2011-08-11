@@ -165,7 +165,7 @@ bin_PROGRAMS += foam-expoao
 foam_expoao_SOURCES = foam-expoao.cc \
 		$(FRAME_SRC) \
 		$(MODS_DIR)/camera.cc \
-		$(MODS_DIR)/andorcam.cc \
+		$(MODS_DIR)/andor.cc \
 		$(MODS_DIR)/shwfs.cc \
 		$(MODS_DIR)/wfs.cc \
 		$(MODS_DIR)/wfc.cc \
@@ -175,7 +175,7 @@ foam_expoao_SOURCES = foam-expoao.cc \
 foam_expoao_SOURCES += foam-expoao.h \
 		$(FRAME_HDR) \
 		$(MODS_DIR)/camera.h \
-		$(MODS_DIR)/andorcam.h \
+		$(MODS_DIR)/andor.h \
 		$(MODS_DIR)/shwfs.h \
 		$(MODS_DIR)/wfs.h \
 		$(MODS_DIR)/wfc.h \
