@@ -51,7 +51,7 @@ io(IO_DEB2)
 	
 	sighandler.quit_func = sigc::mem_fun(*this, &FOAM::stopfoam);
 	
-	devices = new DeviceManager(io);
+	devices = new foam::DeviceManager(io);
 	
 	if (parse_args(argc, argv)) {
 		error = true;

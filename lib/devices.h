@@ -56,6 +56,8 @@ typedef Protocol::Server::Connection Connection;
  
  @todo Add signal for measurement complete
  */
+namespace foam {
+
 class Device {
 private:
 	// These should be accessed through get/set functions to notify the GUI
@@ -180,6 +182,7 @@ public:
 	string getname() const { return name; }
 	string gettype() const { return type; }
 };
+} // namespace foam
 
 /*!
  @brief Device manager class to keep track of all devices in the system.
@@ -187,6 +190,7 @@ public:
  To keep track of the different devices, this DeviceManager stores all
  in a map (devices).
  */
+namespace foam {
 class DeviceManager {
 private:
 	Io &io;
@@ -241,6 +245,7 @@ public:
 	DeviceManager(Io &io);
 	~DeviceManager();
 };
+} // namespace foam
 
 #endif // HAVE_DEVICES_H
 

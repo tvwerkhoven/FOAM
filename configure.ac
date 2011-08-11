@@ -56,6 +56,8 @@ FOAMCONFDIR=$sysconfdir/foam
 AC_SUBST(FOAMDATADIR)
 AC_SUBST(FOAMCONFDIR)
 
+### CHECK FOR REQUIRED LIBRARIES ###
+####################################
 
 ### Store & reset $(LIBS) to capture output of AC_SEARCH_LIBS
 OLDLIBS=$LIBS
@@ -94,34 +96,8 @@ AC_SUBST(COMMON_LIBS)
 # Reset LIBS
 LIBS=$OLDLIBS
 
-### Hardware libraries
-
-# dc1394
-PKG_CHECK_MODULES(DC1394, [libdc1394-2 >= 2.0.2],
-		[have_dc1394=true],
-		[have_dc1394=false])
-
-# TODO: need to check things for linux and mac here
-if test "$have_dc1394" = true ; then
-	case "$build" in
-		*-*-linux*)
-		# TODO: test this, do we need it?
-		#AC_SEARCH_LIBS(raw1394_channel_modify, raw1394,
-		#		[have_dc1394=true],
-		#		[have_dc1394=false;AC_MSG_WARN(libraw1394 not found or too old (<1.2.0), required for libdc1394.)])
-		;;
-		*-*-darwin*)
-		AC_SEARCH_LIBS(IOMasterPort, IOKit,
-				[have_dc1394=true],
-				[have_dc1394=true;AC_MSG_WARN(IOKitLib not found, required for libdc1394.)])
-		;;
-	esac
-fi
-AM_CONDITIONAL(HAVE_DC1394, test x$have_dc1394 = xtrue)
-
-
-### BUILD TARGETS ###
-#####################
+### INSPECT BUILD TARGETS ###
+#############################
 
 dummy=true
 AC_ARG_ENABLE([dummy],
@@ -162,8 +138,8 @@ AC_ARG_ENABLE([hwdebug],
 		AC_HELP_STRING([--enable-hwdebug], [build hardware debugging tests]),
 		[test "$enableval" = yes && hwdebug=true], [hwdebug=disabled])
 
-### BUILD OPTIONS ###
-#####################
+### INSPECT BUILD OPTIONS ###
+#############################
 		
 AC_ARG_WITH([libsiu],
 		AC_HELP_STRING([--with-libsiu], [location of libsiu (def: ./libsiu)]),
@@ -184,8 +160,63 @@ AM_CONDITIONAL([DEBUG], [test "$debug" = true])
 AM_CONDITIONAL([HWDEBUG], [test "$hwdebug" = true])
 AC_SUBST(LIBSIU)
 
+### CHECK FOR HARDWARE LIBRARIES ###
+####################################
+AC_MSG_NOTICE([*** Checking hardware capabilities.])
+
+# Check 1394 camera libraries dc1394
+PKG_CHECK_MODULES(DC1394, [libdc1394-2 >= 2.0.2],
+		[have_dc1394=true],
+		[have_dc1394=false;hw1394_missing+=" libdc1394"])
+
+# TODO: need to check things for linux and mac here
+if test "$have_dc1394" = true ; then
+	case "$build" in
+		*-*-linux*)
+		# TODO: test this, do we need it?
+		AC_SEARCH_LIBS([raw1394_channel_modify], [raw1394],
+				[have_dc1394=true;],
+				[have_dc1394=false;hw1394_missing+=" raw1394"])
+		;;
+		*-*-darwin*)
+		AC_SEARCH_LIBS(IOMasterPort, IOKit,
+				[have_dc1394=true],
+				[have_dc1394=false;hw1394_missing+=" IOKit"])
+		;;
+	esac
+fi
+AM_CONDITIONAL(HAVE_DC1394, test x$have_dc1394 = xtrue)
+
+# Check Andor camera libraries (should have atmcdLXd.h and libandor.so)
+
+AC_CHECK_HEADERS([atmcdLXd.h], 
+		[have_andor_h=true], 
+		[have_andor_h=false;hwandor_missing+=" atmcdLXd.h"])
+
+OLDLIBS=$LIBS
+LIBS=
+
+AC_SEARCH_LIBS([Initialize],
+		[andor],
+		[have_andor_lib=true],
+		[have_andor_lib=false;hwandor_missing+=" libandor"])
+
+ANDORCAM_LIBS="$LIBS"
+AC_SUBST(ANDORCAM_LIBS)
+
+# Reset LIBS back to old value
+LIBS=$OLDLIBS
+
+have_andor=true
+if test "$have_andor_h" = false || test  "$have_andor_lib" = false ; then
+		have_andor=false
+fi
+
+AM_CONDITIONAL(HAVE_ANDORCAM, test x$have_andor = xtrue)
+
 ### DOCUMENTATION BUILD CHECKS ###
 ##################################
+AC_MSG_NOTICE([*** Checking documentation tools.])
 
 if test "$docs" = true ; then
 	AC_CHECK_PROG(have_doxygen, doxygen, yes, no)
@@ -198,7 +229,7 @@ if test "$docs" = true ; then
 		docs=false;
 		AC_MSG_WARN([FOAM docs need doxygen & dot programs to compile]);
 	else
-		AC_MSG_NOTICE([*** Compiling documentation])
+		AC_MSG_NOTICE([*** Will compile documentation])
 	fi
 else
 	AC_MSG_NOTICE([*** Not compiling documentation])
@@ -304,6 +335,23 @@ if test "$FOAM_FATAL" = yes ; then
 fi
 
 AC_MSG_NOTICE([===============Summary================])
+
+
+AC_MSG_NOTICE([---------------Hardware---------------])
+
+if test "$have_dc1394" = true ; then
+	AC_MSG_NOTICE([1394 cameras:            supported])
+else
+	AC_MSG_NOTICE([1394 cameras:            not supported, missing:$hw1394_missing])
+fi
+
+if test "$have_andor" = true ; then
+	AC_MSG_NOTICE([Andor cameras:           supported])
+else
+	AC_MSG_NOTICE([Andor cameras:           not supported, missing:$hwandor_missing])
+fi
+
+AC_MSG_NOTICE([---------------Targets----------------])
 
 if test "$dummy" = true ; then
 	AC_MSG_NOTICE([Dummy mode:              available])

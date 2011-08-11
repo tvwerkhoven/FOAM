@@ -31,6 +31,8 @@ using namespace std;
 
 // Device class
 
+namespace foam {
+
 Device::Device(Io &io, foamctrl *const ptc, const string n, const string t, const string p, const Path conf, const bool online): 
 is_calib(false), is_ok(false), outputdir(ptc->outdir), io(io), ptc(ptc), name(n), type("dev." + t), port(p), conffile(conf), netio(p, n), online(online)
 { 
@@ -162,16 +164,16 @@ int Device::set_outputdir(const string identifier) {
 	netio.broadcast("ok outputdir :" + outputdir.str(), "outputdir");
 	return 0;
 }
-
-
+} // namespace foam
 
 // DeviceManager class
 
-DeviceManager::DeviceManager(Io &io): io(io) {
+
+foam::DeviceManager::DeviceManager(Io &io): io(io) {
 	io.msg(IO_DEB2, "DeviceManager::DeviceManager()");
 }
 
-DeviceManager::~DeviceManager() {
+foam::DeviceManager::~DeviceManager() {
 	io.msg(IO_DEB2, "DeviceManager::~DeviceManager()");
 
 	device_t::iterator it;
@@ -180,7 +182,7 @@ DeviceManager::~DeviceManager() {
 	
 }
 
-int DeviceManager::add(Device *dev) {
+int foam::DeviceManager::add(foam::Device *dev) {
 	string id = dev->getname();
 	if (devices.find(id) != devices.end()) {
 		io.msg(IO_ERR, "Device ID '%s' already exists!", id.c_str());
@@ -190,7 +192,7 @@ int DeviceManager::add(Device *dev) {
 	return 0;
 }
 
-Device* DeviceManager::get(string id) {
+foam::Device* foam::DeviceManager::get(string id) {
 	if (devices.find(id) == devices.end()) {
 		io.msg(IO_ERR, "Device ID '%s' does not exist!", id.c_str());
 		throw exception("Device " + id + " does not exist!");
@@ -199,7 +201,7 @@ Device* DeviceManager::get(string id) {
 	return devices[id];
 }
 
-int DeviceManager::del(string id) {
+int foam::DeviceManager::del(string id) {
 	if (devices.find(id) == devices.end()) {
 		io.msg(IO_ERR, "Device ID '%s' does not exist!", id.c_str());
 		return -1;
@@ -208,7 +210,7 @@ int DeviceManager::del(string id) {
 	return 0;
 }
 
-string DeviceManager::getlist(bool showtype, bool showonline) {
+string foam::DeviceManager::getlist(bool showtype, bool showonline) {
 	string devlist = "";
 	int num=0;
 	for (device_t::iterator it=devices.begin(); it != devices.end(); it++) {
@@ -223,5 +225,3 @@ string DeviceManager::getlist(bool showtype, bool showonline) {
 	devlist = format("%d ", num) + devlist;
 	return devlist;
 }
-
-

@@ -60,7 +60,7 @@ const string wfs_type = "wfs";
  - none
 
  */
-class Wfs: public Device {
+class Wfs: public foam::Device {
 private:
 	void init();												//!< Common initialisation for constructors
 	

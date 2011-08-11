@@ -122,7 +122,7 @@ const string cam_type = "cam";
  - Implement guard-pixel watchers (for fast processing, i.e. SHWFS)
  
  */ 
-class Camera: public Device {
+class Camera: public foam::Device {
 	// Wfs is a friend class because it needs more access to the camera (also mutexes etc)
 	friend class Wfs;
 public:
@@ -227,6 +227,8 @@ protected:
 	uint8_t df_correct(const uint8_t *in, size_t offset);
 	uint16_t df_correct(const uint16_t *in, size_t offset);
 	
+	bool do_proc;									//!< Do frame-processing or not?
+	
 	frame_t *frames;							//!< Frame ringbuffer
 	size_t nframes;								//!< Ringbuffer size
 	size_t count;									//!< Total number of frames captured
@@ -246,7 +248,7 @@ protected:
 	double offset;								//!< Constant offset added to frames
 	
 	coord_t res;									//!< Camera pixel resolution
-	int depth;										//!< Camera pixel depth in bits
+	int depth;										//!< Camera pixel depth in bits @todo Is now ceil'ed to 8, 16 or 32. Need to fix real value here
 
 	mode_t mode;									//!< Camera mode (see Camera::mode_t)
 	
@@ -262,6 +264,14 @@ protected:
 	string fits_instrument;				//!< FITS header properties for saved files
 	string fits_target;						//!< FITS header properties for saved files
 	string fits_comments;					//!< FITS header properties for saved files
+	
+	int conv_depth(int d) { 
+		if (d<=8) return 8;
+		if (d<=16) return 16;
+		if (d<=32) return 32;
+		if (d<=64) return 64;
+	}
+		
 	
 public:
 	Camera(Io &io, foamctrl *const ptc, const string name, const string type, const string port, Path const &conffile, const bool online=true);
@@ -287,6 +297,9 @@ protected:
 public:
 	size_t get_count() const { return count; }
 	size_t get_bufsize() const { return nframes; }
+	
+	void set_proc_frames(const bool b=true) { do_proc = b; }
+	bool get_proc_frames() const { return do_proc; }
 	
 	// From Devices::
 	virtual int verify() { return 0; }

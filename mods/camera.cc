@@ -41,7 +41,7 @@ using namespace std;
 
 Camera::Camera(Io &io, foamctrl *const ptc, const string name, const string type, const string port, Path const &conffile, const bool online):
 Device(io, ptc, name, cam_type + "." + type, port, conffile, online),
-nframes(8), count(0), timeouts(0), ndark(10), nflat(10), 
+do_proc(false), nframes(-1), count(0), timeouts(0), ndark(10), nflat(10), 
 darkexp(1.0), flatexp(1.0),
 interval(1.0), exposure(1.0), gain(1.0), offset(0.0), 
 res(0,0), depth(-1),
@@ -78,8 +78,8 @@ fits_telescope("undef"), fits_observer("undef"), fits_instrument("undef"), fits_
 	add_cmd("flat");
 //	add_cmd("statistics");
 	
-	// Set buffer size (default 8 frames)
-	nframes = cfg.getint("nframes", 8);
+	// Set buffer size (default 32 frames)
+	nframes = cfg.getint("nframes", 32);
 	frames = new frame_t[nframes];
 	
 	// Set number of darks & flats to take (default 10)
@@ -128,7 +128,7 @@ void Camera::cam_proc() {
 		// Always wait for proc_cond broadcasts
 		{
 			pthread::mutexholder h(&proc_mutex);
-			io.msg(IO_DEB2, "Camera::cam_proc() waiting...");
+//			io.msg(IO_DEB2, "Camera::cam_proc() waiting...");
 			proc_cond.wait(proc_mutex);
 		}
 		
@@ -138,7 +138,8 @@ void Camera::cam_proc() {
 		// There is a new frame ready now, process it
 		frame = get_last_frame();
 		
-		calculate_stats(frame);
+		if (do_proc)
+			calculate_stats(frame);
 
 		if (nstore == -1 || nstore > 0) {
 			io.msg(IO_DEB2, "Camera::cam_proc() nstore=%d", nstore);
@@ -318,7 +319,9 @@ void *Camera::cam_queue(void * const data, void * const image, struct timeval *c
 	frame->data = data;
 	frame->image = image;
 	frame->id = count++;
-	frame->size = res.x * res.y * depth/8;
+	// Depth should be ceil'ed to the nearest 8 multiple, because 'depth' could
+	// also be 14 or 12 bits in which case 'size' would be wrong.
+	frame->size = res.x * res.y * ceil(depth/8);
 	
 	if(!frame->histo)
 		frame->histo = new uint32_t[get_maxval()];
