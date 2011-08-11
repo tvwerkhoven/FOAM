@@ -108,6 +108,9 @@ Camera(io, ptc, name, andor_type, port, conffile, online)
 	// Start camera thread
 	cam_set_mode(Camera::WAITING);
 	cam_thr.create(sigc::mem_fun(*this, &AndorCam::cam_handler));
+	// Give thread time to initialize
+	//! @todo Solve synchronisation with a mutex instead!
+	sleep(1);
 }
 
 AndorCam::~AndorCam() {
