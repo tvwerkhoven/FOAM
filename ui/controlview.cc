@@ -101,6 +101,9 @@ statframe("Status"), stat_mode("Mode: "), stat_ndev("# Dev: "), stat_nframes("# 
 	
 	// register callback functions
 	connect.signal_clicked().connect(sigc::mem_fun(*this, &ControlPage::on_connect_clicked));
+	//! @todo add handlers for host and port Entry widgets
+	//host.signal_activated().connect(sigc::mem_fun(*this, &ControlPage::on_connect_clicked));
+	//port.signal_clicked().connect(sigc::mem_fun(*this, &ControlPage::on_connect_clicked));
 	
 	mode_listen.signal_clicked().connect(sigc::mem_fun(*this, &ControlPage::on_mode_listen_clicked));
 	mode_open.signal_clicked().connect(sigc::mem_fun(*this, &ControlPage::on_mode_open_clicked));
