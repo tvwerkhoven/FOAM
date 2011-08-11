@@ -50,7 +50,7 @@ const string simseeing_type = "simseeing";
  Network commands:
  - None, offline device
  */
-class SimSeeing: public Device {
+class SimSeeing: public foam::Device {
 public:
 	typedef enum {
 		RANDOM=0,													//!< Random walk around the wavefront (SimSeeing::windspeed is 'amplitude')

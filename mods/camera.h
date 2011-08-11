@@ -122,7 +122,7 @@ const string cam_type = "cam";
  - Implement guard-pixel watchers (for fast processing, i.e. SHWFS)
  
  */ 
-class Camera: public Device {
+class Camera: public foam::Device {
 	// Wfs is a friend class because it needs more access to the camera (also mutexes etc)
 	friend class Wfs;
 public:

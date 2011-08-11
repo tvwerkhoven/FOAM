@@ -164,7 +164,7 @@ public:
 	void stopfoam();										//!< Common cleanup code, used to stop on signals
 	
 	foamctrl *ptc;											//!< AO control class
-	DeviceManager *devices;							//!< Device/hardware management
+	foam::DeviceManager *devices;							//!< Device/hardware management
 	Io io;															//!< Terminal diagnostics output
 	
 	bool has_error() const { return error; } //!< Return error status

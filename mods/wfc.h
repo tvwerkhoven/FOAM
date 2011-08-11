@@ -49,7 +49,7 @@ const string wfc_type = "wfc";
  - none
 
  */
-class Wfc: public Device {
+class Wfc: public foam::Device {
 private:
 	int nact;														//!< Number of actuators in this device
 	

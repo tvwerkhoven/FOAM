@@ -47,15 +47,15 @@ int FOAM_FullSim::load_modules() {
 	
 	// Init WFC simulation
 	simwfc = new SimulWfc(io, ptc, "simwfc", ptc->listenport, ptc->conffile);
-	devices->add((Device *) simwfc);
+	devices->add((foam::Device *) simwfc);
 
 	// Init camera simulation (using simwfc)
 	simcam = new SimulCam(io, ptc, "simcam", ptc->listenport, ptc->conffile, *simwfc);
-	devices->add((Device *) simcam);
+	devices->add((foam::Device *) simcam);
 	
 	// Init WFS simulation (using camera)
 	simwfs = new Shwfs(io, ptc, "simshwfs", ptc->listenport, ptc->conffile, *simcam);
-	devices->add((Device *) simwfs);
+	devices->add((foam::Device *) simwfs);
 
 	return 0;
 }

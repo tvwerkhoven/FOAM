@@ -46,11 +46,11 @@ int FOAM_simstatic::load_modules() {
 		
 	// Add ImgCam device
 	imgcama = new ImgCamera(io, ptc, "imgcamA", ptc->listenport, ptc->conffile);
-	devices->add((Device *) imgcama);
+	devices->add((foam::Device *) imgcama);
 	
 	// Init WFS simulation (using camera)
 	simwfs = new Shwfs(io, ptc, "simshwfs", ptc->listenport, ptc->conffile, *imgcama);
-	devices->add((Device *) simwfs);
+	devices->add((foam::Device *) simwfs);
 	
 	return 0;
 }
