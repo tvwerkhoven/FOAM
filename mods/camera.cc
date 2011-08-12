@@ -231,18 +231,33 @@ bool Camera::store_frame(const frame_t *const frame) const {
 	
 	// Add datatype <http://www.eso.org/sci/data-processing/software/esomidas//doc/user/98NOV/vola/node112.html>
 	fits_add_card(phdu, "SIMPLE", "T");
-	if (depth == 16)
+	if (depth == 16) {
 		fits_add_card(phdu, "BITPIX", "16");
-	else
+		// This implies datatype TUSHORT (chapter 4 / page 16 of cfitsio.pdf)
+		//! @todo Add TUSHORT or TBYTE here? SAO DS9 does not recognize the byte format!
+		fits_add_card(phdu, "BZERO", "32768");
+		fits_add_card(phdu, "BSCALE", "1");
+	}	else {
 		fits_add_card(phdu, "BITPIX", "8");
+	}
+		
+	if (frame->min < frame->max) {
+		fits_add_card(phdu, "DATAMAX", format("%lf", frame->max));
+		fits_add_card(phdu, "DATAMIN", format("%lf", frame->min));
+	}
+	if (frame->avg != frame->rms) {
+		fits_add_card(phdu, "AVG", format("%lf", frame->avg));
+		fits_add_card(phdu, "RMS", format("%lf", frame->rms));
+	}
 		
 	// Add rest of the metadata
 	fits_add_card(phdu, "NAXIS", "2");
 	fits_add_card(phdu, "NAXIS1", format("%d", res.x));
 	fits_add_card(phdu, "NAXIS2", format("%d", res.y));
 	
-	fits_add_card(phdu, "ORIGIN", "FOAM Camera");
-	fits_add_card(phdu, "DEVICE", name);
+	fits_add_card(phdu, "ORIGIN", PACKAGE_NAME " -- " PACKAGE_VERSION);
+	fits_add_card(phdu, "DEVNAME", name);
+	fits_add_card(phdu, "DEVTYPE", type);
 	fits_add_card(phdu, "TELESCOPE", fits_telescope);
 	fits_add_card(phdu, "INSTRUMENT", fits_instrument);
 	fits_add_card(phdu, "DATE", date);
