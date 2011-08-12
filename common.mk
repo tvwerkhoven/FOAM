@@ -8,7 +8,7 @@ LIBSIU_DIR = $(top_srcdir)/$(LIBSIU)
 
 AM_CPPFLAGS = -D__STDC_FORMAT_MACROS \
 		-D__STDC_LIMIT_MACROS \
-		-DFOAM_DATADIR=\"$(FOAMDATADIR)\"
+		-DFOAM_DATADIR=\"$(datadir)/foam\"
 
 AM_CPPFLAGS += \
         -I$(LIB_DIR) \
