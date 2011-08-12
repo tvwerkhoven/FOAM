@@ -265,7 +265,7 @@ protected:
 	string fits_target;						//!< FITS header properties for saved files
 	string fits_comments;					//!< FITS header properties for saved files
 	
-	int conv_depth(int d) { 
+	int conv_depth(const int d) { 
 		if (d<=8) return 8;
 		if (d<=16) return 16;
 		if (d<=32) return 32;
