@@ -212,10 +212,10 @@ void SimulCam::setup() {
 	gsl_vector_float_free(wfcerr_act);
 	wfcerr_act = gsl_vector_float_calloc(simwfcerr.get_nact());
 	
-	// Output frame (8 bit int)
+	// Output frame (arbitrary bitdepth)
 	free(frame_out);
-	out_size = frame_raw->size1 * frame_raw->size2  * sizeof *frame_out;
-	frame_out = (uint8_t *) calloc(1, out_size);
+	out_size = frame_raw->size1 * frame_raw->size2 * conv_depth(depth);
+	frame_out = calloc(1, out_size);	
 }
 
 void SimulCam::gen_telapt(gsl_matrix *const apt, const double rad) const {
@@ -416,14 +416,25 @@ void SimulCam::simul_wfs(gsl_matrix *const wave_in) const {
 	fftw_destroy_plan(shplan);
 }
 
-void SimulCam::simul_capture(const gsl_matrix *const im_in, uint8_t *const frame_out) const {
-	// Convert frame to uint8_t, scale properly
+void SimulCam::simul_capture(const gsl_matrix *const im_in, void *const frame_out) const {
+	io.msg(IO_DEB1, "SimulCam::simul_capture() depth=%d", depth);
+	if (depth <=8)
+		return _simul_capture(im_in, (uint8_t *) frame_out);
+	if (depth <=16)
+		return _simul_capture(im_in, (uint16_t *) frame_out);
+	if (depth <=32)
+		return _simul_capture(im_in, (uint32_t *) frame_out);
+	if (depth <=64)
+		return _simul_capture(im_in, (uint64_t *) frame_out);
+}
+
+template <class T> void SimulCam::_simul_capture(const gsl_matrix *const im_in, T *const frame_out) const {
+	// Convert frame to type 'T', scale properly
 	double min=0, max=0, noisei=0, fac;
 	gsl_matrix_minmax(im_in, &min, &max);
-	fac = (get_maxval()-1)/(max-min);
+	fac = get_maxval()/(max-min);
 	
-	io.msg(IO_DEB1, "SimulCam::_simul_capture() max: %g, min: %g, fac: %g, max: %zu", 
-				 max, min, fac, get_maxval());
+	io.msg(IO_DEB1, "SimulCam::_simul_capture() fac: %g, max: %zu", fac, get_maxval());
 	
 	// Copy and scale, add noise
 	double pix=0.0;

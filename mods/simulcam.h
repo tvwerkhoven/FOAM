@@ -119,7 +119,7 @@ private:
 	SimulWfc &simwfc;										//!< This class simulates a wavefront corrector
 	
 	size_t out_size;										//!< Size of frame_out
-	uint8_t *frame_out;									//!< Frame to store simulated image
+	void *frame_out;										//!< Frame to store simulated image
 	gsl_matrix *frame_raw;							//!< Raw frame used to calculate wavefront errors etc.
 
 	double telradius;										//!< Telescope radius (fraction of CCD)
@@ -213,11 +213,16 @@ public:
 	/*! @brief Simulate CCD frame capture given input image
 	 
 	 Given an input image (as double matrix), simulate the CCD frame capture
-	 process including things as exposure, offset and noise.
+	 process including things as exposure, offset and noise. 
+	 
+	 This function is a wrapper for _simul_capture() which does all the work. 
+	 The wrapper casts the data pointer to the correct type.
+	 
 	 @param [in] *im_in Image to be processed
-	 @param [out] *frame_out Output frame as 8 bits (pre-allocated)
+	 @param [out] *frame_out Output frame in arbitrary type (like uint8_t, uint16_t) (pre-allocated)
 	 */
-	void simul_capture(const gsl_matrix *const im_in, uint8_t *const frame_out) const;	//!< 
+	void simul_capture(const gsl_matrix *const im_in, void *const frame_out) const;
+	template <class T> void _simul_capture(const gsl_matrix *const im_in, T *const frame_out) const;
 	
 	// From Camera::
 	void cam_handler();
