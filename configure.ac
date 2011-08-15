@@ -51,10 +51,10 @@ AM_CONDITIONAL(HAVE_LINUX, test x$have_linux = xtrue)
 AM_CONDITIONAL(HAVE_MACOSX, test x$have_macosx = xtrue)
 
 # FOAM data & configuration directory
-FOAMDATADIR=$datadir/foam
-FOAMCONFDIR=$sysconfdir/foam
-AC_SUBST(FOAMDATADIR)
-AC_SUBST(FOAMCONFDIR)
+#FOAMDATADIR=$datadir/foam
+#FOAMCONFDIR=$sysconfdir/foam
+#AC_SUBST(FOAMDATADIR)
+#AC_SUBST(FOAMCONFDIR)
 
 ### CHECK FOR REQUIRED LIBRARIES ###
 ####################################

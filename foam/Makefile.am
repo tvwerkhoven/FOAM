@@ -26,7 +26,7 @@ FRAME_HDR = foam.h foamctrl.h autoconfig.h $(LIB_DIR)/devices.h
 ##################
 
 bin_PROGRAMS = foam-dummy
-foam_dummy_CPPFLAGS = -DFOAM_DEFAULTCONF=\"$(FOAMCONFDIR)/foam-dummy.cfg\" \
+foam_dummy_CPPFLAGS = -DFOAM_DEFAULTCONF=\"$(sysconfdir)/foam/foam-dummy.cfg\" \
 		-DFOAM_DEBUG=1 $(AM_CPPFLAGS)
 foam_dummy_SOURCES = foam-dummy.cc $(FRAME_SRC) 
 foam_dummy_SOURCES += $(FRAME_HDR)
@@ -59,7 +59,7 @@ foam_simstat_SOURCES += foam-simstatic.h \
 		$(LIB_DIR)/shift.h
 
 # Some CPP flags
-foam_simstat_CPPFLAGS = -DFOAM_DEFAULTCONF=\"$(FOAMCONFDIR)/foam-simstat.cfg\" \
+foam_simstat_CPPFLAGS = -DFOAM_DEFAULTCONF=\"$(sysconfdir)/foam/foam-simstat.cfg\" \
 		$(SIMSTAT_CFLAGS) $(AM_CPPFLAGS)
 
 foam_simstat_LDADD = $(LIBSIU_DIR)/libimgdata.a \
@@ -94,7 +94,7 @@ foam_hwtest_SOURCES += foam-hwtest.h \
 		$(MODS_DIR)/fw1394cam.h \
 		$(MODS_DIR)/dc1394++.h
 
-foam_hwtest_CPPFLAGS = -DFOAM_DEFAULTCONF=\"$(FOAMCONFDIR)/foam-hwtest.cfg\" \
+foam_hwtest_CPPFLAGS = -DFOAM_DEFAULTCONF=\"$(sysconfdir)/foam/foam-hwtest.cfg\" \
 		$(AM_CPPFLAGS)
 foam_hwtest_CXXFLAGS = $(AM_CXXFLAGS) $(DC1394_CFLAGS)
 foam_hwtest_LDADD = $(LDADD) \
@@ -144,7 +144,7 @@ foam_fullsim_LDADD = $(LIBSIU_DIR)/libimgdata.a \
 		$(LDADD)
 
 # Some CPP flags
-foam_fullsim_CPPFLAGS = -DFOAM_DEFAULTCONF=\"$(FOAMCONFDIR)/foam-fullsim.cfg\" \
+foam_fullsim_CPPFLAGS = -DFOAM_DEFAULTCONF=\"$(sysconfdir)/foam/foam-fullsim.cfg\" \
 		$(FULLSIM_CFLAGS) $(AM_CPPFLAGS)
 
 # specific flags and libraries

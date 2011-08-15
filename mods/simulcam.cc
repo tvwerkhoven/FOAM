@@ -417,24 +417,34 @@ void SimulCam::simul_wfs(gsl_matrix *const wave_in) const {
 }
 
 void SimulCam::simul_capture(const gsl_matrix *const im_in, uint8_t *const frame_out) const {
-	io.msg(IO_DEB1, "SimulCam::simul_capture()");
 	// Convert frame to uint8_t, scale properly
 	double min=0, max=0, noisei=0, fac;
 	gsl_matrix_minmax(im_in, &min, &max);
-	fac = 255.0/(max-min);
+	fac = (get_maxval()-1)/(max-min);
+	
+	io.msg(IO_DEB1, "SimulCam::_simul_capture() max: %g, min: %g, fac: %g, max: %zu", 
+				 max, min, fac, get_maxval());
 	
 	// Copy and scale, add noise
-	double pix=0.0, noise=0.0;
+	double pix=0.0;
+	min=get_maxval()-1; max=0;
 	for (size_t i=0; i<im_in->size1; i++) {
 		for (size_t j=0; j<im_in->size2; j++) {
 			pix = (double) ((gsl_matrix_get(im_in, i, j) - min)*fac);
-			noise=0.0;
 			// Add noise only in 'noise' fraction of the pixels, with 'noiseamp' amplitude. Noise is independent of exposure here
+			noisei = 0.0;
 			if (simple_rand() < noise) 
-				noisei = simple_rand() * noiseamp * UINT8_MAX;
-			frame_out[i*im_in->size2 + j] = (uint8_t) clamp(((pix * exposure) + noisei + offset) * gain, 0.0, 1.0*UINT8_MAX);
+				noisei = simple_rand() * noiseamp * (get_maxval()-1);
+			frame_out[i*im_in->size2 + j] = (T) clamp(((pix * exposure) + noisei + offset) * gain, 
+																											(double) 0.0, (double) get_maxval()-1);
+//			if (frame_out[i*im_in->size2 + j] > max) max = frame_out[i*im_in->size2 + j];
+//			else if (frame_out[i*im_in->size2 + j] < min) min = frame_out[i*im_in->size2 + j];
 		}
 	}
+//	io.msg(IO_DEB1, "SimulCam::_simul_capture() max: %g, min: %g", max, min);
+
+//	io.msg(IO_DEB1, "SimulCam::_simul_capture() pix[10] = %d, pix[%d] = %d", 
+//				 frame_out[10], 256+68*512, frame_out[256+68*512]);
 }
 
 // From Camera::

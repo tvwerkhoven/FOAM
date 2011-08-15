@@ -1,5 +1,5 @@
 # Install the relevant configuration files to a subdir of the datadir
-foamdatadir = $(FOAMDATADIR)/simdata
+foamdatadir = $(datadir)/foam/simdata
 
 # Include these files in th distribution (the rest depend on them)
 dist_foamdata_DATA = simstatic*.pgm wavefront.fits simulwfc.csv
