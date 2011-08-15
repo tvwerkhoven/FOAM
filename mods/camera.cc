@@ -28,6 +28,7 @@
 #define _XOPEN_SOURCE 600	// for posix_fadvise()
 #endif
 #include <fcntl.h>
+#include <fitsio.h>
 
 #include "io.h"
 #include "utils.h"
@@ -142,11 +143,15 @@ void Camera::cam_proc() {
 			calculate_stats(frame);
 
 		if (nstore == -1 || nstore > 0) {
-			io.msg(IO_DEB2, "Camera::cam_proc() nstore=%d", nstore);
-			if (store_frame(frame)) {
+//			io.msg(IO_DEB2, "Camera::cam_proc() nstore=%d", nstore);
+			int status=store_frame(frame);
+			if (!status) {
 				nstore--;
 				netio.broadcast(format("ok store %d", nstore), "store");
-				io.msg(IO_DEB2, "Camera::cam_proc() nstore--", nstore);
+//				io.msg(IO_DEB2, "Camera::cam_proc() nstore--", nstore);
+			} else {
+				netio.broadcast(format("error storing frame: %d", status), "store");
+				io.msg(IO_ERR, "Camera::cam_proc() fits store error: %d", status);
 			}
 		}
 		
@@ -158,136 +163,105 @@ void Camera::cam_proc() {
 	}
 }
 
-void Camera::fits_init_phdu(char *const phdu) const {
-	memset(phdu, ' ', 2880);
+int Camera::fits_add_card(fitsfile *fptr, string key, string value, string comment) const {
+	int status=0;
+	char hdr_val[FLEN_CARD], hdr_comm[FLEN_CARD];
+	snprintf(hdr_val, FLEN_CARD, "%s", value.c_str());
+	snprintf(hdr_comm, FLEN_CARD, "%s", comment.c_str());
+	
+//	fits_update_key(fptr, TSTRING, "MAXVAL", hdr_str, "Maximum data value", &status);
+	fits_update_key(fptr, TSTRING, key.c_str(), hdr_val, hdr_comm, &status);
+	return status;
 }
 
-bool Camera::fits_add_card(char *phdu, const string &key, const string &value) const {
-	int i;
+int Camera::store_frame(const frame_t *const frame) const {
+//	if (depth != 8 && depth != 16) {
+//		io.msg(IO_WARN, "Camera::store_frame() Only 8 and 16 bit images supported!");
+//		return false;
+//	}
 	
-	for(i = 0; i < 36; i++) {
-		if(*phdu == ' ' || *phdu == '\0')
-			break;
-		phdu += 80;
-	}
-	
-	if(i >= 36)
-		return false;
-	
-	memcpy(phdu, key.data(), key.size() < 8 ? key.size() : 8);
-	
-	if(value.size()) {
-		phdu[8] = '=';
-		memcpy(phdu + 10, value.data(), value.size() < 70 ? value.size() : 70);
-	}
-	
-	return true;
-}
-
-bool Camera::fits_add_comment(char *phdu, const string &comment) const {
-	int i;
-	
-	for(i = 0; i < 35; i++) {
-		if(*phdu == ' ' || *phdu == '\0')
-			break;
-		phdu += 80;
-	}
-	
-	if(i >= 35)
-		return false;
-	
-	memcpy(phdu, "COMMENT", 7);
-	memcpy(phdu + 10, comment.data(), comment.size() < 70 ? comment.size() : 70);
-	
-	return true;
-}
-
-bool Camera::store_frame(const frame_t *const frame) const {
 	// Generate path to store file to, based on filenamebase
-	if (depth != 8 && depth != 16) {
-		io.msg(IO_WARN, "Camera::store_frame() Only 8 and 16 bit images supported!");
-		return false;
-	}
-	
 	Path filename = makename();
 	io.msg(IO_DEB1, "Camera::store_frame(%p) to %s", frame, filename.c_str());
 	
+	fitsfile *fptr;
+  int status = 0, naxis = 2, bitpix;
+  long fpixel = 1, nelements = -1;
+  long naxes[naxis];
+	nelements = frame->npixels;
+  naxes[0] = frame->res.x; naxes[1] = frame->res.y;
+
 	// Open file
-	int fd = open(filename.c_str(), O_WRONLY | O_CREAT | O_EXCL, 0644);
-	if (fd < 0)
-		return io.msg(IO_ERR, "Camera::store_frame() Error opening file!");
+	fits_create_file(&fptr, filename.c_str(), &status);
+	if (status) return status;
 	
-	// Get time & date
-	struct timeval tv;
-	struct tm tm;
-	gettimeofday(&tv, 0);
-	gmtime_r(&tv.tv_sec, &tm);
-	string date = format("%04d-%02d-%02dT%02d:%02d:%02d", 1900 + tm.tm_year, 1 + tm.tm_mon, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
-	
-	// Init FITS header unit
-	char phdu[2880];
-	
-	fits_init_phdu(phdu);
-	
-	// Add datatype <http://www.eso.org/sci/data-processing/software/esomidas//doc/user/98NOV/vola/node112.html>
-	fits_add_card(phdu, "SIMPLE", "T");
-	if (depth == 16) {
-		fits_add_card(phdu, "BITPIX", "16");
-		// This implies datatype TUSHORT (chapter 4 / page 16 of cfitsio.pdf)
-		//! @todo Add TUSHORT or TBYTE here? SAO DS9 does not recognize the byte format!
-		fits_add_card(phdu, "BZERO", "32768");
-		fits_add_card(phdu, "BSCALE", "1");
-	}	else {
-		fits_add_card(phdu, "BITPIX", "8");
+	// Get filedatatype parameters
+	int ftype=0, dtype=0;
+	if (frame->depth <= 8) {
+		ftype = BYTE_IMG; dtype = TBYTE;
+		io.msg(IO_DEB1, "Camera::store_frame() BYTE_IMG TBYTE");
+	} else if (frame->depth <= 16) {
+		ftype = USHORT_IMG; dtype = TUSHORT;
+		io.msg(IO_DEB1, "Camera::store_frame() SHORT_IMG TUSHORT");
+	} else if (frame->depth <= 32) {
+		ftype = ULONG_IMG; dtype = TUINT;
+		io.msg(IO_DEB1, "Camera::store_frame() LONG_IMG TUINT");
+	} else {
+		io.msg(IO_ERR, "Camera::store_frame() saving 32+ bit data not supported");
+		return OVERFLOW_ERR;
 	}
-		
+	
+	// Create image 
+	fits_create_img(fptr, ftype, naxis, naxes, &status);
+	if (status) return status;
+	
+	// Write header: http://heasarc.gsfc.nasa.gov/docs/software/fitsio/c/c_user/node39.html
+	
+	// Write a keyword; must pass the ADDRESS of the value
+	fits_write_date(fptr, &status);
+
 	if (frame->min < frame->max) {
-		fits_add_card(phdu, "DATAMAX", format("%lf", frame->max));
-		fits_add_card(phdu, "DATAMIN", format("%lf", frame->min));
+		fits_add_card(fptr, "MAXVAL", format("%d", frame->max), "Max data value");
+		fits_add_card(fptr, "MINVAL", format("%d", frame->min), "Min data value");
 	}
 	if (frame->avg != frame->rms) {
-		fits_add_card(phdu, "AVG", format("%lf", frame->avg));
-		fits_add_card(phdu, "RMS", format("%lf", frame->rms));
+		fits_add_card(fptr, "AVG", format("%lf", frame->avg), "Average data value");
+		fits_add_card(fptr, "RMS", format("%lf", frame->rms), "Data root mean square");
 	}
-		
-	// Add rest of the metadata
-	fits_add_card(phdu, "NAXIS", "2");
-	fits_add_card(phdu, "NAXIS1", format("%d", res.x));
-	fits_add_card(phdu, "NAXIS2", format("%d", res.y));
 	
-	fits_add_card(phdu, "ORIGIN", PACKAGE_NAME " -- " PACKAGE_VERSION);
-	fits_add_card(phdu, "DEVNAME", name);
-	fits_add_card(phdu, "DEVTYPE", type);
-	fits_add_card(phdu, "TELESCOPE", fits_telescope);
-	fits_add_card(phdu, "INSTRUMENT", fits_instrument);
-	fits_add_card(phdu, "DATE", date);
-	fits_add_card(phdu, "OBSERVER", fits_observer);
-	fits_add_card(phdu, "EXPTIME", format("%lf / [s]", exposure));
-	fits_add_card(phdu, "INTERVAL", format("%lf / [s]", interval));
-	fits_add_card(phdu, "GAIN", format("%lf", gain));
-	fits_add_card(phdu, "OFFSET", format("%lf", offset));
+	fits_add_card(fptr, "ORIGIN", PACKAGE_NAME " -- " PACKAGE_VERSION);
+	fits_add_card(fptr, "DEVNAME", name, "FOAM device name");
+	fits_add_card(fptr, "DEVTYPE", type, "FOAM device type");
+	fits_add_card(fptr, "TELESCOPE", fits_telescope);
+	fits_add_card(fptr, "INSTRUMENT", fits_instrument);
+	fits_add_card(fptr, "OBSERVER", fits_observer);
+	fits_add_card(fptr, "TARGET", fits_target);
+	fits_add_card(fptr, "EXPTIME", format("%lf", exposure), "[s] Exposure time");
+	fits_add_card(fptr, "INTERVAL", format("%lf", interval), "[s] Frame cadence");
+	fits_add_card(fptr, "GAIN", format("%lf", gain));
+	fits_add_card(fptr, "OFFSET", format("%lf", offset));
+	if (status) return status;
+	
+	fits_write_comment(fptr, fits_comments.c_str(), &status);
+	if (status) return status;
 
-	string comments = fits_comments;
-	
-	while(true) {
-		string comment = popword(comments, ";");
-		if(comment.empty())
-			break;
-		fits_add_comment(phdu, comment);
+	// Write the array of integers to the image
+	if (frame->depth <= 8) {
+		fits_write_img(fptr, dtype, fpixel, nelements, (uint8_t *) frame->image, &status);
+	} else if (frame->depth <= 16) {
+		fits_write_img(fptr, dtype, fpixel, nelements, (uint16_t *) frame->image, &status);
+	} else if (frame->depth <= 32) {
+		fits_write_img(fptr, dtype, fpixel, nelements, (uint32_t *) frame->image, &status);
+	} else if (frame->depth <= 64) {
+		fits_write_img(fptr, dtype, fpixel, nelements, (uint64_t *) frame->image, &status);
 	}
+	if (status) return status;
 	
-	fits_add_card(phdu, "END", "");
+	// Close file
+	fits_close_file(fptr, &status);
+	if (status) return status;
 	
-#ifdef LINUX
-	posix_fadvise(fd, 0, (res.x * res.y * depth/8) + sizeof phdu, POSIX_FADV_DONTNEED); 
-#endif
-	ssize_t ret = write(fd, phdu, sizeof phdu);
-	ret += write(fd, frame->image, res.x * res.y * depth/8);
-	close(fd);
-	if (ret != (ssize_t) sizeof phdu + (res.x * res.y * depth/8))
-		return io.msg(IO_ERR, "Camera::store_frame() Writing failed!");
-	
-	return true;
+	return 0;
 }
 
 void Camera::calculate_stats(frame_t *const frame) const {
@@ -334,9 +308,14 @@ void *Camera::cam_queue(void * const data, void * const image, struct timeval *c
 	frame->data = data;
 	frame->image = image;
 	frame->id = count++;
+
+	frame->res = res;
+	frame->depth = conv_depth(depth);
+	frame->npixels = res.x * res.y;
 	// Depth should be ceil'ed to the nearest 8 multiple, because 'depth' could
 	// also be 14 or 12 bits in which case 'size' would be wrong.
-	frame->size = res.x * res.y * ceil(depth/8);
+	//! @todo Need to distinguish between data bitdepth and camera bitdepth
+	frame->size = frame->npixels * frame->depth;
 	
 	if(!frame->histo)
 		frame->histo = new uint32_t[get_maxval()];
@@ -658,12 +637,12 @@ void Camera::grab(Connection *conn, int x1, int y1, int x2, int y2, int scale = 
 //	bool dxt1 = false;
 	void *buffer;
 	size_t size = (y2 - y1) * (x2 - x1) * (depth <= 8 ? 1 : 2);
-	uint16_t maxval = get_maxval();
-	uint8_t lookup[maxval];
-	for(int i = 0; i < maxval / 2; i++)
-		lookup[i] = pow(i, 7.0 / (depth - 1));
-	for(int i = maxval / 2; i < maxval; i++)
-		lookup[i] = 128 + pow(i - maxval / 2, 7.0 / (depth - 1));
+//	uint16_t maxval = get_maxval();
+//	uint8_t lookup[maxval];
+//	for(int i = 0; i < maxval / 2; i++)
+//		lookup[i] = pow(i, 7.0 / (depth - 1));
+//	for(int i = maxval / 2; i < maxval; i++)
+//		lookup[i] = 128 + pow(i - maxval / 2, 7.0 / (depth - 1));
 	
 	{
 		//! @todo locks frame when sending over network?
@@ -728,7 +707,7 @@ void Camera::grab(Connection *conn, int x1, int y1, int x2, int y2, int scale = 
 		
 	finish:
 		if(f->histo && do_histo)
-			conn->write(f->histo, sizeof *f->histo * maxval);
+			conn->write(f->histo, sizeof *f->histo * get_maxval());
 	}
 }
 

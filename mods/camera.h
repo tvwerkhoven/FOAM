@@ -24,6 +24,7 @@
 #include <fstream>
 #include <stdint.h>
 #include <limits.h>
+#include <fitsio.h>
 
 #include "types.h"
 #include "config.h"
@@ -160,8 +161,11 @@ public:
 		void *image;					//!< Pointer to frame data (unsigned int, 8 or 16 bpp)
 		uint32_t *histo;			//!< Histogram data (optional)
 		size_t id;						//!< Unique frame ID
-		size_t size;					//!< Byte size of 'image'
-		struct timeval tv;
+		size_t size;					//!< Size of 'image' [bytes]
+		coord_t res;					//!< Resolution of 'image' [pixels]
+		int depth;						//!< Data depth for 'image' [bits]
+		size_t npixels;				//!< Number of pixels in frame
+		struct timeval tv;		//!< Frame creation timestamp (as close as possible)
 		
 		bool proc;						//!< Was the frame processed?
 		
@@ -219,7 +223,7 @@ protected:
 	
 	Path makename(const string &base) const;					//!< Make filename from outputdir and filenamebase
 	Path makename() const { return makename(filenamebase); }
-	bool store_frame(const frame_t *const frame) const;	//!< Store frame to disk
+	int store_frame(const frame_t *const frame) const;	//!< Store frame to disk
 	
 	uint8_t *get_thumbnail(Connection *conn);					//!< Get 32x32x8 thumnail
 	void grab(Connection *conn, int x1, int y1, int x2, int y2, int scale, bool do_df, bool do_histo);
@@ -255,10 +259,8 @@ protected:
 	string filenamebase;					//!< Base filename, input for makename()
 	ssize_t nstore;								//!< Numebr of new frames to store (-1 for unlimited)
 
-	void fits_init_phdu(char *const phdu) const;	//!< Init FITS header unit
-	bool fits_add_card(char *phdu, const string &key, const string &value) const; //!< Add FITS header card
-	bool fits_add_comment(char *phdu, const string &comment) const; //!< Add FITS comment
-	
+	int fits_add_card(fitsfile *fptr, string key, string value, string comment="") const; //!< Shorthand for writing a header card.
+
 	string fits_telescope;				//!< FITS header properties for saved files
 	string fits_observer;					//!< FITS header properties for saved files
 	string fits_instrument;				//!< FITS header properties for saved files
