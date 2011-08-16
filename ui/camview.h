@@ -98,8 +98,8 @@ protected:
 	Glib::RefPtr<Gdk::Pixbuf> histopixbuf;
 
 	VBox histovbox;
-	LabeledSpinEntry minval;
-	LabeledSpinEntry maxval;
+	LabeledSpinEntry minval;						//!<
+	LabeledSpinEntry maxval;						//!<
 	HBox histohbox2;
 	LabeledEntry e_avg;									//!< Shows avg value
 	LabeledEntry e_rms;									//!< Shows rms/sigma
@@ -126,6 +126,7 @@ protected:
 	
 	void on_histo_toggled();
 	bool on_histo_clicked(GdkEventButton *);
+	void on_minmax_change();						//!< Set new min/max values for clipping
 	
 	//!< @todo Sort these functions out
 	void on_image_realize();

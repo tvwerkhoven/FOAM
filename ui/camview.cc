@@ -135,6 +135,8 @@ histoalign(0.5, 0.5, 0, 0), minval("Display min"), maxval("Display max"), e_avg(
 	zoomout.signal_clicked().connect(sigc::mem_fun(*this, &CamView::on_zoomout_activate));
 	
 	histoevents.signal_button_press_event().connect(sigc::mem_fun(*this, &CamView::on_histo_clicked));
+	minval.signal_value_changed().connect(sigc::mem_fun(*this, &CamView::on_minmax_change));
+	maxval.signal_value_changed().connect(sigc::mem_fun(*this, &CamView::on_minmax_change));
 	
 	// Handle some glarea events as well
 	glarea.view_update.connect(sigc::mem_fun(*this, &CamView::on_glarea_view_update));
@@ -404,8 +406,8 @@ void CamView::do_histo_update() {
 	}
 	
 	// Make vertical bars (red and cyan) at minval and maxval:
-	int x1 = clamp(minval.get_value_as_int() * 256 / max, (size_t) 0, (size_t) 255);
-	int x2 = clamp(maxval.get_value_as_int() * 256 / max, (size_t) 0, (size_t) 255);
+	int x1 = clamp(minval.get_value_as_int() * 256 / max, (size_t) 0, (size_t) (1 << camctrl->get_depth()) - 1);
+	int x2 = clamp(maxval.get_value_as_int() * 256 / max, (size_t) 0, (size_t) (1 << camctrl->get_depth()) - 1);
 	
 	for(int y = 0; y < 100; y += 2) {
 		uint8_t *p = out + 3 * (x1 + 256 * y);
@@ -598,5 +600,10 @@ bool CamView::on_histo_clicked(GdkEventButton *event) {
 	//!< @todo implement histogram binning here
 	//do_update();	
 	return true;
+}
+
+void CamView::on_minmax_change() {
+	glarea.setminmax(minval.get_value_as_int(), maxval.get_value_as_int());
+	glarea.do_update();
 }
 

@@ -103,6 +103,10 @@ class LabeledSpinEntry: public Gtk::HBox {
 	Glib::SignalProxy0<void> signal_value_changed() {
 		return entry.signal_value_changed();
 	}
+	
+	Glib::SignalProxy0<void> signal_activate() {
+		return entry.signal_activate();		
+	}
 
 	Gtk::Adjustment *get_adjustment() {
 		return entry.get_adjustment();
