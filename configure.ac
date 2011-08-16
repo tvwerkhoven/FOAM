@@ -51,10 +51,6 @@ AM_CONDITIONAL(HAVE_LINUX, test x$have_linux = xtrue)
 AM_CONDITIONAL(HAVE_MACOSX, test x$have_macosx = xtrue)
 
 # FOAM data & configuration directory
-#FOAMDATADIR=$datadir/foam
-#FOAMCONFDIR=$sysconfdir/foam
-#AC_SUBST(FOAMDATADIR)
-#AC_SUBST(FOAMCONFDIR)
 
 ### CHECK FOR REQUIRED LIBRARIES ###
 ####################################
@@ -156,8 +152,8 @@ fi
 ### Set some automake variables ###
 ###################################
 
-AM_CONDITIONAL([DEBUG], [test "$debug" = true])
-AM_CONDITIONAL([HWDEBUG], [test "$hwdebug" = true])
+AM_CONDITIONAL([HAVE_DEBUG], [test "$debug" = true])
+AM_CONDITIONAL([HAVE_HWDEBUG], [test "$hwdebug" = true])
 AC_SUBST(LIBSIU)
 
 ### CHECK FOR HARDWARE LIBRARIES ###

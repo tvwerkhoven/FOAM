@@ -41,7 +41,7 @@ latencies_test_CPPFLAGS = $(SIGC_CFLAGS) $(AM_CPPFLAGS)
 latencies_test_LDADD = $(LIBSIU_DIR)/libtime.a \
 		$(LDADD) $(SIGC_LIBS)
 
-if HWDEBUG
+if HAVE_HWDEBUG
 # only do this if we want hardware debugging 
 # install the test programs in a foam-test subdir
 if HAVE_DC1394
@@ -70,9 +70,9 @@ andorcam_test_LDADD = $(LIBSIU_DIR)/libio.a \
 
 endif HAVE_ANDORCAM
 
-endif HWDEBUG
+endif HAVE_HWDEBUG
 
-if DEBUG
+if HAVE_DEBUG
 check_PROGRAMS += pixbuf-test gtk-test sigcpp-test zern-test
 
 pixbuf_test_SOURCES = pixbuf-test.cc
@@ -150,4 +150,4 @@ camsend_test_LDADD = $(COMMON_LIBS) \
 		$(LIBSIU_DIR)/libsocket.a
 
 
-endif DEBUG
+endif HAVE_DEBUG
