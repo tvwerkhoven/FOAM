@@ -25,6 +25,26 @@
 #include "autoconfig.h"
 #endif
 
+#ifdef HAVE_GL_GL_H
+#include "GL/gl.h"
+#elif HAVE_OPENGL_GL_H
+#include "OpenGL/gl.h"
+#endif
+
+#ifdef HAVE_GL_GLU_H
+#include "GL/glu.h"
+#elif HAVE_OPENGL_GLU_H 
+#include "OpenGL/glu.h"
+#endif
+
+#ifdef HAVE_GL_GLUT_H
+#include "GL/glut.h"
+#elif HAVE_GLUT_GLUT_H 
+#include "GLUT/glut.h"
+#endif
+
+#include "sighandle.h"
+
 #include <iostream>
 #include <string>
 #include <map>
@@ -98,6 +118,7 @@ private:
 	
 	Log log;														//!< This logs messages (see LogPage and Log)
 	FoamControl foamctrl;								//!< This is the base connection to FOAM
+	SigHandle sighandler;								//!< Signal handler object
 
 	AboutFOAMGui aboutdialog;						//!< About dialog
 	Notebook notebook;									//<! Notebook contains the different control tabs
