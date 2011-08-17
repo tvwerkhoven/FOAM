@@ -34,8 +34,9 @@ if HAVE_DEBUG
 AM_CPPFLAGS += -D_GLIBCXX_DEBUG \
 		-D_GLIBCXX_DEBUG_PEDANTIC \
 		-D_GLIBCXX_FULLY_DYNAMIC_STRING \
+		-DGLIBCXX_FORCE_NEW \
 		-DFOAM_DEBUG=1
-AM_CXXFLAGS += -O1 -ggdb -fno-inline
+AM_CXXFLAGS += -O0 -ggdb -g3 -fno-inline
 else
 AM_CXXFLAGS += -O3 -ftree-vectorize
 endif
