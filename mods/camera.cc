@@ -185,7 +185,7 @@ int Camera::store_frame(const frame_t *const frame) const {
 	io.msg(IO_DEB1, "Camera::store_frame(%p) to %s", frame, filename.c_str());
 	
 	fitsfile *fptr;
-  int status = 0, naxis = 2, bitpix;
+  int status = 0, naxis = 2;
   long fpixel = 1, nelements = -1;
   long naxes[naxis];
 	nelements = frame->npixels;

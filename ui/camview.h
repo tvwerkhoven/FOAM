@@ -80,6 +80,7 @@ protected:
 	CheckButton crosshair;							//!< Show crosshair
 	CheckButton grid;										//!< Show grid
 	CheckButton histo;									//!< Show histogram
+	CheckButton underover;							//!< Show under-/overexposed areas as red and green
 	VSeparator vsep1;
 	Button zoomin;											//!< Zoom in, CamView::on_zoomin_activate()
 	Button zoomout;											//!< Zoom out, CamView::on_zoomout_activate()
@@ -98,8 +99,8 @@ protected:
 	Glib::RefPtr<Gdk::Pixbuf> histopixbuf;
 
 	VBox histovbox;
-	LabeledSpinEntry minval;
-	LabeledSpinEntry maxval;
+	LabeledSpinEntry minval;						//!<
+	LabeledSpinEntry maxval;						//!<
 	HBox histohbox2;
 	LabeledEntry e_avg;									//!< Shows avg value
 	LabeledEntry e_rms;									//!< Shows rms/sigma
@@ -124,8 +125,10 @@ protected:
 	void on_store_clicked();						//!< Called when user clicks CamView::store or activates CamView::store_n
 	void on_info_change();							//!< Propagate user changed settings in GUI to camera
 	
-	void on_histo_toggled();
+	void on_histo_toggled();						//!< Toggle histogram frame display
+	void on_underover_toggled();				//!< Toggle under-/overexposure indication
 	bool on_histo_clicked(GdkEventButton *);
+	void on_minmax_change();						//!< Set new min/max values for display clipping
 	
 	//!< @todo Sort these functions out
 	void on_image_realize();

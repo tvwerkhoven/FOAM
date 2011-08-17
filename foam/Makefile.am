@@ -76,7 +76,7 @@ endif SIMSTAT
 ### HW TEST MODE ###
 ####################
 
-if HWDEBUG
+if HAVE_HWDEBUG
 # building hardware tests
 
 if HAVE_DC1394
@@ -102,7 +102,7 @@ foam_hwtest_LDADD = $(LDADD) \
 
 endif HAVE_DC1394
 
-endif HWDEBUG
+endif HAVE_HWDEBUG
 ### END HW TEST MODE ###
 
 

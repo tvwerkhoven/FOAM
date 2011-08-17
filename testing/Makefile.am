@@ -41,7 +41,7 @@ latencies_test_CPPFLAGS = $(SIGC_CFLAGS) $(AM_CPPFLAGS)
 latencies_test_LDADD = $(LIBSIU_DIR)/libtime.a \
 		$(LDADD) $(SIGC_LIBS)
 
-if HWDEBUG
+if HAVE_HWDEBUG
 # only do this if we want hardware debugging 
 # install the test programs in a foam-test subdir
 if HAVE_DC1394
@@ -70,9 +70,9 @@ andorcam_test_LDADD = $(LIBSIU_DIR)/libio.a \
 
 endif HAVE_ANDORCAM
 
-endif HWDEBUG
+endif HAVE_HWDEBUG
 
-if DEBUG
+if HAVE_DEBUG
 check_PROGRAMS += pixbuf-test gtk-test sigcpp-test zern-test
 
 pixbuf_test_SOURCES = pixbuf-test.cc
@@ -111,7 +111,7 @@ shwfs_test_SOURCES = shwfs-test.cc \
 		$(LIB_DIR)/zernike.cc \
 		../foam/foamctrl.cc
 
-shwfs_test_CFLAGS = $(COMMON_CFLAGS) $(FFTW_CFLAGS)
+shwfs_test_CFLAGS = $(COMMON_CFLAGS) $(FFTW_CFLAGS) $(AM_CFLAGS)
 shwfs_test_CPPFLAGS = $(SIGC_CFLAGS) $(AM_CPPFLAGS)
 shwfs_test_LDADD = $(COMMON_LIBS) \
 		$(SIGC_LIBS) \
@@ -133,7 +133,7 @@ check_PROGRAMS += camview-test
 
 camview_test_SOURCES = camview-test.cc
 camview_test_CPPFLAGS = $(GUI_CFLAGS) $(AM_CPPFLAGS)
-camview_test_CFLAGS = $(COMMON_CFLAGS) $(GUI_CFLAGS) 
+camview_test_CFLAGS = $(COMMON_CFLAGS) $(GUI_CFLAGS) $(AM_CFLAGS)
 camview_test_LDADD = $(COMMON_LIBS) $(GUI_LIBS) -lgthread-2.0 \
 		$(LIBSIU_DIR)/libglviewer.a \
 		$(LIBSIU_DIR)/libprotocol.a \
@@ -150,4 +150,4 @@ camsend_test_LDADD = $(COMMON_LIBS) \
 		$(LIBSIU_DIR)/libsocket.a
 
 
-endif DEBUG
+endif HAVE_DEBUG
