@@ -51,7 +51,8 @@ dispframe("Display settings"),
 camframe("Camera " + devname),
 histoframe("Histogram"),
 capture("Capture"), display("Display"), store("Store"), e_exposure("Exp."), e_offset("Offset"), e_interval("Intv."), e_gain("Gain"), e_res("Res."), e_mode("Mode"),
-flipv("Flip V"), fliph("Flip H"), crosshair("X-hair"), grid("Grid"), histo("Histogram"), zoomin(Stock::ZOOM_IN), zoomout(Stock::ZOOM_OUT), zoom100(Stock::ZOOM_100), zoomfit(Stock::ZOOM_FIT), 
+flipv("Flip V"), fliph("Flip H"), crosshair("+"), grid("Grid"), histo("Histo"), underover("Underover"), 
+zoomin(Stock::ZOOM_IN), zoomout(Stock::ZOOM_OUT), zoom100(Stock::ZOOM_100), zoomfit(Stock::ZOOM_FIT), 
 histoalign(0.5, 0.5, 0, 0), minval("Display min"), maxval("Display max"), e_avg("Avg."), e_rms("RMS"), e_datamin("Min"), e_datamax("Max")
 {
 	log.term(format("%s", __PRETTY_FUNCTION__));
@@ -83,6 +84,7 @@ histoalign(0.5, 0.5, 0, 0), minval("Display min"), maxval("Display max"), e_avg(
 	crosshair.set_active(false);
 	grid.set_active(false);
 	histo.set_active(false);
+	underover.set_active(false);
 	
 	store_n.set_width_chars(4);
 	
@@ -128,6 +130,7 @@ histoalign(0.5, 0.5, 0, 0), minval("Display min"), maxval("Display max"), e_avg(
 	crosshair.signal_toggled().connect(sigc::mem_fun(*this, &CamView::do_update));
 	grid.signal_toggled().connect(sigc::mem_fun(*this, &CamView::do_update));
 	histo.signal_toggled().connect(sigc::mem_fun(*this, &CamView::on_histo_toggled));
+	underover.signal_toggled().connect(sigc::mem_fun(*this, &CamView::on_underover_toggled));
 	
 	zoomfit.signal_toggled().connect(sigc::mem_fun(*this, &CamView::do_update));
 	zoom100.signal_clicked().connect(sigc::mem_fun(*this, &CamView::on_zoom100_activate));
@@ -162,6 +165,7 @@ histoalign(0.5, 0.5, 0, 0), minval("Display min"), maxval("Display max"), e_avg(
 	disphbox.pack_start(crosshair, PACK_SHRINK);
 	disphbox.pack_start(grid, PACK_SHRINK);
 	disphbox.pack_start(histo, PACK_SHRINK);
+	disphbox.pack_start(underover, PACK_SHRINK);
 	disphbox.pack_start(vsep1, PACK_SHRINK);
 	disphbox.pack_start(zoomfit, PACK_SHRINK);
 	disphbox.pack_start(zoom100, PACK_SHRINK);
@@ -231,6 +235,7 @@ void CamView::enable_gui() {
 	crosshair.set_sensitive(true);
 	grid.set_sensitive(true);
 	histo.set_sensitive(true);
+	underover.set_sensitive(true);
 	
 	capture.set_sensitive(true);
 	display.set_sensitive(true);
@@ -252,6 +257,7 @@ void CamView::disable_gui() {
 	crosshair.set_sensitive(false);
 	grid.set_sensitive(false);
 	histo.set_sensitive(false);
+	underover.set_sensitive(false);
 
 	capture.set_sensitive(false);
 	display.set_sensitive(false);
@@ -315,6 +321,12 @@ void CamView::on_histo_toggled() {
 	}
 }
 
+void CamView::on_underover_toggled() {
+	glarea.setunderover(underover.get_active());
+	glarea.do_update();
+}
+
+
 int CamView::histo_scale_func(int max) {
 	switch (histo_scale_f) {
 		case LINEAR:
@@ -343,6 +355,10 @@ void CamView::do_histo_update() {
 	double rms = max;
 	bool overexposed = false;						//!< Overexposed flag
 	
+	// Don't do anything is histoframe is hidden
+	if (!histoframe.is_visible())
+		return;
+	
 	// Analyze histogram data if available. histo is a linear array from 0 to
 	// the maximum intensity and counts pixels for each intensity bin.
 	if (histo_img) {
@@ -360,19 +376,17 @@ void CamView::do_histo_update() {
 		rms = sqrt(sumsquared - sum * sum) / sum;
 	}
 	
+	// Update ranges
 	minval.set_range(0, 1 << camctrl->get_depth());
 	maxval.set_range(0, 1 << camctrl->get_depth());
-	e_avg.set_text(format("%.2lf", sum));
-	e_rms.set_text(format("%.3lf", rms));
 	
-	// Update min/max if necessary
+	// Update min/max/avg/rms data values
 	e_datamin.set_text(format("%d", camctrl->monitor.min));
 	e_datamax.set_text(format("%d", camctrl->monitor.max));
+	e_avg.set_text(format("%.2lf", sum));
+	e_rms.set_text(format("%.3lf", rms));
 
 	// Draw the histogram
-	
-	if (!histoframe.is_visible())
-		return;
 	
 	// total nr of pixels: pixels
 	// maximum intensity in image (nr of bins): max
@@ -381,9 +395,7 @@ void CamView::do_histo_update() {
 	const int hscale = 1 + 10 * pixels / max;
 	
 	// Color red if overexposed
-	//!< @todo implement underover
-	//if (overexposed && underover.get_active() && lastupdate & 1)
-	if (overexposed)
+	if (overexposed && underover.get_active())
 		histopixbuf->fill(0xff000000);
 	else
 		histopixbuf->fill(0xffffff00);
@@ -598,7 +610,7 @@ bool CamView::on_histo_clicked(GdkEventButton *event) {
 		maxval.set_value(value);
 	
 	//!< @todo implement histogram binning here
-	//do_update();	
+	do_histo_update();
 	return true;
 }
 
