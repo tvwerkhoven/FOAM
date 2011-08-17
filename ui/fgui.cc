@@ -62,6 +62,7 @@
 
 #include "protocol.h"
 #include "glviewer.h"
+#include "sighandle.h"
 
 #include "about.h"
 #include "widgets.h"
@@ -324,10 +325,14 @@ int main(int argc, char *argv[]) {
 	signal(SIGFPE, signal_handler);
 	signal(SIGALRM, signal_handler);
 	signal(SIGPIPE, signal_handler);
-	
+
+	Gtk::Main::init_gtkmm_internals();
+
 	Glib::thread_init();
 	
 	Gtk::Main kit(argc, argv);
+	// solve glibmm:ERROR:objectbase.cc:78:void Glib::ObjectBase::initialize(GObject*): assertion failed: (gobject_ == castitem) ?
+	// http://stackoverflow.com/questions/4453399/cant-display-images-on-a-gtkmm-based-gnome-panel-applet
 	Gtk::GL::init(argc, argv);
 	
 	glutInit(&argc, argv);
