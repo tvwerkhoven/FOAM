@@ -708,7 +708,7 @@ void Camera::grab(Connection *conn, int x1, int y1, int x2, int y2, int scale = 
 		free(buffer);
 		
 	finish:
-		io.msg(IO_DEB2, "Camera::grab() finish: %p & %d & %zu & %zu", f->histo, do_histo, sizeof *f->histo, maxval);
+		io.msg(IO_DEB2, "Camera::grab() finish: %p & %d & %zu & %zu", f->histo, do_histo, sizeof *f->histo, get_maxval());
 		if(f->histo && do_histo)
 			conn->write(f->histo, sizeof *f->histo * get_maxval());
 	}
