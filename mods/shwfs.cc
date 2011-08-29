@@ -735,7 +735,7 @@ int Shwfs::gen_mla_grid(std::vector<vector_t> &mlacfg, const coord_t res, const 
 		}
 	}
 	io.msg(IO_XNFO, "Shwfs::gen_mla_grid(): Found %d subapertures.", (int) mlacfg.size());
-	netio.broadcast("ok mla " + get_mla_str(), "mla");
+	net_broadcast("ok mla " + get_mla_str(), "mla");
 	
 	// Re-calibrate with new settings
 	calibrate();
@@ -889,7 +889,7 @@ int Shwfs::find_mla_grid(std::vector<vector_t> &mlacfg, const coord_t size, cons
 		io.msg(IO_WARN, "Shwfs::find_mla_grid(): iter not yet implemented");
 	}
 	
-	netio.broadcast("ok mla " + get_mla_str(), "mla");
+	net_broadcast("ok mla " + get_mla_str(), "mla");
 	// Re-calibrate with new settings
 	calibrate();
 	
@@ -919,7 +919,7 @@ int Shwfs::mla_update_si(const int nx0, const int ny0, const int nx1, const int 
 		set_calib(false);
 		calibrate();
 
-		netio.broadcast("ok mla " + get_mla_str(), "mla");
+		net_broadcast("ok mla " + get_mla_str(), "mla");
 		return 0;
 	}
 	else {
@@ -932,7 +932,7 @@ int Shwfs::mla_del_si(const int idx) {
 		mlacfg.erase(mlacfg.begin() + idx);
 		set_calib(false);
 		calibrate();
-		netio.broadcast("ok mla " + get_mla_str(), "mla");
+		net_broadcast("ok mla " + get_mla_str(), "mla");
 		return 0;
 	}
 	else
@@ -988,7 +988,7 @@ int Shwfs::set_mla_str(string mla_str) {
 	
 	calibrate();
 
-	netio.broadcast("ok mla " + get_mla_str(), "mla");
+	net_broadcast("ok mla " + get_mla_str(), "mla");
 	return (int) mlacfg.size();
 }
 

@@ -34,7 +34,7 @@ using namespace std;
 namespace foam {
 
 Device::Device(Io &io, foamctrl *const ptc, const string n, const string t, const string p, const Path conf, const bool online): 
-is_calib(false), is_ok(false), outputdir(ptc->outdir), io(io), ptc(ptc), name(n), type("dev." + t), port(p), conffile(conf), netio(p, n), online(online)
+is_calib(false), is_ok(false), outputdir(ptc->outdir), io(io), ptc(ptc), name(n), type("dev." + t), port(p), conffile(conf), netio(NULL), online(online)
 { 
 	//! @todo This init() can just be placed here?
 	init();
@@ -58,19 +58,20 @@ bool Device::init() {
 	}
 	
 	if (online) {
-		netio.slot_message = sigc::mem_fun(this, &Device::on_message_common);
-		netio.slot_connected = sigc::mem_fun(this, &Device::on_connect);
-		io.msg(IO_XNFO, "Device %s listening on port %s.", name.c_str(), port.c_str());
+		netio = new Protocol::Server(port, name);
+		netio->slot_message = sigc::mem_fun(this, &Device::on_message_common);
+		netio->slot_connected = sigc::mem_fun(this, &Device::on_connect);
+		netio->listen();
+		io.msg(IO_XNFO, "Device %s online, listening on port %s.", name.c_str(), port.c_str());
 	}
 	
-	// Always listen, also for offline devices. In that latter case, simply don't parse any data.
-	netio.listen();
-
 	return true;
 }
 
 Device::~Device() {
 	io.msg(IO_DEB2, "Device::~Device()");
+	
+	delete netio;
 	
 	// Update master configuration with our (potentially changed) settings
 	ptc->cfg->update(&cfg);
@@ -138,12 +139,12 @@ void Device::get_var(Connection * const conn, const string varname, const double
 
 void Device::set_calib(bool newcalib) {
 	is_calib = newcalib;
-	netio.broadcast(format("ok calib %d", is_calib));
+	net_broadcast(format("ok calib %d", is_calib));
 }
 
 void Device::set_status(bool newstat) {
 	is_ok = newstat;
-	netio.broadcast(format("ok status %d", newstat));
+	net_broadcast(format("ok status %d", newstat));
 }
 
 int Device::set_outputdir(const string identifier) {
@@ -161,7 +162,7 @@ int Device::set_outputdir(const string identifier) {
 	}
 
 	outputdir = tmp;
-	netio.broadcast("ok outputdir :" + outputdir.str(), "outputdir");
+	net_broadcast("ok outputdir :" + outputdir.str(), "outputdir");
 	return 0;
 }
 } // namespace foam
