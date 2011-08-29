@@ -135,7 +135,7 @@ void Wfc::on_message(Connection *const conn, string line) {
 			ctrlparams.gain.p = popdouble(line);
 			ctrlparams.gain.i = popdouble(line);
 			ctrlparams.gain.d = popdouble(line);
-			netio.broadcast(format("ok gain %g %g %g", ctrlparams.gain.p, ctrlparams.gain.i, ctrlparams.gain.d));
+			net_broadcast(format("ok gain %g %g %g", ctrlparams.gain.p, ctrlparams.gain.i, ctrlparams.gain.d));
 		} else
 			parsed = false;
 	}

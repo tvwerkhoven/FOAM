@@ -80,7 +80,7 @@ protected:
 	const Path conffile;								//!< Configuration file
 	config cfg;													//!< Interpreted configuration file
 	
-	Protocol::Server netio;							//!< Network connection
+	Protocol::Server *netio;						//!< Network connection
 	bool online;												//!< Online flag, indicates whether this Device listens to network commands or not.
 	
 	
@@ -115,7 +115,7 @@ protected:
 		}
 		else {
 			*var = value;
-			netio.broadcast(format("ok %s %le", varname.c_str(), (double) *var), varname);
+			net_broadcast(format("ok %s %le", varname.c_str(), (double) *var), varname);
 			return *var;
 		}
 	}
@@ -161,7 +161,24 @@ protected:
 	 */
 	virtual void on_connect(const Connection * const /*conn*/, const bool status) const { 
 		io.msg(IO_DEB2, "Device::on_connect(stat=%d)", (int) status); 
-	}	
+	}
+	
+	/*!
+	 @brief Broadcast a message over netio
+	 */
+	void net_broadcast(const string &msg) const {
+		if (netio)
+			netio->broadcast(msg);
+	}
+
+	/*!
+	 @brief Broadcast a tagged message over netio
+	 */
+	void net_broadcast(const string &msg, const string &tag) const {
+		if (netio)
+			netio->broadcast(msg, tag);
+	}
+
 public:
 	class exception: public std::runtime_error {
 	public:

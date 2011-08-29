@@ -147,10 +147,10 @@ void Camera::cam_proc() {
 			int status=store_frame(frame);
 			if (!status) {
 				nstore--;
-				netio.broadcast(format("ok store %d", nstore), "store");
+				net_broadcast(format("ok store %d", nstore), "store");
 //				io.msg(IO_DEB2, "Camera::cam_proc() nstore--", nstore);
 			} else {
-				netio.broadcast(format("error storing frame: %d", status), "store");
+				net_broadcast(format("error storing frame: %d", status), "store");
 				io.msg(IO_ERR, "Camera::cam_proc() fits store error: %d", status);
 			}
 		}
@@ -494,40 +494,40 @@ void Camera::on_message(Connection *const conn, string line) {
 
 double Camera::set_exposure(const double value) {	
 	cam_set_exposure(value);
-	netio.broadcast(format("ok exposure %lf", exposure), "exposure");
+	net_broadcast(format("ok exposure %lf", exposure), "exposure");
 	set_calib(false);
 	return exposure;
 }
 
 double Camera::set_interval(const double value) {
 	cam_set_interval(value);
-	netio.broadcast(format("ok interval %lf", interval), "interval");
+	net_broadcast(format("ok interval %lf", interval), "interval");
 	return interval;
 }
 
 double Camera::set_gain(const double value) {
 	cam_set_gain(value);
-	netio.broadcast(format("ok gain %lf", gain), "gain");
+	net_broadcast(format("ok gain %lf", gain), "gain");
 	set_calib(false);
 	return gain;
 }
 
 double Camera::set_offset(const double value) {
 	cam_set_offset(value);
-	netio.broadcast(format("ok offset %lf", offset), "offset");
+	net_broadcast(format("ok offset %lf", offset), "offset");
 	set_calib(false);
 	return offset;
 }
 
 Camera::mode_t Camera::set_mode(const mode_t value) {
 	cam_set_mode(value);
-	netio.broadcast("ok mode " + mode2str(mode), "mode");
+	net_broadcast("ok mode " + mode2str(mode), "mode");
 	return mode;
 }
 
 int Camera::set_store(const int n) {
 	nstore = n;
-	netio.broadcast(format("ok store %d", nstore), "store");
+	net_broadcast(format("ok store %d", nstore), "store");
 	return nstore;	
 }
 
@@ -559,7 +559,7 @@ string Camera::set_fits_comments(const string val) {
 
 string Camera::set_filename(const string value) {
 	filenamebase = value;
-	netio.broadcast("ok filename :" + filenamebase, "filename");
+	net_broadcast("ok filename :" + filenamebase, "filename");
 	return filenamebase;
 }
 
@@ -774,7 +774,7 @@ int Camera::darkburst(size_t bcount) {
 	dark.data = dark.image;
 	
 	io.msg(IO_DEB1, "Got new dark.");
-	netio.broadcast(format("ok dark %d", nflat));
+	net_broadcast(format("ok dark %d", nflat));
 	
 	set_mode(OFF);
 	return 0;
@@ -813,7 +813,7 @@ int Camera::flatburst(size_t bcount) {
 	flat.data = flat.image;
 	
 	io.msg(IO_DEB1, "Got new flat.");
-	netio.broadcast(format("ok flat %d", nflat));
+	net_broadcast(format("ok flat %d", nflat));
 	
 	set_mode(OFF);
 	return 0;

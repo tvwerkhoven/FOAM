@@ -138,7 +138,7 @@ void SimulCam::on_message(Connection *const conn, string line) {
 				conn->addtag("windspeed");
 				seeing.windspeed.x = tmpx;
 				seeing.windspeed.y = tmpy;
-				netio.broadcast(format("ok windspeed %d %d", seeing.windspeed.x, seeing.windspeed.y), "windspeed");
+				net_broadcast(format("ok windspeed %d %d", seeing.windspeed.x, seeing.windspeed.y), "windspeed");
 			}
 		} else if(what == "windtype") {		// set windtype <string>
 			conn->addtag("windtype");
@@ -152,7 +152,7 @@ void SimulCam::on_message(Connection *const conn, string line) {
 				seeing.windtype = SimSeeing::DRIFTING;
 			}
 			
-			netio.broadcast(format("ok windtype %s", tmp.c_str()), "windtype");
+			net_broadcast(format("ok windtype %s", tmp.c_str()), "windtype");
 		} else if(what == "wfcerr_retain") { // set wfcerr_retain <double>
 			set_var(conn, "wfcerr_retain", popdouble(line), &wfcerr_retain, 0.0, 1.0, "out of range");
 		} else if(what == "telapt_fill") { // set telapt_fill <double>
