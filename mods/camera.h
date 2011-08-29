@@ -42,15 +42,18 @@ const string cam_type = "cam";
 
  The Camera class is a template for implementing camera software. The class 
  consists of two parts. One part of the class handles network I/O from outside
- (i.e. from a GUI), this is done with 'netio' in a seperate thread. The other
- part is hardware I/O which is done by a seperate thread through 'handler' in
- the 'camthr' thread. Graphically:
+ (i.e. from a GUI), this is done with 'netio' in a seperate thread and is 
+ initiated from the Device class. The other part is hardware I/O which is done
+ by a seperate thread through the 'cam_handler' method in the 'camthr' thread. A
+ third thread 'proc_thr' handles processing of the image data in 'cam_proc()'.
+ 
+ Graphically:
  
  <tt>
- Device --- netio --        --- netio ----
-      \---- main --- Camera --- cam_thr --
-												  +---- proc_thr -
-													\----	main -----
+ Device --- netio --        --- netio (on_message/on_connect)
+      \---- main --- Camera --- cam_thr (cam_handler) -----
+												  +---- proc_thr (cam_proc) -------
+													\----	main (returns after init) -
  </tt>
  
  \li netio gets input from outside (GUIs), reads from shared class
