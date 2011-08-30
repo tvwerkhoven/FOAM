@@ -95,7 +95,7 @@ zern_test_LDADD = $(LIBSIU_DIR)/libimgdata.a \
 		$(COMMON_LIBS)
 
 
-if FULLSIM
+if HAVE_FULLSIM
 check_PROGRAMS += shwfs-test
 shwfs_test_SOURCES = shwfs-test.cc \
 		$(MODS_DIR)/shwfs.cc \
@@ -123,7 +123,7 @@ shwfs_test_LDADD = $(COMMON_LIBS) \
 		$(LIBSIU_DIR)/libconfig.a \
 		$(LIBSIU_DIR)/libimgdata.a
 
-endif FULLSIM
+endif HAVE_FULLSIM
 
 ### OpenGL programs go here (need GUI libs)
 

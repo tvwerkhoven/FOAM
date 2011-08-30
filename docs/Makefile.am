@@ -37,7 +37,7 @@ man3_MANS = man/man3/*.3
 
 endif # HAVE_DOCS
 
-clean-local:
+distclean-local:
 	@echo -n Cleaning up documentatation...
 	@if [ -d man ]; then rm -r man; fi 
 	@if [ -d html ]; then rm -r html; fi 

@@ -22,21 +22,27 @@ LDADD = $(LIBSIU_DIR)/libsocket.a \
 FRAME_SRC = foam.cc foamctrl.cc $(LIB_DIR)/devices.cc
 FRAME_HDR = foam.h foamctrl.h autoconfig.h $(LIB_DIR)/devices.h
 
+# init empty, append later
+bin_PROGRAMS =
+
 ### DUMMY MODE ###
 ##################
 
-bin_PROGRAMS = foam-dummy
+if HAVE_DUMMY
+
+bin_PROGRAMS += foam-dummy
 foam_dummy_CPPFLAGS = -DFOAM_DEFAULTCONF=\"$(sysconfdir)/foam/foam-dummy.cfg\" \
-		-DFOAM_DEBUG=1 $(AM_CPPFLAGS)
+		$(AM_CPPFLAGS)
 foam_dummy_SOURCES = foam-dummy.cc $(FRAME_SRC) 
 foam_dummy_SOURCES += $(FRAME_HDR)
 
+endif HAVE_DUMMY
 ### END DUMMY MODE ###
 
 ### STATIC SIMULATION MODE ###
 ##############################
 
-if SIMSTAT
+if HAVE_SIMSTAT
 bin_PROGRAMS += foam-simstat
 
 foam_simstat_SOURCES = foam-simstatic.cc \
@@ -70,7 +76,7 @@ foam_simstat_LDADD = $(LIBSIU_DIR)/libimgdata.a \
 foam_simstat_CXXFLAGS = $(SIMSTAT_CFLAGS) $(AM_CXXFLAGS)
 foam_simstat_LDFLAGS = $(SIMSTAT_LIBS) $(AM_LDFLAGS)
 
-endif SIMSTAT
+endif HAVE_SIMSTAT
 ### END STATIC SIMULATION MODE ###
 
 ### HW TEST MODE ###
@@ -109,7 +115,7 @@ endif HAVE_HWDEBUG
 ### FULL SIMULATION MODE ###
 ############################
 
-if FULLSIM
+if HAVE_FULLSIM
 # building full simulation mode
 
 bin_PROGRAMS += foam-fullsim
@@ -151,13 +157,13 @@ foam_fullsim_CPPFLAGS = -DFOAM_DEFAULTCONF=\"$(sysconfdir)/foam/foam-fullsim.cfg
 foam_fullsim_CXXFLAGS = $(FULLSIM_CFLAGS) $(AM_CXXFLAGS)
 foam_fullsim_LDFLAGS = $(FULLSIM_LIBS) $(AM_LDFLAGS)
 
-endif FULLSIM
+endif HAVE_FULLSIM
 ### END FULL SIMULATION MODE ###
 
 ### EXPOAO BUILD TARGET ###
 ###########################
 
-if EXPOAO
+if HAVE_EXPOAO
 # building expoao foam target
 
 bin_PROGRAMS += foam-expoao
@@ -186,8 +192,8 @@ foam_expoao_CPPFLAGS = -DFOAM_DEFAULTCONF=\"$(FOAMCONFDIR)/foam-expoao.cfg\" \
 
 foam_expoao_CXXFLAGS = $(EXPOAO_CFLAGS) $(AM_CXXFLAGS)
 
-foam_expoao_LDADD = $(LDADD) $(ANDORCAM_LIBS)
+foam_expoao_LDADD = $(EXPOAO_LIBS) $(LDADD)
 
-endif EXPOAO
+endif HAVE_EXPOAO
 ### END EXPOAO TARGET ###
 
