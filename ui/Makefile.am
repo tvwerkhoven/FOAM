@@ -13,7 +13,7 @@ LDADD = $(LIBSIU_DIR)/libsocket.a \
 ### FOAM GUI ###
 ################
 
-if GUI
+if HAVE_GUI
 bin_PROGRAMS = foam-gui
 foam_gui_CPPFLAGS = $(GUI_CFLAGS) $(AM_CPPFLAGS)
 foam_gui_LDFLAGS = $(COMMON_LIBS) $(GUI_LIBS) $(AM_LDFLAGS)
@@ -23,4 +23,4 @@ foam_gui_SOURCES += fgui.h log.h logview.h about.h foamcontrol.h controlview.h w
 foamdatadir = $(datadir)/foam
 nobase_dist_foamdata_DATA = FOAM-logo.svg FOAM-logo.png
 
-endif GUI
+endif HAVE_GUI

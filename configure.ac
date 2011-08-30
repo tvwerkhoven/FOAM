@@ -75,342 +75,288 @@ AC_SEARCH_LIBS([ffopen],
   	[AC_DEFINE([HAVE_CFITSIO], [1], [CFITSIO supported.])],
 		[FOAM_FATAL=yes;FOAM_MISSING+=" cfitsio"])
 
-PKG_CHECK_MODULES(SIGC, [sigc++-2.0 >= 2.0], [],
+PKG_CHECK_MODULES(SIGC, 
+		[sigc++-2.0 >= 2.0], 
+		[],
 		[FOAM_FATAL=yes;FOAM_MISSING+=" sigc++-2.0"])
 
-PKG_CHECK_MODULES(GSL, [gsl >= 1.11], [AC_DEFINE([HAVE_GSL], [1], [GSL supported.])],
+PKG_CHECK_MODULES(GSL, 
+		[gsl >= 1.11], 
+		[AC_DEFINE([HAVE_GSL], [1], [GSL supported.])],
 		[FOAM_FATAL=yes;FOAM_MISSING+=" gsl gslcblas";])
 
-#PKG_CHECK_MODULES(FITSIO, [cfitsio], [AC_DEFINE([HAVE_CFITSIO], [1], [CFITSIO supported.])],
+AS_IF([test "$FOAM_FATAL" = yes],
+	[AC_MSG_ERROR([Cannot build FOAM! Missing libraries:$FOAM_MISSING!])],
+	[])
+
+#PKG_CHECK_MODULES(FITSIO, 
+#		[cfitsio], 
+#		[AC_DEFINE([HAVE_CFITSIO], [1], [CFITSIO supported.])],
 #		[FOAM_FATAL=yes;FOAM_MISSING+=" cfitsio"])
 
-COMMON_CFLAGS="$SIGC_CFLAGS $GSL_CFLAGS $FITSIO_CFLAGS"
-COMMON_LIBS="$SIGC_LIBS $GSL_LIBS $FITSIO_LIBS $LIBS"
-AC_SUBST(COMMON_CFLAGS)
-AC_SUBST(COMMON_LIBS)
+AC_SUBST(COMMON_CFLAGS, ["$SIGC_CFLAGS $GSL_CFLAGS $FITSIO_CFLAGS"])
+AC_SUBST(COMMON_LIBS, ["$SIGC_LIBS $GSL_LIBS $FITSIO_LIBS $LIBS"])
 
 # Reset LIBS
 LIBS=$OLDLIBS
 
-### INSPECT BUILD TARGETS ###
-#############################
+### INSPECT CONFIGURATION OPTIONS ###
+#####################################
 
-dummy=true
+# Build targets
+
 AC_ARG_ENABLE([dummy],
 		AC_HELP_STRING([--disable-dummy], [don't build dummy mode]),
-		[test "$enableval" = no && dummy=disabled], [])
+		[have_dummy=$enableval],
+		[have_dummy=yes])
+AM_CONDITIONAL([HAVE_DUMMY], [test "x$have_dummy" != "xno"])
 
-docs=true
-AC_ARG_ENABLE([docs],
-		AC_HELP_STRING([--disable-docs], [don't compile documentation]),
-		[test "$enableval" = no && docs=disabled], [])
-
-extdocs=false
-AC_ARG_ENABLE([extdocs],
-		AC_HELP_STRING([--enable-extdocs], [compile extended documentation]),
-		[test "$enableval" = yes && extdocs=true], [extdocs=disabled])
-
-simstat=true
 AC_ARG_ENABLE([simstat],
 		AC_HELP_STRING([--disable-simstat], [don't build static simulation mode]),
-		[test "$enableval" = no && simstat=disabled], [])
+		[have_simstat=$enableval],
+		[have_simstat=yes])
+AM_CONDITIONAL([HAVE_SIMSTAT], [test "x$have_simstat" != "xno"])
 
-fullsim=true
 AC_ARG_ENABLE([fullsim],
 		AC_HELP_STRING([--disable-fullsim], [don't build full simulation mode]),
-		[test "$enableval" = no && fullsim=disabled], [])
+		[have_fullsim=$enableval],
+		[have_fullsim=yes])
+AM_CONDITIONAL([HAVE_FULLSIM], [test "x$have_fullsim" != "xno"])
 
-debug=true
-AC_ARG_ENABLE([debug],
-		AC_HELP_STRING([--disable-debug], [don't disable debugging mode]),
-		[test "$enableval" = no && debug=disabled], [])
-
-gui=true
 AC_ARG_ENABLE([gui],
-		AC_HELP_STRING([--disable-gui], [don't build gui]),
-		[test "$enableval" = no && gui=disabled], [])
+		AC_HELP_STRING([--disable-gui], [don't build FOAM gui]),
+		[have_gui=$enableval],
+		[have_gui=yes])
+AM_CONDITIONAL([HAVE_GUI], [test "x$have_gui" != "xno"])
 
 AC_ARG_ENABLE([hwdebug],
 		AC_HELP_STRING([--enable-hwdebug], [build hardware debugging tests]),
-		[test "$enableval" = yes && hwdebug=true], [hwdebug=disabled])
+		[have_hwdebug=$enableval],
+		[have_hwdebug=no])
+AM_CONDITIONAL([HAVE_HWDEBUG], [test "x$have_hwdebug" != "xno"])
 
-### INSPECT BUILD OPTIONS ###
-#############################
-		
+### Documentation options
+
+AC_ARG_ENABLE([docs],
+		AC_HELP_STRING([--enable-docs], [compile documentation]),
+		[have_docs=$enableval],
+		[have_docs=no])
+
+AC_ARG_ENABLE([extdocs],
+		AC_HELP_STRING([--enable-extdocs], [compile verbose documentation]),
+		[have_extdocs=$enableval],
+		[have_extdocs=no])
+
+### Debug / profiling options ###
+
+AC_ARG_ENABLE([debug],
+		AC_HELP_STRING([--enable-debug], [enable debug output]),
+		[have_debug=$enableval],
+		[have_debug=no])
+AC_ARG_ENABLE([strict-debug],
+		AC_HELP_STRING([--enable-strict-debug], [enable strict (agressive) debug output]),
+		[have_str_debug=$enableval;],
+		[have_str_debug=no])
+AM_CONDITIONAL([HAVE_STR_DEBUG], [test "x$have_str_debug" != "xno"])
+AS_IF([test "x$have_str_debug" != "xno"],
+		[
+		AC_MSG_WARN([*** Enabling strict debugging. Continue at your own risk! (but in any case make sure to use strict debugging consistently)])
+		have_debug=yes
+		])
+AM_CONDITIONAL([HAVE_DEBUG], [test "x$have_debug" != "xno"])
+AC_DEFINE([FOAM_DEBUG], [test "x$have_debug" != "xno"], [Toggle debugging.])
+
+AC_ARG_ENABLE([profiling],
+		AC_HELP_STRING([--enable-profiling], [enable profiling support]),
+		[have_profiling=$enableval],
+		[have_profiling=no])
+AM_CONDITIONAL([HAVE_PROFILING], [test "x$have_profiling" != "xno"])
+
+### Compilation dependencies
+
 AC_ARG_WITH([libsiu],
-		AC_HELP_STRING([--with-libsiu], [location of libsiu (def: ./libsiu)]),
-		[test "$withval" != false && LIBSIU=$withval],
-		[LIBSIU="libsiu"])
-		
-# @todo test LIBSIU presence
-if test -d $LIBSIU ; then
-	AC_MSG_NOTICE([*** Found libsiu in $LIBSIU.])
-else
-	AC_MSG_ERROR([*** libsiu not found in $LIBSIU. Please install first (see INSTALL)])
-fi
+		[AC_HELP_STRING([--with-libsiu], [location of libsiu (def: ./libsiu)])],
+		[have_libsiu=$withval],
+		[have_libsiu="./libsiu"])
 
-### Set some automake variables ###
-###################################
+### CHECK LIBSIU LIBRARY ###
+############################
 
-AM_CONDITIONAL([HAVE_DEBUG], [test "$debug" = true])
-AM_CONDITIONAL([HAVE_HWDEBUG], [test "$hwdebug" = true])
-AC_SUBST(LIBSIU)
+### Libsiu testing, 1) test if pthread++.h exist, 2) test for libsighandle.a
+AC_MSG_NOTICE([*** Looking for libsiu library.])
+
+AC_CHECK_FILE([$have_libsiu/pthread++.h],
+		[],
+		[AC_MSG_ERROR([*** libsiu not found in $have_libsiu. Please install first (see INSTALL)])])
+AC_CHECK_FILE([$have_libsiu/libsighandle.a],
+		[],
+		[AC_MSG_ERROR([*** libsiu files found, but could find compiled libraries. Please install first (see INSTALL)])])
+
+AC_SUBST(LIBSIU, [$have_libsiu])
 
 ### CHECK FOR HARDWARE LIBRARIES ###
 ####################################
-AC_MSG_NOTICE([*** Checking hardware capabilities.])
+AC_MSG_NOTICE([*** Checking for 1394 camera support.])
 
-# Check 1394 camera libraries dc1394
 PKG_CHECK_MODULES(DC1394, [libdc1394-2 >= 2.0.2],
-		[have_dc1394=true],
-		[have_dc1394=false;hw1394_missing+=" libdc1394"])
+		[have_dc1394=yes],
+		[have_dc1394=no;dc1394_missing+=" libdc1394"])
 
 # TODO: need to check things for linux and mac here
-if test "$have_dc1394" = true ; then
-	case "$build" in
-		*-*-linux*)
-		# TODO: test this, do we need it?
-		AC_SEARCH_LIBS([raw1394_channel_modify], [raw1394],
-				[have_dc1394=true;],
-				[have_dc1394=false;hw1394_missing+=" raw1394"])
-		;;
-		*-*-darwin*)
-		AC_SEARCH_LIBS(IOMasterPort, IOKit,
-				[have_dc1394=true],
-				[have_dc1394=false;hw1394_missing+=" IOKit"])
-		;;
-	esac
-fi
-AM_CONDITIONAL(HAVE_DC1394, test x$have_dc1394 = xtrue)
+# TODO: test this, do we need it?
+AS_IF([test "x$have_dc1394" != "xno"],
+	AS_CASE([$build], 
+			[*-*-linux*], 
+			[
+			AC_SEARCH_LIBS([raw1394_channel_modify], [raw1394],
+				[have_dc1394=yes],
+				[have_dc1394=no;hw1394_missing+=" raw1394"])
+			], 
+			[*-*-darwin*],
+			[
+			AC_SEARCH_LIBS([IOMasterPort], [IOKit],
+				[have_dc1394=yes],
+				[have_dc1394=no;hw1394_missing+=" IOKit"])
+			], [])
+	[])
+
+AM_CONDITIONAL([HAVE_DC1394], [test "x$have_dc1394" != "xno"])
 
 # Check Andor camera libraries (should have atmcdLXd.h and libandor.so)
+AC_MSG_NOTICE([*** Checking for Andor camera support.])
 
 AC_CHECK_HEADERS([atmcdLXd.h], 
-		[have_andor_h=true], 
-		[have_andor_h=false;hwandor_missing+=" atmcdLXd.h"])
+		[have_andor_h=yes], 
+		[have_andor_h=no;hwandor_missing+=" atmcdLXd.h"])
 
 OLDLIBS=$LIBS
 LIBS=
 
 AC_SEARCH_LIBS([Initialize],
 		[andor],
-		[have_andor_lib=true],
-		[have_andor_lib=false;hwandor_missing+=" libandor"])
+		[have_andor_lib=yes],
+		[have_andor_lib=no;hwandor_missing+=" libandor"])
 
-ANDORCAM_LIBS="$LIBS"
-AC_SUBST(ANDORCAM_LIBS)
+AC_SUBST(ANDORCAM_LIBS, ["$LIBS"])
 
 # Reset LIBS back to old value
 LIBS=$OLDLIBS
 
-have_andor=true
-if test "$have_andor_h" = false || test  "$have_andor_lib" = false ; then
-		have_andor=false
-fi
-
-AM_CONDITIONAL(HAVE_ANDORCAM, test x$have_andor = xtrue)
+AS_IF([test "x$have_andor_h" != "xyes" || test  "x$have_andor_lib" != "xyes"],
+		[have_andor=no],
+		[have_andor=yes])
+AM_CONDITIONAL([HAVE_ANDORCAM], [test "x$have_andor" != "xno"])
 
 ### DOCUMENTATION BUILD CHECKS ###
 ##################################
 AC_MSG_NOTICE([*** Checking documentation tools.])
 
-if test "$docs" = true ; then
-	AC_CHECK_PROG(have_doxygen, doxygen, yes, no)
-	if test "$have_doxygen" = no; then docsmissing+=" doxygen"; fi
-	
-	AC_CHECK_PROG(have_dot, dot, yes, no)
-	if test "$have_dot" = no; then docsmissing+=" dot"; fi
-	
-	if test "$have_dot" = no || test  "$have_doxygen" = no ; then
-		docs=false;
-		AC_MSG_WARN([FOAM docs need doxygen & dot programs to compile]);
-	else
-		AC_MSG_NOTICE([*** Will compile documentation])
-	fi
-else
-	AC_MSG_NOTICE([*** Not compiling documentation])
-fi
+AS_IF([test "x$have_docs" != "xno"],
+		[
+		AC_CHECK_PROG(have_doxygen, doxygen, yes, no)
+		AS_IF([test "x$have_doxygen" != "xyes"], [docsmissing+=" doxygen";have_docs=no], [])
+		AC_CHECK_PROG(have_dot, dot, yes, no)
+		AS_IF([test "x$have_dot" != "xyes"], [docsmissing+=" dot";have_docs=no], [])
+		],
+		[AC_MSG_NOTICE([*** Not compiling documentation])])
 
-AM_CONDITIONAL([HAVE_DOCS], [test "$docs" = true])
-AM_CONDITIONAL([HAVE_EXTDOCS], [test "$extdocs" = true])
-
+AM_CONDITIONAL([HAVE_DOCS], [test "x$have_docs" != "xno"])
+AM_CONDITIONAL([HAVE_EXTDOCS], [test "x$have_extdocs" != "xno" && test "x$have_docs" != "xno"])
 
 ### STATIC SIMULATION MODE LIBS ###
 ###################################
-if test "$simstat" = true ; then
-	AC_MSG_NOTICE([*** Static simulation enabled, doesn't need extra libs])
-		
-else 
-	AC_MSG_NOTICE([*** Static simulation disabled])
-fi
 
-AC_SUBST(SIMSTAT_CFLAGS)
-AC_SUBST(SIMSTAT_LIBS)
-AM_CONDITIONAL([SIMSTAT], [test "$simstat" = true])
+AM_CONDITIONAL([HAVE_SIMSTAT], [test "x$have_simstat" != "xno"])
 
 ### FULL SIMULATION MODE LIBS ###
 #################################
-if test "$fullsim" = true ; then
-	AC_MSG_NOTICE([*** Full simulation enabled, checking for extra libs])
-	fullsimmissing=""
-	
-	# Optional libraries, for libimgdata.a.
-	# @todo this should be handled by libsiu (through .pc file?)
-	AC_SEARCH_LIBS([deflate], [z],
-		[have_z=true],
-		[have_z=false])
 
-	AC_SEARCH_LIBS([IcsOpen], [ics],
-			[have_ics=true],
-			[have_ics=false])
+AS_IF([test "x$have_fullsim" != "xno"],
+		[
+		AC_MSG_NOTICE([*** Full simulation enabled, checking for extra libs])
+		# Optional libraries, for libimgdata.a.
+		# @todo this should be handled by libsiu (through .pc file?)
+		AC_SEARCH_LIBS([deflate], [z], [have_z=true], [have_z=false])
+		AC_SEARCH_LIBS([IcsOpen], [ics], [have_ics=true], [have_ics=false])
+		PKG_CHECK_MODULES(FFTW, [fftw3 >= 3.1.2], [],
+				[have_fullsim=no;fullsimmissing+=" fftw3"])
+		AC_SUBST(FULLSIM_CFLAGS, ["$FFTW_CFLAGS"])
+		AC_SUBST(FULLSIM_LIBS, ["$FFTW_LIBS"])
+	],
+	[AC_MSG_NOTICE([*** Full simulation disabled])])
 
-	PKG_CHECK_MODULES(FFTW, fftw3 >= 3.1.2, [],
-		[AC_MSG_WARN([FOAM full sim needs fftw3.]);fullsim=false;fullsimmissing+=" fftw3"])
-	
-	FULLSIM_CFLAGS+=" $FFTW_CFLAGS"
-	FULLSIM_LIBS+=" $FFTW_LIBS"
-else 
-	AC_MSG_NOTICE([*** Full simulation disabled])
-fi
-
-AC_SUBST(FULLSIM_CFLAGS)
-AC_SUBST(FULLSIM_LIBS)
-AM_CONDITIONAL([FULLSIM], [test "$fullsim" = true])
-
+AM_CONDITIONAL([HAVE_FULLSIM], [test "$have_fullsim" != "xno"])
 
 ### GUI LIBRARIES ###
 #####################
-opengl=disabled
-if test "$gui" = true ; then
-	AC_MSG_NOTICE([*** GUI enabled, checking for extra libs])
-	guimissing=""
-	opengl=true;
-	
-	PKG_CHECK_MODULES(GTKMM, gtkmm-2.4 >= 2.6, [],
-		[AC_MSG_WARN([FOAM GUI needs gtkmm.]);gui=false;guimissing+=" gtkmm-2.4"])
-	
-	PKG_CHECK_MODULES(GTHREAD, gthread-2.0 >= 2.16.6, [],
-		[AC_MSG_WARN([FOAM GUI needs gthread-2.0.]);gui=false;guimissing+=" gthread-2.0"])
-	
-	### OpenGL for UI etc.
 
-	AX_CHECK_GL
-	if test "$no_gl" = yes; then guimissing+=" gl"; fi
+# Check for opengl support
+have_opengl=yes
+AX_CHECK_GL
+AS_IF([test "x$no_gl" = "xyes"], [have_opengl=no;glmissing+=" gl"])
+AX_CHECK_GLU
+AS_IF([test "x$no_glu" = "xyes"], [have_opengl=no;glmissing+=" glu"])
+AX_CHECK_GLUT
+AS_IF([test "x$no_glut" = "xyes"], [have_opengl=no;glmissing+=" glut"])
+AM_CONDITIONAL([HAVE_OPENGL], [test "x$have_opengl" != "xno"])
 
-	AX_CHECK_GLU
-	if test "$no_glu" = yes; then guimissing+=" glu"; fi
+# Check for GUI support
+AS_IF([test "x$have_gui" != "xno"],
+		[
+		AC_MSG_NOTICE([*** GUI enabled, checking for extra libs])
+		PKG_CHECK_MODULES(GTKMM, gtkmm-2.4 >= 2.6, [],
+				[have_gui=no;guimissing+=" gtkmm-2.4"])
+		PKG_CHECK_MODULES(GTHREAD, gthread-2.0 >= 2.16.6, [],
+				[have_gui=no;guimissing+=" gthread-2.0"])
+		PKG_CHECK_MODULES(GLEXTMM, gtkglextmm-1.2 >= 1.2.0, [],
+				[have_gui=no;guimissing+=" gtkglextmm-1.2"])
+		AS_IF([test "x$have_opengl" = "xno"], 
+				[have_gui=no;guimissing+=" $glmissing"],
+				[])
 
-	AX_CHECK_GLUT
-	if test "$no_glut" = yes; then guimissing+=" glut"; fi
+		AC_SUBST(GUI_CFLAGS, ["$GTHREAD_CFLAGS $GTKMM_CFLAGS $GL_CFLAGS $GLU_CFLAGS $GLUT_CFLAGS $GLEXTMM_CFLAGS"])
+		AC_SUBST(GUI_LIBS, ["$GTHREAD_LIBS $GTKMM_LIBS $GL_LIBS $GLU_LIBS $GLUT_LIBS $GLEXTMM_LIBS"])
+		],
+		[AC_MSG_NOTICE([*** GUI disabled])])
 
-	if test "$no_gl" = yes || test  "$no_glu" = yes || test "$no_glut" = yes ; then
-		opengl=false;
-		gui=false;
-		AC_MSG_WARN([FOAM GUI needs OpenGL]);
-	fi
-
-	PKG_CHECK_MODULES(GLEXTMM, gtkglextmm-1.2 >= 1.2.0, [],
-		[AC_MSG_WARN([FOAM GUI gtkglextmm-1.2.]);gui=false;guimissing+=" gtkglextmm-1.2"])
-
-	GUI_CFLAGS+=" $GTHREAD_CFLAGS $GTKMM_CFLAGS $GL_CFLAGS $GLU_CFLAGS $GLUT_CFLAGS $GLEXTMM_CFLAGS"
-	GUI_LIBS+=" $GTHREAD_LIBS $GTKMM_LIBS $GL_LIBS $GLU_LIBS $GLUT_LIBS $GLEXTMM_LIBS"
-else 
-	AC_MSG_NOTICE([*** GUI disabled])
-fi
-
-AC_SUBST(GUI_CFLAGS)
-AC_SUBST(GUI_LIBS)
-AM_CONDITIONAL([GUI], [test "$opengl" = true])
-AM_CONDITIONAL([HAVE_OPENGL], [test "$opengl" = true])
+AM_CONDITIONAL([HAVE_GUI], [test "x$have_gui" != "xno"])
 
 ### END CHECKING FOR LIBS ###
 #############################
-
-if test "$FOAM_FATAL" = yes ; then
-	AC_MSG_ERROR([Cannot build FOAM! Missing libraries:$FOAM_MISSING!])
-fi
 
 AC_MSG_NOTICE([===============Summary================])
 
 
 AC_MSG_NOTICE([---------------Hardware---------------])
 
-if test "$have_dc1394" = true ; then
-	AC_MSG_NOTICE([1394 cameras:            supported])
-else
-	AC_MSG_NOTICE([1394 cameras:            not supported, missing:$hw1394_missing])
-fi
-
-if test "$have_andor" = true ; then
-	AC_MSG_NOTICE([Andor cameras:           supported])
-else
-	AC_MSG_NOTICE([Andor cameras:           not supported, missing:$hwandor_missing])
-fi
+AC_MSG_NOTICE([1394 cameras:            $have_dc1394 $hw1394_missing])
+AC_MSG_NOTICE([Andor cameras:           $have_andor $hwandor_missing])
 
 AC_MSG_NOTICE([---------------Targets----------------])
 
-if test "$dummy" = true ; then
-	AC_MSG_NOTICE([Dummy mode:              available])
-else
-	AC_MSG_NOTICE([Dummy mode               disabled])
-fi
+AC_MSG_NOTICE([Dummy mode:              $have_dummy])
+AC_MSG_NOTICE([Static sim mode:         $have_simstat])
+AC_MSG_NOTICE([Full sim mode:           $have_fullsim $fullsimmissing])
 
-if test "$simstat" = true ; then
-	AC_MSG_NOTICE([Static sim mode:         available])
-elif test "$simstat" = disabled; then
-	AC_MSG_NOTICE([Static sim mode:         disabled])
-else
-	AC_MSG_NOTICE([Static sim mode:         not available])
-	AC_MSG_NOTICE([Static sim mode:         missing:$simstatmissing])
-fi
+AC_MSG_NOTICE([FOAM control GUI:        $have_gui $guimissing])
 
-if test "$fullsim" = true ; then
-	AC_MSG_NOTICE([Full sim mode:           available])
-elif test "$fullsim" = disabled; then
-	AC_MSG_NOTICE([Full sim mode:           disabled])
-else
-	AC_MSG_NOTICE([Full sim mode:           not available])
-	AC_MSG_NOTICE([Full sim mode:           missing:$fullsimmissing])
-fi
+AC_MSG_NOTICE([---------------Debugging--------------])
 
-if test "$gui" = true ; then
-	AC_MSG_NOTICE([FOAM control GUI:        available])
-elif test "$gui" = disabled; then
-	AC_MSG_NOTICE([FOAM control GUI:        disabled])
-else
-	AC_MSG_NOTICE([FOAM control GUI:        not available])
-	AC_MSG_NOTICE([FOAM control GUI:        missing:$guimissing])
-fi
+AC_MSG_NOTICE([Debug support:           $have_debug])
+AC_MSG_NOTICE([Strict debug support:    $have_str_debug])
 
-#if test "$opengl" = true ; then
-#	AC_MSG_NOTICE([OpenGL renderer:         available])
-#elif test "$opengl" = disabled; then
-#	AC_MSG_NOTICE([OpenGL renderer:         disabled])
-#else
-#	AC_MSG_NOTICE([OpenGL renderer:         not available])
-#	AC_MSG_NOTICE([OpenGL renderer:         missing:$openglmissing])
-#fi
+AC_MSG_NOTICE([Profiling support:       $have_profiling])
 
-if test "$debug" = true ; then
-	AC_MSG_NOTICE([Debug targets:           available])
-else
-	AC_MSG_NOTICE([Debug targets:           disabled])
-fi
+AC_MSG_NOTICE([Hardware debug targets:  $have_hwdebug])
 
-if test "$hwdebug" = true ; then
-	AC_MSG_NOTICE([Hardware debug targets:  available])
-else
-	AC_MSG_NOTICE([Hardware debug targets:  disabled])
-fi
+AC_MSG_NOTICE([---------------Documentation----------])
 
-if test "$docs" = true ; then
-	AC_MSG_NOTICE([FOAM docs:               available])
-elif test "$simstat" = disabled; then
-	AC_MSG_NOTICE([FOAM docs:               disabled])
-else
-	AC_MSG_NOTICE([FOAM docs:               not available])
-	AC_MSG_NOTICE([FOAM docs:               missing:$docsmissing])
-fi
+AC_MSG_NOTICE([FOAM docs:               $have_docs $docsmissing])
+AC_MSG_NOTICE([FOAM extdocs:            $have_extdocs])
+
+AC_MSG_NOTICE([---------------Dependencies-----------])
+
+AC_MSG_NOTICE([libsiu:                  $have_libsiu])
 
 AC_MSG_NOTICE([======================================])
 
