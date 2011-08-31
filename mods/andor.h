@@ -43,13 +43,17 @@ const string andor_type = "andorcam";
  
  AndorCam is derived from Camera. It can control an Andor iXON camera.
  
- Configuration parameters:
- - cooltemp: default requested cooling temperature
+ \section andorcam_cfg Configuration parameters
  
- @todo document AndorCam class
- @todo add cool temperature ranges
- @todo add capabilities checks
- @todo add capabilities printing
+ AlpaoDM supports the following configuration parameters:
+ 
+ - cooltemp: default requested cooling temperature, see cool_info
+ - andor_cfgdir: see andordir (default "/usr/local/etc/andor")
+ 
+ \section andorcam_cfg Network IO
+ 
+ - get/set cooling: control cooling temperature, see cool_info
+ 
  */
 class AndorCam: public Camera {
 private:

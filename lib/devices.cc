@@ -74,7 +74,7 @@ Device::~Device() {
 	delete netio;
 	
 	// Update master configuration with our (potentially changed) settings
-	ptc->cfg->update(&cfg);
+	//ptc->cfg->update(&cfg);
 }
 
 void Device::on_message_common(Connection * const conn, string line) {

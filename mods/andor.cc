@@ -64,6 +64,7 @@ Camera(io, ptc, name, andor_type, port, conffile, online)
 	// Initialize default configuration
 	ret = initialize();
 	if (ret != DRV_SUCCESS) {
+		ShutDown();
 		io.msg(IO_ERR, "AndorCam::AndorCam() Could not initialize andor camera, error: %d, %s", ret, error_desc[ret].c_str());
 		throw std::runtime_error(format("Could not initialize andor camera! error: %d, %s", ret, error_desc[ret].c_str()));
 	}
