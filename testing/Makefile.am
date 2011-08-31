@@ -37,9 +37,8 @@ bitdef_test_LIBS =
 check_PROGRAMS += latencies-test
 
 latencies_test_SOURCES = latencies-test.cc
-latencies_test_CPPFLAGS = $(SIGC_CFLAGS) $(AM_CPPFLAGS)
 latencies_test_LDADD = $(LIBSIU_DIR)/libtime.a \
-		$(LDADD) $(SIGC_LIBS)
+		$(LDADD)
 
 if HAVE_HWDEBUG
 # only do this if we want hardware debugging 
@@ -49,6 +48,7 @@ check_PROGRAMS += dc1394-test
 
 dc1394_test_SOURCES = dc1394-test.cc
 dc1394_test_CPPFLAGS = $(DC1394_CFLAGS) $(AM_CPPFLAGS)
+dc1394_test_CXXFLAGS = $(DC1394_CFLAGS) $(AM_CXXFLAGS)
 dc1394_test_LDADD = $(LDADD) $(DC1394_LIBS)
 endif HAVE_DC1394
 
@@ -61,12 +61,11 @@ andorcam_test_SOURCES = andorcam-test.cc \
 		$(LIB_DIR)/devices.cc \
 		../foam/foamctrl.cc
 
-andorcam_test_CPPFLAGS = $(SIGC_CFLAGS) $(AM_CPPFLAGS)
 andorcam_test_LDADD = $(LIBSIU_DIR)/libio.a \
 		$(LIBSIU_DIR)/libconfig.a \
 		$(LIBSIU_DIR)/libprotocol.a \
 		$(LIBSIU_DIR)/libpath.a \
-		$(LDADD) $(SIGC_LIBS) $(ANDORCAM_LIBS)
+		$(LDADD) $(ANDORCAM_LIBS)
 
 endif HAVE_ANDORCAM
 
@@ -78,22 +77,19 @@ check_PROGRAMS += pixbuf-test gtk-test sigcpp-test
 
 pixbuf_test_SOURCES = pixbuf-test.cc
 pixbuf_test_CPPFLAGS = $(GUI_CFLAGS) $(AM_CPPFLAGS)
-pixbuf_test_LDADD = $(GUI_LIBS) -lgthread-2.0
+pixbuf_test_LDADD = $(GUI_LIBS) -lgthread-2.0 $(LDADD)
 
 gtk_test_SOURCES = gtk-test.cc
 gtk_test_CPPFLAGS = $(GUI_CFLAGS) $(AM_CPPFLAGS)
-gtk_test_LDADD = $(GUI_LIBS) -lgthread-2.0
+gtk_test_LDADD = $(GUI_LIBS) -lgthread-2.0 $(LDADD)
 
 sigcpp_test_SOURCES = sigcpp-test.cc
-sigcpp_test_CPPFLAGS = $(SIGC_CFLAGS) $(AM_CPPFLAGS)
-sigcpp_test_LDADD = $(LDADD) $(SIGC_LIBS)
 
 #zern_test_SOURCES = zern-test.cc \
 #		$(LIB_DIR)/zernike.cc
 #zern_test_CPPFLAGS = $(COMMON_CFLAGS) $(AM_CPPFLAGS)
 #zern_test_LDADD = $(LIBSIU_DIR)/libimgdata.a \
-#		$(LIBSIU_DIR)/libio.a \
-#		$(COMMON_LIBS)
+#		$(LIBSIU_DIR)/libio.a 
 
 if HAVE_FULLSIM
 check_PROGRAMS += shwfs-test
@@ -112,9 +108,7 @@ shwfs_test_SOURCES = shwfs-test.cc \
 		../foam/foamctrl.cc
 
 shwfs_test_CFLAGS = $(COMMON_CFLAGS) $(FFTW_CFLAGS) $(AM_CFLAGS)
-shwfs_test_CPPFLAGS = $(SIGC_CFLAGS) $(AM_CPPFLAGS)
-shwfs_test_LDADD = $(COMMON_LIBS) \
-		$(SIGC_LIBS) \
+shwfs_test_LDADD =  $(LDADD) \
 		$(FFTW_LIBS) \
     $(LIBSIU_DIR)/libcsv.a \
 		$(LIBSIU_DIR)/libio.a \
@@ -133,21 +127,20 @@ check_PROGRAMS += camview-test
 
 camview_test_SOURCES = camview-test.cc
 camview_test_CPPFLAGS = $(GUI_CFLAGS) $(AM_CPPFLAGS)
-camview_test_CFLAGS = $(COMMON_CFLAGS) $(GUI_CFLAGS) $(AM_CFLAGS)
-camview_test_LDADD = $(COMMON_LIBS) $(GUI_LIBS) -lgthread-2.0 \
+camview_test_CXXFLAGS = $(GUI_CFLAGS) $(AM_CXXFLAGS)
+camview_test_LDADD = $(GUI_LIBS) -lgthread-2.0 \
 		$(LIBSIU_DIR)/libglviewer.a \
 		$(LIBSIU_DIR)/libprotocol.a \
-		$(LIBSIU_DIR)/libsocket.a
+		$(LIBSIU_DIR)/libsocket.a \
+		$(LDADD)
 
 endif HAVE_OPENGL
 
 check_PROGRAMS += camsend-test
 
 camsend_test_SOURCES = camsend-test.cc
-camsend_test_CPPFLAGS = $(COMMON_CFLAGS) $(AM_CPPFLAGS)
-camsend_test_LDADD = $(COMMON_LIBS) \
-		$(LIBSIU_DIR)/libprotocol.a \
-		$(LIBSIU_DIR)/libsocket.a
+camsend_test_LDADD = $(LIBSIU_DIR)/libprotocol.a \
+		$(LIBSIU_DIR)/libsocket.a $(LDADD)
 
 
 endif HAVE_DEBUG
