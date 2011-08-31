@@ -73,7 +73,8 @@ endif HAVE_ANDORCAM
 endif HAVE_HWDEBUG
 
 if HAVE_DEBUG
-check_PROGRAMS += pixbuf-test gtk-test sigcpp-test zern-test
+check_PROGRAMS += pixbuf-test gtk-test sigcpp-test 
+#zern-test
 
 pixbuf_test_SOURCES = pixbuf-test.cc
 pixbuf_test_CPPFLAGS = $(GUI_CFLAGS) $(AM_CPPFLAGS)
@@ -87,13 +88,12 @@ sigcpp_test_SOURCES = sigcpp-test.cc
 sigcpp_test_CPPFLAGS = $(SIGC_CFLAGS) $(AM_CPPFLAGS)
 sigcpp_test_LDADD = $(LDADD) $(SIGC_LIBS)
 
-zern_test_SOURCES = zern-test.cc \
-		$(LIB_DIR)/zernike.cc
-zern_test_CPPFLAGS = $(COMMON_CFLAGS) $(AM_CPPFLAGS)
-zern_test_LDADD = $(LIBSIU_DIR)/libimgdata.a \
-		$(LIBSIU_DIR)/libio.a \
-		$(COMMON_LIBS)
-
+#zern_test_SOURCES = zern-test.cc \
+#		$(LIB_DIR)/zernike.cc
+#zern_test_CPPFLAGS = $(COMMON_CFLAGS) $(AM_CPPFLAGS)
+#zern_test_LDADD = $(LIBSIU_DIR)/libimgdata.a \
+#		$(LIBSIU_DIR)/libio.a \
+#		$(COMMON_LIBS)
 
 if HAVE_FULLSIM
 check_PROGRAMS += shwfs-test
