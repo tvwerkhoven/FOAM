@@ -13,9 +13,9 @@ check_PROGRAMS = autotools-test
 autotools_test_SOURCES = autotools-test.cc
 
 # include compilation test
-TESTS_ENVIRONMENT = $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) \
-	$(autotools_test_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -E -dM
-TESTS = $(autotools_test_SOURCES)
+#TESTS_ENVIRONMENT = $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) \
+#	$(autotools_test_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -E -dM
+#TESTS = $(autotools_test_SOURCES)
 
 ## Bitness test
 #check_PROGRAMS += bit64-test bit32-test bitdef-test
