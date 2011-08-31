@@ -58,6 +58,9 @@ int Wfc::update_control(const gsl_vector_float *const error, const gain_t g, con
 	if (error != ctrlparams.err)
 		gsl_blas_scopy(error, ctrlparams.err);
 	
+	// Copy current target to ctrlparams.prev
+	gsl_blas_scopy(ctrlparams.target, ctrlparams.prev);
+	
 	// If retain is unequal to 1, apply
 	if (retain != 1.0) {
 		if (retain == 0)
@@ -92,11 +95,36 @@ int Wfc::update_control(const gsl_vector_float *const error, const gain_t g, con
 	}
 #endif
 	
-	// Copy current target to ctrlparams.prev
-	gsl_blas_scopy(ctrlparams.target, ctrlparams.prev);
-		
 	return 0;
 }
+
+int Wfc::set_control(const gsl_vector_float *const newctrl) {
+	if (!get_calib())
+		calibrate();
+	
+	// Copy new target to ctrlparams.target
+	gsl_blas_scopy(newctrl, ctrlparams.target);
+	return 0;
+}
+
+int Wfc::set_control(const float val) {
+	if (!get_calib())
+		calibrate();
+	
+	// Set all actuators to 'val'
+	gsl_vector_float_set_all(ctrlparams.target, val);
+	return 0;
+}
+
+int Wfc::set_control_act(const float val, const size_t act_id) {
+	if (!get_calib())
+		calibrate();
+	
+	// Set actuator 'act_id' to 'val'
+	gsl_vector_float_set(ctrlparams.target, act_id, val);
+	return 0;
+}
+
 
 int Wfc::calibrate() {
 	// Allocate memory for control command

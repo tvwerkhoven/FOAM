@@ -84,6 +84,23 @@ public:
 	 @param [in] err Error between target and current signal
 	 */
 	int update_control(const gsl_vector_float *const err) { return update_control(err, ctrlparams.gain); }
+	
+	/*! @brief Set WFC control, ignoring current signal
+	 
+	 @param [in] newctrl New control target for WFC
+	 */
+	int set_control(const gsl_vector_float *const newctrl);
+	/*! @brief Set WFC control for all actuators, ignoring current signal
+	 
+	 @param [in] val New control target for all WFC actuators
+	 */
+	int set_control(const float val=0.0);
+	/*! @brief Set WFC control for a specific actuators, ignoring current signal
+	 
+	 @param [in] val New control target for WFC
+	 @param [in] act_id WFC actuator to set
+	 */
+	int set_control_act(const float val, const size_t act_id);
 
 	// To be implemented by derived classes:
 	/*! @brief Actuate WFC using internal control vector
