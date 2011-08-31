@@ -3,13 +3,11 @@
 
 include $(top_srcdir)/common.mk
 
-AM_LDFLAGS = $(COMMON_LIBS)
-
 if HAVE_MACOSX
-AM_LDFLAGS += -framework CoreFoundation -framework Carbon
+AM_LDFLAGS = -framework CoreFoundation -framework Carbon
 endif
 
-LDADD = $(LIBSIU_DIR)/libsocket.a \
+LDADD += $(LIBSIU_DIR)/libsocket.a \
 		$(LIBSIU_DIR)/libio.a \
 		$(LIBSIU_DIR)/libconfig.a \
 		$(LIBSIU_DIR)/libprotocol.a \
