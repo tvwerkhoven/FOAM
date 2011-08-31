@@ -62,7 +62,7 @@ Wfc(io, ptc, name, alpaodm_type, port, conffile, online)
 	io.msg(IO_DEB2, "AlpaoDM::AlpaoDM()::%d got %d actuators", dm_id, nact);
 
 	// Retrieve offset
-	offset.reserve(nact);
+	offset.resize(nact);
 	double *offset_tmp = &offset[0];
 	io.msg(IO_DEB2, "AlpaoDM::AlpaoDM()::%d acquiring offset...", dm_id, nact);
 	acedev5GetOffset(1, &dm_id, offset_tmp);
