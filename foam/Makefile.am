@@ -175,6 +175,7 @@ foam_expoao_SOURCES = foam-expoao.cc \
 		$(MODS_DIR)/shwfs.cc \
 		$(MODS_DIR)/wfs.cc \
 		$(MODS_DIR)/wfc.cc \
+		$(MODS_DIR)/alpaodm.cc \
 		$(LIB_DIR)/shift.cc
 
 # Header files are part of the sources as well
@@ -185,6 +186,7 @@ foam_expoao_SOURCES += foam-expoao.h \
 		$(MODS_DIR)/shwfs.h \
 		$(MODS_DIR)/wfs.h \
 		$(MODS_DIR)/wfc.h \
+		$(MODS_DIR)/alpaodm.h \
 		$(LIB_DIR)/shift.h
 
 foam_expoao_CPPFLAGS = -DFOAM_DEFAULTCONF=\"$(FOAMCONFDIR)/foam-expoao.cfg\" \
