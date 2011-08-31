@@ -30,6 +30,7 @@
 #include "wfs.h"
 #include "shwfs.h"
 #include "wfc.h"
+#include "alpaodm.h"
 
 #include "foam-expoao.h"
 
@@ -38,6 +39,7 @@ using namespace std;
 // Global device list for easier access
 AndorCam *ixoncam;
 Shwfs *ixonwfs;
+AlpaoDM *alpao_dm97;
 
 int FOAM_ExpoAO::load_modules() {
 	io.msg(IO_DEB2, "FOAM_ExpoAO::load_modules()");
@@ -51,9 +53,14 @@ int FOAM_ExpoAO::load_modules() {
 	io.msg(IO_INFO, "Andor camera initialized, printing capabilities");
 	ixoncam->print_andor_caps();
 	
-	// Init WFS simulation (using ixoncam)
+	// Init WFS (using ixoncam)
 	ixonwfs = new Shwfs(io, ptc, "ixonwfs", ptc->listenport, ptc->conffile, *ixoncam);
 	devices->add((foam::Device *) ixonwfs);
+	
+	// Init Alpao DM
+	io.msg(IO_INFO, "Init Alpao DM97-15...");
+	alpao_dm97 = new AlpaoDM(io, ptc, "alpao_dm97", ptc->listenport, ptc->conffile);
+	devices->add((foam::Device *) alpao_dm97);
 
 	return 0;
 }
