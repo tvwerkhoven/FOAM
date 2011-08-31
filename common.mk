@@ -20,6 +20,8 @@ AM_CPPFLAGS += -D__STDC_FORMAT_MACROS \
 		-D__STDC_LIMIT_MACROS \
 		-DFOAM_DATADIR=\"$(datadir)/foam\"
 
+LDADD = $(COMMON_LIBS)
+
 # More error reporting during compilation
 AM_CXXFLAGS = -Wall -Wextra -Wfatal-errors
 
