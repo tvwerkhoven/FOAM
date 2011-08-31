@@ -194,7 +194,9 @@ AS_IF([test "x$have_str_debug" != "xno"],
 		have_debug=yes
 		])
 AM_CONDITIONAL([HAVE_DEBUG], [test "x$have_debug" != "xno"])
-AC_DEFINE([FOAM_DEBUG], [test "x$have_debug" != "xno"], [Toggle debugging.])
+AS_IF([test "x$have_debug" != "xno"],
+		[AC_DEFINE([FOAM_DEBUG], [1], [Toggle debugging.])],
+		[AC_DEFINE([FOAM_DEBUG], [0], [Toggle debugging.])])
 
 AC_ARG_ENABLE([profiling],
 		AC_HELP_STRING([--enable-profiling], [enable profiling support]),
