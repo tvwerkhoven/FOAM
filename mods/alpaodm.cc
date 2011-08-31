@@ -52,6 +52,7 @@ Wfc(io, ptc, name, alpaodm_type, port, conffile, online)
 	snprintf(serial_char, 128, "%s", serial.c_str());
 	if (acedev5Init(1, &dm_id, serial_char) == acecsFAILURE) {
 		acecsErrDisplay();
+		acedev5Release(1, &dm_id);
 		throw "AlpaoDM: error at acedev5Init()";
 	}
 	io.msg(IO_DEB2, "AlpaoDM::AlpaoDM() init ok, dm ID: %d, serial: %s", dm_id, serial.c_str());
@@ -63,6 +64,7 @@ Wfc(io, ptc, name, alpaodm_type, port, conffile, online)
 	// Retrieve offset
 	offset.reserve(nact);
 	double *offset_tmp = &offset[0];
+	io.msg(IO_DEB2, "AlpaoDM::AlpaoDM()::%d acquiring offset...", dm_id, nact);
 	acedev5GetOffset(1, &dm_id, offset_tmp);
 	
 	for (size_t i=0; i < (size_t) nact; i++)
