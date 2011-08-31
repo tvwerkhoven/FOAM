@@ -50,7 +50,7 @@ const string wfc_type = "wfc";
 
  */
 class Wfc: public foam::Device {
-private:
+protected:
 	int nact;														//!< Number of actuators in this device
 	
 public:
