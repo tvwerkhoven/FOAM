@@ -69,6 +69,26 @@ andorcam_test_LDADD = $(LIBSIU_DIR)/libio.a \
 
 endif HAVE_ANDORCAM
 
+### Alpao deformable mirror test 
+
+if HAVE_ALPAODM
+
+check_PROGRAMS += alpaodm-test
+
+alpaodm_test_SOURCES = alpaodm-test.cc \
+		$(MODS_DIR)/alpaodm.cc \
+		$(MODS_DIR)/wfc.cc \
+		$(LIB_DIR)/devices.cc \
+		../foam/foamctrl.cc
+
+alpaodm_test_LDADD = $(LIBSIU_DIR)/libio.a \
+		$(LIBSIU_DIR)/libconfig.a \
+		$(LIBSIU_DIR)/libprotocol.a \
+		$(LIBSIU_DIR)/libpath.a \
+		$(LDADD) $(ALPAODM_LIBS)
+
+endif HAVE_ALPAODM
+
 endif HAVE_HWDEBUG
 
 if HAVE_DEBUG
