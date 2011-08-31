@@ -40,8 +40,7 @@ int main() {
 		ixoncam = new AndorCam(io, &ptc, "andorcam-test", "1234", Path("./andor-test.cfg"), true);
 	} catch (...) {
 		io.msg(IO_ERR, "Failed to initialize AndorCam, deleting & aborting!");
-		delete ixoncam;
-		exit(-1);
+		return 1;
 	}
 	sleep(1);
 	
