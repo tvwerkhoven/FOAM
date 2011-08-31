@@ -20,6 +20,7 @@
 
 #include <string>
 #include <vector>
+#include <memory>
 
 #include "path++.h"
 #include "io.h"
@@ -35,21 +36,22 @@ int main() {
 	foamctrl ptc(io);
 	
 	io.msg(IO_INFO, "Init AlpaoDM...");
-	AlpaoDM *alpao_dm97;
+	auto_ptr<AlpaoDM> alpao_dm97;
 	try {
-		alpao_dm97 = new AlpaoDM(io, &ptc, "alpao_dm97-test", "1234", Path("./alpaodm-test.cfg"), true);
+		alpao_dm97 = auto_ptr<AlpaoDM> (new AlpaoDM(io, &ptc, "alpao_dm97-test", "1234", Path("./alpaodm-test.cfg"), true));
 	} catch (std::runtime_error &e) {
 		io.msg(IO_ERR | IO_FATAL, "AlpaoDM: problem init: %s", e.what());
-		return 1;
+		throw;
 	} catch (...) {
 		io.msg(IO_ERR, "AlpaoDM: unknown error during init");
-		return 1;
+		throw;
 	}
 
 	io.msg(IO_INFO, "Init complete, setting %d actuators to 0.12 one by one...", 
 				 alpao_dm97->get_nact());
 	
-	for (size_t idx=0; idx<alpao_dm97->get_nact(); idx++) {
+	for (size_t idx=0; idx< (size_t) alpao_dm97->get_nact(); idx++) {
+		io.msg(IO_INFO, "Setting actuator %zu/%zu...", idx, alpao_dm97->get_nact());
 		// Set all to 0
 		alpao_dm97->set_control(0.0);
 		// set idx to 0.12
@@ -57,14 +59,14 @@ int main() {
 		// Actuate mirror
 		alpao_dm97->actuate();
 		// Sleep 1
-		sleep(1);
+		//sleep(1);
 	}
 	
 	io.msg(IO_INFO, "Quitting now...");
-	delete alpao_dm97;
+	//delete alpao_dm97;
 	
-	io.msg(IO_INFO, "Program exit in 5 seconds...");
-	sleep(5);
+	io.msg(IO_INFO, "Program exit in 2 seconds...");
+	sleep(2);
 	
 	return 0;
 }
