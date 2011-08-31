@@ -255,10 +255,7 @@ AS_IF([test "x$have_dc1394" != "xno"],
 
 AM_CONDITIONAL([HAVE_DC1394], [test "x$have_dc1394" != "xno"])
 
-# Check Andor camera libraries (should have atmcdLXd.h and libandor.so)
 AC_MSG_NOTICE([*** Checking for Andor camera support.])
-
-AC_MSG_NOTICE([* Andor camera support.])
 
 AC_CHECK_HEADERS([atmcdLXd.h], 
 		[have_andor_h=yes], 
@@ -284,7 +281,36 @@ AM_CONDITIONAL([HAVE_ANDORCAM], [test "x$have_andor" != "xno"])
 
 AC_MSG_NOTICE([*** Checking for Alpao DM support.])
 
-# alpoa DM lib check goes here
+AC_CHECK_HEADERS([acecs.h], [], [have_alpaodm_h=no;hwalpaodm_missing+=" acecs.h"])
+AC_CHECK_HEADERS([acedev5.h], [], [have_alpaodm_h=no;hwalpaodm_missing+=" acedev5.h"])
+
+OLDLIBS=$LIBS
+LIBS=
+
+AC_SEARCH_LIBS([Register_Card],
+		[pci_dask],
+		[],
+		[have_alpaodm_lib=no;hwalpaodm_missing+=" pci_dask"])
+
+AC_SEARCH_LIBS([acecsErrDisplay],
+		[acecs],
+		[],
+		[have_alpaodm_lib=no;hwalpaodm_missing+=" acecs"])
+
+AC_SEARCH_LIBS([acedev5Send],
+		[acedev5],
+		[],
+		[have_alpaodm_lib=no;hwalpaodm_missing+=" acedev5"])
+
+AC_SUBST(ALPAODM_LIBS, ["$LIBS"])
+
+# Reset LIBS back to old value
+LIBS=$OLDLIBS
+
+AS_IF([test "x$have_alpaodm_h" != "xno" || test  "x$have_alpaodm_lib" != "xno"],
+		[have_alpaodm=yes],
+		[have_alpaodm=no])
+AM_CONDITIONAL([HAVE_ALPAODM], [test "x$have_alpaodm" != "xno"])
 
 ### DOCUMENTATION BUILD CHECKS ###
 ##################################
@@ -333,9 +359,10 @@ AS_IF([test "x$have_expoao" != "xno"],
 		# Check if we have the required libraries (fftw3, andorcam)
 		AS_IF([test "x$have_fftw" != "xyes"], [have_expoao=no;expoaomissing+=" fftw3"])
 		AS_IF([test "x$have_andor" != "xyes"], [have_expoao=no;expoaomissing+=" andor"])
+		AS_IF([test "x$have_alpaodm" != "xyes"], [have_expoao=no;expoaomissing+=" alpaodm"])
 
 		AC_SUBST(EXPOAO_CFLAGS, ["$FFTW_CFLAGS $LIBIMGDATA_CFLAGS"])
-		AC_SUBST(EXPOAO_LIBS, ["$FFTW_LIBS $LIBIMGDATA_LIBS"])
+		AC_SUBST(EXPOAO_LIBS, ["$FFTW_LIBS $LIBIMGDATA_LIBS $ANDORCAM_LIBS $ALPAODM_LIBS"])
 	],
 	[AC_MSG_NOTICE([*** Expoao target disabled])])
 
@@ -346,12 +373,16 @@ AM_CONDITIONAL([HAVE_EXPOAO], [test "x$have_expoao" != "xno"])
 
 # Check for opengl support
 have_opengl=yes
-AX_CHECK_GL
-AS_IF([test "x$no_gl" = "xyes"], [have_opengl=no;glmissing+=" gl"])
-AX_CHECK_GLU
-AS_IF([test "x$no_glu" = "xyes"], [have_opengl=no;glmissing+=" glu"])
-AX_CHECK_GLUT
-AS_IF([test "x$no_glut" = "xyes"], [have_opengl=no;glmissing+=" glut"])
+AS_IF([test "x$have_gui" != "xno"],
+		[
+		AX_CHECK_GL
+		AS_IF([test "x$no_gl" = "xyes"], [have_opengl=no;glmissing+=" gl"])
+		AX_CHECK_GLU
+		AS_IF([test "x$no_glu" = "xyes"], [have_opengl=no;glmissing+=" glu"])
+		AX_CHECK_GLUT
+		AS_IF([test "x$no_glut" = "xyes"], [have_opengl=no;glmissing+=" glut"])
+		], [])
+
 AM_CONDITIONAL([HAVE_OPENGL], [test "x$have_opengl" != "xno"])
 
 # Check for GUI support
@@ -385,6 +416,7 @@ AC_MSG_NOTICE([---------------Hardware---------------])
 
 AC_MSG_NOTICE([1394 cameras:            $have_dc1394 $hw1394_missing])
 AC_MSG_NOTICE([Andor cameras:           $have_andor $hwandor_missing])
+AC_MSG_NOTICE([Alpao DM:                $have_alpaodm $hwalpaodm_missing])
 
 AC_MSG_NOTICE([---------------Targets----------------])
 
@@ -398,10 +430,10 @@ AC_MSG_NOTICE([FOAM control GUI:        $have_gui $guimissing])
 
 AC_MSG_NOTICE([---------------Debugging--------------])
 
-AC_MSG_NOTICE([Debug support:           $have_debug])
-AC_MSG_NOTICE([Strict debug support:    $have_str_debug])
+AC_MSG_NOTICE([Debug enabled:           $have_debug])
+AC_MSG_NOTICE([Strict debug enabled:    $have_str_debug])
 
-AC_MSG_NOTICE([Profiling support:       $have_profiling])
+AC_MSG_NOTICE([Profiling enabled:       $have_profiling])
 
 AC_MSG_NOTICE([Hardware debug targets:  $have_hwdebug])
 
