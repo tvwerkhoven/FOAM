@@ -41,7 +41,7 @@ private:
 	WfcCtrl *wfcctrl;
 	
 	VSeparator vsep0;
-	LabeledEntry nact;									//!< Number of actuators
+	LabeledEntry wfc_nact;							//!< Number of actuators
 	
 	Frame calib_frame;
 
@@ -56,7 +56,7 @@ private:
 	virtual void do_info_update();			//!< Update general info in GUI
 
 	// From DevicePage::
-	virtual void on_message_update();
+	//virtual void on_message_update();
 	
 	virtual void enable_gui();
 	virtual void disable_gui();

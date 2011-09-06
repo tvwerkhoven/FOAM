@@ -32,21 +32,29 @@ using namespace Gtk;
 WfcView::WfcView(WfcCtrl *wfcctrl, Log &log, FoamControl &foamctrl, string n): 
 DevicePage((DeviceCtrl *) wfcctrl, log, foamctrl, n), 
 wfcctrl(wfcctrl),
-nact("#Act."),
+wfc_nact("#Act."),
 calib_frame("Calibration"),
 wfcact_frame("WFC actuators"), wfcact_align(0.5, 0.5, 0, 0)
 {
 	log.term(format("%s", __PRETTY_FUNCTION__));
 	
+	wfcact_pixbuf = Gdk::Pixbuf::create(Gdk::COLORSPACE_RGB, false, 8, 480, 100);
+	wfcact_pixbuf->fill(0xFFFFFF00);
+	wfcact_img.set(wfcact_pixbuf);
+	wfcact_img.set_double_buffered(false);
+	
+	wfc_nact.set_width_chars(8);
+	wfc_nact.set_editable(false);
+
 	clear_gui();
 	disable_gui();
 	
 	// Extra device info
 	devhbox.pack_start(vsep0, PACK_SHRINK);
-	devhbox.pack_start(nact, PACK_SHRINK);
+	devhbox.pack_start(wfc_nact, PACK_SHRINK);
 		
 	// Wavefront corrector actuator 'spectrum' (separate window)
-	wfcact_events.add(wfcact_events);
+	wfcact_events.add(wfcact_img);
 	wfcact_align.add(wfcact_events);
 	
 	wfcact_hbox.pack_start(wfcact_align);
@@ -90,7 +98,6 @@ void WfcView::disable_gui() {
 void WfcView::clear_gui() {
 	DevicePage::clear_gui();
 	log.term(format("%s", __PRETTY_FUNCTION__));
-	
 }
 
 void WfcView::do_wfcact_update() {
@@ -98,9 +105,5 @@ void WfcView::do_wfcact_update() {
 }
 
 void WfcView::do_info_update() {
-	
-}
-
-void WfcView::on_message_update() {
 	
 }
