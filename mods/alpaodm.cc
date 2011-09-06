@@ -40,11 +40,13 @@ Wfc(io, ptc, name, alpaodm_type, port, conffile, online)
 	
 	// Configure initial settings
 	try {
+		// Get unique Alpao DM serial
 		serial = cfg.getstring("serial");
 	} catch (std::runtime_error &e) {
 		io.msg(IO_ERR | IO_FATAL, "AlpaoDM: problem with configuration file: %s", e.what());
 	} catch (...) { 
 		io.msg(IO_ERR | IO_FATAL, "AlpaoDM: unknown error at initialisation.");
+		throw;
 	}
 	
 	// Init DM
