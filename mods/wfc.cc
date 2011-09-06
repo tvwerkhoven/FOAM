@@ -33,8 +33,20 @@
 
 Wfc::Wfc(Io &io, foamctrl *const ptc, const string name, const string type, const string port, Path const & conffile, const bool online):
 Device(io, ptc, name, wfc_type + "." + type, port, conffile, online),
-nact(0) {	
+nact(0), have_waffle(false) {	
 	io.msg(IO_DEB2, "Wfc::Wfc()");
+
+	try {
+		// Get waffle pattern actuators
+		str_waffle_odd = cfg.getstring("waffle_odd", "");
+		str_waffle_even = cfg.getstring("waffle_even", "");
+		
+	} catch (std::runtime_error &e) {
+		io.msg(IO_ERR | IO_FATAL, "Wfc: problem with configuration file: %s", e.what());
+	} catch (...) { 
+		io.msg(IO_ERR | IO_FATAL, "Wfc: unknown error at initialisation.");
+		throw;
+	}
 	
 	add_cmd("set gain");
 	add_cmd("get gain");
@@ -125,6 +137,26 @@ int Wfc::set_control_act(const float val, const size_t act_id) {
 	return 0;
 }
 
+int Wfc::set_wafflepattern(const float val) {
+	if (!have_waffle)
+		return 1;
+	
+	if (!get_calib())
+		calibrate();
+	
+	// Set all to zero first
+	gsl_vector_float_set_zero(ctrlparams.target);
+	
+	// Set 'even' actuators to +val, set 'odd' actuators to -val:
+	for (size_t idx=0; idx < waffle_even.size(); idx++)
+		gsl_vector_float_set(ctrlparams.target, waffle_even.at(idx), val);
+
+	for (size_t idx=0; idx < waffle_odd.size(); idx++)
+		gsl_vector_float_set(ctrlparams.target, waffle_odd.at(idx), val);
+	
+	return 0;
+}
+
 
 int Wfc::calibrate() {
 	// Allocate memory for control command
@@ -136,10 +168,47 @@ int Wfc::calibrate() {
 	ctrlparams.prev = gsl_vector_float_calloc(nact);
 	gsl_vector_float_free(ctrlparams.pid_int);
 	ctrlparams.pid_int = gsl_vector_float_calloc(nact);
+	
+	// Parse waffle pattern strings (only here because otherwise nact is 0)
+	parse_waffle(str_waffle_odd, str_waffle_even);
 		
 	set_calib(true);
 	return 0;
 }
+
+void Wfc::parse_waffle(string &odd, string &even) {
+	io.msg(IO_DEB2, "Wfc::parse_waffle(odd=%s, even=%s)", odd.c_str(), even.c_str());
+	if (odd.size() <= 0 || even.size() <= 0)
+		return;
+
+	string thisact;
+	int thisact_i;
+	
+	while (odd.size() > 0) {
+		thisact = popword(odd, " \t\n,");
+		thisact_i = strtol(thisact.c_str(), (char **) NULL, 10);
+		if (thisact_i >= 0 && thisact_i <= nact) {
+			waffle_odd.push_back(thisact_i);
+			io.msg(IO_DEB2, "Wfc::parse_waffle(odd) add %d", thisact_i);
+		}
+		else
+			break;
+	}
+	
+	while (even.size() > 0) {
+		thisact = popword(even, " \t\n,");
+		thisact_i = strtol(thisact.c_str(), (char **) NULL, 10);
+		if (thisact_i >= 0 && thisact_i <= nact) {
+			waffle_even.push_back(thisact_i);
+			io.msg(IO_DEB2, "Wfc::parse_waffle(even) add %d", thisact_i);
+		}
+		else
+			break;
+	}
+	
+	have_waffle = true;
+}
+
 
 void Wfc::on_message(Connection *const conn, string line) { 
 	string orig = line;

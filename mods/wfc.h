@@ -46,12 +46,20 @@ const string wfc_type = "wfc";
  
  \section wfc_cfg Configuration parameters
  
- - none
+ - waffle_odd / waffle_even: space or comma-seperated list of actuators for a 
+	 waffle pattern. Stored in waffle_even and waffle_odd.
 
  */
 class Wfc: public foam::Device {
 protected:
 	int nact;														//!< Number of actuators in this device
+	
+	string str_waffle_even;							//!< String representation of even actuators
+	string str_waffle_odd;							//!< String representation of odd actuators
+	vector<int> waffle_even;						//!< 'Even' actuators for waffle pattern
+	vector<int> waffle_odd;							//!< 'Odd' actuators for waffle pattern
+	void parse_waffle(string &odd, string &even); //!< Interpret data in waffle_even and waffle_odd
+	bool have_waffle;										//!< Do we know about the waffle pattern?
 	
 public:
 	// Common Wfc settings
@@ -101,6 +109,15 @@ public:
 	 @param [in] act_id WFC actuator to set
 	 */
 	int set_control_act(const float val, const size_t act_id);
+	
+	/*! @brief Set wafflepattern on DM with value 'val'
+	 
+	 Uses waffle pattern as loaded from cfg file at init and stored in 
+	 waffle_even and waffle_odd.
+	 
+	 @param [in] val Value to set on actuators
+	 */
+	int set_wafflepattern(const float val);
 
 	// To be implemented by derived classes:
 	/*! @brief Actuate WFC using internal control vector
