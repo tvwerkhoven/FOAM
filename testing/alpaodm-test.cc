@@ -21,6 +21,9 @@
 #include <string>
 #include <vector>
 #include <memory>
+#include <algorithm>
+
+#include <unistd.h>
 
 #include "path++.h"
 #include "io.h"
@@ -47,11 +50,36 @@ int main() {
 		throw;
 	}
 
-	io.msg(IO_INFO, "Init complete, setting %d actuators to 0.12 one by one...", 
-				 alpao_dm97->get_nact());
+	io.msg(IO_INFO, "Init complete, starting tests now.");
+
+	
+	io.msg(IO_INFO, "Test0: Setting all %d actuators to 0.12...", alpao_dm97->get_nact());
+	// Set all to 0.12
+	alpao_dm97->set_control(0.12);
+	// Actuate mirror
+	alpao_dm97->actuate();
+	sleep(2);
+
+	io.msg(IO_INFO, "Test1: Setting all %d actuators to -0.12...", alpao_dm97->get_nact());
+	// Set all to 0.12
+	alpao_dm97->set_control(-0.12);
+	// Actuate mirror
+	alpao_dm97->actuate();
+	sleep(2);
+
+	io.msg(IO_INFO, "Test2: Setting %d actuators to 0.12 one by one...", alpao_dm97->get_nact());
 	
 	for (size_t idx=0; idx< (size_t) alpao_dm97->get_nact(); idx++) {
-		io.msg(IO_INFO, "Setting actuator %zu/%zu...", idx, alpao_dm97->get_nact());
+		if ((idx % 10 == 0 && idx > 0) || idx == alpao_dm97->get_nact()-1)
+			io.msg(IO_INFO | IO_NOID, "");
+
+		if (idx % 10 == 0)
+			io.msg(IO_INFO | IO_NOLF, "Setting actuators %d--%d: .", 
+						 idx, 
+						 min((size_t) alpao_dm97->get_nact(), (idx+10)));
+		else
+			io.msg(IO_INFO | IO_NOLF | IO_NOID, ".");
+		
 		// Set all to 0
 		alpao_dm97->set_control(0.0);
 		// set idx to 0.12
@@ -59,10 +87,13 @@ int main() {
 		// Actuate mirror
 		alpao_dm97->actuate();
 		// Sleep 1
-		//sleep(1);
+		usleep(0.4 * 1E6);
 	}
 	
-	io.msg(IO_INFO, "Quitting now...");
+	io.msg(IO_INFO, "Test3: Setting waffle pattern...");
+	alpao_dm97->set_wafflepattern(0.12);
+	sleep(2);
+	//io.msg(IO_INFO, "Quitting now...");
 	//delete alpao_dm97;
 	
 	io.msg(IO_INFO, "Program exit in 2 seconds...");
