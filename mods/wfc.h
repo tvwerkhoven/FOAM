@@ -53,6 +53,8 @@ class Wfc: public foam::Device {
 private:
 	int nact;														//!< Number of actuators in this device
 	
+	string ctrl_as_str(const char *fmt="%.4f") const; //!< Return control vector ctrlparams.target as string (not thread-safe)
+	
 public:
 	// Common Wfc settings
 	typedef struct wfc_ctrl {
