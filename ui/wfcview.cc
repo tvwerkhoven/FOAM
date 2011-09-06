@@ -31,7 +31,10 @@ using namespace Gtk;
 
 WfcView::WfcView(WfcCtrl *wfcctrl, Log &log, FoamControl &foamctrl, string n): 
 DevicePage((DeviceCtrl *) wfcctrl, log, foamctrl, n), 
-wfcctrl(wfcctrl)
+wfcctrl(wfcctrl),
+nact("#Act."),
+calib_frame("Calibration"),
+wfcact_frame("WFC actuators"), wfcact_align(0.5, 0.5, 0, 0)
 {
 	log.term(format("%s", __PRETTY_FUNCTION__));
 	
@@ -43,17 +46,16 @@ wfcctrl(wfcctrl)
 	devhbox.pack_start(nact, PACK_SHRINK);
 		
 	// Wavefront corrector actuator 'spectrum' (separate window)
-	wfpow_events.add(wfpow_img);
-	wfpow_align.add(wfpow_events);
+	wfcact_events.add(wfcact_events);
+	wfcact_align.add(wfcact_events);
 	
-	wfpow_hbox.pack_start(wfpow_mode, PACK_SHRINK);
-	wfpow_hbox.pack_start(wfpow_align);
-	wfpow_frame.add(wfpow_hbox);
+	wfcact_hbox.pack_start(wfcact_align);
+	wfcact_frame.add(wfcact_hbox);
 	
 	// Extra window
 	extra_win.set_title("FOAM WFC " + devname);
 	
-	extra_vbox.pack_start(wfpow_frame, PACK_SHRINK);
+	extra_vbox.pack_start(wfcact_frame, PACK_SHRINK);
 	extra_win.add(extra_vbox);
 	
 	extra_win.show_all_children();
@@ -91,4 +93,14 @@ void WfcView::clear_gui() {
 	
 }
 
+void WfcView::do_wfcact_update() {
+	
+}
 
+void WfcView::do_info_update() {
+	
+}
+
+void WfcView::on_message_update() {
+	
+}

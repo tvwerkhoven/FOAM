@@ -47,7 +47,6 @@ private:
 
 	Frame wfcact_frame;
 	HBox wfcact_hbox;
-	LabeledEntry wfcact_ctrl;						//!< WFC ctrl vector
 	Alignment wfcact_align;
 	EventBox wfcact_events;
 	Image wfcact_img;
