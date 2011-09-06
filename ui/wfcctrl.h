@@ -29,6 +29,7 @@
 
 #include "pthread++.h"
 #include "protocol.h"
+#include "types.h"
 
 #include "devicectrl.h"
 
