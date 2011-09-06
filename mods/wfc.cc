@@ -48,6 +48,16 @@ Wfc::~Wfc() {
 	gsl_vector_float_free(ctrlparams.pid_int);
 }
 
+string Wfc::ctrl_as_str(const char *fmt) const {
+	// Init string with number of values
+	string ctrl_str(format("%zu", ctrlparams.target->size));
+	// Add all values seperated by commas
+	for (size_t i=0; i < ctrlparams.target->size; i++)
+		ctrl_str += ", " + format(fmt, gsl_float_vector_get(ctrlparams.target, i));
+	
+	return ctrl_str;
+}
+
 int Wfc::update_control(const gsl_vector_float *const error, const gain_t g, const float retain) {
 	// gsl_blas_saxpy(alpha, x, y): compute the sum y = \alpha x + y for the vectors x and y.
 	// gsl_blas_sscal(alpha, x): rescale the vector x by the multiplicative factor alpha. 
@@ -124,6 +134,10 @@ void Wfc::on_message(Connection *const conn, string line) {
 		if (what == "gain") {							// get gain
 			conn->addtag("gain");
 			conn->write(format("ok gain %g %g %g", ctrlparams.gain.p, ctrlparams.gain.i, ctrlparams.gain.d));
+		} else if (what == "nact") {			// get nact
+			conn->write(format("ok nact %d", nact));
+		} else if (what == "ctrl") {			// get ctrl
+			conn->write(format("ok ctrl %s", ctrl_as_str()));
 		} else
 			parsed = false;
 
@@ -135,7 +149,7 @@ void Wfc::on_message(Connection *const conn, string line) {
 			ctrlparams.gain.p = popdouble(line);
 			ctrlparams.gain.i = popdouble(line);
 			ctrlparams.gain.d = popdouble(line);
-			net_broadcast(format("ok gain %g %g %g", ctrlparams.gain.p, ctrlparams.gain.i, ctrlparams.gain.d));
+			net_broadcast(format("ok gain %g %g %g", ctrlparams.gain.p, ctrlparams.gain.i, ctrlparams.gain.d), "gain");
 		} else
 			parsed = false;
 	}
