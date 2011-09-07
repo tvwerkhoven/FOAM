@@ -174,7 +174,7 @@ int Wfc::set_wafflepattern(const float val) {
 		gsl_vector_float_set(ctrlparams.target, waffle_even.at(idx), val);
 
 	for (size_t idx=0; idx < waffle_odd.size(); idx++)
-		gsl_vector_float_set(ctrlparams.target, waffle_odd.at(idx), val);
+		gsl_vector_float_set(ctrlparams.target, waffle_odd.at(idx), -val);
 	
 	return 0;
 }
