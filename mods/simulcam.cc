@@ -416,7 +416,7 @@ void SimulCam::simul_wfs(gsl_matrix *const wave_in) const {
 	fftw_destroy_plan(shplan);
 }
 
-void SimulCam::simul_capture(const gsl_matrix *const im_in, void *const frame_out) const {
+void SimulCam::simul_capture(gsl_matrix *const im_in, void *const frame_out) const {
 	io.msg(IO_DEB1, "SimulCam::simul_capture() depth=%d", depth);
 	if (depth <=8)
 		return _simul_capture(im_in, (uint8_t *) frame_out);
@@ -428,31 +428,37 @@ void SimulCam::simul_capture(const gsl_matrix *const im_in, void *const frame_ou
 		return _simul_capture(im_in, (uint64_t *) frame_out);
 }
 
-template <class T> void SimulCam::_simul_capture(const gsl_matrix *const im_in, T *const frame_out) const {
+template <class T> void SimulCam::_simul_capture(gsl_matrix *const im_in, T *const frame_out) const {
 	// Convert frame to type 'T', scale properly
 	double min=0, max=0, noisei=0, fac;
 	gsl_matrix_minmax(im_in, &min, &max);
 	fac = get_maxval()/(max-min);
 	
-	io.msg(IO_DEB1, "SimulCam::_simul_capture() fac: %g, max: %zu", fac, get_maxval());
+	io.msg(IO_DEB1, "SimulCam::_simul_capture() data %g--%g, fac: %g, max: %zu", min, max, fac, get_maxval());
 	
+	// Scale & add such that the range of im_in is 0-- get_maxval() * exposure:
+	if (min != 0)
+		gsl_matrix_add_constant(im_in, -min);
+	gsl_matrix_scale(im_in, fac * exposure);
+									 
 	// Copy and scale, add noise
 	double pix=0.0;
 	//min=get_maxval()-1; max=0;
 	for (size_t i=0; i<im_in->size1; i++) {
 		for (size_t j=0; j<im_in->size2; j++) {
-			pix = (double) ((gsl_matrix_get(im_in, i, j) - min)*fac);
+			
+			pix = (double) gsl_matrix_get(im_in, i, j);
 			// Add noise only in 'noise' fraction of the pixels, with 'noiseamp' amplitude. Noise is independent of exposure here
 			noisei = 0.0;
 			if (simple_rand() < noisefac) 
 				noisei = simple_rand() * noiseamp * (get_maxval()-1);
-			frame_out[i*im_in->size2 + j] = (T) clamp(((pix * exposure) + noisei + offset) * gain, 
+			frame_out[i*im_in->size2 + j] = (T) clamp(((pix) + noisei + offset) * gain, 
 																											(double) 0.0, (double) get_maxval()-1);
 //			if (frame_out[i*im_in->size2 + j] > max) max = frame_out[i*im_in->size2 + j];
 //			else if (frame_out[i*im_in->size2 + j] < min) min = frame_out[i*im_in->size2 + j];
 		}
 	}
-//	io.msg(IO_DEB1, "SimulCam::_simul_capture() max: %g, min: %g", max, min);
+	io.msg(IO_DEB1, "SimulCam::_simul_capture() max: %g, min: %g", max, min);
 
 //	io.msg(IO_DEB1, "SimulCam::_simul_capture() pix[10] = %d, pix[%d] = %d", 
 //				 frame_out[10], 256+68*512, frame_out[256+68*512]);

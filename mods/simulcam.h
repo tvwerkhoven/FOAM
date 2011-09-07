@@ -221,8 +221,8 @@ public:
 	 @param [in] *im_in Image to be processed
 	 @param [out] *frame_out Output frame in arbitrary type (like uint8_t, uint16_t) (pre-allocated)
 	 */
-	void simul_capture(const gsl_matrix *const im_in, void *const frame_out) const;
-	template <class T> void _simul_capture(const gsl_matrix *const im_in, T *const frame_out) const;
+	void simul_capture(gsl_matrix *const im_in, void *const frame_out) const;
+	template <class T> void _simul_capture(gsl_matrix *const im_in, T *const frame_out) const;
 	
 	// From Camera::
 	void cam_handler();
