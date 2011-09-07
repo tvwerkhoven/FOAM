@@ -92,7 +92,6 @@ wfcact_frame("WFC actuators"), wfcact_gr(480,100)
 	calib_setactid.entry.signal_activate().connect(sigc::mem_fun(*this, &WfcView::on_calib_setact_act));
 	calib_setactval.entry.signal_activate().connect(sigc::mem_fun(*this, &WfcView::on_calib_setact_act));
 	
-	
 	clear_gui();
 	disable_gui();
 	
@@ -142,22 +141,24 @@ void WfcView::on_wfcact_update() {
 }
 
 void WfcView::on_calib_random_clicked() {
-	//wfcctrl->act_random();
+	wfcctrl->send_cmd("act random");
+	//	wfcctrl->set_act_random();
 }
 
 void WfcView::on_calib_waffle_clicked() {
-	//wfcctrl->act_waffle();
+	wfcctrl->send_cmd("act waffle");
+	//	wfcctrl->set_act_waffle();
 }
 
 void WfcView::on_calib_setall_act() {
 	double actval = strtof(calib_setall.get_text().c_str(), NULL);
-	//wfcctrl->act_all(actval);
+	wfcctrl->send_cmd(format("act all %g", actval));
 }
 
 void WfcView::on_calib_setact_act() {
 	double actval = strtof(calib_setactval.get_text().c_str(), NULL);
 	int actid = calib_setactid.get_value_as_int();
-	//wfcctrl->act_one(actid, actval);
+	wfcctrl->send_cmd(format("act one %d %g", actid, actval));
 }
 
 void WfcView::on_message_update() {
