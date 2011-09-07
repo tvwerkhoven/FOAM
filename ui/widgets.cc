@@ -177,6 +177,12 @@ void BarGraph::on_update(const std::vector< double > &graph_vals) {
 					p[0] = col[0]; p[1] = col[1]; p[2] = col[2];
 				} } }
 	}
+	
+	// If we were waiting for this update, set button to 'OK' state again. If 
+	// this is only a one-time 'b_refresh' event, this probably won't happen.
+	if (b_autoupd.get_state() == SwitchButton::WAITING)
+		b_autoupd.set_state(SwitchButton::OK);
+	
 	gr_img.queue_draw();
 }
 
