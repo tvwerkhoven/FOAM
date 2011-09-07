@@ -50,14 +50,14 @@ simwfcerr(io, ptc, name + "-wfcerr", port, conffile),
 simwfc(simwfc),
 out_size(0), frame_out(NULL), frame_raw(NULL),
 telradius(1.0), telapt(NULL), telapt_fill(0.7),
-noise(0.0), noiseamp(0.0), mlafac(1.0), wfcerr_retain(0.7), wfcerr_act(NULL), 
+noisefac(0.0), noiseamp(0.0), mlafac(1.0), wfcerr_retain(0.7), wfcerr_act(NULL), 
 shwfs(io, ptc, name + "-shwfs", port, conffile, *this, false),
 do_simwf(true), do_simtel(true), do_simwfcerr(false), do_simmla(true), do_simwfc(true)
 {
 	io.msg(IO_DEB2, "SimulCam::SimulCam()");
 	// Register network commands with base device:
-	add_cmd("get noise");
-	add_cmd("set noise");
+	add_cmd("get noisefac");
+	add_cmd("set noisefac");
 	add_cmd("get noiseamp");
 	add_cmd("set noiseamp");
 	add_cmd("get seeingfac");
@@ -79,7 +79,7 @@ do_simwf(true), do_simtel(true), do_simwfcerr(false), do_simmla(true), do_simwfc
 	add_cmd("set simmla");			// Do MLA simulation (i.e. lenslet array)
 	add_cmd("set simwfc");			// Do wavefront correction
 
-	noise = cfg.getdouble("noise", 0.2);
+	noisefac = cfg.getdouble("noisefac", 0.2);
 	noiseamp = cfg.getdouble("noiseamp", 0.2);
 	mlafac = cfg.getdouble("mlafac", 25.0);
 	
@@ -120,8 +120,8 @@ void SimulCam::on_message(Connection *const conn, string line) {
 	if (command == "set") {							// set ...
 		string what = popword(line);
 	
-		if(what == "noise") {							// set noise <double>
-			set_var(conn, "noise", popdouble(line), &noise, 0.0, 1.0, "Out of range");
+		if(what == "noisefac") {							// set noise <double>
+			set_var(conn, "noisefac", popdouble(line), &noisefac, 0.0, 1.0, "Out of range");
 		} else if(what == "noiseamp") {		// set noiseamp <double>
 			set_var(conn, "noiseamp", popdouble(line), &noiseamp);
 		} else if(what == "seeingfac") {	// set seeingfac <double>
@@ -172,8 +172,8 @@ void SimulCam::on_message(Connection *const conn, string line) {
 	} else if (command == "get") {			// get ...
 		string what = popword(line);
 	
-		if(what == "noise") {							// get noise
-			get_var(conn, "noise", noise);
+		if(what == "noisefac") {							// get noise
+			get_var(conn, "noisefac", noisefac);
 		} else if(what == "noiseamp") {		// get noiseamp
 			get_var(conn, "noiseamp", noiseamp);
 		} else if(what == "seeingfac") {	// get seeingfac
@@ -416,7 +416,7 @@ void SimulCam::simul_wfs(gsl_matrix *const wave_in) const {
 	fftw_destroy_plan(shplan);
 }
 
-void SimulCam::simul_capture(const gsl_matrix *const im_in, void *const frame_out) const {
+void SimulCam::simul_capture(gsl_matrix *const im_in, void *const frame_out) const {
 	io.msg(IO_DEB1, "SimulCam::simul_capture() depth=%d", depth);
 	if (depth <=8)
 		return _simul_capture(im_in, (uint8_t *) frame_out);
@@ -428,31 +428,37 @@ void SimulCam::simul_capture(const gsl_matrix *const im_in, void *const frame_ou
 		return _simul_capture(im_in, (uint64_t *) frame_out);
 }
 
-template <class T> void SimulCam::_simul_capture(const gsl_matrix *const im_in, T *const frame_out) const {
+template <class T> void SimulCam::_simul_capture(gsl_matrix *const im_in, T *const frame_out) const {
 	// Convert frame to type 'T', scale properly
 	double min=0, max=0, noisei=0, fac;
 	gsl_matrix_minmax(im_in, &min, &max);
 	fac = get_maxval()/(max-min);
 	
-	io.msg(IO_DEB1, "SimulCam::_simul_capture() fac: %g, max: %zu", fac, get_maxval());
+	io.msg(IO_DEB1, "SimulCam::_simul_capture() data %g--%g, fac: %g, max: %zu", min, max, fac, get_maxval());
 	
+	// Scale & add such that the range of im_in is 0-- get_maxval() * exposure:
+	if (min != 0)
+		gsl_matrix_add_constant(im_in, -min);
+	gsl_matrix_scale(im_in, fac * exposure);
+									 
 	// Copy and scale, add noise
 	double pix=0.0;
-	min=get_maxval()-1; max=0;
+	//min=get_maxval()-1; max=0;
 	for (size_t i=0; i<im_in->size1; i++) {
 		for (size_t j=0; j<im_in->size2; j++) {
-			pix = (double) ((gsl_matrix_get(im_in, i, j) - min)*fac);
+			
+			pix = (double) gsl_matrix_get(im_in, i, j);
 			// Add noise only in 'noise' fraction of the pixels, with 'noiseamp' amplitude. Noise is independent of exposure here
 			noisei = 0.0;
-			if (simple_rand() < noise) 
+			if (simple_rand() < noisefac) 
 				noisei = simple_rand() * noiseamp * (get_maxval()-1);
-			frame_out[i*im_in->size2 + j] = (T) clamp(((pix * exposure) + noisei + offset) * gain, 
+			frame_out[i*im_in->size2 + j] = (T) clamp(((pix) + noisei + offset) * gain, 
 																											(double) 0.0, (double) get_maxval()-1);
 //			if (frame_out[i*im_in->size2 + j] > max) max = frame_out[i*im_in->size2 + j];
 //			else if (frame_out[i*im_in->size2 + j] < min) min = frame_out[i*im_in->size2 + j];
 		}
 	}
-//	io.msg(IO_DEB1, "SimulCam::_simul_capture() max: %g, min: %g", max, min);
+	io.msg(IO_DEB1, "SimulCam::_simul_capture() max: %g, min: %g", max, min);
 
 //	io.msg(IO_DEB1, "SimulCam::_simul_capture() pix[10] = %d, pix[%d] = %d", 
 //				 frame_out[10], 256+68*512, frame_out[256+68*512]);
