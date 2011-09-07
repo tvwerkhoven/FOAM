@@ -438,7 +438,7 @@ template <class T> void SimulCam::_simul_capture(const gsl_matrix *const im_in, 
 	
 	// Copy and scale, add noise
 	double pix=0.0;
-	min=get_maxval()-1; max=0;
+	//min=get_maxval()-1; max=0;
 	for (size_t i=0; i<im_in->size1; i++) {
 		for (size_t j=0; j<im_in->size2; j++) {
 			pix = (double) ((gsl_matrix_get(im_in, i, j) - min)*fac);
