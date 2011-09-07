@@ -158,8 +158,10 @@ int Wfc::set_control_act(const float val, const size_t act_id) {
 }
 
 int Wfc::set_wafflepattern(const float val) {
-	if (!have_waffle)
+	if (!have_waffle) {
+		io.msg(IO_WARN, "Wfc::set_wafflepattern() no waffle!");
 		return 1;
+	}
 	
 	if (!get_calib())
 		calibrate();
@@ -272,25 +274,32 @@ void Wfc::on_message(Connection *const conn, string line) {
 			net_broadcast(format("ok gain %g %g %g", ctrlparams.gain.p, ctrlparams.gain.i, ctrlparams.gain.d));
 		} else
 			parsed = false;
-	} else if (command == "act waffle") { // act waffle
-		set_wafflepattern(0.5);
-		actuate();
-		conn->write(format("ok act waffle"));
-	} else if (command == "act random") { // act random
-		set_randompattern(1.0);
-		actuate();
-		conn->write(format("ok act random"));
-	} else if (command == "act one") { 	// act one
-		int actid = popint(line);
-		double actval = popdouble(line);
-		set_control_act(actval, actid);
-		actuate();
-		conn->write(format("ok act one"));
-	} else if (command == "act all") { 	// act one
-		double actval = popdouble(line);
-		set_control(actval);
-		actuate();
-		conn->write(format("ok act all"));
+	} else if (command == "act") { 
+		string actwhat = popword(line);
+		
+		if (actwhat == "waffle") {				// act waffle
+			set_wafflepattern(0.5);
+			actuate();
+			conn->write(format("ok act waffle"));
+		} else if (actwhat == "random") { // act random
+			set_randompattern(1.0);
+			actuate();
+			conn->write(format("ok act random"));
+		} else if (actwhat == "one") { 		// act one <id> <val>
+			int actid = popint(line);
+			double actval = popdouble(line);
+			set_control_act(actval, actid);
+			actuate();
+			conn->write(format("ok act one"));
+		} else if (actwhat == "all") { 		// act all <val>
+			double actval = popdouble(line);
+			set_control(actval);
+			actuate();
+			conn->write(format("ok act all"));
+		} else
+			parsed = false;
+	} else {
+		parsed = false;
 	}
 		
 	// If not parsed here, call parent
