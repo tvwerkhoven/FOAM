@@ -56,6 +56,9 @@ public:
 	WfcCtrl(Log &log, const string name, const string host, const string port);
 	~WfcCtrl();
 	
+	vector< double > get_ctrlvec() const { return ctrlvec; }
+	int get_nact() const { return nact; }
+	
 	Glib::Dispatcher signal_wfcctrl;	//!< New actuator voltages available
 };
 
