@@ -46,14 +46,24 @@ const string wfc_type = "wfc";
  
  \section wfc_cfg Configuration parameters
  
- - none
+ - waffle_odd / waffle_even: space or comma-seperated list of actuators for a 
+	 waffle pattern. Stored in waffle_even and waffle_odd.
 
  */
 class Wfc: public foam::Device {
-private:
+protected:
 	int nact;														//!< Number of actuators in this device
 	
+	string str_waffle_even;							//!< String representation of even actuators
+	string str_waffle_odd;							//!< String representation of odd actuators
+	vector<int> waffle_even;						//!< 'Even' actuators for waffle pattern
+	vector<int> waffle_odd;							//!< 'Odd' actuators for waffle pattern
+	void parse_waffle(string &odd, string &even); //!< Interpret data in waffle_even and waffle_odd
+	bool have_waffle;										//!< Do we know about the waffle pattern?
 	string ctrl_as_str(const char *fmt="%.4f") const; //!< Return control vector ctrlparams.target as string (not thread-safe)
+
+protected:
+	void set_nact(const int val) { nact = val; }
 	
 public:
 	// Common Wfc settings
@@ -69,7 +79,6 @@ public:
 	
 	wfc_ctrl_t ctrlparams;
 	
-	void set_nact(const int val) { nact = val; }
 	int get_nact() const { return nact; }
 	
 	void set_gain(const double p, const double i, const double d) { ctrlparams.gain.p = p; ctrlparams.gain.i = i; ctrlparams.gain.d = d; }
@@ -86,6 +95,38 @@ public:
 	 @param [in] err Error between target and current signal
 	 */
 	int update_control(const gsl_vector_float *const err) { return update_control(err, ctrlparams.gain); }
+	
+	/*! @brief Set WFC control, ignoring current signal
+	 
+	 @param [in] newctrl New control target for WFC
+	 */
+	int set_control(const gsl_vector_float *const newctrl);
+	/*! @brief Set WFC control for all actuators, ignoring current signal
+	 
+	 @param [in] val New control target for all WFC actuators
+	 */
+	int set_control(const float val=0.0);
+	/*! @brief Set WFC control for a specific actuators, ignoring current signal
+	 
+	 @param [in] val New control target for WFC
+	 @param [in] act_id WFC actuator to set
+	 */
+	int set_control_act(const float val, const size_t act_id);
+	
+	/*! @brief Set wafflepattern on DM with value 'val'
+	 
+	 Uses waffle pattern as loaded from cfg file at init and stored in 
+	 waffle_even and waffle_odd.
+	 
+	 @param [in] val Value to set on actuators
+	 */
+	int set_wafflepattern(const float val);
+	
+	/*! @brief Set random pattern on DM with maximum value 'maxval'
+	 
+	 @param [in] maxval Range of random values to set on actuators
+	 */
+	int set_randompattern(const float maxval);
 
 	// To be implemented by derived classes:
 	/*! @brief Actuate WFC using internal control vector
