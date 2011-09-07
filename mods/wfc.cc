@@ -22,6 +22,7 @@
 #include <stdint.h>
 #include <sys/types.h>
 #include <gsl/gsl_blas.h>
+#include <gsl/gsl_vector.h>
 
 #include "types.h"
 #include "config.h"
@@ -53,7 +54,7 @@ string Wfc::ctrl_as_str(const char *fmt) const {
 	string ctrl_str(format("%zu", ctrlparams.target->size));
 	// Add all values seperated by commas
 	for (size_t i=0; i < ctrlparams.target->size; i++)
-		ctrl_str += ", " + format(fmt, gsl_float_vector_get(ctrlparams.target, i));
+		ctrl_str += ", " + format(fmt, gsl_vector_float_get(ctrlparams.target, i));
 	
 	return ctrl_str;
 }
