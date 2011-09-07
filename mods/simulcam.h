@@ -70,7 +70,7 @@ const string simulcam_type = "simulcam";
   
  \section simulcam_cfg Configuration parameters
  
- - noise: SimulCam::noise
+ - noisefac: SimulCam::noisefac
  - noiseamp: SimulCam::noiseamp
  - mlafac: SimulCam::mlafac
 
@@ -90,7 +90,7 @@ const string simulcam_type = "simulcam";
  
  \section simulcam_netio Network commands
  
- - get/set noise: see above
+ - get/set noisefac: see above
  - get/set noiseamp: see above
  - get/set seeingfac: see above
  - get/set mlafac: see above
@@ -126,7 +126,7 @@ private:
 	gsl_matrix *telapt;									//!< Telescope aperture mask
 	double telapt_fill;									//!< How much subaperture should be within the telescope aperture to be processed
 	
-	double noise;												//!< Noise fill factor for CCD
+	double noisefac;										//!< Noise fill factor for CCD
 	double noiseamp;										//!< Noise amplitude as fraction of maximum intensity
 	double mlafac;											//!< Factor to multiply wavefront with before imaging (i.e. image magnification) (like seeingfac, except this also takes simulated correction into account)
 	double wfcerr_retain;								//!< Ratio of old and new random wfc error to add. wfc_err = old_err * fac + new_err * (1-fac). 0.9 means the wavefront changes very slowly (high correlation between consecutive frames), 0.1 means it changes very rapidly (low correlation).
@@ -145,8 +145,8 @@ public:
 	bool do_simmla;											//!< Simulate microlens array?
 	bool do_simwfc;											//!< Simulate wavefront corrector?
 	
-	void set_noise(const double val) { noise = val; }
-	double get_noise() const { return noise; }
+	void set_noisefac(const double val) { noisefac = val; }
+	double get_noisefac() const { return noisefac; }
 	void set_noiseamp(const double val) { noiseamp = val; }
 	double get_noiseamp() const { return noiseamp; }
 	void set_seeingfac(const double val) { seeing.seeingfac = val; }
