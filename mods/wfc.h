@@ -121,6 +121,12 @@ public:
 	 @param [in] val Value to set on actuators
 	 */
 	int set_wafflepattern(const float val);
+	
+	/*! @brief Set random pattern on DM with maximum value 'maxval'
+	 
+	 @param [in] maxval Range of random values to set on actuators
+	 */
+	int set_randompattern(const float maxval);
 
 	// To be implemented by derived classes:
 	/*! @brief Actuate WFC using internal control vector

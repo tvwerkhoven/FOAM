@@ -176,6 +176,19 @@ int Wfc::set_wafflepattern(const float val) {
 	return 0;
 }
 
+int Wfc::set_randompattern(const float maxval) {
+	if (!get_calib())
+		calibrate();
+
+	// Set all to zero first
+	gsl_vector_float_set_zero(ctrlparams.target);
+	
+	for (size_t idx=0; idx < ctrlparams.target->size; idx++)
+		gsl_vector_float_set(ctrlparams.target, idx, (drand48()*2.0-1.0)*maxval);
+	
+	return 0;
+}
+
 
 int Wfc::calibrate() {
 	// Allocate memory for control command
