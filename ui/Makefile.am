@@ -17,8 +17,8 @@ if HAVE_GUI
 bin_PROGRAMS = foam-gui
 foam_gui_CPPFLAGS = $(GUI_CFLAGS) $(AM_CPPFLAGS)
 foam_gui_LDFLAGS = $(GUI_LIBS) $(AM_LDFLAGS)
-foam_gui_SOURCES = fgui.cc log.cc logview.cc about.cc foamcontrol.cc controlview.cc widgets.cc deviceview.cc devicectrl.cc camview.cc camctrl.cc wfsview.cc wfsctrl.cc shwfsview.cc shwfsctrl.cc
-foam_gui_SOURCES += fgui.h log.h logview.h about.h foamcontrol.h controlview.h widgets.h deviceview.h devicectrl.h camview.h camctrl.h wfsview.h wfsctrl.h shwfsview.h shwfsctrl.h
+foam_gui_SOURCES = fgui.cc log.cc logview.cc about.cc foamcontrol.cc controlview.cc widgets.cc deviceview.cc devicectrl.cc camview.cc camctrl.cc wfsview.cc wfsctrl.cc shwfsview.cc shwfsctrl.cc wfcview.cc wfcctrl.cc
+foam_gui_SOURCES += fgui.h log.h logview.h about.h foamcontrol.h controlview.h widgets.h deviceview.h devicectrl.h camview.h camctrl.h wfsview.h wfsctrl.h shwfsview.h shwfsctrl.h wfcview.h wfcctrl.h
 
 foamdatadir = $(datadir)/foam
 nobase_dist_foamdata_DATA = FOAM-logo.svg FOAM-logo.png

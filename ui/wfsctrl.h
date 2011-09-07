@@ -1,5 +1,5 @@
 /*
- WfsCtrl.cc -- camera control class
+ wfsctrl.h -- camera control class
  Copyright (C) 2010--2011 Tim van Werkhoven <t.i.m.vanwerkhoven@xs4all.nl>
  Copyright (C) 2010 Guus Sliepen
  

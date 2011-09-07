@@ -26,6 +26,7 @@
 #include <vector>
 #include "format.h"
 
+
 /*!
  @brief Similar to ToggleButton, but uses color for status indication, which can be updated without generating signals
  */
@@ -63,10 +64,11 @@ public:
 class LabeledSpinEntry: public Gtk::HBox {
 	Gtk::Label pre;
 	Gtk::Label post;
-	Gtk::SpinButton entry;
 
 	public:
 	LabeledSpinEntry(const Glib::ustring &pretext, const Glib::ustring &posttext = "", double lower = 0, double upper = INFINITY, double step_increment = 1, double page_increment = 1, guint digits = 0);
+
+	Gtk::SpinButton entry;
 
 	void set_value(double value) {
 		entry.set_value(value);
@@ -150,6 +152,44 @@ public:
 		entry.set_alignment(alignment);
 	}
 };
+
+/*!
+ @brief Bar graph used to display SHWFS shift vector and WFC actuator voltages
+ */
+class BarGraph: public Gtk::HBox {
+private:
+	Gtk::VBox vbox1;
+	Gtk::HBox hbox0;
+	LabeledEntry e_minval;										//!< Minimum value in bargraph
+	LabeledEntry e_maxval;										//!< Maximum value in bargraph
+	LabeledEntry e_allval;										//!< Vector of all values
+	
+	Gtk::HSeparator hsep1;
+	Gtk::Button b_refresh;										//!< Update once button
+	
+	Gtk::HBox hbox1;
+	SwitchButton b_autoupd;										//!< Auto update button
+	LabeledEntry e_autointval;								//!< Auto update interval
+
+	Gtk::EventBox gr_events;
+	Gtk::Image gr_img;
+	Glib::RefPtr<Gdk::Pixbuf> gr_pixbuf;
+	Gtk::Alignment gr_align;
+	
+	bool on_timeout();												//!< Run this 30x/sec to enable auto updating, throttle with e_autointval
+	void do_update() { slot_update(); }				//!< Wrapper for slot_update
+	
+	void on_autoupd_clicked();								//!< Callback for b_autoupd
+	
+public:
+	BarGraph(const int width=480, const int height=100);
+	~BarGraph();
+
+	sigc::slot<void> slot_update;							//!< Slot to request update
+
+	void on_update(const std::vector< double > &graph_vals);
+};
+
 
 class LabeledSpinView: public Gtk::HBox {
 	Gtk::Label pre;
