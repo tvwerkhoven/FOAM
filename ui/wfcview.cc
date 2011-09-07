@@ -33,24 +33,41 @@ WfcView::WfcView(WfcCtrl *wfcctrl, Log &log, FoamControl &foamctrl, string n):
 DevicePage((DeviceCtrl *) wfcctrl, log, foamctrl, n), 
 wfcctrl(wfcctrl),
 wfc_nact("#Act."),
-calib_frame("Calibration"),
+calib_frame("Calibration"), calib_setall("Set all"), calib_setactid("Set act #"), calib_setactval("to"),
+calib_random("Set Random"), calib_waffle("Set Waffle"),
 wfcact_frame("WFC actuators"), wfcact_gr(480,100)
 {
 	log.term(format("%s", __PRETTY_FUNCTION__));
 	
 	wfc_nact.set_width_chars(8);
 	wfc_nact.set_editable(false);
-
-	clear_gui();
-	disable_gui();
 	
+	calib_setall.set_width_chars(4);
+
+	calib_setactid.set_digits(0);
+	calib_setactid.set_increments(1, 10);
+	
+	calib_setactval.set_width_chars(4);
+
 	// Extra device info
 	devhbox.pack_start(vsep0, PACK_SHRINK);
 	devhbox.pack_start(wfc_nact, PACK_SHRINK);
+	
+	// Calib frame
+	calib_hbox.pack_start(calib_setall, PACK_SHRINK);
+	calib_hbox.pack_start(vsep1, PACK_SHRINK);
+	calib_hbox.pack_start(calib_setactid, PACK_SHRINK);
+	calib_hbox.pack_start(calib_setactval, PACK_SHRINK);
+	calib_hbox.pack_start(vsep2, PACK_SHRINK);
+	calib_hbox.pack_start(calib_random, PACK_SHRINK);
+	calib_hbox.pack_start(calib_waffle, PACK_SHRINK);
+	calib_frame.add(calib_hbox);
 		
 	// Wavefront corrector actuator 'spectrum' (separate window)
 	wfcact_hbox.pack_start(wfcact_gr);
 	wfcact_frame.add(wfcact_hbox);
+	
+	pack_start(wfcact_frame, PACK_SHRINK);
 	
 	// Extra window
 	extra_win.set_title("FOAM WFC " + devname);
@@ -68,6 +85,16 @@ wfcact_frame("WFC actuators"), wfcact_gr(480,100)
 	wfcctrl->signal_wfcctrl.connect(sigc::mem_fun(*this, &WfcView::on_wfcact_update));
 	wfcctrl->signal_message.connect(sigc::mem_fun(*this, &WfcView::on_message_update));
 	
+	calib_random.signal_clicked().connect(sigc::mem_fun(*this, &WfcView::on_calib_random_clicked));
+	calib_waffle.signal_clicked().connect(sigc::mem_fun(*this, &WfcView::on_calib_waffle_clicked));
+	calib_setall.entry.signal_activate().connect(sigc::mem_fun(*this, &WfcView::on_calib_setall_act));
+	calib_setactid.entry.signal_activate().connect(sigc::mem_fun(*this, &WfcView::on_calib_setact_act));
+	calib_setactval.entry.signal_activate().connect(sigc::mem_fun(*this, &WfcView::on_calib_setact_act));
+	
+	
+	clear_gui();
+	disable_gui();
+	
 	// finalize
 	show_all_children();
 }
@@ -79,18 +106,30 @@ WfcView::~WfcView() {
 void WfcView::enable_gui() {
 	DevicePage::enable_gui();
 	log.term(format("%s", __PRETTY_FUNCTION__));
-
+	
+	calib_setall.set_sensitive(true);
+	calib_setactid.set_sensitive(true);
+	calib_setactval.set_sensitive(true);
+	calib_random.set_sensitive(true);
+	calib_waffle.set_sensitive(true);
 }
 
 void WfcView::disable_gui() {
 	DevicePage::disable_gui();
 	log.term(format("%s", __PRETTY_FUNCTION__));
-	
+	calib_setall.set_sensitive(false);
+	calib_setactid.set_sensitive(false);
+	calib_setactval.set_sensitive(false);
+	calib_random.set_sensitive(false);
+	calib_waffle.set_sensitive(false);
 }
 
 void WfcView::clear_gui() {
 	DevicePage::clear_gui();
 	log.term(format("%s", __PRETTY_FUNCTION__));
+	calib_setall.set_text("0");
+	calib_setactid.set_value(0);
+	calib_setactval.set_text("0");
 }
 
 void WfcView::on_wfcact_update() {
@@ -101,8 +140,28 @@ void WfcView::on_wfcact_update() {
 	wfcact_gr.on_update(wfcctrl->get_ctrlvec());
 }
 
+void WfcView::on_calib_random_clicked() {
+	//wfcctrl->act_random();
+}
+
+void WfcView::on_calib_waffle_clicked() {
+	//wfcctrl->act_waffle();
+}
+
+void WfcView::on_calib_setall_act() {
+	double actval = strtof(calib_setall.get_text().c_str(), NULL);
+	//wfcctrl->act_all(actval);
+}
+
+void WfcView::on_calib_setact_act() {
+	double actval = strtof(calib_setactval.get_text().c_str(), NULL);
+	int actid = calib_setactid.get_value_as_int();
+	//wfcctrl->act_one(actid, actval);
+}
+
 void WfcView::on_message_update() {
 	DevicePage::on_message_update();
 	
+	calib_setactid.set_range(0, wfcctrl->get_nact()-1);
 	wfc_nact.set_text(format("%d", wfcctrl->get_nact()));
 }

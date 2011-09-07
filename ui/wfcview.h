@@ -44,13 +44,26 @@ private:
 	LabeledEntry wfc_nact;							//!< Number of actuators
 	
 	Frame calib_frame;
-
+	HBox calib_hbox;
+	LabeledEntry calib_setall;
+	VSeparator vsep1;
+	LabeledSpinEntry calib_setactid;
+	LabeledEntry calib_setactval;
+	VSeparator vsep2;
+	Button calib_random;
+	Button calib_waffle;
+	
 	Frame wfcact_frame;
 	HBox wfcact_hbox;
 	BarGraph wfcact_gr;
 	
 	void do_wfcact_update() const { wfcctrl->send_cmd("get ctrl"); } //!< Request update of ctrl vector
 	void on_wfcact_update();						//!< Update WF display
+	
+	void on_calib_random_clicked();			//!< Callback for calib_random button
+	void on_calib_waffle_clicked();			//!< Callback for calib_waffle button
+	void on_calib_setall_act();					//!< Callback for calib_setall entry
+	void on_calib_setact_act();					//!< Callback for calib_setactid/calib_setactval entries
 	
 	// From DevicePage::
 	virtual void on_message_update();
