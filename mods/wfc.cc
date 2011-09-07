@@ -272,16 +272,24 @@ void Wfc::on_message(Connection *const conn, string line) {
 		} else
 			parsed = false;
 	} else if (command == "act waffle") { // act waffle
-		
+		set_wafflepattern(0.5);
+		actuate();
+		conn->write(format("ok act waffle"));
 	} else if (command == "act random") { // act random
-		
+		set_randompattern(1.0);
+		actuate();
+		conn->write(format("ok act random"));
 	} else if (command == "act one") { 	// act one
 		int actid = popint(line);
 		double actval = popdouble(line);
-
+		set_control_act(actval, actid);
+		actuate();
+		conn->write(format("ok act one"));
 	} else if (command == "act all") { 	// act one
 		double actval = popdouble(line);
-		
+		set_control(actval);
+		actuate();
+		conn->write(format("ok act all"));
 	}
 		
 	// If not parsed here, call parent
