@@ -64,10 +64,11 @@ public:
 class LabeledSpinEntry: public Gtk::HBox {
 	Gtk::Label pre;
 	Gtk::Label post;
-	Gtk::SpinButton entry;
 
 	public:
 	LabeledSpinEntry(const Glib::ustring &pretext, const Glib::ustring &posttext = "", double lower = 0, double upper = INFINITY, double step_increment = 1, double page_increment = 1, guint digits = 0);
+
+	Gtk::SpinButton entry;
 
 	void set_value(double value) {
 		entry.set_value(value);
