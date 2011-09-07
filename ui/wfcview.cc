@@ -62,12 +62,13 @@ wfcact_frame("WFC actuators"), wfcact_gr(480,100)
 	calib_hbox.pack_start(calib_random, PACK_SHRINK);
 	calib_hbox.pack_start(calib_waffle, PACK_SHRINK);
 	calib_frame.add(calib_hbox);
-		
+	
+	// Add to main GUI page
+	pack_start(calib_frame, PACK_SHRINK);
+
 	// Wavefront corrector actuator 'spectrum' (separate window)
 	wfcact_hbox.pack_start(wfcact_gr);
 	wfcact_frame.add(wfcact_hbox);
-	
-	pack_start(wfcact_frame, PACK_SHRINK);
 	
 	// Extra window
 	extra_win.set_title("FOAM WFC " + devname);
