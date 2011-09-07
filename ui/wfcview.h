@@ -47,16 +47,13 @@ private:
 
 	Frame wfcact_frame;
 	HBox wfcact_hbox;
-	Alignment wfcact_align;
-	EventBox wfcact_events;
-	Image wfcact_img;
-	Glib::RefPtr<Gdk::Pixbuf> wfcact_pixbuf;
+	BarGraph wfcact_gr;
 	
-	virtual void do_wfcact_update();		//!< Update WF display
-	virtual void do_info_update();			//!< Update general info in GUI
-
+	void do_wfcact_update() const { wfcctrl->send_cmd("get ctrl"); } //!< Request update of ctrl vector
+	void on_wfcact_update();						//!< Update WF display
+	
 	// From DevicePage::
-	//virtual void on_message_update();
+	virtual void on_message_update();
 	
 	virtual void enable_gui();
 	virtual void disable_gui();

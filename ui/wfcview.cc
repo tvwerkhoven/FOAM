@@ -34,14 +34,9 @@ DevicePage((DeviceCtrl *) wfcctrl, log, foamctrl, n),
 wfcctrl(wfcctrl),
 wfc_nact("#Act."),
 calib_frame("Calibration"),
-wfcact_frame("WFC actuators"), wfcact_align(0.5, 0.5, 0, 0)
+wfcact_frame("WFC actuators"), wfcact_gr(480,100)
 {
 	log.term(format("%s", __PRETTY_FUNCTION__));
-	
-	wfcact_pixbuf = Gdk::Pixbuf::create(Gdk::COLORSPACE_RGB, false, 8, 480, 100);
-	wfcact_pixbuf->fill(0xFFFFFF00);
-	wfcact_img.set(wfcact_pixbuf);
-	wfcact_img.set_double_buffered(false);
 	
 	wfc_nact.set_width_chars(8);
 	wfc_nact.set_editable(false);
@@ -54,10 +49,7 @@ wfcact_frame("WFC actuators"), wfcact_align(0.5, 0.5, 0, 0)
 	devhbox.pack_start(wfc_nact, PACK_SHRINK);
 		
 	// Wavefront corrector actuator 'spectrum' (separate window)
-	wfcact_events.add(wfcact_img);
-	wfcact_align.add(wfcact_events);
-	
-	wfcact_hbox.pack_start(wfcact_align);
+	wfcact_hbox.pack_start(wfcact_gr);
 	wfcact_frame.add(wfcact_hbox);
 	
 	// Extra window
@@ -68,12 +60,13 @@ wfcact_frame("WFC actuators"), wfcact_align(0.5, 0.5, 0, 0)
 	
 	extra_win.show_all_children();
 	extra_win.present();
-//	
-//	// Event handlers
-//	
-//	wfsctrl->signal_message.connect(sigc::mem_fun(*this, &WfsView::do_info_update));
-//	wfsctrl->signal_wavefront.connect(sigc::mem_fun(*this, &WfsView::do_wfspow_update));
-//	wfsctrl->signal_wfscam.connect(sigc::mem_fun(*this, &WfsView::do_cam_update));
+	
+	// wfcact_gr needs to know about the function to get updated values
+	wfcact_gr.slot_update = sigc::mem_fun(*this, &WfcView::do_wfcact_update);
+	
+	// Event handlers
+	wfcctrl->signal_wfcctrl.connect(sigc::mem_fun(*this, &WfcView::on_wfcact_update));
+	wfcctrl->signal_message.connect(sigc::mem_fun(*this, &WfcView::on_message_update));
 	
 	// finalize
 	show_all_children();
@@ -100,10 +93,16 @@ void WfcView::clear_gui() {
 	log.term(format("%s", __PRETTY_FUNCTION__));
 }
 
-void WfcView::do_wfcact_update() {
-	
+void WfcView::on_wfcact_update() {
+	// Return if nothing to be drawn
+	if (!wfcact_frame.is_visible())
+		return;
+
+	wfcact_gr.on_update(wfcctrl->get_ctrlvec());
 }
 
-void WfcView::do_info_update() {
+void WfcView::on_message_update() {
+	DevicePage::on_message_update();
 	
+	wfc_nact.set_text(format("%d", wfcctrl->get_nact()));
 }
