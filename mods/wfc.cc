@@ -50,6 +50,13 @@ nact(0), have_waffle(false) {
 	
 	add_cmd("set gain");
 	add_cmd("get gain");
+	add_cmd("get nact");
+	add_cmd("get ctrl");
+
+	add_cmd("act waffle");
+	add_cmd("act random");
+	add_cmd("act all");
+	add_cmd("act one");
 }
 
 Wfc::~Wfc() {
@@ -58,6 +65,18 @@ Wfc::~Wfc() {
 	gsl_vector_float_free(ctrlparams.err);
 	gsl_vector_float_free(ctrlparams.prev);
 	gsl_vector_float_free(ctrlparams.pid_int);
+}
+
+string Wfc::ctrl_as_str(const char *fmt) const {
+	// Init string with number of values
+	string ctrl_str;
+	ctrl_str = format("%zu", ctrlparams.target->size);
+	
+	// Add all values seperated by commas
+	for (size_t i=0; i < ctrlparams.target->size; i++)
+		ctrl_str += ", " + format(fmt, gsl_vector_float_get(ctrlparams.target, i));
+	
+	return ctrl_str;
 }
 
 int Wfc::update_control(const gsl_vector_float *const error, const gain_t g, const float retain) {
@@ -221,6 +240,10 @@ void Wfc::on_message(Connection *const conn, string line) {
 		if (what == "gain") {							// get gain
 			conn->addtag("gain");
 			conn->write(format("ok gain %g %g %g", ctrlparams.gain.p, ctrlparams.gain.i, ctrlparams.gain.d));
+		} else if (what == "nact") {			// get nact
+			conn->write(format("ok nact %d", nact));
+		} else if (what == "ctrl") {			// get ctrl
+			conn->write(format("ok ctrl %s", ctrl_as_str().c_str()));
 		} else
 			parsed = false;
 
@@ -235,6 +258,17 @@ void Wfc::on_message(Connection *const conn, string line) {
 			net_broadcast(format("ok gain %g %g %g", ctrlparams.gain.p, ctrlparams.gain.i, ctrlparams.gain.d));
 		} else
 			parsed = false;
+	} else if (command == "act waffle") { // act waffle
+		
+	} else if (command == "act random") { // act random
+		
+	} else if (command == "act one") { 	// act one
+		int actid = popint(line);
+		double actval = popdouble(line);
+
+	} else if (command == "act all") { 	// act one
+		double actval = popdouble(line);
+		
 	}
 		
 	// If not parsed here, call parent
