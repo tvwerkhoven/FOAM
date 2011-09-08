@@ -46,7 +46,7 @@ devframe("Raw device control"), dev_val("value:"), dev_send("Send"), dev_stat("S
 
 	// Init default values for extra_win
 	extra_win.set_title("FOAM " + devname);
-	extra_win.set_default_size(640, 480);
+	extra_win.set_default_size(640, 200);
 	extra_win.set_gravity(Gdk::GRAVITY_STATIC);
 	
 	devhbox.set_spacing(4);

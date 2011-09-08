@@ -73,6 +73,8 @@ wfcact_frame("WFC actuators"), wfcact_gr(480,100)
 	// Extra window
 	extra_win.set_title("FOAM WFC " + devname);
 	
+	extra_win.set_default_size(640, 140);
+
 	extra_vbox.pack_start(wfcact_frame, PACK_SHRINK);
 	extra_win.add(extra_vbox);
 	

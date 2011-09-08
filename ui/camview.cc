@@ -201,6 +201,8 @@ histoalign(0.5, 0.5, 0, 0), minval("Display min"), maxval("Display max"), e_avg(
 	// Extra window
 	extra_win.set_title("FOAM Camera " + devname);
 	
+	extra_win.set_default_size(520,520);
+	
 	extra_vbox.pack_start(camframe);
 	extra_vbox.pack_start(histoframe, PACK_SHRINK);
 	extra_win.add(extra_vbox);

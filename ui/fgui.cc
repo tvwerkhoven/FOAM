@@ -158,7 +158,7 @@ menubar(*this)
 	
 	// widget properties
 	set_title("FOAM Control");
-	set_default_size(800, 600);
+	set_default_size(800, 300);
 	set_gravity(Gdk::GRAVITY_STATIC);
 	
 	//vbox.set_spacing(4);
