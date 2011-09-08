@@ -58,6 +58,10 @@ Camera(io, ptc, name, andor_type, port, conffile, online)
 	int cooltemp = cfg.getint("cooltemp", 20);
 	andordir = cfg.getstring("andor_cfgdir", "/usr/local/etc/andor");
 	
+	int hsspeed = cfg.getint("hsspeed", 0);
+	int vsspeed = cfg.getint("vsspeed", 0);
+	int vsamp = cfg.getint("vsspeed", 4);
+	
 	// Init error codes
 	init_errors();	
 
@@ -80,7 +84,7 @@ Camera(io, ptc, name, andor_type, port, conffile, online)
 	
 	// Set CCD readout speed-related settings
 	io.msg(IO_DEB1, "AndorCam::AndorCam() setting shift speed...");
-	cam_set_shift_speed(0, 0, 0);
+	cam_set_shift_speed(hsspeed, vsspeed, vsamp);
 	
 	// Set pre-amp gain (should be left alone, probably)
 	io.msg(IO_DEB1, "AndorCam::AndorCam() setting gain...");
