@@ -92,7 +92,8 @@ void ShwfsCtrl::on_message(string line) {
 		
 		signal_message();
 		return;
-	} else if (what == "shifts") {			// ok shifts [<N> [idx Sx0 Sy0 Sx1 Sy1 [idx Sx0 Sy0 Sx1 Sy1 [...]]]
+	} else if (what == "shifts") {			// ok shifts [<N> [idx Rx0 Ry0 Sx1 Sy1 [idx Rx0 Ry0 Sx1 Sy1 [...]]]
+																			// Give shift vectors with reference as origin and 'shift' as length
 		n = popint(line);
 		
 		shifts_v.clear();

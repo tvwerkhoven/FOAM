@@ -77,8 +77,8 @@ method(Shift::COG)
 	if (cfg.exists("sipitch"))
 		sipitch.x = sipitch.y = cfg.getint("sipitch");
 	
-	disp.x = cfg.getint("dispx", cam.get_width()/2);
-	disp.y = cfg.getint("dispy", cam.get_height()/2);
+	disp.x = cfg.getint("dispx", 0); //cam.get_width()/2
+	disp.y = cfg.getint("dispy", 0); //cam.get_height()/2
 	if (cfg.exists("disp"))
 		disp.x = disp.y = cfg.getint("disp");
 	
@@ -623,8 +623,10 @@ gsl_vector_float *Shwfs::comp_shift(string wfcname, gsl_vector_float *act, gsl_v
 void Shwfs::set_reference(Camera::frame_t *frame) {
 	// Measure shifts
 	wf_info_t *m = measure(frame);
-	if (!m)
+	if (!m) {
+		io.msg(IO_WARN, "Shwfs::set_reference() failed to measure reference frame @ %p!", frame);
 		return;
+	}
 
 	// Store these as reference positions
 	gsl_vector_float_memcpy(ref_vec, m->wfamp);
@@ -714,10 +716,10 @@ int Shwfs::gen_mla_grid(std::vector<vector_t> &mlacfg, const coord_t res, const 
 			
 			if (shape == CIRCULAR) {
 				if (pow(fabs(sa_c.x) + (overlap-0.5)*size.x, 2) + pow(fabs(sa_c.y) + (overlap-0.5)*size.y, 2) < minradsq) {
-					tmpsi = vector_t(sa_c.x + disp.x - size.x/2,
-									 sa_c.y + disp.y - size.y/2,
-									 sa_c.x + disp.x + size.x/2,
-									 sa_c.y + disp.y + size.y/2);
+					tmpsi = vector_t(sa_c.x + res.x/2 + disp.x - size.x/2,
+									 sa_c.y + res.y/2 + disp.y - size.y/2,
+									 sa_c.x + res.x/2 + disp.x + size.x/2,
+									 sa_c.y + res.y/2 + disp.y + size.y/2);
 					mlacfg.push_back(tmpsi);
 				}
 			}
@@ -725,10 +727,10 @@ int Shwfs::gen_mla_grid(std::vector<vector_t> &mlacfg, const coord_t res, const 
 				// Accept a subimage coordinate (center position) the position + 
 				// half-size the subaperture is within the bounds
 				if ((fabs(sa_c.x + (overlap-0.5)*size.x) < res.x/2) && (fabs(sa_c.y + (overlap-0.5)*size.y) < res.y/2)) {
-					tmpsi = vector_t(sa_c.x + disp.x - size.x/2,
-													 sa_c.y + disp.y - size.y/2,
-													 sa_c.x + disp.x + size.x/2,
-													 sa_c.y + disp.y + size.y/2);
+					tmpsi = vector_t(sa_c.x + res.x/2 + disp.x - size.x/2,
+													 sa_c.y + res.y/2 + disp.y - size.y/2,
+													 sa_c.x + res.x/2 + disp.x + size.x/2,
+													 sa_c.y + res.y/2 + disp.y + size.y/2);
 					mlacfg.push_back(tmpsi);
 				}
 			}
@@ -1012,12 +1014,14 @@ string Shwfs::get_shifts_str() const {
 	ret = format("%d ", (int) shift_vec->size);
 	
 	for (size_t i=0; i<shift_vec->size/2; i++) {
+		float refx = gsl_vector_float_get(ref_vec, i*2+0);
+		float refy = gsl_vector_float_get(ref_vec, i*2+0);
 		fcoord_t vec_origin(mlacfg[i].lx/2 + mlacfg[i].tx/2, mlacfg[i].ly/2 + mlacfg[i].ty/2);
 		ret += format("%d %g %g %g %g ", (int) i, 
-									vec_origin.x,
-									vec_origin.y,
-									vec_origin.x + gsl_vector_float_get(shift_vec, i*2+0), 
-									vec_origin.y + gsl_vector_float_get(shift_vec, i*2+1));
+									vec_origin.x + refx,
+									vec_origin.y + refy,
+									vec_origin.x + refx + gsl_vector_float_get(shift_vec, i*2+0), 
+									vec_origin.y + refy + gsl_vector_float_get(shift_vec, i*2+1));
 	}
 	
 	return ret;
