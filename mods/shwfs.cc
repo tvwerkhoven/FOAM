@@ -223,7 +223,7 @@ Wfs::wf_info_t* Shwfs::measure(Camera::frame_t *frame) {
 	// Calculate shifts
 	if (cam.get_depth() == 16) {
 		io.msg(IO_DEB2, "Shwfs::measure() got UINT16");
-		//shifts.calc_shifts((uint16_t *) frame->image, cam.get_res(), (Shift::crop_t *) mlacfg.ml, mlacfg.size(), shift_vec, method);
+		shifts.calc_shifts((uint16_t *) frame->image, cam.get_res(), mlacfg, shift_vec, method);
 	}
 	else if (cam.get_depth() == 8) {
 		io.msg(IO_DEB2, "Shwfs::measure() got UINT8");
@@ -793,8 +793,8 @@ int Shwfs::find_mla_grid(std::vector<vector_t> &mlacfg, const coord_t size, cons
 
 	// Store current camera count, get last frame
 	Camera::frame_t *f = cam.get_last_frame();
-	void *image;
-	size_t imsize;
+	void *image=NULL;
+	size_t imsize=0;
 	
 	if (f == NULL) {
 		io.msg(IO_WARN, "Shwfs::find_mla_grid() Could not get frame, is the camera running?");
@@ -803,10 +803,12 @@ int Shwfs::find_mla_grid(std::vector<vector_t> &mlacfg, const coord_t size, cons
 		// Copy frame for ourselves while we are looking for a grid. This prevents the camera from overwriting the frame we are using
 		imsize = f->size;
 		image = malloc(imsize);
+		io.msg(IO_XNFO, "Shwfs::find_mla_grid() copy from from %p to %p (size=%zu)", f->image, image, imsize);
+		if (!image)
+			throw format("Shwfs::find_mla_grid() Could not allocate memory (size=%zu)!", imsize);
 		memcpy(image, f->image, imsize);
 	}
 
-	
 	vector_t tmpsi;
 	mlacfg.clear();
 	
@@ -824,7 +826,8 @@ int Shwfs::find_mla_grid(std::vector<vector_t> &mlacfg, const coord_t size, cons
 	int mini = maxi * mini_f;
 	if (mini <= 0) {
 		io.msg(IO_WARN, "Shwfs::find_mla_grid() I_min < 0, something went wrong, aborting.");
-		return 0;
+		free(image);
+		return mlacfg.size();
 	}
 	
 	io.msg(IO_DEB2, "Shwfs::find_mla_grid(maxi=%d, mini_f=%g, mini=%d)", maxi, mini_f, mini);
@@ -842,8 +845,10 @@ int Shwfs::find_mla_grid(std::vector<vector_t> &mlacfg, const coord_t size, cons
 		}
 		
 		// Intensity too low, done
-		if (maxi < mini)
+		if (maxi < mini) {
+			io.msg(IO_XNFO, "Shwfs::find_mla_grid() maxi(%d) < mini(%d), break", maxi, mini);
 			break;
+		}
 		
 		// Add new subimage
 		tmpsi = vector_t((maxidx % cam.get_width()) - size.x/2,
@@ -857,18 +862,24 @@ int Shwfs::find_mla_grid(std::vector<vector_t> &mlacfg, const coord_t size, cons
 					 maxi, maxidx, tmpsi.lx, tmpsi.ly, (int) mlacfg.size(), nmax);
 
 		// If we have enough subimages, done
-		if ((int) mlacfg.size() == nmax)
+		if ((int) mlacfg.size() == nmax) {
+			io.msg(IO_XNFO, "Shwfs::find_mla_grid() mlacfg.size()(%zu) == nmax(%d), break", mlacfg.size(), nmax);
 			break;
+		}
 		if ((int) mlacfg.size() >= cam.get_width()*cam.get_height()/size.x/size.y) {
+			//!< @todo check this code, does aborting work?
 			io.msg(IO_WARN, "Shwfs::find_mla_grid() subaperture detection overflow, aborting!");
+			free(image);
 			mlacfg.clear();
-			return 0;
+			mlacfg.size(); 
 		}
 		
 		// Set the current subimage to zero such that we don't detect it next time
 		int xran[] = {max(0, tmpsi.lx), min(cam.get_width(), tmpsi.tx)};
 		int yran[] = {max(0, tmpsi.ly), min(cam.get_height(), tmpsi.ty)};
 		
+//		io.msg(IO_DEB1, "Shwfs::find_mla_grid() setting to zero from (%d, %d) to (%d, %d)", 
+//					 xran[0], yran[0], xran[1], yran[1]);
 		if (cam.get_depth() <= 8) {
 			uint8_t *cimg = (uint8_t *)image;
 			for (int y=yran[0]; y<yran[1]; y++)
@@ -892,7 +903,7 @@ int Shwfs::find_mla_grid(std::vector<vector_t> &mlacfg, const coord_t size, cons
 	net_broadcast("ok mla " + get_mla_str(), "mla");
 	// Re-calibrate with new settings
 	calibrate();
-	
+
 	free(image);
 
 	return (int) mlacfg.size();
