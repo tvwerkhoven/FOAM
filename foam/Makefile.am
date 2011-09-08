@@ -187,7 +187,7 @@ foam_expoao_SOURCES += foam-expoao.h \
 		$(MODS_DIR)/alpaodm.h \
 		$(LIB_DIR)/shift.h
 
-foam_expoao_CPPFLAGS = -DFOAM_DEFAULTCONF=\"$(FOAMCONFDIR)/foam-expoao.cfg\" \
+foam_expoao_CPPFLAGS = -DFOAM_DEFAULTCONF=\"$(sysconfdir)/foam/foam-expoao.cfg\" \
 		$(EXPOAO_CFLAGS) $(AM_CPPFLAGS)
 
 foam_expoao_CXXFLAGS = $(EXPOAO_CFLAGS) $(AM_CXXFLAGS)
