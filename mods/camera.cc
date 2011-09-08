@@ -315,7 +315,8 @@ void *Camera::cam_queue(void * const data, void * const image, struct timeval *c
 	// Depth should be ceil'ed to the nearest 8 multiple, because 'depth' could
 	// also be 14 or 12 bits in which case 'size' would be wrong.
 	//! @todo Need to distinguish between data bitdepth and camera bitdepth
-	frame->size = frame->npixels * frame->depth;
+	// Use depth/8, remember depth is in bits, size in bytes
+	frame->size = frame->npixels * frame->depth/8;
 	
 	if(!frame->histo)
 		frame->histo = new uint32_t[get_maxval()];
