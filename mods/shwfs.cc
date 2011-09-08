@@ -57,8 +57,9 @@ method(Shift::COG)
 	add_cmd("mla add");
 	add_cmd("mla get");
 	add_cmd("mla set");
-
+	
 	add_cmd("get shifts");
+	add_cmd("get refshifts");
 	
 	add_cmd("calibrate");
 	add_cmd("measure");
@@ -193,7 +194,9 @@ void Shwfs::on_message(Connection *const conn, string line) {
 		string what = popword(line);
 		
 		if (what == "shifts")
-			conn->write("ok shifts " + get_shifts_str());
+			conn->write("ok shifts " + get_vec_as_str(shift_vec));
+		else if (what == "refshifts")
+			conn->write("ok refshifts " + get_vec_as_str(ref_vec));
 		else 
 			parsed = false;
 	} else if (command == "set") {
@@ -623,8 +626,10 @@ gsl_vector_float *Shwfs::comp_shift(string wfcname, gsl_vector_float *act, gsl_v
 void Shwfs::set_reference(Camera::frame_t *frame) {
 	// Measure shifts
 	wf_info_t *m = measure(frame);
-	if (!m)
+	if (!m) {
+		io.msg(IO_WARN, "Shwfs::set_reference() failed to measure reference frame @ %p!", frame);
 		return;
+	}
 
 	// Store these as reference positions
 	gsl_vector_float_memcpy(ref_vec, m->wfamp);
@@ -1001,6 +1006,28 @@ int Shwfs::set_mla_str(string mla_str) {
 
 	net_broadcast("ok mla " + get_mla_str(), "mla");
 	return (int) mlacfg.size();
+}
+
+string Shwfs::get_vec_as_str(gsl_vector_float *vec) const {
+#error Finish this function here
+	io.msg(IO_DEB2, "Shwfs::get_vec_as_str(%p)", vec);
+	
+	string ret;
+	
+	// Return all shifts in one string
+	//! @bug This might cause problems when others are writing this data!
+	ret = format("%d ", (int) vec->size);
+	
+	for (size_t i=0; i<vec->size/2; i++) {
+		fcoord_t vec_origin(mlacfg[i].lx/2 + mlacfg[i].tx/2, mlacfg[i].ly/2 + mlacfg[i].ty/2);
+		ret += format("%d %g %g %g %g ", (int) i, 
+									vec_origin.x,
+									vec_origin.y,
+									vec_origin.x + gsl_vector_float_get(vec, i*2+0), 
+									vec_origin.y + gsl_vector_float_get(vec, i*2+1));
+	}
+	
+	return ret;
 }
 
 string Shwfs::get_shifts_str() const {
