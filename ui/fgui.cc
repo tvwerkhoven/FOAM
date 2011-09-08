@@ -80,6 +80,8 @@
 #include "wfsctrl.h"
 #include "shwfsview.h"
 #include "shwfsctrl.h"
+#include "wfcview.h"
+#include "wfcctrl.h"
 
 #include "fgui.h"
 
@@ -264,18 +266,25 @@ void MainWindow::on_ctrl_device_update() {
 				tmpdev->page = (DevicePage *) new ShwfsView((ShwfsCtrl *) tmpdev->ctrl, log, foamctrl, tmpdev->name);
 				log.add(Log::OK, "Added new SH-WFS device, type="+tmpdev->type+", name="+tmpdev->name+".");
 			}
-//			else if (tmpdev->type.substr(0, 7) == "dev.wfs") {
-//				fprintf(stderr, "MainWindow::on_ctrl_device_update() got generic wfs device\n");
-//				tmpdev->ctrl = (DeviceCtrl *) new WfsCtrl(log, foamctrl.host, foamctrl.port, tmpdev->name);
-//				tmpdev->page = (DevicePage *) new WfsView((WfsCtrl *) tmpdev->ctrl, log, foamctrl, tmpdev->name);
-//				log.add(Log::OK, "Added new generic WFS device, type="+tmpdev->type+", name="+tmpdev->name+".");
-//			}
+			else if (tmpdev->type.substr(0, 7) == "dev.wfs") {
+				fprintf(stderr, "MainWindow::on_ctrl_device_update() got generic wfs device\n");
+				tmpdev->ctrl = (DeviceCtrl *) new WfsCtrl(log, foamctrl.host, foamctrl.port, tmpdev->name);
+				tmpdev->page = (DevicePage *) new WfsView((WfsCtrl *) tmpdev->ctrl, log, foamctrl, tmpdev->name);
+				log.add(Log::OK, "Added new generic WFS device, type="+tmpdev->type+", name="+tmpdev->name+".");
+			}
 			else if (tmpdev->type.substr(0, 7) == "dev.cam") {
                 log.term(format("%s got generic cam dev", __PRETTY_FUNCTION__));
 
 				tmpdev->ctrl = (DeviceCtrl *) new CamCtrl(log, foamctrl.host, foamctrl.port, tmpdev->name);
 				tmpdev->page = (DevicePage *) new CamView((CamCtrl *) tmpdev->ctrl, log, foamctrl, tmpdev->name);
 				log.add(Log::OK, "Added new generic camera, type="+tmpdev->type+", name="+tmpdev->name+".");
+			}
+			else if (tmpdev->type.substr(0, 7) == "dev.wfc") {
+				log.term(format("%s got generic wfc", __PRETTY_FUNCTION__));
+				
+				tmpdev->ctrl = (DeviceCtrl *) new WfcCtrl(log, foamctrl.host, foamctrl.port, tmpdev->name);
+				tmpdev->page = (DevicePage *) new WfcView((WfcCtrl *) tmpdev->ctrl, log, foamctrl, tmpdev->name);
+				log.add(Log::OK, "Added new generic wfc, type="+tmpdev->type+", name="+tmpdev->name+".");
 			}
 			// Fallback, if we don't have a good GUI element for the device, use a generic device controller
 			else {
@@ -287,7 +296,7 @@ void MainWindow::on_ctrl_device_update() {
 			
 			notebook.append_page(*(tmpdev->page), "_" + tmpdev->name, tmpdev->name, true);
 			pagelist[tmpdev->name] = tmpdev->page;
-            log.term(format("%s added dev", __PRETTY_FUNCTION__));
+      log.term(format("%s added dev", __PRETTY_FUNCTION__));
 		}
 	}
 	

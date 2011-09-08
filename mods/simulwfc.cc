@@ -110,8 +110,10 @@ int SimulWfc::actuate(const bool /*block*/) {
 		return io.msg(IO_ERR, "SimulWfc::actuate() # of actuator position != # of actuator amplitudes!");
 
 	float amp_abssum = gsl_blas_sasum(ctrlparams.target);
-	if (amp_abssum < min_actvec_amp)						// if vector amplitude is small, set WFC 'flat'
+	if (amp_abssum < min_actvec_amp) {						// if vector amplitude is small, set WFC 'flat'
+		io.msg(IO_INFO, "SimulWfc::actuate() sum(actvec) (%g) < %g, setting to 0", amp_abssum, min_actvec_amp);
 		return 0;
+	}
 	
 	for (size_t i=0; i<actpos.size(); i++) {
 		float amp = gsl_vector_float_get(ctrlparams.target, i);
