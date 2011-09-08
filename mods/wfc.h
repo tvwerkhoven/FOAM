@@ -60,6 +60,10 @@ protected:
 	vector<int> waffle_odd;							//!< 'Odd' actuators for waffle pattern
 	void parse_waffle(string &odd, string &even); //!< Interpret data in waffle_even and waffle_odd
 	bool have_waffle;										//!< Do we know about the waffle pattern?
+	string ctrl_as_str(const char *fmt="%.4f") const; //!< Return control vector ctrlparams.target as string (not thread-safe)
+
+protected:
+	void set_nact(const int val) { nact = val; }
 	
 public:
 	// Common Wfc settings
@@ -75,7 +79,6 @@ public:
 	
 	wfc_ctrl_t ctrlparams;
 	
-	void set_nact(const int val) { nact = val; }
 	int get_nact() const { return nact; }
 	
 	void set_gain(const double p, const double i, const double d) { ctrlparams.gain.p = p; ctrlparams.gain.i = i; ctrlparams.gain.d = d; }
@@ -118,6 +121,11 @@ public:
 	 @param [in] val Value to set on actuators
 	 */
 	int set_wafflepattern(const float val);
+	/*! @brief Set random pattern on DM with maximum value 'maxval'
+	 
+	 @param [in] maxval Range of random values to set on actuators
+	 */
+	int set_randompattern(const float maxval);
 
 	// To be implemented by derived classes:
 	/*! @brief Actuate WFC using internal control vector
