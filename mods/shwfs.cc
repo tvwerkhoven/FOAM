@@ -793,8 +793,8 @@ int Shwfs::find_mla_grid(std::vector<vector_t> &mlacfg, const coord_t size, cons
 
 	// Store current camera count, get last frame
 	Camera::frame_t *f = cam.get_last_frame();
-	void *image;
-	size_t imsize;
+	void *image=NULL;
+	size_t imsize=0;
 	
 	if (f == NULL) {
 		io.msg(IO_WARN, "Shwfs::find_mla_grid() Could not get frame, is the camera running?");
@@ -803,10 +803,12 @@ int Shwfs::find_mla_grid(std::vector<vector_t> &mlacfg, const coord_t size, cons
 		// Copy frame for ourselves while we are looking for a grid. This prevents the camera from overwriting the frame we are using
 		imsize = f->size;
 		image = malloc(imsize);
+		io.msg(IO_XNFO, "Shwfs::find_mla_grid() copy from from %p to %p (size=%zu)", f->image, image, imsize);
+		if (!image)
+			throw format("Shwfs::find_mla_grid() Could not allocate memory (size=%zu)!", imsize);
 		memcpy(image, f->image, imsize);
 	}
 
-	
 	vector_t tmpsi;
 	mlacfg.clear();
 	
@@ -824,7 +826,8 @@ int Shwfs::find_mla_grid(std::vector<vector_t> &mlacfg, const coord_t size, cons
 	int mini = maxi * mini_f;
 	if (mini <= 0) {
 		io.msg(IO_WARN, "Shwfs::find_mla_grid() I_min < 0, something went wrong, aborting.");
-		return 0;
+		free(image);
+		return mlacfg.size();
 	}
 	
 	io.msg(IO_DEB2, "Shwfs::find_mla_grid(maxi=%d, mini_f=%g, mini=%d)", maxi, mini_f, mini);
@@ -838,7 +841,7 @@ int Shwfs::find_mla_grid(std::vector<vector_t> &mlacfg, const coord_t size, cons
 		if (cam.get_depth() <= 8) {
 			maxi = _find_max((uint8_t *)image, imsize, &maxidx);
 		} else {
-			maxi = _find_max((uint16_t *)image, imsize/2, &maxidx);
+			maxi = _find_max((uint16_t *)image, imsize/8, &maxidx);
 		}
 		
 		// Intensity too low, done
@@ -860,9 +863,11 @@ int Shwfs::find_mla_grid(std::vector<vector_t> &mlacfg, const coord_t size, cons
 		if ((int) mlacfg.size() == nmax)
 			break;
 		if ((int) mlacfg.size() >= cam.get_width()*cam.get_height()/size.x/size.y) {
+			//!< @todo check this code, does aborting work?
 			io.msg(IO_WARN, "Shwfs::find_mla_grid() subaperture detection overflow, aborting!");
+			free(image);
 			mlacfg.clear();
-			return 0;
+			mlacfg.size(); 
 		}
 		
 		// Set the current subimage to zero such that we don't detect it next time
@@ -892,7 +897,7 @@ int Shwfs::find_mla_grid(std::vector<vector_t> &mlacfg, const coord_t size, cons
 	net_broadcast("ok mla " + get_mla_str(), "mla");
 	// Re-calibrate with new settings
 	calibrate();
-	
+
 	free(image);
 
 	return (int) mlacfg.size();
