@@ -77,8 +77,8 @@ method(Shift::COG)
 	if (cfg.exists("sipitch"))
 		sipitch.x = sipitch.y = cfg.getint("sipitch");
 	
-	disp.x = cfg.getint("dispx", cam.get_width()/2);
-	disp.y = cfg.getint("dispy", cam.get_height()/2);
+	disp.x = cfg.getint("dispx", 0); //cam.get_width()/2
+	disp.y = cfg.getint("dispy", 0); //cam.get_height()/2
 	if (cfg.exists("disp"))
 		disp.x = disp.y = cfg.getint("disp");
 	
@@ -716,10 +716,10 @@ int Shwfs::gen_mla_grid(std::vector<vector_t> &mlacfg, const coord_t res, const 
 			
 			if (shape == CIRCULAR) {
 				if (pow(fabs(sa_c.x) + (overlap-0.5)*size.x, 2) + pow(fabs(sa_c.y) + (overlap-0.5)*size.y, 2) < minradsq) {
-					tmpsi = vector_t(sa_c.x + disp.x - size.x/2,
-									 sa_c.y + disp.y - size.y/2,
-									 sa_c.x + disp.x + size.x/2,
-									 sa_c.y + disp.y + size.y/2);
+					tmpsi = vector_t(sa_c.x + res.x/2 + disp.x - size.x/2,
+									 sa_c.y + res.y/2 + disp.y - size.y/2,
+									 sa_c.x + res.x/2 + disp.x + size.x/2,
+									 sa_c.y + res.y/2 + disp.y + size.y/2);
 					mlacfg.push_back(tmpsi);
 				}
 			}
@@ -727,10 +727,10 @@ int Shwfs::gen_mla_grid(std::vector<vector_t> &mlacfg, const coord_t res, const 
 				// Accept a subimage coordinate (center position) the position + 
 				// half-size the subaperture is within the bounds
 				if ((fabs(sa_c.x + (overlap-0.5)*size.x) < res.x/2) && (fabs(sa_c.y + (overlap-0.5)*size.y) < res.y/2)) {
-					tmpsi = vector_t(sa_c.x + disp.x - size.x/2,
-													 sa_c.y + disp.y - size.y/2,
-													 sa_c.x + disp.x + size.x/2,
-													 sa_c.y + disp.y + size.y/2);
+					tmpsi = vector_t(sa_c.x + res.x/2 + disp.x - size.x/2,
+													 sa_c.y + res.y/2 + disp.y - size.y/2,
+													 sa_c.x + res.x/2 + disp.x + size.x/2,
+													 sa_c.y + res.y/2 + disp.y + size.y/2);
 					mlacfg.push_back(tmpsi);
 				}
 			}
