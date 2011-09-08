@@ -92,19 +92,8 @@ void ShwfsCtrl::on_message(string line) {
 		
 		signal_message();
 		return;
-	} else if (what == "refshifts") {			// ok shifts [<N> [idx Sx0 Sy0 Sx1 Sy1 [idx Sx0 Sy0 Sx1 Sy1 [...]]]
-#error Finish this code here, include in shifts, make 'get shifts' syntax like [refx, refy, vecx, vecy]
-		n = popint(line);
-		
-		shifts_v.clear();
-		for (int i=0; i<n; i++) {
-			popint(line);										// discard idx
-			x0 = popdouble(line); y0 = popdouble(line);
-			x1 = popdouble(line); y1 = popdouble(line);
-			shifts_v.push_back(fvector_t(x0, y0, x1, y1));
-		}
-		signal_sh_shifts();
-	} else if (what == "shifts") {			// ok shifts [<N> [idx Sx0 Sy0 Sx1 Sy1 [idx Sx0 Sy0 Sx1 Sy1 [...]]]
+	} else if (what == "shifts") {			// ok shifts [<N> [idx Rx0 Ry0 Sx1 Sy1 [idx Rx0 Ry0 Sx1 Sy1 [...]]]
+																			// Give shift vectors with reference as origin and 'shift' as length
 		n = popint(line);
 		
 		shifts_v.clear();
