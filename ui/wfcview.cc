@@ -144,12 +144,10 @@ void WfcView::on_wfcact_update() {
 
 void WfcView::on_calib_random_clicked() {
 	wfcctrl->send_cmd("act random");
-	//	wfcctrl->set_act_random();
 }
 
 void WfcView::on_calib_waffle_clicked() {
 	wfcctrl->send_cmd("act waffle");
-	//	wfcctrl->set_act_waffle();
 }
 
 void WfcView::on_calib_setall_act() {
