@@ -62,6 +62,8 @@ Camera(io, ptc, name, andor_type, port, conffile, online)
 	int vsspeed = cfg.getint("vsspeed", 0);
 	int vsamp = cfg.getint("vsspeed", 4);
 	
+	int pagain = cfg.getint("pa_gain", 2);
+	
 	// Init error codes
 	init_errors();	
 
@@ -88,7 +90,7 @@ Camera(io, ptc, name, andor_type, port, conffile, online)
 	
 	// Set pre-amp gain (should be left alone, probably)
 	io.msg(IO_DEB1, "AndorCam::AndorCam() setting gain...");
-	ret = SetPreAmpGain(2);							// 0: 1x, 1: 2.2x, 2: 4.6x. Andor recommends 4.6x (iXonEM+ Hardware guide 3.3.1)
+	ret = SetPreAmpGain(pagain);				// 0: 1x, 1: 2.2x, 2: 4.6x. Andor recommends 4.6x (iXonEM+ Hardware guide 3.3.1)
 	if (ret != DRV_SUCCESS) 
 		io.msg(IO_ERR, "AndorCam::AndorCam() SetPreAmpGain error: %d, %s", ret, error_desc[ret].c_str());
 	
