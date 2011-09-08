@@ -841,12 +841,14 @@ int Shwfs::find_mla_grid(std::vector<vector_t> &mlacfg, const coord_t size, cons
 		if (cam.get_depth() <= 8) {
 			maxi = _find_max((uint8_t *)image, imsize, &maxidx);
 		} else {
-			maxi = _find_max((uint16_t *)image, imsize/8, &maxidx);
+			maxi = _find_max((uint16_t *)image, imsize/2, &maxidx);
 		}
 		
 		// Intensity too low, done
-		if (maxi < mini)
+		if (maxi < mini) {
+			io.msg(IO_XNFO, "Shwfs::find_mla_grid() maxi(%d) < mini(%d), break", maxi, mini);
 			break;
+		}
 		
 		// Add new subimage
 		tmpsi = vector_t((maxidx % cam.get_width()) - size.x/2,
@@ -860,8 +862,10 @@ int Shwfs::find_mla_grid(std::vector<vector_t> &mlacfg, const coord_t size, cons
 					 maxi, maxidx, tmpsi.lx, tmpsi.ly, (int) mlacfg.size(), nmax);
 
 		// If we have enough subimages, done
-		if ((int) mlacfg.size() == nmax)
+		if ((int) mlacfg.size() == nmax) {
+			io.msg(IO_XNFO, "Shwfs::find_mla_grid() mlacfg.size()(%zu) == nmax(%d), break", mlacfg.size(), nmax);
 			break;
+		}
 		if ((int) mlacfg.size() >= cam.get_width()*cam.get_height()/size.x/size.y) {
 			//!< @todo check this code, does aborting work?
 			io.msg(IO_WARN, "Shwfs::find_mla_grid() subaperture detection overflow, aborting!");
@@ -874,6 +878,8 @@ int Shwfs::find_mla_grid(std::vector<vector_t> &mlacfg, const coord_t size, cons
 		int xran[] = {max(0, tmpsi.lx), min(cam.get_width(), tmpsi.tx)};
 		int yran[] = {max(0, tmpsi.ly), min(cam.get_height(), tmpsi.ty)};
 		
+//		io.msg(IO_DEB1, "Shwfs::find_mla_grid() setting to zero from (%d, %d) to (%d, %d)", 
+//					 xran[0], yran[0], xran[1], yran[1]);
 		if (cam.get_depth() <= 8) {
 			uint8_t *cimg = (uint8_t *)image;
 			for (int y=yran[0]; y<yran[1]; y++)
