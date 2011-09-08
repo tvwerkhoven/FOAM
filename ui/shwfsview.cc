@@ -317,11 +317,8 @@ void ShwfsView::do_info_update() {
 	if (wfscam_ui) {
 		wfscam_ui->glarea.clearboxes();
 		
-		for (size_t i=0; i<shwfsctrl->get_mla_nsi(); i++) {
+		for (size_t i=0; i<shwfsctrl->get_mla_nsi(); i++)
 			wfscam_ui->glarea.addbox(shwfsctrl->get_mla_si((size_t) i));
-			//!< @test Test to see if lines are rendered properly here
-			wfscam_ui->glarea.addline(shwfsctrl->get_mla_si((size_t) i));
-		}
 	
 		wfscam_ui->glarea.do_update();
 	}	
