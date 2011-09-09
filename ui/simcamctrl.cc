@@ -89,7 +89,7 @@ void SimCamCtrl::on_message(string line) {
 		parsed = false;
 	
 	if (!parsed)
-		DeviceCtrl::on_message(orig);
+		CamCtrl::on_message(orig);
 	else
 		signal_message();
 }
