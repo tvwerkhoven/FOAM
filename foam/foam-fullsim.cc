@@ -77,6 +77,7 @@ int FOAM_FullSim::open_loop() {
 	string vec_str;
 	
 	// Get next frame, simulcam takes care of all simulation
+	//!< @bug This call blocks and if the camera is stopped before it returns, it will hang
 	Camera::frame_t *frame = simcam->get_next_frame(true);
 	open_perf.addlog(2);
 	
