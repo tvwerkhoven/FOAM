@@ -82,7 +82,7 @@ void SimCamCtrl::on_message(string line) {
 	else if(what == "noisefac")
 		noisefac = popdouble(line);
 	else if(what == "noiseamp")
-		noiseamp = popint32(line);
+		noiseamp = popdouble(line);
 	else if(what == "seeingfac")
 		seeingfac = popdouble(line);
 	else
