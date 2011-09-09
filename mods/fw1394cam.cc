@@ -99,7 +99,7 @@ void FW1394Camera::cam_set_exposure(double value) {
 	pthread::mutexholder h(&cam_mutex);
 	camera->set_feature(dc1394::FEATURE_EXPOSURE, max((uint32_t)(value * 30 * 512), (uint32_t)511));
 	}
-	fprintf(stderr, "FW1394Camera::cam_set_exposure val=%g, discretized=%d\n", value, max((uint32_t)(value * 30 * 512), (uint32_t)511));
+	io.msg(IO_DEB2, "FW1394Camera::cam_set_exposure val=%g, discretized=%d", value, max((uint32_t)(value * 30 * 512), (uint32_t)511));
 	
 	exposure = cam_get_exposure();
 }
