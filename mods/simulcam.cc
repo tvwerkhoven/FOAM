@@ -43,11 +43,11 @@
 
 using namespace std;
 
-SimulCam::SimulCam(Io &io, foamctrl *const ptc, const string name, const string port, Path const &conffile, SimulWfc &simwfc, const bool online):
+SimulCam::SimulCam(Io &io, foamctrl *const ptc, const string name, const string port, Path const &conffile, SimulWfc &_simwfc, SimulWfc &_simwfcerr, const bool online):
 Camera(io, ptc, name, simulcam_type, port, conffile, online),
 seeing(io, ptc, name + "-seeing", port, conffile),
-simwfcerr(io, ptc, name + "-wfcerr", port, conffile),
-simwfc(simwfc),
+simwfcerr(_simwfcerr),
+simwfc(_simwfc),
 out_size(0), frame_out(NULL), frame_raw(NULL),
 telradius(1.0), telapt(NULL), telapt_fill(0.7),
 noisefac(0.0), noiseamp(0.0), mlafac(1.0), wfcerr_retain(0.7), wfcerr_act(NULL), 
