@@ -101,6 +101,7 @@ void SimCamView::enable_gui() {
 
 	e_noisefac.set_sensitive(true);
 	e_noiseamp.set_sensitive(true);
+	e_seeingfac.set_sensitive(true);
 }
 
 void SimCamView::disable_gui() {
@@ -115,6 +116,7 @@ void SimCamView::disable_gui() {
 	
 	e_noisefac.set_sensitive(false);
 	e_noiseamp.set_sensitive(false);
+	e_seeingfac.set_sensitive(false);
 }
 
 void SimCamView::clear_gui() {
@@ -129,6 +131,7 @@ void SimCamView::clear_gui() {
 	
 	e_noisefac.set_value(0);
 	e_noiseamp.set_value(0);
+	e_seeingfac.set_value(0);
 }
 
 void SimCamView::on_seeing_activate() {
