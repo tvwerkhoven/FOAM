@@ -115,7 +115,8 @@ protected:
 		}
 		else {
 			*var = value;
-			net_broadcast(format("ok %s %le", varname.c_str(), (double) *var), varname);
+			//! @todo Check best format for reply, should be %le or %g?
+			net_broadcast(format("ok %s %g", varname.c_str(), (double) *var), varname);
 			return *var;
 		}
 	}
