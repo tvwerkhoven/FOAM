@@ -68,7 +68,7 @@ protected:
 public:
 	// Common Wfc settings
 	typedef struct wfc_ctrl {
-		wfc_ctrl(): target(NULL), err(NULL), prev(NULL), pid_int(NULL) { }
+		wfc_ctrl(): target(NULL), err(NULL), prev(NULL), gain(1,0,0), pid_int(NULL) { }
 		gsl_vector_float *target;					//!< (Requested) actuator amplitudes, should be between -1 and 1.
 		gsl_vector_float *err;						//!< Error between current and target actuation
 		gsl_vector_float *prev;						//!< Previous actuator amplitudes

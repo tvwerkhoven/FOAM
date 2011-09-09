@@ -226,7 +226,7 @@ public:
 	 @param [out] *act Generalized actuator commands for wfcname (pre-allocated)
 	 @return Computed control vector
 	 */
-	gsl_vector_float *comp_ctrlcmd(string wfcname, gsl_vector_float *shift, gsl_vector_float *act);
+	gsl_vector_float *comp_ctrlcmd(const string &wfcname, const gsl_vector_float *shift, gsl_vector_float *act);
 	
 	/*! @brief Given a control vector, calculate shifts
 	 
@@ -240,7 +240,7 @@ public:
 	 @param [out] *shift Vector of calculated shifts (pre-allocated)
 	 @return Vector of calculated shifts
 	 */
-	gsl_vector_float *comp_shift(string wfcname, gsl_vector_float *act, gsl_vector_float *shift);
+	gsl_vector_float *comp_shift(const string &wfcname, const gsl_vector_float *act, gsl_vector_float *shift);
 	
 	/*! @brief Initialize influence matrix, allocate memory
 	 
