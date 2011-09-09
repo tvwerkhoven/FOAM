@@ -40,7 +40,7 @@ DeviceCtrl::DeviceCtrl(Log &log, const string h, const string p, const string n)
 }
 
 DeviceCtrl::~DeviceCtrl() {
-	fprintf(stderr, "DeviceCtrl::~DeviceCtrl()\n");
+	log.term(format("%s", __PRETTY_FUNCTION__));
 }
 
 void DeviceCtrl::connect() {
