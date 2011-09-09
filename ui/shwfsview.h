@@ -77,8 +77,7 @@ private:
 	virtual void disable_gui();
 	virtual void clear_gui();
 
-	// From WfsView::
-	virtual void do_info_update();
+	virtual void on_message_update();
 	
 	// New:
 	void do_sh_shifts_update();					//!< Connected to ShwfsCtrl::signal_sh_shifts(), fires when new SHWFS shifts are available

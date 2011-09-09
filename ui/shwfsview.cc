@@ -301,8 +301,8 @@ void ShwfsView::do_sh_shifts_update() {
 	}
 }
 
-void ShwfsView::do_info_update() {
-	WfsView::do_info_update();
+void ShwfsView::on_message_update() {
+	WfsView::on_message_update();
 	log.term(format("%s", __PRETTY_FUNCTION__));
 
 	// Add list of subimages to dropdown box
