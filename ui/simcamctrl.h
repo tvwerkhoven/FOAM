@@ -67,7 +67,7 @@ public:
 	void set_simwfc(const bool v) { send_cmd(format("set simwfc %d", v)); }
 	void set_simwfcerr(const bool v) { send_cmd(format("set simwfcerr %d", v)); }
 	void set_simtel(const bool v) { send_cmd(format("set simtel %d", v)); }
-	void set_simwfs(const bool v) { send_cmd(format("set simwfs %d", v)); }
+	void set_simwfs(const bool v) { send_cmd(format("set simmla %d", v)); }
 	
 	double get_noisefac() const { return noisefac; }
 	double get_noiseamp() const { return noiseamp; }
