@@ -53,7 +53,7 @@ private:
 	
 	struct wavefront {
 		wavefront(): basis("UNDEF") { ; }
-		std::vector<float> wfamp;					//!< Mode amplitudes
+		std::vector<double> wfamp;					//!< Mode amplitudes
 		string basis;											//!< Basis functions used for this representation
 	};
 	
@@ -67,7 +67,9 @@ public:
 	
 	string get_basis() const { return wf.basis; }
 	int get_nmodes() const { return (int) wf.wfamp.size(); }
-	float get_mode(const size_t idx) const { return wf.wfamp[idx]; }
+	double get_mode(const size_t idx) const { return wf.wfamp[idx]; }
+	std::vector< double > get_modes_vec() const { return wf.wfamp; }
+
 	
 	Glib::Dispatcher signal_wfscam;			//!< WFS camera available now
 	Glib::Dispatcher signal_wavefront;	//!< New wavefront information available
