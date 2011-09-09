@@ -69,6 +69,7 @@ private:
 	Button subi_find;										//!< Find subimage pattern
 	
 	SwitchButton subi_vecs;							//!< Display shift vectors or not
+																			//! @todo convert subi_vecdelayi to spin entry
 	LabeledEntry subi_vecdelayi;				//!< Display shift vectors every X seconds
 	float subi_vecdelay;								//!< Delay for displaying shift vectors (in seconds)
 

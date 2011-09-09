@@ -66,10 +66,10 @@ protected:
 	SwitchButton store;									//!< Start/stop storing frames on the camera, CamView::on_store_clicked().  CLEAR: not storing. WAITING: store in progress. ERROR: something went wrong, abort. OK: unused
 	Entry store_n;											//!< How many frames to store when clicking CamView:store
 	VSeparator ctrl_vsep;
-	LabeledEntry e_exposure;						//!< For exposure time, RW
-	LabeledEntry e_offset;							//!< For offset, RW
-	LabeledEntry e_interval;						//!< For interval, RW
-	LabeledEntry e_gain;								//!< For gain, RW
+	LabeledEntry e_exposure;						//!< For exposure time, RW @todo convert to spin entry
+	LabeledEntry e_offset;							//!< For offset, RW @todo convert to spin entry
+	LabeledEntry e_interval;						//!< For interval, RW @todo convert to spin entry
+	LabeledEntry e_gain;								//!< For gain, RW @todo convert to spin entry
 	LabeledEntry e_res;									//!< For resolution, RO
 	LabeledEntry e_mode;								//!< For mode, RO
 	
