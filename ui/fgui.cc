@@ -76,6 +76,8 @@
 #include "devicectrl.h"
 #include "camview.h"
 #include "camctrl.h"
+#include "simcamview.h"
+#include "simcamctrl.h"
 #include "wfsview.h"
 #include "wfsctrl.h"
 #include "shwfsview.h"
@@ -158,7 +160,7 @@ menubar(*this)
 	
 	// widget properties
 	set_title("FOAM Control");
-	set_default_size(800, 600);
+	set_default_size(800, 300);
 	set_gravity(Gdk::GRAVITY_STATIC);
 	
 	//vbox.set_spacing(4);
@@ -271,6 +273,13 @@ void MainWindow::on_ctrl_device_update() {
 				tmpdev->ctrl = (DeviceCtrl *) new WfsCtrl(log, foamctrl.host, foamctrl.port, tmpdev->name);
 				tmpdev->page = (DevicePage *) new WfsView((WfsCtrl *) tmpdev->ctrl, log, foamctrl, tmpdev->name);
 				log.add(Log::OK, "Added new generic WFS device, type="+tmpdev->type+", name="+tmpdev->name+".");
+			}
+			else if (tmpdev->type.substr(0, 16) == "dev.cam.simulcam") {
+				log.term(format("%s got simulation cam dev", __PRETTY_FUNCTION__));
+				
+				tmpdev->ctrl = (DeviceCtrl *) new SimCamCtrl(log, foamctrl.host, foamctrl.port, tmpdev->name);
+				tmpdev->page = (DevicePage *) new SimCamView((SimCamCtrl *) tmpdev->ctrl, log, foamctrl, tmpdev->name);
+				log.add(Log::OK, "Added new simulation camera, type="+tmpdev->type+", name="+tmpdev->name+".");
 			}
 			else if (tmpdev->type.substr(0, 7) == "dev.cam") {
                 log.term(format("%s got generic cam dev", __PRETTY_FUNCTION__));

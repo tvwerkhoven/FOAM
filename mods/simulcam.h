@@ -98,11 +98,11 @@ const string simulcam_type = "simulcam";
  - get/set windtype: see above
  - get/set wfcerr_retain: see SimulCam::wfcerr_retain. 
  - get/set telapt_fill: subaperture should have at least this fraction of light in order to be considered
- - set simwf: simulate wavefront (atmospheric seeing)
- - set simtel: simulate telescope (aperture)
- - set simwfcerr: simulate wfc as error source
- - set simmla: siulate microlens array to ccd
- - set simwfc: simulate wavefront corrector device
+ - get/set simwf: simulate wavefront (atmospheric seeing)
+ - get/set simtel: simulate telescope (aperture)
+ - get/set simwfcerr: simulate wfc as error source
+ - get/set simmla: siulate microlens array to ccd
+ - get/set simwfc: simulate wavefront corrector device
  
  \section simulcam_dep Dependencies
 
