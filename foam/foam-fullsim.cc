@@ -38,6 +38,7 @@ using namespace std;
 
 // Global device list for easier access
 SimulWfc *simwfc;
+SimulWfc *simwfcerr;
 SimulCam *simcam;
 Shwfs *simwfs;
 
@@ -49,8 +50,12 @@ int FOAM_FullSim::load_modules() {
 	simwfc = new SimulWfc(io, ptc, "simwfc", ptc->listenport, ptc->conffile);
 	devices->add((foam::Device *) simwfc);
 
-	// Init camera simulation (using simwfc)
-	simcam = new SimulCam(io, ptc, "simcam", ptc->listenport, ptc->conffile, *simwfc);
+	// Init WFC error simulation (we use one WFC for generating errors and another for correcting them. This should go perfectly)
+	simwfcerr = new SimulWfc(io, ptc, "simwfcerr", ptc->listenport, ptc->conffile);
+	devices->add((foam::Device *) simwfcerr);
+
+	// Init camera simulation (using simwfcerr and simwfc)
+	simcam = new SimulCam(io, ptc, "simcam", ptc->listenport, ptc->conffile, *simwfc, *simwfcerr);
 	devices->add((foam::Device *) simcam);
 	
 	// Init WFS simulation (using camera)

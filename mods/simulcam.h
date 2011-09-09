@@ -114,8 +114,8 @@ const string simulcam_type = "simulcam";
 class SimulCam: public Camera {
 private:
 	SimSeeing seeing;										//!< This class simulates the atmosphere
-	SimulWfc simwfcerr;									//!< This class simulates a wavefront corrector as a source of errors
-	
+
+	SimulWfc &simwfcerr;								//!< This class simulates a wavefront corrector as a source of errors
 	SimulWfc &simwfc;										//!< This class simulates a wavefront corrector
 	
 	size_t out_size;										//!< Size of frame_out
@@ -136,7 +136,7 @@ private:
 	
 public:
 	Shwfs shwfs;												//!< Reference to WFS we simulate (i.e. for configuration)
-	SimulCam(Io &io, foamctrl *const ptc, const string name, const string port, Path const &conffile, SimulWfc &simwfc, const bool online=true);
+	SimulCam(Io &io, foamctrl *const ptc, const string name, const string port, Path const &conffile, SimulWfc &_simwfc, SimulWfc &_simwfcerr, const bool online=true);
 	~SimulCam();
 
 	bool do_simwf;											//!< Simulate seeing wavefront?
