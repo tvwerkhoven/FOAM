@@ -593,7 +593,7 @@ int Shwfs::calc_actmat(string wfcname, double singval, enum wfbasis /*basis*/) {
 	return 0;
 }
 
-gsl_vector_float *Shwfs::comp_ctrlcmd(string wfcname, gsl_vector_float *shift, gsl_vector_float *act) {
+gsl_vector_float *Shwfs::comp_ctrlcmd(const string &wfcname, const gsl_vector_float *shift, gsl_vector_float *act) {
 	//! @todo comp_ctrlcmd() does not know whether the matrix calib[wfcname].actmat.mat is proper or not. Need better calibration tracking, not at device level but at the top level of the program perhaps.
 	if (calib.find(wfcname) == calib.end())
 		return NULL;
@@ -603,18 +603,22 @@ gsl_vector_float *Shwfs::comp_ctrlcmd(string wfcname, gsl_vector_float *shift, g
 	// Compute vector. We apply -1 here because the matrix is the pseudo inverse
 	// of infmat, while it should be of -infmat. Alternative explanation: we 
 	// need to *correct* the shifts measured, not reproduce them
+	// int gsl_blas_sgemv (CBLAS_TRANSPOSE_t TransA, float alpha, const gsl_matrix_float * A, const gsl_vector_float * x, float beta, gsl_vector_float * y)
+	// y = \alpha op(A) x + \beta y
 	gsl_blas_sgemv(CblasNoTrans, -1.0, calib[wfcname].actmat.mat, shift, 0.0, act);
 
 	return act;
 }
 
-gsl_vector_float *Shwfs::comp_shift(string wfcname, gsl_vector_float *act, gsl_vector_float *shift) {
+gsl_vector_float *Shwfs::comp_shift(const string &wfcname, const gsl_vector_float *act, gsl_vector_float *shift) {
 	if (calib.find(wfcname) == calib.end())
 		return NULL;
 	if (!get_calib())
 		calibrate();
 	
 	// Compute vector
+	// int gsl_blas_sgemv (CBLAS_TRANSPOSE_t TransA, float alpha, const gsl_matrix_float * A, const gsl_vector_float * x, float beta, gsl_vector_float * y)
+	// y = \alpha op(A) x + \beta y
 	gsl_blas_sgemv(CblasNoTrans, 1.0, calib[wfcname].meas.infmat_f, act, 0.0, shift);
 	
 	return shift;
