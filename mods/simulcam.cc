@@ -74,10 +74,15 @@ do_simwf(true), do_simtel(true), do_simwfcerr(false), do_simmla(true), do_simwfc
 	add_cmd("set telapt_fill");
 	
 	add_cmd("set simwf");				// Do seeing simulation
+	add_cmd("get simwf");
 	add_cmd("set simtel");			// Do telescope simulation (i.e. circular crop)
+	add_cmd("get simtel");
 	add_cmd("set simwfcerr");		// Do wavefront corrector error simulation
+	add_cmd("get simwfcerr");
 	add_cmd("set simmla");			// Do MLA simulation (i.e. lenslet array)
+	add_cmd("get simmla");
 	add_cmd("set simwfc");			// Do wavefront correction
+	add_cmd("get simwfc");
 
 	noisefac = cfg.getdouble("noisefac", 0.2);
 	noiseamp = cfg.getdouble("noiseamp", 0.2);
@@ -120,7 +125,7 @@ void SimulCam::on_message(Connection *const conn, string line) {
 	if (command == "set") {							// set ...
 		string what = popword(line);
 	
-		if(what == "noisefac") {							// set noise <double>
+		if(what == "noisefac") {					// set noisefac <double>
 			set_var(conn, "noisefac", popdouble(line), &noisefac, 0.0, 1.0, "Out of range");
 		} else if(what == "noiseamp") {		// set noiseamp <double>
 			set_var(conn, "noiseamp", popdouble(line), &noiseamp);
@@ -172,7 +177,7 @@ void SimulCam::on_message(Connection *const conn, string line) {
 	} else if (command == "get") {			// get ...
 		string what = popword(line);
 	
-		if(what == "noisefac") {							// get noise
+		if(what == "noisefac") {					// get noisefac
 			get_var(conn, "noisefac", noisefac);
 		} else if(what == "noiseamp") {		// get noiseamp
 			get_var(conn, "noiseamp", noiseamp);
@@ -188,6 +193,16 @@ void SimulCam::on_message(Connection *const conn, string line) {
 			get_var(conn, "wfcerr_retain", wfcerr_retain);
 		} else if(what == "telapt_fill") { // get telapt_fill
 			get_var(conn, "telapt_fill", telapt_fill);
+		} else if(what == "simwf") {			// get simwfs
+			get_var(conn, "simwf", do_simwf);
+		} else if(what == "simtel") {			// get simtel <bool>
+			get_var(conn, "simtel", do_simtel);
+		} else if(what == "simwfcerr") {	// get simwfcerr <bool>
+			get_var(conn, "simwfcerr", do_simwfcerr);
+		} else if(what == "simmla") {			// get simmla <bool>
+			get_var(conn, "simmla", do_simmla);
+		} else if(what == "simwfc") {			// get simwfc <bool>
+			get_var(conn, "simwfc", do_simwfc);
 		} else
 			parsed = false;
 	}
