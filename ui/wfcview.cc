@@ -73,6 +73,8 @@ wfcact_frame("WFC actuators"), wfcact_gr(480,100)
 	// Extra window
 	extra_win.set_title("FOAM WFC " + devname);
 	
+	extra_win.set_default_size(640, 140);
+
 	extra_vbox.pack_start(wfcact_frame, PACK_SHRINK);
 	extra_win.add(extra_vbox);
 	
@@ -142,12 +144,10 @@ void WfcView::on_wfcact_update() {
 
 void WfcView::on_calib_random_clicked() {
 	wfcctrl->send_cmd("act random");
-	//	wfcctrl->set_act_random();
 }
 
 void WfcView::on_calib_waffle_clicked() {
 	wfcctrl->send_cmd("act waffle");
-	//	wfcctrl->set_act_waffle();
 }
 
 void WfcView::on_calib_setall_act() {

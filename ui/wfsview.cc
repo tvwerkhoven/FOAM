@@ -66,7 +66,9 @@ wfscam_ui(NULL)
 	
 	// Extra window
 	extra_win.set_title("FOAM WFS " + devname);
-	
+
+	extra_win.set_default_size(640, 140);
+
 	extra_vbox.pack_start(wfpow_frame, PACK_SHRINK);
 	extra_win.add(extra_vbox);
 	
