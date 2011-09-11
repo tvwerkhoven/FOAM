@@ -58,9 +58,9 @@ int FOAM_ExpoAO::load_modules() {
 	devices->add((foam::Device *) ixonwfs);
 	
 	// Init Alpao DM
-//	io.msg(IO_INFO, "Init Alpao DM97-15...");
-//	alpao_dm97 = new AlpaoDM(io, ptc, "alpao_dm97", ptc->listenport, ptc->conffile);
-//	devices->add((foam::Device *) alpao_dm97);
+	io.msg(IO_INFO, "Init Alpao DM97-15...");
+	alpao_dm97 = new AlpaoDM(io, ptc, "alpao_dm97", ptc->listenport, ptc->conffile);
+	devices->add((foam::Device *) alpao_dm97);
 
 	return 0;
 }
