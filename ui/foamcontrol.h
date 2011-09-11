@@ -84,8 +84,8 @@ private:
 	Log &log;														//!< Reference to MainWindow::log
 	config cfg;													//!< GUI configuration (position etc.)
 	
-	string execname;										//!< Executable name (argv[0])
 	string conffile;										//!< Configuration file
+	string execname;										//!< Executable name (argv[0])
 
 	pthread::mutex mutex;
 	
@@ -116,7 +116,7 @@ public:
 	
 	pthread::mutex gui_mutex;
 	
-	FoamControl(Log &log, int argc, char* argv[]);
+	FoamControl(Log &log, string &conffile, string &execname);
 	~FoamControl() { };
 	
 	int connect(const string &host, const string &port);
