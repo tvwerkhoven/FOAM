@@ -126,7 +126,7 @@ int FOAM::init() {
 	
 	// Try to load setup-specific modules 
 	if (load_modules())
-		return io.msg(IO_ERR, "Could not load modules, aborting. Check your code.");
+		return io.msg(IO_ERR, "Could not load modules, aborting. Check your code & configuration.");
 	
 	// Verify setup integrity
 	if (verify())
