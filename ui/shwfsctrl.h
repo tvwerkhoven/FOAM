@@ -74,7 +74,7 @@ public:
 	void mla_del_si(const int idx) { send_cmd(format("mla del %d", idx)); }
 	void mla_update_si(const int idx, const int lx, const int ly, const int tx, const int ty) { send_cmd(format("mla update %d %d %d %d %d", idx, lx, ly, tx, ty)); }
 	void mla_regen_pattern() { send_cmd("mla generate"); }
-	void mla_find_pattern() { send_cmd("mla find"); }
+	void mla_find_pattern(const double minif=0.6) { send_cmd(format("mla find %g", minif)); }
 	
 	// Get SHWFS shifts
 	void cmd_get_shifts() { send_cmd("get shifts"); }
