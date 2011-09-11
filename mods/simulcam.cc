@@ -282,10 +282,10 @@ void SimulCam::simul_wfcerr(gsl_matrix *const wave_in) {
 	io.msg(IO_DEB1, "SimulCam::simul_wfcerr()");
 	
 	// Generate random actuation
-	for (size_t i=0; i<wfcerr_act->size; i++)
-		gsl_vector_float_set(wfcerr_act, i, simple_rand()*2.0-1.0);
+//	for (size_t i=0; i<wfcerr_act->size; i++)
+//		gsl_vector_float_set(wfcerr_act, i, simple_rand()*2.0-1.0);
 
-	simwfcerr.update_control(wfcerr_act, gain_t(1.0-wfcerr_retain, 0, 0), wfcerr_retain);
+//	simwfcerr.update_control(wfcerr_act, gain_t(1.0-wfcerr_retain, 0, 0), wfcerr_retain);
 	simwfcerr.actuate();
 	
 	// Add simulated wfc error to input
