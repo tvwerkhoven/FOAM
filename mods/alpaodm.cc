@@ -67,7 +67,7 @@ Wfc(io, ptc, name, alpaodm_type, port, conffile, online)
 	if (acedev5Init(1, &dm_id, serial_char) == acecsFAILURE) {
 		acecsErrDisplay();
 		acedev5Release(1, &dm_id);
-		throw "AlpaoDM: error at acedev5Init()";
+		throw std::runtime_error("AlpaoDM: error at acedev5Init()");
 	}
 	io.msg(IO_DEB2, "AlpaoDM::AlpaoDM() init ok sleep 2 sec (dm ID: %d, serial: %s)", dm_id, serial.c_str());
 	sleep(2);
@@ -124,7 +124,7 @@ int AlpaoDM::calibrate() {
 int AlpaoDM::reset() {
 	if (acedev5SoftwareDACReset(1, &dm_id) == acecsFAILURE) {
 		acecsErrDisplay();
-		throw "AlpaoDM: error at acedev5SoftwareDACReset()";
+		throw std::runtime_error("AlpaoDM: error at acedev5SoftwareDACReset()");
 	}
 	
 	return 0;
@@ -146,7 +146,7 @@ int AlpaoDM::actuate(const bool /*block*/) {
 	if (acedev5Send(1, &dm_id, act_vec_arr) == acecsFAILURE)	{
 		acecsErrDisplay();
 		acedev5Release(1, &dm_id);
-		throw "AlpaoDM: error at acedev5Send()";
+		throw std::runtime_error("AlpaoDM: error at acedev5Send()");
 	}
 
 	return 0;
