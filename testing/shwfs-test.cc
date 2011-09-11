@@ -50,13 +50,15 @@ int main(int argc, char *argv[]) {
 	}
 	else {
 		io.msg(IO_INFO, "Have argc>1: will do simulcam with configuration file '%s'", argv[1]);
-	
+		
+		// Simulation wavefront corrector used for *correction*
     SimulWfc simwfc(io, &ptc, "simwfc", "12345", tmp);
+		// Simulation wavefront corrector used as *error source*
+		SimulWfc simwfcerr(io, &ptc, "simwfc", "12345", tmp);
     
 		tmp = argv[1];
 		io.msg(IO_INFO, "Init SimulCam with %s", tmp.c_str());
-		SimulCam wfscam(io, &ptc, "wfscam", "12345", tmp, simwfc);
-		sleep(1);
+		SimulCam wfscam(io, &ptc, "wfscam", "12345", tmp, simwfc, simwfcerr);
 
 		Path mlaout("./mla_grid");
 		wfscam.shwfs.store_mla_grid(true);
