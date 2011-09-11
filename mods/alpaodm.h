@@ -66,8 +66,9 @@ public:
 	~AlpaoDM();
 	
 	// From Wfc::
-	int actuate(const bool block=false);
-	int calibrate();
+	virtual int actuate(const bool block=false);
+	virtual int calibrate();
+	virtual int reset();
 	
 	// From Devices::
 	void on_message(Connection *const conn, string);
