@@ -296,15 +296,19 @@ void ShwfsView::do_sh_shifts_update() {
 		
 		for (size_t i=0; i<shwfsctrl->get_nrefshifts(); i++) {
 			fvector_t refline = shwfsctrl->get_refshift((size_t) i);
-			fprintf(stderr, "ShwfsView::do_sh_shifts_update(): refline (%g, %g) to (%g, %g)\n",
-							refline.lx, refline.ly, refline.tx, refline.ty);
+			// Add (0.5, 0.5) to the *end* of the vector because we want to end up in the middle of the pixel, not at the origin
+			refline.tx+=0.5;
+			refline.ty+=0.5;
 			wfscam_ui->glarea.addline(refline);
 		}
 
 		for (size_t i=0; i<shwfsctrl->get_nshifts(); i++) {
 			fvector_t shline = shwfsctrl->get_shift((size_t) i);
-			fprintf(stderr, "ShwfsView::do_sh_shifts_update(): shline (%g, %g) to (%g, %g)\n",
-							shline.lx, shline.ly, shline.tx, shline.ty);
+			// Add (0.5, 0.5) to both ends of the vector because we want to end up in the middle of the pixel, not at the origin
+			shline.lx+=0.5;
+			shline.ly+=0.5;
+			shline.tx+=0.5;
+			shline.ty+=0.5;
 			wfscam_ui->glarea.addline(shline);
 		}
 		
