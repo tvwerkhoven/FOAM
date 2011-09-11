@@ -92,7 +92,7 @@ int main() {
 		// Set all to 0
 		alpao_dm97->set_control(0.0);
 		// set idx to 0.12
-		alpao_dm97->set_control_act(0.0, idx);
+		alpao_dm97->set_control_act(0.12, idx);
 		// Actuate mirror
 		alpao_dm97->actuate();
 		// Sleep 1
