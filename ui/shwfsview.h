@@ -66,12 +66,15 @@ private:
 	Button subi_add;										//!< Add new subimage
 	
 	Button subi_regen;									//!< Re-generate subimage pattern
+	HBox subi_find_box;
 	Button subi_find;										//!< Find subimage pattern
+	LabeledSpinEntry subi_find_minif;		//!< Find subimages up to this factor less than the maximum intensity
 	
 	SwitchButton subi_vecs;							//!< Display shift vectors or not
 																			//! @todo convert subi_vecdelayi to spin entry
-	LabeledEntry subi_vecdelayi;				//!< Display shift vectors every X seconds
+	LabeledSpinEntry subi_vecdelayi;		//!< Display shift vectors every X seconds
 	float subi_vecdelay;								//!< Delay for displaying shift vectors (in seconds)
+	struct timeval subi_last;
 
 	// From DeviceView::
 	virtual void enable_gui();
