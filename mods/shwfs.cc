@@ -625,6 +625,9 @@ gsl_vector_float *Shwfs::comp_shift(const string &wfcname, const gsl_vector_floa
 }
 
 void Shwfs::set_reference(Camera::frame_t *frame) {
+	// Set old reference vector to 0
+	gsl_vector_float_set_zero(ref_vec);
+
 	// Measure shifts
 	wf_info_t *m = measure(frame);
 	if (!m) {
@@ -638,6 +641,9 @@ void Shwfs::set_reference(Camera::frame_t *frame) {
 	for (size_t i=0; i<ref_vec->size; i++)
 		io.msg(IO_DEB2 | IO_NOLF | IO_NOID, "%.1f ", gsl_vector_float_get(ref_vec, i));
 	io.msg(IO_DEB2 | IO_NOLF, "\n");
+	
+	// Reference is set, measure again to set 'shift_vec' to 0
+	measure();
 }
 
 void Shwfs::store_reference() {
