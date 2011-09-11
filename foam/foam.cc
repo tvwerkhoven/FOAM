@@ -51,8 +51,6 @@ io(IO_DEB2)
 	io.msg(IO_DEB2, "FOAM::FOAM()");
 	
 	
-	devices = new foam::DeviceManager(io);
-	
 	if (parse_args(argc, argv)) {
 		error = true;
 		exit(-1);
@@ -61,6 +59,9 @@ io(IO_DEB2)
 		sighandler = new SigHandle();
 		sighandler->quit_func = sigc::mem_fun(*this, &FOAM::stopfoam);
 	}
+	
+	devices = new foam::DeviceManager(io);
+	
 	if (load_config()) {
 		error = true;
 		exit(-1);
