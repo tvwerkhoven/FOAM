@@ -137,7 +137,6 @@ int AlpaoDM::actuate(const bool /*block*/) {
 		act_vec.at(i) = gsl_vector_float_get(ctrlparams.target, i);
 		act_vec_str += format("%g, ", act_vec.at(i));
 	}
-	io.msg(IO_INFO, "AlpaoDM::actuate() vector: %s", act_vec_str.c_str());
 	
 	// acedev5Send expected pointer to double-array, take address of first
 	// vector element to satisfy this need. std::vector guarantees data contiguity
