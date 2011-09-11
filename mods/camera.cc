@@ -647,7 +647,6 @@ void Camera::grab(Connection *conn, int x1, int y1, int x2, int y2, int scale = 
 	
 	{
 		//! @todo locks frame when sending over network?
-		io.msg(IO_DEB2, "Camera::grab() waiting for cam_mutex...");
 		pthread::mutexholder h(&cam_mutex);
 		frame_t *f = get_frame(count);
 		if(!f)
@@ -709,11 +708,9 @@ void Camera::grab(Connection *conn, int x1, int y1, int x2, int y2, int scale = 
 		free(buffer);
 		
 	finish:
-		io.msg(IO_DEB2, "Camera::grab() finish: %p & %d & %zu & %zu", f->histo, do_histo, sizeof *f->histo, get_maxval());
 		if(f->histo && do_histo)
 			conn->write(f->histo, sizeof *f->histo * get_maxval());
 	}
-	io.msg(IO_DEB2, "Camera::grab() complete!");
 }
 
 uint8_t Camera::df_correct(const uint8_t *in, size_t offset) {

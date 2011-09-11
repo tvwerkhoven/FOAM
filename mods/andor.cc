@@ -417,16 +417,13 @@ void AndorCam::cam_handler() {
 					ret = WaitForAcquisitionTimeOut(2500);
 					
 					if (ret == DRV_SUCCESS) {
-						io.msg(IO_DEB2, "AndorCam::cam_handler(R) new data!");
 						// Try to get new frame data						
 						ret = GetMostRecentImage16(img_buffer.at(count % nframes), (unsigned long) (res.x * res.y));
 						if (ret == DRV_SUCCESS) {
 							void *queue_ret = cam_queue(img_buffer.at(count % nframes), img_buffer.at(count % nframes));
-							io.msg(IO_DEB2, "AndorCam::cam_handler(R) data[0]: %d data[100]: %d!",
-										 img_buffer.at(count % nframes)[0], img_buffer.at(count % nframes)[100]);
 							
-							if (queue_ret != NULL)
-								io.msg(IO_XNFO, "AndorCam::cam_handler(R) cam_queue returned old frame");
+							//if (queue_ret != NULL)
+							//	io.msg(IO_XNFO, "AndorCam::cam_handler(R) cam_queue returned old frame");
 							//! @todo handle returned data?
 					} else {
 						io.msg(IO_WARN, "AndorCam::cam_handler(R) GetMostRecentImage16 error %s", error_desc[ret].c_str());
