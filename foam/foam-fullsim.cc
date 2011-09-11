@@ -1,5 +1,5 @@
 /*
- foam-full.cc -- full simulation module
+ foam-fullsim.cc -- full simulation module
  Copyright (C) 2010--2011 Tim van Werkhoven <t.i.m.vanwerkhoven@xs4all.nl>
  
  This file is part of FOAM.

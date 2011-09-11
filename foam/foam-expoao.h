@@ -1,5 +1,5 @@
 /*
- foam-full.h -- static simulation module header file
+ foam-expoao.h -- FOAM expoao build header
  Copyright (C) 2008--2011 Tim van Werkhoven <t.i.m.vanwerkhoven@xs4all.nl>
  
  This file is part of FOAM.

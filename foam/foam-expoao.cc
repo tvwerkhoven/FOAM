@@ -1,5 +1,5 @@
 /*
- foam-full.cc -- full simulation module
+ foam-expoao.cc -- FOAM expoao build
  Copyright (C) 2010--2011 Tim van Werkhoven <t.i.m.vanwerkhoven@xs4all.nl>
  
  This file is part of FOAM.
