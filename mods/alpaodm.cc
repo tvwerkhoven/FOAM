@@ -42,12 +42,24 @@ Wfc(io, ptc, name, alpaodm_type, port, conffile, online)
 	try {
 		// Get unique Alpao DM serial
 		serial = cfg.getstring("serial");
+		conf_acfg = ptc->datadir + cfg.getstring("acfg");
+		conf_data = ptc->datadir + cfg.getstring("datafile");
 	} catch (std::runtime_error &e) {
 		io.msg(IO_ERR | IO_FATAL, "AlpaoDM: problem with configuration file: %s", e.what());
 	} catch (...) { 
 		io.msg(IO_ERR | IO_FATAL, "AlpaoDM: unknown error at initialisation.");
 		throw;
 	}
+	
+	// Check if conf_acfg and conf_data exist
+	if (!conf_data.isfile() || !conf_acfg.isfile())
+		throw std::runtime_error(format("AlpaoDM: conf_acfg (%s) or conf_data (%s) doesn't exist.", 
+								 conf_acfg.c_str(), conf_data.c_str()));
+	
+	// Check if conf_acfg and conf_data exist in local directory
+	if (!conf_data.basename().exists() || !conf_acfg.basename().exists())
+		throw std::runtime_error(format("AlpaoDM: conf_acfg (%s) or conf_data (%s) don't exist in working dir.", 
+								 conf_acfg.basename().c_str(), conf_data.basename().c_str()));
 	
 	// Init DM
 	char serial_char[128];

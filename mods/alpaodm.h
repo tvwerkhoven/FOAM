@@ -55,6 +55,9 @@ class AlpaoDM: public Wfc {
 private:
 	string serial;										//!< Alpao DM serial number
 	int dm_id;												//!< IDs of the DM we are driving
+	
+	Path conf_acfg;										//!< Alpao DM .acfg file
+	Path conf_data;										//!< Alpao DM associated binary data file
 
 	vector<double> offset;						//!< DM offset (calibrated safe 'zero' position)
 	string offset_str;								//!< Space-separated representation of offset
