@@ -103,6 +103,22 @@ int FOAM_ExpoAO::open_loop() {
 	for (size_t i=0; i < wf_meas->wfamp->size; i++)
 		vec_str += format("%.3g ", gsl_vector_float_get(wf_meas->wfamp, i));
 	io.msg(IO_INFO, "FOAM_ExpoAO::wfs_m: %s", vec_str.c_str());
+	
+	ixonwfs->comp_ctrlcmd(alpao_dm97->getname(), wf_meas->wfamp, alpao_dm97->ctrlparams.err);
+	open_perf.addlog(4);
+	
+	vec_str = "";
+	for (size_t i=0; i<alpao_dm97->ctrlparams.err->size; i++)
+		vec_str += format("%.3g ", gsl_vector_float_get(alpao_dm97->ctrlparams.err, i));
+	io.msg(IO_INFO, "FOAM_ExpoAO::wfc_rec: %s", vec_str.c_str());
+	
+	ixonwfs->comp_shift(alpao_dm97->getname(), alpao_dm97->ctrlparams.err, wf_meas->wfamp);
+	open_perf.addlog(5);
+
+	vec_str = "";
+	for (size_t i=0; i<wf_meas->wfamp->size; i++)
+		vec_str += format("%.3g ", gsl_vector_float_get(wf_meas->wfamp, i));
+	io.msg(IO_INFO, "FOAM_ExpoAO::wfs_r: %s", vec_str.c_str());
 
 	// Wait a little so we can follow the program
 	usleep(1.0 * 1000000);
@@ -142,13 +158,14 @@ int FOAM_ExpoAO::closed_loop() {
 	Shwfs::wf_info_t *wf_meas = ixonwfs->measure(frame);
 	open_perf.addlog(3);
 	
-	// Print analysis
-	vec_str = "";
-	for (size_t i=0; i < wf_meas->wfamp->size; i++)
-		vec_str += format("%.3g ", gsl_vector_float_get(wf_meas->wfamp, i));
-	io.msg(IO_INFO, "FOAM_ExpoAO::wfs_m: %s", vec_str.c_str());
+	// Calculate control command for DM
+	ixonwfs->comp_ctrlcmd(alpao_dm97->getname(), wf_meas->wfamp, alpao_dm97->ctrlparams.err);
+	
+	// Apply control to DM to correct shifts
+	alpao_dm97->update_control(alpao_dm97->ctrlparams.err);
+	alpao_dm97->actuate();
 
-	// Don't wait here, we want to test performance
+	// Don't wait here, closed loop should be fast
 	return 0;
 }
 
@@ -229,7 +246,7 @@ int FOAM_ExpoAO::calib() {
 			alpao_dm97->set_control(0.0);
 		}
 		
-		io.msg(IO_XNFO, "FOAM_FullSim::calib() Process data...");
+		io.msg(IO_XNFO, "FOAM_ExpoAO::calib() Process data...");
 		// Calculate the final influence function
 		ixonwfs->calc_infmat(alpao_dm97->getname());
 		
