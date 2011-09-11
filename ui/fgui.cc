@@ -317,21 +317,6 @@ void MainWindow::on_ctrl_device_update() {
 
 // !!!: General:Miscellaneous functions
 
-
-static void signal_handler(int s) {
-	if(s == SIGALRM || s == SIGPIPE)
-		return;
-	
-	signal(s, SIG_DFL);
-	
-	fprintf(stderr, "fgui.cc::signal_handler(): Received %s signal, exitting\n", strsignal(s));
-	
-	if(s == SIGILL || s == SIGABRT || s == SIGFPE || s == SIGSEGV || s == SIGBUS)
-		abort();
-	else
-		exit(s);
-}
-
 void show_version() {
 	printf("%s\n", FGUI_WELCOME.c_str());
 	printf("%s\n", FGUI_COPYRIGHT.c_str());
@@ -392,27 +377,18 @@ int parse_args(int argc, char *argv[], string &conffile, bool &do_sighandle) {
 	return 0;
 }
 
-
-
 int main(int argc, char *argv[]) {
 	// Parse command-line arguments
 	string conffile("");
 	string execname(argv[0]);
-	bool do_sighandle(false);
+	bool do_sighandle(true);
 	parse_args(argc, argv, conffile, do_sighandle);
-			
-	signal(SIGINT, signal_handler);
-	signal(SIGHUP, signal_handler);
-	signal(SIGTERM, signal_handler);
-	signal(SIGSEGV, signal_handler);
-	signal(SIGILL, signal_handler);
-	signal(SIGBUS, signal_handler);
-	signal(SIGFPE, signal_handler);
-	signal(SIGALRM, signal_handler);
-	signal(SIGPIPE, signal_handler);
-	
-	if (do_sighandle)
-		SigHandle sighandler;
+		
+	SigHandle *sighandler=NULL;
+	if (do_sighandle) {
+		sighandler = new SigHandle();
+		sighandler->quit_func = sigc::ptr_fun(&Gtk::Main::quit);
+	}
 
 	Gtk::Main::init_gtkmm_internals();
 
@@ -429,5 +405,6 @@ int main(int argc, char *argv[]) {
 	Main::run(*window);
 
 	delete window;
+	delete sighandler;
 	return 0;
 }
