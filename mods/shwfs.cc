@@ -189,7 +189,7 @@ void Shwfs::on_message(Connection *const conn, string line) {
 		} else if(what == "get") {				// mla get
 			conn->write("ok mla " + get_mla_str());
 		}
-	} else if (command == "get") {
+	} else if (command == "get") {			// get shifts
 		string what = popword(line);
 		
 		if (what == "shifts")
@@ -1015,17 +1015,17 @@ string Shwfs::get_shifts_str() const {
 	
 	// Return all shifts in one string
 	//! @bug This might cause problems when others are writing this data!
-	ret = format("%d ", (int) shift_vec->size);
+	ret = format("%d ", (int) shift_vec->size/2);
 	
-	for (size_t i=0; i<shift_vec->size/2; i++) {
-		float refx = gsl_vector_float_get(ref_vec, i*2+0);
-		float refy = gsl_vector_float_get(ref_vec, i*2+0);
-		fcoord_t vec_origin(mlacfg[i].lx/2 + mlacfg[i].tx/2, mlacfg[i].ly/2 + mlacfg[i].ty/2);
-		ret += format("%d %g %g %g %g ", (int) i, 
-									vec_origin.x + refx,
-									vec_origin.y + refy,
-									vec_origin.x + refx + gsl_vector_float_get(shift_vec, i*2+0), 
-									vec_origin.y + refy + gsl_vector_float_get(shift_vec, i*2+1));
+	for (size_t idx=0; idx<shift_vec->size/2; idx++) {
+		ret += format("%d %g %g %g %g %g %g ", 
+									(int) idx, 
+									0.5 * (mlacfg.at(idx).lx + mlacfg.at(idx).tx),
+									0.5 * (mlacfg.at(idx).ly + mlacfg.at(idx).ty),
+									gsl_vector_float_get(ref_vec, idx*2+0),
+									gsl_vector_float_get(ref_vec, idx*2+1),
+									gsl_vector_float_get(shift_vec, idx*2+0), 
+									gsl_vector_float_get(shift_vec, idx*2+1));
 	}
 	
 	return ret;

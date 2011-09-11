@@ -47,6 +47,7 @@ protected:
 	
 	std::vector<fvector_t> mlacfg;			//!< Simple subimage configuration
 	std::vector<fvector_t> shifts_v;		//!< SHWFS shift vectors
+	std::vector<fvector_t> refshift_v;	//!< SHWFS reference shift vectors
 	
 public:
 	ShwfsCtrl(Log &log, const string name, const string host, const string port);
@@ -61,6 +62,9 @@ public:
 	
 	size_t get_nshifts() const { return shifts_v.size(); }
 	fvector_t get_shift(const size_t idx) const { return shifts_v[idx]; }
+
+	size_t get_nrefshifts() const { return refshift_v.size(); }
+	fvector_t get_refshift(const size_t idx) const { return refshift_v[idx]; }
 	
 	// ==== Network control ====
 	
