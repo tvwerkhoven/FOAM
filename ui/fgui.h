@@ -118,8 +118,7 @@ private:
 	
 	Log log;														//!< This logs messages (see LogPage and Log)
 	FoamControl foamctrl;								//!< This is the base connection to FOAM
-	SigHandle sighandler;								//!< Signal handler object
-
+	
 	AboutFOAMGui aboutdialog;						//!< About dialog
 	Notebook notebook;									//<! Notebook contains the different control tabs
 	ConnectDialog conndialog;						//!< Connect dialog
@@ -144,7 +143,7 @@ public:
 	void on_ctrl_message_update();			//!< Connects to FoamControl::signal_message()
 	void on_ctrl_device_update();				//!< Connects to FoamControl::signal_device()
 	
-	MainWindow(int argc, char* argv[]);
+	MainWindow(string &cfg, string &exec);
 	~MainWindow() {};
 };
 

@@ -93,6 +93,9 @@ extern Gtk::Tooltips *tooltips;
 using namespace std;
 using namespace Gtk;
 
+const std::string FGUI_WELCOME = "FOAM Control (" PACKAGE_NAME " version " PACKAGE_VERSION " built " __DATE__ " " __TIME__ ")";
+const std::string FGUI_COPYRIGHT = "Copyright (c) 2009--2011 " PACKAGE_BUGREPORT;
+
 // !!!: ConnectDialog starts here
 
 ConnectDialog::ConnectDialog(FoamControl &foamctrl): 
@@ -148,15 +151,14 @@ connect(Stock::CONNECT), quit(Stock::QUIT), about(Stock::ABOUT)
 }
 
 // !!!: MainWindow starts here
-
-MainWindow::MainWindow(int argc, char *argv[]):
-log(), foamctrl(log, argc, argv), 
+MainWindow::MainWindow(string &cfg, string &exec):
+log(), foamctrl(log, cfg, exec), 
 aboutdialog(), notebook(), conndialog(foamctrl), 
 logpage(log), controlpage(log, foamctrl), 
 menubar(*this) 
 {
-	log.add(Log::NORMAL, "FOAM Control (" PACKAGE_NAME " version " PACKAGE_VERSION " built " __DATE__ " " __TIME__ ")");
-	log.add(Log::NORMAL, "Copyright (c) 2009--2011 " PACKAGE_BUGREPORT);
+	log.add(Log::NORMAL, FGUI_WELCOME);
+	log.add(Log::NORMAL, FGUI_COPYRIGHT);
 	
 	// widget properties
 	set_title("FOAM Control");
@@ -315,34 +317,78 @@ void MainWindow::on_ctrl_device_update() {
 
 // !!!: General:Miscellaneous functions
 
+void show_version() {
+	printf("%s\n", FGUI_WELCOME.c_str());
+	printf("%s\n", FGUI_COPYRIGHT.c_str());
+	printf("\nFOAM GUI comes with ABSOLUTELY NO WARRANTY. This is free software,\n"
+				 "and you are welcome to redistribute it under certain conditions;\n"
+				 "see the file COPYING for details.\n");
+}
 
-static void signal_handler(int s) {
-	if(s == SIGALRM || s == SIGPIPE)
-		return;
+void show_clihelp(const string &execname, const bool error = false) {
+	if(error)
+		fprintf(stderr, "Try '%s --help' for more information.\n", execname.c_str());
+	else {
+		printf("Usage: %s [option]...\n\n", execname.c_str());
+		printf("  -c, --config=FILE    Read configuration from FILE.\n"
+					 "  -s, --sighandle=0|1  Toggle signal handling (default: 1).\n"
+					 "  -h, --help           Display this help message.\n"
+					 "      --version        Display version information.\n\n");
+		printf("Report bugs to %s.\n", PACKAGE_BUGREPORT);
+	}
+}
+
+int parse_args(int argc, char *argv[], string &conffile, bool &do_sighandle) {
+	int r, option_index = 0;
 	
-	signal(s, SIG_DFL);
+	static struct option const long_options[] = {
+		{"config", required_argument, NULL, 'c'},
+		{"help", no_argument, NULL, 'h'},
+		{"version", no_argument, NULL, 1},
+		{"sighandle", required_argument, NULL, 's'},
+		{NULL, 0, NULL, 0}
+	};
 	
-	fprintf(stderr, "fgui.cc::signal_handler(): Received %s signal, exitting\n", strsignal(s));
+	string execname(argv[0]);
 	
-	if(s == SIGILL || s == SIGABRT || s == SIGFPE || s == SIGSEGV || s == SIGBUS)
-		abort();
-	else
-		exit(s);
+	while((r = getopt_long(argc, argv, "c:hs:", long_options, &option_index)) != EOF) {
+		switch(r) {
+			case 0:
+				break;
+			case 'c':												// Configuration file
+				conffile = string(optarg);
+				break;
+			case '?':												// Help
+			case 'h':												// Help
+				show_clihelp(execname);
+				exit(0);
+			case 1:													// Version info
+				show_version();
+				exit(0);
+			case 's':												// Signal handling
+				do_sighandle = bool(strtol(optarg, NULL, 10));
+				break;
+			default:
+				show_clihelp(execname);
+				exit(-1);
+		}
+	}
+	
+	return 0;
 }
 
 int main(int argc, char *argv[]) {
-	printf("FOAM Control (" PACKAGE_NAME " version " PACKAGE_VERSION " built " __DATE__ " " __TIME__ ")\n");
-	printf("Copyright (c) 2009--2011 %s\n", PACKAGE_BUGREPORT);
-
-	signal(SIGINT, signal_handler);
-	signal(SIGHUP, signal_handler);
-	signal(SIGTERM, signal_handler);
-	signal(SIGSEGV, signal_handler);
-	signal(SIGILL, signal_handler);
-	signal(SIGBUS, signal_handler);
-	signal(SIGFPE, signal_handler);
-	signal(SIGALRM, signal_handler);
-	signal(SIGPIPE, signal_handler);
+	// Parse command-line arguments
+	string conffile("");
+	string execname(argv[0]);
+	bool do_sighandle(true);
+	parse_args(argc, argv, conffile, do_sighandle);
+		
+	SigHandle *sighandler=NULL;
+	if (do_sighandle) {
+		sighandler = new SigHandle();
+		sighandler->quit_func = sigc::ptr_fun(&Gtk::Main::quit);
+	}
 
 	Gtk::Main::init_gtkmm_internals();
 
@@ -355,9 +401,10 @@ int main(int argc, char *argv[]) {
 	
 	glutInit(&argc, argv);
 	
- 	MainWindow *window = new MainWindow(argc, argv);
+ 	MainWindow *window = new MainWindow(conffile, execname);
 	Main::run(*window);
 
 	delete window;
+	delete sighandler;
 	return 0;
 }

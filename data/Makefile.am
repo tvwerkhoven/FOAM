@@ -30,4 +30,4 @@ clean-local:
 dist_foamdata_DATA = simstatic*.pgm wavefront.fits simulwfc.csv
 
 # These files are generated from the above files and do not need to be included in the distribution
-foamdata_DATA = simstatic*.fits wavefront.fits wavefront.png wavefront-crop* 
+foamdata_DATA = simstatic*.fits wavefront.png wavefront-crop* 
