@@ -135,6 +135,7 @@ public:
 	virtual int actuate(const bool block=false) = 0;
 		
 	virtual int calibrate();						//!< Calibrate actuator
+	virtual int reset();								//!< Reset mirror to best known 'flat' position
 	
 	// From Device::
 	virtual void on_message(Connection *const conn, string line);

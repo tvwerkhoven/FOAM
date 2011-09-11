@@ -211,6 +211,12 @@ int Wfc::calibrate() {
 	return 0;
 }
 
+int Wfc::reset() {
+	set_control(0.0);
+	actuate();
+	return 0;
+}
+
 void Wfc::parse_waffle(string &odd, string &even) {
 	io.msg(IO_DEB2, "Wfc::parse_waffle(odd=%s, even=%s)", odd.c_str(), even.c_str());
 	if (odd.size() <= 0 || even.size() <= 0)
