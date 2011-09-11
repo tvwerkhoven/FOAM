@@ -45,23 +45,31 @@ int FOAM_ExpoAO::load_modules() {
 	io.msg(IO_DEB2, "FOAM_ExpoAO::load_modules()");
 	io.msg(IO_INFO, "This is the expoao build, enjoy.");
 	
-	// Init Andor camera
-	io.msg(IO_INFO, "Init Andor Ixon Camera...");
-	ixoncam = new AndorCam(io, ptc, "ixoncam", ptc->listenport, ptc->conffile);
-	devices->add((foam::Device *) ixoncam);
-	
-	io.msg(IO_INFO, "Andor camera initialized, printing capabilities");
-	ixoncam->print_andor_caps();
-	
-	// Init WFS (using ixoncam)
-	ixonwfs = new Shwfs(io, ptc, "ixonwfs", ptc->listenport, ptc->conffile, *ixoncam);
-	devices->add((foam::Device *) ixonwfs);
-	
-	// Init Alpao DM
-	io.msg(IO_INFO, "Init Alpao DM97-15...");
-	alpao_dm97 = new AlpaoDM(io, ptc, "alpao_dm97", ptc->listenport, ptc->conffile);
-	devices->add((foam::Device *) alpao_dm97);
+	try {
+		// Init Alpao DM
+		io.msg(IO_INFO, "Init Alpao DM97-15...");
+		alpao_dm97 = new AlpaoDM(io, ptc, "alpao_dm97", ptc->listenport, ptc->conffile);
+		devices->add((foam::Device *) alpao_dm97);
 
+		// Init Andor camera
+		io.msg(IO_INFO, "Init Andor Ixon Camera...");
+		ixoncam = new AndorCam(io, ptc, "ixoncam", ptc->listenport, ptc->conffile);
+		devices->add((foam::Device *) ixoncam);
+		
+		io.msg(IO_INFO, "Andor camera initialized, printing capabilities");
+		ixoncam->print_andor_caps();
+		
+		// Init WFS (using ixoncam)
+		ixonwfs = new Shwfs(io, ptc, "ixonwfs", ptc->listenport, ptc->conffile, *ixoncam);
+		devices->add((foam::Device *) ixonwfs);
+	} catch (std::runtime_error &e) {
+		io.msg(IO_ERR, "FOAM_ExpoAO::load_modules: %s", e.what());
+		return -1;
+	}	catch (...) {
+		io.msg(IO_ERR, "FOAM_ExpoAO::load_modules: unknown error!");
+		throw;
+	}
+	
 	return 0;
 }
 
