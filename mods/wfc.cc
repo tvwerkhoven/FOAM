@@ -284,7 +284,11 @@ void Wfc::on_message(Connection *const conn, string line) {
 		string actwhat = popword(line);
 		
 		if (actwhat == "waffle") {				// act waffle
-			set_wafflepattern(0.5);
+			double w_amp = popdouble(line);
+			if (w_amp > 0 && w_amp < 1)
+				set_wafflepattern(w_amp);
+			else
+				set_wafflepattern(0.5);
 			actuate();
 			conn->write(format("ok act waffle"));
 		} else if (actwhat == "random") { // act random
