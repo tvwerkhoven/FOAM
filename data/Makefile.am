@@ -1,5 +1,5 @@
-# Install the relevant configuration files to a subdir of the datadir
-foamdatadir = $(datadir)/foam/simdata
+# Install the relevant data files to a subdir of the datadir
+foamsimdatadir = $(datadir)/foam/simdata
 
 # Crop wavefront file (asymmetric is better for testing)
 wavefront-crop*: wavefront.fits
@@ -27,7 +27,11 @@ clean-local:
 	@rm -f simstatic*.fits
 
 # Include these files in th distribution (the other files depend on them)
-dist_foamdata_DATA = simstatic*.pgm wavefront.fits simulwfc.csv
+dist_foamsimdata_DATA = simstatic*.pgm wavefront.fits simulwfc.csv
 
 # These files are generated from the above files and do not need to be included in the distribution
-foamdata_DATA = simstatic*.fits wavefront.png wavefront-crop* 
+foamsimdata_DATA = simstatic*.fits wavefront.png wavefront-crop* 
+
+foamalpaodatadir = $(datadir)/foam/alpao
+dist_foamalpaodata_DATA = alpao/alpaoHSDM97-15-031 alpao/alpaoHSDM97-15-031.acfg
+
