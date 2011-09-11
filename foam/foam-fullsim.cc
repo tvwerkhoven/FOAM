@@ -222,6 +222,8 @@ int FOAM_FullSim::calib() {
 			
 			// Set actuator back to 0
 			gsl_vector_float_set_zero(tmpact);
+			simwfc->update_control(tmpact, gain_t(1,0,0), 0.0);
+			simwfc->actuate(true);
 		}
 		
 		io.msg(IO_XNFO, "FOAM_FullSim::calib() Process data...");
