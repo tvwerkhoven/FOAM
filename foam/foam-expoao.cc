@@ -167,10 +167,9 @@ int FOAM_ExpoAO::calib() {
 	io.msg(IO_DEB2, "FOAM_ExpoAO::calib()=%s", ptc->calib.c_str());
 
 	if (ptc->calib == "zero") {	// Calibrate reference/'flat' wavefront
-		//gsl_vector_float *tmpact = gsl_vector_float_calloc(simwfc->get_nact());
+		io.msg(IO_INFO, "FOAM_ExpoAO::calib() Zero calibration");
 		// Set wavefront corrector to flat position, start camera
-//		simwfc->update_control(tmpact, gain_t(0.0, 0.0, 0.0), 0.0);
-//		simwfc->actuate(true);
+		alpao_dm97->reset();
 
 		io.msg(IO_XNFO, "FOAM_ExpoAO::calib() Start camera...");
 		ixoncam->set_mode(Camera::RUNNING);
@@ -186,9 +185,61 @@ int FOAM_ExpoAO::calib() {
 		
 		// Restore seeing & wfc
 		ixoncam->set_mode(Camera::WAITING);
-		//gsl_vector_float_free(tmpact);
-	} 
-	else {
+	} else if (ptc->calib == "influence") {		// Calibrate influence function
+		io.msg(IO_INFO, "FOAM_ExpoAO::calib() influence calibration");
+		// Init actuation vector & positions, camera, 
+		vector <float> actpos;
+		actpos.push_back(-0.12);
+		actpos.push_back(0.12);
+		
+		ixonwfs->init_infmat(alpao_dm97->getname(), alpao_dm97->get_nact(), actpos);
+		
+		io.msg(IO_XNFO, "FOAM_ExpoAO::calib() Start camera...");
+		ixoncam->set_mode(Camera::RUNNING);
+		
+		io.msg(IO_XNFO, "FOAM_ExpoAO::calib() Loosen mirror 10 times...");
+		for (int i=0; i < 10; i++) {
+			alpao_dm97->set_control(-0.12);
+			alpao_dm97->actuate();
+			alpao_dm97->set_control(0.12);
+			alpao_dm97->actuate();
+			usleep(0.1 * 1E6);
+		}
+		
+		io.msg(IO_XNFO, "FOAM_ExpoAO::calib() Reset mirror...");
+		alpao_dm97->set_control(0.0);
+		alpao_dm97->actuate();
+
+		
+		// Loop over all actuators, actuate according to actpos
+		io.msg(IO_XNFO, "FOAM_ExpoAO::calib() Start calibration loop...");
+		for (size_t actid = 0; actid < alpao_dm97->get_nact(); actid++) {	// Loop over actuators
+			for (size_t p = 0; p < actpos.size(); p++) {	// Loop over actuator positions
+				if (ptc->mode != AO_MODE_CAL)
+					goto influence_break;
+				
+				// Set actuator 'i' to 'actpos[p]', measure, store
+				alpao_dm97->set_control_act(actpos[p], actid);
+				alpao_dm97->actuate();
+				Camera::frame_t *frame = ixoncam->get_next_frame(true);
+				ixonwfs->build_infmat(alpao_dm97->getname(), frame, actid, p);
+			}
+			
+			// Set actuators back to 0
+			alpao_dm97->set_control(0.0);
+		}
+		
+		io.msg(IO_XNFO, "FOAM_FullSim::calib() Process data...");
+		// Calculate the final influence function
+		ixonwfs->calc_infmat(alpao_dm97->getname());
+		
+		// Calculate forward matrix
+		ixonwfs->calc_actmat(alpao_dm97->getname());
+		
+	influence_break:
+		// Restore seeing
+		ixoncam->set_mode(Camera::OFF);
+	} else {
 		io.msg(IO_WARN, "FOAM_ExpoAO::calib unknown!");
 		return -1;
 	}
@@ -217,13 +268,14 @@ void FOAM_ExpoAO::on_message(Connection *const conn, string line) {
 		else if (topic == "calib") {			// help calib
 			conn->write(\
 												":calib <mode>:           Calibrate AO system.\n"
+ 												":  mode=influence:       Measure influence function."
 												":  mode=zero:            Set current WFS data as reference.");
 		}
 	}
 	else if (cmd == "get") {						// get ...
 		string what = popword(line);
 		if (what == "calibmodes")					// get calibmodes
-			conn->write("ok calibmodes 1 zero");
+			conn->write("ok calibmodes 2 zero influence");
 		else
 			parsed = false;
 	}
