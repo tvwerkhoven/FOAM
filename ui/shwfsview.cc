@@ -294,8 +294,19 @@ void ShwfsView::do_sh_shifts_update() {
 	if (wfscam_ui) {
 		wfscam_ui->glarea.clearlines();
 		
-		for (size_t i=0; i<shwfsctrl->get_nshifts(); i++)
-			wfscam_ui->glarea.addline(shwfsctrl->get_shift((size_t) i));
+		for (size_t i=0; i<shwfsctrl->get_nrefshifts(); i++) {
+			fvector_t refline = shwfsctrl->get_refshift((size_t) i);
+			fprintf(stderr, "ShwfsView::do_sh_shifts_update(): refline (%g, %g) to (%g, %g)\n",
+							refline.lx, refline.ly, refline.tx, refline.ty);
+			wfscam_ui->glarea.addline(refline);
+		}
+
+		for (size_t i=0; i<shwfsctrl->get_nshifts(); i++) {
+			fvector_t shline = shwfsctrl->get_shift((size_t) i);
+			fprintf(stderr, "ShwfsView::do_sh_shifts_update(): shline (%g, %g) to (%g, %g)\n",
+							shline.lx, shline.ly, shline.tx, shline.ty);
+			wfscam_ui->glarea.addline(shline);
+		}
 		
 		wfscam_ui->glarea.do_update();
 	}

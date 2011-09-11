@@ -163,7 +163,18 @@ private:
 	
 	int mla_subapsel();
 	
-	//!< Represent SHWFS shifts as a string [<N> [idx Sx0 Sy0 Sx1 Sy1 [idx Sx0 Sy0 Sx1 Sy1 [...]]]
+	/*! @brief Represent SHWFS shifts as a string
+	 
+	 String representing SHWFS shift vector, including subaperture center 
+	 coordinates and reference shift. Syntax:
+	 
+	   [<N> [idx subap0_x subap0_y ref0_x ref0_y sh0_x sh0_y [idx subap1_x subap1_y ref1_x ref1_y sh1_x sh1_y [...]]]
+	 
+	 The origin of the reference shift is the exact center of the subaperture. 
+	 The origin of the shift vector is the end of the reference vector. With 
+	 respect to the center of the subaperture, the spot centroid is located at
+	 ref_vec + shift_vec.
+	 */
 	string get_shifts_str() const;
 	
 public:
