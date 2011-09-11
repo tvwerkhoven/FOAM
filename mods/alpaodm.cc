@@ -57,7 +57,8 @@ Wfc(io, ptc, name, alpaodm_type, port, conffile, online)
 		acedev5Release(1, &dm_id);
 		throw "AlpaoDM: error at acedev5Init()";
 	}
-	io.msg(IO_DEB2, "AlpaoDM::AlpaoDM() init ok, dm ID: %d, serial: %s", dm_id, serial.c_str());
+	io.msg(IO_DEB2, "AlpaoDM::AlpaoDM() init ok sleep 2 sec (dm ID: %d, serial: %s)", dm_id, serial.c_str());
+	sleep(2);
 	
 	// Retreive number of actuators
 	acedev5GetNbActuator(1, &dm_id, &nact);
