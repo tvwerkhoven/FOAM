@@ -58,6 +58,10 @@ int main() {
 	alpao_dm97->set_control(0.12);
 	// Actuate mirror
 	alpao_dm97->actuate();
+	// Sleep to see results on camera
+	sleep(2);
+	io.msg(IO_INFO, "Test0 end: reset DM...");
+	alpao_dm97->reset();
 	sleep(2);
 
 	io.msg(IO_INFO, "Test1: Setting all %d actuators to -0.12...", alpao_dm97->get_nact());
@@ -65,7 +69,12 @@ int main() {
 	alpao_dm97->set_control(-0.12);
 	// Actuate mirror
 	alpao_dm97->actuate();
+	// Sleep to see results on camera
 	sleep(2);
+	io.msg(IO_INFO, "Test1 end: reset DM...");
+	alpao_dm97->reset();
+	sleep(2);
+
 
 	io.msg(IO_INFO, "Test2: Setting %d actuators to 0.12 one by one...", alpao_dm97->get_nact());
 	
@@ -90,9 +99,18 @@ int main() {
 		usleep(0.4 * 1E6);
 	}
 	
+	io.msg(IO_INFO, "Test2 end: reset DM...");
+	alpao_dm97->reset();
+	sleep(2);
+
+	
 	io.msg(IO_INFO, "Test3: Setting waffle pattern...");
 	alpao_dm97->set_wafflepattern(0.12);
 	sleep(2);
+	io.msg(IO_INFO, "Test3 end: reset DM...");
+	alpao_dm97->reset();
+	sleep(2);
+
 	//io.msg(IO_INFO, "Quitting now...");
 	//delete alpao_dm97;
 	
