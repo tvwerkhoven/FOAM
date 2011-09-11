@@ -75,7 +75,7 @@ Wfc(io, ptc, name, alpaodm_type, port, conffile, online)
 	
 	io.msg(IO_DEB2, "AlpaoDM::AlpaoDM()::%d offset: %s", dm_id, offset_str.c_str());
 	
-	// Enable DEV5 trigger signal
+	// Enable DEV5 trigger signal (?)
 	acedev5EnableTrig(1, &dm_id);
 	
 	add_cmd("get serial");
@@ -107,6 +107,15 @@ int AlpaoDM::calibrate() {
 	
 	// Call calibrate() in base class (for wfc_amp)
 	return Wfc::calibrate();
+}
+
+int AlpaoDM::reset() {
+	if (acedev5SoftwareDACReset(1, &dm_id) == acecsFAILURE) {
+		acecsErrDisplay();
+		throw "AlpaoDM: error at acedev5SoftwareDACReset()";
+	}
+	
+	return 0;
 }
 
 int AlpaoDM::actuate(const bool /*block*/) {
