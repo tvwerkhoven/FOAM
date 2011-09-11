@@ -103,7 +103,7 @@ AlpaoDM::~AlpaoDM() {
 
 int AlpaoDM::calibrate() {
 	// 'Calibrate' simulator (allocate memory)
-	act_vec.reserve(nact);
+	act_vec.resize(nact);
 	
 	// Call calibrate() in base class (for wfc_amp)
 	return Wfc::calibrate();
@@ -111,9 +111,16 @@ int AlpaoDM::calibrate() {
 
 int AlpaoDM::actuate(const bool /*block*/) {
 	// Copy from ctrlparams to local double array:
-	for (size_t i=0; i<act_vec.size(); i++)
+	string act_vec_str = "";
+	for (size_t i=0; i<nact; i++) {
 		act_vec.at(i) = gsl_vector_float_get(ctrlparams.target, i);
+		act_vec_str += format("%g, ", act_vec.at(i));
+	}
+	io.msg(IO_INFO, "AlpaoDM::actuate() vector: %s", act_vec_str.c_str());
 	
+	// acedev5Send expected pointer to double-array, take address of first
+	// vector element to satisfy this need. std::vector guarantees data contiguity
+	// so this is legal
 	double *act_vec_arr = &act_vec[0];
 	if (acedev5Send(1, &dm_id, act_vec_arr) == acecsFAILURE)	{
 		acecsErrDisplay();
