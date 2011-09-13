@@ -26,6 +26,7 @@
 #include <gsl/gsl_vector.h>
 #include "types.h"
 
+#include "wfc.h"
 #include "camera.h"
 #include "io.h"
 #include "wfs.h"
@@ -225,6 +226,21 @@ public:
 	 @param [out] *outvec Vector of measurements in specific basis
 	 */
 	int shift_to_basis(const gsl_vector_float *const invec, const wfbasis basis, gsl_vector_float *outvec);
+	
+	/*! @brief Calibrate influence function between this WFS and *wfc using *cam
+	 
+	 @param [in] *wfc Wavefront corrector to calculate influence function for
+	 @param [in] *cam Camera to use for influence calculation
+	 @param [in] &actpos Actuator positions to use for measuring the influence function
+	 */
+	int calib_influence(Wfc *wfc, Camera *cam, const vector <float> &actpos);
+	
+	/*! @brief Calibrate influence function between this WFS and *wfc using *cam
+	 
+	 @param [in] *wfc Wavefront corrector to calculate influence function for
+	 @param [in] *cam Camera to use for influence calculation
+	 */
+	int calib_zero(Wfc *wfc, Camera *cam);
 
 	/*! @brief Given shifts, compute control vector 
 	 
@@ -266,7 +282,7 @@ public:
 	 @param [in] nact Number of actuators in the WFC
 	 @param [in] &actpos List of positions that will be actuated
 	 */
-	void init_infmat(string wfcname, size_t nact, vector <float> &actpos);
+	void init_infmat(const string &wfcname, const size_t nact, const vector <float> &actpos);
 	
 	/*! @brief Build influece matrix
 	 

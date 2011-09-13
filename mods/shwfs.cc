@@ -31,6 +31,7 @@
 #include "csv.h"
 #include "types.h"
 #include "camera.h"
+#include "wfc.h"
 #include "io.h"
 #include "path++.h"
 
@@ -262,7 +263,14 @@ int Shwfs::shift_to_basis(const gsl_vector_float *const invec, const wfbasis bas
 	return 0;
 }
 
-void Shwfs::init_infmat(string wfcname, size_t nact, vector <float> &actpos) {
+void Shwfs::init_infmat(const string &wfcname, const size_t nact, const vector <float> &actpos) {
+	// Check sanity
+	
+	if (actpos.size() < 2) {
+		io.msg(IO_WARN, "Shwfs::init_infmat(): Cannot calibrate with <2 positions.");
+		return;
+	}
+
 	// First delete all data...
 	if (calib.find(wfcname) != calib.end()) {
 		io.msg(IO_DEB1, "Shwfs::init_infmat(): free()'ing old data.");
@@ -701,6 +709,75 @@ int Shwfs::calibrate() {
 	return 0;
 }
 
+int Shwfs::calib_influence(Wfc *wfc, Camera *cam, const vector <float> &actpos) {
+	double wfc_response = 0.1;
+	
+	// Check sanity
+	if (wfc->get_nact() > 2*mlacfg.size()) {
+		io.msg(IO_ERR, "Shwfs::calib_influence(): # actuators > 2 * # subapertures, underdetermind system, abort!");
+		return -1;
+	}
+	
+	io.msg(IO_XNFO, "Shwfs::calib_influence() init.");
+	init_infmat(wfc->getname(), wfc->get_nact(), actpos);
+	
+	io.msg(IO_XNFO, "Shwfs::calib_influence() Start camera...");
+	cam->set_mode(Camera::RUNNING);
+	
+	// Loop over all actuators, actuate according to actpos
+	io.msg(IO_XNFO, "Shwfs::calib_influence() Start calibration loop...");
+	for (size_t actid = 0; actid < wfc->get_nact(); actid++) {	// Loop over actuators
+		for (size_t posid = 0; posid < actpos.size(); posid++) {	// Loop over actuator voltages
+			if (ptc->mode != AO_MODE_CAL)	// Abort if mode is not 'calib' anymore
+				goto influence_break;
+			
+			// Set actuator 'i' to 'actpos[p]', measure, wait until WFC is done
+			wfc->set_control_act(actpos.at(posid), actid);
+			wfc->actuate();
+			usleep(wfc_response * 1E6);
+			
+			// Store frame, and add to analysis results
+			Camera::frame_t *frame = cam->get_next_frame(true);
+			build_infmat(wfc->getname(), frame, actid, posid);
+		}
+		
+		// Reset WFC to flat position
+		wfc->reset();
+	}
+		
+	io.msg(IO_XNFO, "Shwfs::calib_influence() Process data...");
+	// Calculate the final influence function
+	calc_infmat(wfc->getname());
+	
+	// Calculate forward matrix
+	calc_actmat(wfc->getname());
+
+influence_break:
+	// Restore seeing
+	cam->set_mode(Camera::WAITING);
+	return 0;
+}
+
+int Shwfs::calib_zero(Wfc *wfc, Camera *cam) {
+	// Set wavefront corrector to flat position, start camera
+	wfc->reset();
+	
+	io.msg(IO_XNFO, "Shwfs::calib_zero() Start camera...");
+	cam->set_mode(Camera::RUNNING);
+	
+	io.msg(IO_XNFO, "Shwfs::calib_zero() Measure reference...");
+	// Get next frame (wait for it)
+	Camera::frame_t *frame = cam->get_next_frame(true);
+	
+	io.msg(IO_XNFO, "Shwfs::calib_zero() Process data...");
+	// Set this frame as reference
+	set_reference(frame);
+	store_reference();
+	
+	// Pause camera
+	cam->set_mode(Camera::WAITING);
+	return 0;
+}
 
 int Shwfs::gen_mla_grid(std::vector<vector_t> &mlacfg, const coord_t res, const coord_t size, const coord_t pitch, const int xoff, const coord_t disp, const mlashape_t shape, const float overlap) {
 	io.msg(IO_DEB2, "Shwfs::gen_mla_grid()");
