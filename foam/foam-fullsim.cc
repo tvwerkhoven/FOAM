@@ -294,26 +294,30 @@ void FOAM_FullSim::on_message(Connection *const conn, string line) {
 			conn->write(\
 												":==== full sim help =========================\n"
 												":get calibmodes:         List calibration modes\n"
-												":calib <mode>:           Calibrate AO system.");
+												":calib <mode> [opt]:     Calibrate AO system.");
 		}
 		else if (topic == "calib") {			// help calib
 			conn->write(\
-												":calib <mode>:           Calibrate AO system.\n"
+												":calib <mode> [opt]:     Calibrate AO system.\n"
 												":  mode=zero:            Set current WFS data as reference.\n"
-												":  mode=influence:       Measure wfs-wfc influence.");
+												":  mode=influence [singv]:\n"
+												":                        Measure wfs-wfc influence, cutoff at singv.");
+												":  mode=svd [singv]:     Recalculate SVD wfs-wfc influence, cutoff at singv.");
 		}
 	}
 	else if (cmd == "get") {						// get ...
 		string what = popword(line);
 		if (what == "calibmodes")					// get calibmodes
-			conn->write("ok calibmodes 2 zero influence");
+			conn->write("ok calibmodes 3 zero influence svd");
 		else
 			parsed = false;
 	}
-	else if (cmd == "calib") {					// calib <mode>
+	else if (cmd == "calib") {					// calib <mode> [opt]
 		string calmode = popword(line);
+		string calopt = popword(line);
 		conn->write("ok cmd calib");
 		ptc->calib = calmode;
+		ptc->calib_opt = calopt;
 		ptc->mode = AO_MODE_CAL;
 		{
 			pthread::mutexholder h(&mode_mutex);
