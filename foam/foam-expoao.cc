@@ -80,7 +80,7 @@ int FOAM_ExpoAO::open_init() {
 	io.msg(IO_DEB2, "FOAM_ExpoAO::open_init()");
 	
 	// Check subimage bounds
-	if (simwfs->check_subimgs(ixoncam->get_res()))
+	if (ixonwfs->check_subimgs(ixoncam->get_res()))
 		return -1;
 
 	ixoncam->set_proc_frames(true);
@@ -144,7 +144,7 @@ int FOAM_ExpoAO::closed_init() {
 	io.msg(IO_DEB2, "FOAM_ExpoAO::closed_init()");
 	
 	// Check subimage bounds
-	if (simwfs->check_subimgs(ixoncam->get_res()))
+	if (ixonwfs->check_subimgs(ixoncam->get_res()))
 		return -1;
 
 	ixoncam->set_proc_frames(false);
@@ -195,7 +195,7 @@ int FOAM_ExpoAO::calib() {
 
 	if (ptc->calib == "zero") {							// Calibrate reference/'flat' wavefront
 		io.msg(IO_INFO, "FOAM_ExpoAO::calib() Zero calibration");
-		shwfs->calib_zero(alpao_dm97, ixoncam);
+		ixonwfs->calib_zero(alpao_dm97, ixoncam);
 	} 
 	else if (ptc->calib == "influence") {		// Calibrate influence function
 		// calib influence [singval cutoff] -- 
@@ -212,7 +212,7 @@ int FOAM_ExpoAO::calib() {
 		actpos.push_back(0.08);
 		
 		// Calibrate for influence function now
-		simwfs->calib_influence(simwfc, simcam, actpos, sval_cutoff);
+		ixonwfs->calib_influence(alpao_dm97, ixoncam, actpos, sval_cutoff);
 	} 
 	else if (ptc->calib == "offsetvec") {	// Add offset vector to correction 
 		double xoff = popdouble(ptc->calib_opt);
@@ -231,7 +231,7 @@ int FOAM_ExpoAO::calib() {
 		if (sval_cutoff == 0.0) sval_cutoff = 0.7;
 		io.msg(IO_INFO, "FOAM_ExpoAO::calib() re-calc SVD, sval=%g", sval_cutoff);
 		
-		simwfs->calc_actmat(simwfc->getname(), sval_cutoff);
+		ixonwfs->calc_actmat(alpao_dm97->getname(), sval_cutoff);
 	}
 	else {
 		io.msg(IO_WARN, "FOAM_ExpoAO::calib unknown!");

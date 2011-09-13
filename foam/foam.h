@@ -33,6 +33,7 @@
 
 #include <string>
 #include <stdexcept>
+#include <memory>
 
 // libsiu headers
 #include <perflogger.h>

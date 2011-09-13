@@ -52,7 +52,7 @@ const string wfc_type = "wfc";
  */
 class Wfc: public foam::Device {
 protected:
-	size_t nact;												//!< Number of actuators in this device
+	int nact;												//!< Number of actuators in this device
 	
 	string str_waffle_even;							//!< String representation of even actuators
 	string str_waffle_odd;							//!< String representation of odd actuators
@@ -79,7 +79,7 @@ public:
 	
 	wfc_ctrl_t ctrlparams;
 	
-	size_t get_nact() const { return nact; }
+	int get_nact() const { return nact; }
 	
 	void set_gain(const double p, const double i, const double d) { ctrlparams.gain.p = p; ctrlparams.gain.i = i; ctrlparams.gain.d = d; }
 	
