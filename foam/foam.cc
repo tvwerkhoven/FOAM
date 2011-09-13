@@ -57,7 +57,7 @@ io(IO_DEB2)
 		exit(-1);
 	}
 	if (do_sighandle) {
-		sighandler = new SigHandle();
+		sighandler = auto_ptr<SigHandle> (new SigHandle());
 		sighandler->quit_func = sigc::mem_fun(*this, &FOAM::stopfoam);
 	}
 	if (do_perflog) {
@@ -104,7 +104,6 @@ FOAM::~FOAM() {
 	// Delete network IO
 	delete protocol;
 	delete ptc;
-	delete sighandler;
 	io.msg(IO_INFO, "FOAM succesfully quit");
 }
 

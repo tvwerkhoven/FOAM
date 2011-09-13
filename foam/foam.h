@@ -121,7 +121,7 @@ private:
 	auto_ptr<PerfLog> closed_perf;			//!< Closed-loop performance
 
 	bool do_sighandle;									//!< Toggle for signal handling or not (default: yes)
-	SigHandle *sighandler;							//!< Signal handler object
+	auto_ptr<SigHandle> sighandler;			//!< Signal handler object
 	
 
 protected:
