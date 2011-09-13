@@ -78,17 +78,17 @@ int FOAM_FullSim::open_init() {
 
 int FOAM_FullSim::open_loop() {
 	io.msg(IO_DEB2, "FOAM_FullSim::open_loop()");
-	open_perf.addlog(1);
+	openperf_addlog(1);
 	string vec_str;
 	
 	// Get next frame, simulcam takes care of all simulation
 	//!< @bug This call blocks and if the camera is stopped before it returns, it will hang
 	Camera::frame_t *frame = simcam->get_next_frame(true);
-	open_perf.addlog(2);
+	openperf_addlog(2);
 	
 	// Propagate simulated frame through system (WFS, algorithms, WFC)
 	Shwfs::wf_info_t *wf_meas = simwfs->measure(frame);
-	open_perf.addlog(3);
+	openperf_addlog(3);
 	
 	vec_str = "";
 	for (size_t i=0; i<wf_meas->wfamp->size; i++)
@@ -96,15 +96,15 @@ int FOAM_FullSim::open_loop() {
 	io.msg(IO_INFO, "FOAM_FullSim::wfs_m: %s", vec_str.c_str());
 
 	simwfs->comp_ctrlcmd(simwfc->getname(), wf_meas->wfamp, simwfc->ctrlparams.err);
-	open_perf.addlog(4);
-	
+	closedperf_addlog(4);
+
 	vec_str = "";
 	for (size_t i=0; i<simwfc->ctrlparams.err->size; i++)
 		vec_str += format("%.3g ", gsl_vector_float_get(simwfc->ctrlparams.err, i));
 	io.msg(IO_INFO, "FOAM_FullSim::wfc_rec: %s", vec_str.c_str());
 
 	simwfs->comp_shift(simwfc->getname(), simwfc->ctrlparams.err, wf_meas->wfamp);
-	open_perf.addlog(5);
+	closedperf_addlog(5);
 
 	vec_str = "";
 	for (size_t i=0; i<wf_meas->wfamp->size; i++)
@@ -136,16 +136,16 @@ int FOAM_FullSim::closed_init() {
 
 int FOAM_FullSim::closed_loop() {
 	io.msg(IO_DEB2, "FOAM_FullSim::closed_loop()");
-	closed_perf.addlog(1);
+	closedperf_addlog(1);
 	string vec_str;
 
 	// Get new frame from SimulCamera
 	Camera::frame_t *frame = simcam->get_next_frame(true);
-	closed_perf.addlog(2);
+	closedperf_addlog(2);
 
 	// Measure wavefront error with SHWFS
 	Shwfs::wf_info_t *wf_meas = simwfs->measure(frame);
-	closed_perf.addlog(3);
+	closedperf_addlog(3);
 	
 	vec_str = "";
 	for (size_t i=0; i<wf_meas->wfamp->size; i++)
@@ -153,7 +153,7 @@ int FOAM_FullSim::closed_loop() {
 	io.msg(IO_INFO, "FOAM_FullSim::wfs_m: %s", vec_str.c_str());
 	
 	simwfs->comp_ctrlcmd(simwfc->getname(), wf_meas->wfamp, simwfc->ctrlparams.err);
-	closed_perf.addlog(4);
+	closedperf_addlog(4);
 
 	vec_str = "";
 	for (size_t i=0; i<simwfc->ctrlparams.err->size; i++)
@@ -161,7 +161,7 @@ int FOAM_FullSim::closed_loop() {
 	io.msg(IO_INFO, "FOAM_FullSim::wfc_rec: %s", vec_str.c_str());
 	
 	simwfs->comp_shift(simwfc->getname(), simwfc->ctrlparams.err, wf_meas->wfamp);
-	closed_perf.addlog(5);
+	closedperf_addlog(5);
 	
 	vec_str = "";
 	for (size_t i=0; i<wf_meas->wfamp->size; i++)
@@ -170,7 +170,7 @@ int FOAM_FullSim::closed_loop() {
 	
 	simwfc->update_control(simwfc->ctrlparams.err);
 	simwfc->actuate(true);
-	closed_perf.addlog(6);
+	closedperf_addlog(6);
 
 	usleep(0.01 * 1000000);
 	return 0;

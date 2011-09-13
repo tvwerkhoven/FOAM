@@ -87,16 +87,16 @@ int FOAM_ExpoAO::open_init() {
 
 int FOAM_ExpoAO::open_loop() {
 	io.msg(IO_DEB2, "FOAM_ExpoAO::open_loop()");
-	open_perf.addlog(1);
+	openperf_addlog(1);
 	string vec_str;
 	
 	// Get next frame from ixoncam
 	Camera::frame_t *frame = ixoncam->get_next_frame(true);
-	open_perf.addlog(2);
+	openperf_addlog(2);
 	
 	// Analyze frame with shack-hartmann routines
 	Shwfs::wf_info_t *wf_meas = ixonwfs->measure(frame);
-	open_perf.addlog(3);
+	openperf_addlog(3);
 	
 	// Print analysis
 	vec_str = "";
@@ -105,7 +105,7 @@ int FOAM_ExpoAO::open_loop() {
 	io.msg(IO_INFO, "FOAM_ExpoAO::wfs_m: %s", vec_str.c_str());
 	
 	ixonwfs->comp_ctrlcmd(alpao_dm97->getname(), wf_meas->wfamp, alpao_dm97->ctrlparams.err);
-	open_perf.addlog(4);
+	openperf_addlog(4);
 	
 	vec_str = "";
 	for (size_t i=0; i<alpao_dm97->ctrlparams.err->size; i++)
@@ -113,7 +113,7 @@ int FOAM_ExpoAO::open_loop() {
 	io.msg(IO_INFO, "FOAM_ExpoAO::wfc_rec: %s", vec_str.c_str());
 	
 	ixonwfs->comp_shift(alpao_dm97->getname(), alpao_dm97->ctrlparams.err, wf_meas->wfamp);
-	open_perf.addlog(5);
+	openperf_addlog(5);
 
 	vec_str = "";
 	for (size_t i=0; i<wf_meas->wfamp->size; i++)
@@ -147,23 +147,25 @@ int FOAM_ExpoAO::closed_init() {
 
 int FOAM_ExpoAO::closed_loop() {
 	io.msg(IO_DEB2, "FOAM_ExpoAO::closed_loop()");
-	closed_perf.addlog(1);
+	closedperf_addlog(1);
 	string vec_str;
 
 	// Get next frame from ixoncam
 	Camera::frame_t *frame = ixoncam->get_next_frame(true);
-	open_perf.addlog(2);
+	closedperf_addlog(2);
 
 	// Analyze frame with shack-hartmann routines
 	Shwfs::wf_info_t *wf_meas = ixonwfs->measure(frame);
-	open_perf.addlog(3);
+	closedperf_addlog(3);
 	
 	// Calculate control command for DM
 	ixonwfs->comp_ctrlcmd(alpao_dm97->getname(), wf_meas->wfamp, alpao_dm97->ctrlparams.err);
+	closedperf_addlog(4);
 	
 	// Apply control to DM to correct shifts
 	alpao_dm97->update_control(alpao_dm97->ctrlparams.err);
 	alpao_dm97->actuate();
+	closedperf_addlog(5);
 
 	// Don't wait here, closed loop should be fast
 	return 0;
@@ -206,8 +208,8 @@ int FOAM_ExpoAO::calib() {
 		io.msg(IO_INFO, "FOAM_ExpoAO::calib() influence calibration");
 		// Init actuation vector & positions, camera, 
 		vector <float> actpos;
-		actpos.push_back(-0.12);
-		actpos.push_back(0.12);
+		actpos.push_back(-0.08);
+		actpos.push_back(0.08);
 		
 		ixonwfs->init_infmat(alpao_dm97->getname(), alpao_dm97->get_nact(), actpos);
 		
@@ -216,9 +218,9 @@ int FOAM_ExpoAO::calib() {
 		
 		io.msg(IO_XNFO, "FOAM_ExpoAO::calib() Loosen mirror 10 times...");
 		for (int i=0; i < 10; i++) {
-			alpao_dm97->set_control(-0.12);
+			alpao_dm97->set_control(-0.2);
 			alpao_dm97->actuate();
-			alpao_dm97->set_control(0.12);
+			alpao_dm97->set_control(0.2);
 			alpao_dm97->actuate();
 			usleep(0.1 * 1E6);
 		}
