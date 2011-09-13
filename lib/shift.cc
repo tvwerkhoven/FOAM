@@ -180,9 +180,12 @@ void Shift::_calc_cog(const uint16_t *img, const coord_t &res, const vector_t &c
 	v[1] = v[1]/sum - crop.ly - (crop.ty - crop.ly)/2;
 }
 
-
 bool Shift::calc_shifts(const uint8_t *img, const coord_t res, const std::vector<vector_t> &crops, gsl_vector_float *shifts, const method_t method, const bool wait, const uint8_t mini) {
 	io.msg(IO_DEB2, "Shift::calc_shifts(uint8_t)");
+	
+	// Sanitize crop windows, should be *inside* the image
+	//! @todo Add sanitisation for crop windows here, (0, res.x) and (0, res.y)
+	
 	
 	// Setup work parameters
 	workpool.method = method;
