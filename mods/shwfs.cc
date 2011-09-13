@@ -480,7 +480,7 @@ int Shwfs::calc_actmat(string wfcname, double singval, enum wfbasis /*basis*/) {
 		sum += gsl_vector_get(s, j);
 	
 	// Calculate various condition cutoffs
-	int acc85=0, acc90=0, acc95=0;
+	int acc85=0, acc90=0, acc95=0, accreq=0;
 	double sum2=0;
 	for (size_t j=0; j < s->size; j++) {
 		double sval = gsl_vector_get(s, j);
@@ -489,6 +489,7 @@ int Shwfs::calc_actmat(string wfcname, double singval, enum wfbasis /*basis*/) {
 		if (sum2/sum < 0.85) acc85++;
 		if (sum2/sum < 0.9) acc90++;
 		if (sum2/sum < 0.95) acc95++;
+		if (sum2/sum < singval) accreq++;
 	}
 	io.msg(IO_XNFO, "Shwfs::calc_actmat(): SVD condition: %g, nmodes: %zu", 
 				 gsl_vector_get(s, 0)/
@@ -496,16 +497,19 @@ int Shwfs::calc_actmat(string wfcname, double singval, enum wfbasis /*basis*/) {
 				 s->size);
 	io.msg(IO_XNFO, "Shwfs::calc_actmat(): cond 0.85 @ %d, 0.90 @ %d, 0.95 @ %d modes", 
 				 acc85, acc90, acc95);
+	io.msg(IO_XNFO, "Shwfs::calc_actmat(): requested cond %g @ %d modes.", singval, accreq);
 	
 	// Fill singular value *matrix* Sigma and store to disk
 	sum2 = 0.0;
+	gsl_matrix_set_zero(Sigma);
 	for (size_t j=0; j < s->size; j++) {
 		double sval = gsl_vector_get(s, j);
 		sum2 += sval;
 		if (sval != 0) sval = 1.0/sval;
 		
 		gsl_matrix_set(Sigma, j, j, sval);
-		//if (sum2/sum <= singval)
+		if (sum2/sum >= singval)
+			break;
 	}
 	
 	outf = mkfname(wfcname + format("_Sigma_%zu_%zu.csv", Sigma->size1, Sigma->size2));

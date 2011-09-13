@@ -298,7 +298,7 @@ public:
 	 @param [in] singval How much singular value to include (0 to 1, 0.8 or lower is generally not recommended)
 	 @param [in] basis Basis for which singval counts
 	 */	 
-	int calc_actmat(string wfcname, double singval=1.0, enum wfbasis basis = SENSOR);
+	int calc_actmat(string wfcname, double singval=0.7, enum wfbasis basis = SENSOR);
 	
 	/*! @brief Set this measurement as reference or 'flat' wavefront
 	 
