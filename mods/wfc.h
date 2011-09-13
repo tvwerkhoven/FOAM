@@ -136,6 +136,7 @@ public:
 		
 	virtual int calibrate();						//!< Calibrate actuator
 	virtual int reset();								//!< Reset mirror to best known 'flat' position
+	virtual void loosen(const double amp, const int niter=10, const double delay=0.1);	//!< Loosen the mirror by jolting it a few times
 	
 	// From Device::
 	virtual void on_message(Connection *const conn, string line);
