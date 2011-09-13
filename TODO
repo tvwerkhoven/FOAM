@@ -2,9 +2,7 @@ Main Todo Items
 ===============
 
 * Global TODO items
-- Improve SVD routine, toggle singval cutoff
 - Use subset of actuators
-- Improve set random/waffle with amplitude
 
 
 * Specific code fixes

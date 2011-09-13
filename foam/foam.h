@@ -116,14 +116,13 @@ private:
 	void show_version() const;					//!< Show version information
 	void show_welcome() const;					//!< Show welcome banner
 	
-	bool do_perflog;										//!< Toggle for performance logging
-	auto_ptr<PerfLog> open_perf;				//!< Open-loop performance
-	auto_ptr<PerfLog> closed_perf;			//!< Closed-loop performance
-
 	bool do_sighandle;									//!< Toggle for signal handling or not (default: yes)
 	auto_ptr<SigHandle> sighandler;			//!< Signal handler object
 	
-
+	bool do_perflog;										//!< Toggle for performance logging
+	auto_ptr<PerfLog> open_perf;				//!< Open-loop performance
+	auto_ptr<PerfLog> closed_perf;			//!< Closed-loop performance
+	
 protected:
 	// Properties set at start
 	bool nodaemon;											//!< Run daemon or not
