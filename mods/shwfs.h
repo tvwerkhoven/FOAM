@@ -233,7 +233,7 @@ public:
 	 @param [in] *cam Camera to use for influence calculation
 	 @param [in] &actpos Actuator positions to use for measuring the influence function
 	 */
-	int calib_influence(Wfc *wfc, Camera *cam, const vector <float> &actpos);
+	int calib_influence(Wfc *wfc, Camera *cam, const vector <float> &actpos, const double sval_cutoff);
 	
 	/*! @brief Calibrate influence function between this WFS and *wfc using *cam
 	 
@@ -314,7 +314,7 @@ public:
 	 @param [in] singval How much singular value to include (0 to 1, 0.8 or lower is generally not recommended)
 	 @param [in] basis Basis for which singval counts
 	 */	 
-	int calc_actmat(string wfcname, double singval=0.7, enum wfbasis basis = SENSOR);
+	int calc_actmat(string wfcname, double singval, enum wfbasis basis = SENSOR);
 	
 	/*! @brief Set this measurement as reference or 'flat' wavefront
 	 

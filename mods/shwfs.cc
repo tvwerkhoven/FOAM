@@ -671,7 +671,7 @@ int Shwfs::calibrate() {
 	return 0;
 }
 
-int Shwfs::calib_influence(Wfc *wfc, Camera *cam, const vector <float> &actpos) {
+int Shwfs::calib_influence(Wfc *wfc, Camera *cam, const vector <float> &actpos, const double sval_cutoff) {
 	double wfc_response = 0.1;
 	
 	// Check sanity
@@ -712,7 +712,7 @@ int Shwfs::calib_influence(Wfc *wfc, Camera *cam, const vector <float> &actpos) 
 	calc_infmat(wfc->getname());
 	
 	// Calculate forward matrix
-	calc_actmat(wfc->getname());
+	calc_actmat(wfc->getname(), sval_cutoff);
 
 influence_break:
 	// Restore seeing
