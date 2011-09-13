@@ -69,6 +69,9 @@ Wfc::~Wfc() {
 }
 
 string Wfc::ctrl_as_str(const char *fmt) const {
+	if (!ctrlparams.target)
+		return "0"
+	
 	// Init string with number of values
 	string ctrl_str;
 	ctrl_str = format("%zu", ctrlparams.target->size);
