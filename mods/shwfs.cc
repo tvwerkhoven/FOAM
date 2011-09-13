@@ -741,6 +741,25 @@ int Shwfs::calib_zero(Wfc *wfc, Camera *cam) {
 	return 0;
 }
 
+int Shwfs::calib_offset(double xoff, double yoff) {
+	if (!ref_vec)
+		return -1;
+	if (fabs(xoff) > (0.9 * sisize.x) || fabs(yoff) > (0.9 * sisize.y))
+		return io.msg(IO_ERR, "Shwfs::calib_offset(): offset > 0.9*sisize (=%d,%d), cannot apply!", sisize.x, sisize.y);
+	else if (fabs(xoff) > (0.5 * sisize.x) || fabs(yoff) > (0.5 * sisize.y))
+		io.msg(IO_WARN, "Shwfs::calib_offset(): fairly large offset, be careful!");
+	
+	float ref=0;
+	// Add xoff and yoff to ref_vec. The rest will take care of itself
+	for (size_t idx=0; idx<ref_vec->size; idx+=2) {
+		ref = gsl_vector_float_get(ref_vec, idx);
+		gsl_vector_float_set(ref_vec, idx, ref + xoff);
+		ref = gsl_vector_float_get(ref_vec, idx+1);
+		gsl_vector_float_set(ref_vec, idx+1, ref + yoff);
+	}
+	return 0;
+}
+
 int Shwfs::gen_mla_grid(std::vector<vector_t> &mlacfg, const coord_t res, const coord_t size, const coord_t pitch, const int xoff, const coord_t disp, const mlashape_t shape, const float overlap) {
 	io.msg(IO_DEB2, "Shwfs::gen_mla_grid()");
 	

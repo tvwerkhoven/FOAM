@@ -241,6 +241,13 @@ public:
 	 @param [in] *cam Camera to use for influence calculation
 	 */
 	int calib_zero(Wfc *wfc, Camera *cam);
+	
+	/*! @brief Add offset vector to correction
+	 
+	 @param [in] x x-offset
+	 @param [in] y y-offset
+	 */
+	int calib_offset(double x, double y);
 
 	/*! @brief Given shifts, compute control vector 
 	 
