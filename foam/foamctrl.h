@@ -80,7 +80,7 @@ public:
 	
 	aomode_t mode;								//!< AO system mode (def: AO_MODE_LISTEN)
 	string calib;									//!< Calibration mode passed to FOAM (def: none)
-	string calibopt;							//!< Calibration options
+	string calib_opt;							//!< Calibration options
 	
 	time_t starttime;							//!< FOAM start timestamp
 	time_t lasttime;							//!< Last frame timestamp
