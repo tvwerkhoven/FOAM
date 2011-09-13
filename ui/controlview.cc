@@ -29,7 +29,7 @@ ControlPage::ControlPage(Log &log, FoamControl &foamctrl):
 log(log), foamctrl(foamctrl),
 connframe("Connection"), host("Hostname"), port("Port"), connect("Connect"),
 modeframe("Run mode"), mode_listen("Listen"), mode_open("Open loop"), mode_closed("Closed loop"), shutdown("Shutdown"),
-calibframe("Calibration"), calmode_lbl("Calibration mode: "), calib("Calibrate"),
+calibframe("Calibration"), calmode_lbl("Mode: "), calmod_opt(""), calib("Calibrate"),
 statframe("Status"), stat_mode("Mode: "), stat_ndev("# Dev: "), stat_nframes("# Frames: "), stat_lastcmd("Last cmd: ") {
 	
 	//set_spacing(4);
@@ -41,6 +41,8 @@ statframe("Status"), stat_mode("Mode: "), stat_ndev("# Dev: "), stat_nframes("# 
 	// Make shutdown/stop button red
 	shutdown.modify_bg(STATE_NORMAL, Gdk::Color("red"));
 	shutdown.modify_bg(STATE_PRELIGHT, Gdk::Color("red"));
+	
+	calmod_opt.set_width_chars(8)
 
 	stat_mode.set_width_chars(8);
 	stat_ndev.set_width_chars(2);
@@ -80,6 +82,7 @@ statframe("Status"), stat_mode("Mode: "), stat_ndev("# Dev: "), stat_nframes("# 
 	calibbox.set_spacing(4);
 	calibbox.pack_start(calmode_lbl, PACK_SHRINK);
 	calibbox.pack_start(calmode_select, PACK_SHRINK);
+	calibbox.pack_start(calmod_opt, PACK_SHRINK);
 	calibbox.pack_start(calib, PACK_SHRINK);
 	calibframe.add(calibbox);
 	
@@ -212,7 +215,7 @@ void ControlPage::on_shutdown_clicked() {
 void ControlPage::on_calib_clicked() {
 	log.term(format("%s", __PRETTY_FUNCTION__));
 	log.add(Log::NORMAL, "Trying to calibrate");
-	foamctrl.calibrate(calmode_select.get_active_text());
+	foamctrl.calibrate(calmode_select.get_active_text(), calmod_opt.get_text());
 }
 
 void ControlPage::on_connect_update() {
