@@ -413,8 +413,9 @@ void AndorCam::cam_handler() {
 				}
 				
 				while (mode == Camera::RUNNING) {
-					// Wait for a new frame for maximum 1000 ms
-					ret = WaitForAcquisitionTimeOut(2500);
+					int waitacq = 2500;
+					// Wait for a new frame for maximum 'wait' ms
+					ret = WaitForAcquisitionTimeOut(waitacq);
 					
 					if (ret == DRV_SUCCESS) {
 						// Try to get new frame data						
@@ -430,7 +431,9 @@ void AndorCam::cam_handler() {
 					}
 
 					} else {
-						io.msg(IO_WARN, "AndorCam::cam_handler(R) no new data in 10 seconds? %s", error_desc[ret].c_str());
+						io.msg(IO_WARN, "AndorCam::cam_handler(R) no new data in %d milliseconds? %s", waitacq, error_desc[ret].c_str());
+						// Add short sleep before trying again, sometimes WaitForAcquisitionTimeOut() freaks out
+						usleep(0.1*1E6);
 					}
 
 				}
