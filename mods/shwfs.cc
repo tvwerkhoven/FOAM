@@ -629,6 +629,9 @@ void Shwfs::store_reference() {
 	Path outf; FILE *fd;
 	outf = mkfname(format("ref_vec_%zu.csv", ref_vec->size));
 	fd = fopen(outf.c_str(), "w+");
+	if (!fd)
+		io.msg(IO_ERR, "Shwfs::store_reference(): could not open file '%s'!", outf.c_str());
+
 	gsl_vector_float_fprintf (fd, ref_vec, "%.12g");
 	fclose(fd);
 }
