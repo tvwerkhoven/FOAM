@@ -256,7 +256,7 @@ int FOAM_ExpoAO::calib() {
 		
 	influence_break:
 		// Restore seeing
-		ixoncam->set_mode(Camera::OFF);
+		ixoncam->set_mode(Camera::WAITING);
 	} else {
 		io.msg(IO_WARN, "FOAM_ExpoAO::calib unknown!");
 		return -1;
