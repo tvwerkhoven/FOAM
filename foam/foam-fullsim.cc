@@ -71,6 +71,11 @@ int FOAM_FullSim::load_modules() {
 int FOAM_FullSim::open_init() {
 	io.msg(IO_DEB2, "FOAM_FullSim::open_init()");
 	
+	// Check subimage bounds
+	if (simwfs->check_subimgs(simcam->get_res()))
+		return -1;
+	
+	// Start camera
 	simcam->set_mode(Camera::RUNNING);
 	
 	return 0;
@@ -129,6 +134,10 @@ int FOAM_FullSim::open_finish() {
 int FOAM_FullSim::closed_init() {
 	io.msg(IO_DEB2, "FOAM_FullSim::closed_init()");
 	
+	// Check subimage bounds
+	if (simwfs->check_subimgs(simcam->get_res()))
+		return -1;
+
 	simcam->set_mode(Camera::RUNNING);
 	
 	return 0;

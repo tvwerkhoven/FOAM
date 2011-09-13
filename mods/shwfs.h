@@ -327,7 +327,12 @@ public:
 	 @param [in] singval How much singular value/modes to include
 	 @param [in] basis Basis for which singval counts
 	 */	 
-	int calc_actmat(string wfcname, double singval, enum wfbasis basis = SENSOR);
+	int calc_actmat(const string &wfcname, const double singval, const enum wfbasis basis = SENSOR);
+	
+	/*! @brief Check subimage sanity, should be inside frame
+	 */
+	int check_subimgs(const vector_t &bounds) const;
+	int check_subimgs(const coord_t &topbounds) const;
 	
 	/*! @brief Set this measurement as reference or 'flat' wavefront
 	 

@@ -79,6 +79,10 @@ int FOAM_ExpoAO::load_modules() {
 int FOAM_ExpoAO::open_init() {
 	io.msg(IO_DEB2, "FOAM_ExpoAO::open_init()");
 	
+	// Check subimage bounds
+	if (simwfs->check_subimgs(ixoncam->get_res()))
+		return -1;
+
 	ixoncam->set_proc_frames(true);
 	ixoncam->set_mode(Camera::RUNNING);
 	
@@ -139,6 +143,10 @@ int FOAM_ExpoAO::open_finish() {
 int FOAM_ExpoAO::closed_init() {
 	io.msg(IO_DEB2, "FOAM_ExpoAO::closed_init()");
 	
+	// Check subimage bounds
+	if (simwfs->check_subimgs(ixoncam->get_res()))
+		return -1;
+
 	ixoncam->set_proc_frames(false);
 	ixoncam->set_mode(Camera::RUNNING);
 	

@@ -612,6 +612,28 @@ gsl_vector_float *Shwfs::comp_shift(const string &wfcname, const gsl_vector_floa
 	return shift;
 }
 
+int Shwfs::check_subimgs(const coord_t &topbounds) const {
+	vector_t bounds(0, 0, topbounds.x, topbounds.y);
+	return check_subimgs(bounds);
+}
+
+int Shwfs::check_subimgs(const vector_t &bounds) const {
+	for (size_t idx=0; idx<mlacfg.size(); idx++) {
+		if (mlacfg.at(idx).lx < bounds.lx || mlacfg.at(idx).lx >= bounds.tx ||
+				mlacfg.at(idx).tx < bounds.lx || mlacfg.at(idx).tx >= bounds.tx ||
+				mlacfg.at(idx).ly < bounds.ly || mlacfg.at(idx).ly >= bounds.ty ||
+				mlacfg.at(idx).tx < bounds.ly || mlacfg.at(idx).tx >= bounds.ty) {
+			io.msg(IO_ERR, "Shwfs::check_subimgs(): subap %zu out of bounds (%d, %d, %d, %d) <> (%d, %d, %d, %d)",
+						 idx,
+						 mlacfg.at(idx).lx, mlacfg.at(idx).ly, mlacfg.at(idx).tx, mlacfg.at(idx).ty,
+						 bounds.lx, bounds.ly, bounds.tx, bounds.ty);
+
+			return -1;
+		}
+	}
+	return 0;
+}
+
 void Shwfs::set_reference(Camera::frame_t *frame) {
 	// Set old reference vector to 0
 	gsl_vector_float_set_zero(ref_vec);
