@@ -116,9 +116,14 @@ private:
 	void show_version() const;					//!< Show version information
 	void show_welcome() const;					//!< Show welcome banner
 	
+	bool do_perflog;										//!< Toggle for performance logging
+	auto_ptr<PerfLog> open_perf;				//!< Open-loop performance
+	auto_ptr<PerfLog> closed_perf;			//!< Closed-loop performance
+
 	bool do_sighandle;									//!< Toggle for signal handling or not (default: yes)
 	SigHandle *sighandler;							//!< Signal handler object
 	
+
 protected:
 	// Properties set at start
 	bool nodaemon;											//!< Run daemon or not
@@ -137,8 +142,8 @@ protected:
 	
 	pthread::mutex stop_mutex;					//!< Mutex used to check if main loop has completed
 	
-	PerfLog open_perf;									//!< Open-loop performance
-	PerfLog closed_perf;								//!< Closed-loop performance
+	void openperf_addlog(const int i) const { if (do_perflog && open_perf.get() != NULL) open_perf.get()->addlog(i); }
+	void closedperf_addlog(const int i) const { if (do_perflog && closed_perf.get() != NULL) closed_perf.get()->addlog(i); }
 
 	/*!
 	 @brief Run on new connection to FOAM

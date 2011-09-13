@@ -44,7 +44,8 @@
 using namespace std;
 
 FOAM::FOAM(int argc, char *argv[]):
-do_sighandle(true),
+do_sighandle(true), sighandler(NULL),
+do_perflog(false), open_perf(NULL), closed_perf(NULL),
 nodaemon(false), error(false), conffile(FOAM_DEFAULTCONF), execname(argv[0]),
 io(IO_DEB2)
 {
@@ -58,6 +59,10 @@ io(IO_DEB2)
 	if (do_sighandle) {
 		sighandler = new SigHandle();
 		sighandler->quit_func = sigc::mem_fun(*this, &FOAM::stopfoam);
+	}
+	if (do_perflog) {
+		open_perf = auto_ptr<PerfLog> (new PerfLog());
+		closed_perf = auto_ptr<PerfLog> (new PerfLog());
 	}
 	
 	devices = new foam::DeviceManager(io);
@@ -158,6 +163,7 @@ void FOAM::show_clihelp(const bool error = false) const {
 					 "  -q,                  Decrease verbosity level.\n"
 					 "      --nodaemon       Do not start network daemon.\n"
 					 "  -s, --sighandle=0|1  Toggle signal handling (default: 1).\n"
+					 "  -p, --perflog=0|1    Toggle performance logging (default: 0).\n"
 					 "  -h, --help           Display this help message.\n"
 					 "      --version        Display version information.\n\n");
 		printf("Report bugs to %s.\n", PACKAGE_BUGREPORT);
@@ -200,10 +206,11 @@ int FOAM::parse_args(int argc, char *argv[]) {
 		{"nodaemon", no_argument, NULL, 3},
 		{"showthreads", no_argument, NULL, 4},
 		{"sighandle", required_argument, NULL, 's'},
+		{"perflog", required_argument, NULL, 'p'},
 		{NULL, 0, NULL, 0}
 	};
 	
-	while((r = getopt_long(argc, argv, "c:hvqs:", long_options, &option_index)) != EOF) {
+	while((r = getopt_long(argc, argv, "c:hvqs:p", long_options, &option_index)) != EOF) {
 		switch(r) {
 			case 0:
 				break;
@@ -227,6 +234,10 @@ int FOAM::parse_args(int argc, char *argv[]) {
 			case 's':												// Signal handling
 				io.msg(IO_DEB2, "FOAM::parse_args() -s: %s", optarg);
 				do_sighandle = bool(strtol(optarg, NULL, 10));
+				break;
+			case 'p':												// performance logging
+				io.msg(IO_DEB2, "FOAM::parse_args() -p");
+				do_perflog = bool(strtol(optarg, NULL, 10));
 				break;
 			case 'v':												// Increase verbosity
 				io.msg(IO_DEB2, "FOAM::parse_args() -v");
@@ -345,7 +356,7 @@ int FOAM::mode_open() {
 	
 	while (ptc->mode == AO_MODE_OPEN) {
 		// Log performance (time, latency)
-		open_perf.addlog(0);
+		openperf_addlog(0);
 
 		if (open_loop()) {
 			io.msg(IO_WARN, "FOAM::open_loop() failed");
@@ -377,7 +388,7 @@ int FOAM::mode_closed() {
 	
 	// Run closed loop
 	while (ptc->mode == AO_MODE_CLOSED) {
-		closed_perf.addlog(0);
+		closedperf_addlog(0);
 		if (closed_loop()) {
 			io.msg(IO_WARN, "FOAM::closed_loop() failed.");
 			ptc->mode = AO_MODE_LISTEN;
