@@ -129,7 +129,6 @@ void Camera::cam_proc() {
 		// Always wait for proc_cond broadcasts
 		{
 			pthread::mutexholder h(&proc_mutex);
-			io.msg(IO_DEB2, "Camera::cam_proc() waiting...");
 			proc_cond.wait(proc_mutex);
 		}
 		
@@ -665,7 +664,6 @@ void Camera::grab(Connection *conn, int x1, int y1, int x2, int y2, int scale = 
 		
 		// zero copy if possible
 		if(!do_df && scale == 1 && x1 == 0 && x2 == (int)res.x && y1 == 0 && y2 == (int)res.y) {
-			io.msg(IO_DEB2, "Camera::grab() 0copy");
 			conn->write(format("ok image %zu %d %d %d %d %d", size, x1, y1, x2, y2, scale) + extra);
 			conn->write(f->image, size);
 			goto finish;
