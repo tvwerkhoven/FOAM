@@ -42,7 +42,7 @@ statframe("Status"), stat_mode("Mode: "), stat_ndev("# Dev: "), stat_nframes("# 
 	shutdown.modify_bg(STATE_NORMAL, Gdk::Color("red"));
 	shutdown.modify_bg(STATE_PRELIGHT, Gdk::Color("red"));
 	
-	calmod_opt.set_width_chars(8)
+	calmod_opt.set_width_chars(8);
 
 	stat_mode.set_width_chars(8);
 	stat_ndev.set_width_chars(2);
