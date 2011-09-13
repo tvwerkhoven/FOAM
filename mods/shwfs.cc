@@ -221,11 +221,9 @@ Wfs::wf_info_t* Shwfs::measure(Camera::frame_t *frame) {
 	
 	// Calculate shifts
 	if (cam.get_depth() == 16) {
-		io.msg(IO_DEB2, "Shwfs::measure() got UINT16");
 		shifts.calc_shifts((uint16_t *) frame->image, cam.get_res(), mlacfg, shift_vec, method);
 	}
 	else if (cam.get_depth() == 8) {
-		io.msg(IO_DEB2, "Shwfs::measure() got UINT8");
 		shifts.calc_shifts((uint8_t *) frame->image, cam.get_res(), mlacfg, shift_vec, method);
 	}
 	else {
