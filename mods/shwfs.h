@@ -317,8 +317,14 @@ public:
 	
 	/*! @brief Calculate actuation matrix to drive Wfc, using SVD
 	 
+	 'Singval' can be used to tweak the SVD results:
+	 if singval = 0: abort
+	 if singval < 0: drop 'singval' number of modes (i.e. if nmodes = 50, singval = -5, use 45 modes)
+	 if singval > 1: use this amount of modes
+	 else: singval is between 0 and 1, use this amount of singular value in the reconstruction
+	 
 	 @param [in] wfcname Name of the WFC this WFS is calibrated with
-	 @param [in] singval How much singular value to include (0 to 1, 0.8 or lower is generally not recommended)
+	 @param [in] singval How much singular value/modes to include
 	 @param [in] basis Basis for which singval counts
 	 */	 
 	int calc_actmat(string wfcname, double singval, enum wfbasis basis = SENSOR);

@@ -190,9 +190,12 @@ int FOAM_ExpoAO::calib() {
 		shwfs->calib_zero(alpao_dm97, ixoncam);
 	} 
 	else if (ptc->calib == "influence") {		// Calibrate influence function
+		// calib influence [singval cutoff] -- 
+		// singval < 0: drop these modes
+		// singval > 1: use this amount of modes
+		// else: use this amount of singular value
 		double sval_cutoff = popdouble(ptc->calib_opt);
-		if (sval_cutoff <= 0.0 || sval_cutoff > 1.0)
-			sval_cutoff = 0.7;
+		if (sval_cutoff == 0.0) sval_cutoff = 0.7;
 		io.msg(IO_INFO, "FOAM_ExpoAO::calib() influence calibration, sval=%g", sval_cutoff);
 
 		// Init actuation vector & positions, camera, 
@@ -212,9 +215,12 @@ int FOAM_ExpoAO::calib() {
 			io.msg(IO_ERR, "FOAM_ExpoAO::calib() offset vector could not be applied!");
 	}
 	else if (ptc->calib == "svd") {					// (Re-)calculate SVD given the influence matrix
+		// calib svd [singval cutoff] -- 
+		// singval < 0: drop these modes
+		// singval > 1: use this amount of modes
+		// else: use this amount of singular value
 		double sval_cutoff = popdouble(ptc->calib_opt);
-		if (sval_cutoff <= 0.0 || sval_cutoff > 1.0)
-			sval_cutoff = 0.7;
+		if (sval_cutoff == 0.0) sval_cutoff = 0.7;
 		io.msg(IO_INFO, "FOAM_ExpoAO::calib() re-calc SVD, sval=%g", sval_cutoff);
 		
 		simwfs->calc_actmat(simwfc->getname(), sval_cutoff);
