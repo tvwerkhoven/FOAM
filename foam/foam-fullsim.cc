@@ -138,6 +138,10 @@ int FOAM_FullSim::closed_loop() {
 	io.msg(IO_DEB2, "FOAM_FullSim::closed_loop()");
 	closedperf_addlog(1);
 	string vec_str;
+	
+	static gsl_vector_float *tmp_wfmeas=NULL;
+	if (tmp_wfmeas == NULL)
+		tmp_wfmeas = gsl_vector_float_calloc(simwfs->wf.nmodes);
 
 	// Get new frame from SimulCamera
 	Camera::frame_t *frame = simcam->get_next_frame(true);

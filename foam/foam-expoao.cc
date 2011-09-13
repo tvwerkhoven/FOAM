@@ -185,64 +185,41 @@ int FOAM_ExpoAO::closed_finish() {
 int FOAM_ExpoAO::calib() {
 	io.msg(IO_DEB2, "FOAM_ExpoAO::calib()=%s", ptc->calib.c_str());
 
-	if (ptc->calib == "zero") {	// Calibrate reference/'flat' wavefront
+	if (ptc->calib == "zero") {							// Calibrate reference/'flat' wavefront
 		io.msg(IO_INFO, "FOAM_ExpoAO::calib() Zero calibration");
 		shwfs->calib_zero(alpao_dm97, ixoncam);
+	} 
+	else if (ptc->calib == "influence") {		// Calibrate influence function
+		double sval_cutoff = popdouble(ptc->calib_opt);
+		if (sval_cutoff <= 0.0 || sval_cutoff > 1.0)
+			sval_cutoff = 0.7;
+		io.msg(IO_INFO, "FOAM_ExpoAO::calib() influence calibration, sval=%g", sval_cutoff);
 
-	} else if (ptc->calib == "influence") {		// Calibrate influence function
-		io.msg(IO_INFO, "FOAM_ExpoAO::calib() influence calibration");
 		// Init actuation vector & positions, camera, 
 		vector <float> actpos;
 		actpos.push_back(-0.08);
 		actpos.push_back(0.08);
 		
 		// Calibrate for influence function now
-		simwfs->calib_influence(simwfc, simcam, actpos);
-
-		io.msg(IO_XNFO, "FOAM_ExpoAO::calib() Loosen mirror 10 times...");
-		for (int i=0; i < 10; i++) {
-			alpao_dm97->set_control(-0.2);
-			alpao_dm97->actuate();
-			alpao_dm97->set_control(0.2);
-			alpao_dm97->actuate();
-			usleep(0.1 * 1E6);
-		}
+		simwfs->calib_influence(simwfc, simcam, actpos, sval_cutoff);
+	} 
+	else if (ptc->calib == "offsetvec") {	// Add offset vector to correction 
+		double xoff = popdouble(ptc->calib_opt);
+		double yoff = popdouble(ptc->calib_opt);
+		io.msg(IO_INFO, "FOAM_ExpoAO::calib() apply offset vector (%g, %g)", xoff, yoff);
 		
-		io.msg(IO_XNFO, "FOAM_ExpoAO::calib() Reset mirror...");
-		alpao_dm97->set_control(0.0);
-		alpao_dm97->actuate();
-
+		if (ixonwfs->calib_offset(xoff, yoff))
+			io.msg(IO_ERR, "FOAM_ExpoAO::calib() offset vector could not be applied!");
+	}
+	else if (ptc->calib == "svd") {					// (Re-)calculate SVD given the influence matrix
+		double sval_cutoff = popdouble(ptc->calib_opt);
+		if (sval_cutoff <= 0.0 || sval_cutoff > 1.0)
+			sval_cutoff = 0.7;
+		io.msg(IO_INFO, "FOAM_ExpoAO::calib() re-calc SVD, sval=%g", sval_cutoff);
 		
-		// Loop over all actuators, actuate according to actpos
-		io.msg(IO_XNFO, "FOAM_ExpoAO::calib() Start calibration loop...");
-		for (size_t actid = 0; actid < alpao_dm97->get_nact(); actid++) {	// Loop over actuators
-			for (size_t p = 0; p < actpos.size(); p++) {	// Loop over actuator positions
-				if (ptc->mode != AO_MODE_CAL)
-					goto influence_break;
-				
-				// Set actuator 'i' to 'actpos[p]', measure, store
-				alpao_dm97->set_control_act(actpos[p], actid);
-				alpao_dm97->actuate();
-				Camera::frame_t *frame = ixoncam->get_next_frame(true);
-				ixonwfs->build_infmat(alpao_dm97->getname(), frame, actid, p);
-			}
-			
-			// Set actuators back to 0
-			alpao_dm97->set_control(0.0);
-			alpao_dm97->actuate();
-		}
-		
-		io.msg(IO_XNFO, "FOAM_ExpoAO::calib() Process data...");
-		// Calculate the final influence function
-		ixonwfs->calc_infmat(alpao_dm97->getname());
-		
-		// Calculate forward matrix
-		ixonwfs->calc_actmat(alpao_dm97->getname());
-		
-	influence_break:
-		// Restore seeing
-		ixoncam->set_mode(Camera::WAITING);
-	} else {
+		simwfs->calc_actmat(simwfc->getname(), sval_cutoff);
+	}
+	else {
 		io.msg(IO_WARN, "FOAM_ExpoAO::calib unknown!");
 		return -1;
 	}
@@ -266,19 +243,23 @@ void FOAM_ExpoAO::on_message(Connection *const conn, string line) {
 			conn->write(\
 												":==== expoao help =========================\n"
 												":get calibmodes:         List calibration modes\n"
-												":calib <mode>:           Calibrate AO system.");
+												":calib <mode> [opts]:    Calibrate AO system.");
 		}
 		else if (topic == "calib") {			// help calib
 			conn->write(\
-												":calib <mode>:           Calibrate AO system.\n"
- 												":  mode=influence:       Measure influence function."
-												":  mode=zero:            Set current WFS data as reference.");
+									":calib <mode> [opt]:     Calibrate AO system.\n"
+									":  mode=zero:            Set current WFS data as reference.\n"
+									":  mode=influence [singv]:\n"
+									":                        Measure wfs-wfc influence, cutoff at singv\n"
+									":  mode=offsetvec [x] [y]:\n"
+									":                        Add offset vector to correction.\n"
+									":  mode=svd [singv]:     Recalculate SVD wfs-wfc influence, cutoff at singv.");
 		}
 	}
 	else if (cmd == "get") {						// get ...
 		string what = popword(line);
 		if (what == "calibmodes")					// get calibmodes
-			conn->write("ok calibmodes 2 zero influence");
+			conn->write("ok calibmodes 3 zero influence offsetvec  svd");
 		else
 			parsed = false;
 	}
