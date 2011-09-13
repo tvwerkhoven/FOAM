@@ -285,16 +285,20 @@ void Wfc::on_message(Connection *const conn, string line) {
 		
 		if (actwhat == "waffle") {				// act waffle
 			double w_amp = popdouble(line);
-			if (w_amp > 0 && w_amp < 1)
-				set_wafflepattern(w_amp);
-			else
-				set_wafflepattern(0.5);
+			if (w_amp < 0 || w_amp > 1)
+				w_amp = 0.5;
+			
+			set_wafflepattern(w_amp);
 			actuate();
-			conn->write(format("ok act waffle"));
+			conn->write(format("ok act waffle %g", w_amp));
 		} else if (actwhat == "random") { // act random
-			set_randompattern(1.0);
+			double w_amp = popdouble(line);
+			if (w_amp < 0 || w_amp > 1)
+				w_amp = 0.5;
+			
+			set_randompattern(w_amp);
 			actuate();
-			conn->write(format("ok act random"));
+			conn->write(format("ok act random %g", w_amp));
 		} else if (actwhat == "one") { 		// act one <id> <val>
 			int actid = popint(line);
 			double actval = popdouble(line);
