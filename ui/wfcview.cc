@@ -33,8 +33,8 @@ WfcView::WfcView(WfcCtrl *wfcctrl, Log &log, FoamControl &foamctrl, string n):
 DevicePage((DeviceCtrl *) wfcctrl, log, foamctrl, n), 
 wfcctrl(wfcctrl),
 wfc_nact("#Act."),
-calib_frame("Calibration"), calib_setall("Set all"), calib_setactid("Set act #"), calib_setactval("to"),
-calib_random("Set Random"), calib_waffle("Set Waffle"),
+calib_frame("Calibration"), calib_setall("Set all to"), calib_setactid("Set act #"), calib_setactval("to"),
+calib_random("Set Random"), calib_waffle("Set Waffle"), calib_amp("amp."),
 wfcact_frame("WFC actuators"), wfcact_gr(480,100)
 {
 	log.term(format("%s", __PRETTY_FUNCTION__));
@@ -42,12 +42,20 @@ wfcact_frame("WFC actuators"), wfcact_gr(480,100)
 	wfc_nact.set_width_chars(8);
 	wfc_nact.set_editable(false);
 	
-	calib_setall.set_width_chars(4);
+	calib_setall.set_digits(2);
+	calib_setall.set_increments(0.1, 1);
+	calib_setall.set_range(-1.0,1.0);
 
 	calib_setactid.set_digits(0);
 	calib_setactid.set_increments(1, 10);
 	
-	calib_setactval.set_width_chars(4);
+	calib_setactval.set_digits(2);
+	calib_setactval.set_increments(0.1, 1);
+	calib_setactval.set_range(-1.0,1.0);
+	
+	calib_amp.set_digits(2);
+	calib_amp.set_increments(0.1, 1);
+	calib_amp.set_range(-1.0,1.0);
 
 	// Extra device info
 	devhbox.pack_start(vsep0, PACK_SHRINK);
@@ -61,6 +69,7 @@ wfcact_frame("WFC actuators"), wfcact_gr(480,100)
 	calib_hbox.pack_start(vsep2, PACK_SHRINK);
 	calib_hbox.pack_start(calib_random, PACK_SHRINK);
 	calib_hbox.pack_start(calib_waffle, PACK_SHRINK);
+	calib_hbox.pack_start(calib_amp, PACK_SHRINK);
 	calib_frame.add(calib_hbox);
 	
 	// Add to main GUI page
@@ -114,6 +123,7 @@ void WfcView::enable_gui() {
 	calib_setactval.set_sensitive(true);
 	calib_random.set_sensitive(true);
 	calib_waffle.set_sensitive(true);
+	calib_amp.set_sensitive(true);
 }
 
 void WfcView::disable_gui() {
@@ -124,14 +134,16 @@ void WfcView::disable_gui() {
 	calib_setactval.set_sensitive(false);
 	calib_random.set_sensitive(false);
 	calib_waffle.set_sensitive(false);
+	calib_amp.set_sensitive(false);
 }
 
 void WfcView::clear_gui() {
 	DevicePage::clear_gui();
 	log.term(format("%s", __PRETTY_FUNCTION__));
-	calib_setall.set_text("0");
+	calib_setall.set_value(0);
 	calib_setactid.set_value(0);
-	calib_setactval.set_text("0");
+	calib_setactval.set_value(0);
+	calib_amp.set_value(0.1);
 }
 
 void WfcView::on_wfcact_update() {
@@ -143,20 +155,19 @@ void WfcView::on_wfcact_update() {
 }
 
 void WfcView::on_calib_random_clicked() {
-	wfcctrl->send_cmd("act random");
+	wfcctrl->send_cmd(format("act random %g", calib_amp.get_value()));
 }
 
 void WfcView::on_calib_waffle_clicked() {
-	wfcctrl->send_cmd("act waffle");
+	wfcctrl->send_cmd(format("act waffle %g", calib_amp.get_value()));
 }
 
 void WfcView::on_calib_setall_act() {
-	double actval = strtof(calib_setall.get_text().c_str(), NULL);
-	wfcctrl->send_cmd(format("act all %g", actval));
+	wfcctrl->send_cmd(format("act all %g", calib_setall.get_value()));
 }
 
 void WfcView::on_calib_setact_act() {
-	double actval = strtof(calib_setactval.get_text().c_str(), NULL);
+	double actval = calib_setactval.get_value();
 	int actid = calib_setactid.get_value_as_int();
 	wfcctrl->send_cmd(format("act one %d %g", actid, actval));
 }

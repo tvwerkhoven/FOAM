@@ -45,14 +45,15 @@ private:
 	
 	Frame calib_frame;
 	HBox calib_hbox;
-	LabeledEntry calib_setall;
+	LabeledSpinEntry calib_setall;
 	VSeparator vsep1;
 	LabeledSpinEntry calib_setactid;
-	LabeledEntry calib_setactval;
+	LabeledSpinEntry calib_setactval;
 	VSeparator vsep2;
 	Button calib_random;
 	Button calib_waffle;
-	
+	LabeledSpinEntry calib_amp;
+
 	Frame wfcact_frame;
 	HBox wfcact_hbox;
 	BarGraph wfcact_gr;
