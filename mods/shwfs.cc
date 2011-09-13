@@ -61,9 +61,6 @@ method(Shift::COG)
 
 	add_cmd("get shifts");
 	
-	add_cmd("calibrate");
-	add_cmd("measure");
-	
 	//! @todo Move microlens array configuration to separate class
 	mlacfg.reserve(128);
 	
@@ -300,18 +297,11 @@ void Shwfs::init_infmat(const string &wfcname, const size_t nact, const vector <
 	
 	// Store number of actuator positions
 	calib[wfcname].meas.actpos = actpos;
-	size_t nactpos = actpos.size();
-	
-	if (nactpos < 2) {
-		io.msg(IO_WARN, "Shwfs::init_infmat(): Cannot calibrate with <2 positions.");
-		return;
-	}
-	
 	calib[wfcname].nact = nact;
 	calib[wfcname].nmeas = mlacfg.size() * 2;
 	
 	// Init influence measurement data
-	for (size_t i=0; i<nactpos; i++) {
+	for (size_t i=0; i<actpos.size(); i++) {
 		gsl_matrix_float *tmp = gsl_matrix_float_calloc(calib[wfcname].nmeas, nact);
 		calib[wfcname].meas.measmat.push_back(tmp);
 	}
@@ -355,7 +345,7 @@ int Shwfs::calc_infmat(string wfcname) {
 
 	/*
 	 This code is similar to the matrix method below, but this one might be more
-	 illustrative
+	 illustrative. Keep here as documentation
 	 
 	// Loop over all actuators
 	float dmeas, dact;
@@ -411,28 +401,6 @@ int Shwfs::calc_infmat(string wfcname) {
 	
 	return 0;
 }
-
-/*
-int Shwfs::gsl_linalg_SV_decomp_float(gsl_matrix_float *U, gsl_matrix_float *V, gsl_vector_float *s) {
-	// Copy matrices to double-precision versions
-	gsl_matrix *Ud = gsl_matrix_alloc(U->size1, U->size2);
-	gsl_matrix *Vd = gsl_matrix_alloc(V->size1, V->size2);
-	gsl_vector *sd = gsl_vector_alloc(s->size);
-	gsl_vector *workvec = gsl_vector_alloc(s->size);
-	
-	// Copy U to Ud
-	for (size_t i; i<U->size1; i++)
-		for (size_t j; j<U->size2; j++)
-			gsl_matrix_set(Ud, i, j, gsl_matrix_float_get(U, i, j));
-	
-	// Perform gsl_linalg_SV_decomp
-	gsl_linalg_SV_decomp(Ud, Vd, sd, workvec);
-	
-	// Copy back to single-precision
-	
-}
- */
-
 
 int Shwfs::calc_actmat(string wfcname, double singval, enum wfbasis /*basis*/) {
 	io.msg(IO_XNFO, "Shwfs::calc_actmat(): calc'ing for wfc '%s' with singval cutoff %g.",
@@ -494,7 +462,6 @@ int Shwfs::calc_actmat(string wfcname, double singval, enum wfbasis /*basis*/) {
 	for (size_t j=0; j < s->size; j++) {
 		double sval = gsl_vector_get(s, j);
 		sum2 += sval;
-//		io.msg(IO_DEB1, "Shwfs::calc_actmat(): singval %zu: %g (cumsum: %g)",  j, sval, sum2/sum);
 		if (sum2/sum < 0.85) acc85++;
 		if (sum2/sum < 0.9) acc90++;
 		if (sum2/sum < 0.95) acc95++;
@@ -660,11 +627,6 @@ void Shwfs::set_reference(Camera::frame_t *frame) {
 }
 
 void Shwfs::store_reference() {
-//	string outfile = mkfname("ref_vec.csv").str();
-//	io.msg(IO_DEB2, "Shwfs::store_reference() to " + outfile);
-//	Csv refvecdat(ref_vec);
-//	refvecdat.write(outfile, "Shwfs reference vector");
-
 	Path outf; FILE *fd;
 	outf = mkfname(format("ref_vec_%zu.csv", ref_vec->size));
 	fd = fopen(outf.c_str(), "w+");

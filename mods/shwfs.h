@@ -54,7 +54,7 @@ const string shwfs_type = "shwfs";
  
  Valid commends include:
  - mla generate: generate microlens array (MLA) pattern
- - mla find: heuristically find MLA
+ - mla find [simini_f] [sisize] [nmax] [iter]: heuristically find MLA 
  - mla store: store MLA pattern to disk
  - mla del <idx>: delete MLA subimage 'idx'
  - mla add <lx> <ly> <tx> <ty>: add MLA subimage with given coordinates
