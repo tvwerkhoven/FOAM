@@ -187,23 +187,8 @@ int FOAM_ExpoAO::calib() {
 
 	if (ptc->calib == "zero") {	// Calibrate reference/'flat' wavefront
 		io.msg(IO_INFO, "FOAM_ExpoAO::calib() Zero calibration");
-		// Set wavefront corrector to flat position, start camera
-		alpao_dm97->reset();
+		shwfs->calib_zero(alpao_dm97, ixoncam);
 
-		io.msg(IO_XNFO, "FOAM_ExpoAO::calib() Start camera...");
-		ixoncam->set_mode(Camera::RUNNING);
-		
-		io.msg(IO_XNFO, "FOAM_ExpoAO::calib() Measure reference...");
-		// Get next frame (wait for it)
-		Camera::frame_t *frame = ixoncam->get_next_frame(true);
-		
-		io.msg(IO_XNFO, "FOAM_ExpoAO::calib() Process data...");
-		// Set this frame as reference
-		ixonwfs->set_reference(frame);
-		ixonwfs->store_reference();
-		
-		// Restore seeing & wfc
-		ixoncam->set_mode(Camera::WAITING);
 	} else if (ptc->calib == "influence") {		// Calibrate influence function
 		io.msg(IO_INFO, "FOAM_ExpoAO::calib() influence calibration");
 		// Init actuation vector & positions, camera, 
@@ -211,11 +196,9 @@ int FOAM_ExpoAO::calib() {
 		actpos.push_back(-0.08);
 		actpos.push_back(0.08);
 		
-		ixonwfs->init_infmat(alpao_dm97->getname(), alpao_dm97->get_nact(), actpos);
-		
-		io.msg(IO_XNFO, "FOAM_ExpoAO::calib() Start camera...");
-		ixoncam->set_mode(Camera::RUNNING);
-		
+		// Calibrate for influence function now
+		simwfs->calib_influence(simwfc, simcam, actpos);
+
 		io.msg(IO_XNFO, "FOAM_ExpoAO::calib() Loosen mirror 10 times...");
 		for (int i=0; i < 10; i++) {
 			alpao_dm97->set_control(-0.2);

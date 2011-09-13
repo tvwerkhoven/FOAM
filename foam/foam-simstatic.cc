@@ -124,7 +124,7 @@ int FOAM_simstatic::closed_finish() {
 int FOAM_simstatic::calib() {
 	io.msg(IO_DEB2, "FOAM_simstatic::calib()=%s", ptc->calib.c_str());
 
-	if (ptc->calib == "INFLUENCE") {
+	if (ptc->calib == "influence") {
 		io.msg(IO_DEB2, "FOAM_simstatic::calib INFLUENCE");
 		usleep((useconds_t) 1.0 * 1000000);
 		return 0;
@@ -154,8 +154,7 @@ void FOAM_simstatic::on_message(Connection *connection, string line) {
 		else if (topic == "calib") {
 			connection->write(\
 												":calib <mode>:           Calibrate AO system.\n"
-												":  mode=influence:       Measure wfs-wfc influence.\n"
-												":  mode=subapsel:        Select subapertures.");
+												":  mode=influence:       Measure wfs-wfc influence.");
 		}
 		else if (!netio.ok) {
 			connection->write("err cmd help :topic unkown");

@@ -60,6 +60,7 @@ class ControlPage: public VBox {
 	HBox calibbox;
 	Label calmode_lbl;
 	ComboBoxText calmode_select;				//!< Possible calibrations modes in FOAM
+	LabeledEntry calmod_opt;						//!< (Optional) calibration options
 	SwitchButton calib;									//!< Start FOAM calibration mode, ControlPage::on_calib_clicked()
 
 	Frame statframe;
