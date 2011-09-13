@@ -164,12 +164,12 @@ int FOAM_FullSim::closed_loop() {
 		vec_str += format("%.3g ", gsl_vector_float_get(simwfc->ctrlparams.err, i));
 	io.msg(IO_INFO, "FOAM_FullSim::wfc_rec: %s", vec_str.c_str());
 	
-	simwfs->comp_shift(simwfc->getname(), simwfc->ctrlparams.err, wf_meas->wfamp);
+	simwfs->comp_shift(simwfc->getname(), simwfc->ctrlparams.err, tmp_wfmeas);
 	closedperf_addlog(5);
 	
 	vec_str = "";
-	for (size_t i=0; i<wf_meas->wfamp->size; i++)
-		vec_str += format("%.3g ", gsl_vector_float_get(wf_meas->wfamp, i));
+	for (size_t i=0; i<tmp_wfmeas->size; i++)
+		vec_str += format("%.3g ", gsl_vector_float_get(tmp_wfmeas, i));
 	io.msg(IO_INFO, "FOAM_FullSim::wfs_r: %s", vec_str.c_str());
 	
 	simwfc->update_control(simwfc->ctrlparams.err);
