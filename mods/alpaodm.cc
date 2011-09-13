@@ -129,6 +129,9 @@ int AlpaoDM::reset() {
 	set_control(0.0);
 	actuate();
 	
+	// Sleep a little to give the WFC time to relax
+	usleep(0.1*1E6);
+	
 	return 0;
 }
 
