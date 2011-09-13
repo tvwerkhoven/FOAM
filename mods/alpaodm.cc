@@ -127,17 +127,16 @@ int AlpaoDM::reset() {
 	// pre-calibrated offset vector as well (acedev5GetOffset) such that it is
 	// closer to flat.
 	set_control(0.0);
+	actuate();
+	
+	// Sleep a little to give the WFC time to relax
+	usleep(0.1*1E6);
 	
 	return 0;
 }
 
 int AlpaoDM::actuate(const bool /*block*/) {
 	// Copy from ctrlparams to local double array:
-	string act_vec_str = "";
-	for (size_t i=0; i<nact; i++) {
-		act_vec.at(i) = gsl_vector_float_get(ctrlparams.target, i);
-		act_vec_str += format("%g, ", act_vec.at(i));
-	}
 	
 	// acedev5Send expected pointer to double-array, take address of first
 	// vector element to satisfy this need. std::vector guarantees data contiguity

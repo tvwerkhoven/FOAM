@@ -149,7 +149,8 @@ public:
 	// set-like commands
 	void set_mode(aomode_t mode);
 	void shutdown() { send_cmd("shutdown"); }
-	void calibrate(string calmode) { send_cmd(format("calib %s", calmode.c_str())); }
+	void calibrate(const string &calmode) { send_cmd(format("calib %s", calmode.c_str())); }
+	void calibrate(const string &calmode, const string &opt) { send_cmd(format("calib %s %s", calmode.c_str(), opt.c_str())); }
 
 	
 	bool is_ok() { return ok; }

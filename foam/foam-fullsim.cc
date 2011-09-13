@@ -78,17 +78,17 @@ int FOAM_FullSim::open_init() {
 
 int FOAM_FullSim::open_loop() {
 	io.msg(IO_DEB2, "FOAM_FullSim::open_loop()");
-	open_perf.addlog(1);
+	openperf_addlog(1);
 	string vec_str;
 	
 	// Get next frame, simulcam takes care of all simulation
 	//!< @bug This call blocks and if the camera is stopped before it returns, it will hang
 	Camera::frame_t *frame = simcam->get_next_frame(true);
-	open_perf.addlog(2);
+	openperf_addlog(2);
 	
 	// Propagate simulated frame through system (WFS, algorithms, WFC)
 	Shwfs::wf_info_t *wf_meas = simwfs->measure(frame);
-	open_perf.addlog(3);
+	openperf_addlog(3);
 	
 	vec_str = "";
 	for (size_t i=0; i<wf_meas->wfamp->size; i++)
@@ -96,15 +96,15 @@ int FOAM_FullSim::open_loop() {
 	io.msg(IO_INFO, "FOAM_FullSim::wfs_m: %s", vec_str.c_str());
 
 	simwfs->comp_ctrlcmd(simwfc->getname(), wf_meas->wfamp, simwfc->ctrlparams.err);
-	open_perf.addlog(4);
-	
+	closedperf_addlog(4);
+
 	vec_str = "";
 	for (size_t i=0; i<simwfc->ctrlparams.err->size; i++)
 		vec_str += format("%.3g ", gsl_vector_float_get(simwfc->ctrlparams.err, i));
 	io.msg(IO_INFO, "FOAM_FullSim::wfc_rec: %s", vec_str.c_str());
 
 	simwfs->comp_shift(simwfc->getname(), simwfc->ctrlparams.err, wf_meas->wfamp);
-	open_perf.addlog(5);
+	closedperf_addlog(5);
 
 	vec_str = "";
 	for (size_t i=0; i<wf_meas->wfamp->size; i++)
@@ -136,16 +136,16 @@ int FOAM_FullSim::closed_init() {
 
 int FOAM_FullSim::closed_loop() {
 	io.msg(IO_DEB2, "FOAM_FullSim::closed_loop()");
-	closed_perf.addlog(1);
+	closedperf_addlog(1);
 	string vec_str;
 
 	// Get new frame from SimulCamera
 	Camera::frame_t *frame = simcam->get_next_frame(true);
-	closed_perf.addlog(2);
+	closedperf_addlog(2);
 
 	// Measure wavefront error with SHWFS
 	Shwfs::wf_info_t *wf_meas = simwfs->measure(frame);
-	closed_perf.addlog(3);
+	closedperf_addlog(3);
 	
 	vec_str = "";
 	for (size_t i=0; i<wf_meas->wfamp->size; i++)
@@ -153,7 +153,7 @@ int FOAM_FullSim::closed_loop() {
 	io.msg(IO_INFO, "FOAM_FullSim::wfs_m: %s", vec_str.c_str());
 	
 	simwfs->comp_ctrlcmd(simwfc->getname(), wf_meas->wfamp, simwfc->ctrlparams.err);
-	closed_perf.addlog(4);
+	closedperf_addlog(4);
 
 	vec_str = "";
 	for (size_t i=0; i<simwfc->ctrlparams.err->size; i++)
@@ -161,7 +161,7 @@ int FOAM_FullSim::closed_loop() {
 	io.msg(IO_INFO, "FOAM_FullSim::wfc_rec: %s", vec_str.c_str());
 	
 	simwfs->comp_shift(simwfc->getname(), simwfc->ctrlparams.err, wf_meas->wfamp);
-	closed_perf.addlog(5);
+	closedperf_addlog(5);
 	
 	vec_str = "";
 	for (size_t i=0; i<wf_meas->wfamp->size; i++)
@@ -170,7 +170,7 @@ int FOAM_FullSim::closed_loop() {
 	
 	simwfc->update_control(simwfc->ctrlparams.err);
 	simwfc->actuate(true);
-	closed_perf.addlog(6);
+	closedperf_addlog(6);
 
 	usleep(0.01 * 1000000);
 	return 0;
@@ -192,83 +192,34 @@ int FOAM_FullSim::calib() {
 
 	if (ptc->calib == "influence") {		// Calibrate influence function
 		// Init actuation vector & positions, camera, 
-		gsl_vector_float *tmpact = gsl_vector_float_calloc(simwfc->get_nact());
 		vector <float> actpos;
 		actpos.push_back(-1.0);
 		actpos.push_back(1.0);
-
-		simwfs->init_infmat(simwfc->getname(), simwfc->get_nact(), actpos);
 		
-		io.msg(IO_XNFO, "FOAM_FullSim::calib() Start camera...");
 		// Disable seeing during calibration
 		double old_seeingfac = simcam->get_seeingfac(); simcam->set_seeingfac(0.0);
 		bool old_do_wfcerr = simcam->do_simwfcerr; simcam->do_simwfcerr = false;
-		simcam->set_mode(Camera::RUNNING);
 		
-		// Loop over all actuators, actuate according to actpos
-		io.msg(IO_XNFO, "FOAM_FullSim::calib() Start calibration loop...");
-		for (int i = 0; i < simwfc->get_nact(); i++) {	// Loop over actuators
-			for (size_t p = 0; p < actpos.size(); p++) {	// Loop over actuator positions
-				if (ptc->mode != AO_MODE_CAL)
-					goto influence_break;
-				
-				// Set actuator to actpos[p], measure, store
-				gsl_vector_float_set(tmpact, i, actpos[p]);
-				simwfc->update_control(tmpact, gain_t(1,0,0), 0.0);
-				simwfc->actuate(true);
-				Camera::frame_t *frame = simcam->get_next_frame(true);
-				simwfs->build_infmat(simwfc->getname(), frame, i, p);
-			}
-			
-			// Set actuator back to 0
-			gsl_vector_float_set_zero(tmpact);
-			simwfc->update_control(tmpact, gain_t(1,0,0), 0.0);
-			simwfc->actuate(true);
-		}
+		// Calibrate for influence function now
+		simwfs->calib_influence(simwfc, simcam, actpos);
 		
-		io.msg(IO_XNFO, "FOAM_FullSim::calib() Process data...");
-		// Calculate the final influence function
-		simwfs->calc_infmat(simwfc->getname());
-		
-		// Calculate forward matrix
-		simwfs->calc_actmat(simwfc->getname());
-		
-		influence_break:
-		// Restore seeing
-		simcam->set_mode(Camera::WAITING);
+		// Reset seeing settings
 		simcam->set_seeingfac(old_seeingfac);
 		simcam->do_simwfcerr = old_do_wfcerr;
-		gsl_vector_float_free(tmpact);
 	} 
 	else if (ptc->calib == "zero") {	// Calibrate reference/'flat' wavefront
-		gsl_vector_float *tmpact = gsl_vector_float_calloc(simwfc->get_nact());
-		// Set wavefront corrector to flat position, start camera
-		simwfc->update_control(tmpact, gain_t(0.0, 0.0, 0.0), 0.0);
-		simwfc->actuate(true);
-
-		io.msg(IO_XNFO, "FOAM_FullSim::calib() Start camera...");
+		io.msg(IO_INFO, "FOAM_FullSim::calib() Zero calibration");
 		// Disable seeing & wfc during calibration
 		double old_seeingfac = simcam->get_seeingfac(); simcam->set_seeingfac(0.0);
 		bool old_do_wfcerr = simcam->do_simwfcerr; simcam->do_simwfcerr = false;
 		bool old_do_simwfc = simcam->do_simwfc; simcam->do_simwfc = false;
 
-		simcam->set_mode(Camera::RUNNING);
-		
-		io.msg(IO_XNFO, "FOAM_FullSim::calib() Measure reference...");
-		// Get next frame (wait for it)
-		Camera::frame_t *frame = simcam->get_next_frame(true);
-		
-		io.msg(IO_XNFO, "FOAM_FullSim::calib() Process data...");
-		// Set this frame as reference
-		simwfs->set_reference(frame);
-		simwfs->store_reference();
-		
+		simwfs->calib_zero(simwfc, simcam);
+
 		// Restore seeing & wfc
-		simcam->set_mode(Camera::WAITING);
 		simcam->set_seeingfac(old_seeingfac);
 		simcam->do_simwfc = old_do_simwfc;
 		simcam->do_simwfcerr = old_do_wfcerr;
-		gsl_vector_float_free(tmpact);
 	} 
 	else {
 		io.msg(IO_WARN, "FOAM_FullSim::calib unknown!");
@@ -294,26 +245,30 @@ void FOAM_FullSim::on_message(Connection *const conn, string line) {
 			conn->write(\
 												":==== full sim help =========================\n"
 												":get calibmodes:         List calibration modes\n"
-												":calib <mode>:           Calibrate AO system.");
+												":calib <mode> [opt]:     Calibrate AO system.");
 		}
 		else if (topic == "calib") {			// help calib
 			conn->write(\
-												":calib <mode>:           Calibrate AO system.\n"
+												":calib <mode> [opt]:     Calibrate AO system.\n"
 												":  mode=zero:            Set current WFS data as reference.\n"
-												":  mode=influence:       Measure wfs-wfc influence.");
+												":  mode=influence [singv]:\n"
+												":                        Measure wfs-wfc influence, cutoff at singv\n"
+												":  mode=svd [singv]:     Recalculate SVD wfs-wfc influence, cutoff at singv.");
 		}
 	}
 	else if (cmd == "get") {						// get ...
 		string what = popword(line);
 		if (what == "calibmodes")					// get calibmodes
-			conn->write("ok calibmodes 2 zero influence");
+			conn->write("ok calibmodes 3 zero influence svd");
 		else
 			parsed = false;
 	}
-	else if (cmd == "calib") {					// calib <mode>
+	else if (cmd == "calib") {					// calib <mode> [opt]
 		string calmode = popword(line);
+		string calopt = popword(line);
 		conn->write("ok cmd calib");
 		ptc->calib = calmode;
+		ptc->calib_opt = calopt;
 		ptc->mode = AO_MODE_CAL;
 		{
 			pthread::mutexholder h(&mode_mutex);

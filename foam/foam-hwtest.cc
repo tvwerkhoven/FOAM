@@ -148,8 +148,7 @@ void FOAM_hwtest::on_message(Connection *connection, string line) {
 		else if (topic == "calib") {
 			connection->write(\
 												":calib <mode>:           Calibrate AO system.\n"
-												":  mode=influence:       Measure wfs-wfc influence.\n"
-												":  mode=subapsel:        Select subapertures.");
+												":  mode=influence:       Measure wfs-wfc influence.");
 		}
 		else if (!netio.ok) {
 			connection->write("err cmd help :topic unkown");

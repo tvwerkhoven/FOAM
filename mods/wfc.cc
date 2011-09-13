@@ -220,6 +220,16 @@ int Wfc::reset() {
 	return 0;
 }
 
+void Wfc::loosen(const double amp, const int niter, const double delay) {
+	for (int iter=0; iter<niter; iter++) {
+		set_control(-1.0*amp);
+		actuate();
+		set_control(1.0*amp);
+		actuate();
+		usleep(delay * 1E6);
+	}
+}
+
 void Wfc::parse_waffle(string &odd, string &even) {
 	io.msg(IO_DEB2, "Wfc::parse_waffle(odd=%s, even=%s)", odd.c_str(), even.c_str());
 	if (odd.size() <= 0 || even.size() <= 0)
