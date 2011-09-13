@@ -195,6 +195,11 @@ int FOAM_FullSim::calib() {
 	io.msg(IO_DEB2, "FOAM_FullSim::calib()=%s", ptc->calib.c_str());
 
 	if (ptc->calib == "influence") {		// Calibrate influence function
+		double sval_cutoff = popdouble(ptc->calib_opt);
+		if (sval_cutoff <= 0.0 || sval_cutoff > 1.0)
+			sval_cutoff = 0.7;
+		io.msg(IO_INFO, "FOAM_FullSim::calib() influence calibration, sval=%g", sval_cutoff);
+
 		// Init actuation vector & positions, camera, 
 		vector <float> actpos;
 		actpos.push_back(-1.0);
@@ -205,7 +210,7 @@ int FOAM_FullSim::calib() {
 		bool old_do_wfcerr = simcam->do_simwfcerr; simcam->do_simwfcerr = false;
 		
 		// Calibrate for influence function now
-		simwfs->calib_influence(simwfc, simcam, actpos);
+		simwfs->calib_influence(simwfc, simcam, actpos, sval_cutoff);
 		
 		// Reset seeing settings
 		simcam->set_seeingfac(old_seeingfac);
@@ -225,6 +230,22 @@ int FOAM_FullSim::calib() {
 		simcam->do_simwfc = old_do_simwfc;
 		simcam->do_simwfcerr = old_do_wfcerr;
 	} 
+	else if (ptc->calib == "offsetvec") {	// Add offset vector to correction 
+		double xoff = popdouble(ptc->calib_opt);
+		double yoff = popdouble(ptc->calib_opt);
+		io.msg(IO_INFO, "FOAM_FullSim::calib() apply offset vector (%g, %g)", xoff, yoff);
+		
+		if (simwfs->calib_offset(xoff, yoff))
+			io.msg(IO_ERR, "FOAM_FullSim::calib() offset vector could not be applied!");
+	}
+	else if (ptc->calib == "svd") {	// (Re-)calculate SVD given the influence matrix
+		double sval_cutoff = popdouble(ptc->calib_opt);
+		if (sval_cutoff <= 0.0 || sval_cutoff > 1.0)
+			sval_cutoff = 0.7;
+		io.msg(IO_INFO, "FOAM_FullSim::calib() re-calc SVD, sval=%g", sval_cutoff);
+
+		simwfs->calc_actmat(simwfc->getname(), sval_cutoff);
+	}
 	else {
 		io.msg(IO_WARN, "FOAM_FullSim::calib unknown!");
 		return -1;
@@ -257,13 +278,15 @@ void FOAM_FullSim::on_message(Connection *const conn, string line) {
 												":  mode=zero:            Set current WFS data as reference.\n"
 												":  mode=influence [singv]:\n"
 												":                        Measure wfs-wfc influence, cutoff at singv\n"
+												":  mode=offsetvec [x] [y]:\n"
+												":                        Add offset vector to correction.\n"
 												":  mode=svd [singv]:     Recalculate SVD wfs-wfc influence, cutoff at singv.");
 		}
 	}
 	else if (cmd == "get") {						// get ...
 		string what = popword(line);
 		if (what == "calibmodes")					// get calibmodes
-			conn->write("ok calibmodes 3 zero influence svd");
+			conn->write("ok calibmodes 4 zero influence offsetvec svd");
 		else
 			parsed = false;
 	}
