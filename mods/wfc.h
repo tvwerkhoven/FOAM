@@ -52,7 +52,7 @@ const string wfc_type = "wfc";
  */
 class Wfc: public foam::Device {
 protected:
-	int nact;														//!< Number of actuators in this device
+	size_t nact;												//!< Number of actuators in this device
 	
 	string str_waffle_even;							//!< String representation of even actuators
 	string str_waffle_odd;							//!< String representation of odd actuators
@@ -63,7 +63,7 @@ protected:
 	string ctrl_as_str(const char *fmt="%.4f") const; //!< Return control vector ctrlparams.target as string (not thread-safe)
 
 protected:
-	void set_nact(const int val) { nact = val; }
+	void set_nact(const size_t val) { nact = val; }
 	
 public:
 	// Common Wfc settings
@@ -79,7 +79,7 @@ public:
 	
 	wfc_ctrl_t ctrlparams;
 	
-	int get_nact() const { return nact; }
+	size_t get_nact() const { return nact; }
 	
 	void set_gain(const double p, const double i, const double d) { ctrlparams.gain.p = p; ctrlparams.gain.i = i; ctrlparams.gain.d = d; }
 	

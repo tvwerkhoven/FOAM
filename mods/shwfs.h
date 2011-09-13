@@ -233,7 +233,7 @@ public:
 	 @param [in] *cam Camera to use for influence calculation
 	 @param [in] &actpos Actuator positions to use for measuring the influence function
 	 */
-	int calib_influence(Wfc *wfc, Camera *cam, const vector <float> &actpos);
+	int calib_influence(Wfc *wfc, Camera *cam, const vector <float> &actpos, const double sval_cutoff);
 	
 	/*! @brief Calibrate influence function between this WFS and *wfc using *cam
 	 
@@ -241,6 +241,13 @@ public:
 	 @param [in] *cam Camera to use for influence calculation
 	 */
 	int calib_zero(Wfc *wfc, Camera *cam);
+	
+	/*! @brief Add offset vector to correction
+	 
+	 @param [in] x x-offset
+	 @param [in] y y-offset
+	 */
+	int calib_offset(double x, double y);
 
 	/*! @brief Given shifts, compute control vector 
 	 
@@ -310,11 +317,17 @@ public:
 	
 	/*! @brief Calculate actuation matrix to drive Wfc, using SVD
 	 
+	 'Singval' can be used to tweak the SVD results:
+	 if singval = 0: abort
+	 if singval < 0: drop 'singval' number of modes (i.e. if nmodes = 50, singval = -5, use 45 modes)
+	 if singval > 1: use this amount of modes
+	 else: singval is between 0 and 1, use this amount of singular value in the reconstruction
+	 
 	 @param [in] wfcname Name of the WFC this WFS is calibrated with
-	 @param [in] singval How much singular value to include (0 to 1, 0.8 or lower is generally not recommended)
+	 @param [in] singval How much singular value/modes to include
 	 @param [in] basis Basis for which singval counts
 	 */	 
-	int calc_actmat(string wfcname, double singval=0.7, enum wfbasis basis = SENSOR);
+	int calc_actmat(string wfcname, double singval, enum wfbasis basis = SENSOR);
 	
 	/*! @brief Set this measurement as reference or 'flat' wavefront
 	 

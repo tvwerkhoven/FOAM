@@ -455,7 +455,8 @@ int Shwfs::calc_actmat(string wfcname, double singval, enum wfbasis /*basis*/) {
 		sum += gsl_vector_get(s, j);
 	
 	// Calculate various condition cutoffs
-	int acc85=0, acc90=0, acc95=0, accreq=0;
+	int acc85=0, acc90=0, acc95=0;
+	int use_nmodes=0;
 	double sum2=0;
 	for (size_t j=0; j < s->size; j++) {
 		double sval = gsl_vector_get(s, j);
@@ -463,27 +464,36 @@ int Shwfs::calc_actmat(string wfcname, double singval, enum wfbasis /*basis*/) {
 		if (sum2/sum < 0.85) acc85++;
 		if (sum2/sum < 0.9) acc90++;
 		if (sum2/sum < 0.95) acc95++;
-		if (sum2/sum < singval) accreq++;
+		if (sum2/sum < singval) use_nmodes++;
 	}
+	// If singval < 0, drop a few modes
+	if (singval < 0)
+		use_nmodes = (int) fmax(s->size - singval, 1.0);
+	// if singval > 1, use this many modes
+	else if (singval > 0)
+		use_nmodes = (int) fmin(s->size, singval);
+	// else, use as many modes to get a condition of 'singval' (already counted above)
+	
 	io.msg(IO_XNFO, "Shwfs::calc_actmat(): SVD condition: %g, nmodes: %zu", 
 				 gsl_vector_get(s, 0)/
 				 gsl_vector_get(s, s->size-1), 
 				 s->size);
 	io.msg(IO_XNFO, "Shwfs::calc_actmat(): cond 0.85 @ %d, 0.90 @ %d, 0.95 @ %d modes", 
 				 acc85, acc90, acc95);
-	io.msg(IO_XNFO, "Shwfs::calc_actmat(): requested cond %g @ %d modes.", singval, accreq);
+	io.msg(IO_XNFO, "Shwfs::calc_actmat(): singval == %g, using %d modes.", singval, use_nmodes);
 	
 	// Fill singular value *matrix* Sigma and store to disk
 	sum2 = 0.0;
 	gsl_matrix_set_zero(Sigma);
 	for (size_t j=0; j < s->size; j++) {
+		if (j == use_nmodes)
+			break;
+		
 		double sval = gsl_vector_get(s, j);
 		sum2 += sval;
 		if (sval != 0) sval = 1.0/sval;
 		
 		gsl_matrix_set(Sigma, j, j, sval);
-		if (sum2/sum >= singval)
-			break;
 	}
 	
 	outf = mkfname(wfcname + format("_Sigma_%zu_%zu.csv", Sigma->size1, Sigma->size2));
@@ -615,11 +625,12 @@ void Shwfs::set_reference(Camera::frame_t *frame) {
 
 	// Store these as reference positions
 	gsl_vector_float_memcpy(ref_vec, m->wfamp);
-	io.msg(IO_DEB2 | IO_NOLF, "Shwfs::set_reference() got: ");
+	string ref_vec_str;
 	for (size_t i=0; i<ref_vec->size; i++)
-		io.msg(IO_DEB2 | IO_NOLF | IO_NOID, "%.1f ", gsl_vector_float_get(ref_vec, i));
-	io.msg(IO_DEB2 | IO_NOLF, "\n");
+		ref_vec_str += format("%.1f ", gsl_vector_float_get(ref_vec, i));
 	
+	io.msg(IO_DEB2, "Shwfs::set_reference() got: %s", ref_vec_str.c_str());
+
 	// Reference is set, measure again to set 'shift_vec' to 0
 	measure();
 }
@@ -628,6 +639,9 @@ void Shwfs::store_reference() {
 	Path outf; FILE *fd;
 	outf = mkfname(format("ref_vec_%zu.csv", ref_vec->size));
 	fd = fopen(outf.c_str(), "w+");
+	if (!fd)
+		io.msg(IO_ERR, "Shwfs::store_reference(): could not open file '%s'!", outf.c_str());
+
 	gsl_vector_float_fprintf (fd, ref_vec, "%.12g");
 	fclose(fd);
 }
@@ -670,7 +684,7 @@ int Shwfs::calibrate() {
 	return 0;
 }
 
-int Shwfs::calib_influence(Wfc *wfc, Camera *cam, const vector <float> &actpos) {
+int Shwfs::calib_influence(Wfc *wfc, Camera *cam, const vector <float> &actpos, const double sval_cutoff) {
 	double wfc_response = 0.1;
 	
 	// Check sanity
@@ -711,7 +725,7 @@ int Shwfs::calib_influence(Wfc *wfc, Camera *cam, const vector <float> &actpos) 
 	calc_infmat(wfc->getname());
 	
 	// Calculate forward matrix
-	calc_actmat(wfc->getname());
+	calc_actmat(wfc->getname(), sval_cutoff);
 
 influence_break:
 	// Restore seeing
@@ -737,6 +751,25 @@ int Shwfs::calib_zero(Wfc *wfc, Camera *cam) {
 	
 	// Pause camera
 	cam->set_mode(Camera::WAITING);
+	return 0;
+}
+
+int Shwfs::calib_offset(double xoff, double yoff) {
+	if (!ref_vec)
+		return -1;
+	if (fabs(xoff) > (0.9 * sisize.x) || fabs(yoff) > (0.9 * sisize.y))
+		return io.msg(IO_ERR, "Shwfs::calib_offset(): offset > 0.9*sisize (=%d,%d), cannot apply!", sisize.x, sisize.y);
+	else if (fabs(xoff) > (0.5 * sisize.x) || fabs(yoff) > (0.5 * sisize.y))
+		io.msg(IO_WARN, "Shwfs::calib_offset(): fairly large offset, be careful!");
+	
+	float ref=0;
+	// Add xoff and yoff to ref_vec. The rest will take care of itself
+	for (size_t idx=0; idx<ref_vec->size; idx+=2) {
+		ref = gsl_vector_float_get(ref_vec, idx);
+		gsl_vector_float_set(ref_vec, idx, ref + xoff);
+		ref = gsl_vector_float_get(ref_vec, idx+1);
+		gsl_vector_float_set(ref_vec, idx+1, ref + yoff);
+	}
 	return 0;
 }
 

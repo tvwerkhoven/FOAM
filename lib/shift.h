@@ -69,7 +69,6 @@ class Shift {
 public:
 	typedef enum {
 		COG=0,														//!< Center of Gravity method
-		CORR,															//!< Cross-correlation method
 	} method_t;													//!< Different image shift calculation methods
 	
 private:
