@@ -122,10 +122,11 @@ int AlpaoDM::calibrate() {
 }
 
 int AlpaoDM::reset() {
-	if (acedev5SoftwareDACReset(1, &dm_id) == acecsFAILURE) {
-		acecsErrDisplay();
-		throw std::runtime_error("AlpaoDM: error at acedev5SoftwareDACReset()");
-	}
+	// Do not use acedev5SoftwareDACReset here as it sets 0 volts to all 
+	// actuators. Setting control vector 0 to all actuators applies a 
+	// pre-calibrated offset vector as well (acedev5GetOffset) such that it is
+	// closer to flat.
+	set_control(0.0);
 	
 	return 0;
 }
