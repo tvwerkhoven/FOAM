@@ -48,6 +48,7 @@ foam_simstat_SOURCES = foam-simstatic.cc \
 		$(MODS_DIR)/camera.cc \
 		$(MODS_DIR)/dummycam.cc \
 		$(MODS_DIR)/imgcam.cc \
+		$(MODS_DIR)/wfc.cc \
 		$(MODS_DIR)/wfs.cc \
 		$(MODS_DIR)/shwfs.cc \
 		$(LIB_DIR)/shift.cc
@@ -58,6 +59,7 @@ foam_simstat_SOURCES += foam-simstatic.h \
 		$(MODS_DIR)/camera.h \
 		$(MODS_DIR)/dummycam.h \
 		$(MODS_DIR)/imgcam.h \
+		$(MODS_DIR)/wfc.h \
 		$(MODS_DIR)/wfs.h \
 		$(MODS_DIR)/shwfs.h \
 		$(LIB_DIR)/shift.h
