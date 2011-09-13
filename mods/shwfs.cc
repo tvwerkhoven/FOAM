@@ -615,11 +615,12 @@ void Shwfs::set_reference(Camera::frame_t *frame) {
 
 	// Store these as reference positions
 	gsl_vector_float_memcpy(ref_vec, m->wfamp);
-	io.msg(IO_DEB2 | IO_NOLF, "Shwfs::set_reference() got: ");
+	string ref_vec_str;
 	for (size_t i=0; i<ref_vec->size; i++)
-		io.msg(IO_DEB2 | IO_NOLF | IO_NOID, "%.1f ", gsl_vector_float_get(ref_vec, i));
-	io.msg(IO_DEB2 | IO_NOLF, "\n");
+		ref_vec_str += format("%.1f ", gsl_vector_float_get(ref_vec, i));
 	
+	io.msg(IO_DEB2, "Shwfs::set_reference() got: %s", ref_vec_str.c_str());
+
 	// Reference is set, measure again to set 'shift_vec' to 0
 	measure();
 }
