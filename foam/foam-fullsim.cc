@@ -179,7 +179,7 @@ int FOAM_FullSim::closed_loop() {
 int FOAM_FullSim::closed_finish() {
 	io.msg(IO_DEB2, "FOAM_FullSim::closed_finish()");
 	
-	simcam->set_mode(Camera::OFF);
+	simcam->set_mode(Camera::WAITING);
 
 	return 0;
 }
@@ -235,7 +235,7 @@ int FOAM_FullSim::calib() {
 		
 		influence_break:
 		// Restore seeing
-		simcam->set_mode(Camera::OFF);
+		simcam->set_mode(Camera::WAITING);
 		simcam->set_seeingfac(old_seeingfac);
 		simcam->do_simwfcerr = old_do_wfcerr;
 		gsl_vector_float_free(tmpact);
@@ -264,7 +264,7 @@ int FOAM_FullSim::calib() {
 		simwfs->store_reference();
 		
 		// Restore seeing & wfc
-		simcam->set_mode(Camera::OFF);
+		simcam->set_mode(Camera::WAITING);
 		simcam->set_seeingfac(old_seeingfac);
 		simcam->do_simwfc = old_do_simwfc;
 		simcam->do_simwfcerr = old_do_wfcerr;
