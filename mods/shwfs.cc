@@ -144,14 +144,15 @@ void Shwfs::on_message(Connection *const conn, string line) {
 			gen_mla_grid(mlacfg, cam.get_res(), sisize, sipitch, xoff, disp, shape, overlap);
 		} else if(what == "find") {				// mla find [simini_f] [sisize] [nmax] [iter]
 			conn->addtag("mla");
-			int nmax=-1, iter=1, tmp = popint(line);
-			if (tmp > 0) simini_f = tmp;
-			tmp = popint(line);
-			if (tmp > 0) sisize = tmp;
-			tmp = popdouble(line);
-			if (tmp > 0) nmax = tmp;
-			tmp = popint(line);
-			if (tmp > 0) iter = tmp;
+			int nmax=-1, iter=1, tmpi=0;
+			double tmpd = popdouble(line);
+			if (tmpd > 0) simini_f = tmpd;
+			tmpi = popint(line);
+			if (tmpi > 0) sisize = tmpi;
+			tmpi = popint(line);
+			if (tmpi > 0) nmax = tmpi;
+			tmpi = popint(line);
+			if (tmpi > 0) iter = tmpi;
 			
 			find_mla_grid(mlacfg, sisize, simini_f, nmax, iter);
 		} else if(what == "store") {			// mla store [reserved] [overwrite]
