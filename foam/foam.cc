@@ -44,19 +44,24 @@
 using namespace std;
 
 FOAM::FOAM(int argc, char *argv[]):
+do_sighandle(true),
 nodaemon(false), error(false), conffile(FOAM_DEFAULTCONF), execname(argv[0]),
 io(IO_DEB2)
 {
 	io.msg(IO_DEB2, "FOAM::FOAM()");
 	
-	sighandler.quit_func = sigc::mem_fun(*this, &FOAM::stopfoam);
-	
-	devices = new foam::DeviceManager(io);
 	
 	if (parse_args(argc, argv)) {
 		error = true;
 		exit(-1);
 	}
+	if (do_sighandle) {
+		sighandler = new SigHandle();
+		sighandler->quit_func = sigc::mem_fun(*this, &FOAM::stopfoam);
+	}
+	
+	devices = new foam::DeviceManager(io);
+	
 	if (load_config()) {
 		error = true;
 		exit(-1);
@@ -94,11 +99,12 @@ FOAM::~FOAM() {
 	// Delete network IO
 	delete protocol;
 	delete ptc;
+	delete sighandler;
 	io.msg(IO_INFO, "FOAM succesfully quit");
 }
 
 void FOAM::stopfoam() {
-	io.msg(IO_INFO, "FOAM::stopfoam() stopping on signal: %s", sighandler.get_sig_info().c_str());
+	io.msg(IO_INFO, "FOAM::stopfoam() stopping on signal: %s", sighandler->get_sig_info().c_str());
 	
 	// Set mode to SHUTDOWN, such that the running program can stop
 	ptc->mode = AO_MODE_SHUTDOWN;
@@ -121,7 +127,7 @@ int FOAM::init() {
 	
 	// Try to load setup-specific modules 
 	if (load_modules())
-		return io.msg(IO_ERR, "Could not load modules, aborting. Check your code.");
+		return io.msg(IO_ERR, "Could not load modules, aborting. Check your code & configuration.");
 	
 	// Verify setup integrity
 	if (verify())
@@ -151,6 +157,7 @@ void FOAM::show_clihelp(const bool error = false) const {
 					 "      --showthreads    Prefix logging with thread ID.\n"
 					 "  -q,                  Decrease verbosity level.\n"
 					 "      --nodaemon       Do not start network daemon.\n"
+					 "  -s, --sighandle=0|1  Toggle signal handling (default: 1).\n"
 					 "  -h, --help           Display this help message.\n"
 					 "      --version        Display version information.\n\n");
 		printf("Report bugs to %s.\n", PACKAGE_BUGREPORT);
@@ -192,30 +199,41 @@ int FOAM::parse_args(int argc, char *argv[]) {
 		{"verb", required_argument, NULL, 2},
 		{"nodaemon", no_argument, NULL, 3},
 		{"showthreads", no_argument, NULL, 4},
+		{"sighandle", required_argument, NULL, 's'},
 		{NULL, 0, NULL, 0}
 	};
 	
-	while((r = getopt_long(argc, argv, "c:hvq", long_options, &option_index)) != EOF) {
+	while((r = getopt_long(argc, argv, "c:hvqs:", long_options, &option_index)) != EOF) {
 		switch(r) {
 			case 0:
 				break;
 			case 'c':												// Configuration file
+				io.msg(IO_DEB2, "FOAM::parse_args() -c: %s", optarg);
 				conffile = string(optarg);
 				break;
 			case '?':												// Help
 			case 'h':												// Help
+				io.msg(IO_DEB2, "FOAM::parse_args() -h/-?");
 				show_clihelp();
 				return -1;
 			case 1:													// Version info
+				io.msg(IO_DEB2, "FOAM::parse_args() --version");
 				show_version();
 				return -1;
 			case 'q':												// Decrease verbosity
+				io.msg(IO_DEB2, "FOAM::parse_args() -q");
 				io.decVerb();
 				break;
+			case 's':												// Signal handling
+				io.msg(IO_DEB2, "FOAM::parse_args() -s: %s", optarg);
+				do_sighandle = bool(strtol(optarg, NULL, 10));
+				break;
 			case 'v':												// Increase verbosity
+				io.msg(IO_DEB2, "FOAM::parse_args() -v");
 				io.incVerb();
 				break;
 			case 2:													// Set verbosity
+				io.msg(IO_DEB2, "FOAM::parse_args() --verb: %s", optarg);
 				if(optarg)
 					io.setVerb((int) atoi(optarg));
 				else {
@@ -224,12 +242,15 @@ int FOAM::parse_args(int argc, char *argv[]) {
 				}
 				break;
 			case 3:													// Don't run daemon
+				io.msg(IO_DEB2, "FOAM::parse_args() --nodaemon");
 				nodaemon = true;
 				break;
 			case 4:													// Show threads in logging
+				io.msg(IO_DEB2, "FOAM::parse_args() --showthreads");
 				io.setdefmask(IO_THR);
 				break;
 			default:
+				io.msg(IO_DEB2, "FOAM::parse_args() unknown");
 				show_clihelp();
 				return -1;
 		}

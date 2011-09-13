@@ -169,7 +169,7 @@ private:
 	
 	Gtk::HBox hbox1;
 	SwitchButton b_autoupd;										//!< Auto update button
-	LabeledEntry e_autointval;								//!< Auto update interval
+	LabeledSpinEntry e_autointval;						//!< Auto update interval
 
 	Gtk::EventBox gr_events;
 	Gtk::Image gr_img;
@@ -180,6 +180,8 @@ private:
 	void do_update() { slot_update(); }				//!< Wrapper for slot_update
 	
 	void on_autoupd_clicked();								//!< Callback for b_autoupd
+	sigc::connection refresh_timer;						//!< For Glib::signal_timeout()
+	struct timeval lastupd;										//!< Time of last update
 	
 public:
 	BarGraph(const int width=480, const int height=100);

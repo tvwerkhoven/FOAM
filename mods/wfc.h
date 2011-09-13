@@ -121,7 +121,6 @@ public:
 	 @param [in] val Value to set on actuators
 	 */
 	int set_wafflepattern(const float val);
-	
 	/*! @brief Set random pattern on DM with maximum value 'maxval'
 	 
 	 @param [in] maxval Range of random values to set on actuators
@@ -136,6 +135,7 @@ public:
 	virtual int actuate(const bool block=false) = 0;
 		
 	virtual int calibrate();						//!< Calibrate actuator
+	virtual int reset();								//!< Reset mirror to best known 'flat' position
 	
 	// From Device::
 	virtual void on_message(Connection *const conn, string line);

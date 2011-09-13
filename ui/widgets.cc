@@ -26,11 +26,32 @@
 using namespace std;
 using namespace Gtk;
 
+static void log_term(string msg) {
+	FILE *stream=stderr;
+	bool showthread=true;
+	if (showthread) {
+		pthread_t pt = pthread_self();
+		unsigned char *ptc = (unsigned char*)(void*)(&pt);
+		char thrid[2+2*sizeof(pt)+1];
+		sprintf(thrid, "0x");
+		for (size_t i=0; i<sizeof(pt); i++)
+			sprintf(thrid, "%s%02x", thrid, (unsigned)(ptc[i]));
+		
+		fprintf(stream, "(%s) %s\n", thrid, msg.c_str());
+	} else {
+		fprintf(stream, "%s\n", msg.c_str());
+	}
+}
+
 BarGraph::BarGraph(const int width, const int height):
 e_minval("Min"), e_maxval("Max"), e_allval("All"),
 b_refresh(Gtk::Stock::REFRESH),
-b_autoupd("Auto Update"), e_autointval("", "Sec"),
+b_autoupd("Auto Update"), e_autointval("", "s"),
 gr_align(0.5, 0.5, 0.0, 0.0) {
+	// Init lastupd to 0 ('never')
+	lastupd.tv_sec = 0;
+	lastupd.tv_usec = 0;
+
 	// Set entry fields to non editable (read-only)
 	e_minval.set_width_chars(6);
 	e_minval.set_editable(false);
@@ -39,9 +60,11 @@ gr_align(0.5, 0.5, 0.0, 0.0) {
 	e_allval.set_width_chars(14);
 	e_allval.set_editable(false);
 	
-	e_autointval.set_width_chars(6);
-	e_autointval.set_text("1");
-	
+	e_autointval.set_digits(2);
+	e_autointval.set_value(1.0);
+	e_autointval.set_increments(0.1, 1);
+	e_autointval.set_range(0, 10.0);
+
 	// Initialize pixbuf and image
 	gr_pixbuf = Gdk::Pixbuf::create(Gdk::COLORSPACE_RGB, false, 8, width, height);
 	gr_pixbuf->fill(0xFFFFFF00);
@@ -74,26 +97,25 @@ gr_align(0.5, 0.5, 0.0, 0.0) {
 	b_refresh.signal_clicked().connect(sigc::mem_fun(*this, &BarGraph::do_update));
 	b_autoupd.signal_clicked().connect(sigc::mem_fun(*this, &BarGraph::on_autoupd_clicked));
 	
-	Glib::signal_timeout().connect(sigc::mem_fun(*this, &BarGraph::on_timeout), 1000.0/30.0);
+	refresh_timer = Glib::signal_timeout().connect(sigc::mem_fun(*this, &BarGraph::on_timeout), 1000.0/30.0);
 }
 
 BarGraph::~BarGraph() {
 	//! @todo delete Pixbuf here?
-	
+	refresh_timer.disconnect();
 }
 
 bool BarGraph::on_timeout() {
 	// This function fires 30 times/s, if we do not want that many updates we can throttle it with subi_vecdelay
-	static struct timeval now, last;
+	struct timeval now;
 	gettimeofday(&now, NULL);
 	// If b_autoupd is 'clear' we don't want shifts, if 'waiting' we're expecting new shifts soon, otherwise if button is 'OK': get new shifts
-	string str_autointval = e_autointval.get_text();
 	if (b_autoupd.get_state() == SwitchButton::OK && 
-			((now.tv_sec - last.tv_sec) + (now.tv_usec - last.tv_usec)/1000000.) > strtof(str_autointval.c_str(), NULL) ) {
+			((now.tv_sec - lastupd.tv_sec) + (now.tv_usec - lastupd.tv_usec)/1000000.) > e_autointval.get_value() ) {
 		b_autoupd.set_state(SwitchButton::WAITING);
-		fprintf(stderr, "BarGraph::on_timeout(): slot_update()\n");
+		log_term(format("%s: slot_update", __PRETTY_FUNCTION__));
 		slot_update();
-		gettimeofday(&last, NULL);
+		gettimeofday(&lastupd, NULL);
 	}
 	return true;
 }
@@ -104,10 +126,14 @@ void BarGraph::on_autoupd_clicked() {
 	// -> if WAITING, OK or ERROR: set to CLEAR and stop everything
 	if (b_autoupd.get_state() == SwitchButton::CLEAR) {
 		b_autoupd.set_state(SwitchButton::OK);
+		log_term(format("%s: on_timeout start", __PRETTY_FUNCTION__));
 		on_timeout();
+		log_term(format("%s: on_timeout done", __PRETTY_FUNCTION__));
 	}
-	else
+	else {
 		b_autoupd.set_state(SwitchButton::CLEAR);
+		log_term(format("%s: clear", __PRETTY_FUNCTION__));
+	}
 }
 
 void BarGraph::on_update(const std::vector< double > &graph_vals) {

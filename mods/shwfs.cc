@@ -77,8 +77,8 @@ method(Shift::COG)
 	if (cfg.exists("sipitch"))
 		sipitch.x = sipitch.y = cfg.getint("sipitch");
 	
-	disp.x = cfg.getint("dispx", cam.get_width()/2);
-	disp.y = cfg.getint("dispy", cam.get_height()/2);
+	disp.x = cfg.getint("dispx", 0); //cam.get_width()/2
+	disp.y = cfg.getint("dispy", 0); //cam.get_height()/2
 	if (cfg.exists("disp"))
 		disp.x = disp.y = cfg.getint("disp");
 	
@@ -142,13 +142,13 @@ void Shwfs::on_message(Connection *const conn, string line) {
 			//! @todo get extra options from line
 			conn->addtag("mla");
 			gen_mla_grid(mlacfg, cam.get_res(), sisize, sipitch, xoff, disp, shape, overlap);
-		} else if(what == "find") {				// mla find [sisize] [simini_f] [nmax] [iter]
+		} else if(what == "find") {				// mla find [simini_f] [sisize] [nmax] [iter]
 			conn->addtag("mla");
 			int nmax=-1, iter=1, tmp = popint(line);
-			if (tmp > 0) sisize = tmp;
-			tmp = popdouble(line);
 			if (tmp > 0) simini_f = tmp;
 			tmp = popint(line);
+			if (tmp > 0) sisize = tmp;
+			tmp = popdouble(line);
 			if (tmp > 0) nmax = tmp;
 			tmp = popint(line);
 			if (tmp > 0) iter = tmp;
@@ -189,7 +189,7 @@ void Shwfs::on_message(Connection *const conn, string line) {
 		} else if(what == "get") {				// mla get
 			conn->write("ok mla " + get_mla_str());
 		}
-	} else if (command == "get") {
+	} else if (command == "get") {			// get shifts
 		string what = popword(line);
 		
 		if (what == "shifts")
@@ -223,7 +223,7 @@ Wfs::wf_info_t* Shwfs::measure(Camera::frame_t *frame) {
 	// Calculate shifts
 	if (cam.get_depth() == 16) {
 		io.msg(IO_DEB2, "Shwfs::measure() got UINT16");
-		//shifts.calc_shifts((uint16_t *) frame->image, cam.get_res(), (Shift::crop_t *) mlacfg.ml, mlacfg.size(), shift_vec, method);
+		shifts.calc_shifts((uint16_t *) frame->image, cam.get_res(), mlacfg, shift_vec, method);
 	}
 	else if (cam.get_depth() == 8) {
 		io.msg(IO_DEB2, "Shwfs::measure() got UINT8");
@@ -480,7 +480,7 @@ int Shwfs::calc_actmat(string wfcname, double singval, enum wfbasis /*basis*/) {
 		sum += gsl_vector_get(s, j);
 	
 	// Calculate various condition cutoffs
-	int acc85=0, acc90=0, acc95=0;
+	int acc85=0, acc90=0, acc95=0, accreq=0;
 	double sum2=0;
 	for (size_t j=0; j < s->size; j++) {
 		double sval = gsl_vector_get(s, j);
@@ -489,6 +489,7 @@ int Shwfs::calc_actmat(string wfcname, double singval, enum wfbasis /*basis*/) {
 		if (sum2/sum < 0.85) acc85++;
 		if (sum2/sum < 0.9) acc90++;
 		if (sum2/sum < 0.95) acc95++;
+		if (sum2/sum < singval) accreq++;
 	}
 	io.msg(IO_XNFO, "Shwfs::calc_actmat(): SVD condition: %g, nmodes: %zu", 
 				 gsl_vector_get(s, 0)/
@@ -496,16 +497,19 @@ int Shwfs::calc_actmat(string wfcname, double singval, enum wfbasis /*basis*/) {
 				 s->size);
 	io.msg(IO_XNFO, "Shwfs::calc_actmat(): cond 0.85 @ %d, 0.90 @ %d, 0.95 @ %d modes", 
 				 acc85, acc90, acc95);
+	io.msg(IO_XNFO, "Shwfs::calc_actmat(): requested cond %g @ %d modes.", singval, accreq);
 	
 	// Fill singular value *matrix* Sigma and store to disk
 	sum2 = 0.0;
+	gsl_matrix_set_zero(Sigma);
 	for (size_t j=0; j < s->size; j++) {
 		double sval = gsl_vector_get(s, j);
 		sum2 += sval;
 		if (sval != 0) sval = 1.0/sval;
 		
 		gsl_matrix_set(Sigma, j, j, sval);
-		//if (sum2/sum <= singval)
+		if (sum2/sum >= singval)
+			break;
 	}
 	
 	outf = mkfname(wfcname + format("_Sigma_%zu_%zu.csv", Sigma->size1, Sigma->size2));
@@ -625,10 +629,15 @@ gsl_vector_float *Shwfs::comp_shift(const string &wfcname, const gsl_vector_floa
 }
 
 void Shwfs::set_reference(Camera::frame_t *frame) {
+	// Set old reference vector to 0
+	gsl_vector_float_set_zero(ref_vec);
+
 	// Measure shifts
 	wf_info_t *m = measure(frame);
-	if (!m)
+	if (!m) {
+		io.msg(IO_WARN, "Shwfs::set_reference() failed to measure reference frame @ %p!", frame);
 		return;
+	}
 
 	// Store these as reference positions
 	gsl_vector_float_memcpy(ref_vec, m->wfamp);
@@ -636,6 +645,9 @@ void Shwfs::set_reference(Camera::frame_t *frame) {
 	for (size_t i=0; i<ref_vec->size; i++)
 		io.msg(IO_DEB2 | IO_NOLF | IO_NOID, "%.1f ", gsl_vector_float_get(ref_vec, i));
 	io.msg(IO_DEB2 | IO_NOLF, "\n");
+	
+	// Reference is set, measure again to set 'shift_vec' to 0
+	measure();
 }
 
 void Shwfs::store_reference() {
@@ -718,10 +730,10 @@ int Shwfs::gen_mla_grid(std::vector<vector_t> &mlacfg, const coord_t res, const 
 			
 			if (shape == CIRCULAR) {
 				if (pow(fabs(sa_c.x) + (overlap-0.5)*size.x, 2) + pow(fabs(sa_c.y) + (overlap-0.5)*size.y, 2) < minradsq) {
-					tmpsi = vector_t(sa_c.x + disp.x - size.x/2,
-									 sa_c.y + disp.y - size.y/2,
-									 sa_c.x + disp.x + size.x/2,
-									 sa_c.y + disp.y + size.y/2);
+					tmpsi = vector_t(sa_c.x + res.x/2 + disp.x - size.x/2,
+									 sa_c.y + res.y/2 + disp.y - size.y/2,
+									 sa_c.x + res.x/2 + disp.x + size.x/2,
+									 sa_c.y + res.y/2 + disp.y + size.y/2);
 					mlacfg.push_back(tmpsi);
 				}
 			}
@@ -729,10 +741,10 @@ int Shwfs::gen_mla_grid(std::vector<vector_t> &mlacfg, const coord_t res, const 
 				// Accept a subimage coordinate (center position) the position + 
 				// half-size the subaperture is within the bounds
 				if ((fabs(sa_c.x + (overlap-0.5)*size.x) < res.x/2) && (fabs(sa_c.y + (overlap-0.5)*size.y) < res.y/2)) {
-					tmpsi = vector_t(sa_c.x + disp.x - size.x/2,
-													 sa_c.y + disp.y - size.y/2,
-													 sa_c.x + disp.x + size.x/2,
-													 sa_c.y + disp.y + size.y/2);
+					tmpsi = vector_t(sa_c.x + res.x/2 + disp.x - size.x/2,
+													 sa_c.y + res.y/2 + disp.y - size.y/2,
+													 sa_c.x + res.x/2 + disp.x + size.x/2,
+													 sa_c.y + res.y/2 + disp.y + size.y/2);
 					mlacfg.push_back(tmpsi);
 				}
 			}
@@ -797,8 +809,8 @@ int Shwfs::find_mla_grid(std::vector<vector_t> &mlacfg, const coord_t size, cons
 
 	// Store current camera count, get last frame
 	Camera::frame_t *f = cam.get_last_frame();
-	void *image;
-	size_t imsize;
+	void *image=NULL;
+	size_t imsize=0;
 	
 	if (f == NULL) {
 		io.msg(IO_WARN, "Shwfs::find_mla_grid() Could not get frame, is the camera running?");
@@ -807,10 +819,12 @@ int Shwfs::find_mla_grid(std::vector<vector_t> &mlacfg, const coord_t size, cons
 		// Copy frame for ourselves while we are looking for a grid. This prevents the camera from overwriting the frame we are using
 		imsize = f->size;
 		image = malloc(imsize);
+		io.msg(IO_XNFO, "Shwfs::find_mla_grid() copy from from %p to %p (size=%zu)", f->image, image, imsize);
+		if (!image)
+			throw format("Shwfs::find_mla_grid() Could not allocate memory (size=%zu)!", imsize);
 		memcpy(image, f->image, imsize);
 	}
 
-	
 	vector_t tmpsi;
 	mlacfg.clear();
 	
@@ -828,7 +842,8 @@ int Shwfs::find_mla_grid(std::vector<vector_t> &mlacfg, const coord_t size, cons
 	int mini = maxi * mini_f;
 	if (mini <= 0) {
 		io.msg(IO_WARN, "Shwfs::find_mla_grid() I_min < 0, something went wrong, aborting.");
-		return 0;
+		free(image);
+		return mlacfg.size();
 	}
 	
 	io.msg(IO_DEB2, "Shwfs::find_mla_grid(maxi=%d, mini_f=%g, mini=%d)", maxi, mini_f, mini);
@@ -846,8 +861,10 @@ int Shwfs::find_mla_grid(std::vector<vector_t> &mlacfg, const coord_t size, cons
 		}
 		
 		// Intensity too low, done
-		if (maxi < mini)
+		if (maxi < mini) {
+			io.msg(IO_XNFO, "Shwfs::find_mla_grid() maxi(%d) < mini(%d), break", maxi, mini);
 			break;
+		}
 		
 		// Add new subimage
 		tmpsi = vector_t((maxidx % cam.get_width()) - size.x/2,
@@ -861,18 +878,24 @@ int Shwfs::find_mla_grid(std::vector<vector_t> &mlacfg, const coord_t size, cons
 					 maxi, maxidx, tmpsi.lx, tmpsi.ly, (int) mlacfg.size(), nmax);
 
 		// If we have enough subimages, done
-		if ((int) mlacfg.size() == nmax)
+		if ((int) mlacfg.size() == nmax) {
+			io.msg(IO_XNFO, "Shwfs::find_mla_grid() mlacfg.size()(%zu) == nmax(%d), break", mlacfg.size(), nmax);
 			break;
+		}
 		if ((int) mlacfg.size() >= cam.get_width()*cam.get_height()/size.x/size.y) {
+			//!< @todo check this code, does aborting work?
 			io.msg(IO_WARN, "Shwfs::find_mla_grid() subaperture detection overflow, aborting!");
+			free(image);
 			mlacfg.clear();
-			return 0;
+			mlacfg.size(); 
 		}
 		
 		// Set the current subimage to zero such that we don't detect it next time
 		int xran[] = {max(0, tmpsi.lx), min(cam.get_width(), tmpsi.tx)};
 		int yran[] = {max(0, tmpsi.ly), min(cam.get_height(), tmpsi.ty)};
 		
+//		io.msg(IO_DEB1, "Shwfs::find_mla_grid() setting to zero from (%d, %d) to (%d, %d)", 
+//					 xran[0], yran[0], xran[1], yran[1]);
 		if (cam.get_depth() <= 8) {
 			uint8_t *cimg = (uint8_t *)image;
 			for (int y=yran[0]; y<yran[1]; y++)
@@ -896,7 +919,7 @@ int Shwfs::find_mla_grid(std::vector<vector_t> &mlacfg, const coord_t size, cons
 	net_broadcast("ok mla " + get_mla_str(), "mla");
 	// Re-calibrate with new settings
 	calibrate();
-	
+
 	free(image);
 
 	return (int) mlacfg.size();
@@ -1002,15 +1025,17 @@ string Shwfs::get_shifts_str() const {
 	
 	// Return all shifts in one string
 	//! @bug This might cause problems when others are writing this data!
-	ret = format("%d ", (int) shift_vec->size);
+	ret = format("%d ", (int) shift_vec->size/2);
 	
-	for (size_t i=0; i<shift_vec->size/2; i++) {
-		fcoord_t vec_origin(mlacfg[i].lx/2 + mlacfg[i].tx/2, mlacfg[i].ly/2 + mlacfg[i].ty/2);
-		ret += format("%d %g %g %g %g ", (int) i, 
-									vec_origin.x,
-									vec_origin.y,
-									vec_origin.x + gsl_vector_float_get(shift_vec, i*2+0), 
-									vec_origin.y + gsl_vector_float_get(shift_vec, i*2+1));
+	for (size_t idx=0; idx<shift_vec->size/2; idx++) {
+		ret += format("%d %g %g %g %g %g %g ", 
+									(int) idx, 
+									0.5 * (mlacfg.at(idx).lx + mlacfg.at(idx).tx),
+									0.5 * (mlacfg.at(idx).ly + mlacfg.at(idx).ty),
+									gsl_vector_float_get(ref_vec, idx*2+0),
+									gsl_vector_float_get(ref_vec, idx*2+1),
+									gsl_vector_float_get(shift_vec, idx*2+0), 
+									gsl_vector_float_get(shift_vec, idx*2+1));
 	}
 	
 	return ret;

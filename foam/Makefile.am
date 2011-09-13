@@ -157,3 +157,43 @@ foam_fullsim_LDFLAGS = $(FULLSIM_LIBS) $(AM_LDFLAGS)
 
 endif HAVE_FULLSIM
 ### END FULL SIMULATION MODE ###
+
+### EXPOAO BUILD TARGET ###
+###########################
+
+if HAVE_EXPOAO
+# building expoao foam target
+
+bin_PROGRAMS += foam-expoao
+
+foam_expoao_SOURCES = foam-expoao.cc \
+		$(FRAME_SRC) \
+		$(MODS_DIR)/camera.cc \
+		$(MODS_DIR)/andor.cc \
+		$(MODS_DIR)/shwfs.cc \
+		$(MODS_DIR)/wfs.cc \
+		$(MODS_DIR)/wfc.cc \
+		$(MODS_DIR)/alpaodm.cc \
+		$(LIB_DIR)/shift.cc
+
+# Header files are part of the sources as well
+foam_expoao_SOURCES += foam-expoao.h \
+		$(FRAME_HDR) \
+		$(MODS_DIR)/camera.h \
+		$(MODS_DIR)/andor.h \
+		$(MODS_DIR)/shwfs.h \
+		$(MODS_DIR)/wfs.h \
+		$(MODS_DIR)/wfc.h \
+		$(MODS_DIR)/alpaodm.h \
+		$(LIB_DIR)/shift.h
+
+foam_expoao_CPPFLAGS = -DFOAM_DEFAULTCONF=\"$(sysconfdir)/foam/foam-expoao.cfg\" \
+		$(EXPOAO_CFLAGS) $(AM_CPPFLAGS)
+
+foam_expoao_CXXFLAGS = $(EXPOAO_CFLAGS) $(AM_CXXFLAGS)
+
+foam_expoao_LDADD = $(EXPOAO_LIBS) $(LDADD)
+
+endif HAVE_EXPOAO
+### END EXPOAO TARGET ###
+

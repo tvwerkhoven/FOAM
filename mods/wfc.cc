@@ -211,6 +211,12 @@ int Wfc::calibrate() {
 	return 0;
 }
 
+int Wfc::reset() {
+	set_control(0.0);
+	actuate();
+	return 0;
+}
+
 void Wfc::parse_waffle(string &odd, string &even) {
 	io.msg(IO_DEB2, "Wfc::parse_waffle(odd=%s, even=%s)", odd.c_str(), even.c_str());
 	if (odd.size() <= 0 || even.size() <= 0)
@@ -278,7 +284,11 @@ void Wfc::on_message(Connection *const conn, string line) {
 		string actwhat = popword(line);
 		
 		if (actwhat == "waffle") {				// act waffle
-			set_wafflepattern(0.5);
+			double w_amp = popdouble(line);
+			if (w_amp > 0 && w_amp < 1)
+				set_wafflepattern(w_amp);
+			else
+				set_wafflepattern(0.5);
 			actuate();
 			conn->write(format("ok act waffle"));
 		} else if (actwhat == "random") { // act random

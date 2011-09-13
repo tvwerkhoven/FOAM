@@ -129,7 +129,7 @@ void Camera::cam_proc() {
 		// Always wait for proc_cond broadcasts
 		{
 			pthread::mutexholder h(&proc_mutex);
-//			io.msg(IO_DEB2, "Camera::cam_proc() waiting...");
+			io.msg(IO_DEB2, "Camera::cam_proc() waiting...");
 			proc_cond.wait(proc_mutex);
 		}
 		
@@ -315,7 +315,8 @@ void *Camera::cam_queue(void * const data, void * const image, struct timeval *c
 	// Depth should be ceil'ed to the nearest 8 multiple, because 'depth' could
 	// also be 14 or 12 bits in which case 'size' would be wrong.
 	//! @todo Need to distinguish between data bitdepth and camera bitdepth
-	frame->size = frame->npixels * frame->depth;
+	// Use depth/8, remember depth is in bits, size in bytes
+	frame->size = frame->npixels * frame->depth/8;
 	
 	if(!frame->histo)
 		frame->histo = new uint32_t[get_maxval()];
@@ -664,6 +665,7 @@ void Camera::grab(Connection *conn, int x1, int y1, int x2, int y2, int scale = 
 		
 		// zero copy if possible
 		if(!do_df && scale == 1 && x1 == 0 && x2 == (int)res.x && y1 == 0 && y2 == (int)res.y) {
+			io.msg(IO_DEB2, "Camera::grab() 0copy");
 			conn->write(format("ok image %zu %d %d %d %d %d", size, x1, y1, x2, y2, scale) + extra);
 			conn->write(f->image, size);
 			goto finish;

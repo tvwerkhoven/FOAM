@@ -100,10 +100,34 @@ AC_SUBST(COMMON_LIBS, ["$SIGC_LIBS $GSL_LIBS $FITSIO_LIBS $LIBS"])
 # Reset LIBS
 LIBS=$OLDLIBS
 
+### CHECK FOR OPTIONAL LIBRARIES ###
+####################################
+
+OLDLIBS=$LIBS
+LIBS=
+
+# Optional libraries, for libimgdata.a.
+# @todo this should be handled by libsiu (through .pc file?)
+AC_SEARCH_LIBS([deflate], [z],
+		[have_z=yes],
+		[have_z=no])
+
+AC_SEARCH_LIBS([IcsOpen], [ics],
+		[have_ics=yes],
+		[have_ics=no])
+
+LIBIMGDATA_LIBS=$LIBS
+
+# Reset LIBS
+LIBS=$OLDLIBS
+
+# for fullsim, expoao etc.
+PKG_CHECK_MODULES([FFTW], [fftw3 >= 3.1.2], 
+		[have_fftw=yes],
+		[have_fftw=no])
+
 ### INSPECT CONFIGURATION OPTIONS ###
 #####################################
-
-# Build targets
 
 AC_ARG_ENABLE([dummy],
 		AC_HELP_STRING([--disable-dummy], [don't build dummy mode]),
@@ -122,6 +146,12 @@ AC_ARG_ENABLE([fullsim],
 		[have_fullsim=$enableval],
 		[have_fullsim=yes])
 AM_CONDITIONAL([HAVE_FULLSIM], [test "x$have_fullsim" != "xno"])
+
+AC_ARG_ENABLE([expoao],
+		AC_HELP_STRING([--disable-expoao], [don't build expoao mode]),
+		[have_expoao=$enableval],
+		[have_expoao=yes])
+AM_CONDITIONAL([HAVE_EXPOAO], [test "x$have_expoao" != "xno"])
 
 AC_ARG_ENABLE([gui],
 		AC_HELP_STRING([--disable-gui], [don't build FOAM gui]),
@@ -198,6 +228,7 @@ AC_SUBST(LIBSIU, [$have_libsiu])
 
 ### CHECK FOR HARDWARE LIBRARIES ###
 ####################################
+
 AC_MSG_NOTICE([*** Checking for 1394 camera support.])
 
 PKG_CHECK_MODULES(DC1394, [libdc1394-2 >= 2.0.2],
@@ -224,7 +255,6 @@ AS_IF([test "x$have_dc1394" != "xno"],
 
 AM_CONDITIONAL([HAVE_DC1394], [test "x$have_dc1394" != "xno"])
 
-# Check Andor camera libraries (should have atmcdLXd.h and libandor.so)
 AC_MSG_NOTICE([*** Checking for Andor camera support.])
 
 AC_CHECK_HEADERS([atmcdLXd.h], 
@@ -249,12 +279,45 @@ AS_IF([test "x$have_andor_h" != "xyes" || test  "x$have_andor_lib" != "xyes"],
 		[have_andor=yes])
 AM_CONDITIONAL([HAVE_ANDORCAM], [test "x$have_andor" != "xno"])
 
+AC_MSG_NOTICE([*** Checking for Alpao DM support.])
+
+AC_CHECK_HEADERS([acecs.h], [], [have_alpaodm_h=no;hwalpaodm_missing+=" acecs.h"])
+AC_CHECK_HEADERS([acedev5.h], [], [have_alpaodm_h=no;hwalpaodm_missing+=" acedev5.h"])
+
+OLDLIBS=$LIBS
+LIBS=
+
+AC_SEARCH_LIBS([Register_Card],
+		[pci_dask],
+		[],
+		[have_alpaodm_lib=no;hwalpaodm_missing+=" pci_dask"])
+
+AC_SEARCH_LIBS([acecsErrDisplay],
+		[acecs],
+		[],
+		[have_alpaodm_lib=no;hwalpaodm_missing+=" acecs"])
+
+AC_SEARCH_LIBS([acedev5Send],
+		[acedev5],
+		[],
+		[have_alpaodm_lib=no;hwalpaodm_missing+=" acedev5"])
+
+AC_SUBST(ALPAODM_LIBS, ["$LIBS"])
+
+# Reset LIBS back to old value
+LIBS=$OLDLIBS
+
+AS_IF([test "x$have_alpaodm_h" != "xno" || test  "x$have_alpaodm_lib" != "xno"],
+		[have_alpaodm=yes],
+		[have_alpaodm=no])
+AM_CONDITIONAL([HAVE_ALPAODM], [test "x$have_alpaodm" != "xno"])
+
 ### DOCUMENTATION BUILD CHECKS ###
 ##################################
-AC_MSG_NOTICE([*** Checking documentation tools.])
 
 AS_IF([test "x$have_docs" != "xno"],
 		[
+		AC_MSG_NOTICE([*** Checking documentation tools.])
 		AC_CHECK_PROG(have_doxygen, doxygen, yes, no)
 		AS_IF([test "x$have_doxygen" != "xyes"], [docsmissing+=" doxygen";have_docs=no], [])
 		AC_CHECK_PROG(have_dot, dot, yes, no)
@@ -276,30 +339,50 @@ AM_CONDITIONAL([HAVE_SIMSTAT], [test "x$have_simstat" != "xno"])
 AS_IF([test "x$have_fullsim" != "xno"],
 		[
 		AC_MSG_NOTICE([*** Full simulation enabled, checking for extra libs])
-		# Optional libraries, for libimgdata.a.
-		# @todo this should be handled by libsiu (through .pc file?)
-		AC_SEARCH_LIBS([deflate], [z], [have_z=true], [have_z=false])
-		AC_SEARCH_LIBS([IcsOpen], [ics], [have_ics=true], [have_ics=false])
-		PKG_CHECK_MODULES(FFTW, [fftw3 >= 3.1.2], [],
-				[have_fullsim=no;fullsimmissing+=" fftw3"])
+
+		AS_IF([test "x$have_fftw" != "xyes"], [have_fullsim=no;fullsimmissing+=" fftw3"])
+
 		AC_SUBST(FULLSIM_CFLAGS, ["$FFTW_CFLAGS"])
-		AC_SUBST(FULLSIM_LIBS, ["$FFTW_LIBS"])
+		AC_SUBST(FULLSIM_LIBS, ["$FFTW_LIBS $LIBIMGDATA_LIBS"])
 	],
 	[AC_MSG_NOTICE([*** Full simulation disabled])])
 
 AM_CONDITIONAL([HAVE_FULLSIM], [test "$have_fullsim" != "xno"])
+
+### EXPOAO BUILD TARGET LIBS ###
+################################
+
+AS_IF([test "x$have_expoao" != "xno"],
+		[
+		AC_MSG_NOTICE([*** Expoao target enabled, checking for libs])
+
+		# Check if we have the required libraries (fftw3, andorcam)
+		AS_IF([test "x$have_fftw" != "xyes"], [have_expoao=no;expoaomissing+=" fftw3"])
+		AS_IF([test "x$have_andor" != "xyes"], [have_expoao=no;expoaomissing+=" andor"])
+		AS_IF([test "x$have_alpaodm" != "xyes"], [have_expoao=no;expoaomissing+=" alpaodm"])
+
+		AC_SUBST(EXPOAO_CFLAGS, ["$FFTW_CFLAGS $LIBIMGDATA_CFLAGS"])
+		AC_SUBST(EXPOAO_LIBS, ["$FFTW_LIBS $LIBIMGDATA_LIBS $ANDORCAM_LIBS $ALPAODM_LIBS"])
+	],
+	[AC_MSG_NOTICE([*** Expoao target disabled])])
+
+AM_CONDITIONAL([HAVE_EXPOAO], [test "x$have_expoao" != "xno"])
 
 ### GUI LIBRARIES ###
 #####################
 
 # Check for opengl support
 have_opengl=yes
-AX_CHECK_GL
-AS_IF([test "x$no_gl" = "xyes"], [have_opengl=no;glmissing+=" gl"])
-AX_CHECK_GLU
-AS_IF([test "x$no_glu" = "xyes"], [have_opengl=no;glmissing+=" glu"])
-AX_CHECK_GLUT
-AS_IF([test "x$no_glut" = "xyes"], [have_opengl=no;glmissing+=" glut"])
+AS_IF([test "x$have_gui" != "xno"],
+		[
+		AX_CHECK_GL
+		AS_IF([test "x$no_gl" = "xyes"], [have_opengl=no;glmissing+=" gl"])
+		AX_CHECK_GLU
+		AS_IF([test "x$no_glu" = "xyes"], [have_opengl=no;glmissing+=" glu"])
+		AX_CHECK_GLUT
+		AS_IF([test "x$no_glut" = "xyes"], [have_opengl=no;glmissing+=" glut"])
+		], [])
+
 AM_CONDITIONAL([HAVE_OPENGL], [test "x$have_opengl" != "xno"])
 
 # Check for GUI support
@@ -333,6 +416,7 @@ AC_MSG_NOTICE([---------------Hardware---------------])
 
 AC_MSG_NOTICE([1394 cameras:            $have_dc1394 $hw1394_missing])
 AC_MSG_NOTICE([Andor cameras:           $have_andor $hwandor_missing])
+AC_MSG_NOTICE([Alpao DM:                $have_alpaodm $hwalpaodm_missing])
 
 AC_MSG_NOTICE([---------------Targets----------------])
 
@@ -340,14 +424,16 @@ AC_MSG_NOTICE([Dummy mode:              $have_dummy])
 AC_MSG_NOTICE([Static sim mode:         $have_simstat])
 AC_MSG_NOTICE([Full sim mode:           $have_fullsim $fullsimmissing])
 
+AC_MSG_NOTICE([ExPoAO build:            $have_expoao $expoaomissing])
+
 AC_MSG_NOTICE([FOAM control GUI:        $have_gui $guimissing])
 
 AC_MSG_NOTICE([---------------Debugging--------------])
 
-AC_MSG_NOTICE([Debug support:           $have_debug])
-AC_MSG_NOTICE([Strict debug support:    $have_str_debug])
+AC_MSG_NOTICE([Debug enabled:           $have_debug])
+AC_MSG_NOTICE([Strict debug enabled:    $have_str_debug])
 
-AC_MSG_NOTICE([Profiling support:       $have_profiling])
+AC_MSG_NOTICE([Profiling enabled:       $have_profiling])
 
 AC_MSG_NOTICE([Hardware debug targets:  $have_hwdebug])
 

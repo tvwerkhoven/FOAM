@@ -32,17 +32,27 @@ WfsView((WfsCtrl *) ctrl, log, foamctrl, n), shwfsctrl(ctrl),
 shwfs_addnew("Add new"),
 subi_frame("Subimages"),
 subi_lx("X_0"), subi_ly("Y_0"), subi_tx("X_1"), subi_ty("Y_1"), 
-subi_update("Update"), subi_del("Del"), subi_add("Add"), subi_regen("Regen pattern"), subi_find("Find pattern"), 
-subi_vecs("Show shifts"), subi_vecdelayi("Delay", "s")
+subi_update("Update"), subi_del("Del"), subi_add("Add"), subi_regen("Regen pattern"), subi_find("Find pattern"), subi_find_minif("Min I", "fac"),
+subi_vecs("Show shifts"), subi_vecdelayi("every", "s")
 {
 	log.term(format("%s", __PRETTY_FUNCTION__));
 	
+	// Set last update to 'never'
+	subi_last.tv_sec = 0;
+	subi_last.tv_usec = 0;
+
 	// Widget properties
 	subi_lx.set_width_chars(6);
 	subi_ly.set_width_chars(6);
 	subi_tx.set_width_chars(6);
 	subi_ty.set_width_chars(6);
-	subi_vecdelayi.set_width_chars(4);
+	subi_vecdelayi.set_digits(2);
+	subi_vecdelayi.set_range(0.0, 5.0);
+	subi_vecdelayi.set_increments(0.1, 1);
+	
+	subi_find_minif.set_digits(2);
+	subi_find_minif.set_range(0.0, 1.0);
+	subi_find_minif.set_increments(0.05, 0.01);
 	
 	// Signals & callbacks
 	subi_select.signal_changed().connect(sigc::mem_fun(*this, &ShwfsView::on_subi_select_changed));
@@ -77,7 +87,9 @@ subi_vecs("Show shifts"), subi_vecdelayi("Delay", "s")
 	subi_vbox12.pack_start(subi_hbox122 ,PACK_SHRINK);
 	
 	subi_vbox13.pack_start(subi_regen, PACK_SHRINK);
-	subi_vbox13.pack_start(subi_find, PACK_SHRINK);
+	subi_find_box.pack_start(subi_find, PACK_SHRINK);
+	subi_find_box.pack_start(subi_find_minif, PACK_SHRINK);
+	subi_vbox13.pack_start(subi_find_box, PACK_SHRINK);
 	
 	subi_hbox141.pack_start(subi_vecs, PACK_SHRINK);
 	subi_hbox141.pack_start(subi_vecdelayi, PACK_SHRINK);
@@ -142,7 +154,8 @@ void ShwfsView::clear_gui() {
 	subi_ly.set_text("");
 	subi_tx.set_text("");
 	subi_ty.set_text("");
-	subi_vecdelayi.set_text("1.0");
+	subi_vecdelayi.set_value(1.0);
+	subi_find_minif.set_value(0.6);
 		
 	if (wfscam_ui) {
 		wfscam_ui->glarea.clearboxes();
@@ -248,19 +261,15 @@ void ShwfsView::on_subi_regen_clicked() {
 }
 
 void ShwfsView::on_subi_find_clicked() {
-	//! @todo Implement mla find with parameters: mla find [sisize] [simini_f] [nmax] [iter]
+	//! @todo Implement mla find with parameters: mla find [simini_f] [sisize] [nmax] [iter]
 	log.term(format("%s", __PRETTY_FUNCTION__));
 	
 	// Find subimage pattern heuristically
-	shwfsctrl->mla_find_pattern();
+	shwfsctrl->mla_find_pattern(subi_find_minif.get_value());
 }
 
 void ShwfsView::on_subi_vecs_clicked() {
 	log.term(format("%s", __PRETTY_FUNCTION__));
-	
-	// Get (new) update delay
-	//! @todo is this legal/safe? subi_vecdelayi.get_text().c_str()
-	subi_vecdelay = strtof(subi_vecdelayi.get_text().c_str(), NULL);
 	
 	// If the button is clear: start acquisition, otherwise: set button to clear (and stop acquisition)
 	if (subi_vecs.get_state() == SwitchButton::CLEAR) {
@@ -274,14 +283,14 @@ void ShwfsView::on_subi_vecs_clicked() {
 
 bool ShwfsView::on_timeout() {
 	// This function fires 30 times/s, if we do not want that many updates we can throttle it with subi_vecdelay
-	static struct timeval now, last;
+	struct timeval now;
 	gettimeofday(&now, NULL);
 	// If button is 'clear' we don't want shifts, if 'waiting' we're expecting new shifts soon, otherwise if button is 'OK': get new shifts
 	if (subi_vecs.get_state() == SwitchButton::OK && 
-			((now.tv_sec - last.tv_sec) + (now.tv_usec - last.tv_usec)/1000000.) > subi_vecdelay) {
+			((now.tv_sec - subi_last.tv_sec) + (now.tv_usec - subi_last.tv_usec)/1000000.) > subi_vecdelayi.get_value()) {
 		subi_vecs.set_state(SwitchButton::WAITING);
 		shwfsctrl->cmd_get_shifts();
-		gettimeofday(&last, NULL);
+		gettimeofday(&subi_last, NULL);
 	}
 	return true;
 }
@@ -294,8 +303,23 @@ void ShwfsView::do_sh_shifts_update() {
 	if (wfscam_ui) {
 		wfscam_ui->glarea.clearlines();
 		
-		for (size_t i=0; i<shwfsctrl->get_nshifts(); i++)
-			wfscam_ui->glarea.addline(shwfsctrl->get_shift((size_t) i));
+		for (size_t i=0; i<shwfsctrl->get_nrefshifts(); i++) {
+			fvector_t refline = shwfsctrl->get_refshift((size_t) i);
+			// Add (0.5, 0.5) to the *end* of the vector because we want to end up in the middle of the pixel, not at the origin
+			refline.tx+=0.5;
+			refline.ty+=0.5;
+			wfscam_ui->glarea.addline(refline);
+		}
+
+		for (size_t i=0; i<shwfsctrl->get_nshifts(); i++) {
+			fvector_t shline = shwfsctrl->get_shift((size_t) i);
+			// Add (0.5, 0.5) to both ends of the vector because we want to end up in the middle of the pixel, not at the origin
+			shline.lx+=0.5;
+			shline.ly+=0.5;
+			shline.tx+=0.5;
+			shline.ty+=0.5;
+			wfscam_ui->glarea.addline(shline);
+		}
 		
 		wfscam_ui->glarea.do_update();
 	}
@@ -317,9 +341,8 @@ void ShwfsView::on_message_update() {
 	if (wfscam_ui) {
 		wfscam_ui->glarea.clearboxes();
 		
-		for (size_t i=0; i<shwfsctrl->get_mla_nsi(); i++) {
+		for (size_t i=0; i<shwfsctrl->get_mla_nsi(); i++)
 			wfscam_ui->glarea.addbox(shwfsctrl->get_mla_si((size_t) i));
-		}
 	
 		wfscam_ui->glarea.do_update();
 	}	

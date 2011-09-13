@@ -1,5 +1,5 @@
 /*
- foam-full.cc -- full simulation module
+ foam-fullsim.cc -- full simulation module
  Copyright (C) 2010--2011 Tim van Werkhoven <t.i.m.vanwerkhoven@xs4all.nl>
  
  This file is part of FOAM.
@@ -38,6 +38,7 @@ using namespace std;
 
 // Global device list for easier access
 SimulWfc *simwfc;
+SimulWfc *simwfcerr;
 SimulCam *simcam;
 Shwfs *simwfs;
 
@@ -49,8 +50,12 @@ int FOAM_FullSim::load_modules() {
 	simwfc = new SimulWfc(io, ptc, "simwfc", ptc->listenport, ptc->conffile);
 	devices->add((foam::Device *) simwfc);
 
-	// Init camera simulation (using simwfc)
-	simcam = new SimulCam(io, ptc, "simcam", ptc->listenport, ptc->conffile, *simwfc);
+	// Init WFC error simulation (we use one WFC for generating errors and another for correcting them. This should go perfectly)
+	simwfcerr = new SimulWfc(io, ptc, "simwfcerr", ptc->listenport, ptc->conffile);
+	devices->add((foam::Device *) simwfcerr);
+
+	// Init camera simulation (using simwfcerr and simwfc)
+	simcam = new SimulCam(io, ptc, "simcam", ptc->listenport, ptc->conffile, *simwfc, *simwfcerr);
 	devices->add((foam::Device *) simcam);
 	
 	// Init WFS simulation (using camera)
@@ -77,6 +82,7 @@ int FOAM_FullSim::open_loop() {
 	string vec_str;
 	
 	// Get next frame, simulcam takes care of all simulation
+	//!< @bug This call blocks and if the camera is stopped before it returns, it will hang
 	Camera::frame_t *frame = simcam->get_next_frame(true);
 	open_perf.addlog(2);
 	
@@ -216,6 +222,8 @@ int FOAM_FullSim::calib() {
 			
 			// Set actuator back to 0
 			gsl_vector_float_set_zero(tmpact);
+			simwfc->update_control(tmpact, gain_t(1,0,0), 0.0);
+			simwfc->actuate(true);
 		}
 		
 		io.msg(IO_XNFO, "FOAM_FullSim::calib() Process data...");

@@ -141,8 +141,10 @@ void CamCtrl::on_monitor_message(string line) {
 		return;
 	}
 	// Second word should be 'image' (but can also be calib or status form Device base class)
-	if(popword(line) != "image")
+	if(popword(line) != "image") {
+		log.term(format("%s (!image)", __PRETTY_FUNCTION__));
 		return;
+	}
 
 	// The rest of the line is: <size> <x1> <y1> <x2> <y2> <scale> [histogram] [avg] [rms]
 	size_t size = popsize(line);
@@ -175,6 +177,7 @@ void CamCtrl::on_monitor_message(string line) {
 
 	{
 		pthread::mutexholder h(&monitor.mutex);
+		log.term(format("%s (mutex)", __PRETTY_FUNCTION__));
 		if(size > monitor.size)
 			monitor.image = (uint16_t *)realloc(monitor.image, size);
 		monitor.size = size;
@@ -193,11 +196,15 @@ void CamCtrl::on_monitor_message(string line) {
 			monitor.histo = (uint32_t *)realloc(monitor.histo, histosize);
 	}
 
+	log.term(format("%s (read1 %d)", __PRETTY_FUNCTION__, monitor.size));
 	monitorprotocol.read(monitor.image, monitor.size);
 
-	if(do_histo)
+	if(do_histo) {
+		log.term(format("%s (read2 %d)", __PRETTY_FUNCTION__, histosize));
 		monitorprotocol.read(monitor.histo, histosize);
+	}
 
+	log.term(format("%s (signal)", __PRETTY_FUNCTION__));
 	signal_monitor();
 }
 

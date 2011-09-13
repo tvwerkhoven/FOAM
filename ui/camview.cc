@@ -451,6 +451,7 @@ bool CamView::on_timeout() {
 }
 
 void CamView::on_monitor_update() {
+	log.term(format("%s", __PRETTY_FUNCTION__));
 	// New image has arrived, display & update 'display' state
 	// -> if WAITING: we wanted the frame, update button to OK
 	// -> if OK: no action necessary

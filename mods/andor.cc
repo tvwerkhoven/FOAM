@@ -58,6 +58,12 @@ Camera(io, ptc, name, andor_type, port, conffile, online)
 	int cooltemp = cfg.getint("cooltemp", 20);
 	andordir = cfg.getstring("andor_cfgdir", "/usr/local/etc/andor");
 	
+	int hsspeed = cfg.getint("hsspeed", 0);
+	int vsspeed = cfg.getint("vsspeed", 0);
+	int vsamp = cfg.getint("vsspeed", 4);
+	
+	int pagain = cfg.getint("pa_gain", 2);
+	
 	// Init error codes
 	init_errors();	
 
@@ -80,11 +86,11 @@ Camera(io, ptc, name, andor_type, port, conffile, online)
 	
 	// Set CCD readout speed-related settings
 	io.msg(IO_DEB1, "AndorCam::AndorCam() setting shift speed...");
-	cam_set_shift_speed(0, 0, 0);
+	cam_set_shift_speed(hsspeed, vsspeed, vsamp);
 	
 	// Set pre-amp gain (should be left alone, probably)
 	io.msg(IO_DEB1, "AndorCam::AndorCam() setting gain...");
-	ret = SetPreAmpGain(2);							// 0: 1x, 1: 2.2x, 2: 4.6x. Andor recommends 4.6x (iXonEM+ Hardware guide 3.3.1)
+	ret = SetPreAmpGain(pagain);				// 0: 1x, 1: 2.2x, 2: 4.6x. Andor recommends 4.6x (iXonEM+ Hardware guide 3.3.1)
 	if (ret != DRV_SUCCESS) 
 		io.msg(IO_ERR, "AndorCam::AndorCam() SetPreAmpGain error: %d, %s", ret, error_desc[ret].c_str());
 	
@@ -101,7 +107,7 @@ Camera(io, ptc, name, andor_type, port, conffile, online)
 		img_buffer.at(i) = new unsigned short[res.x * res.y];
 	
 	// Set filename prefix for saved frames
-	set_filename("andorcam-"+name);
+	set_filename("andor-");
 	
 	io.msg(IO_INFO, "AndorCam init success, got %dx%dx%d frame, intv=%g, exp=%g.", 
 				 res.x, res.y, depth, interval, exposure);
@@ -109,6 +115,9 @@ Camera(io, ptc, name, andor_type, port, conffile, online)
 	// Start camera thread
 	cam_set_mode(Camera::WAITING);
 	cam_thr.create(sigc::mem_fun(*this, &AndorCam::cam_handler));
+	// Give thread time to initialize
+	//! @todo Solve synchronisation with a mutex instead!
+	sleep(1);
 }
 
 AndorCam::~AndorCam() {
@@ -120,6 +129,12 @@ AndorCam::~AndorCam() {
 	// Stop capture thread
 	cam_thr.cancel();
 	cam_thr.join();
+	sleep(1);
+	
+	// Abort acquisition and close shutter
+	AbortAcquisition();
+	SetShutter(1, 2, 0, 0);
+	sleep(1);
 
 	// Disable cooler, warm up CCD
 	cam_set_cooler(false);
@@ -398,20 +413,17 @@ void AndorCam::cam_handler() {
 				}
 				
 				while (mode == Camera::RUNNING) {
-					// Wait for a new frame for maximum 10000 ms
-					ret = WaitForAcquisitionTimeOut(10000);
+					// Wait for a new frame for maximum 1000 ms
+					ret = WaitForAcquisitionTimeOut(2500);
 					
 					if (ret == DRV_SUCCESS) {
-//						io.msg(IO_DEB2, "AndorCam::cam_handler(R) new data!");
 						// Try to get new frame data						
 						ret = GetMostRecentImage16(img_buffer.at(count % nframes), (unsigned long) (res.x * res.y));
 						if (ret == DRV_SUCCESS) {
 							void *queue_ret = cam_queue(img_buffer.at(count % nframes), img_buffer.at(count % nframes));
-//							io.msg(IO_DEB2, "AndorCam::cam_handler(R) data[0]: %d data[-1]: %d!",
-//										 img_buffer.at(count % nframes)[0], img_buffer.at(count % nframes)[res.x * res.y - 1]);
 							
-//							if (queue_ret != NULL)
-//								io.msg(IO_XNFO, "AndorCam::cam_handler(R) cam_queue returned old frame");
+							//if (queue_ret != NULL)
+							//	io.msg(IO_XNFO, "AndorCam::cam_handler(R) cam_queue returned old frame");
 							//! @todo handle returned data?
 					} else {
 						io.msg(IO_WARN, "AndorCam::cam_handler(R) GetMostRecentImage16 error %s", error_desc[ret].c_str());
@@ -735,39 +747,39 @@ void AndorCam::read_capabilities(AndorCapabilities *caps, std::vector< string> &
 	cvec.clear();
 	
 	cvec.push_back(format("caps.ulAcqModes for SetAcquisitionMode: %08x", caps->ulAcqModes));
-	cvec.push_back(format("Single Scan Acquisition Mode available using SetAcquisitionMode: %d", caps->ulAcqModes & AC_ACQMODE_SINGLE != 0 ));
-	cvec.push_back(format("Video (Run Till Abort) Acquisition Mode available using SetAcquisitionMode: %d", caps->ulAcqModes & AC_ACQMODE_VIDEO != 0 ));
-	cvec.push_back(format("Accumulation Acquisition Mode available using SetAcquisitionMode: %d", caps->ulAcqModes & AC_ACQMODE_ACCUMULATE != 0 ));
-	cvec.push_back(format("Kinetic Series Acquisition Mode available using SetAcquisitionMode: %d", caps->ulAcqModes & AC_ACQMODE_KINETIC != 0 ));
-	cvec.push_back(format("Frame Transfer Acquisition Mode available using SetAcquisitionMode: %d", caps->ulAcqModes & AC_ACQMODE_FRAMETRANSFER != 0 ));
-	cvec.push_back(format("Fast Kinetics Acquisition Mode available using SetAcquisitionMode: %d", caps->ulAcqModes & AC_ACQMODE_FASTKINETICS != 0 ));
-	cvec.push_back(format("Overlap Acquisition Mode available using SetAcquisitionMode: %d", caps->ulAcqModes & AC_ACQMODE_OVERLAP != 0 ));
+	cvec.push_back(format("Single Scan Acquisition Mode available using SetAcquisitionMode: %d", (caps->ulAcqModes & AC_ACQMODE_SINGLE) != 0 ));
+	cvec.push_back(format("Video (Run Till Abort) Acquisition Mode available using SetAcquisitionMode: %d", (caps->ulAcqModes & AC_ACQMODE_VIDEO) != 0 ));
+	cvec.push_back(format("Accumulation Acquisition Mode available using SetAcquisitionMode: %d", (caps->ulAcqModes & AC_ACQMODE_ACCUMULATE) != 0 ));
+	cvec.push_back(format("Kinetic Series Acquisition Mode available using SetAcquisitionMode: %d", (caps->ulAcqModes & AC_ACQMODE_KINETIC) != 0 ));
+	cvec.push_back(format("Frame Transfer Acquisition Mode available using SetAcquisitionMode: %d", (caps->ulAcqModes & AC_ACQMODE_FRAMETRANSFER) != 0 ));
+	cvec.push_back(format("Fast Kinetics Acquisition Mode available using SetAcquisitionMode: %d", (caps->ulAcqModes & AC_ACQMODE_FASTKINETICS) != 0 ));
+	cvec.push_back(format("Overlap Acquisition Mode available using SetAcquisitionMode: %d", (caps->ulAcqModes & AC_ACQMODE_OVERLAP) != 0 ));
 	
 	cvec.push_back(format("caps.ulReadModes for SetReadMode: %08x", caps->ulReadModes));
-	cvec.push_back(format("Full Image Read Mode available using SetReadMode: %d", caps->ulReadModes & AC_READMODE_FULLIMAGE != 0 ));
-	cvec.push_back(format("Sub Image Read Mode available using SetReadMode: %d", caps->ulReadModes & AC_READMODE_SUBIMAGE != 0 ));
-	cvec.push_back(format("Single track Read Mode available using SetReadMode: %d", caps->ulReadModes & AC_READMODE_SINGLETRACK != 0 ));
-	cvec.push_back(format("Full Vertical Binning Read Mode available using SetReadMode: %d", caps->ulReadModes & AC_READMODE_FVB != 0 ));
-	cvec.push_back(format("Multi Track Read Mode available using SetReadMode: %d", caps->ulReadModes & AC_READMODE_MULTITRACK != 0 ));
-	cvec.push_back(format("Random­Track Read Mode available using SetReadMode: %d", caps->ulReadModes & AC_READMODE_RANDOMTRACK != 0 ));
+	cvec.push_back(format("Full Image Read Mode available using SetReadMode: %d", (caps->ulReadModes & AC_READMODE_FULLIMAGE) != 0 ));
+	cvec.push_back(format("Sub Image Read Mode available using SetReadMode: %d", (caps->ulReadModes & AC_READMODE_SUBIMAGE) != 0 ));
+	cvec.push_back(format("Single track Read Mode available using SetReadMode: %d", (caps->ulReadModes & AC_READMODE_SINGLETRACK) != 0 ));
+	cvec.push_back(format("Full Vertical Binning Read Mode available using SetReadMode: %d", (caps->ulReadModes & AC_READMODE_FVB) != 0 ));
+	cvec.push_back(format("Multi Track Read Mode available using SetReadMode: %d", (caps->ulReadModes & AC_READMODE_MULTITRACK) != 0 ));
+	cvec.push_back(format("Random­Track Read Mode available using SetReadMode: %d", (caps->ulReadModes & AC_READMODE_RANDOMTRACK) != 0 ));
 	
 	cvec.push_back(format("caps.ulFTReadModes for SetReadMode: %08x", caps->ulFTReadModes));
-	cvec.push_back(format("Full Image Read Mode (Frame Transfer) available using SetReadMode: %d", caps->ulFTReadModes & AC_READMODE_FULLIMAGE != 0 ));
-	cvec.push_back(format("Sub Image Read Mode (Frame Transfer) available using SetReadMode: %d", caps->ulFTReadModes & AC_READMODE_SUBIMAGE != 0 ));
-	cvec.push_back(format("Single track Read Mode (Frame Transfer) available using SetReadMode: %d", caps->ulFTReadModes & AC_READMODE_SINGLETRACK != 0 ));
-	cvec.push_back(format("Full Vertical Binning Read Mode (Frame Transfer) available using SetReadMode: %d", caps->ulFTReadModes & AC_READMODE_FVB != 0 ));
-	cvec.push_back(format("Multi Track Read Mode (Frame Transfer) available using SetReadMode: %d", caps->ulFTReadModes & AC_READMODE_MULTITRACK != 0 ));
-	cvec.push_back(format("Random­Track Read Mode (Frame Transfer) available using SetReadMode: %d", caps->ulFTReadModes & AC_READMODE_RANDOMTRACK != 0 ));
+	cvec.push_back(format("Full Image Read Mode (Frame Transfer) available using SetReadMode: %d", (caps->ulFTReadModes & AC_READMODE_FULLIMAGE) != 0 ));
+	cvec.push_back(format("Sub Image Read Mode (Frame Transfer) available using SetReadMode: %d", (caps->ulFTReadModes & AC_READMODE_SUBIMAGE) != 0 ));
+	cvec.push_back(format("Single track Read Mode (Frame Transfer) available using SetReadMode: %d", (caps->ulFTReadModes & AC_READMODE_SINGLETRACK) != 0 ));
+	cvec.push_back(format("Full Vertical Binning Read Mode (Frame Transfer) available using SetReadMode: %d", (caps->ulFTReadModes & AC_READMODE_FVB) != 0 ));
+	cvec.push_back(format("Multi Track Read Mode (Frame Transfer) available using SetReadMode: %d", (caps->ulFTReadModes & AC_READMODE_MULTITRACK) != 0 ));
+	cvec.push_back(format("Random­Track Read Mode (Frame Transfer) available using SetReadMode: %d", (caps->ulFTReadModes & AC_READMODE_RANDOMTRACK) != 0 ));
 	
 	cvec.push_back(format("caps.ulTriggerModes for SetTriggerMode: %08x", caps->ulTriggerModes));
-	cvec.push_back(format("Internal Trigger Mode available using SetTriggerMode: %d", caps->ulTriggerModes & AC_TRIGGERMODE_INTERNAL != 0));
-	cvec.push_back(format("External Trigger Mode available using SetTriggerMode: %d", caps->ulTriggerModes & AC_TRIGGERMODE_EXTERNAL != 0 ));
-	cvec.push_back(format("External FVB EM Trigger Mode available using SetTriggerMode: %d", caps->ulTriggerModes & AC_TRIGGERMODE_EXTERNAL_FVB_EM != 0 ));
-	cvec.push_back(format("Continuous (Software) Trigger Mode available using SetTriggerMode: %d", caps->ulTriggerModes & AC_TRIGGERMODE_CONTINUOUS != 0 ));
-	cvec.push_back(format("External Start Trigger Mode available using SetTriggerMode: %d", caps->ulTriggerModes & AC_TRIGGERMODE_EXTERNALSTART != 0 ));
-	cvec.push_back(format("Bulb Trigger Mode available using SetTriggerMode: %d", caps->ulTriggerModes & AC_TRIGGERMODE_BULB != 0 ));
-	cvec.push_back(format("External Exposure Trigger Mode available using SetTriggerMode: %d", caps->ulTriggerModes & AC_TRIGGERMODE_EXTERNALEXPOSURE != 0 ));
-	cvec.push_back(format("Inverted Trigger Mode available using SetTriggerMode: %d", caps->ulTriggerModes & AC_TRIGGERMODE_INVERTED != 0 ));
+	cvec.push_back(format("Internal Trigger Mode available using SetTriggerMode: %d", (caps->ulTriggerModes & AC_TRIGGERMODE_INTERNAL) != 0));
+	cvec.push_back(format("External Trigger Mode available using SetTriggerMode: %d", (caps->ulTriggerModes & AC_TRIGGERMODE_EXTERNAL) != 0 ));
+	cvec.push_back(format("External FVB EM Trigger Mode available using SetTriggerMode: %d", (caps->ulTriggerModes & AC_TRIGGERMODE_EXTERNAL_FVB_EM) != 0 ));
+	cvec.push_back(format("Continuous (Software) Trigger Mode available using SetTriggerMode: %d", (caps->ulTriggerModes & AC_TRIGGERMODE_CONTINUOUS) != 0 ));
+	cvec.push_back(format("External Start Trigger Mode available using SetTriggerMode: %d", (caps->ulTriggerModes & AC_TRIGGERMODE_EXTERNALSTART) != 0 ));
+	cvec.push_back(format("Bulb Trigger Mode available using SetTriggerMode: %d", (caps->ulTriggerModes & AC_TRIGGERMODE_BULB) != 0 ));
+	cvec.push_back(format("External Exposure Trigger Mode available using SetTriggerMode: %d", (caps->ulTriggerModes & AC_TRIGGERMODE_EXTERNALEXPOSURE) != 0 ));
+	cvec.push_back(format("Inverted Trigger Mode available using SetTriggerMode: %d", (caps->ulTriggerModes & AC_TRIGGERMODE_INVERTED) != 0 ));
 	
 	// caps->ulCameraType is a integer indicating the camera type (0 -- 16)
 	cvec.push_back(format("caps.ulCameraType: %08x", caps->ulCameraType));
@@ -791,70 +803,70 @@ void AndorCam::read_capabilities(AndorCapabilities *caps, std::vector< string> &
 	cvec.push_back(format("Camera Type: Andor Clara: %d", caps->ulCameraType == AC_CAMERATYPE_CLARA));
 	
 	cvec.push_back(format("caps.ulPixelMode: %08x", caps->ulPixelMode));
-	cvec.push_back(format("Camera can acquire in 8­bit mode: %d", caps->ulPixelMode & AC_PIXELMODE_8BIT != 0 ));
-	cvec.push_back(format("Camera can acquire in 14­bit mode: %d", caps->ulPixelMode & AC_PIXELMODE_14BIT != 0 ));
-	cvec.push_back(format("Camera can acquire in 16­bit mode: %d", caps->ulPixelMode & AC_PIXELMODE_16BIT != 0 ));
-	cvec.push_back(format("Camera can acquire in 32bit mode: %d", caps->ulPixelMode & AC_PIXELMODE_32BIT != 0 ));
-	cvec.push_back(format("Camera can acquire in grey scale: %d", caps->ulPixelMode & AC_PIXELMODE_MONO != 0 ));
-	cvec.push_back(format("Camera can acquire in RGB mode: %d", caps->ulPixelMode & AC_PIXELMODE_RGB != 0 ));
-	cvec.push_back(format("Camera can acquire in CMY mode: %d", caps->ulPixelMode & AC_PIXELMODE_CMY != 0 ));
+	cvec.push_back(format("Camera can acquire in 8­bit mode: %d", (caps->ulPixelMode & AC_PIXELMODE_8BIT) != 0 ));
+	cvec.push_back(format("Camera can acquire in 14­bit mode: %d", (caps->ulPixelMode & AC_PIXELMODE_14BIT) != 0 ));
+	cvec.push_back(format("Camera can acquire in 16­bit mode: %d", (caps->ulPixelMode & AC_PIXELMODE_16BIT) != 0 ));
+	cvec.push_back(format("Camera can acquire in 32bit mode: %d", (caps->ulPixelMode & AC_PIXELMODE_32BIT) != 0 ));
+	cvec.push_back(format("Camera can acquire in grey scale: %d", (caps->ulPixelMode & AC_PIXELMODE_MONO) != 0 ));
+	cvec.push_back(format("Camera can acquire in RGB mode: %d", (caps->ulPixelMode & AC_PIXELMODE_RGB) != 0 ));
+	cvec.push_back(format("Camera can acquire in CMY mode: %d", (caps->ulPixelMode & AC_PIXELMODE_CMY) != 0 ));
 	
 	cvec.push_back(format("caps.ulSetFunctions: %08x", caps->ulSetFunctions));
-	cvec.push_back(format("SetVSSpeed: %d", caps->ulSetFunctions & AC_SETFUNCTION_VREADOUT != 0 ));
-	cvec.push_back(format("SetHSSpeed: %d", caps->ulSetFunctions & AC_SETFUNCTION_HREADOUT != 0 ));
-	cvec.push_back(format("SetTemperature: %d", caps->ulSetFunctions & AC_SETFUNCTION_TEMPERATURE != 0 ));
-	cvec.push_back(format("SetMCPGain: %d", caps->ulSetFunctions & AC_SETFUNCTION_MCPGAIN != 0 ));
-	cvec.push_back(format("SetEMCCDGain: %d", caps->ulSetFunctions & AC_SETFUNCTION_EMCCDGAIN != 0 ));
-	cvec.push_back(format("SetBaselineClamp: %d", caps->ulSetFunctions & AC_SETFUNCTION_BASELINECLAMP != 0 ));
-	cvec.push_back(format("SetVSAmplitude: %d", caps->ulSetFunctions & AC_SETFUNCTION_VSAMPLITUDE != 0 ));
-	cvec.push_back(format("SetHighCapacity: %d", caps->ulSetFunctions & AC_SETFUNCTION_HIGHCAPACITY != 0 ));
-	cvec.push_back(format("SetBaselineOffset: %d", caps->ulSetFunctions & AC_SETFUNCTION_BASELINEOFFSET != 0 ));
-	cvec.push_back(format("SetPreAmpGain: %d", caps->ulSetFunctions & AC_SETFUNCTION_PREAMPGAIN != 0 ));
-	cvec.push_back(format("SetCropMode/SetIsolatedCropMode: %d", caps->ulSetFunctions & AC_SETFUNCTION_CROPMODE != 0 ));
-	cvec.push_back(format("SetDMAParameters: %d", caps->ulSetFunctions & AC_SETFUNCTION_DMAPARAMETERS != 0 ));
-	cvec.push_back(format("Relative read mode horizontal binning: %d", caps->ulSetFunctions & AC_SETFUNCTION_HORIZONTALBIN != 0 ));
-	cvec.push_back(format("SetMultiTrackHRange: %d", caps->ulSetFunctions & AC_SETFUNCTION_MULTITRACKHRANGE != 0 ));
-	cvec.push_back(format("SetRandomTracks or SetComplexImage: %d", caps->ulSetFunctions & AC_SETFUNCTION_RANDOMTRACKNOGAPS != 0 ));
-	cvec.push_back(format("SetEMAdvanced: %d", caps->ulSetFunctions & AC_SETFUNCTION_EMADVANCED != 0 ));
+	cvec.push_back(format("SetVSSpeed: %d", (caps->ulSetFunctions & AC_SETFUNCTION_VREADOUT) != 0 ));
+	cvec.push_back(format("SetHSSpeed: %d", (caps->ulSetFunctions & AC_SETFUNCTION_HREADOUT) != 0 ));
+	cvec.push_back(format("SetTemperature: %d", (caps->ulSetFunctions & AC_SETFUNCTION_TEMPERATURE) != 0 ));
+	cvec.push_back(format("SetMCPGain: %d", (caps->ulSetFunctions & AC_SETFUNCTION_MCPGAIN) != 0 ));
+	cvec.push_back(format("SetEMCCDGain: %d", (caps->ulSetFunctions & AC_SETFUNCTION_EMCCDGAIN) != 0 ));
+	cvec.push_back(format("SetBaselineClamp: %d", (caps->ulSetFunctions & AC_SETFUNCTION_BASELINECLAMP) != 0 ));
+	cvec.push_back(format("SetVSAmplitude: %d", (caps->ulSetFunctions & AC_SETFUNCTION_VSAMPLITUDE) != 0 ));
+	cvec.push_back(format("SetHighCapacity: %d", (caps->ulSetFunctions & AC_SETFUNCTION_HIGHCAPACITY) != 0 ));
+	cvec.push_back(format("SetBaselineOffset: %d", (caps->ulSetFunctions & AC_SETFUNCTION_BASELINEOFFSET) != 0 ));
+	cvec.push_back(format("SetPreAmpGain: %d", (caps->ulSetFunctions & AC_SETFUNCTION_PREAMPGAIN) != 0 ));
+	cvec.push_back(format("SetCropMode/SetIsolatedCropMode: %d", (caps->ulSetFunctions & AC_SETFUNCTION_CROPMODE) != 0 ));
+	cvec.push_back(format("SetDMAParameters: %d", (caps->ulSetFunctions & AC_SETFUNCTION_DMAPARAMETERS) != 0 ));
+	cvec.push_back(format("Relative read mode horizontal binning: %d", (caps->ulSetFunctions & AC_SETFUNCTION_HORIZONTALBIN) != 0 ));
+	cvec.push_back(format("SetMultiTrackHRange: %d", (caps->ulSetFunctions & AC_SETFUNCTION_MULTITRACKHRANGE) != 0 ));
+	cvec.push_back(format("SetRandomTracks or SetComplexImage: %d", (caps->ulSetFunctions & AC_SETFUNCTION_RANDOMTRACKNOGAPS) != 0 ));
+	cvec.push_back(format("SetEMAdvanced: %d", (caps->ulSetFunctions & AC_SETFUNCTION_EMADVANCED) != 0 ));
 	
 	cvec.push_back(format("caps.ulGetFunctions: %08x", caps->ulGetFunctions));
-	cvec.push_back(format("GetTemperature: %d", caps->ulGetFunctions & AC_GETFUNCTION_TEMPERATURE != 0 ));
-	cvec.push_back(format("GetTemperatureRange: %d", caps->ulGetFunctions & AC_GETFUNCTION_TEMPERATURERANGE != 0 ));
-	cvec.push_back(format("GetDetector: %d", caps->ulGetFunctions & AC_GETFUNCTION_DETECTORSIZE != 0 ));
-	cvec.push_back(format("AC_GETFUNCTION_MCPGAIN (reserved): %d", caps->ulGetFunctions & AC_GETFUNCTION_MCPGAIN != 0 ));
-	cvec.push_back(format("GetEMCCDGain: %d", caps->ulGetFunctions & AC_GETFUNCTION_EMCCDGAIN != 0 ));
-	cvec.push_back(format("GetBaselineClamp: %d", caps->ulGetFunctions & AC_GETFUNCTION_BASELINECLAMP != 0 ));
+	cvec.push_back(format("GetTemperature: %d", (caps->ulGetFunctions & AC_GETFUNCTION_TEMPERATURE) != 0 ));
+	cvec.push_back(format("GetTemperatureRange: %d", (caps->ulGetFunctions & AC_GETFUNCTION_TEMPERATURERANGE) != 0 ));
+	cvec.push_back(format("GetDetector: %d", (caps->ulGetFunctions & AC_GETFUNCTION_DETECTORSIZE) != 0 ));
+	cvec.push_back(format("AC_GETFUNCTION_MCPGAIN (reserved): %d", (caps->ulGetFunctions & AC_GETFUNCTION_MCPGAIN) != 0 ));
+	cvec.push_back(format("GetEMCCDGain: %d", (caps->ulGetFunctions & AC_GETFUNCTION_EMCCDGAIN) != 0 ));
+	cvec.push_back(format("GetBaselineClamp: %d", (caps->ulGetFunctions & AC_GETFUNCTION_BASELINECLAMP) != 0 ));
 	
 	cvec.push_back(format("caps.ulFeatures: %08x", caps->ulFeatures));
-	cvec.push_back(format("GetStatus AC_FEATURES_POLLING: %d", caps->ulFeatures & AC_FEATURES_POLLING != 0 ));
-	cvec.push_back(format("Windows Event AC_FEATURES_EVENTS: %d", caps->ulFeatures & AC_FEATURES_EVENTS != 0 ));
-	cvec.push_back(format("SetSpool: %d", caps->ulFeatures & AC_FEATURES_SPOOLING != 0 ));
-	cvec.push_back(format("SetShutter: %d", caps->ulFeatures & AC_FEATURES_SHUTTER != 0 ));
-	cvec.push_back(format("SetShutterEx: %d", caps->ulFeatures & AC_FEATURES_SHUTTEREX != 0 ));
-	cvec.push_back(format("Dedicated external I2C bus: %d", caps->ulFeatures & AC_FEATURES_EXTERNAL_I2C != 0 ));
-	cvec.push_back(format("SetSaturationEvent: %d", caps->ulFeatures & AC_FEATURES_SATURATIONEVENT != 0 ));
-	cvec.push_back(format("SetFanMode: %d", caps->ulFeatures & AC_FEATURES_FANCONTROL != 0 ));
-	cvec.push_back(format("SetFanMode low fan setting: %d", caps->ulFeatures & AC_FEATURES_MIDFANCONTROL != 0 ));
-	cvec.push_back(format("GetTemperature during acquisition: %d", caps->ulFeatures & AC_FEATURES_TEMPERATUREDURINGACQUISITION != 0 ));
-	cvec.push_back(format("turn off keep cleans between scans: %d", caps->ulFeatures & AC_FEATURES_KEEPCLEANCONTROL != 0 ));
-	cvec.push_back(format("AC_FEATURES_DDGLITE (reserved): %d", caps->ulFeatures & AC_FEATURES_DDGLITE != 0 ));
-	cvec.push_back(format("Frame Transfer and External Exposure modes combination: %d", caps->ulFeatures & AC_FEATURES_FTEXTERNALEXPOSURE != 0 ));
-	cvec.push_back(format("External Exposure trigger mode with Kinetic acquisition mode: %d", caps->ulFeatures & AC_FEATURES_KINETICEXTERNALEXPOSURE != 0 ));
-	cvec.push_back(format("AC_FEATURES_DACCONTROL (reserved): %d", caps->ulFeatures & AC_FEATURES_DACCONTROL != 0 ));
-	cvec.push_back(format("AC_FEATURES_METADATA (reserved): %d", caps->ulFeatures & AC_FEATURES_METADATA != 0 ));
-	cvec.push_back(format("Configurable IO: %d", caps->ulFeatures & AC_FEATURES_IOCONTROL != 0 ));
-	cvec.push_back(format("Photon counting: %d", caps->ulFeatures & AC_FEATURES_PHOTONCOUNTING != 0 ));
-	cvec.push_back(format("Count Convert: %d", caps->ulFeatures & AC_FEATURES_COUNTCONVERT != 0 ));
-	cvec.push_back(format("Dual exposure mode: %d", caps->ulFeatures & AC_FEATURES_DUALMODE != 0 ));
+	cvec.push_back(format("GetStatus AC_FEATURES_POLLING: %d", (caps->ulFeatures & AC_FEATURES_POLLING) != 0 ));
+	cvec.push_back(format("Windows Event AC_FEATURES_EVENTS: %d", (caps->ulFeatures & AC_FEATURES_EVENTS) != 0 ));
+	cvec.push_back(format("SetSpool: %d", (caps->ulFeatures & AC_FEATURES_SPOOLING) != 0 ));
+	cvec.push_back(format("SetShutter: %d", (caps->ulFeatures & AC_FEATURES_SHUTTER) != 0 ));
+	cvec.push_back(format("SetShutterEx: %d", (caps->ulFeatures & AC_FEATURES_SHUTTEREX) != 0 ));
+	cvec.push_back(format("Dedicated external I2C bus: %d", (caps->ulFeatures & AC_FEATURES_EXTERNAL_I2C) != 0 ));
+	cvec.push_back(format("SetSaturationEvent: %d", (caps->ulFeatures & AC_FEATURES_SATURATIONEVENT) != 0 ));
+	cvec.push_back(format("SetFanMode: %d", (caps->ulFeatures & AC_FEATURES_FANCONTROL) != 0 ));
+	cvec.push_back(format("SetFanMode low fan setting: %d", (caps->ulFeatures & AC_FEATURES_MIDFANCONTROL) != 0 ));
+	cvec.push_back(format("GetTemperature during acquisition: %d", (caps->ulFeatures & AC_FEATURES_TEMPERATUREDURINGACQUISITION) != 0 ));
+	cvec.push_back(format("turn off keep cleans between scans: %d", (caps->ulFeatures & AC_FEATURES_KEEPCLEANCONTROL) != 0 ));
+	cvec.push_back(format("AC_FEATURES_DDGLITE (reserved): %d", (caps->ulFeatures & AC_FEATURES_DDGLITE) != 0 ));
+	cvec.push_back(format("Frame Transfer and External Exposure modes combination: %d", (caps->ulFeatures & AC_FEATURES_FTEXTERNALEXPOSURE) != 0 ));
+	cvec.push_back(format("External Exposure trigger mode with Kinetic acquisition mode: %d", (caps->ulFeatures & AC_FEATURES_KINETICEXTERNALEXPOSURE) != 0 ));
+	cvec.push_back(format("AC_FEATURES_DACCONTROL (reserved): %d", (caps->ulFeatures & AC_FEATURES_DACCONTROL) != 0 ));
+	cvec.push_back(format("AC_FEATURES_METADATA (reserved): %d", (caps->ulFeatures & AC_FEATURES_METADATA) != 0 ));
+	cvec.push_back(format("Configurable IO: %d", (caps->ulFeatures & AC_FEATURES_IOCONTROL) != 0 ));
+	cvec.push_back(format("Photon counting: %d", (caps->ulFeatures & AC_FEATURES_PHOTONCOUNTING) != 0 ));
+	cvec.push_back(format("Count Convert: %d", (caps->ulFeatures & AC_FEATURES_COUNTCONVERT) != 0 ));
+	cvec.push_back(format("Dual exposure mode: %d", (caps->ulFeatures & AC_FEATURES_DUALMODE) != 0 ));
 	
 	cvec.push_back(format("caps.ulPCICard: %08x", caps->ulPCICard));
 	cvec.push_back(format("Maximum PCI speed in Hz: %d", caps->ulPCICard));
 	
 	cvec.push_back(format("caps.ulEMGainCapability: %08x", caps->ulEMGainCapability));
-	cvec.push_back(format("8bit DAC: %d", caps->ulEMGainCapability & AC_EMGAIN_8BIT != 0 ));
-	cvec.push_back(format("12bit DAC: %d", caps->ulEMGainCapability & AC_EMGAIN_12BIT != 0 ));
-	cvec.push_back(format("Gain setting linear: %d", caps->ulEMGainCapability & AC_EMGAIN_LINEAR12 != 0 ));
-	cvec.push_back(format("Gain setting real EM gain: %d", caps->ulEMGainCapability & AC_EMGAIN_REAL12 != 0 ));
+	cvec.push_back(format("8bit DAC: %d", (caps->ulEMGainCapability & AC_EMGAIN_8BIT) != 0 ));
+	cvec.push_back(format("12bit DAC: %d", (caps->ulEMGainCapability & AC_EMGAIN_12BIT) != 0 ));
+	cvec.push_back(format("Gain setting linear: %d", (caps->ulEMGainCapability & AC_EMGAIN_LINEAR12) != 0 ));
+	cvec.push_back(format("Gain setting real EM gain: %d", (caps->ulEMGainCapability & AC_EMGAIN_REAL12) != 0 ));
 	
 	// Gain settings (pre-amp and EMCCD)
 	int i, npg, emh, eml;

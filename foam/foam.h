@@ -60,11 +60,12 @@ typedef Protocol::Server::Connection Connection;
  
  \section foam_cmdline Command line arguments
  
- - -c or --config: configuration file [FOAM_DEFAULTCONF]
+ - -c or --config=FILE: configuration file
  - -v: increase verbosity
  - -q: decrease verbosity
  - --verb=LEVEL: set verbosity
  - --nodaemon: don't start network daemon
+ - -s, --sighandle=0|1: toggle signal handling
  - -h or --help: show help
  - --version: show version info
  
@@ -115,7 +116,8 @@ private:
 	void show_version() const;					//!< Show version information
 	void show_welcome() const;					//!< Show welcome banner
 	
-	SigHandle sighandler;								//!< Signal handler object
+	bool do_sighandle;									//!< Toggle for signal handling or not (default: yes)
+	SigHandle *sighandler;							//!< Signal handler object
 	
 protected:
 	// Properties set at start
