@@ -75,6 +75,7 @@ const string shwfs_type = "shwfs";
  
  */
 class Shwfs: public Wfs {
+	//! @todo this is a bit weird, why only SimulCam?
 	friend class SimulCam;
 public:
 	// Public datatypes
@@ -313,7 +314,7 @@ public:
 	 
 	 @param [in] wfcname Name of the WFC this WFS is calibrated with
 	 */
-	int calc_infmat(string wfcname);
+	int calc_infmat(const string &wfcname);
 	
 	/*! @brief Calculate actuation matrix to drive Wfc, using SVD
 	 

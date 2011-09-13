@@ -236,7 +236,7 @@ void Wfc::parse_waffle(string &odd, string &even) {
 		return;
 
 	string thisact;
-	int thisact_i;
+	size_t thisact_i=0;
 	
 	while (odd.size() > 0) {
 		thisact = popword(odd, " \t\n,");

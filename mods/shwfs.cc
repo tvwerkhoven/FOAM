@@ -335,7 +335,7 @@ int Shwfs::build_infmat(string wfcname, Camera::frame_t *frame, int actid, int a
 	return (int) m->wfamp->size;
 }
 
-int Shwfs::calc_infmat(string wfcname) {
+int Shwfs::calc_infmat(const string &wfcname) {
 	if (!calib[wfcname].init) {
 		io.msg(IO_WARN, "Shwfs::calc_infmat(): Call Shwfs::init_infmat() first.");
 		return 0;
@@ -400,7 +400,7 @@ int Shwfs::calc_infmat(string wfcname) {
 	return 0;
 }
 
-int Shwfs::calc_actmat(string wfcname, double singval, enum wfbasis /*basis*/) {
+int Shwfs::calc_actmat(const string &wfcname, const double singval, const enum wfbasis) {
 	io.msg(IO_XNFO, "Shwfs::calc_actmat(): calc'ing for wfc '%s' with singval cutoff %g.",
 				 wfcname.c_str(), singval);
 	// Using input:
