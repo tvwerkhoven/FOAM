@@ -244,6 +244,7 @@ int FOAM_ExpoAO::calib() {
 			
 			// Set actuators back to 0
 			alpao_dm97->set_control(0.0);
+			alpao_dm97->actuate();
 		}
 		
 		io.msg(IO_XNFO, "FOAM_ExpoAO::calib() Process data...");
