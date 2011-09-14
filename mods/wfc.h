@@ -52,26 +52,31 @@ const string wfc_type = "wfc";
  */
 class Wfc: public foam::Device {
 protected:
-	int nact;												//!< Number of actuators in this device
+	int real_nact;											//!< Number of actuators in this device. This will be used internally to drive the WFC
+	int virt_nact;											//!< Number of actuators to use. This will be visible to the outside world (i.e. GUI)
+	bool use_actmap;										//!< Use actuator map or not
+	typedef std::vector< std::vector<int> > actmap_t;
+	actmap_t actmap;										//!< Actuator map for cases where use_nact < real_nact. In this case, actmap.size() == use_nact and 'virtual' actuator 'idx' uses real actuators actmap[idx].
+	int ctrl_apply_actmap();						//!< Apply actmap to actuation vector, if necessary. Assumes ctrlparams.target is set with the proper control values
+
 	
-	string str_waffle_even;							//!< String representation of even actuators
-	string str_waffle_odd;							//!< String representation of odd actuators
-	vector<int> waffle_even;						//!< 'Even' actuators for waffle pattern
-	vector<int> waffle_odd;							//!< 'Odd' actuators for waffle pattern
-	void parse_waffle(string &odd, string &even); //!< Interpret data in waffle_even and waffle_odd
+	string str_waffle_even;							//!< String representation of even actuators. Should be *real* actuators
+	string str_waffle_odd;							//!< String representation of odd actuators. Should be *real* actuators
+	vector<int> waffle_even;						//!< 'Even' actuators for waffle pattern. Should be *real* actuators, not virtual
+	vector<int> waffle_odd;							//!< 'Odd' actuators for waffle pattern. Should be *real* actuators, not virtual
+	void parse_waffle(string &odd, string &even); //!< Interpret data in waffle_even and waffle_odd. Should be *real* actuators, not virtual
 	bool have_waffle;										//!< Do we know about the waffle pattern?
 	string ctrl_as_str(const char *fmt="%.4f") const; //!< Return control vector ctrlparams.target as string (not thread-safe)
-
-protected:
-	void set_nact(const size_t val) { nact = val; }
 	
 public:
 	// Common Wfc settings
 	typedef struct wfc_ctrl {
 		wfc_ctrl(): target(NULL), err(NULL), prev(NULL), gain(1,0,0), pid_int(NULL) { }
-		gsl_vector_float *target;					//!< (Requested) actuator amplitudes, should be between -1 and 1.
-		gsl_vector_float *err;						//!< Error between current and target actuation
-		gsl_vector_float *prev;						//!< Previous actuator amplitudes
+		gsl_vector_float *ctrl_vec;				//!< Control vector sent to the WFC (size real_nact). If use_actmap is false, this points to 'target' and has no memory itself. If use_actmap is true, it has its own memory and data has to be copied here.
+
+		gsl_vector_float *target;					//!< (Requested) actuator amplitudes, should be between -1 and 1. (size virt_nact)
+		gsl_vector_float *err;						//!< Error between current and target actuation (size virt_nact)
+		gsl_vector_float *prev;						//!< Previous actuator amplitudes (size virt_nact)
 		gain_t gain;											//!< Operating gain for this device
 		gsl_vector_float *pid_int;				//!< Integral part of the PID gain
 		float i_ran[2];										//!< Range for individual pid_int elements
@@ -79,8 +84,9 @@ public:
 	
 	wfc_ctrl_t ctrlparams;
 	
-	int get_nact() const { return nact; }
-	
+	int get_nact() const { return virt_nact; }
+	void set_nact(const int val) { virt_nact = val; }
+
 	void set_gain(const double p, const double i, const double d) { ctrlparams.gain.p = p; ctrlparams.gain.i = i; ctrlparams.gain.d = d; }
 	
 	/*! @brief Update WFC control

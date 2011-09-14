@@ -73,16 +73,16 @@ Wfc(io, ptc, name, alpaodm_type, port, conffile, online)
 	sleep(2);
 	
 	// Retreive number of actuators
-	acedev5GetNbActuator(1, &dm_id, &nact);
-	io.msg(IO_DEB2, "AlpaoDM::AlpaoDM()::%d got %d actuators", dm_id, nact);
+	acedev5GetNbActuator(1, &dm_id, &real_nact);
+	io.msg(IO_DEB2, "AlpaoDM::AlpaoDM()::%d got %d actuators", dm_id, real_nact);
 
 	// Retrieve offset
-	offset.resize(nact);
+	offset.resize(real_nact);
 	double *offset_tmp = &offset[0];
-	io.msg(IO_DEB2, "AlpaoDM::AlpaoDM()::%d acquiring offset...", dm_id, nact);
+	io.msg(IO_DEB2, "AlpaoDM::AlpaoDM()::%d acquiring offset...", dm_id, real_nact);
 	acedev5GetOffset(1, &dm_id, offset_tmp);
 	
-	for (size_t i=0; i < (size_t) nact; i++)
+	for (size_t i=0; i < (size_t) real_nact; i++)
 		offset_str += format("%.4f ", offset.at(i));
 	
 	io.msg(IO_DEB2, "AlpaoDM::AlpaoDM()::%d offset: %s", dm_id, offset_str.c_str());
@@ -115,7 +115,7 @@ AlpaoDM::~AlpaoDM() {
 
 int AlpaoDM::calibrate() {
 	// 'Calibrate' simulator (allocate memory)
-	act_vec.resize(nact);
+	act_vec.resize(real_nact);
 	
 	// Call calibrate() in base class (for wfc_amp)
 	return Wfc::calibrate();

@@ -62,7 +62,7 @@ private:
 	vector<double> offset;						//!< DM offset (calibrated safe 'zero' position)
 	string offset_str;								//!< Space-separated representation of offset
 
-	vector<double> act_vec;						//!< Local temporary actuate vector (copy of ctrlparms.target)
+	vector<double> act_vec;						//!< Local temporary actuate vector (copy of ctrlparms.ctrl_vec)
 
 public:
 	AlpaoDM(Io &io, foamctrl *const ptc, const string name, const string port, Path const &conffile, const bool online=true);
