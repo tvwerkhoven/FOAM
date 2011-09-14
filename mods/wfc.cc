@@ -39,6 +39,9 @@ have_waffle(false) {
 	io.msg(IO_DEB2, "Wfc::Wfc()");
 
 	try {
+		// Get actuator map. Syntax should be '<N_virt> [virt_act1 real_act1,real_act2,real_act3 [virt_act2 real_act1,real_act2,real_act3]]
+		str_actmap = cfg.getstring("actmap", "");
+		
 		// Get waffle pattern actuators
 		str_waffle_odd = cfg.getstring("waffle_odd", "");
 		str_waffle_even = cfg.getstring("waffle_even", "");
@@ -237,7 +240,9 @@ int Wfc::calibrate() {
 	
 	// Parse waffle pattern strings (only here because otherwise real_nact is 0)
 	parse_waffle(str_waffle_odd, str_waffle_even);
-		
+	// Parse actuator map string
+	parse_actmap(str_actmap);
+
 	set_calib(true);
 	return 0;
 }
@@ -289,6 +294,40 @@ void Wfc::parse_waffle(string &odd, string &even) {
 	}
 	
 	have_waffle = true;
+}
+
+void Wfc::parse_actmap(string &map) {
+	io.msg(IO_DEB2, "Wfc::parse_actmap(map=%s)", map.c_str());
+	if (map.size() <= 0)
+		return;
+	
+	string actmap_result;
+	// First 'word' is the number of virtual actuators
+	virt_nact = popint(map);
+	
+	actmap_result = format("n_vact: %d", virt_nact);
+	
+	int this_vact;
+	string these_ract;
+	int this_ract;
+	std::vector<int> this_actmap;
+	
+	while (map.size() > 0) {
+		// Each virtual actuator map syntax is like: 'v_act r_act1,r_act2,r_act3'
+		this_vact = popint(map);
+		actmap_result += format("vact %d -> ", this_vact);
+		
+		// This will contain 'r_act1,r_act2,...'
+		these_ract = popword(map);
+		while (these_ract.size() > 0) {
+			this_ract = popint(these_ract);
+			this_actmap.push_back(this_ract);
+			actmap_result += format("%d ", this_ract);
+		}
+		actmap.push_back(this_actmap);
+	}
+
+	use_actmap = true;
 }
 
 void Wfc::on_message(Connection *const conn, string line) { 
