@@ -470,7 +470,7 @@ int Shwfs::calc_actmat(const string &wfcname, const double singval, const enum w
 	if (singval < 0)
 		use_nmodes = (int) fmax(s->size - singval, 1.0);
 	// if singval > 1, use this many modes
-	else if (singval > 0)
+	else if (singval > 1)
 		use_nmodes = (int) fmin(s->size, singval);
 	// else, use as many modes to get a condition of 'singval' (already counted above)
 	
