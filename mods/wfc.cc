@@ -34,10 +34,14 @@
 
 Wfc::Wfc(Io &io, foamctrl *const ptc, const string name, const string type, const string port, Path const & conffile, const bool online):
 Device(io, ptc, name, wfc_type + "." + type, port, conffile, online),
-nact(0), have_waffle(false) {	
+real_nact(0), virt_nact(0), use_actmap(false), 
+have_waffle(false) {	
 	io.msg(IO_DEB2, "Wfc::Wfc()");
 
 	try {
+		// Get actuator map. Syntax should be '<N_virt> [virt_act1 real_act1,real_act2,real_act3 [virt_act2 real_act1,real_act2,real_act3]]
+		str_actmap = cfg.getstring("actmap", "");
+		
 		// Get waffle pattern actuators
 		str_waffle_odd = cfg.getstring("waffle_odd", "");
 		str_waffle_even = cfg.getstring("waffle_even", "");
@@ -52,6 +56,7 @@ nact(0), have_waffle(false) {
 	add_cmd("set gain");
 	add_cmd("get gain");
 	add_cmd("get nact");
+	//! @todo	add_cmd("get real_nact");
 	add_cmd("get ctrl");
 
 	add_cmd("act waffle");
@@ -62,6 +67,8 @@ nact(0), have_waffle(false) {
 
 Wfc::~Wfc() {
 	io.msg(IO_DEB2, "Wfc::~Wfc()");
+	if (use_actmap)
+		gsl_vector_float_free(ctrlparams.ctrl_vec);
 	gsl_vector_float_free(ctrlparams.target);
 	gsl_vector_float_free(ctrlparams.err);
 	gsl_vector_float_free(ctrlparams.prev);
@@ -81,6 +88,30 @@ string Wfc::ctrl_as_str(const char *fmt) const {
 		ctrl_str += ", " + format(fmt, gsl_vector_float_get(ctrlparams.target, i));
 	
 	return ctrl_str;
+}
+
+int Wfc::ctrl_apply_actmap() {
+	// If we don't use act_map, ctrl_vec already points to target and we're done
+	if (!use_actmap) {
+		io.msg(IO_DEB2, "Wfc::ctrl_apply_actmap() no act_map");
+		return 0;
+	}
+	string ctrl_str;
+	
+	// Loop over all virtual actuators in 'actmap'
+	for (size_t v_act=0; v_act<actmap.size(); v_act++) {
+		float ctrl_val = gsl_vector_float_get(ctrlparams.target, v_act);
+		ctrl_str += format("%d (%g) -> ", v_act, ctrl_val);
+		// Map over all real actuators associated with virtual actuator 'v_act'
+		for (size_t r_act=0; r_act<actmap.at(v_act).size(); r_act++) {
+			// Set real actuator 'r_act' to value of 'v_act'
+			gsl_vector_float_set(ctrlparams.ctrl_vec, actmap.at(v_act).at(r_act), ctrl_val);
+			ctrl_str += format("%d ", actmap.at(v_act).at(r_act));
+		}
+	}
+	io.msg(IO_DEB2, "Wfc::ctrl_apply_actmap() %s", ctrl_str.c_str());
+
+	return 0;
 }
 
 int Wfc::update_control(const gsl_vector_float *const error, const gain_t g, const float retain) {
@@ -130,7 +161,7 @@ int Wfc::update_control(const gsl_vector_float *const error, const gain_t g, con
 	}
 #endif
 	
-	return 0;
+	return ctrl_apply_actmap();
 }
 
 int Wfc::set_control(const gsl_vector_float *const newctrl) {
@@ -139,7 +170,7 @@ int Wfc::set_control(const gsl_vector_float *const newctrl) {
 	
 	// Copy new target to ctrlparams.target
 	gsl_blas_scopy(newctrl, ctrlparams.target);
-	return 0;
+	return ctrl_apply_actmap();
 }
 
 int Wfc::set_control(const float val) {
@@ -148,7 +179,7 @@ int Wfc::set_control(const float val) {
 	
 	// Set all actuators to 'val'
 	gsl_vector_float_set_all(ctrlparams.target, val);
-	return 0;
+	return ctrl_apply_actmap();
 }
 
 int Wfc::set_control_act(const float val, const size_t act_id) {
@@ -157,7 +188,7 @@ int Wfc::set_control_act(const float val, const size_t act_id) {
 	
 	// Set actuator 'act_id' to 'val'
 	gsl_vector_float_set(ctrlparams.target, act_id, val);
-	return 0;
+	return ctrl_apply_actmap();
 }
 
 int Wfc::set_wafflepattern(const float val) {
@@ -170,14 +201,14 @@ int Wfc::set_wafflepattern(const float val) {
 		calibrate();
 	
 	// Set all to zero first
-	gsl_vector_float_set_zero(ctrlparams.target);
+	gsl_vector_float_set_zero(ctrlparams.ctrl_vec);
 	
 	// Set 'even' actuators to +val, set 'odd' actuators to -val:
 	for (size_t idx=0; idx < waffle_even.size(); idx++)
-		gsl_vector_float_set(ctrlparams.target, waffle_even.at(idx), val);
+		gsl_vector_float_set(ctrlparams.ctrl_vec, waffle_even.at(idx), val);
 
 	for (size_t idx=0; idx < waffle_odd.size(); idx++)
-		gsl_vector_float_set(ctrlparams.target, waffle_odd.at(idx), -val);
+		gsl_vector_float_set(ctrlparams.ctrl_vec, waffle_odd.at(idx), -val);
 	
 	return 0;
 }
@@ -192,24 +223,34 @@ int Wfc::set_randompattern(const float maxval) {
 	for (size_t idx=0; idx < ctrlparams.target->size; idx++)
 		gsl_vector_float_set(ctrlparams.target, idx, (drand48()*2.0-1.0)*maxval);
 	
-	return 0;
+	return ctrl_apply_actmap();
 }
 
 
 int Wfc::calibrate() {
+	// Parse actuator map string
+	virt_nact = parse_actmap(str_actmap);
+	
+	// Parse waffle pattern strings (only here because otherwise real_nact is 0)
+	parse_waffle(str_waffle_odd, str_waffle_even);
+	
 	// Allocate memory for control command
 	gsl_vector_float_free(ctrlparams.target);
-	ctrlparams.target = gsl_vector_float_calloc(nact);
+	ctrlparams.target = gsl_vector_float_calloc(virt_nact);
 	gsl_vector_float_free(ctrlparams.err);
-	ctrlparams.err = gsl_vector_float_calloc(nact);
+	ctrlparams.err = gsl_vector_float_calloc(virt_nact);
 	gsl_vector_float_free(ctrlparams.prev);
-	ctrlparams.prev = gsl_vector_float_calloc(nact);
+	ctrlparams.prev = gsl_vector_float_calloc(virt_nact);
 	gsl_vector_float_free(ctrlparams.pid_int);
-	ctrlparams.pid_int = gsl_vector_float_calloc(nact);
+	ctrlparams.pid_int = gsl_vector_float_calloc(virt_nact);
 	
-	// Parse waffle pattern strings (only here because otherwise nact is 0)
-	parse_waffle(str_waffle_odd, str_waffle_even);
-		
+	if (use_actmap) {
+		gsl_vector_float_free(ctrlparams.ctrl_vec);
+		ctrlparams.ctrl_vec = gsl_vector_float_calloc(real_nact);
+	} else {
+		ctrlparams.ctrl_vec = ctrlparams.target;
+	}
+	
 	set_calib(true);
 	return 0;
 }
@@ -241,7 +282,7 @@ void Wfc::parse_waffle(string &odd, string &even) {
 	while (odd.size() > 0) {
 		thisact = popword(odd, " \t\n,");
 		thisact_i = strtol(thisact.c_str(), (char **) NULL, 10);
-		if (thisact_i >= 0 && thisact_i <= nact) {
+		if (thisact_i >= 0 && thisact_i <= real_nact) {
 			waffle_odd.push_back(thisact_i);
 			io.msg(IO_DEB2, "Wfc::parse_waffle(odd) add %d", thisact_i);
 		}
@@ -252,7 +293,7 @@ void Wfc::parse_waffle(string &odd, string &even) {
 	while (even.size() > 0) {
 		thisact = popword(even, " \t\n,");
 		thisact_i = strtol(thisact.c_str(), (char **) NULL, 10);
-		if (thisact_i >= 0 && thisact_i <= nact) {
+		if (thisact_i >= 0 && thisact_i <= real_nact) {
 			waffle_even.push_back(thisact_i);
 			io.msg(IO_DEB2, "Wfc::parse_waffle(even) add %d", thisact_i);
 		}
@@ -263,6 +304,49 @@ void Wfc::parse_waffle(string &odd, string &even) {
 	have_waffle = true;
 }
 
+int Wfc::parse_actmap(string &map) {
+	io.msg(IO_DEB2, "Wfc::parse_actmap(map=%s)", map.c_str());
+	if (map.size() <= 0)
+		return real_nact;
+	
+	string actmap_result;
+	// First 'word' is the number of virtual actuators
+	int n_virt = popint(map);
+	
+	actmap_result = format("n_vact: %d ", n_virt);
+	
+	int this_vact;
+	string these_ract;
+	int this_ract;
+	std::vector<int> this_actmap;
+	int vact_count=0;
+	
+	while (map.size() > 0) {
+		vact_count++;
+		this_actmap.clear();
+		// Each virtual actuator map syntax is like: 'v_act r_act1,r_act2,r_act3'
+		this_vact = popint(map);
+		actmap_result += format("vact %d -> ", this_vact);
+		
+		// This will contain 'r_act1,r_act2,...'
+		these_ract = popword(map);
+		while (these_ract.size() > 0) {
+			this_ract = str2int(popword(these_ract, ","));
+			this_actmap.push_back(this_ract);
+			actmap_result += format("%d ", this_ract);
+		}
+		actmap.push_back(this_actmap);
+	}
+	if (n_virt != vact_count)
+		io.msg(IO_ERR, "Wfc::parse_actmap() n_virt %d != vact_count %d", n_virt, vact_count);
+	if (n_virt != actmap.size())
+		io.msg(IO_ERR, "Wfc::parse_actmap() n_virt %d != actmap.size %zu", n_virt, actmap.size());
+
+	io.msg(IO_XNFO, "Wfc::parse_actmap() map: %s", actmap_result.c_str());
+
+	use_actmap = true;
+	return actmap.size();
+}
 
 void Wfc::on_message(Connection *const conn, string line) { 
 	string orig = line;
@@ -276,7 +360,7 @@ void Wfc::on_message(Connection *const conn, string line) {
 			conn->addtag("gain");
 			conn->write(format("ok gain %g %g %g", ctrlparams.gain.p, ctrlparams.gain.i, ctrlparams.gain.d));
 		} else if (what == "nact") {			// get nact
-			conn->write(format("ok nact %d", nact));
+			conn->write(format("ok nact %d", get_nact()));
 		} else if (what == "ctrl") {			// get ctrl
 			conn->write(format("ok ctrl %s", ctrl_as_str().c_str()));
 		} else
