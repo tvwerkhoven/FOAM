@@ -196,6 +196,9 @@ int FOAM_ExpoAO::calib() {
 	if (ptc->calib == "zero") {							// Calibrate reference/'flat' wavefront
 		io.msg(IO_INFO, "FOAM_ExpoAO::calib() Zero calibration");
 		shwfs->calib_zero(alpao_dm97, ixoncam);
+		
+		protocol->broadcast(format("ok calib zero :%s", 
+															 simwfs->get_refvec_str().c_str() ));
 	} 
 	else if (ptc->calib == "influence") {		// Calibrate influence function
 		// calib influence [singval cutoff] -- 
@@ -213,6 +216,15 @@ int FOAM_ExpoAO::calib() {
 		
 		// Calibrate for influence function now
 		simwfs->calib_influence(simwfc, simcam, actpos, sval_cutoff);
+		
+		// Broadcast results to clients
+		protocol->broadcast(format("ok calib svd singvals :%s", 
+															 simwfs->get_singval_str(simwfc->getname()).c_str() ));
+		protocol->broadcast(format("ok calib svd condition :%g", simwfs->get_svd_cond(simwfc->getname()) ));
+		protocol->broadcast(format("ok calib svd usage :%g %d", 
+															 simwfs->get_svd_singuse(simwfc->getname()),
+															 simwfs->get_svd_modeuse(simwfc->getname())
+															 ));
 	} 
 	else if (ptc->calib == "offsetvec") {	// Add offset vector to correction 
 		double xoff = popdouble(ptc->calib_opt);
@@ -232,6 +244,15 @@ int FOAM_ExpoAO::calib() {
 		io.msg(IO_INFO, "FOAM_ExpoAO::calib() re-calc SVD, sval=%g", sval_cutoff);
 		
 		simwfs->calc_actmat(simwfc->getname(), sval_cutoff);
+		
+		// Broadcast results to clients
+		protocol->broadcast(format("ok calib svd singvals :%s", 
+															 simwfs->get_singval_str(simwfc->getname()).c_str() ));
+		protocol->broadcast(format("ok calib svd condition :%g", simwfs->get_svd_cond(simwfc->getname())));
+		protocol->broadcast(format("ok calib svd usage :%g %d", 
+															 simwfs->get_svd_singuse(simwfc->getname()),
+															 simwfs->get_svd_modeuse(simwfc->getname())
+															 ));
 	}
 	else {
 		io.msg(IO_WARN, "FOAM_ExpoAO::calib unknown!");
