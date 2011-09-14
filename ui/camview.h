@@ -64,14 +64,14 @@ protected:
 	SwitchButton capture;								//!< Start/stop capturing frames, CamView::on_capture_clicked()
 	SwitchButton display;								//!< Start/stop displaying frames, CamView::on_display_clicked(). OK: frame just updated. WAITING: frame requested. CLEAR: don't display. ERROR: something went wrong, stop display.
 	SwitchButton store;									//!< Start/stop storing frames on the camera, CamView::on_store_clicked().  CLEAR: not storing. WAITING: store in progress. ERROR: something went wrong, abort. OK: unused
-	Entry store_n;											//!< How many frames to store when clicking CamView:store
+	LabeledSpinEntry store_n;						//!< How many frames to store when clicking CamView:store
 	VSeparator ctrl_vsep;
-	LabeledEntry e_exposure;						//!< For exposure time, RW @todo convert to spin entry
-	LabeledEntry e_offset;							//!< For offset, RW @todo convert to spin entry
-	LabeledEntry e_interval;						//!< For interval, RW @todo convert to spin entry
-	LabeledEntry e_gain;								//!< For gain, RW @todo convert to spin entry
+	LabeledSpinEntry e_exposure;				//!< For exposure time, RW
+	LabeledSpinEntry e_offset;					//!< For offset, RW
+	LabeledSpinEntry e_interval;				//!< For interval, RW
+	LabeledSpinEntry e_gain;						//!< For gain, RW
 	LabeledEntry e_res;									//!< For resolution, RO
-	LabeledEntry e_mode;								//!< For mode, RO
+	LabeledEntry e_mode;								//!< For operating mode, RO
 	
 	// Display stuff
 	HBox disphbox;
@@ -99,8 +99,8 @@ protected:
 	Glib::RefPtr<Gdk::Pixbuf> histopixbuf;
 
 	VBox histovbox;
-	LabeledSpinEntry minval;						//!<
-	LabeledSpinEntry maxval;						//!<
+	LabeledSpinEntry minval;						//!< Minimum value to display in glviewer
+	LabeledSpinEntry maxval;						//!< Maximum value to display in glviewer
 	HBox histohbox2;
 	LabeledEntry e_avg;									//!< Shows avg value
 	LabeledEntry e_rms;									//!< Shows rms/sigma

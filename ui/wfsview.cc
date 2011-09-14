@@ -34,7 +34,7 @@ DevicePage((DeviceCtrl *) wfsctrl, log, foamctrl, n), wfsctrl(wfsctrl),
 wf_cam("Cam"), 
 wfpow_frame("Wavefront info"), 
 wfpow_gr(480,100), wfpow_mode("Basis"), 
-wfscam_ui(NULL)
+wfscam_ui(NULL), wfscam_ctrl(NULL)
 {
 	log.term(format("%s", __PRETTY_FUNCTION__));
 	
@@ -127,6 +127,7 @@ void WfsView::on_cam_update() {
 	// New camera for this WFS, get from foamctrl and store in this class.
 	FoamControl::device_t *dev_wfscam = foamctrl.get_device(wfsctrl->wfscam);
 	wfscam_ui = (CamView *) dev_wfscam->page;
+	wfscam_ctrl = (CamCtrl *) dev_wfscam->ctrl;
 	
 	// update gui with new information
 	on_message_update();

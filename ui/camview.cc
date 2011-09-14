@@ -50,10 +50,17 @@ ctrlframe("Camera controls"),
 dispframe("Display settings"),
 camframe("Camera " + devname),
 histoframe("Histogram"),
-capture("Capture"), display("Display"), store("Store"), e_exposure("Exp."), e_offset("Offset"), e_interval("Intv."), e_gain("Gain"), e_res("Res."), e_mode("Mode"),
+capture("Capture"), display("Display"), store("Store"), 
+store_n("#", "", -1, INFINITY, 10.0, 100.0, 0), 
+e_exposure("Exp.", "s", 0, INFINITY, 0.01, 0.1, 6), 
+e_offset("Offset", "", -INFINITY, INFINITY, 10.0, 100.0, 2), 
+e_interval("Intv.", "s", 0, INFINITY, 0.1, 1.0, 4), 
+e_gain("Gain", "", -INFINITY, INFINITY, 1.0, 10.0, 0), 
+e_res("Res."), e_mode("Mode"),
 flipv("Flip V"), fliph("Flip H"), crosshair("+"), grid("Grid"), histo("Histo"), underover("Underover"), 
 zoomin(Stock::ZOOM_IN), zoomout(Stock::ZOOM_OUT), zoom100(Stock::ZOOM_100), zoomfit(Stock::ZOOM_FIT), 
-histoalign(0.5, 0.5, 0, 0), minval("Display min"), maxval("Display max"), e_avg("Avg."), e_rms("RMS"), e_datamin("Min"), e_datamax("Max")
+histoalign(0.5, 0.5, 0, 0), 
+minval("Display min"), maxval("Display max"), e_avg("Avg."), e_rms("RMS"), e_datamin("Min"), e_datamax("Max")
 {
 	log.term(format("%s", __PRETTY_FUNCTION__));
 	
@@ -69,11 +76,6 @@ histoalign(0.5, 0.5, 0, 0), minval("Display min"), maxval("Display max"), e_avg(
 	histoimage.set(histopixbuf);
 	histoimage.set_double_buffered(false);
 	
-	e_exposure.set_width_chars(4);
-	e_offset.set_width_chars(4);
-	e_interval.set_width_chars(4);
-	e_gain.set_width_chars(4);
-	
 	e_res.set_width_chars(10);
 	e_res.set_editable(false);
 	e_mode.set_width_chars(8);
@@ -85,8 +87,6 @@ histoalign(0.5, 0.5, 0, 0), minval("Display min"), maxval("Display max"), e_avg(
 	grid.set_active(false);
 	histo.set_active(false);
 	underover.set_active(false);
-	
-	store_n.set_width_chars(4);
 	
 	minval.set_range(0, 1 << camctrl->get_depth());
 	minval.set_digits(0);
@@ -271,10 +271,11 @@ void CamView::clear_gui() {
 	DevicePage::clear_gui();
 	log.term(format("%s", __PRETTY_FUNCTION__));
 	
-	e_exposure.set_text("N/A");
-	e_offset.set_text("N/A");
-	e_interval.set_text("N/A");
-	e_gain.set_text("N/A");
+	e_exposure.set_value(0);
+	e_offset.set_value(0);
+	e_interval.set_value(0);
+	e_gain.set_value(0);
+	
 	e_res.set_text("N/A");
 	e_mode.set_text("N/A");
 	
@@ -282,7 +283,7 @@ void CamView::clear_gui() {
 	display.set_state(SwitchButton::CLEAR);
 	store.set_state(SwitchButton::CLEAR);
 	
-	store_n.set_text("10");
+	store_n.set_value(10);
 
 	e_avg.set_text("N/A");
 	e_rms.set_text("N/A");	
@@ -489,10 +490,11 @@ void CamView::on_message_update() {
 	DevicePage::on_message_update();
 
 	// Set values in text entries
-	e_exposure.set_text(format("%g", camctrl->get_exposure()));
-	e_offset.set_text(format("%g", camctrl->get_offset()));
-	e_interval.set_text(format("%g", camctrl->get_interval()));
-	e_gain.set_text(format("%g", camctrl->get_gain()));
+	e_exposure.set_value(camctrl->get_exposure());
+	e_offset.set_value(camctrl->get_offset());
+	e_interval.set_value(camctrl->get_interval());
+	e_gain.set_value(camctrl->get_gain());
+	
 	e_res.set_text(format("%dx%dx%d", camctrl->get_width(), camctrl->get_height(), camctrl->get_depth()));
 	
 	// Tell glarea what we can expect
@@ -516,7 +518,7 @@ void CamView::on_message_update() {
 	else
 		capture.set_state(SwitchButton::ERROR);
 	
-	store_n.set_text(format("%d", camctrl->get_nstore()));
+	store_n.set_value(camctrl->get_nstore());
 	if (camctrl->get_nstore() == 0)
 		store.set_state(SwitchButton::CLEAR);
 	else
@@ -526,10 +528,10 @@ void CamView::on_message_update() {
 
 void CamView::on_info_change() {
 	log.term(format("%s", __PRETTY_FUNCTION__));
-	camctrl->set_exposure(strtod(e_exposure.get_text().c_str(), NULL));
-	camctrl->set_offset(strtod(e_offset.get_text().c_str(), NULL));
-	camctrl->set_interval(strtod(e_interval.get_text().c_str(), NULL));
-	camctrl->set_gain(strtod(e_gain.get_text().c_str(), NULL));
+	camctrl->set_exposure( e_exposure.get_value() );
+	camctrl->set_offset( e_offset.get_value() );
+	camctrl->set_interval( e_interval.get_value() );
+	camctrl->set_gain( e_gain.get_value() );
 }
 
 void CamView::on_zoom100_activate() {
@@ -579,7 +581,7 @@ void CamView::on_store_clicked() {
 	// - store ERROR: abort
 	// - store OK: unused
 	
-	int nstore = (int) strtol(store_n.get_text().c_str(), NULL, 0);
+	int nstore = store_n.get_value_as_int();
 	log.term(format("%s (%d)", __PRETTY_FUNCTION__, nstore));
 	
 	if (store.get_state() == SwitchButton::CLEAR) {

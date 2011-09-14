@@ -50,10 +50,11 @@ protected:
 	BarGraph wfpow_gr;
 	LabeledEntry wfpow_mode;						//!< Wavefront representation modes used (KL, Zernike, mirror, etc.)
 	
-	CamView *wfscam_ui;									//!< Camera GUI class
+	CamView *wfscam_ui;									//!< Camera GUI class used with this SHWFS
+	CamCtrl *wfscam_ctrl;								//!< Camera ctrl class used with this SHWFS
 	
 	void on_wfpow_update();							//!< Update WF display
-	void on_cam_update();								//!< Update on WFS camera
+	virtual void on_cam_update();				//!< Update on WFS camera
 
 	void do_wfpow_update() const { wfsctrl->send_cmd("get modes"); } //!< Request update of modes vector
 

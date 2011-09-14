@@ -56,10 +56,10 @@ private:
 	HBox subi_hbox141;
 	
 	ComboBoxText subi_select;						//!< List of subimages
-	LabeledEntry subi_lx;								//!< Subimage coordinate lower x
-	LabeledEntry subi_ly;								//!< Subimage coordinate lower y
-	LabeledEntry subi_tx;								//!< Subimage coordinate top x
-	LabeledEntry subi_ty;								//!< Subimage coordinate top y
+	LabeledSpinEntry subi_lx;						//!< Subimage coordinate lower x
+	LabeledSpinEntry subi_ly;						//!< Subimage coordinate lower y
+	LabeledSpinEntry subi_tx;						//!< Subimage coordinate top x
+	LabeledSpinEntry subi_ty;						//!< Subimage coordinate top y
 	
 	Button subi_update;									//!< Update current subimage data
 	Button subi_del;										//!< Delete current subimage
