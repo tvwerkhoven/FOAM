@@ -227,6 +227,15 @@ int FOAM_FullSim::calib() {
 		// Reset seeing settings
 		simcam->set_seeingfac(old_seeingfac);
 		simcam->do_simwfcerr = old_do_wfcerr;
+		
+		// Broadcast results to clients
+		protocol->broadcast(format("ok calib svd singvals :%s", 
+															 simwfs->get_singval_str(simwfc->getname()).c_str() ));
+		protocol->broadcast(format("ok calib svd condition :%g", simwfs->get_svd_cond(simwfc->getname())));
+		protocol->broadcast(format("ok calib svd usage :%g %d", 
+															 simwfs->get_svd_singuse(simwfc->getname()),
+															 simwfs->get_svd_modeuse(simwfc->getname())
+															 ));
 	} 
 	else if (ptc->calib == "zero") {	// Calibrate reference/'flat' wavefront
 		io.msg(IO_INFO, "FOAM_FullSim::calib() Zero calibration");
@@ -241,6 +250,10 @@ int FOAM_FullSim::calib() {
 		simcam->set_seeingfac(old_seeingfac);
 		simcam->do_simwfc = old_do_simwfc;
 		simcam->do_simwfcerr = old_do_wfcerr;
+		
+		protocol->broadcast(format("ok calib zero :%s", 
+															 simwfs->get_refvec_str().c_str() ));
+
 	} 
 	else if (ptc->calib == "offsetvec") {	// Add offset vector to correction 
 		double xoff = popdouble(ptc->calib_opt);
@@ -249,6 +262,7 @@ int FOAM_FullSim::calib() {
 		
 		if (simwfs->calib_offset(xoff, yoff))
 			io.msg(IO_ERR, "FOAM_FullSim::calib() offset vector could not be applied!");
+		
 	}
 	else if (ptc->calib == "svd") {	// (Re-)calculate SVD given the influence matrix
 		// calib svd [singval cutoff] -- 
@@ -260,6 +274,15 @@ int FOAM_FullSim::calib() {
 		io.msg(IO_INFO, "FOAM_FullSim::calib() re-calc SVD, sval=%g", sval_cutoff);
 
 		simwfs->calc_actmat(simwfc->getname(), sval_cutoff);
+		
+		// Broadcast results to clients
+		protocol->broadcast(format("ok calib svd singvals :%s", 
+															 simwfs->get_singval_str(simwfc->getname()).c_str() ));
+		protocol->broadcast(format("ok calib svd condition :%g", simwfs->get_svd_cond(simwfc->getname())));
+		protocol->broadcast(format("ok calib svd usage :%g %d", 
+															 simwfs->get_svd_singuse(simwfc->getname()),
+															 simwfs->get_svd_modeuse(simwfc->getname())
+															 ));
 	}
 	else {
 		io.msg(IO_WARN, "FOAM_FullSim::calib unknown!");
