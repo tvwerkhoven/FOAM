@@ -90,6 +90,30 @@ string Wfc::ctrl_as_str(const char *fmt) const {
 	return ctrl_str;
 }
 
+int Wfc::ctrl_apply_actmap() {
+	// If we don't use act_map, ctrl_vec already points to target and we're done
+	if (!use_actmap) {
+		io.msg(IO_DEB2, "Wfc::ctrl_apply_actmap() no act_map");
+		return 0;
+	}
+	string ctrl_str;
+	
+	// Loop over all virtual actuators in 'actmap'
+	for (size_t v_act=0; v_act<actmap.size(); v_act++) {
+		float ctrl_val = gsl_vector_float_get(ctrlparams.target, v_act);
+		ctrl_str += format("%d (%g) -> ", v_act, ctrl_val);
+		// Map over all real actuators associated with virtual actuator 'v_act'
+		for (size_t r_act=0; r_act<actmap.at(v_act).size(); r_act++) {
+			// Set real actuator 'r_act' to value of 'v_act'
+			gsl_vector_float_set(ctrlparams.ctrl_vec, r_act, ctrl_val);
+			ctrl_str += format("%d ", r_act);
+		}
+	}
+	io.msg(IO_DEB2, "Wfc::ctrl_apply_actmap() %s", ctrl_str.c_str());
+
+	return 0;
+}
+
 int Wfc::update_control(const gsl_vector_float *const error, const gain_t g, const float retain) {
 	// gsl_blas_saxpy(alpha, x, y): compute the sum y = \alpha x + y for the vectors x and y.
 	// gsl_blas_sscal(alpha, x): rescale the vector x by the multiplicative factor alpha. 
@@ -138,23 +162,6 @@ int Wfc::update_control(const gsl_vector_float *const error, const gain_t g, con
 #endif
 	
 	return ctrl_apply_actmap();
-}
-
-int Wfc::ctrl_apply_actmap() {
-	// If we don't use act_map, ctrl_vec already points to target and we're done
-	if (!use_actmap)
-		return 0;
-	
-	// Loop over all virtual actuators in 'actmap'
-	for (size_t v_act=0; v_act<actmap.size(); v_act++) {
-		// Map over all real actuators associated with virtual actuator 'v_act'
-		for (size_t r_act=0; r_act<actmap.at(v_act).size(); r_act++) {
-			// Set real actuator 'r_act' to value of 'v_act'
-			float ctrl_val = gsl_vector_float_get(ctrlparams.target, v_act);
-			gsl_vector_float_set(ctrlparams.ctrl_vec, r_act, ctrl_val);
-		}
-	}
-	return 0;
 }
 
 int Wfc::set_control(const gsl_vector_float *const newctrl) {
