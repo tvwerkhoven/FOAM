@@ -138,7 +138,7 @@ int AlpaoDM::reset() {
 int AlpaoDM::actuate(const bool /*block*/) {
 	// Copy from ctrlparams to local double array:
 	for (size_t i=0; i<nact; i++)
-		act_vec.at(i) = gsl_vector_float_get(ctrlparams.ctrl_vec, i);
+		act_vec.at(i) = gsl_vector_float_get(ctrlparams.target, i);
 	
 	// acedev5Send expected pointer to double-array, take address of first
 	// vector element to satisfy this need. std::vector guarantees data contiguity
