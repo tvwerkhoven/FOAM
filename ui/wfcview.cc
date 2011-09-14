@@ -55,7 +55,7 @@ wfcact_frame("WFC actuators"), wfcact_gr(480,100)
 	
 	calib_amp.set_digits(2);
 	calib_amp.set_increments(0.1, 1);
-	calib_amp.set_range(-1.0,1.0);
+	calib_amp.set_range(-5.0, 5.0);
 
 	// Extra device info
 	devhbox.pack_start(vsep0, PACK_SHRINK);
