@@ -117,6 +117,10 @@ private:
 			gsl_vector *s;									//!< SVD vector s of infmat (size (nact, 1))
 			gsl_matrix *Sigma;							//!< SVD matrix Sigma of infmat (size (nact, nact))
 			gsl_matrix *V;									//!< SVD matrix V of infmat (size (nact, nact))
+			
+			int use_nmodes;									//!< Number of modes to use
+			double use_singval;							//!< Amount of singular values used (i.e. 1.0 for all, 0.5 for half the power in all modes)
+			double condition;								//!< SVD condition, i.e. singval[0]/singval[-1]
 		} actmat;													//!< Actuation matrix & related entitites
 		
 	} infdata_t;
@@ -328,8 +332,36 @@ public:
 	 @param [in] singval How much singular value/modes to include
 	 @param [in] basis Basis for which singval counts
 	 */	 
-	int calc_actmat(const string &wfcname, const double singval, const enum wfbasis basis = SENSOR);
+	int calc_actmat(const string &wfcname, const double singval, const bool check_svd=true, const enum wfbasis basis = SENSOR);
 	
+	/*! @brief Represent singular value array as string
+	 
+	 @return <N> <s1> <s2> ... <sN>
+	 */
+	string get_singval_str(const string &wfcname) const;
+	
+	/*! @brief Return condition of a specific SVD
+	 
+	 @return singval[0]/singval[-1]
+	 */
+	double get_svd_cond(const string &wfcname) const;
+	
+	/*! @brief Return number of modes used in this decomposition
+	 @return <N> number of modes
+	 */
+	int get_svd_modeuse(const string &wfcname) const;
+	
+	/*! @brief Return singular value used in this decomposition
+	 @return sum i=0...modes_used (singval[i]/sum(singval))
+	 */
+	double get_svd_singuse(const string &wfcname) const;
+	
+	/*! @brief Return reference vector as string
+	 
+	 @return <N> <refx1> <refy1> <refx2> <refy2> ... <refNx> <refNy>
+	 */
+	string get_refvec_str() const;
+
 	/*! @brief Check subimage sanity, should be inside frame
 	 */
 	int check_subimgs(const vector_t &bounds) const;
