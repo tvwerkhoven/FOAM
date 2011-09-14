@@ -198,7 +198,7 @@ int FOAM_ExpoAO::calib() {
 		ixonwfs->calib_zero(alpao_dm97, ixoncam);
 		
 		protocol->broadcast(format("ok calib zero :%s", 
-															 simwfs->get_refvec_str().c_str() ));
+															 ixonwfs->get_refvec_str().c_str() ));
 	} 
 	else if (ptc->calib == "influence") {		// Calibrate influence function
 		// calib influence [singval cutoff] -- 
@@ -219,11 +219,12 @@ int FOAM_ExpoAO::calib() {
 
 		// Broadcast results to clients
 		protocol->broadcast(format("ok calib svd singvals :%s", 
-															 simwfs->get_singval_str(simwfc->getname()).c_str() ));
-		protocol->broadcast(format("ok calib svd condition :%g", simwfs->get_svd_cond(simwfc->getname()) ));
+															 ixonwfs->get_singval_str(alpao_dm97->getname()).c_str() ));
+		protocol->broadcast(format("ok calib svd condition :%g", 
+															 ixonwfs->get_svd_cond(alpao_dm97->getname()) ));
 		protocol->broadcast(format("ok calib svd usage :%g %d", 
-															 simwfs->get_svd_singuse(simwfc->getname()),
-															 simwfs->get_svd_modeuse(simwfc->getname())
+															 ixonwfs->get_svd_singuse(alpao_dm97->getname()),
+															 ixonwfs->get_svd_modeuse(alpao_dm97->getname())
 															 ));
 	} 
 	else if (ptc->calib == "offsetvec") {	// Add offset vector to correction 
@@ -247,11 +248,12 @@ int FOAM_ExpoAO::calib() {
 		
 		// Broadcast results to clients
 		protocol->broadcast(format("ok calib svd singvals :%s", 
-															 simwfs->get_singval_str(simwfc->getname()).c_str() ));
-		protocol->broadcast(format("ok calib svd condition :%g", simwfs->get_svd_cond(simwfc->getname())));
+															 ixonwfs->get_singval_str(alpao_dm97->getname()).c_str() ));
+		protocol->broadcast(format("ok calib svd condition :%g", 
+															 ixonwfs->get_svd_cond(alpao_dm97->getname()) ));
 		protocol->broadcast(format("ok calib svd usage :%g %d", 
-															 simwfs->get_svd_singuse(simwfc->getname()),
-															 simwfs->get_svd_modeuse(simwfc->getname())
+															 ixonwfs->get_svd_singuse(alpao_dm97->getname()),
+															 ixonwfs->get_svd_modeuse(alpao_dm97->getname())
 															 ));
 	}
 	else {
