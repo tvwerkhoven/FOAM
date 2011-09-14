@@ -274,6 +274,9 @@ void ShwfsView::on_subi_vecs_clicked() {
 		subi_vecs.set_state(SwitchButton::WAITING);
 	}
 	else {
+		// Clear current lines from the GUI
+		if (wfscam_ui)
+			wfscam_ui->glarea.clearlines();
 		subi_vecs.set_state(SwitchButton::CLEAR);
 	}
 }
@@ -342,5 +345,12 @@ void ShwfsView::on_message_update() {
 			wfscam_ui->glarea.addbox(shwfsctrl->get_mla_si((size_t) i));
 	
 		wfscam_ui->glarea.do_update();
-	}	
+	}
+	// If we have wfscam_ctrl, set subimage coordinate ranges to camera resolution
+	if (wfscam_ctrl) {
+		subi_lx.set_range(0, wfscam_ctrl->get_width());
+		subi_ly.set_range(0, wfscam_ctrl->get_height());
+		subi_tx.set_range(0, wfscam_ctrl->get_width());
+		subi_ty.set_range(0, wfscam_ctrl->get_height());
+	}
 }
