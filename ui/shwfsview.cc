@@ -42,10 +42,15 @@ subi_vecs("Show shifts"), subi_vecdelayi("every", "s")
 	subi_last.tv_usec = 0;
 
 	// Widget properties
-	subi_lx.set_width_chars(6);
-	subi_ly.set_width_chars(6);
-	subi_tx.set_width_chars(6);
-	subi_ty.set_width_chars(6);
+	subi_lx.set_digits(0);
+	subi_lx.set_increments(1, 10);
+	subi_ly.set_digits(0);
+	subi_ly.set_increments(1, 10);
+	subi_tx.set_digits(0);
+	subi_tx.set_increments(1, 10);
+	subi_ty.set_digits(0);
+	subi_ty.set_increments(1, 10);
+	
 	subi_vecdelayi.set_digits(2);
 	subi_vecdelayi.set_range(0.0, 5.0);
 	subi_vecdelayi.set_increments(0.1, 1);
@@ -150,10 +155,10 @@ void ShwfsView::clear_gui() {
 	
 	subi_select.clear_items();
 	subi_select.append_text("-");
-	subi_lx.set_text("");
-	subi_ly.set_text("");
-	subi_tx.set_text("");
-	subi_ty.set_text("");
+	subi_lx.set_value(0);
+	subi_ly.set_value(0);
+	subi_tx.set_value(0);
+	subi_ty.set_value(0);
 	subi_vecdelayi.set_value(1.0);
 	subi_find_minif.set_value(0.6);
 		
@@ -177,10 +182,10 @@ void ShwfsView::on_subi_select_changed() {
 	// Get coordinates for that subimage
 	fvector_t tmp_si = shwfsctrl->get_mla_si((size_t) curr_si);
 	
-	subi_lx.set_text(format("%.0f", tmp_si.lx));
-	subi_ly.set_text(format("%.0f", tmp_si.ly));
-	subi_tx.set_text(format("%.0f", tmp_si.tx));
-	subi_ty.set_text(format("%.0f", tmp_si.ty));
+	subi_lx.set_value(tmp_si.lx);
+	subi_ly.set_value(tmp_si.ly);
+	subi_tx.set_value(tmp_si.tx);
+	subi_ty.set_value(tmp_si.ty);
 }
 
 void ShwfsView::on_subi_add_clicked() {
@@ -196,14 +201,10 @@ void ShwfsView::on_subi_add_clicked() {
 	// Get text from GUI, convert to floats
 	// Read as floats to process potential decimal signals, then cast to int. 
 	// Reading as ints directly might break on decimals.
-	tmp = subi_lx.get_text();
-	int new_lx = (int) strtof(tmp.c_str(), NULL);
-	tmp = subi_ly.get_text();
-	int new_ly = (int) strtof(tmp.c_str(), NULL);
-	tmp = subi_tx.get_text();
-	int new_tx = (int) strtof(tmp.c_str(), NULL);
-	tmp = subi_ty.get_text();
-	int new_ty = (int) strtof(tmp.c_str(), NULL);
+	int new_lx = subi_lx.get_value_as_int();
+	int new_ly = subi_ly.get_value_as_int();
+	int new_tx = subi_tx.get_value_as_int();
+	int new_ty = subi_ty.get_value_as_int();
 	
 	// Call shwfsctrl to add this subimage to the MLA grid
 	shwfsctrl->mla_add_si(new_lx, new_ly, new_tx, new_ty);
@@ -232,14 +233,10 @@ void ShwfsView::on_subi_update_clicked() {
 	// Get text from GUI, convert to floats
 	// Read as floats to process potential decimal signals, then cast to int. 
 	// Reading as ints directly might break on decimals.
-	tmp = subi_lx.get_text();
-	int new_lx = (int) strtof(tmp.c_str(), NULL);
-	tmp = subi_ly.get_text();
-	int new_ly = (int) strtof(tmp.c_str(), NULL);
-	tmp = subi_tx.get_text();
-	int new_tx = (int) strtof(tmp.c_str(), NULL);
-	tmp = subi_ty.get_text();
-	int new_ty = (int) strtof(tmp.c_str(), NULL);
+	int new_lx = subi_lx.get_value_as_int();
+	int new_ly = subi_ly.get_value_as_int();
+	int new_tx = subi_tx.get_value_as_int();
+	int new_ty = subi_ty.get_value_as_int();
 	
 	// Get current selected item, convert to int
 	tmp = subi_select.get_active_text();

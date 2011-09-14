@@ -50,11 +50,17 @@ ctrlframe("Camera controls"),
 dispframe("Display settings"),
 camframe("Camera " + devname),
 histoframe("Histogram"),
-capture("Capture"), display("Display"), store("Store"), store_n("#"), 
-e_exposure("Exp."), e_offset("Offset"), e_interval("Intv."), e_gain("Gain"), e_res("Res."), e_mode("Mode"),
+capture("Capture"), display("Display"), store("Store"), 
+store_n("#", "", -1, INFINITY, 10.0, 100.0, 0), 
+e_exposure("Exp.", "s", 0, INFINITY, 0.01, 0.1, 6), 
+e_offset("Offset", "", -INFINITY, INFINITY, 10.0, 100.0, 2), 
+e_interval("Intv.", "s", 0, INFINITY, 0.1, 1.0, 4), 
+e_gain("Gain", "", -INFINITY, INFINITY, 1.0, 10.0, 0), 
+e_res("Res."), e_mode("Mode"),
 flipv("Flip V"), fliph("Flip H"), crosshair("+"), grid("Grid"), histo("Histo"), underover("Underover"), 
 zoomin(Stock::ZOOM_IN), zoomout(Stock::ZOOM_OUT), zoom100(Stock::ZOOM_100), zoomfit(Stock::ZOOM_FIT), 
-histoalign(0.5, 0.5, 0, 0), minval("Display min"), maxval("Display max"), e_avg("Avg."), e_rms("RMS"), e_datamin("Min"), e_datamax("Max")
+histoalign(0.5, 0.5, 0, 0), 
+minval("Display min"), maxval("Display max"), e_avg("Avg."), e_rms("RMS"), e_datamin("Min"), e_datamax("Max")
 {
 	log.term(format("%s", __PRETTY_FUNCTION__));
 	
@@ -70,15 +76,6 @@ histoalign(0.5, 0.5, 0, 0), minval("Display min"), maxval("Display max"), e_avg(
 	histoimage.set(histopixbuf);
 	histoimage.set_double_buffered(false);
 	
-	e_exposure.set_digits(8);
-	e_exposure.set_increments(0.01, 0.1);
-	e_offset.set_digits(2);
-	e_offset.set_increments(10, 100);
-	e_interval.set_digits(4);
-	e_interval.set_increments(0.1, 1);
-	e_gain.set_digits(0);
-	e_gain.set_increments(1, 10);
-	
 	e_res.set_width_chars(10);
 	e_res.set_editable(false);
 	e_mode.set_width_chars(8);
@@ -90,9 +87,6 @@ histoalign(0.5, 0.5, 0, 0), minval("Display min"), maxval("Display max"), e_avg(
 	grid.set_active(false);
 	histo.set_active(false);
 	underover.set_active(false);
-	
-	store_n.set_digits(0);
-	store_n.set_increments(10, 100);
 	
 	minval.set_range(0, 1 << camctrl->get_depth());
 	minval.set_digits(0);
