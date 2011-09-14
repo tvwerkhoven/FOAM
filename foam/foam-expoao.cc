@@ -302,8 +302,10 @@ void FOAM_ExpoAO::on_message(Connection *const conn, string line) {
 	}
 	else if (cmd == "calib") {					// calib <mode>
 		string calmode = popword(line);
+		string calopt = popword(line);
 		conn->write("ok cmd calib");
 		ptc->calib = calmode;
+		ptc->calib_opt = calopt;
 		ptc->mode = AO_MODE_CAL;
 		{
 			pthread::mutexholder h(&mode_mutex);
