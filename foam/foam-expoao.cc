@@ -296,7 +296,7 @@ void FOAM_ExpoAO::on_message(Connection *const conn, string line) {
 	else if (cmd == "get") {						// get ...
 		string what = popword(line);
 		if (what == "calibmodes")					// get calibmodes
-			conn->write("ok calibmodes 3 zero influence offsetvec  svd");
+			conn->write("ok calibmodes 4 zero influence offsetvec svd");
 		else
 			parsed = false;
 	}

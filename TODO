@@ -3,6 +3,9 @@ Main Todo Items
 
 * Global TODO items
 - Use subset of actuators
+- Add 'clear mla' or 'show MLA pattern' toggler
+- 'Shutdown' does not work in closed loop
+- When stopping camera in open/closed loop, the loop cannot finish because it waits for the camera
 
 
 * Specific code fixes
