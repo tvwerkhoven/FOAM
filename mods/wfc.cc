@@ -105,8 +105,8 @@ int Wfc::ctrl_apply_actmap() {
 		// Map over all real actuators associated with virtual actuator 'v_act'
 		for (size_t r_act=0; r_act<actmap.at(v_act).size(); r_act++) {
 			// Set real actuator 'r_act' to value of 'v_act'
-			gsl_vector_float_set(ctrlparams.ctrl_vec, r_act, ctrl_val);
-			ctrl_str += format("%d ", r_act);
+			gsl_vector_float_set(ctrlparams.ctrl_vec, actmap.at(v_act).at(r_act), ctrl_val);
+			ctrl_str += format("%d ", actmap.at(v_act).at(r_act));
 		}
 	}
 	io.msg(IO_DEB2, "Wfc::ctrl_apply_actmap() %s", ctrl_str.c_str());
@@ -223,11 +223,17 @@ int Wfc::set_randompattern(const float maxval) {
 	for (size_t idx=0; idx < ctrlparams.target->size; idx++)
 		gsl_vector_float_set(ctrlparams.target, idx, (drand48()*2.0-1.0)*maxval);
 	
-	return 0;
+	return ctrl_apply_actmap();
 }
 
 
 int Wfc::calibrate() {
+	// Parse actuator map string
+	virt_nact = parse_actmap(str_actmap);
+	
+	// Parse waffle pattern strings (only here because otherwise real_nact is 0)
+	parse_waffle(str_waffle_odd, str_waffle_even);
+	
 	// Allocate memory for control command
 	gsl_vector_float_free(ctrlparams.target);
 	ctrlparams.target = gsl_vector_float_calloc(virt_nact);
@@ -245,11 +251,6 @@ int Wfc::calibrate() {
 		ctrlparams.ctrl_vec = ctrlparams.target;
 	}
 	
-	// Parse waffle pattern strings (only here because otherwise real_nact is 0)
-	parse_waffle(str_waffle_odd, str_waffle_even);
-	// Parse actuator map string
-	parse_actmap(str_actmap);
-
 	set_calib(true);
 	return 0;
 }
@@ -303,23 +304,26 @@ void Wfc::parse_waffle(string &odd, string &even) {
 	have_waffle = true;
 }
 
-void Wfc::parse_actmap(string &map) {
+int Wfc::parse_actmap(string &map) {
 	io.msg(IO_DEB2, "Wfc::parse_actmap(map=%s)", map.c_str());
 	if (map.size() <= 0)
-		return;
+		return real_nact;
 	
 	string actmap_result;
 	// First 'word' is the number of virtual actuators
-	virt_nact = popint(map);
+	int n_virt = popint(map);
 	
-	actmap_result = format("n_vact: %d", virt_nact);
+	actmap_result = format("n_vact: %d ", n_virt);
 	
 	int this_vact;
 	string these_ract;
 	int this_ract;
 	std::vector<int> this_actmap;
+	int vact_count=0;
 	
 	while (map.size() > 0) {
+		vact_count++;
+		this_actmap.clear();
 		// Each virtual actuator map syntax is like: 'v_act r_act1,r_act2,r_act3'
 		this_vact = popint(map);
 		actmap_result += format("vact %d -> ", this_vact);
@@ -327,14 +331,21 @@ void Wfc::parse_actmap(string &map) {
 		// This will contain 'r_act1,r_act2,...'
 		these_ract = popword(map);
 		while (these_ract.size() > 0) {
-			this_ract = popint(these_ract);
+			this_ract = str2int(popword(these_ract, ","));
 			this_actmap.push_back(this_ract);
 			actmap_result += format("%d ", this_ract);
 		}
 		actmap.push_back(this_actmap);
 	}
+	if (n_virt != vact_count)
+		io.msg(IO_ERR, "Wfc::parse_actmap() n_virt %d != vact_count %d", n_virt, vact_count);
+	if (n_virt != actmap.size())
+		io.msg(IO_ERR, "Wfc::parse_actmap() n_virt %d != actmap.size %zu", n_virt, actmap.size());
+
+	io.msg(IO_XNFO, "Wfc::parse_actmap() map: %s", actmap_result.c_str());
 
 	use_actmap = true;
+	return actmap.size();
 }
 
 void Wfc::on_message(Connection *const conn, string line) { 

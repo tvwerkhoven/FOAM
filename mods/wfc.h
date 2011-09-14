@@ -59,7 +59,7 @@ protected:
 	actmap_t actmap;										//!< Actuator map for cases where use_nact < real_nact. In this case, actmap.size() == use_nact and 'virtual' actuator 'idx' uses real actuators actmap[idx].
 	int ctrl_apply_actmap();						//!< Apply actmap to actuation vector, if necessary. Assumes ctrlparams.target is set with the proper control values
 	string str_actmap;
-	void parse_actmap(string &map); 		//!< Interpret actmap parameter in config. Syntax should be '<N_virt> [virt_act1 real_act1,real_act2,real_act3 [virt_act2 real_act1,real_act2,real_act3]], i.e. virtual actuators seperated by spaces, real actuators seperated by only commas
+	int parse_actmap(string &map); 		//!< Interpret actmap parameter in config. Syntax should be '<N_virt> [virt_act1 real_act1,real_act2,real_act3 [virt_act2 real_act1,real_act2,real_act3]], i.e. virtual actuators seperated by spaces, real actuators seperated by only commas
 	
 	string str_waffle_even;							//!< String representation of even actuators. Should be *real* actuators
 	string str_waffle_odd;							//!< String representation of odd actuators. Should be *real* actuators
