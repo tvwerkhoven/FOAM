@@ -374,6 +374,7 @@ int FOAM::mode_open() {
 }
 
 int FOAM::mode_closed() {	
+	//! @bug Cannot shutdown from closed loop?
 	io.msg(IO_INFO, "FOAM::mode_closed()");
 	
 	// Initialize closed loop
