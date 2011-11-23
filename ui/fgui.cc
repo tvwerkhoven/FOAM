@@ -24,6 +24,7 @@
  */
 
 //! @bug crashes when running on expoao directly after connecting? Program received signal SIGSEGV, Segmentation fault. / 0x00007ffff2e8092e in XF86DRIQueryVersion () from /usr/lib/libGL.so.1
+//! @bug FOAM-gui might give an error while compiling the vertex shader. This happens when the GUI attempts to draw the camera window. This can be remedied by checking glxinfo settings and setting indirect rendering to true or false (by (un)setting LIBGL_ALWAYS_INDIRECT).
 
 #ifdef HAVE_CONFIG_H
 #include "autoconfig.h"
