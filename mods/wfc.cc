@@ -204,12 +204,14 @@ int Wfc::set_wafflepattern(const float val) {
 	gsl_vector_float_set_zero(ctrlparams.ctrl_vec);
 	
 	// Set 'even' actuators to +val, set 'odd' actuators to -val:
+    //! @todo Check bounds here, waffle_even.at(idx) can be higher than ctrl_vec length 
 	for (size_t idx=0; idx < waffle_even.size(); idx++)
 		gsl_vector_float_set(ctrlparams.ctrl_vec, waffle_even.at(idx), val);
 
 	for (size_t idx=0; idx < waffle_odd.size(); idx++)
 		gsl_vector_float_set(ctrlparams.ctrl_vec, waffle_odd.at(idx), -val);
 	
+    //! @bug Waffle pattern works for *all* actuators, not just actmap, fix
 	return 0;
 }
 
@@ -407,6 +409,15 @@ void Wfc::on_message(Connection *const conn, string line) {
 			set_control(actval);
 			actuate();
 			conn->write(format("ok act all"));
+            
+        //! @todo Implement setting all actuators with a vector
+//		} else if (actwhat == "vec") { 		// act vec <val> <val> <val> <val>
+//            for (size_t acti=0; acti < ctrlparams.target->size; acti++) {
+//                double actval = popdouble(line);
+//                gsl_vector_float_set(ctrlparams.target, acti, actval);
+//            }
+//			actuate();
+//			conn->write(format("ok act all"));
 		} else
 			parsed = false;
 	} else {
