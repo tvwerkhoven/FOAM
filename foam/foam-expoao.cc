@@ -240,6 +240,8 @@ int FOAM_ExpoAO::calib() {
 		// singval < 0: drop these modes
 		// singval > 1: use this amount of modes
 		// else: use this amount of singular value
+        //! @todo Document this
+        //! @bug When singval == # actuators, this code crashes (i.e. 37 virtual actuators and asking singval=37 crashes)
 		double sval_cutoff = popdouble(ptc->calib_opt);
 		if (sval_cutoff == 0.0) sval_cutoff = 0.7;
 		io.msg(IO_INFO, "FOAM_ExpoAO::calib() re-calc SVD, sval=%g", sval_cutoff);
