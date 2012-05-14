@@ -349,6 +349,11 @@ int AndorCam::initialize() {
 	error = SetImage(1, 1, 1, res.x, 1, res.y);
 	if (error != DRV_SUCCESS) return error;
 	
+	// Query run mode parameters
+	long bufsize=0;
+	GetSizeOfCircularBuffer(&bufsize);
+	io.msg(IO_INFO, "AndorCam::AndorCam() GetSizeOfCircularBuffer: %ld.", bufsize);
+
 	return DRV_SUCCESS;
 }
 
@@ -414,7 +419,7 @@ void AndorCam::cam_handler() {
 				
 				while (mode == Camera::RUNNING) {
 					int waitacq = 2500;
-					// Wait for a new frame for maximum 'wait' ms
+					// Wait for a new frame for maximum 'waitacq' ms
 					ret = WaitForAcquisitionTimeOut(waitacq);
 					
 					if (ret == DRV_SUCCESS) {
