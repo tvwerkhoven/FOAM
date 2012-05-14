@@ -46,8 +46,9 @@ using namespace std;
 FOAM::FOAM(int argc, char *argv[]):
 do_sighandle(true), sighandler(NULL),
 do_perflog(false), open_perf(NULL), closed_perf(NULL),
+t_closed_l(0.0), it_closed_l(0), t_open_l(0.0), it_open_l(0),
 nodaemon(false), error(false), conffile(FOAM_DEFAULTCONF), execname(argv[0]),
-io(IO_DEB2)
+io(IO_DEB2),
 {
 	io.msg(IO_DEB2, "FOAM::FOAM()");
 	
@@ -352,6 +353,11 @@ int FOAM::mode_open() {
 	}
 		
 	protocol->broadcast("ok mode open");
+  // Register start time, and current iterations (update every 500 frames)
+  Time time1 = Time();
+  Time time2 = Time();
+  size_t curr_iter = 0;
+  double currfps=0;
 	
 	while (ptc->mode == AO_MODE_OPEN) {
 		// Log performance (time, latency)
@@ -362,8 +368,22 @@ int FOAM::mode_open() {
 			ptc->mode = AO_MODE_LISTEN;
 			return -1;
 		}
+    
+    // Count openloop iterations, measure time difference, 
+    it_open_l++;
+    curr_iter++;
+    if (curr_iter % 500 == 0) {
+      Time time2 = Time();
+      time2.update();
+      currfps = (time2 - time1)/curr_iter;
+      io.msg(IO_INFO, "FOAM::mode_open() # iter: %zu fps: %g.", curr_iter, currfps);
+    }
 	}
 	
+  time_t time2 = time(NULL);
+  // Add this time to openloop time
+  t_open_l += difftime(time2, time1);
+  
 	if (open_finish()) {		// check if we can finish
 		io.msg(IO_WARN, "FOAM::open_finish() failed.");
 		ptc->mode = AO_MODE_LISTEN;
