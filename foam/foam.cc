@@ -57,14 +57,17 @@ io(IO_DEB2)
 		exit(-1);
 	}
 	if (do_sighandle) {
+    io.msg(IO_INFO, "FOAM::FOAM() Setting up SigHandle.");
 		sighandler = auto_ptr<SigHandle> (new SigHandle());
 		sighandler->quit_func = sigc::mem_fun(*this, &FOAM::stopfoam);
 	}
 	if (do_perflog) {
+    io.msg(IO_INFO, "FOAM::FOAM() Setting up PerfLog.");
 		open_perf = auto_ptr<PerfLog> (new PerfLog());
 		closed_perf = auto_ptr<PerfLog> (new PerfLog());
 	}
 	
+  io.msg(IO_INFO, "FOAM::FOAM() Setting up DeviceManager.");
 	devices = new foam::DeviceManager(io);
 	
 	if (load_config()) {
@@ -343,6 +346,7 @@ int FOAM::listen() {
 
 int FOAM::mode_open() {
 	io.msg(IO_INFO, "FOAM::mode_open()");
+  
 
 	// Run the initialisation function of the modules used
 	if (open_init()) {
