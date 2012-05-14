@@ -64,6 +64,7 @@ private:
 	Button subi_update;									//!< Update current subimage data
 	Button subi_del;										//!< Delete current subimage
 	Button subi_add;										//!< Add new subimage
+																			//!< @todo Add 'clear' button to clear out MLA pattern
 	
 	Button subi_regen;									//!< Re-generate subimage pattern
 	HBox subi_find_box;
