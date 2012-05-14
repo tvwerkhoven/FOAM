@@ -149,11 +149,12 @@ AndorCam::~AndorCam() {
 	io.msg(IO_INFO, "AndorCam::~AndorCam() Shutting down");
 	ShutDown();
 	
-	io.msg(IO_INFO, "AndorCam::~AndorCam() Releasing memory");
+	io.msg(IO_INFO, "AndorCam::~AndorCam() Releasing memory (%zu items)", img_buffer.size());
 	// Delete frames in buffer if necessary
 	for (size_t i=0; i < img_buffer.size(); i++)
 		delete[] img_buffer.at(i);
 	
+	io.msg(IO_INFO, "AndorCam::~AndorCam() done.");
 }
 
 void AndorCam::init_errors() {
@@ -431,12 +432,11 @@ void AndorCam::cam_handler() {
 							//if (queue_ret != NULL)
 							//	io.msg(IO_XNFO, "AndorCam::cam_handler(R) cam_queue returned old frame");
 							//! @todo handle returned data?
+						} else {
+							io.msg(IO_WARN, "AndorCam::cam_handler(R) GetMostRecentImage16 error %s", error_desc[ret].c_str());
+						}
 					} else {
-						io.msg(IO_WARN, "AndorCam::cam_handler(R) GetMostRecentImage16 error %s", error_desc[ret].c_str());
-					}
-
-					} else {
-						io.msg(IO_WARN, "AndorCam::cam_handler(R) no new data in %d milliseconds? %s", waitacq, error_desc[ret].c_str());
+							io.msg(IO_WARN, "AndorCam::cam_handler(R) no new data in %d milliseconds? %s", waitacq, error_desc[ret].c_str());
 						// Add short sleep before trying again, sometimes WaitForAcquisitionTimeOut() freaks out
 						usleep(0.1*1E6);
 					}
