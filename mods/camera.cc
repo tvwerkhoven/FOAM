@@ -263,37 +263,45 @@ int Camera::store_frame(const frame_t *const frame) const {
 }
 
 void Camera::calculate_stats(frame_t *const frame) const {
-	memset(frame->histo, 0, get_maxval() * sizeof *frame->histo);
+	size_t thismaxval = get_maxval();
+	memset(frame->histo, 0, thismaxval * sizeof *frame->histo);
 	
+	double sum = 0;
+	double sumsquared = 0;
+
 	if(depth <= 8) {
 		uint8_t *image = (uint8_t *)frame->image;
 		for(size_t i = 0; i < (size_t) res.x * res.y; i++) {
 			frame->histo[image[i]]++;
+			sum += image[i];
+			sumsquared += (image[i] * image[i]);
 			if (image[i] > frame->max) frame->max = image[i];
-			if (image[i] < frame->min) frame->min = image[i];
+			else if (image[i] < frame->min) frame->min = image[i];
 		}
 	} else {
 		uint16_t *image = (uint16_t *)frame->image;
 		for(size_t i = 0; i < (size_t) res.x * res.y; i++) {
 			frame->histo[image[i]]++;
+			sum += image[i];
+			sumsquared += (image[i] * image[i]);
 			if (image[i] > frame->max) frame->max = image[i];
-			if (image[i] < frame->min) frame->min = image[i];
+			else if (image[i] < frame->min) frame->min = image[i];
 		}
 	}
+
+//	sum=0;
+//	sumsquared=0;
+//! @bug This code is extremely slow! Why?
+//	for(size_t i = 0; i < thismaxval; i++) {
+//		sum += (double)i * frame->histo[i];
+//		sumsquared += (double)(i * i) * frame->histo[i];
+//	}
 	
-	double sum = 0;
-	double sumsquared = 0;
+//	sum /= res.x * res.y;
+//	sumsquared /= res.x * res.y;
 	
-	for(size_t i = 0; i < get_maxval(); i++) {
-		sum += (double)i * frame->histo[i];
-		sumsquared += (double)(i * i) * frame->histo[i];
-	}
-	
-	sum /= res.x * res.y;
-	sumsquared /= res.x * res.y;
-	
-	frame->avg = sum;
-	frame->rms = sqrt(sumsquared - sum * sum) / sum;
+	frame->avg = sum / (res.x * res.y);
+	frame->rms = sqrt((sumsquared/(res.x * res.y)) - frame->avg * frame->avg) / frame->avg;
 }
 
 void *Camera::cam_queue(void * const data, void * const image, struct timeval *const tv) {
