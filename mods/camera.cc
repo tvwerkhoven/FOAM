@@ -98,8 +98,8 @@ fits_telescope("undef"), fits_observer("undef"), fits_instrument("undef"), fits_
 	res.x = cfg.getint("width", 768);
 	depth = cfg.getint("depth", 8);
 
-	//io.msg(IO_XNFO, "Camera::Camera(): %dx%dx%d, exp:%g, int:%g, gain:%g, off:%g",
-	//			 res.x, res.y, depth, exposure, interval, gain, offset);
+//	io.msg(IO_XNFO, "Camera::Camera(): %dx%dx%d, exp:%g, int:%g, gain:%g, off:%g",
+//				 res.x, res.y, depth, exposure, interval, gain, offset);
 	
 	// Set output dir because this class might store files.
 	set_outputdir("");
@@ -132,15 +132,14 @@ void Camera::cam_proc() {
 			proc_cond.wait(proc_mutex);
 		}
 		
-		// Lock cam_mut before handling the data
+		// Lock cam_mutex before handling the data
 		pthread::mutexholder h(&cam_mutex);
 		
 		// There is a new frame ready now, process it
 		frame = get_last_frame();
-		
 		if (do_proc)
 			calculate_stats(frame);
-
+		 
 		if (nstore == -1 || nstore > 0) {
 //			io.msg(IO_DEB2, "Camera::cam_proc() nstore=%d", nstore);
 			int status=store_frame(frame);
@@ -153,10 +152,10 @@ void Camera::cam_proc() {
 				io.msg(IO_ERR, "Camera::cam_proc() fits store error: %d", status);
 			}
 		}
-		
+
 		// Flag frame as processed
 		frame->proc = true;
-		
+
 		// Notify all threads waiting for new frames now
 		cam_cond.broadcast();
 	}
