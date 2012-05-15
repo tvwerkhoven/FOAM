@@ -95,6 +95,7 @@ private:
 	Shift shifts;												//!< Shift computation class. Does the heavy lifting.
 	gsl_vector_float *shift_vec;				//!< SHWFS shift vector. Shift for subimage N are elements N*2+0 and N*2+1. Same order as mlacfg @todo Make this a ring buffer
 	gsl_vector_float *ref_vec;					//!< SHWFS reference shift vector. Use this as 'zero' value
+	gsl_vector_float *tot_shift_vec;		//!< Total SHWFS shift being corrected, as calculated from the WFC control vector.
 	
 	typedef struct infdata {
 		infdata(): init(false), nact(0), nmeas(0) {  }
@@ -121,7 +122,7 @@ private:
 			int use_nmodes;									//!< Number of modes to use
 			double use_singval;							//!< Amount of singular values used (i.e. 1.0 for all, 0.5 for half the power in all modes)
 			double condition;								//!< SVD condition, i.e. singval[0]/singval[-1]
-		} actmat;													//!< Actuation matrix & related entitites
+		} actmat;													//!< Actuation matrix & related entitites (inverse of influence measurements)
 		
 	} infdata_t;
 	
