@@ -69,9 +69,11 @@ wfc_sim(NULL)
 						 reader.csvdata[i][0], reader.csvdata[i][1]);
 		}
 	} catch (std::runtime_error &e) {
-		io.msg(IO_ERR | IO_FATAL, "SimulWfc: problem with configuration file: %s", e.what());
+		fprintf(stderr, "!!! SimulWfc: problem with configuration file: %s\n", e.what());
+		throw( std::runtime_error(format("SimulWfc: problem with configuration file: %s", e.what() )) );
 	} catch (...) { 
-		io.msg(IO_ERR | IO_FATAL, "SimulWfc: unknown error at initialisation.");
+		fprintf(stderr, "!!! SimulWfc: unknown error at initialisation.\n");
+		throw( std::runtime_error("SimulWfc: unknown error at initialisation.") );
 	}
 	
 	// Set number of actuators
