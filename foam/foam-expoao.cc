@@ -174,6 +174,9 @@ int FOAM_ExpoAO::closed_loop() {
 	alpao_dm97->update_control(alpao_dm97->ctrlparams.err);
 	alpao_dm97->actuate();
 	closedperf_addlog(5);
+	
+	// Use control vector to compute total shifts that we are correcting
+	ixonwfs->comp_shift(alpao_dm97->getname(), alpao_dm97->ctrlparams.ctrl_vec, ixonwfs->tot_shift_vec);
 
 	// Don't wait here, closed loop should be fast
 	return 0;
