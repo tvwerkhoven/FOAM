@@ -156,7 +156,7 @@ void FOAM::show_version() const {
 
 void FOAM::show_clihelp(const bool error = false) const {
 	if(error)
-		io.msg(IO_ERR | IO_NOID, "Try '%s --help' for more information.\n", execname.c_str());
+		fprintf(stderr, "Try '%s --help' for more information.\n", execname.c_str());
 	else {
 		printf("Usage: %s [option]...\n\n", execname.c_str());
 		printf("  -c, --config=FILE    Read configuration from FILE.\n"
@@ -172,7 +172,7 @@ void FOAM::show_clihelp(const bool error = false) const {
 	}
 }
 
-void FOAM::show_welcome() const {
+void FOAM::show_welcome() {
 	io.msg(IO_DEB2, "FOAM::show_welcome()");
 	
 	char date[64];
@@ -431,7 +431,7 @@ int FOAM::mode_calib() {
 	return 0;
 }
 
-void FOAM::on_connect(const Connection * const conn, const bool status) const {
+void FOAM::on_connect(const Connection * const conn, const bool status) {
   if (status) {
     conn->write(":client connected");
     io.msg(IO_DEB1, "Client connected from %s.", conn->getpeername().c_str());
