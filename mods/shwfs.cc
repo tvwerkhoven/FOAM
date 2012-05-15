@@ -47,7 +47,7 @@ using namespace std;
 Shwfs::Shwfs(Io &io, foamctrl *const ptc, const string name, const string port, Path const &conffile, Camera &wfscam, const bool online):
 Wfs(io, ptc, name, shwfs_type, port, conffile, wfscam, online),
 shifts(io, 1),
-shift_vec(NULL), ref_vec(NULL),
+shift_vec(NULL), ref_vec(NULL), tot_shift_vec(NULL),
 method(Shift::COG)
 {
 	io.msg(IO_DEB2, "Shwfs::Shwfs()");
@@ -105,7 +105,8 @@ Shwfs::~Shwfs() {
 	
 	gsl_vector_float_free(shift_vec);
 	gsl_vector_float_free(ref_vec);
-	
+	gsl_vector_float_free(tot_shift_vec);
+
 	std::map<std::string, infdata_t>::iterator it;
 	for (it=calib.begin(); it != calib.end(); it++ ) {
 		//cout << (*it).first << " => " << (*it).second << endl;
@@ -657,11 +658,16 @@ gsl_vector_float *Shwfs::comp_shift(const string &wfcname, const gsl_vector_floa
 	if (!get_calib())
 		calibrate();
 	
-	// Compute vector
+	// If shift is not given, use the class' own data tot_shift_vec
+	if (!shift)
+		shift = tot_shift_vec;
+	
+	// Compute total shift vector from influence matrix. This gives the 
+	// effective shift vector being corrected by the WFC actuation vector **act**
 	// int gsl_blas_sgemv (CBLAS_TRANSPOSE_t TransA, float alpha, const gsl_matrix_float * A, const gsl_vector_float * x, float beta, gsl_vector_float * y)
 	// y = \alpha op(A) x + \beta y
 	gsl_blas_sgemv(CblasNoTrans, 1.0, calib[wfcname].meas.infmat_f, act, 0.0, shift);
-	
+		
 	return shift;
 }
 
@@ -731,6 +737,8 @@ int Shwfs::calibrate() {
 	shift_vec = gsl_vector_float_calloc(mlacfg.size() * 2);
 	gsl_vector_float_free(ref_vec);
 	ref_vec = gsl_vector_float_calloc(mlacfg.size() * 2);
+	gsl_vector_float_free(tot_shift_vec);
+	tot_shift_vec = gsl_vector_float_calloc(mlacfg.size() * 2);
 	
 	switch (wf.basis) {
 		case SENSOR:
