@@ -80,10 +80,10 @@ method(Shift::COG)
 	if (cfg.exists("disp"))
 		disp.x = disp.y = cfg.getint("disp");
 	
-	overlap = cfg.getdouble("overlap", 0.5);
+	overlap = cfg.getdouble("overlap", 1);
 	xoff = cfg.getint("xoff", 0);
 	
-	string shapestr = cfg.getstring("shape", "square");
+	string shapestr = cfg.getstring("shape", "circular");
 	if (shapestr == "circular")
 		shape = CIRCULAR;
 	else
@@ -854,43 +854,58 @@ int Shwfs::gen_mla_grid(std::vector<vector_t> &mlacfg, const coord_t res, const 
 	set_calib(false);
 
 	// How many subapertures would fit in the requested size 'res':
-	int sa_range_y = (int) ((res.y/2)/pitch.x + 1);
-	int sa_range_x = (int) ((res.x/2)/pitch.y + 1);
+	int sa_range_y = (int) (res.y - size.y)/pitch.y + 1;
+	int sa_range_x = (int) (res.x - size.x)/pitch.x + 1;
 	
 	vector_t tmpsi;
 	mlacfg.clear();
 	
+	// Calculate the radius of the biggest circle that fits within a rectangle 
+	// of (res.x, res.y)
 	float minradsq = pow(((double) min(res.x, res.y))/2.0, 2);
 	
 	coord_t sa_c;
 	// Loop over potential subaperture positions 
-	for (int sa_y=-sa_range_y; sa_y < sa_range_y; sa_y++) {
-		for (int sa_x=-sa_range_x; sa_x < sa_range_x; sa_x++) {
-			// Centroid position of current subap is 
-			sa_c.x = sa_x * pitch.x;
-			sa_c.y = sa_y * pitch.y;
+	for (int sa_y=0; sa_y < sa_range_y; sa_y++) {
+		for (int sa_x=0; sa_x < sa_range_x; sa_x++) {
+			// Centroid position of current subap is (using the center of the CCD as origin)
+			sa_c.x = (sa_x * pitch.x) + size.x/2 + disp.x - res.x/2;
+			sa_c.y = (sa_y * pitch.y) + size.y/2 + disp.y- res.y/2;
 			
 			// Offset odd rows: 'sa_y % 2' gives 0 for even rows and 1 for odd rows. 
 			// Use this to apply a row-offset to even and odd rows
 			sa_c.x -= (sa_y % 2) * xoff * pitch.x;
-			
+
+			io.msg(IO_DEB2, "Shwfs::gen_mla_grid() test (%d, %d) -> (%d, %d)", 
+						 sa_x, sa_y, sa_c.x, sa_c.y);			
 			if (shape == CIRCULAR) {
-				if (pow(fabs(sa_c.x) + (overlap-0.5)*size.x, 2) + pow(fabs(sa_c.y) + (overlap-0.5)*size.y, 2) < minradsq) {
-					tmpsi = vector_t(sa_c.x + res.x/2 + disp.x - size.x/2,
-									 sa_c.y + res.y/2 + disp.y - size.y/2,
-									 sa_c.x + res.x/2 + disp.x + size.x/2,
-									 sa_c.y + res.y/2 + disp.y + size.y/2);
+				io.msg(IO_DEB2, "Shwfs::gen_mla_grid(CIRC) %g < %g", 
+							 pow(fabs(sa_c.x) + (overlap-0.5)*size.x, 2) + pow(fabs(sa_c.y) + (overlap-0.5)*size.y, 2),
+							 minradsq);
+				
+				if (pow(fabs(sa_c.x) + (overlap-0.5)*size.x, 2) + pow(fabs(sa_c.y) + (overlap-0.5)*size.y, 2) <= minradsq) {
+					// Store subapertures as (lowerx, lower y, upper x, upper y)
+					tmpsi = vector_t(sa_c.x + res.x/2 - size.x/2,
+													 sa_c.y + res.y/2 - size.y/2,
+													 sa_c.x + res.x/2 + size.x/2,
+													 sa_c.y + res.y/2 + size.y/2);
 					mlacfg.push_back(tmpsi);
 				}
 			}
 			else {
 				// Accept a subimage coordinate (center position) the position + 
 				// half-size the subaperture is within the bounds
-				if ((fabs(sa_c.x + (overlap-0.5)*size.x) < res.x/2) && (fabs(sa_c.y + (overlap-0.5)*size.y) < res.y/2)) {
-					tmpsi = vector_t(sa_c.x + res.x/2 + disp.x - size.x/2,
-													 sa_c.y + res.y/2 + disp.y - size.y/2,
-													 sa_c.x + res.x/2 + disp.x + size.x/2,
-													 sa_c.y + res.y/2 + disp.y + size.y/2);
+				io.msg(IO_DEB2, "Shwfs::gen_mla_grid(SQ) %g, %g < %g, %g", 
+							 fabs(sa_c.x + (overlap-0.5)*size.x),
+							 fabs(sa_c.y + (overlap-0.5)*size.y),
+							 res.x/2.0,
+							 res.y/2.0);
+							
+				if ((fabs(sa_c.x + (overlap-0.5)*size.x) <= res.x/2) && (fabs(sa_c.y + (overlap-0.5)*size.y) <= res.y/2)) {
+					tmpsi = vector_t(sa_c.x + res.x/2 - size.x/2,
+													 sa_c.y + res.y/2 - size.y/2,
+													 sa_c.x + res.x/2 + size.x/2,
+													 sa_c.y + res.y/2 + size.y/2);
 					mlacfg.push_back(tmpsi);
 				}
 			}
