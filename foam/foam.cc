@@ -58,14 +58,17 @@ io(IO_DEB2),
 		exit(-1);
 	}
 	if (do_sighandle) {
+    io.msg(IO_INFO, "FOAM::FOAM() Setting up SigHandle.");
 		sighandler = auto_ptr<SigHandle> (new SigHandle());
 		sighandler->quit_func = sigc::mem_fun(*this, &FOAM::stopfoam);
 	}
 	if (do_perflog) {
+    io.msg(IO_INFO, "FOAM::FOAM() Setting up PerfLog.");
 		open_perf = auto_ptr<PerfLog> (new PerfLog());
 		closed_perf = auto_ptr<PerfLog> (new PerfLog());
 	}
 	
+  io.msg(IO_INFO, "FOAM::FOAM() Setting up DeviceManager.");
 	devices = new foam::DeviceManager(io);
 	
 	if (load_config()) {
@@ -154,7 +157,7 @@ void FOAM::show_version() const {
 
 void FOAM::show_clihelp(const bool error = false) const {
 	if(error)
-		io.msg(IO_ERR | IO_NOID, "Try '%s --help' for more information.\n", execname.c_str());
+		fprintf(stderr, "Try '%s --help' for more information.\n", execname.c_str());
 	else {
 		printf("Usage: %s [option]...\n\n", execname.c_str());
 		printf("  -c, --config=FILE    Read configuration from FILE.\n"
@@ -170,7 +173,7 @@ void FOAM::show_clihelp(const bool error = false) const {
 	}
 }
 
-void FOAM::show_welcome() const {
+void FOAM::show_welcome() {
 	io.msg(IO_DEB2, "FOAM::show_welcome()");
 	
 	char date[64];
@@ -344,6 +347,7 @@ int FOAM::listen() {
 
 int FOAM::mode_open() {
 	io.msg(IO_INFO, "FOAM::mode_open()");
+  
 
 	// Run the initialisation function of the modules used
 	if (open_init()) {
@@ -447,7 +451,7 @@ int FOAM::mode_calib() {
 	return 0;
 }
 
-void FOAM::on_connect(const Connection * const conn, const bool status) const {
+void FOAM::on_connect(const Connection * const conn, const bool status) {
   if (status) {
     conn->write(":client connected");
     io.msg(IO_DEB1, "Client connected from %s.", conn->getpeername().c_str());

@@ -98,8 +98,8 @@ fits_telescope("undef"), fits_observer("undef"), fits_instrument("undef"), fits_
 	res.x = cfg.getint("width", 768);
 	depth = cfg.getint("depth", 8);
 
-	//io.msg(IO_XNFO, "Camera::Camera(): %dx%dx%d, exp:%g, int:%g, gain:%g, off:%g",
-	//			 res.x, res.y, depth, exposure, interval, gain, offset);
+//	io.msg(IO_XNFO, "Camera::Camera(): %dx%dx%d, exp:%g, int:%g, gain:%g, off:%g",
+//				 res.x, res.y, depth, exposure, interval, gain, offset);
 	
 	// Set output dir because this class might store files.
 	set_outputdir("");
@@ -132,15 +132,14 @@ void Camera::cam_proc() {
 			proc_cond.wait(proc_mutex);
 		}
 		
-		// Lock cam_mut before handling the data
+		// Lock cam_mutex before handling the data
 		pthread::mutexholder h(&cam_mutex);
 		
 		// There is a new frame ready now, process it
 		frame = get_last_frame();
-		
 		if (do_proc)
 			calculate_stats(frame);
-
+		 
 		if (nstore == -1 || nstore > 0) {
 //			io.msg(IO_DEB2, "Camera::cam_proc() nstore=%d", nstore);
 			int status=store_frame(frame);
@@ -153,10 +152,10 @@ void Camera::cam_proc() {
 				io.msg(IO_ERR, "Camera::cam_proc() fits store error: %d", status);
 			}
 		}
-		
+
 		// Flag frame as processed
 		frame->proc = true;
-		
+
 		// Notify all threads waiting for new frames now
 		cam_cond.broadcast();
 	}
@@ -264,37 +263,45 @@ int Camera::store_frame(const frame_t *const frame) const {
 }
 
 void Camera::calculate_stats(frame_t *const frame) const {
-	memset(frame->histo, 0, get_maxval() * sizeof *frame->histo);
+	size_t thismaxval = get_maxval();
+	memset(frame->histo, 0, thismaxval * sizeof *frame->histo);
 	
+	double sum = 0;
+	double sumsquared = 0;
+
 	if(depth <= 8) {
 		uint8_t *image = (uint8_t *)frame->image;
 		for(size_t i = 0; i < (size_t) res.x * res.y; i++) {
 			frame->histo[image[i]]++;
+			sum += image[i];
+			sumsquared += (image[i] * image[i]);
 			if (image[i] > frame->max) frame->max = image[i];
-			if (image[i] < frame->min) frame->min = image[i];
+			else if (image[i] < frame->min) frame->min = image[i];
 		}
 	} else {
 		uint16_t *image = (uint16_t *)frame->image;
 		for(size_t i = 0; i < (size_t) res.x * res.y; i++) {
 			frame->histo[image[i]]++;
+			sum += image[i];
+			sumsquared += (image[i] * image[i]);
 			if (image[i] > frame->max) frame->max = image[i];
-			if (image[i] < frame->min) frame->min = image[i];
+			else if (image[i] < frame->min) frame->min = image[i];
 		}
 	}
+
+//	sum=0;
+//	sumsquared=0;
+//! @bug This code is extremely slow! Why?
+//	for(size_t i = 0; i < thismaxval; i++) {
+//		sum += (double)i * frame->histo[i];
+//		sumsquared += (double)(i * i) * frame->histo[i];
+//	}
 	
-	double sum = 0;
-	double sumsquared = 0;
+//	sum /= res.x * res.y;
+//	sumsquared /= res.x * res.y;
 	
-	for(size_t i = 0; i < get_maxval(); i++) {
-		sum += (double)i * frame->histo[i];
-		sumsquared += (double)(i * i) * frame->histo[i];
-	}
-	
-	sum /= res.x * res.y;
-	sumsquared /= res.x * res.y;
-	
-	frame->avg = sum;
-	frame->rms = sqrt(sumsquared - sum * sum) / sum;
+	frame->avg = sum / (res.x * res.y);
+	frame->rms = sqrt((sumsquared/(res.x * res.y)) - frame->avg * frame->avg) / frame->avg;
 }
 
 void *Camera::cam_queue(void * const data, void * const image, struct timeval *const tv) {

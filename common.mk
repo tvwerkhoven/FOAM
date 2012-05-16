@@ -41,9 +41,9 @@ AM_CPPFLAGS += -D_GLIBCXX_DEBUG \
 endif
 
 if HAVE_DEBUG
-AM_CXXFLAGS += -ggdb -g3 -O0 -fno-inline
+AM_CXXFLAGS += -ggdb -g3 -fno-inline -O0
 else
-AM_CXXFLAGS += -O3 -ftree-vectorize
+AM_CXXFLAGS += -ftree-vectorize -O2
 endif
 
 ### Profiling options

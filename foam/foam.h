@@ -115,7 +115,7 @@ private:
 	void show_clihelp(const bool) const;//!< Show help on command-line syntax.
 	int show_nethelp(const Connection *const connection, string topic, string rest); //!< Show help on network command usage
 	void show_version() const;					//!< Show version information
-	void show_welcome() const;					//!< Show welcome banner
+	void show_welcome();								//!< Show welcome banner
 	
 	bool do_sighandle;									//!< Toggle for signal handling or not (default: yes)
 	auto_ptr<SigHandle> sighandler;			//!< Signal handler object
@@ -156,7 +156,7 @@ protected:
 	 @param [in] *conn Connection used for this event
 	 @param [in] status Connection status (connect or disconnect)
 	 */
-	virtual void on_connect(const Connection * const conn, const bool status) const;
+	virtual void on_connect(const Connection * const conn, const bool status);
 	
 	/*!
 	 @brief Run on new incoming message to FOAM
