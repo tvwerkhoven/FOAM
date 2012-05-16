@@ -106,6 +106,15 @@ FOAM::~FOAM() {
 	io.msg(IO_INFO, "Stopping FOAM at %s, ran for %d seconds.", 
 				 date, end-ptc->starttime);
 	
+	// Print open/closed loop performance
+	double open_time = ((double) t_open_l.tv_sec) + ( ((double) t_open_l.tv_usec) / 1.e6);
+	double open_fps = it_open_l / open_time;
+	io.msg(IO_INFO, "Open loop: %zu frames in %g seconds is %g fps.", it_open_l, open_time, open_fps);
+
+	double closed_time = ((double) t_closed_l.tv_sec) + ( ((double) t_closed_l.tv_usec) / 1.e6);
+	double closed_fps = it_closed_l / closed_time;
+	io.msg(IO_INFO, "Closed loop: %zu frames in %g seconds is %g fps.", it_closed_l, closed_time, closed_fps);
+
 	// Delete devices, wait a bit to give the devices time to quit (mostly for Protocol objects used)
 	//! @todo This should block in a more proper way instead of sleeping
 	delete devices;
@@ -363,6 +372,7 @@ int FOAM::mode_open() {
 	}
 		
 	protocol->broadcast("ok mode open");
+	
   // Register start time, and current iterations (update every second)
 	struct timeval now, last, diff;
 	double curr_time, curr_fps;
@@ -398,7 +408,7 @@ int FOAM::mode_open() {
 			
 			// Calculate framerate, report to user
 			curr_time = ((double) diff.tv_sec) + ( ((double) diff.tv_usec) / 1.e6);
-			curr_fps = curr_time / curr_iter;
+			curr_fps = curr_iter / curr_time;
       io.msg(IO_INFO, "FOAM::mode_open() # iter: %zu fps: %g. (over %zu iters.)", it_open_l, curr_fps, curr_iter);
 			
 			// Reset timers, calculate new frame cadence to get updates every second
@@ -412,7 +422,10 @@ int FOAM::mode_open() {
 	gettimeofday(&time_end, 0);
 	timersub(&time_end, &time_beg, &diff);
 	timeradd(&diff, &t_open_l, &t_open_l);
-  
+	
+	// Show performance
+	openperf_report(stdout);
+
 	if (open_finish()) {		// check if we can finish
 		io.msg(IO_WARN, "FOAM::open_finish() failed.");
 		ptc->mode = AO_MODE_LISTEN;
@@ -435,6 +448,19 @@ int FOAM::mode_closed() {
 		
 	protocol->broadcast("ok mode closed");
 	
+	// Register start time, and current iterations (update every second)
+	struct timeval now, last, diff;
+	double curr_time, curr_fps;
+	gettimeofday(&last, 0);
+	
+	// Also measure how long the total loop takes, so take time at begin and end
+	struct timeval time_beg, time_end;
+	gettimeofday(&time_beg, 0);
+	
+	// Check current iteration
+  int curr_iter = 0;
+	int iter_cad = 10;
+	
 	// Run closed loop
 	while (ptc->mode == AO_MODE_CLOSED) {
 		closedperf_addlog(0);
@@ -443,7 +469,36 @@ int FOAM::mode_closed() {
 			ptc->mode = AO_MODE_LISTEN;
 			return -1;
 		}
+		
+		// Count closed loop iterations
+    it_closed_l++;
+    curr_iter++;
+		
+		// Every 'iter_cad', check the current framerate
+    if (curr_iter == iter_cad) {
+			// Get current time, subtract from previous measurement
+			gettimeofday(&now, 0);
+			timersub(&now, &last, &diff);
+			
+			// Calculate framerate, report to user
+			curr_time = ((double) diff.tv_sec) + ( ((double) diff.tv_usec) / 1.e6);
+			curr_fps = curr_iter / curr_time;
+      io.msg(IO_INFO, "FOAM::mode_closed() # iter: %zu fps: %g. (over %zu iters.)", it_closed_l, curr_fps, curr_iter);
+			
+			// Reset timers, calculate new frame cadence to get updates every second
+			last = now;
+			curr_iter = 0;
+			iter_cad = curr_fps;
+    }
 	}
+	
+	// Get ending time, meaure time spent in loop, add to total closdeloop runtime
+	gettimeofday(&time_end, 0);
+	timersub(&time_end, &time_beg, &diff);
+	timeradd(&diff, &t_closed_l, &t_closed_l);
+	
+	// Show performance
+	closedperf_report(stdout);
 	
 	// Finish closed loop
 	if (closed_finish()) {
