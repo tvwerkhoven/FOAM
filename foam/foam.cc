@@ -41,18 +41,20 @@
 #include "devices.h"
 #include "foam.h"
 
+extern char *optarg;
+extern int optind, opterr, optopt;
+
 using namespace std;
 
 FOAM::FOAM(int argc, char *argv[]):
 do_sighandle(true), sighandler(NULL),
 do_perflog(false), open_perf(NULL), closed_perf(NULL),
-t_closed_l(0.0), it_closed_l(0), t_open_l(0.0), it_open_l(0),
+it_closed_l(0), it_open_l(0),
 nodaemon(false), error(false), conffile(FOAM_DEFAULTCONF), execname(argv[0]),
-io(IO_DEB2),
+io(IO_DEB2)
 {
 	io.msg(IO_DEB2, "FOAM::FOAM()");
-	
-	
+		
 	if (parse_args(argc, argv)) {
 		error = true;
 		exit(-1);
@@ -67,6 +69,10 @@ io(IO_DEB2),
 		open_perf = auto_ptr<PerfLog> (new PerfLog());
 		closed_perf = auto_ptr<PerfLog> (new PerfLog());
 	}
+	
+	// Set timers to zero
+	timerclear(&t_closed_l);
+	timerclear(&t_open_l);
 	
   io.msg(IO_INFO, "FOAM::FOAM() Setting up DeviceManager.");
 	devices = new foam::DeviceManager(io);
@@ -213,7 +219,7 @@ int FOAM::parse_args(int argc, char *argv[]) {
 		{NULL, 0, NULL, 0}
 	};
 	
-	while((r = getopt_long(argc, argv, "c:hvqs:p", long_options, &option_index)) != EOF) {
+	while((r = getopt_long(argc, argv, "c:hvqs:p:", long_options, &option_index)) != EOF) {
 		switch(r) {
 			case 0:
 				break;
@@ -239,7 +245,7 @@ int FOAM::parse_args(int argc, char *argv[]) {
 				do_sighandle = bool(strtol(optarg, NULL, 10));
 				break;
 			case 'p':												// performance logging
-				io.msg(IO_DEB2, "FOAM::parse_args() -p");
+				io.msg(IO_DEB2, "FOAM::parse_args() -p: %s", optarg);
 				do_perflog = bool(strtol(optarg, NULL, 10));
 				break;
 			case 'v':												// Increase verbosity
@@ -357,11 +363,18 @@ int FOAM::mode_open() {
 	}
 		
 	protocol->broadcast("ok mode open");
-  // Register start time, and current iterations (update every 500 frames)
-  Time time1 = Time();
-  Time time2 = Time();
-  size_t curr_iter = 0;
-  double currfps=0;
+  // Register start time, and current iterations (update every second)
+	struct timeval now, last, diff;
+	double curr_time, curr_fps;
+	gettimeofday(&last, 0);
+	
+	// Also measure how long the total loop takes, so take time at begin and end
+	struct timeval time_beg, time_end;
+	gettimeofday(&time_beg, 0);
+
+	// Check current iteration
+  int curr_iter = 0;
+	int iter_cad = 10;
 	
 	while (ptc->mode == AO_MODE_OPEN) {
 		// Log performance (time, latency)
@@ -373,20 +386,32 @@ int FOAM::mode_open() {
 			return -1;
 		}
     
-    // Count openloop iterations, measure time difference, 
+    // Count openloop iterations
     it_open_l++;
     curr_iter++;
-    if (curr_iter % 500 == 0) {
-      Time time2 = Time();
-      time2.update();
-      currfps = (time2 - time1)/curr_iter;
-      io.msg(IO_INFO, "FOAM::mode_open() # iter: %zu fps: %g.", curr_iter, currfps);
+		
+		// Every 'iter_cad', check the current framerate
+    if (curr_iter == iter_cad) {
+			// Get current time, subtract from previous measurement
+			gettimeofday(&now, 0);
+			timersub(&now, &last, &diff);
+			
+			// Calculate framerate, report to user
+			curr_time = ((double) diff.tv_sec) + ( ((double) diff.tv_usec) / 1.e6);
+			curr_fps = curr_time / curr_iter;
+      io.msg(IO_INFO, "FOAM::mode_open() # iter: %zu fps: %g. (over %zu iters.)", it_open_l, curr_fps, curr_iter);
+			
+			// Reset timers, calculate new frame cadence to get updates every second
+			last = now;
+			curr_iter = 0;
+			iter_cad = curr_fps;
     }
 	}
 	
-  time_t time2 = time(NULL);
-  // Add this time to openloop time
-  t_open_l += difftime(time2, time1);
+	// Get ending time, meaure time spent in loop, add to total openloop runtime
+	gettimeofday(&time_end, 0);
+	timersub(&time_end, &time_beg, &diff);
+	timeradd(&diff, &t_open_l, &t_open_l);
   
 	if (open_finish()) {		// check if we can finish
 		io.msg(IO_WARN, "FOAM::open_finish() failed.");

@@ -124,9 +124,9 @@ private:
 	auto_ptr<PerfLog> open_perf;				//!< Open-loop performance
 	auto_ptr<PerfLog> closed_perf;			//!< Closed-loop performance
   
-  struct timeval t_closed_l;          //!< Time spent in closed loop (seconds)
+  struct timeval t_closed_l;          //!< Time spent in closed loop (timeval)
   size_t it_closed_l;                 //!< Iterations in closed loop (#)
-  double t_open_l;                    //!< Time spent in open loop (seconds)
+  struct timeval t_open_l;            //!< Time spent in open loop (timeval)
   size_t it_open_l;                   //!< Iterations in open loop (#)
 	
 protected:
