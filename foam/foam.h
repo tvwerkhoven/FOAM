@@ -123,6 +123,11 @@ private:
 	bool do_perflog;										//!< Toggle for performance logging
 	auto_ptr<PerfLog> open_perf;				//!< Open-loop performance
 	auto_ptr<PerfLog> closed_perf;			//!< Closed-loop performance
+  
+  struct timeval t_closed_l;          //!< Time spent in closed loop (timeval)
+  size_t it_closed_l;                 //!< Iterations in closed loop (#)
+  struct timeval t_open_l;            //!< Time spent in open loop (timeval)
+  size_t it_open_l;                   //!< Iterations in open loop (#)
 	
 protected:
 	// Properties set at start
@@ -143,7 +148,9 @@ protected:
 	pthread::mutex stop_mutex;					//!< Mutex used to check if main loop has completed
 	
 	void openperf_addlog(const int i) const { if (do_perflog && open_perf.get() != NULL) open_perf.get()->addlog(i); }
+	void openperf_report(FILE *stream=stdout) const { if (do_perflog && open_perf.get() != NULL) open_perf.get()->print_report(stream); }
 	void closedperf_addlog(const int i) const { if (do_perflog && closed_perf.get() != NULL) closed_perf.get()->addlog(i); }
+	void closedperf_report(FILE *stream=stdout) const { if (do_perflog && closed_perf.get() != NULL) closed_perf.get()->print_report(stream); }
 
 	/*!
 	 @brief Run on new connection to FOAM
