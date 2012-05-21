@@ -1,6 +1,6 @@
 /*
  foam.cc -- main FOAM framework file, glues everything together
- Copyright (C) 2008--2011 Tim van Werkhoven <t.i.m.vanwerkhoven@xs4all.nl>
+ Copyright (C) 2008--2012 Tim van Werkhoven <t.i.m.vanwerkhoven@xs4all.nl>
  
  This file is part of FOAM.
  
@@ -163,8 +163,13 @@ int FOAM::init() {
 }
 
 void FOAM::show_version() const {
-	printf("FOAM (%s version %s, built %s %s)\n", PACKAGE_NAME, PACKAGE_VERSION, __DATE__, __TIME__);
-	printf("Copyright (c) 2007--2011 %s\n", PACKAGE_BUGREPORT);
+	printf("FOAM (%s version %s, built %s %s with )\n", PACKAGE_NAME, PACKAGE_VERSION, __DATE__, __TIME__);
+#ifdef __VERSION__
+	printf("Compiled with GCC: %s\n", __VERSION__);
+#else
+	printf("Not compiled with GCC\n");
+#endif
+	printf("Copyright (c) 2007--2012 %s\n", PACKAGE_BUGREPORT);
 	printf("\nFOAM comes with ABSOLUTELY NO WARRANTY. This is free software,\n"
 				 "and you are welcome to redistribute it under certain conditions;\n"
 				 "see the file COPYING for details.\n");
@@ -208,8 +213,13 @@ void FOAM::show_welcome() {
                    \\/__/         \\/__/         \\/__/ \n");
 	
 	io.msg(IO_INFO, "This is FOAM (version %s, built %s %s)", PACKAGE_VERSION, __DATE__, __TIME__);
+#ifdef __VERSION__
+	io.msg(IO_INFO, "Compiled with GCC: %s", __VERSION__);
+#else
+	io.msg(IO_INFO, "Not compiled with GCC.");
+#endif
 	io.msg(IO_INFO, "Starting at %s", date);
-	io.msg(IO_INFO, "Copyright (c) 2007--2011 %s", PACKAGE_BUGREPORT);
+	io.msg(IO_INFO, "Copyright (c) 2007--2012 %s", PACKAGE_BUGREPORT);
 }
 
 int FOAM::parse_args(int argc, char *argv[]) {
