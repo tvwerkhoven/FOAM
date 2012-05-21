@@ -111,10 +111,13 @@ const string wht_type = "wht";
  http://www.ing.iac.es/~cfg/group_notes/portserv.htm
  http://www.digi.com/support/productdetail?pid=2240&type=drivers
  http://whtics.roque.ing.iac.es:8081/TCSStatus/TCSStatusExPo
+ ftp://ftp1.digi.com/support/beta/linux/dgrp/
  
  \section wht_cfg Configuration params
  
- - url: live WHT pointing
+ - track_host: live WHT pointing host (whtics.roque.ing.iac.es)
+ - track_port: live WHT pointing port (8001)
+ - track_file: live WHT pointing file (/TCSStatus/TCSStatusExPo)
  
  \section wht_netio Network commands
  
@@ -125,18 +128,19 @@ const string wht_type = "wht";
 */
 class WHT: public Telescope {
 private:
-	
-public:
-	WHT(Io &io, foamctrl *const ptc, const string name, const string port, Path const &conffile, const bool online=true);
-	~WHT();
-	
 	serial::port *wht_ctrl;	//!< Hardware interface (RS323) to WHT. Needs device, speed, parity, delim
-
+	string sport;						//!< Serial port to use (/dev/tty...)
+	
 	Socket::Socket sock_track; //!< Socket to read live WHT position
 	string track_prot;			//!< track protocol (http)
 	string track_host;			//!< Hostname to read for live WHT position
 	string track_file;			//!< file to read wht_live_url on;
 	string track_port;			//!< port to read wht_live_url on;
+
+public:
+	WHT(Io &io, foamctrl *const ptc, const string name, const string port, Path const &conffile, const bool online=true);
+	~WHT();
+	
 	
 	float ele;							//!< Telescope elevation
 	float dec;							//!< Telescope declination

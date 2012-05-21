@@ -40,22 +40,27 @@
 using namespace std;
 
 WHT::WHT(Io &io, foamctrl *const ptc, const string name, const string port, Path const &conffile, const bool online):
-Telescope(io, ptc, name, wht_type, port, conffile, online)
+Telescope(io, ptc, name, wht_type, port, conffile, online),
+ele(0.0), dec(0.0)
 {
 	io.msg(IO_DEB2, "WHT::WHT()");
 	
 	// Configure initial settings
 	{
 		// port
-		// parity
-		// speed
+		sport = cfg.getstring("port");
+		
 		// delimiter
-		// coords url
+		// coords url = http://whtics.roque.ing.iac.es:8081/TCSStatus/TCSStatusExPo
 		track_prot = "http://";
 		track_host = cfg.getstring("track_host", "whtics.roque.ing.iac.es");
 		track_port = cfg.getstring("track_port", "8081");
-		track_file = cfg.getstring("track_port", "/TCSStatus/TCSStatusExPo");
+		track_file = cfg.getstring("track_file", "/TCSStatus/TCSStatusExPo");
 	}
+		
+	wht_ctrl = new serial::port(sport, B9600, 0, '\r');
+	// Start watcher, loop
+	
 }
 
 WHT::~WHT() {
@@ -67,25 +72,33 @@ WHT::~WHT() {
 int WHT::get_wht_coords(float *c0, float *c1) {
 	// Connect if necessary
 	if (!sock_track.is_connected()) {
+		io.msg(IO_XNFO, "WHT::get_wht_coords(): connecting to %s:%s...", track_host.c_str(), track_port.c_str());
 		sock_track.connect(track_host, track_port);
-		sock_track.setblocking(true);
+		sock_track.setblocking(false);
 	}
-	// Open URL
-	sock_track.write(format("GET %s HTTP/1.1\r\nHOST %s\r\nUser-Agent: FOAM\r\n\r\n", 
-								track_file.c_str(), track_host.c_str()));
+
+	// Open URL, request disconnect 
+	sock_track.printf("GET %s HTTP/1.1\r\nHOST: %s\r\nUser-Agent: FOAM dev.telescope.wht\r\nConnection: close\r\n\r\n\n", 
+										track_file.c_str(), track_host.c_str());
 
 	// Read data
 	string rawdata;
-	printf("Got data (<<EOF):\n");
-	while (sock_track.readline(rawdata)) {
-		printf("%s\n",rawdata.c_str());
-	}
-	printf("EOF\n");
-	
+	char buf[2048];
+	while (sock_track.read((void *)buf, 2048))
+		rawdata += string(buf);
+
 	// Parse data, find first line after \r\n\r\n
-	size_t dbeg = rawdata.find("\r\n\r\n");
+	size_t dbeg = rawdata.find("\r\n\r\n") +4;
+	if (dbeg == string::npos) {
+		io.msg(IO_WARN, "WHT::get_wht_coords(): could not find data.");
+		return -1;
+	}
 	string track_data = rawdata.substr(dbeg);
+	io.msg(IO_WARN, "WHT::get_wht_coords(): track data @ %zu: %s", dbeg, track_data.c_str());
 	
+	// Split by words, find coordinates, store and return
+	
+
 	// Set c0, c1
 	*c0 = 0.0;
 	*c1 = 1.0;
@@ -104,6 +117,9 @@ void WHT::on_message(Connection *const conn, string line) {
 		if (what == "track") {					// get track
 			conn->addtag("track");
 			conn->write("ok track " +track_prot+"://"+track_host+":"+track_port+"/"+track_file);
+		} else if (what == "pos") {			// get pos
+				conn->addtag("pos");
+				conn->write(format("ok pos %d %d", ele, dec));
 		} else 
 			parsed = false;
 	} else if (command == "set") {
