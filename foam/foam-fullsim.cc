@@ -98,7 +98,7 @@ int FOAM_FullSim::open_loop() {
 	vec_str = "";
 	for (size_t i=0; i<wf_meas->wfamp->size; i++)
 		vec_str += format("%.3g ", gsl_vector_float_get(wf_meas->wfamp, i));
-	io.msg(IO_INFO, "FOAM_FullSim::wfs_m: %s", vec_str.c_str());
+	io.msg(IO_XNFO, "FOAM_FullSim::wfs_m: %s", vec_str.c_str());
 
 	simwfs->comp_ctrlcmd(simwfc->getname(), wf_meas->wfamp, simwfc->ctrlparams.err);
 	closedperf_addlog(4);
@@ -106,7 +106,7 @@ int FOAM_FullSim::open_loop() {
 	vec_str = "";
 	for (size_t i=0; i<simwfc->ctrlparams.err->size; i++)
 		vec_str += format("%.3g ", gsl_vector_float_get(simwfc->ctrlparams.err, i));
-	io.msg(IO_INFO, "FOAM_FullSim::wfc_rec: %s", vec_str.c_str());
+	io.msg(IO_XNFO, "FOAM_FullSim::wfc_rec: %s", vec_str.c_str());
 
 	simwfs->comp_shift(simwfc->getname(), simwfc->ctrlparams.err, wf_meas->wfamp);
 	closedperf_addlog(5);
@@ -114,7 +114,7 @@ int FOAM_FullSim::open_loop() {
 	vec_str = "";
 	for (size_t i=0; i<wf_meas->wfamp->size; i++)
 		vec_str += format("%.3g ", gsl_vector_float_get(wf_meas->wfamp, i));
-	io.msg(IO_INFO, "FOAM_FullSim::wfs_r: %s", vec_str.c_str());
+	io.msg(IO_XNFO, "FOAM_FullSim::wfs_r: %s", vec_str.c_str());
 
 	usleep(0.1 * 1000000);
 	return 0;

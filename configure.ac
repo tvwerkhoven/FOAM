@@ -377,8 +377,8 @@ AS_IF([test "x$have_gui" != "xno"],
 		[
 		AX_CHECK_GL
 		AS_IF([test "x$no_gl" = "xyes"], [have_opengl=no;glmissing+=" gl"])
-		AX_CHECK_GLU
-		AS_IF([test "x$no_glu" = "xyes"], [have_opengl=no;glmissing+=" glu"])
+#		AX_CHECK_GLU
+#		AS_IF([test "x$no_glu" = "xyes"], [have_opengl=no;glmissing+=" glu"])
 		AX_CHECK_GLUT
 		AS_IF([test "x$no_glut" = "xyes"], [have_opengl=no;glmissing+=" glut"])
 		], [])
@@ -399,8 +399,8 @@ AS_IF([test "x$have_gui" != "xno"],
 				[have_gui=no;guimissing+=" $glmissing"],
 				[])
 
-		AC_SUBST(GUI_CFLAGS, ["$GTHREAD_CFLAGS $GTKMM_CFLAGS $GL_CFLAGS $GLU_CFLAGS $GLUT_CFLAGS $GLEXTMM_CFLAGS"])
-		AC_SUBST(GUI_LIBS, ["$GTHREAD_LIBS $GTKMM_LIBS $GL_LIBS $GLU_LIBS $GLUT_LIBS $GLEXTMM_LIBS"])
+		AC_SUBST(GUI_CFLAGS, ["$GTHREAD_CFLAGS $GTKMM_CFLAGS $GL_CFLAGS $GLUT_CFLAGS $GLEXTMM_CFLAGS"])
+		AC_SUBST(GUI_LIBS, ["$GTHREAD_LIBS $GTKMM_LIBS $GL_LIBS $GLUT_LIBS $GLEXTMM_LIBS"])
 		],
 		[AC_MSG_NOTICE([*** GUI disabled])])
 

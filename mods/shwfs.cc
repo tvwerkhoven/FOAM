@@ -877,8 +877,8 @@ int Shwfs::gen_mla_grid(std::vector<vector_t> &mlacfg, const coord_t res, const 
 	for (int sa_y=0; sa_y < sa_range_y; sa_y++) {
 		for (int sa_x=0; sa_x < sa_range_x; sa_x++) {
 			// Centroid position of current subap is (using the center of the CCD as origin)
-			sa_c.x = (sa_x * pitch.x) + size.x/2 + disp.x - res.x/2;
-			sa_c.y = (sa_y * pitch.y) + size.y/2 + disp.y- res.y/2;
+			sa_c.x = (sa_x * pitch.x) + pitch.x/2 + disp.x - res.x/2;
+			sa_c.y = (sa_y * pitch.y) + pitch.y/2 + disp.y - res.y/2;
 			
 			// Offset odd rows: 'sa_y % 2' gives 0 for even rows and 1 for odd rows. 
 			// Use this to apply a row-offset to even and odd rows

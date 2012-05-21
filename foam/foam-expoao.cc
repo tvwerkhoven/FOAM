@@ -45,6 +45,7 @@ int FOAM_ExpoAO::load_modules() {
 	io.msg(IO_DEB2, "FOAM_ExpoAO::load_modules()");
 	io.msg(IO_INFO, "This is the expoao build, enjoy.");
 	
+	//! @todo Try-catch clause does not function properly, errors don't propagate outward io.msg() problem?
 	try {
 		// Init Alpao DM
 		io.msg(IO_INFO, "Init Alpao DM97-15...");
@@ -63,7 +64,7 @@ int FOAM_ExpoAO::load_modules() {
 		ixonwfs = new Shwfs(io, ptc, "ixonwfs", ptc->listenport, ptc->conffile, *ixoncam);
 		devices->add((foam::Device *) ixonwfs);
 	} catch (std::runtime_error &e) {
-		io.msg(IO_ERR, "FOAM_ExpoAO::load_modules: %s", e.what());
+		io.msg(IO_ERR | IO_FATAL, "FOAM_ExpoAO::load_modules: %s", e.what());
 		return -1;
 	}	catch (...) {
 		io.msg(IO_ERR, "FOAM_ExpoAO::load_modules: unknown error!");
@@ -106,7 +107,7 @@ int FOAM_ExpoAO::open_loop() {
 	vec_str = "";
 	for (size_t i=0; i < wf_meas->wfamp->size; i++)
 		vec_str += format("%.3g ", gsl_vector_float_get(wf_meas->wfamp, i));
-	io.msg(IO_INFO, "FOAM_ExpoAO::wfs_m: %s", vec_str.c_str());
+	io.msg(IO_XNFO, "FOAM_ExpoAO::wfs_m: %s", vec_str.c_str());
 	
 	ixonwfs->comp_ctrlcmd(alpao_dm97->getname(), wf_meas->wfamp, alpao_dm97->ctrlparams.err);
 	openperf_addlog(4);
@@ -114,7 +115,7 @@ int FOAM_ExpoAO::open_loop() {
 	vec_str = "";
 	for (size_t i=0; i<alpao_dm97->ctrlparams.err->size; i++)
 		vec_str += format("%.3g ", gsl_vector_float_get(alpao_dm97->ctrlparams.err, i));
-	io.msg(IO_INFO, "FOAM_ExpoAO::wfc_rec: %s", vec_str.c_str());
+	io.msg(IO_XNFO, "FOAM_ExpoAO::wfc_rec: %s", vec_str.c_str());
 	
 	ixonwfs->comp_shift(alpao_dm97->getname(), alpao_dm97->ctrlparams.err, wf_meas->wfamp);
 	openperf_addlog(5);
@@ -122,10 +123,10 @@ int FOAM_ExpoAO::open_loop() {
 	vec_str = "";
 	for (size_t i=0; i<wf_meas->wfamp->size; i++)
 		vec_str += format("%.3g ", gsl_vector_float_get(wf_meas->wfamp, i));
-	io.msg(IO_INFO, "FOAM_ExpoAO::wfs_r: %s", vec_str.c_str());
+	io.msg(IO_XNFO, "FOAM_ExpoAO::wfs_r: %s", vec_str.c_str());
 
 	// Wait a little so we can follow the program
-	usleep(1.0 * 1000000);
+	//usleep(1.0 * 1000000);
 	return 0;
 }
 
