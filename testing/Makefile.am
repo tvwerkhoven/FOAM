@@ -92,6 +92,25 @@ endif HAVE_ALPAODM
 endif HAVE_HWDEBUG
 
 if HAVE_DEBUG
+
+### WHT telescope testing
+
+check_PROGRAMS += wht-test
+
+wht_test_SOURCES = wht-test.cc \
+		$(MODS_DIR)/telescope.cc \
+		$(MODS_DIR)/wht.cc \
+		$(LIB_DIR)/devices.cc \
+		../foam/foamctrl.cc
+
+wht_test_LDADD = $(LIBSIU_DIR)/libio.a \
+		$(LIBSIU_DIR)/libconfig.a \
+		$(LIBSIU_DIR)/libprotocol.a \
+		$(LIBSIU_DIR)/libsocket.a \
+		$(LIBSIU_DIR)/libserial.a \
+		$(LIBSIU_DIR)/libpath.a \
+		$(LDADD)
+
 check_PROGRAMS += pixbuf-test gtk-test sigcpp-test 
 #zern-test
 
