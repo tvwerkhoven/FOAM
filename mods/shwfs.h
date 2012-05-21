@@ -275,12 +275,29 @@ public:
 	 WFC were to apply it, given the actuation matrix. It serves as a test to
 	 see if the back-calculated shifts correspond to the measured shifts.
 	 
+	 If shift is NULL, use tot_shift_vec instead.
+
 	 @param [in] wfcname Name of the wavefront corrector to be used.
 	 @param [in] *act Generalized actuator commands for wfcname 
 	 @param [out] *shift Vector of calculated shifts (pre-allocated)
 	 @return Vector of calculated shifts
 	 */
 	gsl_vector_float *comp_shift(const string &wfcname, const gsl_vector_float *act, gsl_vector_float *shift);
+	
+	/*! @brief Given a shift vector, calculate the tip-tilt
+	 
+	 To off-load tip-tilt to a telescope, we need to get the tip-tilt 
+	 information from the system. This is done by simply summing all x- and 
+	 y-shifts in a shiftvector. The summed x-, y-shifts is added to tty and tty,
+	 so make sure they have sane values before calling this function.
+	 
+	 If shift is NULL, use tot_shift_vec instead.
+	 
+	 @param [in] *shift Total shift vector
+	 @param [out] *ttx Shift in x-direction
+	 @param [out] *tty Shift in y-direction
+	 */
+	void comp_tt(const gsl_vector_float *shift, float *ttx, float *tty);
 	
 	/*! @brief Initialize influence matrix, allocate memory
 	 

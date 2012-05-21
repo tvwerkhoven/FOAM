@@ -671,6 +671,20 @@ gsl_vector_float *Shwfs::comp_shift(const string &wfcname, const gsl_vector_floa
 	return shift;
 }
 
+void Shwfs::comp_tt(const gsl_vector_float *shift, float *ttx, float *tty) {
+	// If shift is not given, use the class' own data tot_shift_vec
+	if (!shift)
+		shift = tot_shift_vec;
+
+	// Given the total shift vector for all subimages, computer the global 
+	// tip-tilt offset of the image. This is simply a sum of all x- and 
+	// y-components of the shift vector.
+	for (size_t idx=0; idx<shift->size; idx+=2) {
+		*ttx += gsl_vector_float_get(shift, idx);
+		*tty += gsl_vector_float_get(shift, idx+1);
+	}
+}
+
 int Shwfs::check_subimgs(const coord_t &topbounds) const {
 	vector_t bounds(0, 0, topbounds.x, topbounds.y);
 	return check_subimgs(bounds);
