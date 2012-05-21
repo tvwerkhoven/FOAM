@@ -36,8 +36,14 @@ const string telescope_type = "telescope";
 /*!
  @brief Telescope tracking controls
  
- Telescope (dev.wfc.telescope) can slew telescopes. This can be useful for 
+ Telescope (dev.telescope) can slew telescopes. This can be useful for 
  tip-tilt offloading.
+ 
+ This class should convert shift in x,y in mm in some primary focus (Nasmyth, 
+ Cassegrain) to a control command to drive the telescope tracking to this 
+ position. Since the dimensions of these units are unknown (might be alt-az, 
+ or anything else), we simply use dim0 and dim1 as dimensions. It is up to the 
+ specific telescope implementation to give these dimensions and units meaning.
  
  Todo:
  
@@ -47,15 +53,15 @@ const string telescope_type = "telescope";
  
  \section telescope_cfg Configuration params
  
- - scalefac: magnification from primary focus to relevant unit for setup
- - signs: need sign flipping
+ - scalefac <s0> <s1>: Telescope::scalefac
+ - rotation <ang>: Telescope::ccd_ang
  
  \section telescope_netio Network commands
  
- - set scalefac <s>: Scale factor for setup that converts input units to 1mm shift in primary focus
- - get scalefac: return scale factor
- - set gain <p> <i> <d>: set correction gain
- - get gain: return gain as <p> <i> <d>
+ - set scalefac <s0> <s1>: Telescope::scalefac
+ - get scalefac: return Telescope::scalefac as <s0> <s1>
+ - set gain <p> <i> <d>: Telescope::gain
+ - get gain: return Telescope::gain as <p> <i> <d>
  
 */
 class Telescope: public Device {
@@ -65,11 +71,12 @@ public:
 	Telescope(Io &io, foamctrl *const ptc, const string name, const string type, const string port, Path const &conffile, const bool online=true);
 	~Telescope();
 	
-	float scalefac;
-	gain_t gain;
+	float scalefac[2];			//!< Scale factor for setup that converts input units to 1mm shift in primary focus
+	gain_t gain;						//!< Gain for tip-tilt offloading correction
+	float ccd_ang;					//!< Rotation of CCD with respect to telescope restframe
 	
-	virtual int delta_pointing(const float dc0, const float dc1);
-	virtual int conv_pix_point(const float dpix0, const float dpix1, float *dc0, float *dc1);
+//	virtual int delta_pointing(const float dc0, const float dc1);
+//	virtual int conv_pix_point(const float dpix0, const float dpix1, float *dc0, float *dc1);
 
 	// From Devices::
 	void on_message(Connection *const conn, string);
@@ -78,7 +85,7 @@ public:
 #endif // HAVE_TELESCOPE_H
 
 /*!
- \page dev_wfc_telescope Telescope tracking class
+ \page dev_telescope Telescope tracking class
  
  Most high-speed wavefront corretors (DMs) can only correct so much tip-tilt. 
  Over longer observations, this has to be offloaded to a larger-stroke device,

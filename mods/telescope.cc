@@ -45,7 +45,10 @@ Device(io, ptc, name, telescope_type + "." + type, port, conffile, online),
 	
 	// Configure initial settings
 	{
-		scalefac = cfg.getdouble("scalefac", 1e-2);
+		scalefac[0] = cfg.getdouble("scalefac_0", 1e-2);
+		scalefac[1] = cfg.getdouble("scalefac_1", 1e-2);
+		gain.p = cfg.getdouble("gain_p", 1.0);
+		ccd_ang = cfg.getdouble("ccd_ang", 0.0);
 	}
 }
 
@@ -54,4 +57,36 @@ Telescope::~Telescope() {
 
 	//!< @todo Save all device settings back to cfg file
 	cfg.set("scalefac", scalefac);
+}
+
+void Telescope::on_message(Connection *const conn, string line) {
+	string orig = line;
+	string command = popword(line);
+	bool parsed = true;
+	
+	if (command == "get") {
+		string what = popword(line);
+		
+		if (what == "scalefac") {					// get shifts
+			conn->addtag("gain");
+			conn->write(format("ok scalefac %g %g", scalefac[0], scalefac[1]));
+		} else if (what == "gain") {				// get gain
+			conn->addtag("gain");
+  		conn->write(format("ok gain %g %g %g", gain.p, gain.i, gain.d));
+		} else if (what == "rotang") {					// get rot - rotation angle
+			conn->addtag("rotation");
+			conn->write(format("ok rotation %g", ccd_ang));
+		} else 
+			parsed = false;
+	} else if (command == "set") {
+		string what = popword(line);
+		
+		parsed = false;
+	} else {
+		parsed = false;
+	}
+	
+	// If not parsed here, call parent
+	if (parsed == false)
+		Device::on_message(conn, orig);
 }

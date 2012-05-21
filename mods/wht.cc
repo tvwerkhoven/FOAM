@@ -49,6 +49,10 @@ Telescope(io, ptc, name, telescope_type + "." + type, port, conffile, online),
 		// speed
 		// delimiter
 		// coords url
+		track_prot = "http://";
+		track_host = cfg.getstring("track_host", "whtics.roque.ing.iac.es");
+		track_port = cfg.getstring("track_port", "8081");
+		track_file = cfg.getstring("track_port", "/TCSStatus/TCSStatusExPo");
 	}
 }
 
@@ -59,13 +63,30 @@ WHT::~WHT() {
 }
 
 int WHT::get_wht_coords(float *c0, float *c1) {
+	// Connect if necessary
+	if (!sock_live.is_connected()) {
+		sock_live.connect(track_host, track_port);
+		sock_live.setblocking(true);
+	}
 	// Open URL
-	
+	sock_live.write("GET %s HTTP/1.1\r\nHOST %s\r\nUser-Agent: FOAM\r\n\r\n", 
+								track_file, track_host);
+
 	// Read data
+	string rawdata;
+	printf("Got data (<<EOF):\n");
+	while (sock_live.readline(rawdata)) {
+		printf(rawdata);
+	}
+	printf("EOF\n");
 	
-	// Parse data
+	// Parse data, find first line after \r\n\r\n
+	size_t dbeg = rawdata.find("\r\n\r\n");
+	string track_data = rawdata.substr(dbeg);
 	
 	// Set c0, c1
+	c0 = 0;
+	c1 = 1;
 	
 	return 0;
 }
