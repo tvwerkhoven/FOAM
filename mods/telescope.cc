@@ -39,7 +39,7 @@
 using namespace std;
 
 Telescope::Telescope(Io &io, foamctrl *const ptc, const string name, const string type, const string port, Path const &conffile, const bool online):
-Device(io, ptc, name, telescope_type + "." + type, port, conffile, online),
+Device(io, ptc, name, telescope_type + "." + type, port, conffile, online)
 {
 	io.msg(IO_DEB2, "Telescope::Telescope()");
 	

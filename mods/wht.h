@@ -127,14 +127,15 @@ class WHT: public Telescope {
 private:
 	
 public:
-	WHT(Io &io, foamctrl *const ptc, const string name, const string type, const string port, Path const &conffile, const bool online=true);
+	WHT(Io &io, foamctrl *const ptc, const string name, const string port, Path const &conffile, const bool online=true);
 	~WHT();
 	
-	serial::port wht_ctrl;	//!< Hardware interface (RS323) to WHT. Needs device, speed, parity, delim
+	serial::port *wht_ctrl;	//!< Hardware interface (RS323) to WHT. Needs device, speed, parity, delim
 
-	
 	Socket::Socket sock_track; //!< Socket to read live WHT position
-	string track_url;			//!< URL to read for live WHT position
+	string track_prot;			//!< track protocol (http)
+	string track_host;			//!< Hostname to read for live WHT position
+	string track_file;			//!< file to read wht_live_url on;
 	string track_port;			//!< port to read wht_live_url on;
 	
 	float ele;							//!< Telescope elevation

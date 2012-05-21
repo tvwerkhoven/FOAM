@@ -31,14 +31,16 @@
 #include "config.h"
 #include "csv.h"
 #include "pthread++.h"
+#include "serial.h"
 
-#include "telescope.h"
 #include "devices.h"
+#include "telescope.h"
+#include "wht.h"
 
 using namespace std;
 
-WHT::WHT(Io &io, foamctrl *const ptc, const string name, const string type, const string port, Path const &conffile, const bool online):
-Telescope(io, ptc, name, telescope_type + "." + type, port, conffile, online),
+WHT::WHT(Io &io, foamctrl *const ptc, const string name, const string port, Path const &conffile, const bool online):
+Telescope(io, ptc, name, wht_type, port, conffile, online)
 {
 	io.msg(IO_DEB2, "WHT::WHT()");
 	
@@ -64,19 +66,19 @@ WHT::~WHT() {
 
 int WHT::get_wht_coords(float *c0, float *c1) {
 	// Connect if necessary
-	if (!sock_live.is_connected()) {
-		sock_live.connect(track_host, track_port);
-		sock_live.setblocking(true);
+	if (!sock_track.is_connected()) {
+		sock_track.connect(track_host, track_port);
+		sock_track.setblocking(true);
 	}
 	// Open URL
-	sock_live.write("GET %s HTTP/1.1\r\nHOST %s\r\nUser-Agent: FOAM\r\n\r\n", 
-								track_file, track_host);
+	sock_track.write(format("GET %s HTTP/1.1\r\nHOST %s\r\nUser-Agent: FOAM\r\n\r\n", 
+								track_file.c_str(), track_host.c_str()));
 
 	// Read data
 	string rawdata;
 	printf("Got data (<<EOF):\n");
-	while (sock_live.readline(rawdata)) {
-		printf(rawdata);
+	while (sock_track.readline(rawdata)) {
+		printf("%s\n",rawdata.c_str());
 	}
 	printf("EOF\n");
 	
@@ -85,8 +87,34 @@ int WHT::get_wht_coords(float *c0, float *c1) {
 	string track_data = rawdata.substr(dbeg);
 	
 	// Set c0, c1
-	c0 = 0;
-	c1 = 1;
+	*c0 = 0.0;
+	*c1 = 1.0;
 	
 	return 0;
+}
+
+void WHT::on_message(Connection *const conn, string line) {
+	string orig = line;
+	string command = popword(line);
+	bool parsed = true;
+	
+	if (command == "get") {
+		string what = popword(line);
+		
+		if (what == "track") {					// get track
+			conn->addtag("track");
+			conn->write("ok track " +track_prot+"://"+track_host+":"+track_port+"/"+track_file);
+		} else 
+			parsed = false;
+	} else if (command == "set") {
+		string what = popword(line);
+		
+		parsed = false;
+	} else {
+		parsed = false;
+	}
+	
+	// If not parsed here, call parent
+	if (parsed == false)
+		Telescope::on_message(conn, orig);
 }

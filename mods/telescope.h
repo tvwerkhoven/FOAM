@@ -26,6 +26,7 @@
 #include "io.h"
 #include "config.h"
 #include "pthread++.h"
+#include "types.h"
 
 #include "devices.h"
 
@@ -64,7 +65,7 @@ const string telescope_type = "telescope";
  - get gain: return Telescope::gain as <p> <i> <d>
  
 */
-class Telescope: public Device {
+class Telescope: public foam::Device {
 private:
 	
 public:
