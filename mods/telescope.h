@@ -82,8 +82,8 @@ protected:
 	float sht0;							//!< Output shift, scaled and rotated
 	float sht1;							//!< Output shift, scaled and rotated
 	
-	float c0;								//!< Input offset (arbitary units, pixels?)
-	float c1;								//!< Input offset (arbitary units, pixels?)	
+	float c0;								//!< Input offset (arbitary units, most likely pixels)
+	float c1;								//!< Input offset (arbitary units, most likely pixels)	
 
 public:
 	Telescope(Io &io, foamctrl *const ptc, const string name, const string type, const string port, Path const &conffile, const bool online=true);

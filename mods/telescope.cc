@@ -70,12 +70,8 @@ void Telescope::tel_handler() {
 		// General:
 		// x' = scalefac0 [ x cos(th) - y sin(th) ]
 		// y; = scalefac1 [ x sin(th) + y cos(th) ]
-		// For ExPo:
-		// ele = 0.001 * sin(??) + cos(??)
-		// dec = 0.001 * sin(??) + cos(??)
-//#error CHECK THIS CODE
-		sht0 = c0 * scalefac[0];
-		sht1 = c1 * scalefac[1];
+		sht0 = scalefac[0] * c0 * cos(ccd_ang) - scalefac[1] * c1 * sin(ccd_ang);
+		sht1 = scalefac[0] * c0 * sin(ccd_ang) + scalefac[1] * c1 * cos(ccd_ang);
 		
 		update_telescope_track(sht0, sht1);
 

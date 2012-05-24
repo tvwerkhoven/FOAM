@@ -93,7 +93,7 @@ int WHT::update_wht_coords(double *const alt, double *const az) {
 		return -1;
 	}
 	string track_data = rawdata.substr(dbeg);
-	io.msg(IO_XNFO, "WHT::update_wht_coords(): data @ %zu: %s...", dbeg, track_data.substr(0,30).c_str());
+	io.msg(IO_DEB1, "WHT::update_wht_coords(): data @ %zu: %s...", dbeg, track_data.substr(0,30).c_str());
 	
 	// Split by words, find coordinates, store and return
 	string key, val;
@@ -104,6 +104,7 @@ int WHT::update_wht_coords(double *const alt, double *const az) {
 		io.msg(IO_DEB1, "WHT::update_wht_coords(): got: %s=%s", key.c_str(), val.c_str());
 	}
 	
+	// Check if we got the ALT and AZ parameters
 	if (wht_info.find("AZ") == wht_info.end() or wht_info.find("ALT") == wht_info.end()) {		
 		io.msg(IO_WARN, "WHT::update_wht_coords(): did not get alt/az information!");
 	} else {
@@ -129,7 +130,9 @@ int WHT::update_telescope_track(const float sht0, const float sht1) {
 	// General:
 	// x' = [ x cos(th) - y sin(th) ]
 	// y; = [ x sin(th) + y cos(th) ]
-//#error CHECK THIS CODE
+	// For ExPo:
+	// ele = 0.001 * sin(??) + cos(??)
+	// dec = 0.001 * sin(??) + cos(??)
 	float d_ele = sht0 * cos(alt) - sht1 * sin(alt);
 	float d_alt = sht0 * sin(alt) + sht1 * cos(alt);
 	
