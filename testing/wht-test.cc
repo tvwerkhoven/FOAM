@@ -46,7 +46,11 @@ int main() {
 	sleep(1);
 	
 	io.msg(IO_INFO, "Init complete.");
-
+	while (true) {
+		float c0=drand48(), c1=drand48();
+		wht->set_track_offset(c0, c1);
+		sleep(1);
+	}
 	
 	io.msg(IO_INFO, "Quitting now...");
 	delete wht;
