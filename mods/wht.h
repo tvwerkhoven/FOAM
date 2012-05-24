@@ -136,16 +136,18 @@ private:
 	string track_file;			//!< file to read wht_live_url on;
 	string track_port;			//!< port to read wht_live_url on;
 	
-	int update_wht_coords(float *const ele, float *const dec); //!< Update WHT pointings coordinates from online thing
+	int update_wht_coords(double *const alt, double *const az); //!< Update WHT pointings coordinates from online thing
 
 public:
 	WHT(Io &io, foamctrl *const ptc, const string name, const string port, Path const &conffile, const bool online=true);
 	~WHT();
 	
-	float ele;							//!< Telescope elevation
-	float dec;							//!< Telescope declination
+	double alt;							//!< Telescope altititude
+	double az;								//!< Telescope azimuthal
+	float delay;						//!< WHT info update period
+	std::map<string, string> wht_info; // Full WHT info from website
 		
-	int get_wht_coords(float *const ele, float *const dec); //!< Get last known WHT pointings coordinates
+	int get_wht_coords(float *const alt, float *const az); //!< Get last known WHT pointings coordinates
 	
 	// From Telescope::
 	int update_telescope_track(const float sht0, const float sht1);

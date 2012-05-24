@@ -42,7 +42,7 @@ using namespace std;
 WHT::WHT(Io &io, foamctrl *const ptc, const string name, const string port, Path const &conffile, const bool online):
 Telescope(io, ptc, name, wht_type, port, conffile, online),
 wht_ctrl(NULL), sport(""),
-ele(0.0), dec(0.0)
+alt(0.0), az(0.0)
 {
 	io.msg(IO_DEB2, "WHT::WHT()");
 	
@@ -58,7 +58,7 @@ ele(0.0), dec(0.0)
 		track_port = cfg.getstring("track_port", "8081");
 		track_file = cfg.getstring("track_file", "/TCSStatus/TCSStatusExPo");
 	}
-		
+	
 	//wht_ctrl = new serial::port(sport, B9600, 0, '\r');
 }
 
@@ -68,7 +68,7 @@ WHT::~WHT() {
 	//!< @todo Save all device settings back to cfg file
 }
 
-int WHT::update_wht_coords(float *const ele, float *const dec) {
+int WHT::update_wht_coords(double *const alt, double *const az) {
 	// Connect if necessary
 	if (!sock_track.is_connected()) {
 		io.msg(IO_DEB1, "WHT::update_wht_coords(): connecting to %s:%s...", track_host.c_str(), track_port.c_str());
@@ -96,13 +96,22 @@ int WHT::update_wht_coords(float *const ele, float *const dec) {
 	io.msg(IO_XNFO, "WHT::update_wht_coords(): data @ %zu: %s...", dbeg, track_data.substr(0,30).c_str());
 	
 	// Split by words, find coordinates, store and return
-	//! @todo
-	//track_data.split()
-	popword(track_data);
-
-	// Set elevation, declination
-	*ele = 0.0;
-	*dec = 1.0;
+	string key, val;
+	while (track_data.length()) {
+		key = popword(track_data, "=");
+		val = popword(track_data, "\n");
+		wht_info[key] = val;
+		io.msg(IO_DEB1, "WHT::update_wht_coords(): got: %s=%s", key.c_str(), val.c_str());
+	}
+	
+	if (wht_info.find("AZ") == wht_info.end() or wht_info.find("ALT") == wht_info.end()) {		
+		io.msg(IO_WARN, "WHT::update_wht_coords(): did not get alt/az information!");
+	} else {
+		// Set elevation, declination
+		*alt = strtod(wht_info["ALT"].c_str(), NULL);
+		*az = strtod(wht_info["AZ"].c_str(), NULL);
+		io.msg(IO_XNFO, "WHT::update_wht_coords(): new alt=%g, az=%g", *alt, *az);
+	}
 	
 	return 0;
 }
@@ -113,7 +122,7 @@ int WHT::update_telescope_track(const float sht0, const float sht1) {
 	// If it's time for a new telescope position, get it
 	if (iter % 10 == 0) {
 		io.msg(IO_DEB1, "WHT::update_telescope_track() iter=%d, get coords", iter);
-		update_wht_coords(&ele, &dec);
+		update_wht_coords(&alt, &az);
 	}
 	
 	// We have shift in the focal plane, convert to telescope axis by rotation:
@@ -121,8 +130,8 @@ int WHT::update_telescope_track(const float sht0, const float sht1) {
 	// x' = [ x cos(th) - y sin(th) ]
 	// y; = [ x sin(th) + y cos(th) ]
 //#error CHECK THIS CODE
-	float d_ele = sht0 * cos(ele) - sht1 * sin(ele);
-	float d_az = sht0 * sin(ele) + sht1 * cos(ele);
+	float d_ele = sht0 * cos(alt) - sht1 * sin(alt);
+	float d_alt = sht0 * sin(alt) + sht1 * cos(alt);
 	
 	iter++;
 	return 0;
@@ -141,7 +150,7 @@ void WHT::on_message(Connection *const conn, string line) {
 			conn->write("ok track " +track_prot+"://"+track_host+":"+track_port+"/"+track_file);
 		} else if (what == "pos") {			// get pos
 				conn->addtag("pos");
-				conn->write(format("ok pos %d %d", ele, dec));
+				conn->write(format("ok pos %d %d", alt, az));
 		} else 
 			parsed = false;
 	} else if (command == "set") {
