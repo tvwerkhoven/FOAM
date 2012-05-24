@@ -49,6 +49,47 @@ Device(io, ptc, name, telescope_type + "." + type, port, conffile, online)
 		scalefac[1] = cfg.getdouble("scalefac_1", 1e-2);
 		gain.p = cfg.getdouble("gain_p", 1.0);
 		ccd_ang = cfg.getdouble("ccd_ang", 0.0);
+		handler_p = cfg.getdouble("cadence", 1.0);
+	}
+	
+	// Start handler thread
+	tel_thr.create(sigc::mem_fun(*this, &Telescope::tel_handler));
+}
+
+void Telescope::tel_handler() {
+	struct timeval last, now, diff;
+	float this_sleep;
+	
+	while (ptc->mode != AO_MODE_SHUTDOWN) {
+		io.msg(IO_DEB1, "Telescope::tel_handler() looping...");
+		gettimeofday(&last, 0);
+		
+		// From input offset (in arbitrary units, i.e. pixels), calculate proper 
+		// shift coordinates, i.e.: 
+		// shift_vec = rot_mat * scale_vec * input_vec
+		// General:
+		// x' = scalefac0 [ x cos(th) - y sin(th) ]
+		// y; = scalefac1 [ x sin(th) + y cos(th) ]
+		// For ExPo:
+		// ele = 0.001 * sin(??) + cos(??)
+		// dec = 0.001 * sin(??) + cos(??)
+//#error CHECK THIS CODE
+		sht0 = c0 * scalefac[0];
+		sht1 = c1 * scalefac[1];
+		
+		update_telescope_track(sht0, sht1);
+
+		// Make sure each iteration takes at minimum handler_p seconds:
+		// update duration = now - last
+		// loop period should be handler_p
+		// sleep time = handler_p - (now - last)
+		gettimeofday(&now, 0);
+		timerclear(&diff);
+		timersub(&now, &last, &diff);
+		
+		this_sleep = handler_p * 1E6 - (diff.tv_sec * 1E6 + diff.tv_usec);
+		if(this_sleep > 0)
+			usleep(this_sleep);
 	}
 }
 
@@ -57,6 +98,10 @@ Telescope::~Telescope() {
 
 	//!< @todo Save all device settings back to cfg file
 	cfg.set("scalefac", scalefac);
+	
+	// Join with telescope handler thread
+	tel_thr.cancel();
+	tel_thr.join();
 }
 
 void Telescope::on_message(Connection *const conn, string line) {

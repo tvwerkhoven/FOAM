@@ -48,9 +48,13 @@ const string telescope_type = "telescope";
  
  Todo:
  
- - Should be WFC or just Device? -> Device
- - Need children that does hardware interface, and conversion form unit pointing to image shift
- - Need configuration that tells magnification from primary focus to camera
+ - Use scalefacs, rotation and gain to convert pixel shift to intermediate focal plane shift
+ - Implement specific conversion details from thereon in children (WHT), 
+ 
+ Raw input: c0, c1. Scaled, rotated output: sht0, sht1. Handler then calls 
+ update_telescope_track() every X seconds which converts these converted 
+ coordinates into hardware-specific coordinates (but without the need for 
+ scaling or rotating).
  
  \section telescope_cfg Configuration params
  
@@ -66,8 +70,16 @@ const string telescope_type = "telescope";
  
 */
 class Telescope: public foam::Device {
-private:
+protected:
+	pthread::thread tel_thr;			//!< Telescope handler thread
+	void tel_handler();						//!< Handler thread that takes care of converting input shifts to tracking the telescope correctly
+
+	float sht0;							//!< Output shift, scaled and rotated
+	float sht1;							//!< Output shift, scaled and rotated
 	
+	float c0;								//!< Input offset (arbitary units, pixels?)
+	float c1;								//!< Input offset (arbitary units, pixels?)	
+
 public:
 	Telescope(Io &io, foamctrl *const ptc, const string name, const string type, const string port, Path const &conffile, const bool online=true);
 	~Telescope();
@@ -76,8 +88,13 @@ public:
 	gain_t gain;						//!< Gain for tip-tilt offloading correction
 	float ccd_ang;					//!< Rotation of CCD with respect to telescope restframe
 	
-//	virtual int delta_pointing(const float dc0, const float dc1);
-//	virtual int conv_pix_point(const float dpix0, const float dpix1, float *dc0, float *dc1);
+	float handler_p;				//!< Handler update period (seconds)
+	
+	void set_track_offset(const float _c0, const float _c1) { c0 = _c0; c1 = _c1; }
+	void get_track_offset(float * const _c0, float * const _c1) { *_c0 = c0; *_c1 = c1; }
+	
+	// To be implemented in derived class
+	virtual int update_telescope_track(const float sht0, const float sht1) = 0;
 
 	// From Devices::
 	void on_message(Connection *const conn, string);

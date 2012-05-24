@@ -101,8 +101,7 @@ const string wht_type = "wht";
  
  @section wht_todo Todo
  
- - hardware interface
- - conversion form unit pointing to image shift
+ - conversion form unit pointing to image shift (using ele)
  - get coordinates from webpage
  
  @section wht_more More info
@@ -136,21 +135,21 @@ private:
 	string track_host;			//!< Hostname to read for live WHT position
 	string track_file;			//!< file to read wht_live_url on;
 	string track_port;			//!< port to read wht_live_url on;
+	
+	int update_wht_coords(float *const ele, float *const dec); //!< Update WHT pointings coordinates from online thing
 
 public:
 	WHT(Io &io, foamctrl *const ptc, const string name, const string port, Path const &conffile, const bool online=true);
 	~WHT();
 	
-	
 	float ele;							//!< Telescope elevation
 	float dec;							//!< Telescope declination
-	
-	int get_wht_coords(float *c0, float *c1); //!< Get WHT pointings coordinates from online thing
+		
+	int get_wht_coords(float *const ele, float *const dec); //!< Get last known WHT pointings coordinates
 	
 	// From Telescope::
-//	virtual int delta_pointing(const float dc0, const float dc1);
-//	virtual int conv_pix_point(const float dpix0, const float dpix1, float *dc0, float *dc1);
-
+	int update_telescope_track(const float sht0, const float sht1);
+	
 	// From Devices::
 	void on_message(Connection *const conn, string);
 };
