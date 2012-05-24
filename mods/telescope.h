@@ -49,17 +49,22 @@ const string telescope_type = "telescope";
  Todo:
  
  - Use scalefacs, rotation and gain to convert pixel shift to intermediate focal plane shift
- - Implement specific conversion details from thereon in children (WHT), 
+ - Implement specific conversion details from thereon in children (WHT, ...)
+
+ \section telescope_method Method
  
- Raw input: c0, c1. Scaled, rotated output: sht0, sht1. Handler then calls 
- update_telescope_track() every X seconds which converts these converted 
- coordinates into hardware-specific coordinates (but without the need for 
- scaling or rotating).
+ The Telescope class takes raw input (in any units), stored in c0, c1. This 
+ is then scaled and rotated, and stored in sht0, sht1. A handler thread, 
+ tel_handler(), then calls update_telescope_track() every X seconds. This 
+ routine should be implemented in a derived class which which converts sht0, 
+ sht1 into hardware-specific coordinates.
  
  \section telescope_cfg Configuration params
  
  - scalefac <s0> <s1>: Telescope::scalefac
  - rotation <ang>: Telescope::ccd_ang
+ - gain <gain>: Telescope::gain
+ - cadence <gain>: Telescope::handler_p
  
  \section telescope_netio Network commands
  
