@@ -39,8 +39,8 @@ int main() {
 	WHT *wht;
 	try {
 		wht = new WHT(io, &ptc, "wht-test", "1234", Path("./wht-test.cfg"), true);
-	} catch (...) {
-		io.msg(IO_ERR, "Failed to initialize WHT, deleting & aborting!");
+	} catch (std::runtime_error &e) {
+		io.msg(IO_ERR, "Failed to initialize WHT: %s", e.what());
 		return 1;
 	}
 	sleep(1);
