@@ -130,21 +130,24 @@ private:
 	serial::port *wht_ctrl;	//!< Hardware interface (RS323) to WHT. Needs device, speed, parity, delim
 	string sport;						//!< Serial port to use (/dev/tty...)
 	
+	pthread::thread wht_cfg_thr;	//!< WHT configuration querying thread
+	void wht_updater();						//!< Handler thread that continuously updates WHT configuration
+	
 	Socket::Socket sock_track; //!< Socket to read live WHT position
 	string track_prot;			//!< track protocol (http)
 	string track_host;			//!< Hostname to read for live WHT position
 	string track_file;			//!< file to read wht_live_url on;
 	string track_port;			//!< port to read wht_live_url on;
 	
-	int update_wht_coords(double *const alt, double *const az); //!< Update WHT pointings coordinates from online thing
+	int update_wht_coords(double *const alt, double *const az, double *const delay); //!< Update WHT pointings coordinates from online thing
 
 public:
 	WHT(Io &io, foamctrl *const ptc, const string name, const string port, Path const &conffile, const bool online=true);
 	~WHT();
 	
 	double alt;							//!< Telescope altititude
-	double az;								//!< Telescope azimuthal
-	float delay;						//!< WHT info update period
+	double az;							//!< Telescope azimuthal
+	double delay;						//!< WHT info update period
 	std::map<string, string> wht_info; // Full WHT info from website
 		
 	int get_wht_coords(float *const alt, float *const az); //!< Get last known WHT pointings coordinates
