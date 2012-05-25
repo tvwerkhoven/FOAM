@@ -99,7 +99,8 @@ public:
 	void get_track_offset(float * const _c0, float * const _c1) { *_c0 = c0; *_c1 = c1; }
 	
 	// To be implemented in derived class
-	virtual int update_telescope_track(const float sht0, const float sht1) = 0;
+	//!< @todo this function is empty because it might be called in tel_handler() before the real function is instantiated. Can we solve this properly?
+	virtual int update_telescope_track(const float sht0, const float sht1) { return 0; }
 
 	// From Devices::
 	void on_message(Connection *const conn, string);
