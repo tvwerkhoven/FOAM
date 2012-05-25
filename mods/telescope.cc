@@ -77,8 +77,8 @@ void Telescope::tel_handler() {
 		// General:
 		// x' = scalefac0 [ x cos(th) - y sin(th) ]
 		// y; = scalefac1 [ x sin(th) + y cos(th) ]
-		sht0 = scalefac[0] * c0 * cos(ccd_ang) - scalefac[1] * c1 * sin(ccd_ang);
-		sht1 = scalefac[0] * c0 * sin(ccd_ang) + scalefac[1] * c1 * cos(ccd_ang);
+		sht0 = scalefac[0] * c0 * cos(ccd_ang * 180.0/M_PI) - scalefac[1] * c1 * sin(ccd_ang * 180.0/M_PI);
+		sht1 = scalefac[0] * c0 * sin(ccd_ang * 180.0/M_PI) + scalefac[1] * c1 * cos(ccd_ang * 180.0/M_PI);
 		
 		update_telescope_track(sht0, sht1);
 
