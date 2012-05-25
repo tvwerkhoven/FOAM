@@ -51,7 +51,14 @@ Device(io, ptc, name, telescope_type + "." + type, port, conffile, online)
 		ccd_ang = cfg.getdouble("ccd_ang", 0.0);
 		handler_p = cfg.getdouble("cadence", 1.0);
 	}
-	
+
+	add_cmd("get scalefac");
+	add_cmd("set scalefac");
+	add_cmd("get gain");
+	add_cmd("set gain");
+	add_cmd("get ccd_ang");
+	add_cmd("set ccd_ang");
+
 	// Start handler thread
 	tel_thr.create(sigc::mem_fun(*this, &Telescope::tel_handler));
 }
@@ -108,20 +115,35 @@ void Telescope::on_message(Connection *const conn, string line) {
 	if (command == "get") {
 		string what = popword(line);
 		
-		if (what == "scalefac") {					// get shifts
-			conn->addtag("gain");
+		if (what == "scalefac") {					// get scalefac
+			conn->addtag("scalefac");
 			conn->write(format("ok scalefac %g %g", scalefac[0], scalefac[1]));
-		} else if (what == "gain") {				// get gain
+		} else if (what == "gain") {			// get gain
 			conn->addtag("gain");
   		conn->write(format("ok gain %g %g %g", gain.p, gain.i, gain.d));
-		} else if (what == "rotang") {					// get rot - rotation angle
-			conn->addtag("rotation");
-			conn->write(format("ok rotation %g", ccd_ang));
+		} else if (what == "ccd_ang") {		// get ccd_ang - CCD rotation angle
+			conn->addtag("ccd_ang");
+			conn->write(format("ok ccd_ang %g", ccd_ang));
 		} else 
 			parsed = false;
 	} else if (command == "set") {
 		string what = popword(line);
 		
+		if (what == "scalefac") {					// set scalefac <s0> <s1>
+			conn->addtag("scalefac");
+			scalefac[0] = popdouble(line);
+			scalefac[1] = popdouble(line);
+		} else if (what == "gain") {			// set gain <p> <i> <d>
+			conn->addtag("gain");
+			gain.p = popdouble(line);
+			gain.i = popdouble(line);
+			gain.d = popdouble(line);
+		} else if (what == "ccd_ang") {		// set ccd_ang <ang>
+			conn->addtag("ccd_ang");
+			ccd_ang = popdouble(line);
+		} else
+			parsed = false;
+
 		parsed = false;
 	} else {
 		parsed = false;
