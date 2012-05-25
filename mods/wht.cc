@@ -62,6 +62,9 @@ alt(0.0), az(0.0), delay(1.0)
 	// Start WHT config update thread
 	wht_cfg_thr.create(sigc::mem_fun(*this, &WHT::wht_updater));
 
+	add_cmd("get trackurl");
+	add_cmd("get telpos");
+
 	// Open serial port connection
 	//wht_ctrl = new serial::port(sport, B9600, 0, '\r');
 }
@@ -125,7 +128,7 @@ int WHT::update_wht_coords(double *const alt, double *const az, double *const de
 	string track_data = rawdata.substr(dbeg);
 	io.msg(IO_DEB1, "WHT::update_wht_coords(): data @ %zu: %s...", dbeg, track_data.substr(0,30).c_str());
 	
-	// Split by words, find coordinates, store and return
+	// Split key=val pairs, find coordinates, store and return
 	string key, val;
 	while (track_data.length()) {
 		key = popword(track_data, "=");
@@ -189,12 +192,12 @@ void WHT::on_message(Connection *const conn, string line) {
 	if (command == "get") {
 		string what = popword(line);
 		
-		if (what == "track") {					// get track
-			conn->addtag("track");
-			conn->write("ok track " +track_prot+"://"+track_host+":"+track_port+"/"+track_file);
-		} else if (what == "pos") {			// get pos
-				conn->addtag("pos");
-				conn->write(format("ok pos %d %d", alt, az));
+		if (what == "trackurl") {				// get trackurl
+			conn->addtag("trackurl");
+			conn->write("ok trackurl " +track_prot+"://"+track_host+":"+track_port+"/"+track_file);
+		} else if (what == "telpos") {	// get telpos
+				conn->addtag("telpos");
+				conn->write(format("ok telpos %d %d", alt, az));
 		} else 
 			parsed = false;
 	} else if (command == "set") {
