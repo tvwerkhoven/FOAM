@@ -236,7 +236,6 @@ Wfs::wf_info_t* Shwfs::measure(Camera::frame_t *frame) {
 	gsl_vector_float_sub(shift_vec, ref_vec);
 	
 	// Copy to output
-	//! @todo where is this deleted?
 	gsl_vector_float_memcpy(wf.wfamp, shift_vec);
 	
 	return &wf;
@@ -245,7 +244,6 @@ Wfs::wf_info_t* Shwfs::measure(Camera::frame_t *frame) {
 int Shwfs::shift_to_basis(const gsl_vector_float *const invec, const wfbasis basis, gsl_vector_float *outvec) {
 	switch (basis) {
 		case SENSOR:
-			//! @todo where is this deleted?
 			gsl_vector_float_memcpy(outvec, invec);
 			break;
 		case ZERNIKE:
