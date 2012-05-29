@@ -675,12 +675,14 @@ void Shwfs::comp_tt(const gsl_vector_float *shift, float *ttx, float *tty) {
 		shift = tot_shift_vec;
 
 	// Given the total shift vector for all subimages, computer the global 
-	// tip-tilt offset of the image. This is simply a sum of all x- and 
+	// tip-tilt offset of the image. This is simply an average of all x- and 
 	// y-components of the shift vector.
 	for (size_t idx=0; idx<shift->size; idx+=2) {
 		*ttx += gsl_vector_float_get(shift, idx);
 		*tty += gsl_vector_float_get(shift, idx+1);
 	}
+	*ttx /= (shift->size)/2;
+	*tty /= (shift->size)/2;
 }
 
 int Shwfs::check_subimgs(const coord_t &topbounds) const {
