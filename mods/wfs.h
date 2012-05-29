@@ -77,8 +77,9 @@ public:
 	 @brief This holds information on the wavefront
 	 */
 	typedef struct wavefront {
-		wavefront() : wfamp(NULL), nmodes(0), basis(SENSOR) { ; }
-		gsl_vector_float *wfamp;					//!< Mode amplitudes
+		wavefront() : wfamp(NULL), wf_full(NULL), nmodes(0), basis(SENSOR) { ; }
+		gsl_vector_float *wfamp;					//!< Residual mode amplitudes (i.e. to be corrected, see Shwfs::measure)
+		gsl_vector_float *wf_full;				//!< Full mode amplitudes (i.e. what is currently corrected, see Shwfs::comp_tt, might be NULL)
 		int nmodes;												//!< Number of modes
 		enum wfbasis basis;								//!< Basis functions used for this representation (see Wfs::wfbasis)
 	} wf_info_t;                        //!< Capture all wavefront information in flexible format

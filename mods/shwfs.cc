@@ -761,6 +761,8 @@ int Shwfs::calibrate() {
 			
 			gsl_vector_float_free(wf.wfamp);
 			wf.wfamp = gsl_vector_float_calloc(wf.nmodes);
+			gsl_vector_float_free(wf.wf_full);
+			wf.wf_full = gsl_vector_float_calloc(wf.nmodes);
 			break;
 		case ZERNIKE:
 			//! @todo how many modes do we want if we're using Zernike? Is the same as the number of coordinates ok or not?

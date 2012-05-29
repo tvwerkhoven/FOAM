@@ -77,7 +77,7 @@ int foamctrl::parse() {
 	io.msg(IO_INFO, "Confdir: '%s', file: '%s'", confdir.c_str(), conffile.basename().c_str());
 	cfg = new config(conffile);
 	
-	// Datadir: always system default
+	// Datadir: always system default (from --prefix in `configure`, $datadir)
 	datadir = FOAM_DATADIR;
 	io.msg(IO_INFO, "Datadir: '%s'.", datadir.c_str());
 
