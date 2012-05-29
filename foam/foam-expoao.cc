@@ -40,6 +40,7 @@ using namespace std;
 AndorCam *ixoncam;
 Shwfs *ixonwfs;
 AlpaoDM *alpao_dm97;
+WHT *wht_track;
 
 int FOAM_ExpoAO::load_modules() {
 	io.msg(IO_DEB2, "FOAM_ExpoAO::load_modules()");
@@ -63,6 +64,11 @@ int FOAM_ExpoAO::load_modules() {
 		// Init WFS (using ixoncam)
 		ixonwfs = new Shwfs(io, ptc, "ixonwfs", ptc->listenport, ptc->conffile, *ixoncam);
 		devices->add((foam::Device *) ixonwfs);
+		
+		// Init WHT telescope interface
+		wht_track = new WHT(io, ptc, "wht", ptc->listenport, ptc->conffile, *ixoncam);
+		devices->add((foam::Device *) wht_track);
+
 	} catch (std::runtime_error &e) {
 		io.msg(IO_ERR | IO_FATAL, "FOAM_ExpoAO::load_modules: %s", e.what());
 		return -1;
@@ -120,13 +126,16 @@ int FOAM_ExpoAO::open_loop() {
 	ixonwfs->comp_shift(alpao_dm97->getname(), alpao_dm97->ctrlparams.err, wf_meas->wfamp);
 	openperf_addlog(5);
 
+	float ttx=0, tty=0;
+	ixonwfs->comp_tt(wf_meas->wfamp, &ttx, &tty);
+	wht_track->set_track_offset(ttx, tty);
+	openperf_addlog(6);
+
 	vec_str = "";
 	for (size_t i=0; i<wf_meas->wfamp->size; i++)
 		vec_str += format("%.3g ", gsl_vector_float_get(wf_meas->wfamp, i));
 	io.msg(IO_XNFO, "FOAM_ExpoAO::wfs_r: %s", vec_str.c_str());
 
-	// Wait a little so we can follow the program
-	//usleep(1.0 * 1000000);
 	return 0;
 }
 
@@ -178,8 +187,13 @@ int FOAM_ExpoAO::closed_loop() {
 	
 	// Use control vector to compute total shifts that we are correcting
 	ixonwfs->comp_shift(alpao_dm97->getname(), alpao_dm97->ctrlparams.ctrl_vec, ixonwfs->tot_shift_vec);
+	
+	// Compute tip-tilt signal from total shift vector, track telescope
+	float ttx=0, tty=0;
+	ixonwfs->comp_tt(ixonwfs->tot_shift_vec, &ttx, &tty);
+	wht_track->set_track_offset(ttx, tty);
+	openperf_addlog(6);
 
-	// Don't wait here, closed loop should be fast
 	return 0;
 }
 
