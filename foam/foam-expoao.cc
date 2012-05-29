@@ -31,6 +31,8 @@
 #include "shwfs.h"
 #include "wfc.h"
 #include "alpaodm.h"
+#include "telescope.h"
+#include "wht.h"
 
 #include "foam-expoao.h"
 
@@ -66,7 +68,7 @@ int FOAM_ExpoAO::load_modules() {
 		devices->add((foam::Device *) ixonwfs);
 		
 		// Init WHT telescope interface
-		wht_track = new WHT(io, ptc, "wht", ptc->listenport, ptc->conffile, *ixoncam);
+		wht_track = new WHT(io, ptc, "wht", ptc->listenport, ptc->conffile);
 		devices->add((foam::Device *) wht_track);
 
 	} catch (std::runtime_error &e) {
@@ -186,11 +188,11 @@ int FOAM_ExpoAO::closed_loop() {
 	closedperf_addlog(5);
 	
 	// Use control vector to compute total shifts that we are correcting
-	ixonwfs->comp_shift(alpao_dm97->getname(), alpao_dm97->ctrlparams.ctrl_vec, ixonwfs->tot_shift_vec);
+	ixonwfs->comp_shift(alpao_dm97->getname(), alpao_dm97->ctrlparams.ctrl_vec, wf_meas->wf_full);
 	
 	// Compute tip-tilt signal from total shift vector, track telescope
 	float ttx=0, tty=0;
-	ixonwfs->comp_tt(ixonwfs->tot_shift_vec, &ttx, &tty);
+	ixonwfs->comp_tt(wf_meas->wf_full, &ttx, &tty);
 	wht_track->set_track_offset(ttx, tty);
 	openperf_addlog(6);
 
