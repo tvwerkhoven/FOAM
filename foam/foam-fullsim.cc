@@ -31,6 +31,7 @@
 #include "shwfs.h"
 #include "wfc.h"
 #include "simulwfc.h"
+#include "telescope.h"
 
 #include "foam-fullsim.h"
 
@@ -41,6 +42,7 @@ SimulWfc *simwfc;
 SimulWfc *simwfcerr;
 SimulCam *simcam;
 Shwfs *simwfs;
+Telescope *simtel;
 
 int FOAM_FullSim::load_modules() {
 	io.msg(IO_DEB2, "FOAM_FullSim::load_modules()");
@@ -61,6 +63,10 @@ int FOAM_FullSim::load_modules() {
 	// Init WFS simulation (using camera)
 	simwfs = new Shwfs(io, ptc, "simshwfs", ptc->listenport, ptc->conffile, *simcam);
 	devices->add((foam::Device *) simwfs);
+
+	// Init Telescope simulation
+	simtel = new Telescope(io, ptc, "simtel", "simtel_t", ptc->listenport, ptc->conffile);
+	devices->add((foam::Device *) simtel);
 
 	return 0;
 }
@@ -110,11 +116,17 @@ int FOAM_FullSim::open_loop() {
 
 	simwfs->comp_shift(simwfc->getname(), simwfc->ctrlparams.err, wf_meas->wfamp);
 	closedperf_addlog(5);
-
+	
 	vec_str = "";
 	for (size_t i=0; i<wf_meas->wfamp->size; i++)
 		vec_str += format("%.3g ", gsl_vector_float_get(wf_meas->wfamp, i));
 	io.msg(IO_XNFO, "FOAM_FullSim::wfs_r: %s", vec_str.c_str());
+	
+	// Compute tip-tilt signal from total shift vector, track telescope
+	float ttx=0, tty=0;
+	simwfs->comp_tt(wf_meas->wfamp, &ttx, &tty);
+	simtel->set_track_offset(ttx, tty);
+	openperf_addlog(6);
 
 	usleep(0.1 * 1000000);
 	return 0;
@@ -148,10 +160,6 @@ int FOAM_FullSim::closed_loop() {
 	closedperf_addlog(1);
 	string vec_str;
 	
-	static gsl_vector_float *tmp_wfmeas=NULL;
-	if (tmp_wfmeas == NULL)
-		tmp_wfmeas = gsl_vector_float_calloc(simwfs->wf.nmodes);
-
 	// Get new frame from SimulCamera
 	Camera::frame_t *frame = simcam->get_next_frame(true);
 	closedperf_addlog(2);
@@ -173,17 +181,23 @@ int FOAM_FullSim::closed_loop() {
 		vec_str += format("%.3g ", gsl_vector_float_get(simwfc->ctrlparams.err, i));
 	io.msg(IO_INFO, "FOAM_FullSim::wfc_rec: %s", vec_str.c_str());
 	
-	simwfs->comp_shift(simwfc->getname(), simwfc->ctrlparams.err, tmp_wfmeas);
+	simwfs->comp_shift(simwfc->getname(), simwfc->ctrlparams.err, wf_meas->wf_full);
 	closedperf_addlog(5);
 	
 	vec_str = "";
-	for (size_t i=0; i<tmp_wfmeas->size; i++)
-		vec_str += format("%.3g ", gsl_vector_float_get(tmp_wfmeas, i));
+	for (size_t i=0; i<wf_meas->wf_full->size; i++)
+		vec_str += format("%.3g ", gsl_vector_float_get(wf_meas->wf_full, i));
 	io.msg(IO_INFO, "FOAM_FullSim::wfs_r: %s", vec_str.c_str());
 	
 	simwfc->update_control(simwfc->ctrlparams.err);
 	simwfc->actuate(true);
 	closedperf_addlog(6);
+	
+	// Compute tip-tilt signal from total shift vector, track telescope
+	float ttx=0, tty=0;
+	simwfs->comp_tt(wf_meas->wf_full, &ttx, &tty);
+	simtel->set_track_offset(ttx, tty);
+	openperf_addlog(7);
 
 	usleep(0.01 * 1000000);
 	return 0;

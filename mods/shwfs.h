@@ -95,6 +95,7 @@ private:
 	Shift shifts;												//!< Shift computation class. Does the heavy lifting.
 	gsl_vector_float *shift_vec;				//!< SHWFS shift vector. Shift for subimage N are elements N*2+0 and N*2+1. Same order as mlacfg @todo Make this a ring buffer
 	gsl_vector_float *ref_vec;					//!< SHWFS reference shift vector. Use this as 'zero' value
+	gsl_vector_float *tot_shift_vec;		//!< Total SHWFS shift being corrected, as calculated from the WFC control vector.
 	
 	typedef struct infdata {
 		infdata(): init(false), nact(0), nmeas(0) {  }
@@ -121,7 +122,7 @@ private:
 			int use_nmodes;									//!< Number of modes to use
 			double use_singval;							//!< Amount of singular values used (i.e. 1.0 for all, 0.5 for half the power in all modes)
 			double condition;								//!< SVD condition, i.e. singval[0]/singval[-1]
-		} actmat;													//!< Actuation matrix & related entitites
+		} actmat;													//!< Actuation matrix & related entitites (inverse of influence measurements)
 		
 	} infdata_t;
 	
@@ -274,12 +275,29 @@ public:
 	 WFC were to apply it, given the actuation matrix. It serves as a test to
 	 see if the back-calculated shifts correspond to the measured shifts.
 	 
+	 If shift is NULL, use tot_shift_vec instead.
+
 	 @param [in] wfcname Name of the wavefront corrector to be used.
 	 @param [in] *act Generalized actuator commands for wfcname 
 	 @param [out] *shift Vector of calculated shifts (pre-allocated)
 	 @return Vector of calculated shifts
 	 */
 	gsl_vector_float *comp_shift(const string &wfcname, const gsl_vector_float *act, gsl_vector_float *shift);
+	
+	/*! @brief Given a shift vector, calculate the tip-tilt
+	 
+	 To off-load tip-tilt to a telescope, we need to get the tip-tilt 
+	 information from the system. This is done by simply summing all x- and 
+	 y-shifts in a shiftvector. The summed x-, y-shifts is added to tty and tty,
+	 so make sure they have sane values before calling this function.
+	 
+	 If shift is NULL, use tot_shift_vec instead.
+	 
+	 @param [in] *shift Total shift vector
+	 @param [out] *ttx Shift in x-direction
+	 @param [out] *tty Shift in y-direction
+	 */
+	void comp_tt(const gsl_vector_float *shift, float *ttx, float *tty);
 	
 	/*! @brief Initialize influence matrix, allocate memory
 	 

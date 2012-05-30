@@ -126,6 +126,7 @@ foam_fullsim_SOURCES = foam-fullsim.cc \
 		$(MODS_DIR)/simulcam.cc \
 		$(MODS_DIR)/shwfs.cc \
 		$(MODS_DIR)/wfs.cc \
+		$(MODS_DIR)/telescope.cc \
 		$(MODS_DIR)/simulwfc.cc \
 		$(MODS_DIR)/wfc.cc \
 		$(LIB_DIR)/shift.cc \
@@ -139,6 +140,7 @@ foam_fullsim_SOURCES += foam-fullsim.h \
 		$(MODS_DIR)/simulcam.h \
 		$(MODS_DIR)/shwfs.h \
 		$(MODS_DIR)/wfs.h \
+		$(MODS_DIR)/telescope.h \
 		$(MODS_DIR)/simulwfc.h \
 		$(MODS_DIR)/wfc.h \
 		$(LIB_DIR)/shift.h \
@@ -176,6 +178,8 @@ foam_expoao_SOURCES = foam-expoao.cc \
 		$(MODS_DIR)/wfs.cc \
 		$(MODS_DIR)/wfc.cc \
 		$(MODS_DIR)/alpaodm.cc \
+		$(MODS_DIR)/telescope.cc \
+		$(MODS_DIR)/wht.cc \
 		$(LIB_DIR)/shift.cc
 
 # Header files are part of the sources as well
@@ -187,6 +191,8 @@ foam_expoao_SOURCES += foam-expoao.h \
 		$(MODS_DIR)/wfs.h \
 		$(MODS_DIR)/wfc.h \
 		$(MODS_DIR)/alpaodm.h \
+		$(MODS_DIR)/telescope.h \
+		$(MODS_DIR)/wht.h \
 		$(LIB_DIR)/shift.h
 
 foam_expoao_CPPFLAGS = -DFOAM_DEFAULTCONF=\"$(sysconfdir)/foam/foam-expoao.cfg\" \
