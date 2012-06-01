@@ -58,6 +58,9 @@ Device(io, ptc, name, telescope_type + "." + type, port, conffile, online)
 	add_cmd("set gain");
 	add_cmd("get ccd_ang");
 	add_cmd("set ccd_ang");
+	add_cmd("get pixshift");
+	add_cmd("get focusshift");
+	add_cmd("get pix2shiftstr");
 
 	// Start handler thread
 	tel_thr.create(sigc::mem_fun(*this, &Telescope::tel_handler));
@@ -125,6 +128,15 @@ void Telescope::on_message(Connection *const conn, string line) {
 		} else if (what == "ccd_ang") {		// get ccd_ang - CCD rotation angle
 			conn->addtag("ccd_ang");
 			conn->write(format("ok ccd_ang %g", ccd_ang));
+		} else if (what == "pixshift") {	// get pixshift - Give last known pixel shift
+			conn->addtag("pixshift");
+			conn->write(format("ok pixshift %g %g", c0, c1));
+		} else if (what == "focusshift") {		// get focusshift - Give last known converted shift
+			conn->addtag("focusshift");
+			conn->write(format("ok focusshift %g %g", sht0, sht1));
+		} else if (what == "pix2shiftstr") {		// get pix2shiftstr - Give conversion formula as string
+			conn->addtag("pix2shiftstr");
+			conn->write("ok pix2shiftstr scalefac[0] * c0 * <cos,sin>(ccd_ang * 180.0/M_PI) - scalefac[1] * c1 * <sin,cos>(ccd_ang * 180.0/M_PI)");
 		} else 
 			parsed = false;
 	} else if (command == "set") {
@@ -145,7 +157,6 @@ void Telescope::on_message(Connection *const conn, string line) {
 		} else
 			parsed = false;
 
-		parsed = false;
 	} else {
 		parsed = false;
 	}
