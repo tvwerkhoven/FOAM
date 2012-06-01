@@ -281,11 +281,14 @@ int FOAM_FullSim::calib() {
 	else if (ptc->calib == "offsetvec") {	// Add offset vector to correction 
 		double xoff = popdouble(ptc->calib_opt);
 		double yoff = popdouble(ptc->calib_opt);
+		//<! @bug xoff, yoff don't both work?
 		
 		if (simwfs->calib_offset(xoff, yoff)) {
 			io.msg(IO_ERR, "FOAM_FullSim::calib() offset vector could not be applied!");
+			return -1;
 		} else {
 			io.msg(IO_INFO, "FOAM_FullSim::calib() apply offset vector (%g, %g)", xoff, yoff);
+			protocol->broadcast(format("ok calib offsetvec %g %g", xoff, yoff));
 		}
 		
 	}
@@ -298,7 +301,11 @@ int FOAM_FullSim::calib() {
 		if (sval_cutoff == 0.0) sval_cutoff = 0.7;
 		io.msg(IO_INFO, "FOAM_FullSim::calib() re-calc SVD, sval=%g", sval_cutoff);
 
-		simwfs->calc_actmat(simwfc->getname(), sval_cutoff);
+		calret = simwfs->calc_actmat(simwfc->getname(), sval_cutoff);
+		
+		// If we failed, return.
+		if (calret)
+			return -1;
 		
 		// Broadcast results to clients
 		protocol->broadcast(format("ok calib svd singvals :%s", 
