@@ -126,7 +126,6 @@ int WHT::update_wht_coords(double *const alt, double *const az, double *const de
 		return -1;
 	}
 	string track_data = rawdata.substr(dbeg);
-	io.msg(IO_DEB1, "WHT::update_wht_coords(): data @ %zu: %s...", dbeg, track_data.substr(0,30).c_str());
 	
 	// Split key=val pairs, find coordinates, store and return
 	string key, val;
@@ -134,7 +133,6 @@ int WHT::update_wht_coords(double *const alt, double *const az, double *const de
 		key = popword(track_data, "=");
 		val = popword(track_data, "\n");
 		wht_info[key] = val;
-		io.msg(IO_DEB1, "WHT::update_wht_coords(): got: %s=%s", key.c_str(), val.c_str());
 	}
 	
 	// Check if we got the ALT and AZ parameters
