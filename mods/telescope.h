@@ -102,7 +102,7 @@ public:
 	virtual int update_telescope_track(const float sht0, const float sht1) { return 0; }
 
 	// From Devices::
-	void on_message(Connection *const conn, string);
+	virtual void on_message(Connection *const conn, string);
 };
 
 #endif // HAVE_TELESCOPE_H

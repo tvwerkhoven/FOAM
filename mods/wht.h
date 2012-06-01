@@ -153,10 +153,10 @@ public:
 	int get_wht_coords(float *const alt, float *const az); //!< Get last known WHT pointings coordinates
 	
 	// From Telescope::
-	int update_telescope_track(const float sht0, const float sht1);
+	virtual int update_telescope_track(const float sht0, const float sht1);
 	
 	// From Devices::
-	void on_message(Connection *const conn, string);
+	virtual void on_message(Connection *const conn, string);
 };
 
 #endif // HAVE_WHT_H
