@@ -195,7 +195,7 @@ void WHT::on_message(Connection *const conn, string line) {
 			conn->write("ok trackurl " +track_prot+"://"+track_host+":"+track_port+"/"+track_file);
 		} else if (what == "telpos") {	// get telpos
 				conn->addtag("telpos");
-				conn->write(format("ok telpos %d %d", alt, az));
+				conn->write(format("ok telpos %g %g", alt, az));
 		} else 
 			parsed = false;
 	} else if (command == "set") {
