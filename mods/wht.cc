@@ -73,6 +73,9 @@ WHT::~WHT() {
 	io.msg(IO_DEB2, "WHT::~WHT()");
 
 	//!< @todo Save all device settings back to cfg file
+	// Join with WHT updater thread
+	wht_cfg_thr.cancel();
+	wht_cfg_thr.join();
 }
 
 void WHT::wht_updater() {
