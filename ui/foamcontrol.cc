@@ -122,13 +122,19 @@ void FoamControl::on_message(string line) {
 
 	state.lastreply = line;
 	
+	// The first word is the prefix. This should be the status, or it can be a device name in which case we ignore it.
 	string stat = popword(line);
 	
 	// FOAM may receive broadcast messages from Devices, which are prefixed by 
 	// the device name like: '<devname> <status> <command> [parameters]' 
-	// e.g. 'simcam ok is_calib 0'.
-	// Thus: stat should be 'ok' OR the name of a device. Otherwise an error occurred.
-	if (stat != "ok" && get_device(stat) == NULL) {
+	// e.g. 'simcam ok is_calib 0'. We ignore device commands here.
+	if (get_device(stat) != NULL) {
+		log.add(Log::DEBUG, "FOAM: <- " + state.lastreply);
+		signal_message();
+		return;
+	}
+	// If the prefix is not a device, check if the status is 'ok'
+	else if (stat != "ok") {
 		ok = false;
 		log.add(Log::ERROR, "FOAM: <- " + state.lastreply);
 		signal_message();
