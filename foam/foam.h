@@ -132,6 +132,7 @@ private:
 protected:
 	// Properties set at start
 	bool nodaemon;											//!< Run daemon or not
+	string listenport;									//!< Port to listen on
 	bool error;													//!< Error flag
 	Path conffile;											//!< Configuration file to use
 	const Path execname;								//!< Executable name, i.e. Path(argv[0])
@@ -187,7 +188,7 @@ public:
 	int parse_args(int argc, char *argv[]); //!< Parse command-line arguments
 	int load_config();									//!< Load FOAM configuration (from arguments)
 	int verify() const;									//!< Verify setup integrity (from configuration)
-	void daemon();											//!< Start network daemon
+	void daemon(string listenport=""); //!< Start network daemon on listenport
 	int listen();												//!< Start main FOAM control loop
 	
 	string mode2str(const aomode_t m) const;

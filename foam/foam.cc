@@ -50,7 +50,7 @@ FOAM::FOAM(int argc, char *argv[]):
 do_sighandle(true), sighandler(NULL),
 do_perflog(false), open_perf(NULL), closed_perf(NULL),
 it_closed_l(0), it_open_l(0),
-nodaemon(false), error(false), conffile(FOAM_DEFAULTCONF), execname(argv[0]),
+nodaemon(false), listenport(""), error(false), conffile(FOAM_DEFAULTCONF), execname(argv[0]),
 io(IO_DEB2)
 {
 	io.msg(IO_DEB2, "FOAM::FOAM()");
@@ -146,7 +146,7 @@ int FOAM::init() {
 	
 	// Start networking thread
 	if (!nodaemon)
-		daemon();	
+		daemon(listenport);	
 	
 	// Try to load setup-specific modules 
 	if (load_modules())
@@ -184,6 +184,7 @@ void FOAM::show_clihelp(const bool error = false) const {
 					 "  -v, --verb[=LEVEL]   Increase verbosity level or set it to LEVEL.\n"
 					 "      --showthreads    Prefix logging with thread ID.\n"
 					 "  -q,                  Decrease verbosity level.\n"
+					 "      --port PORT      Listen on PORT (default: read cfg).\n"
 					 "      --nodaemon       Do not start network daemon.\n"
 					 "  -s, --sighandle=0|1  Toggle signal handling (default: 1).\n"
 					 "  -p, --perflog=0|1    Toggle performance logging (default: 0).\n"
@@ -233,6 +234,7 @@ int FOAM::parse_args(int argc, char *argv[]) {
 		{"verb", required_argument, NULL, 2},
 		{"nodaemon", no_argument, NULL, 3},
 		{"showthreads", no_argument, NULL, 4},
+		{"port", required_argument, NULL, 5},
 		{"sighandle", required_argument, NULL, 's'},
 		{"perflog", required_argument, NULL, 'p'},
 		{NULL, 0, NULL, 0}
@@ -288,6 +290,10 @@ int FOAM::parse_args(int argc, char *argv[]) {
 				io.msg(IO_DEB2, "FOAM::parse_args() --showthreads");
 				io.setdefmask(IO_THR);
 				break;
+			case 5:													// Show threads in logging
+				io.msg(IO_DEB2, "FOAM::parse_args() --port");
+				listenport = string(optarg);
+				break;
 			default:
 				io.msg(IO_DEB2, "FOAM::parse_args() unknown");
 				show_clihelp();
@@ -323,7 +329,11 @@ int FOAM::verify() const {
 	return ret;
 }
 
-void FOAM::daemon() {
+void FOAM::daemon(string listenport) {
+	// If listenport is not empty, use that one
+	if (listenport != "") {
+		ptc->listenport = listenport;
+	}
 	io.msg(IO_INFO, "Starting daemon at %s:%s...", ptc->listenip.c_str(), ptc->listenport.c_str());
   protocol = new Protocol::Server(ptc->listenport);
   protocol->slot_message = sigc::mem_fun(this, &FOAM::on_message);
