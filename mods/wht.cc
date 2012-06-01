@@ -83,7 +83,6 @@ void WHT::wht_updater() {
 	float this_sleep;
 	
 	while (ptc->mode != AO_MODE_SHUTDOWN) {
-		io.msg(IO_DEB1, "WHT::wht_updater() looping...");
 		gettimeofday(&last, 0);
 		
 		// Update WHT config info

@@ -70,7 +70,6 @@ void Telescope::tel_handler() {
 	float this_sleep;
 	
 	while (ptc->mode != AO_MODE_SHUTDOWN) {
-		io.msg(IO_DEB1, "Telescope::tel_handler() looping...");
 		gettimeofday(&last, 0);
 		
 		// From input offset (in arbitrary units, i.e. pixels), calculate proper 
