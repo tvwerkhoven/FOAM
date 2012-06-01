@@ -216,7 +216,8 @@ int FOAM_FullSim::closed_finish() {
 
 int FOAM_FullSim::calib() {
 	io.msg(IO_DEB2, "FOAM_FullSim::calib()=%s", ptc->calib.c_str());
-
+	int calret = 0;
+	
 	if (ptc->calib == "influence") {		// Calibrate influence function
 		// calib influence [singval cutoff] -- 
 		// singval < 0: drop these modes
@@ -236,11 +237,15 @@ int FOAM_FullSim::calib() {
 		bool old_do_wfcerr = simcam->do_simwfcerr; simcam->do_simwfcerr = false;
 		
 		// Calibrate for influence function now
-		simwfs->calib_influence(simwfc, simcam, actpos, sval_cutoff);
+		calret = simwfs->calib_influence(simwfc, simcam, actpos, sval_cutoff);
 		
 		// Reset seeing settings
 		simcam->set_seeingfac(old_seeingfac);
 		simcam->do_simwfcerr = old_do_wfcerr;
+		
+		// If we failed, return.
+		if (calret)
+			return -1;
 		
 		// Broadcast results to clients
 		protocol->broadcast(format("ok calib svd singvals :%s", 
@@ -258,7 +263,11 @@ int FOAM_FullSim::calib() {
 		bool old_do_wfcerr = simcam->do_simwfcerr; simcam->do_simwfcerr = false;
 		bool old_do_simwfc = simcam->do_simwfc; simcam->do_simwfc = false;
 
-		simwfs->calib_zero(simwfc, simcam);
+		calret = simwfs->calib_zero(simwfc, simcam);
+		
+		// If we failed, return.
+		if (calret)
+			return -1;
 
 		// Restore seeing & wfc
 		simcam->set_seeingfac(old_seeingfac);
@@ -272,10 +281,12 @@ int FOAM_FullSim::calib() {
 	else if (ptc->calib == "offsetvec") {	// Add offset vector to correction 
 		double xoff = popdouble(ptc->calib_opt);
 		double yoff = popdouble(ptc->calib_opt);
-		io.msg(IO_INFO, "FOAM_FullSim::calib() apply offset vector (%g, %g)", xoff, yoff);
 		
-		if (simwfs->calib_offset(xoff, yoff))
+		if (simwfs->calib_offset(xoff, yoff)) {
 			io.msg(IO_ERR, "FOAM_FullSim::calib() offset vector could not be applied!");
+		} else {
+			io.msg(IO_INFO, "FOAM_FullSim::calib() apply offset vector (%g, %g)", xoff, yoff);
+		}
 		
 	}
 	else if (ptc->calib == "svd") {	// (Re-)calculate SVD given the influence matrix
