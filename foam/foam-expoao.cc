@@ -212,11 +212,16 @@ int FOAM_ExpoAO::closed_finish() {
 
 int FOAM_ExpoAO::calib() {
 	io.msg(IO_DEB2, "FOAM_ExpoAO::calib()=%s", ptc->calib.c_str());
-
+	int calret = 0;
+	
 	if (ptc->calib == "zero") {							// Calibrate reference/'flat' wavefront
 		io.msg(IO_INFO, "FOAM_ExpoAO::calib() Zero calibration");
-		ixonwfs->calib_zero(alpao_dm97, ixoncam);
+		calret = ixonwfs->calib_zero(alpao_dm97, ixoncam);
 		
+		// If we failed, return.
+		if (calret)
+			return -1;
+
 		protocol->broadcast(format("ok calib zero :%s", 
 															 ixonwfs->get_refvec_str().c_str() ));
 	} 
@@ -235,7 +240,11 @@ int FOAM_ExpoAO::calib() {
 		actpos.push_back(0.08);
 		
 		// Calibrate for influence function now
-		ixonwfs->calib_influence(alpao_dm97, ixoncam, actpos, sval_cutoff);
+		calret = ixonwfs->calib_influence(alpao_dm97, ixoncam, actpos, sval_cutoff);
+
+		// If we failed, return.
+		if (calret)
+			return -1;
 
 		// Broadcast results to clients
 		protocol->broadcast(format("ok calib svd singvals :%s", 
@@ -250,10 +259,13 @@ int FOAM_ExpoAO::calib() {
 	else if (ptc->calib == "offsetvec") {	// Add offset vector to correction 
 		double xoff = popdouble(ptc->calib_opt);
 		double yoff = popdouble(ptc->calib_opt);
-		io.msg(IO_INFO, "FOAM_ExpoAO::calib() apply offset vector (%g, %g)", xoff, yoff);
 		
-		if (ixonwfs->calib_offset(xoff, yoff))
+		if (ixonwfs->calib_offset(xoff, yoff)) {
 			io.msg(IO_ERR, "FOAM_ExpoAO::calib() offset vector could not be applied!");
+			return -1;
+		} else {
+			io.msg(IO_INFO, "FOAM_ExpoAO::calib() apply offset vector (%g, %g)", xoff, yoff);
+		}
 	}
 	else if (ptc->calib == "svd") {					// (Re-)calculate SVD given the influence matrix
 		// calib svd [singval cutoff] -- 
@@ -266,7 +278,11 @@ int FOAM_ExpoAO::calib() {
 		if (sval_cutoff == 0.0) sval_cutoff = 0.7;
 		io.msg(IO_INFO, "FOAM_ExpoAO::calib() re-calc SVD, sval=%g", sval_cutoff);
 		
-		ixonwfs->calc_actmat(alpao_dm97->getname(), sval_cutoff);
+		calret = ixonwfs->calc_actmat(alpao_dm97->getname(), sval_cutoff);
+		
+		// If we failed, return.
+		if (calret)
+			return -1;
 		
 		// Broadcast results to clients
 		protocol->broadcast(format("ok calib svd singvals :%s", 
