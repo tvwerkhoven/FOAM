@@ -49,7 +49,7 @@ alt(0.0), az(0.0), delay(1.0)
 	// Configure initial settings
 	{
 		// port
-		sport = cfg.getstring("port");
+		sport = cfg.getstring("port", "/dev/null");
 		
 		// delimiter
 		// coords url = http://whtics.roque.ing.iac.es:8081/TCSStatus/TCSStatusExPo
