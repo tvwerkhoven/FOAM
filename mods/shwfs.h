@@ -250,8 +250,11 @@ public:
 	
 	/*! @brief Add offset vector to correction
 	 
-	 @param [in] x x-offset
-	 @param [in] y y-offset
+	 This calibration requires ref_vec to be measured and set,
+	 
+	 @param [in] x x-offset to add
+	 @param [in] y y-offset to add
+	 @returns 0 if successful, !0 otherwise
 	 */
 	int calib_offset(double x, double y);
 

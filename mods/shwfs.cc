@@ -859,7 +859,7 @@ int Shwfs::calib_zero(Wfc *wfc, Camera *cam) {
 
 int Shwfs::calib_offset(double xoff, double yoff) {
 	if (!ref_vec)
-		return -1;
+		return io.msg(IO_ERR, "Shwfs::calib_offset(): cannot apply offsetvec without reference vector!");
 	if (fabs(xoff) > (0.9 * sisize.x) || fabs(yoff) > (0.9 * sisize.y))
 		return io.msg(IO_ERR, "Shwfs::calib_offset(): offset > 0.9*sisize (=%d,%d), cannot apply!", sisize.x, sisize.y);
 	else if (fabs(xoff) > (0.5 * sisize.x) || fabs(yoff) > (0.5 * sisize.y))
