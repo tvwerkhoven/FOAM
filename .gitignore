@@ -13,3 +13,4 @@ docs/
 libsiu
 stamp-h1
 version.m4
+version.mk
