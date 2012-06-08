@@ -1,6 +1,10 @@
 ## @file common.mk
-## @author Tim van Werkhoven (t.i.m.vanwerkhoven@xs4all.nl)
+## @author Tim van Werkhoven (werkhoven@strw.leidenuniv.nl)
 ## Common makefile directives for all subdirs.
+
+### Version @ compiletime
+
+include $(top_srcdir)/version.mk
 
 ### Inclusion directories
 
@@ -18,7 +22,8 @@ AM_CPPFLAGS = \
 
 AM_CPPFLAGS += -D__STDC_FORMAT_MACROS \
 		-D__STDC_LIMIT_MACROS \
-		-DFOAM_DATADIR=\"$(datadir)/foam\"
+		-DFOAM_DATADIR=\"$(datadir)/foam\" \
+		-DFOAM_VERSION=\"$(FOAM_VERSION)\"
 
 LDADD = $(COMMON_LIBS)
 
