@@ -131,7 +131,7 @@ void Telescope::on_message(Connection *const conn, string line) {
 			conn->write(format("ok pixshift %g %g %g %g", c0, c1, sht0, sht1));
 		} else if (what == "pix2shiftstr") {		// get pix2shiftstr - Give conversion formula as string
 			conn->addtag("pix2shiftstr");
-			conn->write("ok pix2shiftstr scalefac[0] * c0 * <cos,sin>(ccd_ang * 180.0/M_PI) - scalefac[1] * c1 * <sin,cos>(ccd_ang * 180.0/M_PI)");
+			conn->write("ok pix2shiftstr scalefac[0] * c0 * <cos,sin>(ccd_ang * 180.0/M_PI) + scalefac[1] * c1 * <-sin,cos>(ccd_ang * 180.0/M_PI)");
 		} else 
 			parsed = false;
 	} else if (command == "set") {
