@@ -76,6 +76,8 @@ private:
 	
 	struct cooling cool_info;						//!< Camera cooling info
 	
+	int emgain_range[2];								//!< EM CCD gain range for the camera
+	
 	string andordir;										//!< Andor configuration file directory (i.e. /usr/local/etc/andor)
 	
 	// Interal functions go here (should not be exposed as API ever)

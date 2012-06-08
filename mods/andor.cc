@@ -66,6 +66,10 @@ Camera(io, ptc, name, andor_type, port, conffile, online)
   
 	int frametransfer = cfg.getint("frametransfer", 0);
 	
+	// EM gain settings
+	int emgain_m = cfg.getint("emccdgain_mode", 0);
+	int emgain_init = cfg.getint("emccdgain_init", 0);
+	
 	// Init error codes
 	init_errors();	
 
@@ -101,8 +105,11 @@ Camera(io, ptc, name, andor_type, port, conffile, online)
 	if (ret != DRV_SUCCESS) 
 		io.msg(IO_ERR, "AndorCam::AndorCam() SetFrameTransferMode error: %d, %s", ret, error_desc[ret].c_str());
 
-	// Set gain to zero for starters (EM CCD)
-	cam_set_gain(0);
+	// Set gain mode (automatically queries the gain range as well)
+	cam_set_gain_mode(emgain_m);
+	
+	// Set gain to initial value (probably zero or so)
+	cam_set_gain(emgain_init);
 	
 	io.msg(IO_DEB1, "AndorCam::AndorCam() setting exposure...");
 	cam_set_exposure(exposure);
@@ -555,7 +562,12 @@ void AndorCam::cam_set_gain(const double value) {
 	int ret = 0;
 	io.msg(IO_DEB1, "AndorCam::cam_set_gain() %g", value);
 	
-	//! @todo Request EMCCD gain range first
+	if (value < emgain_range[0] || value > emgain_range[1]) {
+		io.msg(IO_ERR, "AndorCam::cam_set_gain() cannot set gain, out of range [%g, %g]", 
+					 emgain_range[0], emgain_range[1]);
+		gain = cam_get_gain();
+	}
+	
 	{
 		pthread::mutexholder h(&cam_mutex);
 		ret = SetEMCCDGain((int) value);								// range depends on temperature
@@ -576,6 +588,9 @@ void AndorCam::cam_set_gain_mode(const int mode) {
 	}
 	if (ret != DRV_SUCCESS)
 		io.msg(IO_ERR, "AndorCam::cam_set_gain() failed to set gain: %s", error_desc[ret].c_str());
+
+	// Also get new EM CCD gain range
+	cam_get_gain_range(&emgain_range[0], &emgain_range[1]);
 	
 	gain = cam_get_gain();
 }
@@ -590,6 +605,19 @@ double AndorCam::cam_get_gain() {
 		io.msg(IO_ERR, "AndorCam::cam_get_gain() failed to get gain: %s", error_desc[ret].c_str());
 	
 	return (double) gain;
+}
+
+void AndorCam::cam_get_gain_range(int *gain_min, int *gain_max) {
+	int min_g=0, max_g=0;
+	{
+		pthread::mutexholder h(&cam_mutex);
+		ret = GetEMGainRange(&min_g, &max_g);
+	}
+	if (ret != DRV_SUCCESS)
+		io.msg(IO_ERR, "AndorCam::cam_get_gain_range() failed to get gain range: %s", error_desc[ret].c_str());
+	
+	*gain_min = min_g;
+	*gain_max = max_g;	
 }
 
 void AndorCam::cam_set_offset(const double /*value*/) {
@@ -689,6 +717,9 @@ void AndorCam::cam_set_cooltarget(const int value) {
 	
 	// There is no function to query the target temperature, so store it manually here
 	cool_info.target = value;
+	
+	// Also get new EM CCD gain range
+	cam_get_gain_range(&emgain_range[0], &emgain_range[1]);
 	
 	//netio.broadcast(format("ok cooltarget %lf", cooling.target), "cooling");
 }
