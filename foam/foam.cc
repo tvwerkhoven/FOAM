@@ -213,7 +213,7 @@ void FOAM::show_welcome() {
                   \\::/  /        /:/  /        /:/  /   \n\
                    \\/__/         \\/__/         \\/__/ \n");
 	
-	io.msg(IO_INFO, "This is FOAM (version %s, built %s %s)", PACKAGE_VERSION, __DATE__, __TIME__);
+	io.msg(IO_INFO, "This is FOAM (version %s, pkg: %s, built %s %s)", FOAM_VERSION, PACKAGE_VERSION, __DATE__, __TIME__);
 #ifdef __VERSION__
 	io.msg(IO_INFO, "Compiled with GCC: %s", __VERSION__);
 #else
