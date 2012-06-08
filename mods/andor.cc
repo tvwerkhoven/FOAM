@@ -63,6 +63,8 @@ Camera(io, ptc, name, andor_type, port, conffile, online)
 	int vsamp = cfg.getint("vsamp", 4);
 	
 	int pagain = cfg.getint("pa_gain", 2);
+  
+	int frametransfer = cfg.getint("frametransfer", 0);
 	
 	// Init error codes
 	init_errors();	
@@ -93,7 +95,12 @@ Camera(io, ptc, name, andor_type, port, conffile, online)
 	ret = SetPreAmpGain(pagain);				// 0: 1x, 1: 2.2x, 2: 4.6x. Andor recommends 4.6x (iXonEM+ Hardware guide 3.3.1)
 	if (ret != DRV_SUCCESS) 
 		io.msg(IO_ERR, "AndorCam::AndorCam() SetPreAmpGain error: %d, %s", ret, error_desc[ret].c_str());
-	
+  
+	// Set frame transfer
+	ret = SetFrameTransferMode(frametransfer);
+	if (ret != DRV_SUCCESS) 
+		io.msg(IO_ERR, "AndorCam::AndorCam() SetFrameTransferMode error: %d, %s", ret, error_desc[ret].c_str());
+
 	// Set gain to zero for starters (EM CCD)
 	cam_set_gain(0);
 	
