@@ -98,7 +98,7 @@ private:
 	void cam_set_cooler(bool status=true); //!< Turn cooler on or off
 	
 	void cam_set_gain_mode(const int mode); //!< Set EM gain mode (0: DAC 0--255, 1: DAC 0--4095, 2: Linear, 3: Real EM gain)
-	void cam_get_gain_range(int *gain_min, int *gain_max) //!< Get EM CCD gain range given the current EM CCD gain mode (cam_set_gain_mode) and the current cooling temperature (cam_set_cooltarget)
+	void cam_get_gain_range(int *gain_min, int *gain_max); //!< Get EM CCD gain range given the current EM CCD gain mode (cam_set_gain_mode) and the current cooling temperature (cam_set_cooltarget)
 	
 	void cam_set_shift_speed(const int hs, const int vs, const int vamp); //!< Set horizontal and vertical shift speed and vertical shift amplitude.
 	
