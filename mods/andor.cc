@@ -608,7 +608,7 @@ double AndorCam::cam_get_gain() {
 }
 
 void AndorCam::cam_get_gain_range(int *gain_min, int *gain_max) {
-	int min_g=0, max_g=0;
+	int min_g=0, max_g=0, ret=0;
 	{
 		pthread::mutexholder h(&cam_mutex);
 		ret = GetEMGainRange(&min_g, &max_g);
