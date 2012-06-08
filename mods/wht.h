@@ -117,12 +117,13 @@ const string wht_type = "wht";
  - track_host: live WHT pointing host (whtics.roque.ing.iac.es)
  - track_port: live WHT pointing port (8001)
  - track_file: live WHT pointing file (/TCSStatus/TCSStatusExPo)
+ - alt_fac: WHT::alt_fac 
  
  \section wht_netio Network commands
  
- - set pointing <c0> <c1>: set pointing to c0, c1
- - get pointing: get last known pointing
- - add pointing <dc0> <dc1>: add (dc0, dc1) to current pointing
+ - get trackurl: get WHT tracker information URL
+ - get telpos: get WHT::alt WHT::az
+ 
  
 */
 class WHT: public Telescope {

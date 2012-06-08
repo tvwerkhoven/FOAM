@@ -72,6 +72,12 @@ const string telescope_type = "telescope";
  - get scalefac: return Telescope::scalefac as <s0> <s1>
  - set gain <p> <i> <d>: Telescope::gain
  - get gain: return Telescope::gain as <p> <i> <d>
+ - set ccd_ang <ang>: Telescope::ccd_ang
+ - get ccd_ang <ang>: Telescope::ccd_ang
+ - get pixshift: return Telescope::c0 Telescope::c1 Telescope::sht0 Telescope::sht1
+ - get pix2shiftstr: return coordinate conversion formula.
+ - get tt_vec: return Telescope::c0 Telescope::c1
+ - set tt_vec: set Telescope::c0 Telescope::c1
  
 */
 class Telescope: public foam::Device {
