@@ -60,7 +60,7 @@ Camera(io, ptc, name, andor_type, port, conffile, online)
 	
 	int hsspeed = cfg.getint("hsspeed", 0);
 	int vsspeed = cfg.getint("vsspeed", 0);
-	int vsamp = cfg.getint("vsspeed", 4);
+	int vsamp = cfg.getint("vsamp", 4);
 	
 	int pagain = cfg.getint("pa_gain", 2);
 	
