@@ -60,6 +60,8 @@ Device(io, ptc, name, telescope_type + "." + type, port, conffile, online)
 	add_cmd("set ccd_ang");
 	add_cmd("get pixshift");
 	add_cmd("get pix2shiftstr");
+	add_cmd("get tt_vec");
+	add_cmd("set tt_vec");
 
 	// Start handler thread
 	tel_thr.create(sigc::mem_fun(*this, &Telescope::tel_handler));
@@ -132,6 +134,8 @@ void Telescope::on_message(Connection *const conn, string line) {
 		} else if (what == "pix2shiftstr") {		// get pix2shiftstr - Give conversion formula as string
 			conn->addtag("pix2shiftstr");
 			conn->write("ok pix2shiftstr scalefac[0] * c0 * <cos,sin>(ccd_ang * 180.0/M_PI) + scalefac[1] * c1 * <-sin,cos>(ccd_ang * 180.0/M_PI)");
+		} else if (what == "tt_vec") {		// get tt_vec
+			conn->write(format("ok tt_vec %g %g", c0, c1));
 		} else 
 			parsed = false;
 	} else if (command == "set") {
@@ -149,6 +153,9 @@ void Telescope::on_message(Connection *const conn, string line) {
 		} else if (what == "ccd_ang") {		// set ccd_ang <ang>
 			conn->addtag("ccd_ang");
 			ccd_ang = popdouble(line);
+		} else if (what == "tt_vec") {		// set tt_vec <c0> <c1>
+			c0 = popdouble(line);
+			c1 = popdouble(line);
 		} else
 			parsed = false;
 
