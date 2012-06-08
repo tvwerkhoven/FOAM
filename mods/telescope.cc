@@ -74,14 +74,14 @@ void Telescope::tel_handler() {
 		
 		// From input offset (in arbitrary units, i.e. pixels), calculate proper 
 		// shift coordinates, i.e.: 
-		// shift_vec = rot_mat * scale_vec * input_vec
+		// shift_vec = rot_mat # (scale_vec * input_vec)
 		// General:
-		// x' = scalefac0 [ x cos(th) - y sin(th) ]
-		// y; = scalefac1 [ x sin(th) + y cos(th) ]
+		// x' = scalefac0 [ x cos(th), - y sin(th) ]
+		// y; = scalefac1 [ x sin(th), + y cos(th) ]
 		sht0 = scalefac[0] * c0 * cos(ccd_ang * 180.0/M_PI) - scalefac[1] * c1 * sin(ccd_ang * 180.0/M_PI);
 		sht1 = scalefac[0] * c0 * sin(ccd_ang * 180.0/M_PI) + scalefac[1] * c1 * cos(ccd_ang * 180.0/M_PI);
 		
-		io.msg(IO_DEB1, "Telescope::tel_handler() (%g, %g) -> (%g, %g)", c0, c1, sht0, sht1);
+		io.msg(IO_DEB1, "Telescope::tel_handler() pix: (%g, %g) -> conv: (%g, %g)", c0, c1, sht0, sht1);
 		update_telescope_track(sht0, sht1);
 
 		// Make sure each iteration takes at minimum handler_p seconds:
