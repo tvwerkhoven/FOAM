@@ -173,8 +173,8 @@ int WHT::update_telescope_track(const float sht0, const float sht1) {
 	// For ExPo:
 	// ele = 0.001 * sin(??) + cos(??)
 	// dec = 0.001 * sin(??) + cos(??)
-	float d_ele = sht0 * cos(alt) - sht1 * sin(alt);
-	float d_alt = sht0 * sin(alt) + sht1 * cos(alt);
+	float d_ele = gain_p * (sht0 * cos(alt) - sht1 * sin(alt));
+	float d_alt = gain_p * (sht0 * sin(alt) + sht1 * cos(alt));
 	
 	// Send control command to telescope
 
