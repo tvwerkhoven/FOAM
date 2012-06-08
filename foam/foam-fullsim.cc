@@ -362,7 +362,7 @@ void FOAM_FullSim::on_message(Connection *const conn, string line) {
 	}
 	else if (cmd == "calib") {					// calib <mode> [opt]
 		string calmode = popword(line);
-		string calopts = line
+		string calopts = line;
 		conn->write("ok cmd calib");
 		ptc->calib = calmode;
 		ptc->calib_opt = calopts;

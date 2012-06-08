@@ -340,7 +340,7 @@ void FOAM_ExpoAO::on_message(Connection *const conn, string line) {
 	}
 	else if (cmd == "calib") {					// calib <calmode> <calopts>
 		string calmode = popword(line);
-		string calopts = line
+		string calopts = line;
 		conn->write("ok cmd calib");
 		ptc->calib = calmode;
 		ptc->calib_opt = calopts;
