@@ -42,7 +42,7 @@ using namespace std;
 WHT::WHT(Io &io, foamctrl *const ptc, const string name, const string port, Path const &conffile, const bool online):
 Telescope(io, ptc, name, wht_type, port, conffile, online),
 wht_ctrl(NULL), sport(""),
-alt(0.0), az(0.0), delay(1.0)
+alt(0.0), alt_fac(1), az(0.0), delay(1.0)
 {
 	io.msg(IO_DEB2, "WHT::WHT()");
 	
@@ -57,6 +57,10 @@ alt(0.0), az(0.0), delay(1.0)
 		track_host = cfg.getstring("track_host", "whtics.roque.ing.iac.es");
 		track_port = cfg.getstring("track_port", "8081");
 		track_file = cfg.getstring("track_file", "/TCSStatus/TCSStatusExPo");
+		
+		// Altitude factor, 1 or -1
+		alt_fac = cfg.getstring("alt_fac", -1);
+
 	}
 	
 	// Start WHT config update thread
@@ -171,10 +175,10 @@ int WHT::update_telescope_track(const float sht0, const float sht1) {
 	// x' = [ x cos(th) - y sin(th) ]
 	// y; = [ x sin(th) + y cos(th) ]
 	// For ExPo:
-	// ele = 0.001 * sin(??) + cos(??)
-	// dec = 0.001 * sin(??) + cos(??)
-	float d_ele = gain_p * (sht0 * cos(alt) - sht1 * sin(alt));
-	float d_alt = gain_p * (sht0 * sin(alt) + sht1 * cos(alt));
+	// az = 50 - 0.01 * [ x * sin( (45-ele) * pi/180 ) + y * cos( (45-e) * pi/180 ) ]
+	// ele = 50 + 0.01 * [ y * sin( (45-ele) * pi/180 ) + x * cos( (45-e) * pi/180 ) ]
+	float d_ele = 50 + (gain_p * (sht0 * cos(alt_fac * alt) - sht1 * sin(alt_fac * alt)));
+	float d_alt = 50 + (gain_p * (sht0 * sin(alt_fac * alt) + sht1 * cos(alt_fac * alt)));
 	
 	// Send control command to telescope
 
