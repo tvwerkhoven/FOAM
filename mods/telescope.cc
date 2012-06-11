@@ -131,9 +131,9 @@ void Telescope::on_message(Connection *const conn, string line) {
 			conn->addtag("gain");
   		conn->write(format("ok gain %g %g %g", gain.p, gain.i, gain.d));
 		} else if (what == "tel_track") {	// get tel_track - Telescope tracking position
-			conn->write(format("ok tel_track %g", telpos[0], telpos[1]));
+			conn->write(format("ok tel_track %g %g", telpos[0], telpos[1]));
 		} else if (what == "tel_units") {	// get tel_units - Telescope tracking units
-			conn->write(format("ok tel_units %g", telunits[0], telunits[1]));
+			conn->write(format("ok tel_units %s %s", telunits[0].c_str(), telunits[1].c_str()));
 		} else if (what == "ccd_ang") {		// get ccd_ang - CCD rotation angle
 			conn->addtag("ccd_ang");
 			conn->write(format("ok ccd_ang %g", ccd_ang));
