@@ -83,6 +83,8 @@
 #include "wfsctrl.h"
 #include "shwfsview.h"
 #include "shwfsctrl.h"
+#include "telescopeview.h"
+#include "telescopectrl.h"
 #include "wfcview.h"
 #include "wfcctrl.h"
 
@@ -297,6 +299,13 @@ void MainWindow::on_ctrl_device_update() {
 				tmpdev->ctrl = (DeviceCtrl *) new WfcCtrl(log, foamctrl.host, foamctrl.port, tmpdev->name);
 				tmpdev->page = (DevicePage *) new WfcView((WfcCtrl *) tmpdev->ctrl, log, foamctrl, tmpdev->name);
 				log.add(Log::OK, "Added new generic wfc, type="+tmpdev->type+", name="+tmpdev->name+".");
+			}
+			else if (tmpdev->type.substr(0, 7) == "dev.telescope") {
+				log.term(format("%s got generic telescope", __PRETTY_FUNCTION__));
+				
+				tmpdev->ctrl = (DeviceCtrl *) new TelescopeCtrl(log, foamctrl.host, foamctrl.port, tmpdev->name);
+				tmpdev->page = (DevicePage *) new TelescopeView((TelescopeCtrl *) tmpdev->ctrl, log, foamctrl, tmpdev->name);
+				log.add(Log::OK, "Added new generic telescope, type="+tmpdev->type+", name="+tmpdev->name+".");
 			}
 			// Fallback, if we don't have a good GUI element for the device, use a generic device controller
 			else {
