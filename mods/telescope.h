@@ -95,6 +95,8 @@ public:
 	Telescope(Io &io, foamctrl *const ptc, const string name, const string type, const string port, Path const &conffile, const bool online=true);
 	~Telescope();
 	
+	double telpos[2];				//!< Telescope position (e.g. alt/az)
+	string telunits[2];			//!< Telescope units
 	float scalefac[2];			//!< Scale factor for setup that converts input units to 1mm shift in primary focus
 	gain_t gain;						//!< Gain for tip-tilt offloading correction
 	float ccd_ang;					//!< Rotation of CCD with respect to telescope restframe
@@ -104,8 +106,8 @@ public:
 	void set_track_offset(const float _c0, const float _c1) { c0 = _c0; c1 = _c1; }
 	void get_track_offset(float * const _c0, float * const _c1) { *_c0 = c0; *_c1 = c1; }
 	
-	// To be implemented in derived class. If not implemented, this is a dummy
-	virtual int update_telescope_track(const float sht0, const float sht1) { return 0; }
+	// To be implemented in derived class. If not implemented, this is a dummy and it displays random stuff
+	virtual int update_telescope_track(const float, const float) { c0 = (c0 + 0.1); c1 = (c1 + 0.5); return 0; }
 
 	// From Devices::
 	virtual void on_message(Connection *const conn, string);

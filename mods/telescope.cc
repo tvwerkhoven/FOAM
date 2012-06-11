@@ -51,6 +51,11 @@ Device(io, ptc, name, telescope_type + "." + type, port, conffile, online)
 		ccd_ang = cfg.getdouble("ccd_ang", 0.0);
 		handler_p = cfg.getdouble("cadence", 1.0);
 	}
+	
+	// Init static vars
+	telpos[0] = telpos[1] = 0;
+	telunits[0] = "ax0";
+	telunits[1] = "ax1";
 
 	add_cmd("get scalefac");
 	add_cmd("set scalefac");
@@ -62,6 +67,8 @@ Device(io, ptc, name, telescope_type + "." + type, port, conffile, online)
 	add_cmd("get pix2shiftstr");
 	add_cmd("get tt_vec");
 	add_cmd("set tt_vec");
+	add_cmd("get tel_track");
+	add_cmd("get tel_units");
 
 	// Start handler thread
 	tel_thr.create(sigc::mem_fun(*this, &Telescope::tel_handler));
@@ -125,6 +132,10 @@ void Telescope::on_message(Connection *const conn, string line) {
 		} else if (what == "gain") {			// get gain
 			conn->addtag("gain");
   		conn->write(format("ok gain %g %g %g", gain.p, gain.i, gain.d));
+		} else if (what == "tel_track") {	// get tel_track - Telescope tracking position
+			conn->write(format("ok tel_track %g %g", telpos[0], telpos[1]));
+		} else if (what == "tel_units") {	// get tel_units - Telescope tracking units
+			conn->write(format("ok tel_units %s %s", telunits[0].c_str(), telunits[1].c_str()));
 		} else if (what == "ccd_ang") {		// get ccd_ang - CCD rotation angle
 			conn->addtag("ccd_ang");
 			conn->write(format("ok ccd_ang %g", ccd_ang));

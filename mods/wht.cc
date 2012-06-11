@@ -42,7 +42,7 @@ using namespace std;
 WHT::WHT(Io &io, foamctrl *const ptc, const string name, const string port, Path const &conffile, const bool online):
 Telescope(io, ptc, name, wht_type, port, conffile, online),
 wht_ctrl(NULL), sport(""),
-alt(0.0), alt_fac(1), az(0.0), delay(1.0)
+alt_fac(1), delay(1.0)
 {
 	io.msg(IO_DEB2, "WHT::WHT()");
 	
@@ -62,12 +62,15 @@ alt(0.0), alt_fac(1), az(0.0), delay(1.0)
 		alt_fac = cfg.getstring("alt_fac", -1);
 
 	}
-	
+
+	// WHT operates in alt/az mode
+	telunits[0] = "alt";
+	telunits[1] = "az";
+
 	// Start WHT config update thread
 	wht_cfg_thr.create(sigc::mem_fun(*this, &WHT::wht_updater));
 
 	add_cmd("get trackurl");
-	add_cmd("get telpos");
 
 	// Open serial port connection
 	//wht_ctrl = new serial::port(sport, B9600, 0, '\r');
@@ -90,7 +93,7 @@ void WHT::wht_updater() {
 		gettimeofday(&last, 0);
 		
 		// Update WHT config info
-		update_wht_coords(&alt, &az, &delay);
+		update_wht_coords(&telpos[0], &telpos[1], &delay);
 
 		// Make sure each iteration takes at minimum delay seconds:
 		// update duration = now - last
@@ -177,8 +180,8 @@ int WHT::update_telescope_track(const float sht0, const float sht1) {
 	// For ExPo:
 	// az = 50 - 0.01 * [ x * sin( (45-ele) * pi/180 ) + y * cos( (45-e) * pi/180 ) ]
 	// ele = 50 + 0.01 * [ y * sin( (45-ele) * pi/180 ) + x * cos( (45-e) * pi/180 ) ]
-	float d_ele = 50 + (gain_p * (sht0 * cos(alt_fac * alt) - sht1 * sin(alt_fac * alt)));
-	float d_alt = 50 + (gain_p * (sht0 * sin(alt_fac * alt) + sht1 * cos(alt_fac * alt)));
+	float d_ele = 50 + (gain_p * (sht0 * cos(alt_fac * telpos[0]) - sht1 * sin(alt_fac * telpos[0])));
+	float d_alt = 50 + (gain_p * (sht0 * sin(alt_fac * telpos[0]) + sht1 * cos(alt_fac * telpos[0])));
 	
 	// Send control command to telescope
 
@@ -199,9 +202,6 @@ void WHT::on_message(Connection *const conn, string line) {
 		if (what == "trackurl") {				// get trackurl
 			conn->addtag("trackurl");
 			conn->write("ok trackurl " +track_prot+"://"+track_host+":"+track_port+"/"+track_file);
-		} else if (what == "telpos") {	// get telpos
-				conn->addtag("telpos");
-				conn->write(format("ok telpos %g %g", alt, az));
 		} else 
 			parsed = false;
 	} else if (command == "set") {
