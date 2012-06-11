@@ -50,6 +50,7 @@ void TelescopeCtrl::on_connected(bool conn) {
 	if (conn) {
 		send_cmd("get tel_track");
 		send_cmd("get tel_units");
+		send_cmd("get pixshift");
 	}
 }
 
@@ -66,10 +67,15 @@ void TelescopeCtrl::on_message(string line) {
 
 	if (what == "tel_track") {
 		tel_track_s = popword(line);
-		tel_track_s += popword(line);
+		tel_track_s += ", " + popword(line);
 	} else if (what == "tel_units") {
 		tel_units_s = popword(line);
-		tel_units_s += popword(line);
+		tel_units_s += "/" + popword(line);
+	} else if (what == "pixshift") {
+		tt_raw_s = popword(line);
+		tt_raw_s += ", " + popword(line);
+		tt_conv_s = popword(line);
+		tt_conv_s += ", " + popword(line);
 	} else
 		parsed = false;
 	

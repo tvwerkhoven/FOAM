@@ -38,6 +38,10 @@ b_refresh(Gtk::Stock::REFRESH), b_autoupd("Auto Update"), e_autointval("", "s")
 {
 	log.term(format("%s", __PRETTY_FUNCTION__));
 	
+	// Init lastupd to 0 ('never')
+	lastupd.tv_sec = 0;
+	lastupd.tv_usec = 0;
+
 	tel_pos.set_width_chars(8);
 	tel_pos.set_editable(false);
 	tt_raw.set_width_chars(8);
@@ -78,7 +82,8 @@ b_refresh(Gtk::Stock::REFRESH), b_autoupd("Auto Update"), e_autointval("", "s")
 	// Connect events
 	b_refresh.signal_clicked().connect(sigc::mem_fun(*this, &TelescopeView::do_teltrack_update));
 	b_autoupd.signal_clicked().connect(sigc::mem_fun(*this, &TelescopeView::on_autoupd_clicked));
-	
+
+	telescopectrl->signal_message.connect(sigc::mem_fun(*this, &TelescopeView::on_message_update));
 	refresh_timer = Glib::signal_timeout().connect(sigc::mem_fun(*this, &TelescopeView::on_timeout), 1000.0/30.0);
 
 	clear_gui();
@@ -90,6 +95,7 @@ b_refresh(Gtk::Stock::REFRESH), b_autoupd("Auto Update"), e_autointval("", "s")
 
 TelescopeView::~TelescopeView() {
 	log.term(format("%s", __PRETTY_FUNCTION__));
+	refresh_timer.disconnect();
 }
 
 void TelescopeView::enable_gui() {
@@ -116,6 +122,7 @@ void TelescopeView::clear_gui() {
 void TelescopeView::do_teltrack_update() const { 
 	telescopectrl->send_cmd("get tel_track");
 	telescopectrl->send_cmd("get tel_units");
+	telescopectrl->send_cmd("get pixshift");
 }
 
 bool TelescopeView::on_timeout() {
@@ -124,8 +131,9 @@ bool TelescopeView::on_timeout() {
 	gettimeofday(&now, NULL);
 	// If b_autoupd is 'clear' we don't want new data, if 'waiting' we're 
 	// expecting new data soon, otherwise if button is 'OK': get new data
+	double timediff = ((now.tv_sec - lastupd.tv_sec) + (now.tv_usec - lastupd.tv_usec)/1000000.);
 	if (b_autoupd.get_state() == SwitchButton::OK && 
-			((now.tv_sec - lastupd.tv_sec) + (now.tv_usec - lastupd.tv_usec)/1000000.) > e_autointval.get_value() ) {
+			timediff > e_autointval.get_value() ) {
 		b_autoupd.set_state(SwitchButton::WAITING);
 		log.term(format("%s: do_teltrack_update", __PRETTY_FUNCTION__));
 		do_teltrack_update();
@@ -152,10 +160,17 @@ void TelescopeView::on_autoupd_clicked() {
 
 void TelescopeView::on_message_update() {
 	DevicePage::on_message_update();
-	
+	log.term(format("%s", __PRETTY_FUNCTION__));
+
 	tel_pos.set_text(telescopectrl->get_tel_track_s());
 	//tel_pos.set_text(telescopectrl->get_tel_units_s());
 	tt_raw.set_text(telescopectrl->get_tt_raw_s());
 	tt_conv.set_text(telescopectrl->get_tt_conv_s());
 	tt_ctrl.set_text(telescopectrl->get_tt_ctrl_s());
+	
+	// If we were waiting for this update, set button to 'OK' state again. If 
+	// this is only a one-time 'b_refresh' event, this probably won't happen.
+	if (b_autoupd.get_state() == SwitchButton::WAITING)
+		b_autoupd.set_state(SwitchButton::OK);
+
 }
