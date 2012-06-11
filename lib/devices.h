@@ -27,6 +27,7 @@
 #endif
 
 #include <vector>
+#include <stdexcept>
 
 #include "io.h"
 #include "protocol.h"
@@ -181,6 +182,7 @@ protected:
 	}
 
 public:
+	//! @todo This should go somewhere more general
 	class exception: public std::runtime_error {
 	public:
 		exception(const string reason): runtime_error(reason) {}
