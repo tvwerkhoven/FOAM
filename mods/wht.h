@@ -145,8 +145,6 @@ public:
 	WHT(Io &io, foamctrl *const ptc, const string name, const string port, Path const &conffile, const bool online=true);
 	~WHT();
 	
-	double alt;							//!< Telescope altititude
-	double az;							//!< Telescope azimuthal
 	double delay;						//!< WHT info update period
 	std::map<string, string> wht_info; // Full WHT info from website
 		

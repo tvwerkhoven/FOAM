@@ -32,7 +32,8 @@
 using namespace std;
 
 TelescopeCtrl::TelescopeCtrl(Log &log, const string h, const string p, const string n):
-DeviceCtrl(log, h, p, n)
+DeviceCtrl(log, h, p, n),
+tel_track_s(""), tel_units_s(""), tt_raw_s(""), tt_conv_s(""), tt_ctrl_s("")
 {
 	log.term(format("%s", __PRETTY_FUNCTION__));
 	
@@ -64,11 +65,11 @@ void TelescopeCtrl::on_message(string line) {
 	string what = popword(line);
 
 	if (what == "tel_track") {
-		popdouble(line);
-		popdouble(line);
+		tel_track_s = popword(line);
+		tel_track_s += popword(line);
 	} else if (what == "tel_units") {
-		popword(line);
-		popword(line);
+		tel_units_s = popword(line);
+		tel_units_s += popword(line);
 	} else
 		parsed = false;
 	

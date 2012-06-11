@@ -39,6 +39,18 @@ using namespace std;
  */
 class TelescopeCtrl: public DeviceCtrl {
 private:
+	
+	string tel_track_s;					//!< Telescope tracking position as string
+	string tel_units_s;					//!< Telescope tracking units as string
+	string tt_raw_s;						//!< Raw tip-tilt coordinates as string
+	string tt_conv_s;						//!< Converted tip-tilt coordinates as string
+	string tt_ctrl_s;						//!< Control tip-tilt coordinates as string
+
+public:
+	string get_tel_track_s() const { return tel_track_s; }
+	string get_tt_raw_s() const { return tt_raw_s; }
+	string get_tt_conv_s() const { return tt_conv_s; }
+	string get_tt_ctrl_s() const { return tt_ctrl_s; }
 
 	// From DeviceCtrl::
 	virtual void on_message(string line);

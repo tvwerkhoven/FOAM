@@ -33,11 +33,42 @@
 /*!
  @brief Generic telescope GUI class
  
+ Displays current telescope coordinates (and which units this are), as well 
+ as tip-tilt tracking information from the wavefront sensor. The tip-tilt is 
+ shown as raw shifts from the WFS, intermediate converted shifts and final 
+ telescope control commands
+ 
  */
 class TelescopeView: public DevicePage {
 private:
 	TelescopeCtrl *telescopectrl;
 	
+	Frame track_frame;
+	HBox track_hbox;
+
+	LabeledEntry tel_pos;						//!< Telescope track position
+
+	VSeparator vsep0;
+	
+	LabeledEntry tt_raw;						//!< Raw tip-tilt coordinate
+	LabeledEntry tt_conv;						//!< Converted tip-tilt coordinate
+	LabeledEntry tt_ctrl;						//!< Telescope control tip-tilt coordinate
+	
+	VSeparator vsep1;
+	
+	VBox vbox1;
+	Button b_refresh;								//!< Update once button
+	
+	HBox hbox1;
+	SwitchButton b_autoupd;					//!< Auto update button
+	LabeledSpinEntry e_autointval;	//!< Auto update interval
+
+	bool on_timeout();							//!< Run this 30x/sec to enable auto updating, throttle with e_autointval
+	void do_teltrack_update() const;//!< Update telescope tracking info
+	
+	void on_autoupd_clicked();			//!< Callback for b_autoupd
+	sigc::connection refresh_timer;	//!< For Glib::signal_timeout()
+	struct timeval lastupd;					//!< Time of last update
 
 	// From DevicePage::
 	virtual void on_message_update();

@@ -89,6 +89,8 @@ public:
 	Telescope(Io &io, foamctrl *const ptc, const string name, const string type, const string port, Path const &conffile, const bool online=true);
 	~Telescope();
 	
+	double telpos[2];				//!< Telescope position (e.g. alt/az)
+	string telunits[2];			//!< Telescope units
 	float scalefac[2];			//!< Scale factor for setup that converts input units to 1mm shift in primary focus
 	gain_t gain;						//!< Gain for tip-tilt offloading correction
 	float ccd_ang;					//!< Rotation of CCD with respect to telescope restframe
