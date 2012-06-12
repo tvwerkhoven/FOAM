@@ -54,8 +54,10 @@ const string wht_type = "wht";
  
  For ExPo, the conversion is:
  
- alt: +- 0.01 [ x * sin(0.001745 * (45 - ele)) +- y * cos(0.001745 * (45 - ele)) ]
- az: -+ 0.01 [ y * sin(0.001745 * (45 - ele)) -+ x * cos(0.001745 * (45 - ele)) ]
+ alt: =  -0.01 [ x * sin(0.001745 * (45 - ele)) + y * cos(0.001745 * (45 - ele)) ]
+ az: = +0.01 [ y * sin(0.001745 * (45 - ele)) - x * cos(0.001745 * (45 - ele)) ]
+ 
+ acedev5Send
  
  with x, y the measured shift, 45 the rotation of the ExPo camera, ele the 
  current elevation of the telescope, and 0.001745 180/pi. The scaling, gain 
