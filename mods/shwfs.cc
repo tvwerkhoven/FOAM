@@ -797,8 +797,6 @@ int Shwfs::calib_influence(Wfc *wfc, Camera *cam, const vector <float> &actpos, 
 	double wfc_response = 0.1;
 	
 	// Check sanity
-	net_broadcast("error calib influence :# actuators > 2 * # subapertures, underdetermind system");
-	return -1;
 	if (wfc->get_nact() > 2*mlacfg.size()) {
 		io.msg(IO_ERR, "Shwfs::calib_influence(): # actuators > 2 * # subapertures, underdetermind system, abort!");
 		return -1;
