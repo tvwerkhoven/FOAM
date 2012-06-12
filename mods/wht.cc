@@ -179,11 +179,12 @@ int WHT::update_telescope_track(const float sht0, const float sht1) {
 	// y; = [ x sin(th) + y cos(th) ]
 	// For ExPo:
 	// az = 50 - 0.01 * [ x * sin( (45-ele) * pi/180 ) + y * cos( (45-e) * pi/180 ) ]
-	// ele = 50 + 0.01 * [ y * sin( (45-ele) * pi/180 ) + x * cos( (45-e) * pi/180 ) ]
+	// ele = 50 + 0.01 * [ y * sin( (45-ele) * pi/180 ) - x * cos( (45-e) * pi/180 ) ]
 	float d_ele = 50 + (gain_p * (sht0 * cos(alt_fac * telpos[0]) - sht1 * sin(alt_fac * telpos[0])));
 	float d_alt = 50 + (gain_p * (sht0 * sin(alt_fac * telpos[0]) + sht1 * cos(alt_fac * telpos[0])));
 	
 	// Send control command to telescope
+	io.msg(IO_XNFO, "WHT::update_telescope_track(): sending (%g, %g)", d_ele, d_alt);
 
 	//!< @todo Send control commands
 	//wht_ctrl.write()
