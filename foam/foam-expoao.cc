@@ -188,7 +188,7 @@ int FOAM_ExpoAO::closed_loop() {
 	closedperf_addlog(5);
 	
 	// Use control vector to compute total shifts that we are correcting
-	ixonwfs->comp_shift(alpao_dm97->getname(), alpao_dm97->ctrlparams.ctrl_vec, wf_meas->wf_full);
+	ixonwfs->comp_shift(alpao_dm97->getname(), alpao_dm97->ctrlparams.target, wf_meas->wf_full);
 	
 	// Compute tip-tilt signal from total shift vector, track telescope
 	float ttx=0, tty=0;
