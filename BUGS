@@ -7,4 +7,13 @@ for a up-to-date bug list.
 - Random malloc error: double-free
 Sometimes somewhere there is a double free() happening, crashing the system. Unsure why.
 
+--> happened during manual actuator setting, probably collision
+
 - calib_store does not initialize the matrix data properly? Crashes when running SVD
+
+--> influence was not loaded properly, fixed now?
+
+- check subimg bounds should be part of making a subap mask, should be earlier
+
+- error on calib fail should be more explicit
+

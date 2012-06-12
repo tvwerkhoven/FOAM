@@ -63,6 +63,8 @@ private:
 	string offset_str;								//!< Space-separated representation of offset
 
 	vector<double> act_vec;						//!< Local temporary actuate vector (copy of ctrlparms.ctrl_vec)
+	
+	pthread::mutex alpao_mutex;				//!< acedev5Send() can only be called sequentially! Lock mutex before actuating, or the Alpao driver double free()'s some memory.
 
 public:
 	AlpaoDM(Io &io, foamctrl *const ptc, const string name, const string port, Path const &conffile, const bool online=true);
