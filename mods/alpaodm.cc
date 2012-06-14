@@ -144,10 +144,15 @@ int AlpaoDM::actuate(const bool /*block*/) {
 	// vector element to satisfy this need. std::vector guarantees data contiguity
 	// so this is legal
 	double *act_vec_arr = &act_vec[0];
-	if (acedev5Send(1, &dm_id, act_vec_arr) == acecsFAILURE)	{
-		acecsErrDisplay();
-		acedev5Release(1, &dm_id);
-		throw std::runtime_error("AlpaoDM: error at acedev5Send()");
+
+	{
+		// Lock mutex before calling acedev5Send(), it's not thread safe!
+		pthread::mutexholder h(&alpao_mutex);
+		if (acedev5Send(1, &dm_id, act_vec_arr) == acecsFAILURE)	{
+			acecsErrDisplay();
+			acedev5Release(1, &dm_id);
+			throw std::runtime_error("AlpaoDM: error at acedev5Send()");
+		}
 	}
 
 	return 0;

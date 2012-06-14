@@ -54,9 +54,9 @@ class Wfc: public foam::Device {
 protected:
 	int real_nact;											//!< Number of actuators in this device. This will be used internally to drive the WFC
 	int virt_nact;											//!< Number of actuators to use. This will be visible to the outside world (i.e. GUI)
-	bool use_actmap;										//!< Use actuator map or not
+	bool use_actmap;										//!< Use actuator map or not (implies virt_nact != real_nact)
 	typedef std::vector< std::vector<int> > actmap_t;
-	actmap_t actmap;										//!< Actuator map for cases where use_nact < real_nact. In this case, actmap.size() == use_nact and 'virtual' actuator 'idx' uses real actuators actmap[idx].
+	actmap_t actmap;										//!< Actuator map for cases where virt_nact < real_nact. In this case, actmap.size() == virt_nact and 'virtual' actuator 'idx' uses real actuators actmap[idx].
 	int ctrl_apply_actmap();						//!< Apply actmap to actuation vector, if necessary. Assumes ctrlparams.target is set with the proper control values
 	string str_actmap;
 	int parse_actmap(string &map); 		//!< Interpret actmap parameter in config. Syntax should be '<N_virt> [virt_act1 real_act1,real_act2,real_act3 [virt_act2 real_act1,real_act2,real_act3]], i.e. virtual actuators seperated by spaces, real actuators seperated by only commas
