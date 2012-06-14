@@ -139,6 +139,14 @@ public:
 	Glib::ustring get_text() const {
 		return entry.get_text();
 	}
+	
+	double get_value() {
+		return atof(entry.get_text().c_str());
+	}
+	
+	int get_value_as_int() {
+		return atoi(entry.get_text().c_str());
+	}
 
 	void set_editable(bool editable = true) {
 		entry.set_editable(editable);

@@ -25,6 +25,7 @@
 
 #include "format.h"
 #include "protocol.h"
+
 #include "devicectrl.h"
 #include "telescopectrl.h"
 #include "log.h"
@@ -58,7 +59,7 @@ void TelescopeCtrl::on_connected(bool conn) {
 	if (conn) {
 		send_cmd("get tel_track");
 		send_cmd("get tel_units");
-		send_cmd("get pixshift");
+		send_cmd("get shifts");
 		send_cmd("get scalefac");
 		send_cmd("get gain");
 		send_cmd("get ccd_ang");
@@ -84,11 +85,13 @@ void TelescopeCtrl::on_message(string line) {
 	} else if (what == "tel_units") {
 		tel_units_s[0] = popword(line);
 		tel_units_s[1] = popword(line);
-	} else if (what == "pixshift") {
+	} else if (what == "shifts") {
 		tt_raw[0] = popdouble(line);
 		tt_raw[1] = popdouble(line);
 		tt_conv[0] = popdouble(line);
 		tt_conv[1] = popdouble(line);
+		tt_ctrl[0] = popdouble(line);
+		tt_ctrl[1] = popdouble(line);
 	} else if (what == "scalefac") {
 		scalefac[0] = popdouble(line);
 		scalefac[1] = popdouble(line);

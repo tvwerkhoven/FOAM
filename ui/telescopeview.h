@@ -56,19 +56,26 @@ private:
 	
 	VSeparator vsep1;
 	
-	VBox vbox1;
 	Button b_refresh;								//!< Update once button
-	
-	HBox hbox1;
 	SwitchButton b_autoupd;					//!< Auto update button
 	LabeledSpinEntry e_autointval;	//!< Auto update interval
+	
+	Frame ctrl_frame;
+	HBox ctrl_hbox;
 
+	LabeledEntry ccd_ang_e;					//!< CCD rotation
+	LabeledEntry scalefac0_e;				//!< Scale factor for axis 0
+	LabeledEntry scalefac1_e;				//!< Scale factor for axis 1
+	LabeledEntry ttgain_e;					//!< Telescope tip-tilt track gain
+	
 	bool on_timeout();							//!< Run this 30x/sec to enable auto updating, throttle with e_autointval
 	void do_teltrack_update() const;//!< Update telescope tracking info
 	
 	void on_autoupd_clicked();			//!< Callback for b_autoupd
 	sigc::connection refresh_timer;	//!< For Glib::signal_timeout()
 	struct timeval lastupd;					//!< Time of last update
+
+	void on_info_change();					//!< Callback for ccd_ang / scalefac / ttgain
 
 	// From DevicePage::
 	virtual void on_message_update();

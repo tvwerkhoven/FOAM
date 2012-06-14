@@ -34,7 +34,9 @@ telescopectrl(telescopectrl),
 track_frame("Telescope tracking"), 
 tel_pos("Tel pos."), 
 tt_raw("Raw", "px"), tt_conv("Conv."), tt_ctrl("Ctrl."),
-b_refresh(Gtk::Stock::REFRESH), b_autoupd("Auto Update"), e_autointval("", "s")	
+b_refresh(Gtk::Stock::REFRESH), b_autoupd("Auto"), e_autointval("", "s"),
+ctrl_frame("Track control"),
+ccd_ang_e("CCD rot.","˚"), scalefac0_e("Scalefac"), scalefac1_e(""), ttgain_e("TT Gain", "(P)")
 {
 	log.term(format("%s", __PRETTY_FUNCTION__));
 	
@@ -44,11 +46,11 @@ b_refresh(Gtk::Stock::REFRESH), b_autoupd("Auto Update"), e_autointval("", "s")
 
 	tel_pos.set_width_chars(8);
 	tel_pos.set_editable(false);
-	tt_raw.set_width_chars(8);
+	tt_raw.set_width_chars(12);
 	tt_raw.set_editable(false);
-	tt_conv.set_width_chars(8);
+	tt_conv.set_width_chars(12);
 	tt_conv.set_editable(false);
-	tt_ctrl.set_width_chars(8);
+	tt_ctrl.set_width_chars(12);
 	tt_ctrl.set_editable(false);
 	
 	e_autointval.set_digits(2);
@@ -56,7 +58,12 @@ b_refresh(Gtk::Stock::REFRESH), b_autoupd("Auto Update"), e_autointval("", "s")
 	e_autointval.set_increments(0.1, 1);
 	e_autointval.set_range(0, 10.0);
 	
-	// Pack boxes
+	tel_pos.set_width_chars(4);
+	scalefac0_e.set_width_chars(6);
+	scalefac1_e.set_width_chars(6);
+	ttgain_e.set_width_chars(8);
+	
+	// Pack boxes for track_frame
 	track_hbox.pack_start(tel_pos, PACK_SHRINK);
 
 	track_hbox.pack_start(vsep0, PACK_SHRINK);
@@ -67,14 +74,19 @@ b_refresh(Gtk::Stock::REFRESH), b_autoupd("Auto Update"), e_autointval("", "s")
 
 	track_hbox.pack_start(vsep1, PACK_SHRINK);
 	
-	hbox1.pack_start(b_autoupd, PACK_SHRINK);
-	hbox1.pack_start(e_autointval, PACK_SHRINK);
+	track_hbox.pack_start(b_refresh, PACK_SHRINK);
+	track_hbox.pack_start(b_autoupd, PACK_SHRINK);
+	track_hbox.pack_start(e_autointval, PACK_SHRINK);
 
-	vbox1.pack_start(b_refresh, PACK_SHRINK);
-	vbox1.pack_start(hbox1, PACK_SHRINK);
-	
-	track_hbox.pack_start(vbox1, PACK_SHRINK);
 	track_frame.add(track_hbox);
+
+	// Pack boxes for ctrl_frame
+	ctrl_hbox.pack_start(ccd_ang_e, PACK_SHRINK);
+	ctrl_hbox.pack_start(scalefac0_e, PACK_SHRINK);
+	ctrl_hbox.pack_start(scalefac1_e, PACK_SHRINK);
+	ctrl_hbox.pack_start(ttgain_e, PACK_SHRINK);
+
+	ctrl_frame.add(ctrl_hbox);
 
 	// Add to main GUI page
 	pack_start(track_frame, PACK_SHRINK);
@@ -82,6 +94,11 @@ b_refresh(Gtk::Stock::REFRESH), b_autoupd("Auto Update"), e_autointval("", "s")
 	// Connect events
 	b_refresh.signal_clicked().connect(sigc::mem_fun(*this, &TelescopeView::do_teltrack_update));
 	b_autoupd.signal_clicked().connect(sigc::mem_fun(*this, &TelescopeView::on_autoupd_clicked));
+
+	ccd_ang_e.entry.signal_activate().connect(sigc::mem_fun(*this, &TelescopeView::on_info_change));
+	scalefac0_e.entry.signal_activate().connect(sigc::mem_fun(*this, &TelescopeView::on_info_change));
+	scalefac1_e.entry.signal_activate().connect(sigc::mem_fun(*this, &TelescopeView::on_info_change));
+	ttgain_e.entry.signal_activate().connect(sigc::mem_fun(*this, &TelescopeView::on_info_change));
 
 	telescopectrl->signal_message.connect(sigc::mem_fun(*this, &TelescopeView::on_message_update));
 	refresh_timer = Glib::signal_timeout().connect(sigc::mem_fun(*this, &TelescopeView::on_timeout), 1000.0/30.0);
@@ -122,7 +139,7 @@ void TelescopeView::clear_gui() {
 void TelescopeView::do_teltrack_update() const { 
 	telescopectrl->send_cmd("get tel_track");
 	telescopectrl->send_cmd("get tel_units");
-	telescopectrl->send_cmd("get pixshift");
+	telescopectrl->send_cmd("get shifts");
 }
 
 bool TelescopeView::on_timeout() {
@@ -157,6 +174,14 @@ void TelescopeView::on_autoupd_clicked() {
 		log.term(format("%s: clear", __PRETTY_FUNCTION__));
 	}
 }
+
+void TelescopeView::on_info_change() {
+	log.term(format("%s", __PRETTY_FUNCTION__));
+	telescopectrl->set_ccd_ang( ccd_ang_e.get_value() );
+	telescopectrl->set_scalefac( scalefac0_e.get_value(), scalefac1_e.get_value() );
+	telescopectrl->set_ttgain( ttgain_e.get_value() );
+}
+
 
 void TelescopeView::on_message_update() {
 	DevicePage::on_message_update();

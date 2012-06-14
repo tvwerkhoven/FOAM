@@ -28,6 +28,7 @@
 #include "pthread++.h"
 #include "protocol.h"
 #include "types.h"
+#include "format.h"
 
 #include "devicectrl.h"
 
@@ -54,7 +55,11 @@ public:
 	string get_tel_track_s() const { return format("%.3g, %.3g", tel_track[0], tel_track[1]); }
 	string get_tt_raw_s() const { return format("%.3g, %.3g", tt_raw[0], tt_raw[1]); }
 	string get_tt_conv_s() const { return format("%.3g, %.3g", tt_conv[0], tt_conv[1]); }
-	string get_tt_ctrl_s() const { return format("%.3g, %.3g", tt_ctrl[0], tt_ctrl[1]); }
+	string get_tt_ctrl_s() const { return format("%g, %g", tt_ctrl[0], tt_ctrl[1]); }
+
+	void set_ccd_ang(double ang) { send_cmd(format("set ccd_ang %lf", ang)); };
+	void set_scalefac(double s0, double s1) { send_cmd(format("set scalefac %lf %lf", s0, s1)); };
+	void set_ttgain(double gain) { send_cmd(format("set ttgain %lf 0 0", gain)); };
 
 	// From DeviceCtrl::
 	virtual void on_message(string line);
