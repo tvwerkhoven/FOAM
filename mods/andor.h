@@ -66,7 +66,7 @@ private:
 
 	// Cooling settings
 	struct cooling {
-		cooling(): status(DRV_TEMP_OFF), operating(false) { }
+		cooling(): status(DRV_TEMP_OFF), operating(false) { range[0] = range[1] = 0; target=25; current=25; }
 		int range[2];											//!< Camera cooling temperature range
 		int target;												//!< Requested cooling temperature
 		int current;											//!< Current camera temperature
