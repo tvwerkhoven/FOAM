@@ -49,7 +49,7 @@ private:
 	
 	float scalefac[2];					//!< Scalefactor for x,y shift
 	gain_t tt_gain;							//!< Tip-tilt gain control
-	int altfac;									//!< Altitude conversion factor
+	float altfac;								//!< Altitude conversion factor
 
 public:
 	string get_tel_track_s() const { return format("%.3g, %.3g", tel_track[0], tel_track[1]); }

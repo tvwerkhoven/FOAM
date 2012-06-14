@@ -148,7 +148,7 @@ public:
 	WHT(Io &io, foamctrl *const ptc, const string name, const string port, Path const &conffile, const bool online=true);
 	~WHT();
 	
-	int	altfac;							//!< Factor to multiple alt with before rotation (i.e. rotate counter-clockwise if -1)
+	double altfac;					//!< Factor to multiple alt with before rotation (i.e. rotate counter-clockwise if -1)
 	double delay;						//!< WHT info update period
 	std::map<string, string> wht_info; // Full WHT info from website
 		

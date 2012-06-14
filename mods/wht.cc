@@ -42,7 +42,7 @@ using namespace std;
 WHT::WHT(Io &io, foamctrl *const ptc, const string name, const string port, Path const &conffile, const bool online):
 Telescope(io, ptc, name, wht_type, port, conffile, online),
 wht_ctrl(NULL), sport(""),
-altfac(-1), delay(1.0)
+altfac(-1.0), delay(1.0)
 {
 	io.msg(IO_DEB2, "WHT::WHT()");
 	
@@ -58,8 +58,8 @@ altfac(-1), delay(1.0)
 		track_port = cfg.getstring("track_port", "8081");
 		track_file = cfg.getstring("track_file", "/TCSStatus/TCSStatusExPo");
 		
-		// Altitude factor, 1 or -1
-		altfac = cfg.getint("altfac", -1);
+		// Altitude factor, can be 1 or -1 or any other conversion factor
+		altfac = cfg.getdouble("altfac", -1.0);
 
 	}
 
@@ -207,7 +207,7 @@ void WHT::on_message(Connection *const conn, string line) {
 			conn->write("ok trackurl " +track_prot+"://"+track_host+":"+track_port+"/"+track_file);
 		} else if (what == "altfac") {	// get altfac - altitude correction factor
 			conn->addtag("altfac");
-			conn->write(format("ok altfac %d", altfac));
+			conn->write(format("ok altfac %lf", altfac));
 		} else 
 			parsed = false;
 	} else if (command == "set") {
@@ -215,7 +215,7 @@ void WHT::on_message(Connection *const conn, string line) {
 		
 		if (what == "altfac") {					// set altfac <1,-1
 			conn->addtag("altfac");
-			altfac = popint(line);
+			altfac = popdouble(line);
 		} else
 			parsed = false;
 	} else {
