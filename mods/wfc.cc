@@ -306,8 +306,8 @@ void Wfc::parse_waffle(string &odd, string &even) {
 			break;
 	}
 	
-	io.msg(IO_DEB2, "Wfc::parse_waffle() odd = %s", odd_act_l);
-	io.msg(IO_DEB2, "Wfc::parse_waffle() even = %s", even_act_l);
+	io.msg(IO_DEB2, "Wfc::parse_waffle() odd = %s", odd_act_l.c_str());
+	io.msg(IO_DEB2, "Wfc::parse_waffle() even = %s", even_act_l.c_str());
 
 	
 	have_waffle = true;
