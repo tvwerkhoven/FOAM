@@ -17,3 +17,8 @@ Sometimes somewhere there is a double free() happening, crashing the system. Uns
 
 - error on calib fail should be more explicit
 
+add net_broadcast()
+
+- Add subap minimum influence to GUI settings
+- Add vsspeed to gui settings
+- Add WFC set as vector to GUI / WFC
