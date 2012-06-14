@@ -39,10 +39,18 @@
 using namespace std;
 
 Telescope::Telescope(Io &io, foamctrl *const ptc, const string name, const string type, const string port, Path const &conffile, const bool online):
-Device(io, ptc, name, telescope_type + "." + type, port, conffile, online)
+Device(io, ptc, name, telescope_type + "." + type, port, conffile, online),
+c0(0), c1(0), sht0(0), sht1(0), ctrl0(0), ctrl1(0), ccd_ang(0), handler_p(0)
 {
 	io.msg(IO_DEB2, "Telescope::Telescope()");
 	
+	// Init static vars
+	telpos[0] = telpos[1] = 0;
+	telunits[0] = "ax0";
+	telunits[1] = "ax1";
+
+	gain.p = gain.i = gain.d = 0.0;
+
 	// Configure initial settings
 	{
 		scalefac[0] = cfg.getdouble("scalefac_0", 1e-2);
@@ -58,8 +66,10 @@ Device(io, ptc, name, telescope_type + "." + type, port, conffile, online)
 	add_cmd("set gain");
 	add_cmd("get ccd_ang");
 	add_cmd("set ccd_ang");
-	add_cmd("get pixshift");
+	add_cmd("get shifts");
 	add_cmd("get pix2shiftstr");
+	add_cmd("get tel_track");
+	add_cmd("get tel_units");
 
 	// Start handler thread
 	tel_thr.create(sigc::mem_fun(*this, &Telescope::tel_handler));
@@ -74,10 +84,10 @@ void Telescope::tel_handler() {
 		
 		// From input offset (in arbitrary units, i.e. pixels), calculate proper 
 		// shift coordinates, i.e.: 
-		// shift_vec = rot_mat * scale_vec * input_vec
+		// shift_vec = rot_mat # (scale_vec * input_vec)
 		// General:
-		// x' = scalefac0 [ x cos(th) - y sin(th) ]
-		// y; = scalefac1 [ x sin(th) + y cos(th) ]
+		// x' = scalefac0 [ x cos(th), - y sin(th) ]
+		// y; = scalefac1 [ x sin(th), + y cos(th) ]
 		sht0 = scalefac[0] * c0 * cos(ccd_ang * 180.0/M_PI) - scalefac[1] * c1 * sin(ccd_ang * 180.0/M_PI);
 		sht1 = scalefac[0] * c0 * sin(ccd_ang * 180.0/M_PI) + scalefac[1] * c1 * cos(ccd_ang * 180.0/M_PI);
 		
@@ -125,15 +135,22 @@ void Telescope::on_message(Connection *const conn, string line) {
 		} else if (what == "gain") {			// get gain
 			conn->addtag("gain");
   		conn->write(format("ok gain %g %g %g", gain.p, gain.i, gain.d));
+		} else if (what == "tel_track") {	// get tel_track - Telescope tracking position
+			conn->write(format("ok tel_track %g %g", telpos[0], telpos[1]));
+		} else if (what == "tel_units") {	// get tel_units - Telescope tracking units
+			conn->write(format("ok tel_units %s %s", telunits[0].c_str(), telunits[1].c_str()));
 		} else if (what == "ccd_ang") {		// get ccd_ang - CCD rotation angle
 			conn->addtag("ccd_ang");
 			conn->write(format("ok ccd_ang %g", ccd_ang));
 		} else if (what == "pixshift") {	// get pixshift - Give last known pixel shift
 			conn->addtag("pixshift");
-			conn->write(format("ok pixshift %g %g %g %g", c0, c1, sht0, sht1));
+			conn->write(format("ok pixshift %g %g", c0, c1));
+		} else if (what == "shifts") {		// get shifts - Give raw shifts, conv shifts, ctrl shifts
+			conn->addtag("shifts");
+			conn->write(format("ok shifts %g %g %g %g %g %g", c0, c1, sht0, sht1, ctrl0, ctrl1));
 		} else if (what == "pix2shiftstr") {		// get pix2shiftstr - Give conversion formula as string
 			conn->addtag("pix2shiftstr");
-			conn->write("ok pix2shiftstr scalefac[0] * c0 * <cos,sin>(ccd_ang * 180.0/M_PI) - scalefac[1] * c1 * <sin,cos>(ccd_ang * 180.0/M_PI)");
+			conn->write("ok pix2shiftstr scalefac[0] * c0 * <cos,sin>(ccd_ang * 180.0/M_PI) + scalefac[1] * c1 * <-sin,cos>(ccd_ang * 180.0/M_PI)");
 		} else 
 			parsed = false;
 	} else if (command == "set") {

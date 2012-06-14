@@ -54,8 +54,10 @@ const string wht_type = "wht";
  
  For ExPo, the conversion is:
  
- alt: +- 0.01 [ x * sin(0.001745 * (45 - ele)) +- y * cos(0.001745 * (45 - ele)) ]
- az: -+ 0.01 [ y * sin(0.001745 * (45 - ele)) -+ x * cos(0.001745 * (45 - ele)) ]
+ alt: =  -0.01 [ x * sin(0.001745 * (45 - ele)) + y * cos(0.001745 * (45 - ele)) ]
+ az: = +0.01 [ y * sin(0.001745 * (45 - ele)) - x * cos(0.001745 * (45 - ele)) ]
+ 
+ acedev5Send
  
  with x, y the measured shift, 45 the rotation of the ExPo camera, ele the 
  current elevation of the telescope, and 0.001745 180/pi. The scaling, gain 
@@ -117,12 +119,13 @@ const string wht_type = "wht";
  - track_host: live WHT pointing host (whtics.roque.ing.iac.es)
  - track_port: live WHT pointing port (8001)
  - track_file: live WHT pointing file (/TCSStatus/TCSStatusExPo)
+ - altfac: WHT::altfac 
  
  \section wht_netio Network commands
  
- - set pointing <c0> <c1>: set pointing to c0, c1
- - get pointing: get last known pointing
- - add pointing <dc0> <dc1>: add (dc0, dc1) to current pointing
+ - get trackurl: get WHT tracker information URL
+ - get telpos: get WHT::alt WHT::az
+ 
  
 */
 class WHT: public Telescope {
@@ -145,8 +148,7 @@ public:
 	WHT(Io &io, foamctrl *const ptc, const string name, const string port, Path const &conffile, const bool online=true);
 	~WHT();
 	
-	double alt;							//!< Telescope altititude
-	double az;							//!< Telescope azimuthal
+	int	altfac;							//!< Factor to multiple alt with before rotation (i.e. rotate counter-clockwise if -1)
 	double delay;						//!< WHT info update period
 	std::map<string, string> wht_info; // Full WHT info from website
 		

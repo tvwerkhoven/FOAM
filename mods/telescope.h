@@ -72,6 +72,12 @@ const string telescope_type = "telescope";
  - get scalefac: return Telescope::scalefac as <s0> <s1>
  - set gain <p> <i> <d>: Telescope::gain
  - get gain: return Telescope::gain as <p> <i> <d>
+ - set ccd_ang <ang>: Telescope::ccd_ang
+ - get ccd_ang <ang>: Telescope::ccd_ang
+ - get shifts: return Telescope::c0 Telescope::c1 Telescope::sht0 Telescope::sht1 Telescope::ctrl0 Telescope::ctrl1
+ - get pix2shiftstr: return coordinate conversion formula.
+ - get tel_track: return Telescope::telpos
+ - get tel_units: return Telescope::tel_units
  
 */
 class Telescope: public foam::Device {
@@ -79,16 +85,21 @@ protected:
 	pthread::thread tel_thr;			//!< Telescope handler thread
 	void tel_handler();						//!< Handler thread that takes care of converting input shifts to tracking the telescope correctly
 
+	float c0;								//!< Input offset (arbitary units, most likely pixels)
+	float c1;								//!< Input offset (arbitary units, most likely pixels)	
+
 	float sht0;							//!< Output shift, scaled and rotated
 	float sht1;							//!< Output shift, scaled and rotated
 	
-	float c0;								//!< Input offset (arbitary units, most likely pixels)
-	float c1;								//!< Input offset (arbitary units, most likely pixels)	
+	float ctrl0;						//!< Final control coordinates for telescope
+	float ctrl1;						//!< Final control coordinates for telescope
 
 public:
 	Telescope(Io &io, foamctrl *const ptc, const string name, const string type, const string port, Path const &conffile, const bool online=true);
 	~Telescope();
 	
+	double telpos[2];				//!< Telescope position (e.g. alt/az)
+	string telunits[2];			//!< Telescope units
 	float scalefac[2];			//!< Scale factor for setup that converts input units to 1mm shift in primary focus
 	gain_t gain;						//!< Gain for tip-tilt offloading correction
 	float ccd_ang;					//!< Rotation of CCD with respect to telescope restframe
@@ -98,8 +109,8 @@ public:
 	void set_track_offset(const float _c0, const float _c1) { c0 = _c0; c1 = _c1; }
 	void get_track_offset(float * const _c0, float * const _c1) { *_c0 = c0; *_c1 = c1; }
 	
-	// To be implemented in derived class. If not implemented, this is a dummy
-	virtual int update_telescope_track(const float sht0, const float sht1) { return 0; }
+	// To be implemented in derived class. If not implemented, this is a dummy and it displays random stuff
+	virtual int update_telescope_track(const float, const float) { c0 = (c0 + 0.1); c1 = (c1 + 0.5); return 0; }
 
 	// From Devices::
 	virtual void on_message(Connection *const conn, string);

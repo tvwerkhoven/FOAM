@@ -42,7 +42,7 @@ using namespace std;
 WHT::WHT(Io &io, foamctrl *const ptc, const string name, const string port, Path const &conffile, const bool online):
 Telescope(io, ptc, name, wht_type, port, conffile, online),
 wht_ctrl(NULL), sport(""),
-alt(0.0), az(0.0), delay(1.0)
+altfac(-1), delay(1.0)
 {
 	io.msg(IO_DEB2, "WHT::WHT()");
 	
@@ -57,13 +57,22 @@ alt(0.0), az(0.0), delay(1.0)
 		track_host = cfg.getstring("track_host", "whtics.roque.ing.iac.es");
 		track_port = cfg.getstring("track_port", "8081");
 		track_file = cfg.getstring("track_file", "/TCSStatus/TCSStatusExPo");
+		
+		// Altitude factor, 1 or -1
+		altfac = cfg.getint("altfac", -1);
+
 	}
-	
+
+	// WHT operates in alt/az mode
+	telunits[0] = "alt";
+	telunits[1] = "az";
+
 	// Start WHT config update thread
 	wht_cfg_thr.create(sigc::mem_fun(*this, &WHT::wht_updater));
 
 	add_cmd("get trackurl");
-	add_cmd("get telpos");
+	add_cmd("get altfac");
+	add_cmd("set altfac");
 
 	// Open serial port connection
 	//wht_ctrl = new serial::port(sport, B9600, 0, '\r');
@@ -86,7 +95,7 @@ void WHT::wht_updater() {
 		gettimeofday(&last, 0);
 		
 		// Update WHT config info
-		update_wht_coords(&alt, &az, &delay);
+		update_wht_coords(&telpos[0], &telpos[1], &delay);
 
 		// Make sure each iteration takes at minimum delay seconds:
 		// update duration = now - last
@@ -171,10 +180,10 @@ int WHT::update_telescope_track(const float sht0, const float sht1) {
 	// x' = [ x cos(th) - y sin(th) ]
 	// y; = [ x sin(th) + y cos(th) ]
 	// For ExPo:
-	// ele = 0.001 * sin(??) + cos(??)
-	// dec = 0.001 * sin(??) + cos(??)
-	float d_ele = sht0 * cos(alt) - sht1 * sin(alt);
-	float d_alt = sht0 * sin(alt) + sht1 * cos(alt);
+	// az = 50 - 0.01 * [ x * sin( (45-ele) * pi/180 ) + y * cos( (45-e) * pi/180 ) ]
+	// ele = 50 + 0.01 * [ y * sin( (45-ele) * pi/180 ) - x * cos( (45-e) * pi/180 ) ]
+	ctrl0 = 50 + (gain.p * (sht0 * cos(altfac * telpos[0]) - sht1 * sin(altfac * telpos[0])));
+	ctrl1 = 50 + (gain.p * (sht0 * sin(altfac * telpos[0]) + sht1 * cos(altfac * telpos[0])));
 	
 	// Send control command to telescope
 //	io.msg(IO_XNFO, "WHT::update_telescope_track(): sending (%g, %g)", ctrl0, ctrl1);
@@ -196,15 +205,19 @@ void WHT::on_message(Connection *const conn, string line) {
 		if (what == "trackurl") {				// get trackurl
 			conn->addtag("trackurl");
 			conn->write("ok trackurl " +track_prot+"://"+track_host+":"+track_port+"/"+track_file);
-		} else if (what == "telpos") {	// get telpos
-				conn->addtag("telpos");
-				conn->write(format("ok telpos %g %g", alt, az));
+		} else if (what == "altfac") {	// get altfac - altitude correction factor
+			conn->addtag("altfac");
+			conn->write(format("ok altfac %d", altfac));
 		} else 
 			parsed = false;
 	} else if (command == "set") {
 		string what = popword(line);
 		
-		parsed = false;
+		if (what == "altfac") {					// set altfac <1,-1
+			conn->addtag("altfac");
+			altfac = popint(line);
+		} else
+			parsed = false;
 	} else {
 		parsed = false;
 	}
