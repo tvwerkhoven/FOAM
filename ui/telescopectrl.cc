@@ -33,7 +33,8 @@
 using namespace std;
 
 TelescopeCtrl::TelescopeCtrl(Log &log, const string h, const string p, const string n):
-DeviceCtrl(log, h, p, n)
+DeviceCtrl(log, h, p, n),
+ccd_ang(0), altfac(-1.0)
 {
 	tel_track[0] = tel_track[1] = 0;
 	tel_units_s[0] = tel_units_s[1] = "";
@@ -42,7 +43,6 @@ DeviceCtrl(log, h, p, n)
 	tt_ctrl[0] = tt_ctrl[1] = 0;
 	
 	scalefac[0] = scalefac[1] = 0;
-	altfac = -1;
 	
 	log.term(format("%s", __PRETTY_FUNCTION__));
 	
@@ -61,7 +61,7 @@ void TelescopeCtrl::on_connected(bool conn) {
 		send_cmd("get tel_units");
 		send_cmd("get shifts");
 		send_cmd("get scalefac");
-		send_cmd("get gain");
+		send_cmd("get ttgain");
 		send_cmd("get ccd_ang");
 		send_cmd("get altfac");
 
@@ -95,12 +95,14 @@ void TelescopeCtrl::on_message(string line) {
 	} else if (what == "scalefac") {
 		scalefac[0] = popdouble(line);
 		scalefac[1] = popdouble(line);
-	} else if (what == "gain") {
+	} else if (what == "ttgain") {
 		tt_gain.p = popdouble(line);
 		tt_gain.i = popdouble(line);
 		tt_gain.d = popdouble(line);
+	} else if (what == "ccd_ang") {
+		ccd_ang = popdouble(line);
 	} else if (what == "altfac") {
-		altfac = popint(line);
+		altfac = popdouble(line);
 	} else
 		parsed = false;
 	

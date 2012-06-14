@@ -47,12 +47,14 @@ private:
 	float tt_conv[2];						//!< Converted tip-tilt coordinates
 	float tt_ctrl[2];						//!< Control tip-tilt coordinates
 	
+	float ccd_ang;							//!< CCD rotation angle
 	float scalefac[2];					//!< Scalefactor for x,y shift
 	gain_t tt_gain;							//!< Tip-tilt gain control
 	float altfac;								//!< Altitude conversion factor
 
 public:
 	string get_tel_track_s() const { return format("%.3g, %.3g", tel_track[0], tel_track[1]); }
+	string get_tel_units_s() const { return format("%s/%s", tel_units_s[0].c_str(), tel_units_s[1].c_str()); }
 	string get_tt_raw_s() const { return format("%.3g, %.3g", tt_raw[0], tt_raw[1]); }
 	string get_tt_conv_s() const { return format("%.3g, %.3g", tt_conv[0], tt_conv[1]); }
 	string get_tt_ctrl_s() const { return format("%g, %g", tt_ctrl[0], tt_ctrl[1]); }
@@ -60,6 +62,13 @@ public:
 	void set_ccd_ang(double ang) { send_cmd(format("set ccd_ang %lf", ang)); };
 	void set_scalefac(double s0, double s1) { send_cmd(format("set scalefac %lf %lf", s0, s1)); };
 	void set_ttgain(double gain) { send_cmd(format("set ttgain %lf 0 0", gain)); };
+//	void set_altfac(double fac) { send_cmd(format("set altfac %lf", fac)); };
+
+	double get_ccd_ang() const { return ccd_ang; };
+	double get_scalefac0() const { return scalefac[0]; };
+	double get_scalefac1() const { return scalefac[1]; };
+	double get_ttgain() const { return tt_gain.p; };
+//	double get_altfac() const { return altfac };
 
 	// From DeviceCtrl::
 	virtual void on_message(string line);

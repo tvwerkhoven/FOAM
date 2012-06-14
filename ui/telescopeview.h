@@ -47,6 +47,7 @@ private:
 	HBox track_hbox;
 
 	LabeledEntry tel_pos;						//!< Telescope track position
+	Label tel_units;								//!< Telescope track units
 
 	VSeparator vsep0;
 	

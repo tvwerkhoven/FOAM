@@ -32,8 +32,8 @@ TelescopeView::TelescopeView(TelescopeCtrl *telescopectrl, Log &log, FoamControl
 DevicePage((DeviceCtrl *) telescopectrl, log, foamctrl, n), 
 telescopectrl(telescopectrl),
 track_frame("Telescope tracking"), 
-tel_pos("Tel pos."), 
-tt_raw("Raw", "px"), tt_conv("Conv."), tt_ctrl("Ctrl."),
+tel_pos("Tel pos."), tel_units(""),
+tt_raw("Raw"), tt_conv("Conv."), tt_ctrl("Ctrl."),
 b_refresh(Gtk::Stock::REFRESH), b_autoupd("Auto"), e_autointval("", "s"),
 ctrl_frame("Track control"),
 ccd_ang_e("CCD rot.","˚"), scalefac0_e("Scalefac"), scalefac1_e(""), ttgain_e("TT Gain", "(P)")
@@ -58,13 +58,14 @@ ccd_ang_e("CCD rot.","˚"), scalefac0_e("Scalefac"), scalefac1_e(""), ttgain_e("
 	e_autointval.set_increments(0.1, 1);
 	e_autointval.set_range(0, 10.0);
 	
-	tel_pos.set_width_chars(4);
+	ccd_ang_e.set_width_chars(4);
 	scalefac0_e.set_width_chars(6);
 	scalefac1_e.set_width_chars(6);
-	ttgain_e.set_width_chars(8);
+	ttgain_e.set_width_chars(4);
 	
 	// Pack boxes for track_frame
 	track_hbox.pack_start(tel_pos, PACK_SHRINK);
+	track_hbox.pack_start(tel_units, PACK_SHRINK);
 
 	track_hbox.pack_start(vsep0, PACK_SHRINK);
 
@@ -90,6 +91,7 @@ ccd_ang_e("CCD rot.","˚"), scalefac0_e("Scalefac"), scalefac1_e(""), ttgain_e("
 
 	// Add to main GUI page
 	pack_start(track_frame, PACK_SHRINK);
+	pack_start(ctrl_frame, PACK_SHRINK);
 
 	// Connect events
 	b_refresh.signal_clicked().connect(sigc::mem_fun(*this, &TelescopeView::do_teltrack_update));
@@ -188,11 +190,16 @@ void TelescopeView::on_message_update() {
 	log.term(format("%s", __PRETTY_FUNCTION__));
 
 	tel_pos.set_text(telescopectrl->get_tel_track_s());
-	//tel_pos.set_text(telescopectrl->get_tel_units_s());
+	tel_units.set_text(telescopectrl->get_tel_units_s());
 	tt_raw.set_text(telescopectrl->get_tt_raw_s());
 	tt_conv.set_text(telescopectrl->get_tt_conv_s());
 	tt_ctrl.set_text(telescopectrl->get_tt_ctrl_s());
-	
+
+	ccd_ang_e.set_text( format("%g", telescopectrl->get_ccd_ang()) );
+	scalefac0_e.set_text( format("%g", telescopectrl->get_scalefac0()) );
+	scalefac1_e.set_text( format("%g", telescopectrl->get_scalefac1()) );
+	ttgain_e.set_text( format("%g", telescopectrl->get_ttgain()) );
+
 	// If we were waiting for this update, set button to 'OK' state again. If 
 	// this is only a one-time 'b_refresh' event, this probably won't happen.
 	if (b_autoupd.get_state() == SwitchButton::WAITING)
