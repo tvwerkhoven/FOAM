@@ -88,8 +88,8 @@ void Telescope::tel_handler() {
 		// General:
 		// x' = scalefac0 [ x cos(th), - y sin(th) ]
 		// y; = scalefac1 [ x sin(th), + y cos(th) ]
-		sht0 = scalefac[0] * c0 * cos(ccd_ang * 180.0/M_PI) - scalefac[1] * c1 * sin(ccd_ang * 180.0/M_PI);
-		sht1 = scalefac[0] * c0 * sin(ccd_ang * 180.0/M_PI) + scalefac[1] * c1 * cos(ccd_ang * 180.0/M_PI);
+		sht0 = scalefac[0] * c0 * cos(ccd_ang * M_PI/180.0) - scalefac[1] * c1 * sin(ccd_ang * M_PI/180.0);
+		sht1 = scalefac[0] * c0 * sin(ccd_ang * M_PI/180.0) + scalefac[1] * c1 * cos(ccd_ang * M_PI/180.0);
 		
 		io.msg(IO_DEB1, "Telescope::tel_handler() (%g, %g) -> (%g, %g) -> (%g, %g)", 
 					 c0, c1, sht0, sht1, ctrl0, ctrl1);
