@@ -799,6 +799,7 @@ int Shwfs::calib_influence(Wfc *wfc, Camera *cam, const vector <float> &actpos, 
 	// Check sanity
 	if (wfc->get_nact() > 2*mlacfg.size()) {
 		io.msg(IO_ERR, "Shwfs::calib_influence(): # actuators > 2 * # subapertures, underdetermind system, abort!");
+		net_broadcast("error mla # actuators > 2 * # subapertures, underdetermind system, abort!");
 		return -1;
 	}
 	
@@ -910,13 +911,7 @@ int Shwfs::gen_mla_grid(std::vector<vector_t> &mlacfg, const coord_t res, const 
 			// Use this to apply a row-offset to even and odd rows
 			sa_c.x -= (sa_y % 2) * xoff * pitch.x;
 
-			io.msg(IO_DEB2, "Shwfs::gen_mla_grid() test (%d, %d) -> (%d, %d)", 
-						 sa_x, sa_y, sa_c.x, sa_c.y);			
-			if (shape == CIRCULAR) {
-				io.msg(IO_DEB2, "Shwfs::gen_mla_grid(CIRC) %g < %g", 
-							 pow(fabs(sa_c.x) + (overlap-0.5)*size.x, 2) + pow(fabs(sa_c.y) + (overlap-0.5)*size.y, 2),
-							 minradsq);
-				
+			if (shape == CIRCULAR) {				
 				if (pow(fabs(sa_c.x) + (overlap-0.5)*size.x, 2) + pow(fabs(sa_c.y) + (overlap-0.5)*size.y, 2) <= minradsq) {
 					// Store subapertures as (lowerx, lower y, upper x, upper y)
 					tmpsi = vector_t(sa_c.x + res.x/2 - size.x/2,
@@ -929,12 +924,6 @@ int Shwfs::gen_mla_grid(std::vector<vector_t> &mlacfg, const coord_t res, const 
 			else {
 				// Accept a subimage coordinate (center position) the position + 
 				// half-size the subaperture is within the bounds
-				io.msg(IO_DEB2, "Shwfs::gen_mla_grid(SQ) %g, %g < %g, %g", 
-							 fabs(sa_c.x + (overlap-0.5)*size.x),
-							 fabs(sa_c.y + (overlap-0.5)*size.y),
-							 res.x/2.0,
-							 res.y/2.0);
-							
 				if ((fabs(sa_c.x + (overlap-0.5)*size.x) <= res.x/2) && (fabs(sa_c.y + (overlap-0.5)*size.y) <= res.y/2)) {
 					tmpsi = vector_t(sa_c.x + res.x/2 - size.x/2,
 													 sa_c.y + res.y/2 - size.y/2,
