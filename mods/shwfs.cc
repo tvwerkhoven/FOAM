@@ -80,7 +80,7 @@ method(Shift::COG)
 	if (cfg.exists("disp"))
 		disp.x = disp.y = cfg.getint("disp");
 	
-	overlap = cfg.getdouble("overlap", 1);
+	overlap = cfg.getdouble("overlap", 0.5);
 	xoff = cfg.getint("xoff", 0);
 	
 	string shapestr = cfg.getstring("shape", "circular");
