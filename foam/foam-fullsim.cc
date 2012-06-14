@@ -89,17 +89,17 @@ int FOAM_FullSim::open_init() {
 
 int FOAM_FullSim::open_loop() {
 	io.msg(IO_DEB2, "FOAM_FullSim::open_loop()");
-	openperf_addlog(1);
+	openperf_addlog("init fullsim");
 	string vec_str;
 	
 	// Get next frame, simulcam takes care of all simulation
 	//!< @bug This call blocks and if the camera is stopped before it returns, it will hang
 	Camera::frame_t *frame = simcam->get_next_frame(true);
-	openperf_addlog(2);
+	openperf_addlog("cam->get_next_frame");
 	
 	// Propagate simulated frame through system (WFS, algorithms, WFC)
 	Shwfs::wf_info_t *wf_meas = simwfs->measure(frame);
-	openperf_addlog(3);
+	openperf_addlog("wfs->measure");
 	
 	vec_str = "";
 	for (size_t i=0; i<wf_meas->wfamp->size; i++)
@@ -107,7 +107,7 @@ int FOAM_FullSim::open_loop() {
 	io.msg(IO_XNFO, "FOAM_FullSim::wfs_m: %s", vec_str.c_str());
 
 	simwfs->comp_ctrlcmd(simwfc->getname(), wf_meas->wfamp, simwfc->ctrlparams.err);
-	closedperf_addlog(4);
+	closedperf_addlog("wfs->comp_ctrlcmd");
 
 	vec_str = "";
 	for (size_t i=0; i<simwfc->ctrlparams.err->size; i++)
@@ -115,7 +115,7 @@ int FOAM_FullSim::open_loop() {
 	io.msg(IO_XNFO, "FOAM_FullSim::wfc_rec: %s", vec_str.c_str());
 
 	simwfs->comp_shift(simwfc->getname(), simwfc->ctrlparams.err, wf_meas->wfamp);
-	closedperf_addlog(5);
+	closedperf_addlog("wfs->comp_shift");
 	
 	vec_str = "";
 	for (size_t i=0; i<wf_meas->wfamp->size; i++)
@@ -126,7 +126,7 @@ int FOAM_FullSim::open_loop() {
 	float ttx=0, tty=0;
 	simwfs->comp_tt(wf_meas->wfamp, &ttx, &tty);
 	simtel->set_track_offset(ttx, tty);
-	openperf_addlog(6);
+	openperf_addlog("wfs->comp_tt");
 
 	usleep(0.1 * 1000000);
 	return 0;
@@ -157,16 +157,16 @@ int FOAM_FullSim::closed_init() {
 
 int FOAM_FullSim::closed_loop() {
 	io.msg(IO_DEB2, "FOAM_FullSim::closed_loop()");
-	closedperf_addlog(1);
+	closedperf_addlog("init fullsim");
 	string vec_str;
 	
 	// Get new frame from SimulCamera
 	Camera::frame_t *frame = simcam->get_next_frame(true);
-	closedperf_addlog(2);
+	closedperf_addlog("cam->get_next_frame");
 
 	// Measure wavefront error with SHWFS
 	Shwfs::wf_info_t *wf_meas = simwfs->measure(frame);
-	closedperf_addlog(3);
+	closedperf_addlog("wfs->measure");
 	
 	vec_str = "";
 	for (size_t i=0; i<wf_meas->wfamp->size; i++)
@@ -174,7 +174,7 @@ int FOAM_FullSim::closed_loop() {
 	io.msg(IO_INFO, "FOAM_FullSim::wfs_m: %s", vec_str.c_str());
 	
 	simwfs->comp_ctrlcmd(simwfc->getname(), wf_meas->wfamp, simwfc->ctrlparams.err);
-	closedperf_addlog(4);
+	closedperf_addlog("wfs->comp_ctrlcmd");
 
 	vec_str = "";
 	for (size_t i=0; i<simwfc->ctrlparams.err->size; i++)
@@ -182,7 +182,7 @@ int FOAM_FullSim::closed_loop() {
 	io.msg(IO_INFO, "FOAM_FullSim::wfc_rec: %s", vec_str.c_str());
 	
 	simwfs->comp_shift(simwfc->getname(), simwfc->ctrlparams.err, wf_meas->wf_full);
-	closedperf_addlog(5);
+	closedperf_addlog("wfs->comp_shift");
 	
 	vec_str = "";
 	for (size_t i=0; i<wf_meas->wf_full->size; i++)
@@ -191,13 +191,13 @@ int FOAM_FullSim::closed_loop() {
 	
 	simwfc->update_control(simwfc->ctrlparams.err);
 	simwfc->actuate(true);
-	closedperf_addlog(6);
+	closedperf_addlog("wfc->update_control");
 	
 	// Compute tip-tilt signal from total shift vector, track telescope
 	float ttx=0, tty=0;
 	simwfs->comp_tt(wf_meas->wf_full, &ttx, &tty);
 	simtel->set_track_offset(ttx, tty);
-	openperf_addlog(7);
+	openperf_addlog("wfs->comp_tt");
 
 	usleep(0.01 * 1000000);
 	return 0;

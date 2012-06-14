@@ -148,9 +148,9 @@ protected:
 	
 	pthread::mutex stop_mutex;					//!< Mutex used to check if main loop has completed
 	
-	void openperf_addlog(const int i) const { if (do_perflog && open_perf.get() != NULL) open_perf.get()->addlog(i); }
+	void openperf_addlog(const string lvl) const { if (do_perflog && open_perf.get() != NULL) open_perf.get()->addlog(lvl); }
 	void openperf_report(FILE *stream=stdout) const { if (do_perflog && open_perf.get() != NULL) open_perf.get()->print_report(stream); }
-	void closedperf_addlog(const int i) const { if (do_perflog && closed_perf.get() != NULL) closed_perf.get()->addlog(i); }
+	void closedperf_addlog(const string lvl) const { if (do_perflog && closed_perf.get() != NULL) closed_perf.get()->addlog(lvl); }
 	void closedperf_report(FILE *stream=stdout) const { if (do_perflog && closed_perf.get() != NULL) closed_perf.get()->print_report(stream); }
 
 	/*!

@@ -7,7 +7,7 @@ Main Todo Items
 - 'Shutdown' does not work in closed loop
 - When stopping camera in open/closed loop, the loop cannot finish because it waits for the camera
 - check new perflog
-- check WHT tip-tilt branch
+- check WHT tip-tilt branch -> done
 
 
 * Specific code fixes

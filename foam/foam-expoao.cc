@@ -100,43 +100,43 @@ int FOAM_ExpoAO::open_init() {
 
 int FOAM_ExpoAO::open_loop() {
 	io.msg(IO_DEB2, "FOAM_ExpoAO::open_loop()");
-	openperf_addlog(1);
+	openperf_addlog("expoao loop");
 	string vec_str;
 	
 	// Get next frame from ixoncam
 	Camera::frame_t *frame = ixoncam->get_next_frame(true);
-	openperf_addlog(2);
+	openperf_addlog("cam->get_next_frame");
 	
 	// Analyze frame with shack-hartmann routines
 	Shwfs::wf_info_t *wf_meas = ixonwfs->measure(frame);
-	openperf_addlog(3);
+	openperf_addlog("wfs->measure");
 	
 	// Print analysis
 	vec_str = "";
 	for (size_t i=0; i < wf_meas->wfamp->size; i++)
 		vec_str += format("%.3g ", gsl_vector_float_get(wf_meas->wfamp, i));
-	io.msg(IO_XNFO, "FOAM_ExpoAO::wfs_m: %s", vec_str.c_str());
+	io.msg(IO_DEB1, "FOAM_ExpoAO::wfs_m: %s", vec_str.c_str());
 	
 	ixonwfs->comp_ctrlcmd(alpao_dm97->getname(), wf_meas->wfamp, alpao_dm97->ctrlparams.err);
-	openperf_addlog(4);
+	openperf_addlog("wfs->comp_ctrlcmd");
 	
 	vec_str = "";
 	for (size_t i=0; i<alpao_dm97->ctrlparams.err->size; i++)
 		vec_str += format("%.3g ", gsl_vector_float_get(alpao_dm97->ctrlparams.err, i));
-	io.msg(IO_XNFO, "FOAM_ExpoAO::wfc_rec: %s", vec_str.c_str());
+	io.msg(IO_DEB1, "FOAM_ExpoAO::wfc_rec: %s", vec_str.c_str());
 	
 	ixonwfs->comp_shift(alpao_dm97->getname(), alpao_dm97->ctrlparams.err, wf_meas->wfamp);
-	openperf_addlog(5);
+	openperf_addlog("wfs->comp_shift");
 
 	float ttx=0, tty=0;
 	ixonwfs->comp_tt(wf_meas->wfamp, &ttx, &tty);
 	wht_track->set_track_offset(ttx, tty);
-	openperf_addlog(6);
+	openperf_addlog("wfs->comp_tt");
 
 	vec_str = "";
 	for (size_t i=0; i<wf_meas->wfamp->size; i++)
 		vec_str += format("%.3g ", gsl_vector_float_get(wf_meas->wfamp, i));
-	io.msg(IO_XNFO, "FOAM_ExpoAO::wfs_r: %s", vec_str.c_str());
+	io.msg(IO_DEB1, "FOAM_ExpoAO::wfs_r: %s", vec_str.c_str());
 
 	return 0;
 }
@@ -167,34 +167,35 @@ int FOAM_ExpoAO::closed_init() {
 
 int FOAM_ExpoAO::closed_loop() {
 	io.msg(IO_DEB2, "FOAM_ExpoAO::closed_loop()");
-	closedperf_addlog(1);
+	closedperf_addlog("expoao loop");
 	string vec_str;
 
 	// Get next frame from ixoncam
 	Camera::frame_t *frame = ixoncam->get_next_frame(true);
-	closedperf_addlog(2);
+	closedperf_addlog("cam->get_next_frame()");
 
 	// Analyze frame with shack-hartmann routines
 	Shwfs::wf_info_t *wf_meas = ixonwfs->measure(frame);
-	closedperf_addlog(3);
+	closedperf_addlog("wfs->measure()");
 	
 	// Calculate control command for DM
 	ixonwfs->comp_ctrlcmd(alpao_dm97->getname(), wf_meas->wfamp, alpao_dm97->ctrlparams.err);
-	closedperf_addlog(4);
+	closedperf_addlog("wfc->comp_ctrlcmd()");
 	
 	// Apply control to DM to correct shifts
 	alpao_dm97->update_control(alpao_dm97->ctrlparams.err);
 	alpao_dm97->actuate();
-	closedperf_addlog(5);
+	closedperf_addlog("wfc->update_control()");
 	
 	// Use control vector to compute total shifts that we are correcting
 	ixonwfs->comp_shift(alpao_dm97->getname(), alpao_dm97->ctrlparams.target, wf_meas->wf_full);
+	openperf_addlog("wfs->comp_shift");
 	
 	// Compute tip-tilt signal from total shift vector, track telescope
 	float ttx=0, tty=0;
 	ixonwfs->comp_tt(wf_meas->wf_full, &ttx, &tty);
 	wht_track->set_track_offset(ttx, tty);
-	openperf_addlog(6);
+	openperf_addlog("wfs->comp_tt");
 
 	return 0;
 }

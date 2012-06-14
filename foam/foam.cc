@@ -409,7 +409,7 @@ int FOAM::mode_open() {
 	
 	while (ptc->mode == AO_MODE_OPEN) {
 		// Log performance (time, latency)
-		openperf_addlog(0);
+		openperf_addlog("init");
 
 		if (open_loop()) {
 			io.msg(IO_WARN, "FOAM::open_loop() failed");
@@ -484,7 +484,7 @@ int FOAM::mode_closed() {
 	
 	// Run closed loop
 	while (ptc->mode == AO_MODE_CLOSED) {
-		closedperf_addlog(0);
+		closedperf_addlog("init");
 		if (closed_loop()) {
 			io.msg(IO_WARN, "FOAM::closed_loop() failed.");
 			ptc->mode = AO_MODE_LISTEN;
