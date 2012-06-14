@@ -45,7 +45,8 @@
 using namespace std;
 
 AndorCam::AndorCam(Io &io, foamctrl *const ptc, const string name, const string port, Path const &conffile, const bool online):
-Camera(io, ptc, name, andor_type, port, conffile, online)
+Camera(io, ptc, name, andor_type, port, conffile, online),
+andordir("/")
 {
 	io.msg(IO_DEB2, "AndorCam::AndorCam()");
 	int ret=0;
@@ -53,6 +54,9 @@ Camera(io, ptc, name, andor_type, port, conffile, online)
 	// Register network commands here
 	add_cmd("set cooling");
 	add_cmd("get cooling");
+	
+	// Set static parameters
+	emgain_range[0] = emgain_range[1] = 0;
 	
 	// Get configuration parameters
 	int cooltemp = cfg.getint("cooltemp", 20);
@@ -563,9 +567,8 @@ void AndorCam::cam_set_gain(const double value) {
 	io.msg(IO_DEB1, "AndorCam::cam_set_gain() %g", value);
 	
 	if (value < emgain_range[0] || value > emgain_range[1]) {
-		io.msg(IO_ERR, "AndorCam::cam_set_gain() cannot set gain, out of range [%g, %g]", 
-					 emgain_range[0], emgain_range[1]);
-		gain = cam_get_gain();
+		io.msg(IO_WARN, "AndorCam::cam_set_gain() requested gain %g out of range [%d, %d]", 
+					 value, emgain_range[0], emgain_range[1]);
 	}
 	
 	{
@@ -587,7 +590,7 @@ void AndorCam::cam_set_gain_mode(const int mode) {
 		ret = SetEMGainMode((int) mode);
 	}
 	if (ret != DRV_SUCCESS)
-		io.msg(IO_ERR, "AndorCam::cam_set_gain() failed to set gain: %s", error_desc[ret].c_str());
+		io.msg(IO_ERR, "AndorCam::cam_set_gain() failed to set gain mode: %s", error_desc[ret].c_str());
 
 	// Also get new EM CCD gain range
 	cam_get_gain_range(&emgain_range[0], &emgain_range[1]);
@@ -603,7 +606,10 @@ double AndorCam::cam_get_gain() {
 	}
 	if (ret != DRV_SUCCESS)
 		io.msg(IO_ERR, "AndorCam::cam_get_gain() failed to get gain: %s", error_desc[ret].c_str());
-	
+
+	// Also get new EM CCD gain range
+	cam_get_gain_range(&emgain_range[0], &emgain_range[1]);
+
 	return (double) gain;
 }
 
