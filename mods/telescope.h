@@ -74,10 +74,10 @@ const string telescope_type = "telescope";
  - get gain: return Telescope::gain as <p> <i> <d>
  - set ccd_ang <ang>: Telescope::ccd_ang
  - get ccd_ang <ang>: Telescope::ccd_ang
- - get pixshift: return Telescope::c0 Telescope::c1 Telescope::sht0 Telescope::sht1
+ - get shifts: return Telescope::c0 Telescope::c1 Telescope::sht0 Telescope::sht1 Telescope::ctrl0 Telescope::ctrl1
  - get pix2shiftstr: return coordinate conversion formula.
- - get tt_vec: return Telescope::c0 Telescope::c1
- - set tt_vec: set Telescope::c0 Telescope::c1
+ - get tel_track: return Telescope::telpos
+ - get tel_units: return Telescope::tel_units
  
 */
 class Telescope: public foam::Device {
@@ -85,11 +85,14 @@ protected:
 	pthread::thread tel_thr;			//!< Telescope handler thread
 	void tel_handler();						//!< Handler thread that takes care of converting input shifts to tracking the telescope correctly
 
+	float c0;								//!< Input offset (arbitary units, most likely pixels)
+	float c1;								//!< Input offset (arbitary units, most likely pixels)	
+
 	float sht0;							//!< Output shift, scaled and rotated
 	float sht1;							//!< Output shift, scaled and rotated
 	
-	float c0;								//!< Input offset (arbitary units, most likely pixels)
-	float c1;								//!< Input offset (arbitary units, most likely pixels)	
+	float ctrl0;						//!< Final control coordinates for telescope
+	float ctrl1;						//!< Final control coordinates for telescope
 
 public:
 	Telescope(Io &io, foamctrl *const ptc, const string name, const string type, const string port, Path const &conffile, const bool online=true);

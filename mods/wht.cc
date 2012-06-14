@@ -42,7 +42,7 @@ using namespace std;
 WHT::WHT(Io &io, foamctrl *const ptc, const string name, const string port, Path const &conffile, const bool online):
 Telescope(io, ptc, name, wht_type, port, conffile, online),
 wht_ctrl(NULL), sport(""),
-alt_fac(1), delay(1.0)
+altfac(-1), delay(1.0)
 {
 	io.msg(IO_DEB2, "WHT::WHT()");
 	
@@ -59,7 +59,7 @@ alt_fac(1), delay(1.0)
 		track_file = cfg.getstring("track_file", "/TCSStatus/TCSStatusExPo");
 		
 		// Altitude factor, 1 or -1
-		alt_fac = cfg.getstring("alt_fac", -1);
+		altfac = cfg.getint("altfac", -1);
 
 	}
 
@@ -71,6 +71,8 @@ alt_fac(1), delay(1.0)
 	wht_cfg_thr.create(sigc::mem_fun(*this, &WHT::wht_updater));
 
 	add_cmd("get trackurl");
+	add_cmd("get altfac");
+	add_cmd("set altfac");
 
 	// Open serial port connection
 	//wht_ctrl = new serial::port(sport, B9600, 0, '\r');
@@ -180,11 +182,11 @@ int WHT::update_telescope_track(const float sht0, const float sht1) {
 	// For ExPo:
 	// az = 50 - 0.01 * [ x * sin( (45-ele) * pi/180 ) + y * cos( (45-e) * pi/180 ) ]
 	// ele = 50 + 0.01 * [ y * sin( (45-ele) * pi/180 ) - x * cos( (45-e) * pi/180 ) ]
-	float d_ele = 50 + (gain_p * (sht0 * cos(alt_fac * telpos[0]) - sht1 * sin(alt_fac * telpos[0])));
-	float d_alt = 50 + (gain_p * (sht0 * sin(alt_fac * telpos[0]) + sht1 * cos(alt_fac * telpos[0])));
+	ctrl0 = 50 + (gain.p * (sht0 * cos(altfac * telpos[0]) - sht1 * sin(altfac * telpos[0])));
+	ctrl1 = 50 + (gain.p * (sht0 * sin(altfac * telpos[0]) + sht1 * cos(altfac * telpos[0])));
 	
 	// Send control command to telescope
-	io.msg(IO_XNFO, "WHT::update_telescope_track(): sending (%g, %g)", d_ele, d_alt);
+	io.msg(IO_XNFO, "WHT::update_telescope_track(): sending (%g, %g)", ctrl0, ctrl1);
 
 	//!< @todo Send control commands
 	//wht_ctrl.write()
@@ -203,12 +205,19 @@ void WHT::on_message(Connection *const conn, string line) {
 		if (what == "trackurl") {				// get trackurl
 			conn->addtag("trackurl");
 			conn->write("ok trackurl " +track_prot+"://"+track_host+":"+track_port+"/"+track_file);
+		} else if (what == "altfac") {	// get altfac - altitude correction factor
+			conn->addtag("altfac");
+			conn->write(format("ok altfac %d", altfac));
 		} else 
 			parsed = false;
 	} else if (command == "set") {
 		string what = popword(line);
 		
-		parsed = false;
+		if (what == "altfac") {					// set altfac <1,-1
+			conn->addtag("altfac");
+			altfac = popint(line);
+		} else
+			parsed = false;
 	} else {
 		parsed = false;
 	}

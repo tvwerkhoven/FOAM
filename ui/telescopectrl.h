@@ -40,17 +40,21 @@ using namespace std;
 class TelescopeCtrl: public DeviceCtrl {
 private:
 	
-	string tel_track_s;					//!< Telescope tracking position as string
-	string tel_units_s;					//!< Telescope tracking units as string
-	string tt_raw_s;						//!< Raw tip-tilt coordinates as string
-	string tt_conv_s;						//!< Converted tip-tilt coordinates as string
-	string tt_ctrl_s;						//!< Control tip-tilt coordinates as string
+	float tel_track[2];					//!< Telescope tracking position
+	string tel_units_s[2];			//!< Telescope tracking units as string
+	float tt_raw[2];						//!< Raw tip-tilt coordinates
+	float tt_conv[2];						//!< Converted tip-tilt coordinates
+	float tt_ctrl[2];						//!< Control tip-tilt coordinates
+	
+	float scalefac[2];					//!< Scalefactor for x,y shift
+	gain_t tt_gain;							//!< Tip-tilt gain control
+	int altfac;									//!< Altitude conversion factor
 
 public:
-	string get_tel_track_s() const { return tel_track_s; }
-	string get_tt_raw_s() const { return tt_raw_s; }
-	string get_tt_conv_s() const { return tt_conv_s; }
-	string get_tt_ctrl_s() const { return tt_ctrl_s; }
+	string get_tel_track_s() const { return format("%.3g, %.3g", tel_track[0], tel_track[1]); }
+	string get_tt_raw_s() const { return format("%.3g, %.3g", tt_raw[0], tt_raw[1]); }
+	string get_tt_conv_s() const { return format("%.3g, %.3g", tt_conv[0], tt_conv[1]); }
+	string get_tt_ctrl_s() const { return format("%.3g, %.3g", tt_ctrl[0], tt_ctrl[1]); }
 
 	// From DeviceCtrl::
 	virtual void on_message(string line);

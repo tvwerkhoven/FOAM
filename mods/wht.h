@@ -119,7 +119,7 @@ const string wht_type = "wht";
  - track_host: live WHT pointing host (whtics.roque.ing.iac.es)
  - track_port: live WHT pointing port (8001)
  - track_file: live WHT pointing file (/TCSStatus/TCSStatusExPo)
- - alt_fac: WHT::alt_fac 
+ - altfac: WHT::altfac 
  
  \section wht_netio Network commands
  
@@ -148,7 +148,7 @@ public:
 	WHT(Io &io, foamctrl *const ptc, const string name, const string port, Path const &conffile, const bool online=true);
 	~WHT();
 	
-	int	alt_fac;						//!< Factor to multiple alt with before rotation (i.e. rotate counter-clockwise if -1)
+	int	altfac;							//!< Factor to multiple alt with before rotation (i.e. rotate counter-clockwise if -1)
 	double delay;						//!< WHT info update period
 	std::map<string, string> wht_info; // Full WHT info from website
 		

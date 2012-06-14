@@ -39,10 +39,18 @@
 using namespace std;
 
 Telescope::Telescope(Io &io, foamctrl *const ptc, const string name, const string type, const string port, Path const &conffile, const bool online):
-Device(io, ptc, name, telescope_type + "." + type, port, conffile, online)
+Device(io, ptc, name, telescope_type + "." + type, port, conffile, online),
+c0(0), c1(0), sht0(0), sht1(0), ctrl0(0), ctrl1(0), ccd_ang(0), handler_p(0)
 {
 	io.msg(IO_DEB2, "Telescope::Telescope()");
 	
+	// Init static vars
+	telpos[0] = telpos[1] = 0;
+	telunits[0] = "ax0";
+	telunits[1] = "ax1";
+
+	gain.p = gain.i = gain.d = 0.0;
+
 	// Configure initial settings
 	{
 		scalefac[0] = cfg.getdouble("scalefac_0", 1e-2);
@@ -51,11 +59,6 @@ Device(io, ptc, name, telescope_type + "." + type, port, conffile, online)
 		ccd_ang = cfg.getdouble("ccd_ang", 0.0);
 		handler_p = cfg.getdouble("cadence", 1.0);
 	}
-	
-	// Init static vars
-	telpos[0] = telpos[1] = 0;
-	telunits[0] = "ax0";
-	telunits[1] = "ax1";
 
 	add_cmd("get scalefac");
 	add_cmd("set scalefac");
@@ -63,10 +66,8 @@ Device(io, ptc, name, telescope_type + "." + type, port, conffile, online)
 	add_cmd("set gain");
 	add_cmd("get ccd_ang");
 	add_cmd("set ccd_ang");
-	add_cmd("get pixshift");
+	add_cmd("get shifts");
 	add_cmd("get pix2shiftstr");
-	add_cmd("get tt_vec");
-	add_cmd("set tt_vec");
 	add_cmd("get tel_track");
 	add_cmd("get tel_units");
 
@@ -141,12 +142,13 @@ void Telescope::on_message(Connection *const conn, string line) {
 			conn->write(format("ok ccd_ang %g", ccd_ang));
 		} else if (what == "pixshift") {	// get pixshift - Give last known pixel shift
 			conn->addtag("pixshift");
-			conn->write(format("ok pixshift %g %g %g %g", c0, c1, sht0, sht1));
+			conn->write(format("ok pixshift %g %g", c0, c1));
+		} else if (what == "shifts") {		// get shifts - Give raw shifts, conv shifts, ctrl shifts
+			conn->addtag("shifts");
+			conn->write(format("ok shifts %g %g %g %g %g %g", c0, c1, sht0, sht1, ctrl0, ctrl1));
 		} else if (what == "pix2shiftstr") {		// get pix2shiftstr - Give conversion formula as string
 			conn->addtag("pix2shiftstr");
 			conn->write("ok pix2shiftstr scalefac[0] * c0 * <cos,sin>(ccd_ang * 180.0/M_PI) + scalefac[1] * c1 * <-sin,cos>(ccd_ang * 180.0/M_PI)");
-		} else if (what == "tt_vec") {		// get tt_vec
-			conn->write(format("ok tt_vec %g %g", c0, c1));
 		} else 
 			parsed = false;
 	} else if (command == "set") {
@@ -164,9 +166,6 @@ void Telescope::on_message(Connection *const conn, string line) {
 		} else if (what == "ccd_ang") {		// set ccd_ang <ang>
 			conn->addtag("ccd_ang");
 			ccd_ang = popdouble(line);
-		} else if (what == "tt_vec") {		// set tt_vec <c0> <c1>
-			c0 = popdouble(line);
-			c1 = popdouble(line);
 		} else
 			parsed = false;
 
