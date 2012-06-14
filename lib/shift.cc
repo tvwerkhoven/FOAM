@@ -34,7 +34,7 @@
 #include "shift.h"
 
 Shift::Shift(Io &io, const int nthr): 
-io(io), nworker(nthr), workid(0) 
+io(io), running(true), nworker(nthr), workid(0) 
 {
 	io.msg(IO_DEB2, "Shift::Shift()");
 	
@@ -53,6 +53,9 @@ io(io), nworker(nthr), workid(0)
 
 Shift::~Shift() {
 	io.msg(IO_DEB2, "Shift::~Shift()");
+	// Set running to false, broadcast to workers that they can stop
+	running = false;
+	work_cond.broadcast();
 }
 
 void Shift::_worker_func() {
@@ -65,7 +68,7 @@ void Shift::_worker_func() {
 	}
 	
 
-	while (true) {
+	while (running) {
 		{
 			pthread::mutexholder h1(&work_mutex);
 			{
@@ -82,7 +85,7 @@ void Shift::_worker_func() {
 			work_cond.wait(work_mutex);
 		}
 		
-		while (true) {
+		while (running) {
 			int myjob=0;
 			{
 				pthread::mutexholder h(&workpool.mutex);

@@ -73,6 +73,7 @@ public:
 	
 private:
 	Io &io;															//!< Message IO
+	bool running;												//!< Are we running?
 	
 	typedef struct jobinfo {
 		jobinfo() : bpp(-1), img(NULL), refimg(NULL), shifts(NULL), jobid(-1), done(-1) { }
