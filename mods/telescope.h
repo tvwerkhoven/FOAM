@@ -63,15 +63,15 @@ const string telescope_type = "telescope";
  
  - scalefac <s0> <s1>: Telescope::scalefac
  - rotation <ang>: Telescope::ccd_ang
- - gain <gain>: Telescope::gain
- - cadence <gain>: Telescope::handler_p
+ - ttgain <gain>: Telescope::ttgain
+ - cadence <delay>: Telescope::handler_p
  
  \section telescope_netio Network commands
  
  - set scalefac <s0> <s1>: Telescope::scalefac
  - get scalefac: return Telescope::scalefac as <s0> <s1>
- - set gain <p> <i> <d>: Telescope::gain
- - get gain: return Telescope::gain as <p> <i> <d>
+ - set ttgain <p> <i> <d>: Telescope::ttgain
+ - get ttgain: return Telescope::ttgain as <p> <i> <d>
  - set ccd_ang <ang>: Telescope::ccd_ang
  - get ccd_ang <ang>: Telescope::ccd_ang
  - get shifts: return Telescope::c0 Telescope::c1 Telescope::sht0 Telescope::sht1 Telescope::ctrl0 Telescope::ctrl1
@@ -101,7 +101,7 @@ public:
 	double telpos[2];				//!< Telescope position (e.g. alt/az)
 	string telunits[2];			//!< Telescope units
 	float scalefac[2];			//!< Scale factor for setup that converts input units to 1mm shift in primary focus
-	gain_t gain;						//!< Gain for tip-tilt offloading correction
+	gain_t ttgain;					//!< Gain for tip-tilt offloading correction
 	float ccd_ang;					//!< Rotation of CCD with respect to telescope restframe
 	
 	float handler_p;				//!< Handler update period (seconds)

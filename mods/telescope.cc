@@ -49,21 +49,21 @@ c0(0), c1(0), sht0(0), sht1(0), ctrl0(0), ctrl1(0), ccd_ang(0), handler_p(0)
 	telunits[0] = "ax0";
 	telunits[1] = "ax1";
 
-	gain.p = gain.i = gain.d = 0.0;
+	ttgain.p = ttgain.i = ttgain.d = 0.0;
 
 	// Configure initial settings
 	{
 		scalefac[0] = cfg.getdouble("scalefac_0", 1e-2);
 		scalefac[1] = cfg.getdouble("scalefac_1", 1e-2);
-		gain.p = cfg.getdouble("gain_p", 1.0);
+		ttgain.p = cfg.getdouble("ttgain_p", 1.0);
 		ccd_ang = cfg.getdouble("ccd_ang", 0.0);
 		handler_p = cfg.getdouble("cadence", 1.0);
 	}
 
 	add_cmd("get scalefac");
 	add_cmd("set scalefac");
-	add_cmd("get gain");
-	add_cmd("set gain");
+	add_cmd("get ttgain");
+	add_cmd("set ttgain");
 	add_cmd("get ccd_ang");
 	add_cmd("set ccd_ang");
 	add_cmd("get shifts");
@@ -132,9 +132,9 @@ void Telescope::on_message(Connection *const conn, string line) {
 		if (what == "scalefac") {					// get scalefac
 			conn->addtag("scalefac");
 			conn->write(format("ok scalefac %g %g", scalefac[0], scalefac[1]));
-		} else if (what == "gain") {			// get gain
-			conn->addtag("gain");
-  		conn->write(format("ok gain %g %g %g", gain.p, gain.i, gain.d));
+		} else if (what == "ttgain") {			// get ttgain
+			conn->addtag("ttgain");
+  		conn->write(format("ok ttgain %g %g %g", ttgain.p, ttgain.i, ttgain.d));
 		} else if (what == "tel_track") {	// get tel_track - Telescope tracking position
 			conn->write(format("ok tel_track %g %g", telpos[0], telpos[1]));
 		} else if (what == "tel_units") {	// get tel_units - Telescope tracking units
@@ -160,11 +160,11 @@ void Telescope::on_message(Connection *const conn, string line) {
 			conn->addtag("scalefac");
 			scalefac[0] = popdouble(line);
 			scalefac[1] = popdouble(line);
-		} else if (what == "gain") {			// set gain <p> <i> <d>
-			conn->addtag("gain");
-			gain.p = popdouble(line);
-			gain.i = popdouble(line);
-			gain.d = popdouble(line);
+		} else if (what == "ttgain") {			// set ttgain <p> <i> <d>
+			conn->addtag("ttgain");
+			ttgain.p = popdouble(line);
+			ttgain.i = popdouble(line);
+			ttgain.d = popdouble(line);
 		} else if (what == "ccd_ang") {		// set ccd_ang <ang>
 			conn->addtag("ccd_ang");
 			ccd_ang = popdouble(line);
