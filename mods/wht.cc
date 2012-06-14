@@ -151,8 +151,8 @@ int WHT::update_wht_coords(double *const alt, double *const az, double *const de
 		io.msg(IO_WARN, "WHT::update_wht_coords(): did not get alt/az information!");
 	} else {
 		// Set elevation, declination
-		float newalt = strtod(wht_info["ALT"].c_str(), NULL);
-		float newaz = strtod(wht_info["AZ"].c_str(), NULL);
+		double newalt = strtod(wht_info["ALT"].c_str(), NULL);
+		double newaz = strtod(wht_info["AZ"].c_str(), NULL);
 		if (newalt != *alt || newaz != *az) {
 			*alt = newalt;
 			*az = newaz;
