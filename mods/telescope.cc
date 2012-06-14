@@ -91,7 +91,9 @@ void Telescope::tel_handler() {
 		sht0 = scalefac[0] * c0 * cos(ccd_ang * 180.0/M_PI) - scalefac[1] * c1 * sin(ccd_ang * 180.0/M_PI);
 		sht1 = scalefac[0] * c0 * sin(ccd_ang * 180.0/M_PI) + scalefac[1] * c1 * cos(ccd_ang * 180.0/M_PI);
 		
-		io.msg(IO_DEB1, "Telescope::tel_handler() pix: (%g, %g) -> conv: (%g, %g)", c0, c1, sht0, sht1);
+		io.msg(IO_DEB1, "Telescope::tel_handler() (%g, %g) -> (%g, %g) -> (%g, %g)", 
+					 c0, c1, sht0, sht1, ctrl0, ctrl1);
+
 		update_telescope_track(sht0, sht1);
 
 		// Make sure each iteration takes at minimum handler_p seconds:

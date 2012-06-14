@@ -115,7 +115,7 @@ void WHT::wht_updater() {
 int WHT::update_wht_coords(double *const alt, double *const az, double *const delay) {
 	// Connect if necessary
 	if (!sock_track.is_connected()) {
-		io.msg(IO_DEB1, "WHT::update_wht_coords(): connecting to %s:%s...", track_host.c_str(), track_port.c_str());
+//		io.msg(IO_DEB1, "WHT::update_wht_coords(): connecting to %s:%s...", track_host.c_str(), track_port.c_str());
 		sock_track.connect(track_host, track_port);
 		sock_track.setblocking(false);
 	}
@@ -173,7 +173,7 @@ int WHT::update_wht_coords(double *const alt, double *const az, double *const de
 }
 
 int WHT::update_telescope_track(const float sht0, const float sht1) {
-	io.msg(IO_DEB1, "WHT::update_telescope_track(sht0=%g, sht1=%g)", sht0, sht1);
+//	io.msg(IO_DEB1, "WHT::update_telescope_track(sht0=%g, sht1=%g)", sht0, sht1);
 	
 	// We have shift in the focal plane, convert to WHT axis by rotation:
 	// General:
@@ -186,7 +186,7 @@ int WHT::update_telescope_track(const float sht0, const float sht1) {
 	ctrl1 = 50 + (gain.p * (sht0 * sin(altfac * telpos[0]) + sht1 * cos(altfac * telpos[0])));
 	
 	// Send control command to telescope
-	io.msg(IO_XNFO, "WHT::update_telescope_track(): sending (%g, %g)", ctrl0, ctrl1);
+//	io.msg(IO_XNFO, "WHT::update_telescope_track(): sending (%g, %g)", ctrl0, ctrl1);
 
 	//!< @todo Send control commands
 	//wht_ctrl.write()
