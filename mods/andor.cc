@@ -519,6 +519,11 @@ void AndorCam::cam_set_exposure(const double value) {
 }
 
 double AndorCam::cam_get_exposure() {
+	cam_get_timings();
+	return exposure;
+}
+
+void AndorCam::cam_get_timings() {
 	int ret=0;
 	float exp=0, acc=0, kin=0;
 	{
@@ -527,11 +532,11 @@ double AndorCam::cam_get_exposure() {
 	}
 	
 	if (ret != DRV_SUCCESS) {
-		io.msg(IO_ERR, "AndorCam::cam_get_exposure() failed to get exposure: %s", error_desc[ret].c_str());
+		io.msg(IO_ERR, "AndorCam::cam_get_timings() failed to get timings: %s", error_desc[ret].c_str());
 	} else {
 		exposure = (double) exp;
+		interval = (double) kin;
 	}
-	return exposure;
 }
 
 void AndorCam::cam_set_interval(const double value) {
@@ -547,18 +552,7 @@ void AndorCam::cam_set_interval(const double value) {
 }
 
 double AndorCam::cam_get_interval() {
-	int ret=0;
-	float exp=0, acc=0, kin=0;
-	{
-		pthread::mutexholder h(&cam_mutex);
-		ret = GetAcquisitionTimings(&exp, &acc, &kin);
-	}
-	
-	if (ret != DRV_SUCCESS) {
-		io.msg(IO_ERR, "AndorCam::cam_get_interval() failed to get kinetic cycle time: %s", error_desc[ret].c_str());
-	} else {
-		interval = (double) kin;
-	}
+	cam_get_timings();
 	return interval;
 }
 

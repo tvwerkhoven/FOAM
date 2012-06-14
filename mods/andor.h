@@ -112,7 +112,10 @@ private:
 	
 	void cam_set_shift_speed(const int hs, const int vs, const int vamp); //!< Set horizontal and vertical shift speed and vertical shift amplitude.
 	
-		
+	/*! @brief Get acquisition timings from Andor camera: exposure, accumulate and kinetic cycle time
+	 */
+	void cam_get_timings();
+	
 public:
 	AndorCam(Io &io, foamctrl *const ptc, const string name, const string port, Path const &conffile, const bool online=true);
 	~AndorCam();
