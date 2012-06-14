@@ -160,14 +160,20 @@ void Telescope::on_message(Connection *const conn, string line) {
 			conn->addtag("scalefac");
 			scalefac[0] = popdouble(line);
 			scalefac[1] = popdouble(line);
+			conn->addtag("scalefac");
+			conn->write(format("ok scalefac %g %g", scalefac[0], scalefac[1]));
 		} else if (what == "ttgain") {			// set ttgain <p> <i> <d>
 			conn->addtag("ttgain");
 			ttgain.p = popdouble(line);
 			ttgain.i = popdouble(line);
 			ttgain.d = popdouble(line);
+			conn->addtag("ttgain");
+  		conn->write(format("ok ttgain %g %g %g", ttgain.p, ttgain.i, ttgain.d));
 		} else if (what == "ccd_ang") {		// set ccd_ang <ang>
 			conn->addtag("ccd_ang");
 			ccd_ang = popdouble(line);
+			conn->addtag("ccd_ang");
+			conn->write(format("ok ccd_ang %g", ccd_ang));
 		} else
 			parsed = false;
 
