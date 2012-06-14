@@ -181,7 +181,7 @@ void Shift::_calc_cog(const uint16_t *img, const coord_t &res, const vector_t &c
 }
 
 bool Shift::calc_shifts(const uint8_t *img, const coord_t res, const std::vector<vector_t> &crops, gsl_vector_float *shifts, const method_t method, const bool wait, const uint8_t mini) {
-	io.msg(IO_DEB2, "Shift::calc_shifts(uint8_t)");
+//	io.msg(IO_DEB2, "Shift::calc_shifts(uint8_t)");
 	
 	// Setup work parameters
 	workpool.method = method;
@@ -214,7 +214,7 @@ bool Shift::calc_shifts(const uint8_t *img, const coord_t res, const std::vector
 }
 
 bool Shift::calc_shifts(const uint16_t *img, const coord_t res, const std::vector<vector_t> &crops, gsl_vector_float *shifts, const method_t method, const bool wait, const uint16_t mini) {
-	io.msg(IO_DEB2, "Shift::calc_shifts(uint16_t)");
+//	io.msg(IO_DEB2, "Shift::calc_shifts(uint16_t)");
 	
 	// Setup work parameters
 	workpool.method = method;

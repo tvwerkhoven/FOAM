@@ -93,7 +93,7 @@ string Wfc::ctrl_as_str(const char *fmt) const {
 int Wfc::ctrl_apply_actmap() {
 	// If we don't use act_map, ctrl_vec already points to target and we're done
 	if (!use_actmap) {
-		io.msg(IO_DEB2, "Wfc::ctrl_apply_actmap() no act_map");
+//		io.msg(IO_DEB2, "Wfc::ctrl_apply_actmap() no act_map");
 		return 0;
 	}
 	string ctrl_str;
@@ -101,15 +101,15 @@ int Wfc::ctrl_apply_actmap() {
 	// Loop over all virtual actuators in 'actmap'
 	for (size_t v_act=0; v_act<actmap.size(); v_act++) {
 		float ctrl_val = gsl_vector_float_get(ctrlparams.target, v_act);
-		ctrl_str += format("%d (%g) -> ", v_act, ctrl_val);
+//		ctrl_str += format("%d (%g) -> ", v_act, ctrl_val);
 		// Map over all real actuators associated with virtual actuator 'v_act'
 		for (size_t r_act=0; r_act<actmap.at(v_act).size(); r_act++) {
 			// Set real actuator 'r_act' to value of 'v_act'
 			gsl_vector_float_set(ctrlparams.ctrl_vec, actmap.at(v_act).at(r_act), ctrl_val);
-			ctrl_str += format("%d ", actmap.at(v_act).at(r_act));
+//			ctrl_str += format("%d ", actmap.at(v_act).at(r_act));
 		}
 	}
-	io.msg(IO_DEB2, "Wfc::ctrl_apply_actmap() %s", ctrl_str.c_str());
+//	io.msg(IO_DEB2, "Wfc::ctrl_apply_actmap() %s", ctrl_str.c_str());
 
 	return 0;
 }
@@ -281,12 +281,15 @@ void Wfc::parse_waffle(string &odd, string &even) {
 	string thisact;
 	size_t thisact_i=0;
 	
+	string odd_act_l = "";
+	string even_act_l = "";
+	
 	while (odd.size() > 0) {
 		thisact = popword(odd, " \t\n,");
 		thisact_i = strtol(thisact.c_str(), (char **) NULL, 10);
 		if (thisact_i >= 0 && thisact_i <= real_nact) {
 			waffle_odd.push_back(thisact_i);
-			io.msg(IO_DEB2, "Wfc::parse_waffle(odd) add %d", thisact_i);
+			odd_act_l += format(" %d", thisact_i);
 		}
 		else
 			break;
@@ -297,11 +300,15 @@ void Wfc::parse_waffle(string &odd, string &even) {
 		thisact_i = strtol(thisact.c_str(), (char **) NULL, 10);
 		if (thisact_i >= 0 && thisact_i <= real_nact) {
 			waffle_even.push_back(thisact_i);
-			io.msg(IO_DEB2, "Wfc::parse_waffle(even) add %d", thisact_i);
+			even_act_l += format(" %d", thisact_i);
 		}
 		else
 			break;
 	}
+	
+	io.msg(IO_DEB2, "Wfc::parse_waffle() odd = %s", odd_act_l);
+	io.msg(IO_DEB2, "Wfc::parse_waffle() even = %s", even_act_l);
+
 	
 	have_waffle = true;
 }
