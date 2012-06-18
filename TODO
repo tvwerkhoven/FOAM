@@ -6,7 +6,7 @@ Main Todo Items
 - Add 'clear mla' or 'show MLA pattern' toggler
 - 'Shutdown' does not work in closed loop
 - When stopping camera in open/closed loop, the loop cannot finish because it waits for the camera
-- check new perflog
+- check new perflog -> done
 - check WHT tip-tilt branch -> done
 
 
