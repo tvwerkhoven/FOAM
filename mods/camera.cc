@@ -28,6 +28,7 @@
 #define _XOPEN_SOURCE 600	// for posix_fadvise()
 #endif
 #include <fcntl.h>
+#include <fitsio.h>
 
 #include "io.h"
 #include "utils.h"
@@ -41,7 +42,7 @@ using namespace std;
 
 Camera::Camera(Io &io, foamctrl *const ptc, const string name, const string type, const string port, Path const &conffile, const bool online):
 Device(io, ptc, name, cam_type + "." + type, port, conffile, online),
-nframes(8), count(0), timeouts(0), ndark(10), nflat(10), 
+do_proc(true), nframes(-1), count(0), timeouts(0), ndark(10), nflat(10), 
 darkexp(1.0), flatexp(1.0),
 interval(1.0), exposure(1.0), gain(1.0), offset(0.0), 
 res(0,0), depth(-1),
@@ -78,8 +79,8 @@ fits_telescope("undef"), fits_observer("undef"), fits_instrument("undef"), fits_
 	add_cmd("flat");
 //	add_cmd("statistics");
 	
-	// Set buffer size (default 8 frames)
-	nframes = cfg.getint("nframes", 8);
+	// Set buffer size (default 32 frames)
+	nframes = cfg.getint("nframes", 32);
 	frames = new frame_t[nframes];
 	
 	// Set number of darks & flats to take (default 10)
@@ -97,8 +98,8 @@ fits_telescope("undef"), fits_observer("undef"), fits_instrument("undef"), fits_
 	res.x = cfg.getint("width", 768);
 	depth = cfg.getint("depth", 8);
 
-	//io.msg(IO_XNFO, "Camera::Camera(): %dx%dx%d, exp:%g, int:%g, gain:%g, off:%g",
-	//			 res.x, res.y, depth, exposure, interval, gain, offset);
+//	io.msg(IO_XNFO, "Camera::Camera(): %dx%dx%d, exp:%g, int:%g, gain:%g, off:%g",
+//				 res.x, res.y, depth, exposure, interval, gain, offset);
 	
 	// Set output dir because this class might store files.
 	set_outputdir("");
@@ -128,184 +129,179 @@ void Camera::cam_proc() {
 		// Always wait for proc_cond broadcasts
 		{
 			pthread::mutexholder h(&proc_mutex);
-			io.msg(IO_DEB2, "Camera::cam_proc() waiting...");
 			proc_cond.wait(proc_mutex);
 		}
 		
-		// Lock cam_mut before handling the data
+		// Lock cam_mutex before handling the data
 		pthread::mutexholder h(&cam_mutex);
 		
 		// There is a new frame ready now, process it
 		frame = get_last_frame();
-		
-		calculate_stats(frame);
-
+		if (do_proc)
+			calculate_stats(frame);
+		 
 		if (nstore == -1 || nstore > 0) {
-			io.msg(IO_DEB2, "Camera::cam_proc() nstore=%d", nstore);
-			if (store_frame(frame)) {
+//			io.msg(IO_DEB2, "Camera::cam_proc() nstore=%d", nstore);
+			int status=store_frame(frame);
+			if (!status) {
 				nstore--;
-				netio.broadcast(format("ok store %d", nstore), "store");
-				io.msg(IO_DEB2, "Camera::cam_proc() nstore--", nstore);
+				net_broadcast(format("ok store %d", nstore), "store");
+//				io.msg(IO_DEB2, "Camera::cam_proc() nstore--", nstore);
+			} else {
+				net_broadcast(format("error storing frame: %d", status), "store");
+				io.msg(IO_ERR, "Camera::cam_proc() fits store error: %d", status);
 			}
 		}
-		
+
 		// Flag frame as processed
 		frame->proc = true;
-		
+
 		// Notify all threads waiting for new frames now
 		cam_cond.broadcast();
 	}
 }
 
-void Camera::fits_init_phdu(char *const phdu) const {
-	memset(phdu, ' ', 2880);
+int Camera::fits_add_card(fitsfile *fptr, string key, string value, string comment) const {
+	int status=0;
+	char hdr_val[FLEN_CARD], hdr_comm[FLEN_CARD];
+	snprintf(hdr_val, FLEN_CARD, "%s", value.c_str());
+	snprintf(hdr_comm, FLEN_CARD, "%s", comment.c_str());
+	
+//	fits_update_key(fptr, TSTRING, "MAXVAL", hdr_str, "Maximum data value", &status);
+	fits_update_key(fptr, TSTRING, key.c_str(), hdr_val, hdr_comm, &status);
+	return status;
 }
 
-bool Camera::fits_add_card(char *phdu, const string &key, const string &value) const {
-	int i;
+int Camera::store_frame(const frame_t *const frame) const {
+//	if (depth != 8 && depth != 16) {
+//		io.msg(IO_WARN, "Camera::store_frame() Only 8 and 16 bit images supported!");
+//		return false;
+//	}
 	
-	for(i = 0; i < 36; i++) {
-		if(*phdu == ' ' || *phdu == '\0')
-			break;
-		phdu += 80;
-	}
-	
-	if(i >= 36)
-		return false;
-	
-	memcpy(phdu, key.data(), key.size() < 8 ? key.size() : 8);
-	
-	if(value.size()) {
-		phdu[8] = '=';
-		memcpy(phdu + 10, value.data(), value.size() < 70 ? value.size() : 70);
-	}
-	
-	return true;
-}
-
-bool Camera::fits_add_comment(char *phdu, const string &comment) const {
-	int i;
-	
-	for(i = 0; i < 35; i++) {
-		if(*phdu == ' ' || *phdu == '\0')
-			break;
-		phdu += 80;
-	}
-	
-	if(i >= 35)
-		return false;
-	
-	memcpy(phdu, "COMMENT", 7);
-	memcpy(phdu + 10, comment.data(), comment.size() < 70 ? comment.size() : 70);
-	
-	return true;
-}
-
-bool Camera::store_frame(const frame_t *const frame) const {
 	// Generate path to store file to, based on filenamebase
-	if (depth != 8 && depth != 16) {
-		io.msg(IO_WARN, "Camera::store_frame() Only 8 and 16 bit images supported!");
-		return false;
-	}
-	
 	Path filename = makename();
 	io.msg(IO_DEB1, "Camera::store_frame(%p) to %s", frame, filename.c_str());
 	
-	// Open file
-	int fd = open(filename.c_str(), O_WRONLY | O_CREAT | O_EXCL, 0644);
-	if (fd < 0)
-		return io.msg(IO_ERR, "Camera::store_frame() Error opening file!");
-	
-	// Get time & date
-	struct timeval tv;
-	struct tm tm;
-	gettimeofday(&tv, 0);
-	gmtime_r(&tv.tv_sec, &tm);
-	string date = format("%04d-%02d-%02dT%02d:%02d:%02d", 1900 + tm.tm_year, 1 + tm.tm_mon, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
-	
-	// Init FITS header unit
-	char phdu[2880];
-	
-	fits_init_phdu(phdu);
-	
-	// Add datatype <http://www.eso.org/sci/data-processing/software/esomidas//doc/user/98NOV/vola/node112.html>
-	fits_add_card(phdu, "SIMPLE", "T");
-	if (depth == 16)
-		fits_add_card(phdu, "BITPIX", "16");
-	else
-		fits_add_card(phdu, "BITPIX", "8");
-		
-	// Add rest of the metadata
-	fits_add_card(phdu, "NAXIS", "2");
-	fits_add_card(phdu, "NAXIS1", format("%d", res.x));
-	fits_add_card(phdu, "NAXIS2", format("%d", res.y));
-	
-	fits_add_card(phdu, "ORIGIN", "FOAM Camera");
-	fits_add_card(phdu, "DEVICE", name);
-	fits_add_card(phdu, "TELESCOPE", fits_telescope);
-	fits_add_card(phdu, "INSTRUMENT", fits_instrument);
-	fits_add_card(phdu, "DATE", date);
-	fits_add_card(phdu, "OBSERVER", fits_observer);
-	fits_add_card(phdu, "EXPTIME", format("%lf / [s]", exposure));
-	fits_add_card(phdu, "INTERVAL", format("%lf / [s]", interval));
-	fits_add_card(phdu, "GAIN", format("%lf", gain));
-	fits_add_card(phdu, "OFFSET", format("%lf", offset));
+	fitsfile *fptr;
+  int status = 0, naxis = 2;
+  long fpixel = 1, nelements = -1;
+  long naxes[naxis];
+	nelements = frame->npixels;
+  naxes[0] = frame->res.x; naxes[1] = frame->res.y;
 
-	string comments = fits_comments;
+	// Open file
+	fits_create_file(&fptr, filename.c_str(), &status);
+	if (status) return status;
 	
-	while(true) {
-		string comment = popword(comments, ";");
-		if(comment.empty())
-			break;
-		fits_add_comment(phdu, comment);
+	// Get filedatatype parameters
+	int ftype=0, dtype=0;
+	if (frame->depth <= 8) {
+		ftype = BYTE_IMG; dtype = TBYTE;
+		io.msg(IO_DEB1, "Camera::store_frame() BYTE_IMG TBYTE");
+	} else if (frame->depth <= 16) {
+		ftype = USHORT_IMG; dtype = TUSHORT;
+		io.msg(IO_DEB1, "Camera::store_frame() SHORT_IMG TUSHORT");
+	} else if (frame->depth <= 32) {
+		ftype = ULONG_IMG; dtype = TUINT;
+		io.msg(IO_DEB1, "Camera::store_frame() LONG_IMG TUINT");
+	} else {
+		io.msg(IO_ERR, "Camera::store_frame() saving 32+ bit data not supported");
+		return OVERFLOW_ERR;
 	}
 	
-	fits_add_card(phdu, "END", "");
+	// Create image 
+	fits_create_img(fptr, ftype, naxis, naxes, &status);
+	if (status) return status;
 	
-#ifdef LINUX
-	posix_fadvise(fd, 0, (res.x * res.y * depth/8) + sizeof phdu, POSIX_FADV_DONTNEED); 
-#endif
-	ssize_t ret = write(fd, phdu, sizeof phdu);
-	ret += write(fd, frame->image, res.x * res.y * depth/8);
-	close(fd);
-	if (ret != (ssize_t) sizeof phdu + (res.x * res.y * depth/8))
-		return io.msg(IO_ERR, "Camera::store_frame() Writing failed!");
+	// Write header: http://heasarc.gsfc.nasa.gov/docs/software/fitsio/c/c_user/node39.html
 	
-	return true;
+	// Write a keyword; must pass the ADDRESS of the value
+	fits_write_date(fptr, &status);
+
+	if (frame->min < frame->max) {
+		fits_add_card(fptr, "MAXVAL", format("%d", frame->max), "Max data value");
+		fits_add_card(fptr, "MINVAL", format("%d", frame->min), "Min data value");
+	}
+	if (frame->avg != frame->rms) {
+		fits_add_card(fptr, "AVG", format("%lf", frame->avg), "Average data value");
+		fits_add_card(fptr, "RMS", format("%lf", frame->rms), "Data root mean square");
+	}
+	
+	fits_add_card(fptr, "ORIGIN", PACKAGE_NAME " -- " PACKAGE_VERSION);
+	fits_add_card(fptr, "DEVNAME", name, "FOAM device name");
+	fits_add_card(fptr, "DEVTYPE", type, "FOAM device type");
+	fits_add_card(fptr, "TELESCOPE", fits_telescope);
+	fits_add_card(fptr, "INSTRUMENT", fits_instrument);
+	fits_add_card(fptr, "OBSERVER", fits_observer);
+	fits_add_card(fptr, "TARGET", fits_target);
+	fits_add_card(fptr, "EXPTIME", format("%lf", exposure), "[s] Exposure time");
+	fits_add_card(fptr, "INTERVAL", format("%lf", interval), "[s] Frame cadence");
+	fits_add_card(fptr, "GAIN", format("%lf", gain));
+	fits_add_card(fptr, "OFFSET", format("%lf", offset));
+	if (status) return status;
+	
+	fits_write_comment(fptr, fits_comments.c_str(), &status);
+	if (status) return status;
+
+	// Write the array of integers to the image
+	if (frame->depth <= 8) {
+		fits_write_img(fptr, dtype, fpixel, nelements, (uint8_t *) frame->image, &status);
+	} else if (frame->depth <= 16) {
+		fits_write_img(fptr, dtype, fpixel, nelements, (uint16_t *) frame->image, &status);
+	} else if (frame->depth <= 32) {
+		fits_write_img(fptr, dtype, fpixel, nelements, (uint32_t *) frame->image, &status);
+	} else if (frame->depth <= 64) {
+		fits_write_img(fptr, dtype, fpixel, nelements, (uint64_t *) frame->image, &status);
+	}
+	if (status) return status;
+	
+	// Close file
+	fits_close_file(fptr, &status);
+	if (status) return status;
+	
+	return 0;
 }
 
 void Camera::calculate_stats(frame_t *const frame) const {
-	memset(frame->histo, 0, get_maxval() * sizeof *frame->histo);
+	size_t thismaxval = get_maxval();
+	memset(frame->histo, 0, thismaxval * sizeof *frame->histo);
 	
+	double sum = 0;
+	double sumsquared = 0;
+
 	if(depth <= 8) {
 		uint8_t *image = (uint8_t *)frame->image;
 		for(size_t i = 0; i < (size_t) res.x * res.y; i++) {
 			frame->histo[image[i]]++;
+			sum += image[i];
+			sumsquared += (image[i] * image[i]);
 			if (image[i] > frame->max) frame->max = image[i];
-			if (image[i] < frame->min) frame->min = image[i];
+			else if (image[i] < frame->min) frame->min = image[i];
 		}
 	} else {
 		uint16_t *image = (uint16_t *)frame->image;
 		for(size_t i = 0; i < (size_t) res.x * res.y; i++) {
 			frame->histo[image[i]]++;
+			sum += image[i];
+			sumsquared += (image[i] * image[i]);
 			if (image[i] > frame->max) frame->max = image[i];
-			if (image[i] < frame->min) frame->min = image[i];
+			else if (image[i] < frame->min) frame->min = image[i];
 		}
 	}
+
+//	sum=0;
+//	sumsquared=0;
+//! @bug This code is extremely slow! Why?
+//	for(size_t i = 0; i < thismaxval; i++) {
+//		sum += (double)i * frame->histo[i];
+//		sumsquared += (double)(i * i) * frame->histo[i];
+//	}
 	
-	double sum = 0;
-	double sumsquared = 0;
+//	sum /= res.x * res.y;
+//	sumsquared /= res.x * res.y;
 	
-	for(size_t i = 0; i < get_maxval(); i++) {
-		sum += (double)i * frame->histo[i];
-		sumsquared += (double)(i * i) * frame->histo[i];
-	}
-	
-	sum /= res.x * res.y;
-	sumsquared /= res.x * res.y;
-	
-	frame->avg = sum;
-	frame->rms = sqrt(sumsquared - sum * sum) / sum;
+	frame->avg = sum / (res.x * res.y);
+	frame->rms = sqrt((sumsquared/(res.x * res.y)) - frame->avg * frame->avg) / frame->avg;
 }
 
 void *Camera::cam_queue(void * const data, void * const image, struct timeval *const tv) {
@@ -318,7 +314,15 @@ void *Camera::cam_queue(void * const data, void * const image, struct timeval *c
 	frame->data = data;
 	frame->image = image;
 	frame->id = count++;
-	frame->size = res.x * res.y * depth/8;
+
+	frame->res = res;
+	frame->depth = conv_depth(depth);
+	frame->npixels = res.x * res.y;
+	// Depth should be ceil'ed to the nearest 8 multiple, because 'depth' could
+	// also be 14 or 12 bits in which case 'size' would be wrong.
+	//! @todo Need to distinguish between data bitdepth and camera bitdepth
+	// Use depth/8, remember depth is in bits, size in bytes
+	frame->size = frame->npixels * frame->depth/8;
 	
 	if(!frame->histo)
 		frame->histo = new uint32_t[get_maxval()];
@@ -497,40 +501,40 @@ void Camera::on_message(Connection *const conn, string line) {
 
 double Camera::set_exposure(const double value) {	
 	cam_set_exposure(value);
-	netio.broadcast(format("ok exposure %lf", exposure), "exposure");
+	net_broadcast(format("ok exposure %lf", exposure), "exposure");
 	set_calib(false);
 	return exposure;
 }
 
 double Camera::set_interval(const double value) {
 	cam_set_interval(value);
-	netio.broadcast(format("ok interval %lf", interval), "interval");
+	net_broadcast(format("ok interval %lf", interval), "interval");
 	return interval;
 }
 
 double Camera::set_gain(const double value) {
 	cam_set_gain(value);
-	netio.broadcast(format("ok gain %lf", gain), "gain");
+	net_broadcast(format("ok gain %lf", gain), "gain");
 	set_calib(false);
 	return gain;
 }
 
 double Camera::set_offset(const double value) {
 	cam_set_offset(value);
-	netio.broadcast(format("ok offset %lf", offset), "offset");
+	net_broadcast(format("ok offset %lf", offset), "offset");
 	set_calib(false);
 	return offset;
 }
 
 Camera::mode_t Camera::set_mode(const mode_t value) {
 	cam_set_mode(value);
-	netio.broadcast("ok mode " + mode2str(mode), "mode");
+	net_broadcast("ok mode " + mode2str(mode), "mode");
 	return mode;
 }
 
 int Camera::set_store(const int n) {
 	nstore = n;
-	netio.broadcast(format("ok store %d", nstore), "store");
+	net_broadcast(format("ok store %d", nstore), "store");
 	return nstore;	
 }
 
@@ -562,7 +566,7 @@ string Camera::set_fits_comments(const string val) {
 
 string Camera::set_filename(const string value) {
 	filenamebase = value;
-	netio.broadcast("ok filename :" + filenamebase, "filename");
+	net_broadcast("ok filename :" + filenamebase, "filename");
 	return filenamebase;
 }
 
@@ -640,12 +644,12 @@ void Camera::grab(Connection *conn, int x1, int y1, int x2, int y2, int scale = 
 //	bool dxt1 = false;
 	void *buffer;
 	size_t size = (y2 - y1) * (x2 - x1) * (depth <= 8 ? 1 : 2);
-	uint16_t maxval = get_maxval();
-	uint8_t lookup[maxval];
-	for(int i = 0; i < maxval / 2; i++)
-		lookup[i] = pow(i, 7.0 / (depth - 1));
-	for(int i = maxval / 2; i < maxval; i++)
-		lookup[i] = 128 + pow(i - maxval / 2, 7.0 / (depth - 1));
+//	uint16_t maxval = get_maxval();
+//	uint8_t lookup[maxval];
+//	for(int i = 0; i < maxval / 2; i++)
+//		lookup[i] = pow(i, 7.0 / (depth - 1));
+//	for(int i = maxval / 2; i < maxval; i++)
+//		lookup[i] = 128 + pow(i - maxval / 2, 7.0 / (depth - 1));
 	
 	{
 		//! @todo locks frame when sending over network?
@@ -710,7 +714,7 @@ void Camera::grab(Connection *conn, int x1, int y1, int x2, int y2, int scale = 
 		
 	finish:
 		if(f->histo && do_histo)
-			conn->write(f->histo, sizeof *f->histo * maxval);
+			conn->write(f->histo, sizeof *f->histo * get_maxval());
 	}
 }
 
@@ -773,7 +777,7 @@ int Camera::darkburst(size_t bcount) {
 	dark.data = dark.image;
 	
 	io.msg(IO_DEB1, "Got new dark.");
-	netio.broadcast(format("ok dark %d", nflat));
+	net_broadcast(format("ok dark %d", nflat));
 	
 	set_mode(OFF);
 	return 0;
@@ -812,7 +816,7 @@ int Camera::flatburst(size_t bcount) {
 	flat.data = flat.image;
 	
 	io.msg(IO_DEB1, "Got new flat.");
-	netio.broadcast(format("ok flat %d", nflat));
+	net_broadcast(format("ok flat %d", nflat));
 	
 	set_mode(OFF);
 	return 0;

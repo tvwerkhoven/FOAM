@@ -28,65 +28,13 @@
 #include "foamtypes.h"
 
 using namespace Gtk;
+using namespace std;
 
-FoamControl::FoamControl(Log &log, int argc, char *argv[]): 
+FoamControl::FoamControl(Log &log, string &conf, string &exec): 
 log(log),
-execname(""), conffile(""),
+conffile(conf), execname(exec),
 ok(false), errormsg("Not connected") {
 	log.term(format("%s", __PRETTY_FUNCTION__));
-	if (parse_args(argc, argv))
-		exit(-1);
-}
-
-void FoamControl::show_version() {
-	printf("FOAM Control (%s version %s, built %s %s)\n", PACKAGE_NAME, PACKAGE_VERSION, __DATE__, __TIME__);
-	printf("Copyright (c) 2007--2011 %s\n", PACKAGE_BUGREPORT);
-	printf("\nFOAM Control comes with ABSOLUTELY NO WARRANTY. This is free software,\n"
-				 "and you are welcome to redistribute it under certain conditions;\n"
-				 "see the file COPYING for details.\n");
-}
-
-void FoamControl::show_clihelp(const bool error) {
-	if(error)
-		fprintf(stderr, "Try '%s --help' for more information.\n", execname.c_str());
-	else {
-		printf("Usage: %s [option]...\n\n", execname.c_str());
-		printf("  -c, --config=FILE    Read configuration from FILE.\n"
-					 "  -h, --help           Display this help message.\n"
-					 "      --version        Display version information.\n\n");
-		printf("Report bugs to %s.\n", PACKAGE_BUGREPORT);
-	}
-}
-
-int FoamControl::parse_args(int argc, char *argv[]) {
-	int r, option_index = 0;
-	
-	static struct option const long_options[] = {
-		{"config", required_argument, NULL, 'c'},
-		{"help", no_argument, NULL, 'h'},
-		{"version", no_argument, NULL, 1},
-		{NULL, 0, NULL, 0}
-	};
-	
-	while((r = getopt_long(argc, argv, "c:h", long_options, &option_index)) != EOF) {
-		switch(r) {
-			case 0:
-				break;
-			case 'c':												// Configuration file
-				conffile = string(optarg);
-				break;
-			case 1:													// Version info
-				show_version();
-				return -1;
-			case '?':												// Help
-			case 'h':												// Help
-			default:
-				show_clihelp();
-				return -1;
-		}
-	}
-	
-	return 0;
 }
 
 int FoamControl::connect(const string &h, const string &p) {
@@ -174,13 +122,19 @@ void FoamControl::on_message(string line) {
 
 	state.lastreply = line;
 	
+	// The first word is the prefix. This should be the status, or it can be a device name in which case we ignore it.
 	string stat = popword(line);
 	
 	// FOAM may receive broadcast messages from Devices, which are prefixed by 
 	// the device name like: '<devname> <status> <command> [parameters]' 
-	// e.g. 'simcam ok is_calib 0'.
-	// Thus: stat should be 'ok' OR the name of a device. Otherwise an error occurred.
-	if (stat != "ok" && get_device(stat) == NULL) {
+	// e.g. 'simcam ok is_calib 0'. We ignore device commands here.
+	if (get_device(stat) != NULL) {
+		log.add(Log::DEBUG, "FOAM: <- " + state.lastreply);
+		signal_message();
+		return;
+	}
+	// If the prefix is not a device, check if the status is 'ok'
+	else if (stat != "ok") {
 		ok = false;
 		log.add(Log::ERROR, "FOAM: <- " + state.lastreply);
 		signal_message();

@@ -22,6 +22,7 @@
 #define HAVE_DEVICECTRL_H
 
 #include <glibmm/dispatcher.h>
+#include <stdexcept>
 
 #include "pthread++.h"
 #include "protocol.h"
@@ -82,6 +83,7 @@ protected:
 	virtual void on_connected(bool status); //!< Connection to device changed
 	
 public:
+	//! @todo This should go somewhere more general
 	class exception: public std::runtime_error {
 	public:
 		exception(const std::string reason): runtime_error(reason) {}

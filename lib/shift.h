@@ -69,20 +69,20 @@ class Shift {
 public:
 	typedef enum {
 		COG=0,														//!< Center of Gravity method
-		CORR,															//!< Cross-correlation method
 	} method_t;													//!< Different image shift calculation methods
 	
 private:
 	Io &io;															//!< Message IO
+	bool running;												//!< Are we running?
 	
 	typedef struct jobinfo {
 		jobinfo() : bpp(-1), img(NULL), refimg(NULL), shifts(NULL), jobid(-1), done(-1) { }
 		method_t method;
 		int bpp;													//!< Image bitdepth (8 for uint8_t, 16 for uint16_t)
-		uint8_t *img;											//!< Image data to process
+		void *img;												//!< Image data to process
 		coord_t res;											//!< Image size (width x height)
-		uint8_t *refimg;									//!< Reference image (for method=CORR)
-		uint8_t mini;											//!< Minimum intensity to consider (for method=COG)
+		void *refimg;											//!< Reference image (for method=CORR)
+		uint32_t mini;										//!< Minimum intensity to consider (for method=COG)
 		std::vector<vector_t> crops;			//!< Crop fields within the bigger image
 		gsl_vector_float *shifts;					//!< Pre-allocated output vector
 		pthread::mutex mutex;							//!< Lock for jobid and done
@@ -114,6 +114,7 @@ private:
 	 @param [in] mini Minimum intensity to consider
 	 */
 	void _calc_cog(const uint8_t *img, const coord_t &res, const vector_t &crop, float *vec, const uint8_t mini=0);
+	void _calc_cog(const uint16_t *img, const coord_t &res, const vector_t &crop, float *vec, const uint16_t mini=0);
 	
 public:
 	Shift(Io &io, const int nthr=1);
@@ -130,6 +131,8 @@ public:
 	 @param [in] mini Minimum intensity to consider (for COG)
 	 */
 	bool calc_shifts(const uint8_t *img, const coord_t res, const std::vector<vector_t> &crops, gsl_vector_float *shifts, const method_t method=COG, const bool wait=true, const uint8_t mini=0);
+	bool calc_shifts(const uint16_t *img, const coord_t res, const std::vector<vector_t> &crops, gsl_vector_float *shifts, const method_t method=COG, const bool wait=true, const uint16_t mini=0);
+
 };
 
 #endif // HAVE_SHIFT_H

@@ -56,29 +56,33 @@ private:
 	HBox subi_hbox141;
 	
 	ComboBoxText subi_select;						//!< List of subimages
-	LabeledEntry subi_lx;								//!< Subimage coordinate lower x
-	LabeledEntry subi_ly;								//!< Subimage coordinate lower y
-	LabeledEntry subi_tx;								//!< Subimage coordinate top x
-	LabeledEntry subi_ty;								//!< Subimage coordinate top y
+	LabeledSpinEntry subi_lx;						//!< Subimage coordinate lower x
+	LabeledSpinEntry subi_ly;						//!< Subimage coordinate lower y
+	LabeledSpinEntry subi_tx;						//!< Subimage coordinate top x
+	LabeledSpinEntry subi_ty;						//!< Subimage coordinate top y
 	
 	Button subi_update;									//!< Update current subimage data
 	Button subi_del;										//!< Delete current subimage
 	Button subi_add;										//!< Add new subimage
+																			//!< @todo Add 'clear' button to clear out MLA pattern
 	
 	Button subi_regen;									//!< Re-generate subimage pattern
+	HBox subi_find_box;
 	Button subi_find;										//!< Find subimage pattern
+	LabeledSpinEntry subi_find_minif;		//!< Find subimages up to this factor less than the maximum intensity
 	
 	SwitchButton subi_vecs;							//!< Display shift vectors or not
-	LabeledEntry subi_vecdelayi;				//!< Display shift vectors every X seconds
+																			//! @todo convert subi_vecdelayi to spin entry
+	LabeledSpinEntry subi_vecdelayi;		//!< Display shift vectors every X seconds
 	float subi_vecdelay;								//!< Delay for displaying shift vectors (in seconds)
+	struct timeval subi_last;
 
 	// From DeviceView::
 	virtual void enable_gui();
 	virtual void disable_gui();
 	virtual void clear_gui();
 
-	// From WfsView::
-	virtual void do_info_update();
+	virtual void on_message_update();
 	
 	// New:
 	void do_sh_shifts_update();					//!< Connected to ShwfsCtrl::signal_sh_shifts(), fires when new SHWFS shifts are available

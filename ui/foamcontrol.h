@@ -84,8 +84,8 @@ private:
 	Log &log;														//!< Reference to MainWindow::log
 	config cfg;													//!< GUI configuration (position etc.)
 	
-	string execname;										//!< Executable name (argv[0])
 	string conffile;										//!< Configuration file
+	string execname;										//!< Executable name (argv[0])
 
 	pthread::mutex mutex;
 	
@@ -116,7 +116,7 @@ public:
 	
 	pthread::mutex gui_mutex;
 	
-	FoamControl(Log &log, int argc, char* argv[]);
+	FoamControl(Log &log, string &conffile, string &execname);
 	~FoamControl() { };
 	
 	int connect(const string &host, const string &port);
@@ -149,7 +149,8 @@ public:
 	// set-like commands
 	void set_mode(aomode_t mode);
 	void shutdown() { send_cmd("shutdown"); }
-	void calibrate(string calmode) { send_cmd(format("calib %s", calmode.c_str())); }
+	void calibrate(const string &calmode) { send_cmd(format("calib %s", calmode.c_str())); }
+	void calibrate(const string &calmode, const string &opt) { send_cmd(format("calib %s %s", calmode.c_str(), opt.c_str())); }
 
 	
 	bool is_ok() { return ok; }

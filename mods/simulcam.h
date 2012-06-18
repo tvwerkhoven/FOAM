@@ -70,7 +70,7 @@ const string simulcam_type = "simulcam";
   
  \section simulcam_cfg Configuration parameters
  
- - noise: SimulCam::noise
+ - noisefac: SimulCam::noisefac
  - noiseamp: SimulCam::noiseamp
  - mlafac: SimulCam::mlafac
 
@@ -90,7 +90,7 @@ const string simulcam_type = "simulcam";
  
  \section simulcam_netio Network commands
  
- - get/set noise: see above
+ - get/set noisefac: see above
  - get/set noiseamp: see above
  - get/set seeingfac: see above
  - get/set mlafac: see above
@@ -98,11 +98,11 @@ const string simulcam_type = "simulcam";
  - get/set windtype: see above
  - get/set wfcerr_retain: see SimulCam::wfcerr_retain. 
  - get/set telapt_fill: subaperture should have at least this fraction of light in order to be considered
- - set simwf: simulate wavefront (atmospheric seeing)
- - set simtel: simulate telescope (aperture)
- - set simwfcerr: simulate wfc as error source
- - set simmla: siulate microlens array to ccd
- - set simwfc: simulate wavefront corrector device
+ - get/set simwf: simulate wavefront (atmospheric seeing)
+ - get/set simtel: simulate telescope (aperture)
+ - get/set simwfcerr: simulate wfc as error source
+ - get/set simmla: siulate microlens array to ccd
+ - get/set simwfc: simulate wavefront corrector device
  
  \section simulcam_dep Dependencies
 
@@ -114,19 +114,19 @@ const string simulcam_type = "simulcam";
 class SimulCam: public Camera {
 private:
 	SimSeeing seeing;										//!< This class simulates the atmosphere
-	SimulWfc simwfcerr;									//!< This class simulates a wavefront corrector as a source of errors
-	
+
+	SimulWfc &simwfcerr;								//!< This class simulates a wavefront corrector as a source of errors
 	SimulWfc &simwfc;										//!< This class simulates a wavefront corrector
 	
 	size_t out_size;										//!< Size of frame_out
-	uint8_t *frame_out;									//!< Frame to store simulated image
+	void *frame_out;										//!< Frame to store simulated image
 	gsl_matrix *frame_raw;							//!< Raw frame used to calculate wavefront errors etc.
 
 	double telradius;										//!< Telescope radius (fraction of CCD)
 	gsl_matrix *telapt;									//!< Telescope aperture mask
 	double telapt_fill;									//!< How much subaperture should be within the telescope aperture to be processed
 	
-	double noise;												//!< Noise fill factor for CCD
+	double noisefac;										//!< Noise fill factor for CCD
 	double noiseamp;										//!< Noise amplitude as fraction of maximum intensity
 	double mlafac;											//!< Factor to multiply wavefront with before imaging (i.e. image magnification) (like seeingfac, except this also takes simulated correction into account)
 	double wfcerr_retain;								//!< Ratio of old and new random wfc error to add. wfc_err = old_err * fac + new_err * (1-fac). 0.9 means the wavefront changes very slowly (high correlation between consecutive frames), 0.1 means it changes very rapidly (low correlation).
@@ -136,7 +136,7 @@ private:
 	
 public:
 	Shwfs shwfs;												//!< Reference to WFS we simulate (i.e. for configuration)
-	SimulCam(Io &io, foamctrl *const ptc, const string name, const string port, Path const &conffile, SimulWfc &simwfc, const bool online=true);
+	SimulCam(Io &io, foamctrl *const ptc, const string name, const string port, Path const &conffile, SimulWfc &_simwfc, SimulWfc &_simwfcerr, const bool online=true);
 	~SimulCam();
 
 	bool do_simwf;											//!< Simulate seeing wavefront?
@@ -145,8 +145,8 @@ public:
 	bool do_simmla;											//!< Simulate microlens array?
 	bool do_simwfc;											//!< Simulate wavefront corrector?
 	
-	void set_noise(const double val) { noise = val; }
-	double get_noise() const { return noise; }
+	void set_noisefac(const double val) { noisefac = val; }
+	double get_noisefac() const { return noisefac; }
 	void set_noiseamp(const double val) { noiseamp = val; }
 	double get_noiseamp() const { return noiseamp; }
 	void set_seeingfac(const double val) { seeing.seeingfac = val; }
@@ -213,11 +213,16 @@ public:
 	/*! @brief Simulate CCD frame capture given input image
 	 
 	 Given an input image (as double matrix), simulate the CCD frame capture
-	 process including things as exposure, offset and noise.
+	 process including things as exposure, offset and noise. 
+	 
+	 This function is a wrapper for _simul_capture() which does all the work. 
+	 The wrapper casts the data pointer to the correct type.
+	 
 	 @param [in] *im_in Image to be processed
-	 @param [out] *frame_out Output frame as 8 bits (pre-allocated)
+	 @param [out] *frame_out Output frame in arbitrary type (like uint8_t, uint16_t) (pre-allocated)
 	 */
-	void simul_capture(const gsl_matrix *const im_in, uint8_t *const frame_out) const;	//!< 
+	void simul_capture(gsl_matrix *const im_in, void *const frame_out) const;
+	template <class T> void _simul_capture(gsl_matrix *const im_in, T *const frame_out) const;
 	
 	// From Camera::
 	void cam_handler();

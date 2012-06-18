@@ -59,6 +59,7 @@ void ShwfsCtrl::on_connected(bool conn) {
 
 void ShwfsCtrl::on_message(string line) {
 	double x0, y0, x1, y1;
+	double refx, refy, shiftx, shifty, subapx, subapy;
 	int n;
 	
 	// Save original line in case this function does not know what to do
@@ -92,15 +93,18 @@ void ShwfsCtrl::on_message(string line) {
 		
 		signal_message();
 		return;
-	} else if (what == "shifts") {			// ok shifts [<N> [idx Sx0 Sy0 Sx1 Sy1 [idx Sx0 Sy0 Sx1 Sy1 [...]]]
+	} else if (what == "shifts") {			// ok shifts see See Shwfs::get_shifts_str() for format.
 		n = popint(line);
 		
 		shifts_v.clear();
+		refshift_v.clear();
 		for (int i=0; i<n; i++) {
 			popint(line);										// discard idx
-			x0 = popdouble(line); y0 = popdouble(line);
-			x1 = popdouble(line); y1 = popdouble(line);
-			shifts_v.push_back(fvector_t(x0, y0, x1, y1));
+			subapx = popdouble(line); subapy = popdouble(line);
+			refx = popdouble(line); refy = popdouble(line);
+			shiftx = popdouble(line); shifty = popdouble(line);
+			refshift_v.push_back(fvector_t(subapx, subapy, subapx+refx, subapy+refy));
+			shifts_v.push_back(fvector_t(subapx+refx, subapy+refy, subapx+refx+shiftx, subapy+refy+shifty));
 		}
 		signal_sh_shifts();
 	} else

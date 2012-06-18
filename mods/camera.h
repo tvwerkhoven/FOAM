@@ -24,6 +24,7 @@
 #include <fstream>
 #include <stdint.h>
 #include <limits.h>
+#include <fitsio.h>
 
 #include "types.h"
 #include "config.h"
@@ -41,15 +42,18 @@ const string cam_type = "cam";
 
  The Camera class is a template for implementing camera software. The class 
  consists of two parts. One part of the class handles network I/O from outside
- (i.e. from a GUI), this is done with 'netio' in a seperate thread. The other
- part is hardware I/O which is done by a seperate thread through 'handler' in
- the 'camthr' thread. Graphically:
+ (i.e. from a GUI), this is done with 'netio' in a seperate thread and is 
+ initiated from the Device class. The other part is hardware I/O which is done
+ by a seperate thread through the 'cam_handler' method in the 'camthr' thread. A
+ third thread 'proc_thr' handles processing of the image data in 'cam_proc()'.
+ 
+ Graphically:
  
  <tt>
- Device --- netio --        --- netio ----
-      \---- main --- Camera --- cam_thr --
-												  +---- proc_thr -
-													\----	main -----
+ Device --- netio --        --- netio (on_message/on_connect)
+      \---- main --- Camera --- cam_thr (cam_handler) -----
+												  +---- proc_thr (cam_proc) -------
+													\----	main (returns after init) -
  </tt>
  
  \li netio gets input from outside (GUIs), reads from shared class
@@ -122,7 +126,7 @@ const string cam_type = "cam";
  - Implement guard-pixel watchers (for fast processing, i.e. SHWFS)
  
  */ 
-class Camera: public Device {
+class Camera: public foam::Device {
 	// Wfs is a friend class because it needs more access to the camera (also mutexes etc)
 	friend class Wfs;
 public:
@@ -160,8 +164,11 @@ public:
 		void *image;					//!< Pointer to frame data (unsigned int, 8 or 16 bpp)
 		uint32_t *histo;			//!< Histogram data (optional)
 		size_t id;						//!< Unique frame ID
-		size_t size;					//!< Byte size of 'image'
-		struct timeval tv;
+		size_t size;					//!< Size of 'image' [bytes]
+		coord_t res;					//!< Resolution of 'image' [pixels]
+		int depth;						//!< Data depth for 'image' [bits]
+		size_t npixels;				//!< Number of pixels in frame
+		struct timeval tv;		//!< Frame creation timestamp (as close as possible)
 		
 		bool proc;						//!< Was the frame processed?
 		
@@ -219,13 +226,15 @@ protected:
 	
 	Path makename(const string &base) const;					//!< Make filename from outputdir and filenamebase
 	Path makename() const { return makename(filenamebase); }
-	bool store_frame(const frame_t *const frame) const;	//!< Store frame to disk
+	int store_frame(const frame_t *const frame) const;	//!< Store frame to disk
 	
 	uint8_t *get_thumbnail(Connection *conn);					//!< Get 32x32x8 thumnail
 	void grab(Connection *conn, int x1, int y1, int x2, int y2, int scale, bool do_df, bool do_histo);
 
 	uint8_t df_correct(const uint8_t *in, size_t offset);
 	uint16_t df_correct(const uint16_t *in, size_t offset);
+	
+	bool do_proc;									//!< Do frame-processing or not?
 	
 	frame_t *frames;							//!< Frame ringbuffer
 	size_t nframes;								//!< Ringbuffer size
@@ -246,22 +255,29 @@ protected:
 	double offset;								//!< Constant offset added to frames
 	
 	coord_t res;									//!< Camera pixel resolution
-	int depth;										//!< Camera pixel depth in bits
+	int depth;										//!< Camera pixel depth in bits @todo Is now ceil'ed to 8, 16 or 32. Need to fix real value here
 
 	mode_t mode;									//!< Camera mode (see Camera::mode_t)
 	
 	string filenamebase;					//!< Base filename, input for makename()
 	ssize_t nstore;								//!< Numebr of new frames to store (-1 for unlimited)
 
-	void fits_init_phdu(char *const phdu) const;	//!< Init FITS header unit
-	bool fits_add_card(char *phdu, const string &key, const string &value) const; //!< Add FITS header card
-	bool fits_add_comment(char *phdu, const string &comment) const; //!< Add FITS comment
-	
+	int fits_add_card(fitsfile *fptr, string key, string value, string comment="") const; //!< Shorthand for writing a header card.
+
 	string fits_telescope;				//!< FITS header properties for saved files
 	string fits_observer;					//!< FITS header properties for saved files
 	string fits_instrument;				//!< FITS header properties for saved files
 	string fits_target;						//!< FITS header properties for saved files
 	string fits_comments;					//!< FITS header properties for saved files
+	
+	int conv_depth(const int d) { 
+		if (d<=8) return 8;
+		if (d<=16) return 16;
+		if (d<=32) return 32;
+		if (d<=64) return 64;
+		return -1;
+	}
+		
 	
 public:
 	Camera(Io &io, foamctrl *const ptc, const string name, const string type, const string port, Path const &conffile, const bool online=true);
@@ -287,6 +303,9 @@ protected:
 public:
 	size_t get_count() const { return count; }
 	size_t get_bufsize() const { return nframes; }
+	
+	void set_proc_frames(const bool b=true) { do_proc = b; }
+	bool get_proc_frames() const { return do_proc; }
 	
 	// From Devices::
 	virtual int verify() { return 0; }

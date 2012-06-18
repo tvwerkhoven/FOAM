@@ -27,6 +27,7 @@
 #endif
 
 #include <vector>
+#include <stdexcept>
 
 #include "io.h"
 #include "protocol.h"
@@ -56,6 +57,8 @@ typedef Protocol::Server::Connection Connection;
  
  @todo Add signal for measurement complete
  */
+namespace foam {
+
 class Device {
 private:
 	// These should be accessed through get/set functions to notify the GUI
@@ -78,8 +81,7 @@ protected:
 	const Path conffile;								//!< Configuration file
 	config cfg;													//!< Interpreted configuration file
 	
-	Protocol::Server netio;							//!< Network connection
-
+	Protocol::Server *netio;						//!< Network connection with device prefix. This is multiplexed over the connection in foamctrl::
 	bool online;												//!< Online flag, indicates whether this Device listens to network commands or not.
 	
 	
@@ -114,7 +116,8 @@ protected:
 		}
 		else {
 			*var = value;
-			netio.broadcast(format("ok %s %le", varname.c_str(), (double) *var), varname);
+			//! @todo Check best format for reply, should be %le or %g?
+			net_broadcast(format("ok %s %g", varname.c_str(), (double) *var), varname);
 			return *var;
 		}
 	}
@@ -160,8 +163,26 @@ protected:
 	 */
 	virtual void on_connect(const Connection * const /*conn*/, const bool status) const { 
 		io.msg(IO_DEB2, "Device::on_connect(stat=%d)", (int) status); 
-	}	
+	}
+	
+	/*!
+	 @brief Broadcast a message over netio
+	 */
+	void net_broadcast(const string &msg) const {
+		if (netio)
+			netio->broadcast(msg);
+	}
+
+	/*!
+	 @brief Broadcast a tagged message over netio
+	 */
+	void net_broadcast(const string &msg, const string &tag) const {
+		if (netio)
+			netio->broadcast(msg, tag);
+	}
+
 public:
+	//! @todo This should go somewhere more general
 	class exception: public std::runtime_error {
 	public:
 		exception(const string reason): runtime_error(reason) {}
@@ -181,6 +202,7 @@ public:
 	string getname() const { return name; }
 	string gettype() const { return type; }
 };
+} // namespace foam
 
 /*!
  @brief Device manager class to keep track of all devices in the system.
@@ -188,6 +210,7 @@ public:
  To keep track of the different devices, this DeviceManager stores all
  in a map (devices).
  */
+namespace foam {
 class DeviceManager {
 private:
 	Io &io;
@@ -242,6 +265,7 @@ public:
 	DeviceManager(Io &io);
 	~DeviceManager();
 };
+} // namespace foam
 
 #endif // HAVE_DEVICES_H
 

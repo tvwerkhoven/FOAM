@@ -31,8 +31,10 @@ using namespace std;
 
 // Device class
 
+namespace foam {
+
 Device::Device(Io &io, foamctrl *const ptc, const string n, const string t, const string p, const Path conf, const bool online): 
-is_calib(false), is_ok(false), outputdir(ptc->outdir), io(io), ptc(ptc), name(n), type("dev." + t), port(p), conffile(conf), netio(p, n), online(online)
+is_calib(false), is_ok(false), outputdir(ptc->outdir), io(io), ptc(ptc), name(n), type("dev." + t), port(p), conffile(conf), netio(NULL), online(online)
 { 
 	//! @todo This init() can just be placed here?
 	init();
@@ -48,28 +50,31 @@ bool Device::init() {
 	if (conffile.isset()) {
 		cfg.parse(conffile, name);
 	
-		string _type = cfg.getstring("type");
-		if (_type != type) 
+		string _type = cfg.getstring("type", "notype");
+		if (_type == "notype")
+			io.msg(IO_WARN, "Device::Device(): not checking device type for device '%s' (should be '%s'), be careful!", name.c_str(), type.c_str());
+		else if (_type != type) 
 			throw exception("Device::Device(): Type should be " + type + " for this Device (" + _type + ")!");
 	}
 	
 	if (online) {
-		netio.slot_message = sigc::mem_fun(this, &Device::on_message_common);
-		netio.slot_connected = sigc::mem_fun(this, &Device::on_connect);
-		io.msg(IO_XNFO, "Device %s listening on port %s.", name.c_str(), port.c_str());
+		netio = new Protocol::Server(port, name);
+		netio->slot_message = sigc::mem_fun(this, &Device::on_message_common);
+		netio->slot_connected = sigc::mem_fun(this, &Device::on_connect);
+		netio->listen();
+		io.msg(IO_XNFO, "Device %s online, listening on port %s.", name.c_str(), port.c_str());
 	}
 	
-	// Always listen, also for offline devices. In that latter case, simply don't parse any data.
-	netio.listen();
-
 	return true;
 }
 
 Device::~Device() {
 	io.msg(IO_DEB2, "Device::~Device()");
 	
+	delete netio;
+	
 	// Update master configuration with our (potentially changed) settings
-	ptc->cfg->update(&cfg);
+	//ptc->cfg->update(&cfg);
 }
 
 void Device::on_message_common(Connection * const conn, string line) {
@@ -134,12 +139,12 @@ void Device::get_var(Connection * const conn, const string varname, const double
 
 void Device::set_calib(bool newcalib) {
 	is_calib = newcalib;
-	netio.broadcast(format("ok calib %d", is_calib));
+	net_broadcast(format("ok calib %d", is_calib));
 }
 
 void Device::set_status(bool newstat) {
 	is_ok = newstat;
-	netio.broadcast(format("ok status %d", newstat));
+	net_broadcast(format("ok status %d", newstat));
 }
 
 int Device::set_outputdir(const string identifier) {
@@ -157,19 +162,19 @@ int Device::set_outputdir(const string identifier) {
 	}
 
 	outputdir = tmp;
-	netio.broadcast("ok outputdir :" + outputdir.str(), "outputdir");
+	net_broadcast("ok outputdir :" + outputdir.str(), "outputdir");
 	return 0;
 }
-
-
+} // namespace foam
 
 // DeviceManager class
 
-DeviceManager::DeviceManager(Io &io): io(io) {
+
+foam::DeviceManager::DeviceManager(Io &io): io(io) {
 	io.msg(IO_DEB2, "DeviceManager::DeviceManager()");
 }
 
-DeviceManager::~DeviceManager() {
+foam::DeviceManager::~DeviceManager() {
 	io.msg(IO_DEB2, "DeviceManager::~DeviceManager()");
 
 	device_t::iterator it;
@@ -178,7 +183,7 @@ DeviceManager::~DeviceManager() {
 	
 }
 
-int DeviceManager::add(Device *dev) {
+int foam::DeviceManager::add(foam::Device *dev) {
 	string id = dev->getname();
 	if (devices.find(id) != devices.end()) {
 		io.msg(IO_ERR, "Device ID '%s' already exists!", id.c_str());
@@ -188,7 +193,7 @@ int DeviceManager::add(Device *dev) {
 	return 0;
 }
 
-Device* DeviceManager::get(string id) {
+foam::Device* foam::DeviceManager::get(string id) {
 	if (devices.find(id) == devices.end()) {
 		io.msg(IO_ERR, "Device ID '%s' does not exist!", id.c_str());
 		throw exception("Device " + id + " does not exist!");
@@ -197,7 +202,7 @@ Device* DeviceManager::get(string id) {
 	return devices[id];
 }
 
-int DeviceManager::del(string id) {
+int foam::DeviceManager::del(string id) {
 	if (devices.find(id) == devices.end()) {
 		io.msg(IO_ERR, "Device ID '%s' does not exist!", id.c_str());
 		return -1;
@@ -206,7 +211,7 @@ int DeviceManager::del(string id) {
 	return 0;
 }
 
-string DeviceManager::getlist(bool showtype, bool showonline) {
+string foam::DeviceManager::getlist(bool showtype, bool showonline) {
 	string devlist = "";
 	int num=0;
 	for (device_t::iterator it=devices.begin(); it != devices.end(); it++) {
@@ -221,5 +226,3 @@ string DeviceManager::getlist(bool showtype, bool showonline) {
 	devlist = format("%d ", num) + devlist;
 	return devlist;
 }
-
-

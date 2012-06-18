@@ -46,11 +46,11 @@ int FOAM_simstatic::load_modules() {
 		
 	// Add ImgCam device
 	imgcama = new ImgCamera(io, ptc, "imgcamA", ptc->listenport, ptc->conffile);
-	devices->add((Device *) imgcama);
+	devices->add((foam::Device *) imgcama);
 	
 	// Init WFS simulation (using camera)
 	simwfs = new Shwfs(io, ptc, "simshwfs", ptc->listenport, ptc->conffile, *imgcama);
-	devices->add((Device *) simwfs);
+	devices->add((foam::Device *) simwfs);
 	
 	return 0;
 }
@@ -83,7 +83,7 @@ int FOAM_simstatic::open_loop() {
 int FOAM_simstatic::open_finish() {
 	io.msg(IO_DEB2, "FOAM_simstatic::open_finish()");
 	
-	imgcama->set_mode(Camera::OFF);
+	imgcama->set_mode(Camera::WAITING);
 	return 0;
 }
 
@@ -124,7 +124,7 @@ int FOAM_simstatic::closed_finish() {
 int FOAM_simstatic::calib() {
 	io.msg(IO_DEB2, "FOAM_simstatic::calib()=%s", ptc->calib.c_str());
 
-	if (ptc->calib == "INFLUENCE") {
+	if (ptc->calib == "influence") {
 		io.msg(IO_DEB2, "FOAM_simstatic::calib INFLUENCE");
 		usleep((useconds_t) 1.0 * 1000000);
 		return 0;
@@ -154,8 +154,7 @@ void FOAM_simstatic::on_message(Connection *connection, string line) {
 		else if (topic == "calib") {
 			connection->write(\
 												":calib <mode>:           Calibrate AO system.\n"
-												":  mode=influence:       Measure wfs-wfc influence.\n"
-												":  mode=subapsel:        Select subapertures.");
+												":  mode=influence:       Measure wfs-wfc influence.");
 		}
 		else if (!netio.ok) {
 			connection->write("err cmd help :topic unkown");

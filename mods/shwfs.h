@@ -26,6 +26,7 @@
 #include <gsl/gsl_vector.h>
 #include "types.h"
 
+#include "wfc.h"
 #include "camera.h"
 #include "io.h"
 #include "wfs.h"
@@ -53,7 +54,7 @@ const string shwfs_type = "shwfs";
  
  Valid commends include:
  - mla generate: generate microlens array (MLA) pattern
- - mla find: heuristically find MLA
+ - mla find [simini_f] [sisize] [nmax] [iter]: heuristically find MLA 
  - mla store: store MLA pattern to disk
  - mla del <idx>: delete MLA subimage 'idx'
  - mla add <lx> <ly> <tx> <ty>: add MLA subimage with given coordinates
@@ -74,6 +75,7 @@ const string shwfs_type = "shwfs";
  
  */
 class Shwfs: public Wfs {
+	//! @todo this is a bit weird, why only SimulCam?
 	friend class SimulCam;
 public:
 	// Public datatypes
@@ -93,6 +95,7 @@ private:
 	Shift shifts;												//!< Shift computation class. Does the heavy lifting.
 	gsl_vector_float *shift_vec;				//!< SHWFS shift vector. Shift for subimage N are elements N*2+0 and N*2+1. Same order as mlacfg @todo Make this a ring buffer
 	gsl_vector_float *ref_vec;					//!< SHWFS reference shift vector. Use this as 'zero' value
+	gsl_vector_float *tot_shift_vec;		//!< Total SHWFS shift being corrected, as calculated from the WFC control vector.
 	
 	typedef struct infdata {
 		infdata(): init(false), nact(0), nmeas(0) {  }
@@ -115,7 +118,11 @@ private:
 			gsl_vector *s;									//!< SVD vector s of infmat (size (nact, 1))
 			gsl_matrix *Sigma;							//!< SVD matrix Sigma of infmat (size (nact, nact))
 			gsl_matrix *V;									//!< SVD matrix V of infmat (size (nact, nact))
-		} actmat;													//!< Actuation matrix & related entitites
+			
+			int use_nmodes;									//!< Number of modes to use
+			double use_singval;							//!< Amount of singular values used (i.e. 1.0 for all, 0.5 for half the power in all modes)
+			double condition;								//!< SVD condition, i.e. singval[0]/singval[-1]
+		} actmat;													//!< Actuation matrix & related entitites (inverse of influence measurements)
 		
 	} infdata_t;
 	
@@ -130,6 +137,7 @@ private:
 	// Parameters for dynamic MLA grids:
 	int simaxr;													//!< Maximum radius to use, or edge erosion subimages
 	float simini_f;											//!< Minimum intensity for a subimage as fraction of the max intensity in a frame
+	float shift_mini;										//!< Minimum intensity to consider when calculating centroiding positions
 	
 	// Parameters for static MLA grids:
 	coord_t sisize;											//!< Subimage size in pixels
@@ -163,7 +171,18 @@ private:
 	
 	int mla_subapsel();
 	
-	//!< Represent SHWFS shifts as a string [<N> [idx Sx0 Sy0 Sx1 Sy1 [idx Sx0 Sy0 Sx1 Sy1 [...]]]
+	/*! @brief Represent SHWFS shifts as a string
+	 
+	 String representing SHWFS shift vector, including subaperture center 
+	 coordinates and reference shift. Syntax:
+	 
+	   [<N> [idx subap0_x subap0_y ref0_x ref0_y sh0_x sh0_y [idx subap1_x subap1_y ref1_x ref1_y sh1_x sh1_y [...]]]
+	 
+	 The origin of the reference shift is the exact center of the subaperture. 
+	 The origin of the shift vector is the end of the reference vector. With 
+	 respect to the center of the subaperture, the spot centroid is located at
+	 ref_vec + shift_vec.
+	 */
 	string get_shifts_str() const;
 	
 public:
@@ -214,6 +233,31 @@ public:
 	 @param [out] *outvec Vector of measurements in specific basis
 	 */
 	int shift_to_basis(const gsl_vector_float *const invec, const wfbasis basis, gsl_vector_float *outvec);
+	
+	/*! @brief Calibrate influence function between this WFS and *wfc using *cam
+	 
+	 @param [in] *wfc Wavefront corrector to calculate influence function for
+	 @param [in] *cam Camera to use for influence calculation
+	 @param [in] &actpos Actuator positions to use for measuring the influence function
+	 */
+	int calib_influence(Wfc *wfc, Camera *cam, const vector <float> &actpos, const double sval_cutoff);
+	
+	/*! @brief Calibrate influence function between this WFS and *wfc using *cam
+	 
+	 @param [in] *wfc Wavefront corrector to calculate influence function for
+	 @param [in] *cam Camera to use for influence calculation
+	 */
+	int calib_zero(Wfc *wfc, Camera *cam);
+	
+	/*! @brief Add offset vector to correction
+	 
+	 This calibration requires ref_vec to be measured and set,
+	 
+	 @param [in] x x-offset to add
+	 @param [in] y y-offset to add
+	 @returns 0 if successful, !0 otherwise
+	 */
+	int calib_offset(double x, double y);
 
 	/*! @brief Given shifts, compute control vector 
 	 
@@ -226,7 +270,7 @@ public:
 	 @param [out] *act Generalized actuator commands for wfcname (pre-allocated)
 	 @return Computed control vector
 	 */
-	gsl_vector_float *comp_ctrlcmd(string wfcname, gsl_vector_float *shift, gsl_vector_float *act);
+	gsl_vector_float *comp_ctrlcmd(const string &wfcname, const gsl_vector_float *shift, gsl_vector_float *act);
 	
 	/*! @brief Given a control vector, calculate shifts
 	 
@@ -235,12 +279,29 @@ public:
 	 WFC were to apply it, given the actuation matrix. It serves as a test to
 	 see if the back-calculated shifts correspond to the measured shifts.
 	 
+	 If shift is NULL, use tot_shift_vec instead.
+
 	 @param [in] wfcname Name of the wavefront corrector to be used.
 	 @param [in] *act Generalized actuator commands for wfcname 
 	 @param [out] *shift Vector of calculated shifts (pre-allocated)
 	 @return Vector of calculated shifts
 	 */
-	gsl_vector_float *comp_shift(string wfcname, gsl_vector_float *act, gsl_vector_float *shift);
+	gsl_vector_float *comp_shift(const string &wfcname, const gsl_vector_float *act, gsl_vector_float *shift);
+	
+	/*! @brief Given a shift vector, calculate the tip-tilt
+	 
+	 To off-load tip-tilt to a telescope, we need to get the tip-tilt 
+	 information from the system. This is done by simply summing all x- and 
+	 y-shifts in a shiftvector. The summed x-, y-shifts is added to tty and tty,
+	 so make sure they have sane values before calling this function.
+	 
+	 If shift is NULL, use tot_shift_vec instead.
+	 
+	 @param [in] *shift Total shift vector
+	 @param [out] *ttx Shift in x-direction
+	 @param [out] *tty Shift in y-direction
+	 */
+	void comp_tt(const gsl_vector_float *shift, float *ttx, float *tty);
 	
 	/*! @brief Initialize influence matrix, allocate memory
 	 
@@ -255,7 +316,7 @@ public:
 	 @param [in] nact Number of actuators in the WFC
 	 @param [in] &actpos List of positions that will be actuated
 	 */
-	void init_infmat(string wfcname, size_t nact, vector <float> &actpos);
+	void init_infmat(const string &wfcname, const size_t nact, const vector <float> &actpos);
 	
 	/*! @brief Build influece matrix
 	 
@@ -279,15 +340,54 @@ public:
 	 
 	 @param [in] wfcname Name of the WFC this WFS is calibrated with
 	 */
-	int calc_infmat(string wfcname);
+	int calc_infmat(const string &wfcname);
 	
 	/*! @brief Calculate actuation matrix to drive Wfc, using SVD
 	 
+	 'Singval' can be used to tweak the SVD results:
+	 if singval = 0: abort
+	 if singval < 0: drop 'singval' number of modes (i.e. if nmodes = 50, singval = -5, use 45 modes)
+	 if singval > 1: use this amount of modes
+	 else: singval is between 0 and 1, use this amount of singular value in the reconstruction
+	 
 	 @param [in] wfcname Name of the WFC this WFS is calibrated with
-	 @param [in] singval How much singular value to include (0 to 1, 0.8 or lower is generally not recommended)
+	 @param [in] singval How much singular value/modes to include
 	 @param [in] basis Basis for which singval counts
 	 */	 
-	int calc_actmat(string wfcname, double singval=1.0, enum wfbasis basis = SENSOR);
+	int calc_actmat(const string &wfcname, const double singval, const bool check_svd=true, const enum wfbasis basis = SENSOR);
+	
+	/*! @brief Represent singular value array as string
+	 
+	 @return <N> <s1> <s2> ... <sN>
+	 */
+	string get_singval_str(const string &wfcname) const;
+	
+	/*! @brief Return condition of a specific SVD
+	 
+	 @return singval[0]/singval[-1]
+	 */
+	double get_svd_cond(const string &wfcname) const;
+	
+	/*! @brief Return number of modes used in this decomposition
+	 @return <N> number of modes
+	 */
+	int get_svd_modeuse(const string &wfcname) const;
+	
+	/*! @brief Return singular value used in this decomposition
+	 @return sum i=0...modes_used (singval[i]/sum(singval))
+	 */
+	double get_svd_singuse(const string &wfcname) const;
+	
+	/*! @brief Return reference vector as string
+	 
+	 @return <N> <refx1> <refy1> <refx2> <refy2> ... <refNx> <refNy>
+	 */
+	string get_refvec_str() const;
+
+	/*! @brief Check subimage sanity, should be inside frame
+	 */
+	int check_subimgs(const vector_t &bounds) const;
+	int check_subimgs(const coord_t &topbounds) const;
 	
 	/*! @brief Set this measurement as reference or 'flat' wavefront
 	 

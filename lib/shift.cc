@@ -29,11 +29,12 @@
 
 #include "io.h"
 #include "types.h"
+#include "format.h"
 
 #include "shift.h"
 
 Shift::Shift(Io &io, const int nthr): 
-io(io), nworker(nthr), workid(0) 
+io(io), running(true), nworker(nthr), workid(0) 
 {
 	io.msg(IO_DEB2, "Shift::Shift()");
 	
@@ -52,6 +53,9 @@ io(io), nworker(nthr), workid(0)
 
 Shift::~Shift() {
 	io.msg(IO_DEB2, "Shift::~Shift()");
+	// Set running to false, broadcast to workers that they can stop
+	running = false;
+	work_cond.broadcast();
 }
 
 void Shift::_worker_func() {
@@ -64,27 +68,24 @@ void Shift::_worker_func() {
 	}
 	
 
-	while (true) {
+	while (running) {
 		{
 			pthread::mutexholder h1(&work_mutex);
 			{
 				//! @todo This check is also performed the first time that _worker_func() runs, while this is not necessary. Move this code to the end of this loop?
 				pthread::mutexholder h2(&workpool.mutex);
-				io.msg(IO_DEB2, "Shift::_worker_func() worker %d done: %d, nworker: %d...", id, workpool.done, nworker);
 				// Increment thread done counter, broadcast signal if we are the last thread
 				if (++(workpool.done) == nworker) {
-					io.msg(IO_DEB2, "Shift::_worker_func() worker %d unlocking...", id);
 					// Lock the work_done_mutex, then broadcast the signal. The 
 					// mutexholder will go out of scope and unlock automatically
 					pthread::mutexholder h3(&work_done_mutex);
 					work_done_cond.broadcast();
 				}
 			}		
-			io.msg(IO_DEB2, "Shift::_worker_func() worker %d waiting...", id);
 			work_cond.wait(work_mutex);
 		}
 		
-		while (true) {
+		while (running) {
 			int myjob=0;
 			{
 				pthread::mutexholder h(&workpool.mutex);
@@ -93,7 +94,12 @@ void Shift::_worker_func() {
 			if (myjob < 0)
 				break;
 			
-			_calc_cog(workpool.img, workpool.res, workpool.crops[myjob], shift, workpool.mini);
+			if (workpool.bpp == 8)
+				_calc_cog((uint8_t *)workpool.img, workpool.res, workpool.crops[myjob], shift, (uint8_t)workpool.mini);
+			else if (workpool.bpp == 16)
+				_calc_cog((uint16_t *)workpool.img, workpool.res, workpool.crops[myjob], shift, (uint16_t)workpool.mini);
+			else
+				throw format("Shift::_worker_func(): bitdepth %d unsupported!", workpool.bpp);
 			
 			//workpool.shifts->data[workpool.shifts->stride * myjob * 2 + 0]
 			//workpool.shifts->data[workpool.shifts->stride * myjob * 2 + 1]
@@ -141,14 +147,51 @@ void Shift::_calc_cog(const uint8_t *img, const coord_t &res, const vector_t &cr
 	v[1] = v[1]/sum - crop.ly - (crop.ty - crop.ly)/2;
 }
 
+void Shift::_calc_cog(const uint16_t *img, const coord_t &res, const vector_t &crop, float *v, const uint16_t mini) {
+	uint16_t *p;
+	float sum;
+	
+	sum = v[0] = v[1] = 0.0;
+	
+	// i,j loop over the pixels inside the crop field for *img
+	for (int j=crop.ly; j<crop.ty; j++) {
+		// j is the vertical counter, store the beginning of the current row here:
+		p = (uint16_t *) img;
+		p += (j*res.x) + crop.lx;
+		// img = data origin, j * res.x skips a few rows, crop.llpos.x gives the 
+		// offset for the current row.
+		for (int i=crop.lx; i<crop.tx; i++) {
+			// Skip pixels with too low an intensity
+			if (*p < mini) {
+				p++;
+				continue;
+			}
+			v[0] += *p * i;
+			v[1] += *p * j;
+			sum += *p;
+			p++;
+		}
+	}
+	
+	// Sum 0? Then we skip this subimage
+	if (sum <= 0) { 
+		v[0] = v[1] = 0.0;
+		return;
+	}
+	
+	v[0] = v[0]/sum - crop.lx - (crop.tx - crop.lx)/2;
+	v[1] = v[1]/sum - crop.ly - (crop.ty - crop.ly)/2;
+}
+
 bool Shift::calc_shifts(const uint8_t *img, const coord_t res, const std::vector<vector_t> &crops, gsl_vector_float *shifts, const method_t method, const bool wait, const uint8_t mini) {
-	io.msg(IO_DEB2, "Shift::calc_shifts(uint8_t)");
+//	io.msg(IO_DEB2, "Shift::calc_shifts(uint8_t)");
 	
 	// Setup work parameters
 	workpool.method = method;
-	workpool.img = (uint8_t *) img;
+	workpool.bpp = (sizeof *img) * 8;
+	workpool.img = (void *) img;
 	workpool.res = res;
-	workpool.refimg = NULL;
+	workpool.refimg = (void *) NULL;
 	workpool.mini = mini;
 	workpool.crops = crops;
 	workpool.shifts = shifts;
@@ -172,3 +215,37 @@ bool Shift::calc_shifts(const uint8_t *img, const coord_t res, const std::vector
 		
 	return true;
 }
+
+bool Shift::calc_shifts(const uint16_t *img, const coord_t res, const std::vector<vector_t> &crops, gsl_vector_float *shifts, const method_t method, const bool wait, const uint16_t mini) {
+//	io.msg(IO_DEB2, "Shift::calc_shifts(uint16_t)");
+	
+	// Setup work parameters
+	workpool.method = method;
+	workpool.bpp = (sizeof *img) * 8;
+	workpool.img = (void *) img;
+	workpool.res = res;
+	workpool.refimg = (void *) NULL;
+	workpool.mini = mini;
+	workpool.crops = crops;
+	workpool.shifts = shifts;
+	workpool.jobid = crops.size()-1;
+	workpool.done = 0;
+	
+	{ 
+		// lock work_done_mutex, then broadcast work to all workers.
+		pthread::mutexholder h1(&work_done_mutex);
+		
+		{
+			pthread::mutexholder h2(&work_mutex);
+			work_cond.broadcast();
+		}
+		
+		// Wait until the work is completed, with the mutex locked. The associated
+		// mutex will unlock automatically when mutexholder goes out of scope
+		if (wait)
+			work_done_cond.wait(work_done_mutex);
+	}
+	
+	return true;
+}
+

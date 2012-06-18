@@ -69,13 +69,15 @@ wfc_sim(NULL)
 						 reader.csvdata[i][0], reader.csvdata[i][1]);
 		}
 	} catch (std::runtime_error &e) {
-		io.msg(IO_ERR | IO_FATAL, "SimulWfc: problem with configuration file: %s", e.what());
+		fprintf(stderr, "!!! SimulWfc: problem with configuration file: %s\n", e.what());
+		throw( std::runtime_error(format("SimulWfc: problem with configuration file: %s", e.what() )) );
 	} catch (...) { 
-		io.msg(IO_ERR | IO_FATAL, "SimulWfc: unknown error at initialisation.");
+		fprintf(stderr, "!!! SimulWfc: unknown error at initialisation.\n");
+		throw( std::runtime_error("SimulWfc: unknown error at initialisation.") );
 	}
 	
 	// Set number of actuators
-	set_nact(actpos.size());
+	real_nact = actpos.size();
 	
 	// Calibrate to allocate memory
 	calibrate();
@@ -106,15 +108,17 @@ int SimulWfc::calibrate() {
 int SimulWfc::actuate(const bool /*block*/) {
 	gsl_matrix_set_zero(wfc_sim);
 	
-	if (actpos.size() != ctrlparams.target->size)
+	if (actpos.size() != ctrlparams.ctrl_vec->size)
 		return io.msg(IO_ERR, "SimulWfc::actuate() # of actuator position != # of actuator amplitudes!");
 
-	float amp_abssum = gsl_blas_sasum(ctrlparams.target);
-	if (amp_abssum < min_actvec_amp)						// if vector amplitude is small, set WFC 'flat'
+	float amp_abssum = gsl_blas_sasum(ctrlparams.ctrl_vec);
+	if (amp_abssum < min_actvec_amp) {						// if vector amplitude is small, set WFC 'flat'
+		io.msg(IO_INFO, "SimulWfc::actuate() sum(actvec) (%g) < %g, setting to 0", amp_abssum, min_actvec_amp);
 		return 0;
+	}
 	
 	for (size_t i=0; i<actpos.size(); i++) {
-		float amp = gsl_vector_float_get(ctrlparams.target, i);
+		float amp = gsl_vector_float_get(ctrlparams.ctrl_vec, i);
 		add_gauss(wfc_sim, actpos[i], actsize, clamp(amp, float(-1.0), float(1.0)));
 	}
 	
@@ -154,15 +158,8 @@ void SimulWfc::add_gauss(gsl_matrix *const wfc, const fcoord_t pos, const double
 void SimulWfc::on_message(Connection *const conn, string line) {
 	string orig = line;
 	string command = popword(line);
-	bool parsed = true;
-	
-	if (command == "set") {
-		string what = popword(line);
+	bool parsed = false;
 		
-		parsed = false;
-	} else
-		parsed = false;
-	
 	// If not parsed here, call parent
 	if (parsed == false)
 		Wfc::on_message(conn, orig);

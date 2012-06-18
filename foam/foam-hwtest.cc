@@ -43,10 +43,10 @@ int FOAM_hwtest::load_modules() {
 	try {
 		testcam = new FW1394Camera(io, ptc, "1394testcam", ptc->listenport, ptc->conffile);
 	}
-	catch (Device::exception &e) {
+	catch (foam::Device::exception &e) {
 		io.msg(IO_ERR | IO_FATAL, "Could not init FW1394Camera(): %s", e.what());
 	}
-	devices->add((Device *) testcam);
+	devices->add((foam::Device *) testcam);
 //	imgcamb = new ImgCamera(io, "imgcamB", ptc->listenport, ptc->cfg);
 //	devices->add((Device *) imgcamb);
 //	imgcamc = new ImgCamera(io, "imgcamC", ptc->listenport, ptc->cfg);
@@ -148,8 +148,7 @@ void FOAM_hwtest::on_message(Connection *connection, string line) {
 		else if (topic == "calib") {
 			connection->write(\
 												":calib <mode>:           Calibrate AO system.\n"
-												":  mode=influence:       Measure wfs-wfc influence.\n"
-												":  mode=subapsel:        Select subapertures.");
+												":  mode=influence:       Measure wfs-wfc influence.");
 		}
 		else if (!netio.ok) {
 			connection->write("err cmd help :topic unkown");

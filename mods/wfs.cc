@@ -66,6 +66,7 @@ Wfs::~Wfs() {
 	
 	// De-allocate memory that might have been allocated in derived classes (Shwfs)
 	gsl_vector_float_free(wf.wfamp);
+	gsl_vector_float_free(wf.wf_full);
 }
 
 void Wfs::on_message(Connection *const conn, string line) {

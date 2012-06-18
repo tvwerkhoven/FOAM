@@ -33,6 +33,7 @@
 
 #include <string>
 #include <stdexcept>
+#include <memory>
 
 // libsiu headers
 #include <perflogger.h>
@@ -60,11 +61,12 @@ typedef Protocol::Server::Connection Connection;
  
  \section foam_cmdline Command line arguments
  
- - -c or --config: configuration file [FOAM_DEFAULTCONF]
+ - -c or --config=FILE: configuration file
  - -v: increase verbosity
  - -q: decrease verbosity
  - --verb=LEVEL: set verbosity
  - --nodaemon: don't start network daemon
+ - -s, --sighandle=0|1: toggle signal handling
  - -h or --help: show help
  - --version: show version info
  
@@ -113,13 +115,24 @@ private:
 	void show_clihelp(const bool) const;//!< Show help on command-line syntax.
 	int show_nethelp(const Connection *const connection, string topic, string rest); //!< Show help on network command usage
 	void show_version() const;					//!< Show version information
-	void show_welcome() const;					//!< Show welcome banner
+	void show_welcome();								//!< Show welcome banner
 	
-	SigHandle sighandler;								//!< Signal handler object
+	bool do_sighandle;									//!< Toggle for signal handling or not (default: yes)
+	auto_ptr<SigHandle> sighandler;			//!< Signal handler object
+	
+	bool do_perflog;										//!< Toggle for performance logging
+	auto_ptr<PerfLog> open_perf;				//!< Open-loop performance
+	auto_ptr<PerfLog> closed_perf;			//!< Closed-loop performance
+  
+  struct timeval t_closed_l;          //!< Time spent in closed loop (timeval)
+  size_t it_closed_l;                 //!< Iterations in closed loop (#)
+  struct timeval t_open_l;            //!< Time spent in open loop (timeval)
+  size_t it_open_l;                   //!< Iterations in open loop (#)
 	
 protected:
 	// Properties set at start
 	bool nodaemon;											//!< Run daemon or not
+	string listenport;									//!< Port to listen on
 	bool error;													//!< Error flag
 	Path conffile;											//!< Configuration file to use
 	const Path execname;								//!< Executable name, i.e. Path(argv[0])
@@ -135,8 +148,10 @@ protected:
 	
 	pthread::mutex stop_mutex;					//!< Mutex used to check if main loop has completed
 	
-	PerfLog open_perf;									//!< Open-loop performance
-	PerfLog closed_perf;								//!< Closed-loop performance
+	void openperf_addlog(const string lvl) const { if (do_perflog && open_perf.get() != NULL) open_perf.get()->addlog(lvl); }
+	void openperf_report(FILE *stream=stdout) const { if (do_perflog && open_perf.get() != NULL) open_perf.get()->print_report(stream); }
+	void closedperf_addlog(const string lvl) const { if (do_perflog && closed_perf.get() != NULL) closed_perf.get()->addlog(lvl); }
+	void closedperf_report(FILE *stream=stdout) const { if (do_perflog && closed_perf.get() != NULL) closed_perf.get()->print_report(stream); }
 
 	/*!
 	 @brief Run on new connection to FOAM
@@ -144,7 +159,7 @@ protected:
 	 @param [in] *conn Connection used for this event
 	 @param [in] status Connection status (connect or disconnect)
 	 */
-	virtual void on_connect(const Connection * const conn, const bool status) const;
+	virtual void on_connect(const Connection * const conn, const bool status);
 	
 	/*!
 	 @brief Run on new incoming message to FOAM
@@ -164,7 +179,7 @@ public:
 	void stopfoam();										//!< Common cleanup code, used to stop on signals
 	
 	foamctrl *ptc;											//!< AO control class
-	DeviceManager *devices;							//!< Device/hardware management
+	foam::DeviceManager *devices;							//!< Device/hardware management
 	Io io;															//!< Terminal diagnostics output
 	
 	bool has_error() const { return error; } //!< Return error status
@@ -173,7 +188,7 @@ public:
 	int parse_args(int argc, char *argv[]); //!< Parse command-line arguments
 	int load_config();									//!< Load FOAM configuration (from arguments)
 	int verify() const;									//!< Verify setup integrity (from configuration)
-	void daemon();											//!< Start network daemon
+	void daemon(string listenport=""); //!< Start network daemon on listenport
 	int listen();												//!< Start main FOAM control loop
 	
 	string mode2str(const aomode_t m) const;

@@ -47,19 +47,20 @@ protected:
 	
 	Frame wfpow_frame;
 	HBox wfpow_hbox;
+	BarGraph wfpow_gr;
 	LabeledEntry wfpow_mode;						//!< Wavefront representation modes used (KL, Zernike, mirror, etc.)
-	Alignment wfpow_align;
-	EventBox wfpow_events;
-	Image wfpow_img;
-	Glib::RefPtr<Gdk::Pixbuf> wfpow_pixbuf;
 	
-	CamView *wfscam_ui;									//!< Camera GUI class
+	CamView *wfscam_ui;									//!< Camera GUI class used with this SHWFS
+	CamCtrl *wfscam_ctrl;								//!< Camera ctrl class used with this SHWFS
 	
-	virtual void do_wfspow_update();		//!< Update WF display
-	virtual void do_info_update();			//!< Update general info in GUI
-	virtual void do_cam_update();				//!< Update on WFS camera
+	void on_wfpow_update();							//!< Update WF display
+	virtual void on_cam_update();				//!< Update on WFS camera
+
+	void do_wfpow_update() const { wfsctrl->send_cmd("get modes"); } //!< Request update of modes vector
 
 	// From DevicePage::
+	virtual void on_message_update();
+
 	virtual void enable_gui();
 	virtual void disable_gui();
 	virtual void clear_gui();
