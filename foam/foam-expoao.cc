@@ -1,6 +1,6 @@
 /*
  foam-expoao.cc -- FOAM expoao build
- Copyright (C) 2010--2011 Tim van Werkhoven <werkhoven@strw.leidenuniv.nl>
+ Copyright (C) 2010-2012 Tim van Werkhoven <werkhoven@strw.leidenuniv.nl>
  
  This file is part of FOAM.
  

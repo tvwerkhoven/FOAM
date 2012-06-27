@@ -1,6 +1,6 @@
 /*
  shwfs.cc -- Shack-Hartmann utilities class
- Copyright (C) 2009--2011 Tim van Werkhoven <werkhoven@strw.leidenuniv.nl>
+ Copyright (C) 2009-2012 Tim van Werkhoven <werkhoven@strw.leidenuniv.nl>
  
  This file is part of FOAM.
  

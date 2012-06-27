@@ -1,6 +1,6 @@
 /*
  foam-fullsim.h -- static simulation module header file
- Copyright (C) 2008--2011 Tim van Werkhoven <werkhoven@strw.leidenuniv.nl>
+ Copyright (C) 2008-2012 Tim van Werkhoven <werkhoven@strw.leidenuniv.nl>
  
  This file is part of FOAM.
  

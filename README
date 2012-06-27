@@ -4,7 +4,7 @@ FOAM - Modular Adative Optics Framework
 This is FOAM, the Modular Adaptive Optics Framework, a collection of 
 routines to drive adaptive optics systems in various scenarios.
 It was programmed as part of a master research at Utrecht University,
-2007--2008 by Tim van Werkhoven (t.i.m.vanwerkhoven@xs4all.nl).
+2007--2008 by Tim van Werkhoven <werkhoven@strw.leidenuniv.nl>
 
 FOAM is free software, you can redistribute it and/or modify it under
 the terms of the GNU General Public License.
@@ -20,8 +20,8 @@ Availability
 ============
 
 The current stable version of FOAM is always available from 
-http://www.phys.uu.nl/~werkhvn/research/FOAM.html or
-http://tvwerkhoven.github.com/FOAM/
+<https://github.com/tvwerkhoven/FOAM> or 
+<https://www.staff.science.uu.nl/~werkh108/FOAM/>.
 
 Testing
 =======

@@ -20,7 +20,7 @@
 /*! 
  @file foamtypes.h
  @brief This file contains some datatypes used.
- @author Tim van Werkhoven (t.i.m.vanwerkhoven@xs4all.nl)
+ @author Tim van Werkhoven <werkhoven@strw.leidenuniv.nl>
 */
 
 #ifndef HAVE_FOAMTYPES_H

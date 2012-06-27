@@ -19,7 +19,7 @@
  */
 /*!
  @file fgui.cc
- @author Tim van Werkhoven (t.i.m.vanwerkhoven@xs4all.nl)
+ @author Tim van Werkhoven <werkhoven@strw.leidenuniv.nl>
  @brief This is the FOAM control GUI, consisting mostly of MainWindow::
  */
 
@@ -97,7 +97,7 @@ using namespace std;
 using namespace Gtk;
 
 const std::string FGUI_WELCOME = "FOAM Control (" PACKAGE_NAME " version " PACKAGE_VERSION " built " __DATE__ " " __TIME__ ")";
-const std::string FGUI_COPYRIGHT = "Copyright (c) 2009--2011 " PACKAGE_BUGREPORT;
+const std::string FGUI_COPYRIGHT = "Copyright (c) 2009-2012 " PACKAGE_BUGREPORT;
 
 // !!!: ConnectDialog starts here
 
