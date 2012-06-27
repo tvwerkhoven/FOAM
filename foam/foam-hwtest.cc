@@ -1,6 +1,6 @@
 /*
  foam-hwtest.cc -- hardware test module
- Copyright (C) 2010--2011 Tim van Werkhoven <t.i.m.vanwerkhoven@xs4all.nl>
+ Copyright (C) 2010--2011 Tim van Werkhoven <werkhoven@strw.leidenuniv.nl>
  
  This file is part of FOAM.
  
@@ -71,7 +71,8 @@ int FOAM_hwtest::open_loop() {
 	static FW1394Camera *tmpcam = ((FW1394Camera*) devices->get("1394testcam"));
 	
 	usleep(1000000);
-	Camera::frame_t *frame = tmpcam->get_last_frame();
+	//Camera::frame_t *frame = 
+	tmpcam->get_last_frame();
 	
 	return 0;
 }

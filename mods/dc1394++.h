@@ -380,8 +380,8 @@ class dc1394 {
 		void print_more_info(FILE *fd = stdout) { 
 			check(dc1394_camera_print_info(handle, fd)); 
 			uint32_t var1, var2, var3;
-			dc1394feature_info_t featinfo;
 			// Not implemented in libdc1394??? 
+			//			dc1394feature_info_t featinfo;
 			//dc1394featureset_t features;
 			//dc1394_get_camera_feature_set(handle, &features);
 			//dc1394_print_feature_set(&features);

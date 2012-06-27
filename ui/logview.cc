@@ -1,6 +1,6 @@
 /*
  logview.cc -- FOAM GUI log viewing pane
- Copyright (C) 2009--2011 Tim van Werkhoven <t.i.m.vanwerkhoven@xs4all.nl>
+ Copyright (C) 2009--2011 Tim van Werkhoven <werkhoven@strw.leidenuniv.nl>
  
  This file is part of FOAM.
  

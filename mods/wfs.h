@@ -1,6 +1,6 @@
 /*
  wfs.h -- a wavefront sensor abstraction class
- Copyright (C) 2009--2011 Tim van Werkhoven <t.i.m.vanwerkhoven@xs4all.nl>
+ Copyright (C) 2009--2011 Tim van Werkhoven <werkhoven@strw.leidenuniv.nl>
  
  This file is part of FOAM.
  

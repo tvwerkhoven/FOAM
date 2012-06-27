@@ -1,5 +1,5 @@
 ## @file foam/Makefile.am
-## @author Tim van Werkhoven (t.i.m.vanwerkhoven@xs4all.nl)
+## @author Tim van Werkhoven <werkhoven@strw.leidenuniv.nl>
 
 include $(top_srcdir)/common.mk
 

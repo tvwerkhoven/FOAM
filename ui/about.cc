@@ -1,6 +1,6 @@
 /*
  about.cc -- FOAM GUI about window
- Copyright (C) 2010--2011 Tim van Werkhoven <t.i.m.vanwerkhoven@xs4all.nl>
+ Copyright (C) 2010--2011 Tim van Werkhoven <werkhoven@strw.leidenuniv.nl>
  Copyright (C) 2009 Guus Sliepen <guus@sliepen.eu.org>
  
  This file is part of FOAM.
@@ -253,7 +253,7 @@ void AboutFOAMGui::on_response(int) {
 
 AboutFOAMGui::AboutFOAMGui() {
 
-	authors.push_back("Tim van Werkhoven <T.I.M.vanWerkhoven@xs4all.nl>");
+	authors.push_back("Tim van Werkhoven <werkhoven@strw.leidenuniv.nl>");
 	authors.push_back("Guus Sliepen <guus@sliepen.eu.org>");
 
 	set_name("FOAM GUI");
