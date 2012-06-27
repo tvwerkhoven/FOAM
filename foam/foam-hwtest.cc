@@ -71,7 +71,8 @@ int FOAM_hwtest::open_loop() {
 	static FW1394Camera *tmpcam = ((FW1394Camera*) devices->get("1394testcam"));
 	
 	usleep(1000000);
-	Camera::frame_t *frame = tmpcam->get_last_frame();
+	//Camera::frame_t *frame = 
+	tmpcam->get_last_frame();
 	
 	return 0;
 }

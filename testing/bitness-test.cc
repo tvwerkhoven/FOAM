@@ -24,11 +24,12 @@
 #define __STDC_FORMAT_MACROS
 #endif
 #include <stdint.h>
+#include <limits.h>
 
 int main() {
-	int *dataint = new int(32);
-	uint32_t *data32 = new uint32_t(32);
-	uint64_t *data64 = new uint64_t(32);
+//	int *dataint = new int(32);
+//	uint32_t *data32 = new uint32_t(32);
+//	uint64_t *data64 = new uint64_t(32);
 	
 	printf("sizeof int: %zu\n", sizeof (int));
 	printf("sizeof int*: %zu\n", sizeof (int*));
