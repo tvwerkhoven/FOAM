@@ -497,7 +497,7 @@ int Shwfs::calc_actmat(const string &wfcname, const double singval, const bool c
 	sum2 = 0.0;
 	gsl_matrix_set_zero(Sigma);
 	for (size_t j=0; j < s->size; j++) {
-		if (j == use_nmodes)
+		if ((int) j == use_nmodes)
 			break;
 		
 		double sval = gsl_vector_get(s, j);
@@ -797,7 +797,7 @@ int Shwfs::calib_influence(Wfc *wfc, Camera *cam, const vector <float> &actpos, 
 	double wfc_response = 0.1;
 	
 	// Check sanity
-	if (wfc->get_nact() > 2*mlacfg.size()) {
+	if (wfc->get_nact() > (int) (2*mlacfg.size())) {
 		io.msg(IO_ERR, "Shwfs::calib_influence(): # actuators > 2 * # subapertures, underdetermind system, abort!");
 		net_broadcast("error mla # actuators > 2 * # subapertures, underdetermind system, abort!");
 		return -1;
@@ -811,8 +811,8 @@ int Shwfs::calib_influence(Wfc *wfc, Camera *cam, const vector <float> &actpos, 
 	
 	// Loop over all actuators, actuate according to actpos
 	io.msg(IO_XNFO, "Shwfs::calib_influence() Start calibration loop...");
-	for (size_t actid = 0; actid < wfc->get_nact(); actid++) {	// Loop over actuators
-		for (size_t posid = 0; posid < actpos.size(); posid++) {	// Loop over actuator voltages
+	for (int actid = 0; actid < wfc->get_nact(); actid++) {	// Loop over actuators
+		for (int posid = 0; posid < (int) actpos.size(); posid++) {	// Loop over actuator voltages
 			if (ptc->mode != AO_MODE_CAL)	// Abort if mode is not 'calib' anymore
 				goto influence_break;
 			
