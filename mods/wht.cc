@@ -49,7 +49,7 @@ altfac(-1.0), delay(1.0)
 	// Configure initial settings
 	{
 		// port
-		sport = cfg.getstring("port", "/dev/ttyao00");
+		sport = cfg.getstring("port");
 		
 		// delimiter
 		// coords url = http://whtics.roque.ing.iac.es:8081/TCSStatus/TCSStatusExPo
@@ -75,19 +75,21 @@ altfac(-1.0), delay(1.0)
 	add_cmd("set altfac");
 
 	// Open serial port connection
-	wht_ctrl = new serial::port(sport, B9600, 0, '\r');
-	if (!wht_ctrl)
-		throw std::runtime_error(format("Could not open serial port %s!", sport.c_str()));
-
+	if (sport != "none") {
+		wht_ctrl = new serial::port(sport, B9600, 0, '\r');
+		if (!wht_ctrl)
+			throw std::runtime_error(format("Could not open serial port %s!", sport.c_str()));
+	}
+	
 	// Set neutral position
-	wht_ctrl->write("0050.00 0050.00 00000.01");
+	port_write("0050.00 0050.00 00000.01\r");
 }
 
 WHT::~WHT() {
 	io.msg(IO_DEB2, "WHT::~WHT()");
 
 	// Tell TCS we're stopping
-	wht_ctrl->write("0050.00 0050.00 -0000.00");
+	port_write("0050.00 0050.00 -0000.00\r");
 
 	// Stop serial port
 	delete wht_ctrl;
@@ -164,10 +166,12 @@ int WHT::update_wht_coords(double *const alt, double *const az, double *const de
 		// Set elevation, declination
 		double newalt = strtod(wht_info["ALT"].c_str(), NULL);
 		double newaz = strtod(wht_info["AZ"].c_str(), NULL);
+		//! @bug This is always triggered?
 		if (newalt != *alt || newaz != *az) {
+			io.msg(IO_XNFO, "WHT::update_wht_coords(): new alt=%g (%+g), az=%g (%+g)", 
+						 newalt, newalt - *alt, newaz, newaz - *az);
 			*alt = newalt;
 			*az = newaz;
-			io.msg(IO_XNFO, "WHT::update_wht_coords(): new alt=%g, az=%g", *alt, *az);
 		}
 	}
 	
@@ -205,12 +209,16 @@ int WHT::update_telescope_track(const float sht0, const float sht1) {
 	string cmdstr = format("%07.2f %07.2f %07.2f\r", ctrl0, ctrl1, delay*10.0+drand48()*0.1);
 
 	// Send control command to telescope
-	if (wht_ctrl) {
-		io.msg(IO_XNFO, "WHT::update_telescope_track(): sending '%s'", cmdstr.c_str());
-		wht_ctrl->write(cmdstr);
-	}
+	io.msg(IO_XNFO, "WHT::update_telescope_track(): sending '%s'", cmdstr.c_str());
+	port_write(cmdstr);
 	
 	return 0;
+}
+
+void WHT::port_write(const string cmd) {
+	// Check if serial port is initialized
+	if (wht_ctrl)
+		wht_ctrl->write(cmd);
 }
 
 void WHT::on_message(Connection *const conn, string line) {
