@@ -47,8 +47,8 @@ int main() {
 	printf("(int) size_t(32): %zu -> %d\n", as, (int) as);
 	printf("(size_t) int(32): %d -> %zu\n", ai, (size_t) ai);
 
-	as = (1 << 31) -1;
-	ai = (1 << 31) - 1;
+	as = (1L << 31L) - 1L;
+	ai = ((1L << 31L) - 1L);
 	
 	printf("(int) size_t(2^31-1): %zu -> %d\n", as, (int) as);
 	printf("(size_t) int(2^31-1): %d -> %zu\n", ai, (size_t) ai);
