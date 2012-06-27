@@ -88,7 +88,10 @@ const string wht_type = "wht";
  for example:
  00050.00 00050.00 00000.10
  
- to send neutral guiding information (=do nothing) every 100msec (10 Hz).
+ to send neutral guiding information (=do nothing) and timeout after 0.1 
+ second. Currently, this is implemented as:
+
+ string cmdstr = format("%07.2f %07.2f %07.2f\r", ctrl0, ctrl1, delay*10.0+drand48()*0.1);
  
  @section wht_guiding Live telescope pointing information
  
