@@ -26,12 +26,13 @@ DOXYFILE_ENCODING      = UTF-8
 # by quotes) that should identify the project.
 
 PROJECT_NAME           = FOAM
+PROJECT_BRIEF          = Modular Adaptive Optics Framework
 
 # The PROJECT_NUMBER tag can be used to enter a project or revision number. 
 # This could be handy for archiving the generated documentation or 
 # if some version control system is used.
 
-PROJECT_NUMBER = 0.3.0-258-g64f0a99
+PROJECT_NUMBER = 0.8.0
 
 # The OUTPUT_DIRECTORY tag is used to specify the (relative or absolute) 
 # base path where the generated documentation will be put. 
