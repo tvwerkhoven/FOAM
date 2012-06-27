@@ -160,9 +160,9 @@ AC_ARG_ENABLE([gui],
 AM_CONDITIONAL([HAVE_GUI], [test "x$have_gui" != "xno"])
 
 AC_ARG_ENABLE([hwdebug],
-		AC_HELP_STRING([--enable-hwdebug], [build hardware debugging tests]),
+		AC_HELP_STRING([--disable-hwdebug], [don't build hardware debugging tests]),
 		[have_hwdebug=$enableval],
-		[have_hwdebug=no])
+		[have_hwdebug=yes])
 AM_CONDITIONAL([HAVE_HWDEBUG], [test "x$have_hwdebug" != "xno"])
 
 ### Documentation options
