@@ -19,7 +19,8 @@
  */
 
 #include <string>
-
+#include <unistd.h>
+ 
 #include "serial.h"
 #include "socket.h"
 #include "io.h"
@@ -31,6 +32,7 @@ using namespace std;
 int main() {
 	printf("Init Io...\n");
 	Io io(10);
+	string port = "2025";
 	
 	io.msg(IO_INFO, "Init foamctrl...");
 	foamctrl ptc(io);
@@ -38,17 +40,24 @@ int main() {
 	io.msg(IO_INFO, "Init WHT...");
 	WHT *wht;
 	try {
-		wht = new WHT(io, &ptc, "wht-test", "1234", Path("./wht-test.cfg"), true);
+		wht = new WHT(io, &ptc, "wht-test", port, Path("./wht-test.cfg"), true);
 	} catch (std::runtime_error &e) {
 		io.msg(IO_ERR, "Failed to initialize WHT: %s", e.what());
 		return 1;
 	}
 	sleep(1);
 	
-	io.msg(IO_INFO, "Init complete.");
+	io.msg(IO_INFO, "Init complete, sending test (0,0) and (1,1).");
+	
+	wht->set_track_offset(0, 0);
+	usleep(0.5 * 1E6);
+
+	wht->set_track_offset(1, 1);
+	usleep(0.5 * 1E6);
+
+	io.msg(IO_INFO, "WHT instance listening on port %s. ^C to stop.", port.c_str());
+
 	while (true) {
-		float c0=drand48(), c1=drand48();
-		wht->set_track_offset(c0, c1);
 		sleep(1);
 	}
 	
