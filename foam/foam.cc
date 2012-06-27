@@ -30,6 +30,12 @@
 #endif
 #include <getopt.h>
 
+// if FOAM_DEFAULTCONF is not defined, we are using FOAM_dummy from test 
+// programs. In that case, just make up a default config file.
+#ifndef FOAM_DEFAULTCONF
+#define FOAM_DEFAULTCONF "foam-noconf.cfg"
+#endif
+
 #include <config.h>
 #include <io.h>
 #include <protocol.h>

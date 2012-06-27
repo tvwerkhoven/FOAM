@@ -10,6 +10,7 @@ include $(top_srcdir)/version.mk
 
 MODS_DIR = $(top_builddir)/mods
 LIB_DIR = $(top_builddir)/lib
+FOAM_DIR = $(top_builddir)/foam
 LIBSIU_DIR = $(top_srcdir)/$(LIBSIU)
 
 ### Common flags

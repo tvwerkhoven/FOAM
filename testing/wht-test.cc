@@ -20,27 +20,35 @@
 
 #include <string>
 #include <unistd.h>
- 
+
 #include "serial.h"
 #include "socket.h"
+
+#include "foam-dummy.h"
+
 #include "io.h"
 #include "telescope.h"
 #include "wht.h"
 
+
 using namespace std;
 
-int main() {
+int main(int argc, char *argv[]) {
 	printf("Init Io...\n");
 	Io io(10);
-	string port = "2025";
 	
-	io.msg(IO_INFO, "Init foamctrl...");
-	foamctrl ptc(io);
+	// Make dummy FOAM to parse arguments and allow the GUI to connect
+	FOAM_dummy fd(argc, argv);
 	
-	io.msg(IO_INFO, "Init WHT...");
+	if (fd.init())
+		exit(-1);
+	
+	string port = fd.ptc->listenport;
+
+	fd.io.msg(IO_INFO, "Init WHT...");
 	WHT *wht;
 	try {
-		wht = new WHT(io, &ptc, "wht-test", port, Path("./wht-test.cfg"), true);
+		wht = new WHT(fd.io, fd.ptc, "wht-test", port, Path("./wht-test.cfg"), true);
 	} catch (std::runtime_error &e) {
 		io.msg(IO_ERR, "Failed to initialize WHT: %s", e.what());
 		return 1;
