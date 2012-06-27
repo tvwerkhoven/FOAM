@@ -76,6 +76,11 @@ altfac(-1.0), delay(1.0)
 
 	// Open serial port connection
 	wht_ctrl = new serial::port(sport, B9600, 0, '\r');
+	if (!wht_ctrl)
+		throw std::runtime_error(format("Could not open serial port %s!", sport.c_str()));
+
+	// Set neutral position
+	wht_ctrl->write("0050.00 0050.00 0000.01");
 }
 
 WHT::~WHT() {
@@ -191,11 +196,13 @@ int WHT::update_telescope_track(const float sht0, const float sht1) {
 	
 	// This is the command string sent over the serial port. Syntax is specified 
 	// in wht.h, but should be like '00050.00 00050.00 00000.10\r'.
-	string cmdstr = format("%7.2f %7.2f %7.2f", ctrl0, ctrl1);
+	string cmdstr = format("%07.2f %07.2f 00000.10", ctrl0, ctrl1);
 
 	// Send control command to telescope
-	io.msg(IO_XNFO, "WHT::update_telescope_track(): sending '%s'", cmdstr.c_str());
-	wht_ctrl->write(cmdstr);
+	if (wht_ctrl) {
+		io.msg(IO_XNFO, "WHT::update_telescope_track(): sending '%s'", cmdstr.c_str());
+		wht_ctrl->write(cmdstr);
+	}
 	
 	return 0;
 }
