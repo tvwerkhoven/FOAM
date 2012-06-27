@@ -49,7 +49,7 @@ altfac(-1.0), delay(1.0)
 	// Configure initial settings
 	{
 		// port
-		sport = cfg.getstring("port", "/dev/null");
+		sport = cfg.getstring("port", "/dev/ttyao00");
 		
 		// delimiter
 		// coords url = http://whtics.roque.ing.iac.es:8081/TCSStatus/TCSStatusExPo
@@ -75,11 +75,14 @@ altfac(-1.0), delay(1.0)
 	add_cmd("set altfac");
 
 	// Open serial port connection
-	//wht_ctrl = new serial::port(sport, B9600, 0, '\r');
+	wht_ctrl = new serial::port(sport, B9600, 0, '\r');
 }
 
 WHT::~WHT() {
 	io.msg(IO_DEB2, "WHT::~WHT()");
+	
+	// Stop serial port
+	delete wht_ctrl;
 
 	//!< @todo Save all device settings back to cfg file
 	// Join with WHT updater thread
@@ -185,11 +188,14 @@ int WHT::update_telescope_track(const float sht0, const float sht1) {
 	ctrl0 = 50 + (ttgain.p * (sht0 * cos(altfac * (telpos[0]*M_PI/180.0)) - sht1 * sin(altfac * (telpos[0]*M_PI/180.0))));
 	ctrl1 = 50 + (ttgain.p * (sht0 * sin(altfac * (telpos[0]*M_PI/180.0)) + sht1 * cos(altfac * (telpos[0]*M_PI/180.0))));
 	
-	// Send control command to telescope
-//	io.msg(IO_XNFO, "WHT::update_telescope_track(): sending (%g, %g)", ctrl0, ctrl1);
+	
+	// This is the command string sent over the serial port. Syntax is specified 
+	// in wht.h, but should be like '00050.00 00050.00 00000.10\r'.
+	string cmdstr = format("%7.2f %7.2f %7.2f", ctrl0, ctrl1);
 
-	//!< @todo Send control commands
-	//wht_ctrl.write()
+	// Send control command to telescope
+	io.msg(IO_XNFO, "WHT::update_telescope_track(): sending '%s'", cmdstr.c_str());
+	wht_ctrl->write(cmdstr);
 	
 	return 0;
 }
