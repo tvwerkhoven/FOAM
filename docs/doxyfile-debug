@@ -31,7 +31,7 @@ PROJECT_NAME           = FOAM
 # This could be handy for archiving the generated documentation or 
 # if some version control system is used.
 
-PROJECT_NUMBER = 0.8.0-6-gbefb1b9
+PROJECT_NUMBER = 0.8.0-7-g2795c56
 
 # The OUTPUT_DIRECTORY tag is used to specify the (relative or absolute) 
 # base path where the generated documentation will be put. 
@@ -503,7 +503,7 @@ SHOW_NAMESPACES        = YES
 # provided by doxygen. Whatever the program writes to standard output 
 # is used as the file version. See the manual for examples.
 
-FILE_VERSION_FILTER    = 
+FILE_VERSION_FILTER    = "git describe --abbrev HEAD"
 
 # The LAYOUT_FILE tag can be used to specify a layout file which will be parsed by 
 # doxygen. The layout file controls the global structure of the generated output files 
