@@ -279,7 +279,7 @@ void Wfc::parse_waffle(string &odd, string &even) {
 		return;
 
 	string thisact;
-	size_t thisact_i=0;
+	int thisact_i=0;
 	
 	string odd_act_l = "";
 	string even_act_l = "";
@@ -352,7 +352,7 @@ int Wfc::parse_actmap(string &map) {
 	}
 	if (n_virt != vact_count)
 		io.msg(IO_ERR, "Wfc::parse_actmap() n_virt %d != vact_count %d", n_virt, vact_count);
-	if (n_virt != actmap.size())
+	if (n_virt != (int) actmap.size())
 		io.msg(IO_ERR, "Wfc::parse_actmap() n_virt %d != actmap.size %zu", n_virt, actmap.size());
 
 	io.msg(IO_XNFO, "Wfc::parse_actmap() map: %s", actmap_result.c_str());
