@@ -291,8 +291,10 @@ void Wfc::parse_waffle(string &odd, string &even) {
 			waffle_odd.push_back(thisact_i);
 			odd_act_l += format(" %d", thisact_i);
 		}
-		else
+		else {
+			io.msg(IO_WARN, "Wfc::parse_waffle() could not parse odd waffle actuator %d!", thisact_i);
 			break;
+		}
 	}
 	
 	while (even.size() > 0) {
@@ -302,8 +304,10 @@ void Wfc::parse_waffle(string &odd, string &even) {
 			waffle_even.push_back(thisact_i);
 			even_act_l += format(" %d", thisact_i);
 		}
-		else
+		else {
+			io.msg(IO_WARN, "Wfc::parse_waffle() could not parse even waffle actuator %d!", thisact_i);
 			break;
+		}
 	}
 	
 	io.msg(IO_DEB2, "Wfc::parse_waffle() odd = %s", odd_act_l.c_str());
