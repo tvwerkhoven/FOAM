@@ -7,6 +7,10 @@ if HAVE_MACOSX
 #AM_LDFLAGS += -framework CoreFoundation -framework Carbon
 endif
 
+##############################################################################
+# MISCELLANEOUS TEST PROGRAMS
+##############################################################################
+
 ## Compilation tests
 check_PROGRAMS = autotools-test
 
@@ -40,79 +44,13 @@ latencies_test_SOURCES = latencies-test.cc
 latencies_test_LDADD = $(LIBSIU_DIR)/libtime.a \
 		$(LDADD)
 
-if HAVE_HWDEBUG
-# only do this if we want hardware debugging 
-# install the test programs in a foam-test subdir
-if HAVE_DC1394
-check_PROGRAMS += dc1394-test
 
-dc1394_test_SOURCES = dc1394-test.cc
-dc1394_test_CPPFLAGS = $(DC1394_CFLAGS) $(AM_CPPFLAGS)
-dc1394_test_CXXFLAGS = $(DC1394_CFLAGS) $(AM_CXXFLAGS)
-dc1394_test_LDADD = $(LDADD) $(DC1394_LIBS)
-endif HAVE_DC1394
+check_PROGRAMS += camsend-test pixbuf-test gtk-test sigcpp-test 
 
-if HAVE_ANDORCAM
-check_PROGRAMS += andorcam-test
+camsend_test_SOURCES = camsend-test.cc
+camsend_test_LDADD = $(LIBSIU_DIR)/libprotocol.a \
+		$(LIBSIU_DIR)/libsocket.a $(LDADD)
 
-andorcam_test_SOURCES = andorcam-test.cc \
-		$(MODS_DIR)/andor.cc \
-		$(MODS_DIR)/camera.cc \
-		$(LIB_DIR)/devices.cc \
-		../foam/foamctrl.cc
-
-andorcam_test_LDADD = $(LIBSIU_DIR)/libio.a \
-		$(LIBSIU_DIR)/libconfig.a \
-		$(LIBSIU_DIR)/libprotocol.a \
-		$(LIBSIU_DIR)/libpath.a \
-		$(LDADD) $(ANDORCAM_LIBS)
-
-endif HAVE_ANDORCAM
-
-### Alpao deformable mirror test 
-
-if HAVE_ALPAODM
-
-check_PROGRAMS += alpaodm-test
-
-alpaodm_test_SOURCES = alpaodm-test.cc \
-		$(MODS_DIR)/alpaodm.cc \
-		$(MODS_DIR)/wfc.cc \
-		$(LIB_DIR)/devices.cc \
-		../foam/foamctrl.cc
-
-alpaodm_test_LDADD = $(LIBSIU_DIR)/libio.a \
-		$(LIBSIU_DIR)/libconfig.a \
-		$(LIBSIU_DIR)/libprotocol.a \
-		$(LIBSIU_DIR)/libpath.a \
-		$(LDADD) $(ALPAODM_LIBS)
-
-endif HAVE_ALPAODM
-
-endif HAVE_HWDEBUG
-
-if HAVE_DEBUG
-
-### WHT telescope testing
-
-check_PROGRAMS += wht-test
-
-wht_test_SOURCES = wht-test.cc \
-		$(MODS_DIR)/telescope.cc \
-		$(MODS_DIR)/wht.cc \
-		$(LIB_DIR)/devices.cc \
-		../foam/foamctrl.cc
-
-wht_test_LDADD = $(LIBSIU_DIR)/libio.a \
-		$(LIBSIU_DIR)/libconfig.a \
-		$(LIBSIU_DIR)/libprotocol.a \
-		$(LIBSIU_DIR)/libsocket.a \
-		$(LIBSIU_DIR)/libserial.a \
-		$(LIBSIU_DIR)/libpath.a \
-		$(LDADD)
-
-check_PROGRAMS += pixbuf-test gtk-test sigcpp-test 
-#zern-test
 
 pixbuf_test_SOURCES = pixbuf-test.cc
 pixbuf_test_CPPFLAGS = $(GUI_CFLAGS) $(AM_CPPFLAGS)
@@ -123,12 +61,6 @@ gtk_test_CPPFLAGS = $(GUI_CFLAGS) $(AM_CPPFLAGS)
 gtk_test_LDADD = $(GUI_LIBS) -lgthread-2.0 $(LDADD)
 
 sigcpp_test_SOURCES = sigcpp-test.cc
-
-#zern_test_SOURCES = zern-test.cc \
-#		$(LIB_DIR)/zernike.cc
-#zern_test_CPPFLAGS = $(COMMON_CFLAGS) $(AM_CPPFLAGS)
-#zern_test_LDADD = $(LIBSIU_DIR)/libimgdata.a \
-#		$(LIBSIU_DIR)/libio.a 
 
 if HAVE_FULLSIM
 check_PROGRAMS += shwfs-test
@@ -175,11 +107,80 @@ camview_test_LDADD = $(GUI_LIBS) -lgthread-2.0 \
 
 endif HAVE_OPENGL
 
-check_PROGRAMS += camsend-test
+##############################################################################
+# HARDWARE TEST PROGRAMS
+##############################################################################
 
-camsend_test_SOURCES = camsend-test.cc
-camsend_test_LDADD = $(LIBSIU_DIR)/libprotocol.a \
-		$(LIBSIU_DIR)/libsocket.a $(LDADD)
+if HAVE_HWDEBUG
+# only do this if we want hardware debugging 
+# install the test programs in a foam-test subdir
 
+### WHT telescope guiding test
 
-endif HAVE_DEBUG
+check_PROGRAMS += wht-test
+
+wht_test_SOURCES = wht-test.cc \
+		$(MODS_DIR)/telescope.cc \
+		$(MODS_DIR)/wht.cc \
+		$(LIB_DIR)/devices.cc \
+		../foam/foamctrl.cc
+
+wht_test_LDADD = $(LIBSIU_DIR)/libio.a \
+		$(LIBSIU_DIR)/libconfig.a \
+		$(LIBSIU_DIR)/libprotocol.a \
+		$(LIBSIU_DIR)/libsocket.a \
+		$(LIBSIU_DIR)/libserial.a \
+		$(LIBSIU_DIR)/libpath.a \
+		$(LDADD)
+
+### IEEE1394 (Firewire) camera test
+
+if HAVE_DC1394
+check_PROGRAMS += dc1394-test
+
+dc1394_test_SOURCES = dc1394-test.cc
+dc1394_test_CPPFLAGS = $(DC1394_CFLAGS) $(AM_CPPFLAGS)
+dc1394_test_CXXFLAGS = $(DC1394_CFLAGS) $(AM_CXXFLAGS)
+dc1394_test_LDADD = $(LDADD) $(DC1394_LIBS)
+endif HAVE_DC1394
+
+### Andor iXon EMCCD test
+
+if HAVE_ANDORCAM
+check_PROGRAMS += andorcam-test
+
+andorcam_test_SOURCES = andorcam-test.cc \
+		$(MODS_DIR)/andor.cc \
+		$(MODS_DIR)/camera.cc \
+		$(LIB_DIR)/devices.cc \
+		../foam/foamctrl.cc
+
+andorcam_test_LDADD = $(LIBSIU_DIR)/libio.a \
+		$(LIBSIU_DIR)/libconfig.a \
+		$(LIBSIU_DIR)/libprotocol.a \
+		$(LIBSIU_DIR)/libpath.a \
+		$(LDADD) $(ANDORCAM_LIBS)
+
+endif HAVE_ANDORCAM
+
+### Alpao deformable mirror test 
+
+if HAVE_ALPAODM
+
+check_PROGRAMS += alpaodm-test
+
+alpaodm_test_SOURCES = alpaodm-test.cc \
+		$(MODS_DIR)/alpaodm.cc \
+		$(MODS_DIR)/wfc.cc \
+		$(LIB_DIR)/devices.cc \
+		../foam/foamctrl.cc
+
+alpaodm_test_LDADD = $(LIBSIU_DIR)/libio.a \
+		$(LIBSIU_DIR)/libconfig.a \
+		$(LIBSIU_DIR)/libprotocol.a \
+		$(LIBSIU_DIR)/libpath.a \
+		$(LDADD) $(ALPAODM_LIBS)
+
+endif HAVE_ALPAODM
+
+endif HAVE_HWDEBUG
