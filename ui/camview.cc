@@ -365,7 +365,7 @@ void CamView::do_histo_update() {
 	// Analyze histogram data if available. histo is a linear array from 0 to
 	// the maximum intensity and counts pixels for each intensity bin.
 	if (histo_img) {
-		for (int i = 0; i < max; i++) {
+		for (int i = 0; i < (int) max; i++) {
 			pixels += histo_img[i];
 			sum += (double)i * histo_img[i];
 			sumsquared += (double)(i * i) * histo_img[i];
@@ -407,7 +407,7 @@ void CamView::do_histo_update() {
 	uint8_t *out = (uint8_t *)histopixbuf->get_pixels();
 	
 	if(histo_img) {
-		for(int i = 0; i < max; i++) {
+		for(int i = 0; i < (int) max; i++) {
 			int height = histo_scale_func(histo_img[i] * 100 / hscale);
 			if(height > 100)
 				height = 100;
