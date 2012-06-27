@@ -1,6 +1,6 @@
 /*
  telescope.h -- offload tip-tilt correction to some large-stroke device (telescope)
- Copyright (C) 2011 Tim van Werkhoven <t.i.m.vanwerkhoven@xs4all.nl>
+ Copyright (C) 2011 Tim van Werkhoven <werkhoven@strw.leidenuniv.nl>
  
  This file is part of FOAM.
  

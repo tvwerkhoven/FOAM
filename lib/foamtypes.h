@@ -1,6 +1,6 @@
 /*
  types.h -- custom FOAM datatypes
- Copyright (C) 2008--2011 Tim van Werkhoven <t.i.m.vanwerkhoven@xs4all.nl>
+ Copyright (C) 2008--2011 Tim van Werkhoven <werkhoven@strw.leidenuniv.nl>
  
  This file is part of FOAM.
  
@@ -20,7 +20,7 @@
 /*! 
  @file foamtypes.h
  @brief This file contains some datatypes used.
- @author Tim van Werkhoven (t.i.m.vanwerkhoven@xs4all.nl)
+ @author Tim van Werkhoven <werkhoven@strw.leidenuniv.nl>
 */
 
 #ifndef HAVE_FOAMTYPES_H

@@ -9,5 +9,5 @@ if [ "$VER" ] ; then
 	echo "FOAM_VERSION=\"`echo $VER | tr -d '\n'`\"" > version.mk
 	echo "FOAM_BRANCH=\"`echo $BRNCH`\"" >> version.mk
 	echo "FOAM_LASTLOG=\"`echo $LASTLOG`\"" >> version.mk
-	test -f docs/doxyfile-debug.base &&  sed -e "s/^PROJECT_NUMBER.*/PROJECT_NUMBER = $VER/" docs/doxyfile-debug.base > docs/doxyfile-debug
+	#test -f docs/doxyfile-debug.base &&  sed -e "s/^PROJECT_NUMBER.*/PROJECT_NUMBER = $VER/" docs/doxyfile-debug.base > docs/doxyfile-debug
 fi

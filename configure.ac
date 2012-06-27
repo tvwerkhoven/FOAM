@@ -1,16 +1,16 @@
 ## @file configure.ac
-## @author Tim van Werkhoven (t.i.m.vanwerkhoven@xs4all.nl)
-## Copyright 2007-2011 Tim van Werkhoven (t.i.m.vanwerkhoven@xs4all.nl)
+## @author Tim van Werkhoven <werkhoven@strw.leidenuniv.nl>
+## Copyright 2007-2012 Tim van Werkhoven <werkhoven@strw.leidenuniv.nl>
 
 AC_PREREQ(2.59)
 m4_include([version.m4])
 
-AC_INIT([FOAM], [GIT_REVISION], [Tim van Werkhoven <t.i.m.vanwerkhoven@xs4all.nl>])
+AC_INIT([FOAM], [GIT_REVISION], [Tim van Werkhoven <werkhoven@strw.leidenuniv.nl>])
 AC_CONFIG_AUX_DIR([build-aux])
 
 AM_INIT_AUTOMAKE([AC_PACKAGE_NAME], [AC_PACKAGE_VERSION])
 
-AC_COPYRIGHT([Copyright (C) 2007-2011 Tim van Werkhoven <t.i.m.vanwerkhoven@xs4all.nl>])
+AC_COPYRIGHT([Copyright (C) 2007-2012 Tim van Werkhoven <werkhoven@strw.leidenuniv.nl>])
 AC_REVISION([GIT_REVISION])
 
 AC_CONFIG_SRCDIR(foam/foam.cc)
