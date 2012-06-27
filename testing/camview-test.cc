@@ -1,7 +1,7 @@
 /*
  camview-test.cc -- test camera viewer, accept data from a protocol:: connection
  
- Copyright (C) 2010 Tim van Werkhoven <t.i.m.vanwerkhoven@xs4all.nl>
+ Copyright (C) 2010 Tim van Werkhoven <werkhoven@strw.leidenuniv.nl>
  
  This file is part of FOAM.
  

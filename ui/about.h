@@ -1,6 +1,6 @@
 /*
  about.h -- FOAM GUI about window
- Copyright (C) 2010--2011 Tim van Werkhoven <t.i.m.vanwerkhoven@xs4all.nl>
+ Copyright (C) 2010--2011 Tim van Werkhoven <werkhoven@strw.leidenuniv.nl>
  Copyright (C) 2009 Guus Sliepen <guus@sliepen.eu.org>
  
  This file is part of FOAM.
