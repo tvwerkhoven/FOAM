@@ -80,12 +80,15 @@ altfac(-1.0), delay(1.0)
 		throw std::runtime_error(format("Could not open serial port %s!", sport.c_str()));
 
 	// Set neutral position
-	wht_ctrl->write("0050.00 0050.00 0000.01");
+	wht_ctrl->write("0050.00 0050.00 00000.01");
 }
 
 WHT::~WHT() {
 	io.msg(IO_DEB2, "WHT::~WHT()");
-	
+
+	// Tell TCS we're stopping
+	wht_ctrl->write("0050.00 0050.00 -0000.00");
+
 	// Stop serial port
 	delete wht_ctrl;
 
@@ -195,8 +198,11 @@ int WHT::update_telescope_track(const float sht0, const float sht1) {
 	
 	
 	// This is the command string sent over the serial port. Syntax is specified 
-	// in wht.h, but should be like '00050.00 00050.00 00000.10\r'.
-	string cmdstr = format("%07.2f %07.2f 00000.10", ctrl0, ctrl1);
+	// in wht.h, but should be like '00050.00 00050.00 00000.10\r'. The delay is 
+	// the timeout until the TCS will resume normal (unguided) tracking. We set 
+	// this to 10 times the update delay so it will not timeout. We add a random
+	// offset to check if everything is working.
+	string cmdstr = format("%07.2f %07.2f %07.2f\r", ctrl0, ctrl1, delay*10.0+drand48()*0.1);
 
 	// Send control command to telescope
 	if (wht_ctrl) {
