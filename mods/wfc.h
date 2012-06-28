@@ -85,10 +85,10 @@ public:
 	
 	wfc_ctrl_t ctrlparams;
 	
-	int get_nact() const { return virt_nact; }
+	int get_nact() const { return virt_nact; } //!< Return the number of actuators in use by the WFC
 	void set_nact(const int val) { virt_nact = val; }
 
-	void set_gain(const double p, const double i, const double d) { ctrlparams.gain.p = p; ctrlparams.gain.i = i; ctrlparams.gain.d = d; }
+	void set_gain(const double p, const double i, const double d) { ctrlparams.gain.p = p; ctrlparams.gain.i = i; ctrlparams.gain.d = d; } //!< Set PID gain for WFC control
 	
 	/*! @brief Update WFC control
 	 
