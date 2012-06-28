@@ -737,6 +737,7 @@ ALIASES += longname="Modular Adaptive Optics Framework"
   - \subpage ud_foamdum "FOAM dummy"
   - \subpage ud_foamss "FOAM static-simulation"
   - \subpage ud_foamfs "FOAM full-simulation"
+  - \subpage ud_foamexpo "FOAM ExPo AO"
 */
 
 /*!
