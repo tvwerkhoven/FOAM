@@ -299,7 +299,7 @@ void ShwfsView::do_sh_shifts_update() {
 	log.term(format("%s", __PRETTY_FUNCTION__));
 	subi_vecs.set_state(SwitchButton::OK);
 		
-	// Add subimage boxes & wavefront vectors to glarea
+	// Add image shift vectors to glarea
 	if (wfscam_ui) {
 		wfscam_ui->glarea.clearlines();
 		

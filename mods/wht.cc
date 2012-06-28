@@ -49,7 +49,7 @@ altfac(-1.0), delay(1.0)
 	// Configure initial settings
 	{
 		// port
-		sport = cfg.getstring("port", "/dev/null");
+		sport = cfg.getstring("port");
 		
 		// delimiter
 		// coords url = http://whtics.roque.ing.iac.es:8081/TCSStatus/TCSStatusExPo
@@ -75,11 +75,24 @@ altfac(-1.0), delay(1.0)
 	add_cmd("set altfac");
 
 	// Open serial port connection
-	//wht_ctrl = new serial::port(sport, B9600, 0, '\r');
+	if (sport != "none") {
+		wht_ctrl = new serial::port(sport, B9600, 0, '\r');
+		if (!wht_ctrl)
+			throw std::runtime_error(format("Could not open serial port %s!", sport.c_str()));
+	}
+	
+	// Set neutral position
+	port_write("00050.00 00050.00 00000.01\r");
 }
 
 WHT::~WHT() {
 	io.msg(IO_DEB2, "WHT::~WHT()");
+
+	// Tell TCS we're stopping
+	port_write("00050.00 00050.00 -0000.00\r");
+
+	// Stop serial port
+	delete wht_ctrl;
 
 	//!< @todo Save all device settings back to cfg file
 	// Join with WHT updater thread
@@ -115,28 +128,35 @@ void WHT::wht_updater() {
 int WHT::update_wht_coords(double *const alt, double *const az, double *const delay) {
 	// Connect if necessary
 	if (!sock_track.is_connected()) {
-//		io.msg(IO_DEB1, "WHT::update_wht_coords(): connecting to %s:%s...", track_host.c_str(), track_port.c_str());
-		sock_track.connect(track_host, track_port);
+		// Check if connection works, otherwise return
+		if (!sock_track.connect(track_host, track_port)) {
+			io.msg(IO_WARN, "WHT::update_wht_coords(): could not connect to %s:%s...", 
+						 track_host.c_str(), track_port.c_str());
+			return -1;
+		}
 		sock_track.setblocking(false);
 	}
+	
 
 	// Open URL, request disconnect 
 	sock_track.printf("GET %s HTTP/1.1\r\nHOST: %s\r\nUser-Agent: FOAM dev.telescope.wht\r\nConnection: close\r\n\r\n\n", 
 										track_file.c_str(), track_host.c_str());
 
 	// Read data
-	string rawdata;
+	string rawdata("");
 	char buf[2048];
+	buf[0] = '\0';
 	while (sock_track.read((void *)buf, 2048))
 		rawdata += string(buf);
 
 	// Parse data, find first line after \r\n\r\n
-	size_t dbeg = rawdata.find("\r\n\r\n") +4;
-	if (dbeg == string::npos) {
+	size_t dbeg = rawdata.find("\r\n\r\n");
+	if (dbeg == string::npos || dbeg == 0) {
 		io.msg(IO_WARN, "WHT::update_wht_coords(): could not find data.");
 		return -1;
 	}
-	string track_data = rawdata.substr(dbeg);
+	// Get tracking data, start after HTTP header and skip the CRLFCRLF
+	string track_data = rawdata.substr(dbeg+4);
 	
 	// Split key=val pairs, find coordinates, store and return
 	string key, val;
@@ -153,10 +173,12 @@ int WHT::update_wht_coords(double *const alt, double *const az, double *const de
 		// Set elevation, declination
 		double newalt = strtod(wht_info["ALT"].c_str(), NULL);
 		double newaz = strtod(wht_info["AZ"].c_str(), NULL);
+		//! @bug This is always triggered?
 		if (newalt != *alt || newaz != *az) {
+			io.msg(IO_XNFO, "WHT::update_wht_coords(): new alt=%g (%+g), az=%g (%+g)", 
+						 newalt, newalt - *alt, newaz, newaz - *az);
 			*alt = newalt;
 			*az = newaz;
-			io.msg(IO_XNFO, "WHT::update_wht_coords(): new alt=%g, az=%g", *alt, *az);
 		}
 	}
 	
@@ -185,13 +207,25 @@ int WHT::update_telescope_track(const float sht0, const float sht1) {
 	ctrl0 = 50 + (ttgain.p * (sht0 * cos(altfac * (telpos[0]*M_PI/180.0)) - sht1 * sin(altfac * (telpos[0]*M_PI/180.0))));
 	ctrl1 = 50 + (ttgain.p * (sht0 * sin(altfac * (telpos[0]*M_PI/180.0)) + sht1 * cos(altfac * (telpos[0]*M_PI/180.0))));
 	
-	// Send control command to telescope
-//	io.msg(IO_XNFO, "WHT::update_telescope_track(): sending (%g, %g)", ctrl0, ctrl1);
+	
+	// This is the command string sent over the serial port. Syntax is specified 
+	// in wht.h, but should be like '00050.00 00050.00 00000.10\r'. The delay is 
+	// the timeout until the TCS will resume normal (unguided) tracking. We set 
+	// this to 10 times the update delay so it will not timeout. We add a random
+	// offset to check if everything is working.
+	string cmdstr = format("%08.2f %08.2f %08.2f\r", ctrl0, ctrl1, delay*10.0+drand48()*0.1);
 
-	//!< @todo Send control commands
-	//wht_ctrl.write()
+	// Send control command to telescope
+	io.msg(IO_XNFO, "WHT::update_telescope_track(): sending '%s'", cmdstr.c_str());
+	port_write(cmdstr);
 	
 	return 0;
+}
+
+void WHT::port_write(const string cmd) {
+	// Check if serial port is initialized
+	if (wht_ctrl)
+		wht_ctrl->write(cmd);
 }
 
 void WHT::on_message(Connection *const conn, string line) {

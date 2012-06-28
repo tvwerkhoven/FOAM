@@ -114,7 +114,6 @@ void Wfs::on_message(Connection *const conn, string line) {
 	else
 		parsed = false;
 	
-
 	// If not parsed here, call parent
 	if (parsed == false)
 		Device::on_message(conn, orig);
@@ -122,7 +121,7 @@ void Wfs::on_message(Connection *const conn, string line) {
 
 Wfs::wf_info_t* Wfs::measure(Camera::frame_t *) {
 	io.msg(IO_DEB2, "Wfs::measure(), filling random");
-	if (wf.nmodes == 0) {
+	if (!wf.wfamp) {
 		wf.nmodes = 16;
 		wf.wfamp = gsl_vector_float_alloc(wf.nmodes);
 		wf.basis = SENSOR;
