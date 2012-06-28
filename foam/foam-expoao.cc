@@ -227,18 +227,21 @@ int FOAM_ExpoAO::calib() {
 															 ixonwfs->get_refvec_str().c_str() ));
 	} 
 	else if (ptc->calib == "influence") {		// Calibrate influence function
-		// calib influence [singval cutoff] -- 
+		// calib influence [actuation amplitude] [singval cutoff] -- 
+		// actuation amplitude: how far should we move the actuators?
 		// singval < 0: drop these modes
 		// singval > 1: use this amount of modes
 		// else: use this amount of singular value
+		double act_amp = popdouble(ptc->calib_opt);
+		if (act_amp == 0.0) act_amp = 0.08;
 		double sval_cutoff = popdouble(ptc->calib_opt);
 		if (sval_cutoff == 0.0) sval_cutoff = 0.7;
-		io.msg(IO_INFO, "FOAM_ExpoAO::calib() influence calibration, sval=%g", sval_cutoff);
+		io.msg(IO_INFO, "FOAM_ExpoAO::calib() influence calibration, amp=%g, sval=%g", act_amp, sval_cutoff);
 
 		// Init actuation vector & positions, camera, 
 		vector <float> actpos;
-		actpos.push_back(-0.08);
-		actpos.push_back(0.08);
+		actpos.push_back(-act_amp);
+		actpos.push_back(act_amp);
 		
 		// Calibrate for influence function now
 		calret = ixonwfs->calib_influence(alpao_dm97, ixoncam, actpos, sval_cutoff);
