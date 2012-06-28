@@ -35,7 +35,8 @@
 Wfc::Wfc(Io &io, foamctrl *const ptc, const string name, const string type, const string port, Path const & conffile, const bool online):
 Device(io, ptc, name, wfc_type + "." + type, port, conffile, online),
 real_nact(0), virt_nact(0), use_actmap(false), 
-have_waffle(false) {	
+have_waffle(false),
+offset(NULL), control(NULL) {	
 	io.msg(IO_DEB2, "Wfc::Wfc()");
 
 	try {
@@ -73,6 +74,9 @@ Wfc::~Wfc() {
 	gsl_vector_float_free(ctrlparams.err);
 	gsl_vector_float_free(ctrlparams.prev);
 	gsl_vector_float_free(ctrlparams.pid_int);
+
+	gsl_vector_float_free(offset);
+	gsl_vector_float_free(control);
 }
 
 string Wfc::ctrl_as_str(const char *fmt) const {
@@ -228,6 +232,13 @@ int Wfc::set_randompattern(const float maxval) {
 	return ctrl_apply_actmap();
 }
 
+int Wfc::actuate(const bool block) {
+	// Copy ctrlparams.ctrl_vec to control
+	gsl_vector_float_memcpy(control, ctrlparams.ctrl_vec);
+	// Subtract offset vector from actuation signal before sending it to the DM
+	gsl_vector_float_sub(control, offset);
+	dm_actuate(block);
+}
 
 int Wfc::calibrate() {
 	// Parse actuator map string
@@ -252,6 +263,11 @@ int Wfc::calibrate() {
 	} else {
 		ctrlparams.ctrl_vec = ctrlparams.target;
 	}
+
+	gsl_vector_float_free(offset);
+	offset = gsl_vector_float_calloc(real_nact);
+	gsl_vector_float_free(control);
+	control = gsl_vector_float_calloc(real_nact);
 	
 	set_calib(true);
 	return 0;

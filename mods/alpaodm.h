@@ -73,7 +73,7 @@ public:
 	int reset_zerovolt();							//!< Set DM to zero volts, which bypasses the factory offsets
 	
 	// From Wfc::
-	virtual int actuate(const bool block=false);
+	virtual int dm_actuate(const bool block=false);
 	virtual int calibrate();
 	virtual int reset();
 	
