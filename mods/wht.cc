@@ -128,28 +128,35 @@ void WHT::wht_updater() {
 int WHT::update_wht_coords(double *const alt, double *const az, double *const delay) {
 	// Connect if necessary
 	if (!sock_track.is_connected()) {
-//		io.msg(IO_DEB1, "WHT::update_wht_coords(): connecting to %s:%s...", track_host.c_str(), track_port.c_str());
-		sock_track.connect(track_host, track_port);
+		// Check if connection works, otherwise return
+		if (!sock_track.connect(track_host, track_port)) {
+			io.msg(IO_WARN, "WHT::update_wht_coords(): could not connect to %s:%s...", 
+						 track_host.c_str(), track_port.c_str());
+			return -1;
+		}
 		sock_track.setblocking(false);
 	}
+	
 
 	// Open URL, request disconnect 
 	sock_track.printf("GET %s HTTP/1.1\r\nHOST: %s\r\nUser-Agent: FOAM dev.telescope.wht\r\nConnection: close\r\n\r\n\n", 
 										track_file.c_str(), track_host.c_str());
 
 	// Read data
-	string rawdata;
+	string rawdata("");
 	char buf[2048];
+	buf[0] = '\0';
 	while (sock_track.read((void *)buf, 2048))
 		rawdata += string(buf);
 
 	// Parse data, find first line after \r\n\r\n
-	size_t dbeg = rawdata.find("\r\n\r\n") +4;
-	if (dbeg == string::npos) {
+	size_t dbeg = rawdata.find("\r\n\r\n");
+	if (dbeg == string::npos || dbeg == 0) {
 		io.msg(IO_WARN, "WHT::update_wht_coords(): could not find data.");
 		return -1;
 	}
-	string track_data = rawdata.substr(dbeg);
+	// Get tracking data, start after HTTP header and skip the CRLFCRLF
+	string track_data = rawdata.substr(dbeg+4);
 	
 	// Split key=val pairs, find coordinates, store and return
 	string key, val;
