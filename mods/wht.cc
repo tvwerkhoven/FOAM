@@ -82,14 +82,14 @@ altfac(-1.0), delay(1.0)
 	}
 	
 	// Set neutral position
-	port_write("0050.00 0050.00 00000.01\r");
+	port_write("00050.00 00050.00 00000.01\r");
 }
 
 WHT::~WHT() {
 	io.msg(IO_DEB2, "WHT::~WHT()");
 
 	// Tell TCS we're stopping
-	port_write("0050.00 0050.00 -0000.00\r");
+	port_write("00050.00 00050.00 -0000.00\r");
 
 	// Stop serial port
 	delete wht_ctrl;
@@ -206,7 +206,7 @@ int WHT::update_telescope_track(const float sht0, const float sht1) {
 	// the timeout until the TCS will resume normal (unguided) tracking. We set 
 	// this to 10 times the update delay so it will not timeout. We add a random
 	// offset to check if everything is working.
-	string cmdstr = format("%07.2f %07.2f %07.2f\r", ctrl0, ctrl1, delay*10.0+drand48()*0.1);
+	string cmdstr = format("%08.2f %08.2f %08.2f\r", ctrl0, ctrl1, delay*10.0+drand48()*0.1);
 
 	// Send control command to telescope
 	io.msg(IO_XNFO, "WHT::update_telescope_track(): sending '%s'", cmdstr.c_str());
