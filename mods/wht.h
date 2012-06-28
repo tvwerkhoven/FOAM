@@ -56,9 +56,7 @@ const string wht_type = "wht";
  
  alt: =  -0.01 [ x * sin(0.001745 * (45 - ele)) + y * cos(0.001745 * (45 - ele)) ]
  az: = +0.01 [ y * sin(0.001745 * (45 - ele)) - x * cos(0.001745 * (45 - ele)) ]
- 
- acedev5Send
- 
+  
  with x, y the measured shift, 45 the rotation of the ExPo camera, ele the 
  current elevation of the telescope, and 0.001745 180/pi. The scaling, gain 
  etc is all encapsulated in the constant 0.01. This might have to be adjusted
@@ -88,9 +86,13 @@ const string wht_type = "wht";
  CR ::= ASCII code 0x0d
  
  for example:
- 00050.00 00050.00 00000.100x20
+ s0000p00 s0000p00 00000p01\r
+ 00050.00 00050.00 00000.10
  
- to send neutral guiding information (=do nothing) every 100msec (10 Hz).
+ to send neutral guiding information (=do nothing) and timeout after 0.1 
+ second. Currently, this is implemented as:
+
+ string cmdstr = format("%07.2f %07.2f %07.2f\r", ctrl0, ctrl1, delay*10.0+drand48()*0.1);
  
  @section wht_guiding Live telescope pointing information
  
@@ -99,33 +101,65 @@ const string wht_type = "wht";
  <http://whtics.roque.ing.iac.es:8081/TCSStatus/TCSStatusExPo>. The syntax of 
  this is document is:
  
- TODO!!! ELE AZ\r\\n
+AZ=298.6429727035839
+ALT=90.28124237374263
+LAST=21 9 15.184
+DELAY=1.0
+SEQUENCE=7055
+RA=0
+DEC=0
+EQUINOX=2000
+COORDTYPE=J
+TELSTAT=ENGMODE 
+AIRMASS=1.000012040138244629
+MJD=55181.694
+SOURCENAME=AGB
+SOURCERA=4.55967267083519
+SOURCEDEC=0.698131700797732
+SOURCEEQUINOX=2000
+SOURCECOORDTYPE=J
  
+ We extract the AZ and ALT parameters, and update if these are different from 
+ what we have. We then rotate the coordinate system using the ALT parameter 
+ as folows:
+
+ In general:
+ x' = [ x cos(th) - y sin(th) ]
+ y' = [ x sin(th) + y cos(th) ]
+ For ExPo:
+ az = 50 - 0.01 * [ x * sin( (45-ele) * pi/180 ) + y * cos( (45-e) * pi/180 ) ]
+ ele = 50 + 0.01 * [ y * sin( (45-ele) * pi/180 ) - x * cos( (45-e) * pi/180 ) ]
+ 
+ in WHT::update_telescope_track():
+ ctrl0 = 50 + (ttgain.p * (sht0 * cos(altfac * (telpos[0]*M_PI/180.0)) - sht1 * sin(altfac * (telpos[0]*M_PI/180.0))));
+ ctrl1 = 50 + (ttgain.p * (sht0 * sin(altfac * (telpos[0]*M_PI/180.0)) + sht1 * cos(altfac * (telpos[0]*M_PI/180.0))));
+
  @section wht_todo Todo
  
- - conversion form unit pointing to image shift (using ele)
- - get coordinates from webpage
- 
+ - test coordinate conversion
+ - make standalone WHT controller
+  
  @section wht_more More info
  
- http://www.ing.iac.es/~eng/ops/general/digi_portserver.html
- http://www.ing.iac.es/~cfg/group_notes/portserv.htm
- http://www.digi.com/support/productdetail?pid=2240&type=drivers
- http://whtics.roque.ing.iac.es:8081/TCSStatus/TCSStatusExPo
- ftp://ftp1.digi.com/support/beta/linux/dgrp/
+ - http://www.ing.iac.es/~eng/ops/general/digi_portserver.html
+ - http://www.ing.iac.es/~cfg/group_notes/portserv.htm
+ - http://www.ing.iac.es/Astronomy/tonotes/wht/expo_working.html
+ - http://whtics.roque.ing.iac.es:8081/TCSStatus/TCSStatusExPo
+ - http://www.digi.com/support/productdetail?pid=2240&type=drivers
+ - ftp://ftp1.digi.com/support/beta/linux/dgrp/
  
  \section wht_cfg Configuration params
  
  - track_host: live WHT pointing host (whtics.roque.ing.iac.es)
  - track_port: live WHT pointing port (8001)
  - track_file: live WHT pointing file (/TCSStatus/TCSStatusExPo)
+ - port: Serial port to use (/dev/ttyao00)
  - altfac: WHT::altfac 
  
  \section wht_netio Network commands
  
  - get trackurl: get WHT tracker information URL
- - get telpos: get WHT::alt WHT::az
- 
+ - get/set altfac: get/set WHT::altfac
  
 */
 class WHT: public Telescope {
@@ -143,7 +177,8 @@ private:
 	string track_port;			//!< port to read wht_live_url on;
 	
 	int update_wht_coords(double *const alt, double *const az, double *const delay); //!< Update WHT pointings coordinates from online thing
-
+	void port_write(const string cmd); //!< Wrapper for wht_ctrl->write() that checks if wht_ctrl is ok
+	
 public:
 	WHT(Io &io, foamctrl *const ptc, const string name, const string port, Path const &conffile, const bool online=true);
 	~WHT();

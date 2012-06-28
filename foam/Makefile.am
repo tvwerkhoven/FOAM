@@ -200,7 +200,8 @@ foam_expoao_CPPFLAGS = -DFOAM_DEFAULTCONF=\"$(sysconfdir)/foam/foam-expoao.cfg\"
 
 foam_expoao_CXXFLAGS = $(EXPOAO_CFLAGS) $(AM_CXXFLAGS)
 
-foam_expoao_LDADD = $(EXPOAO_LIBS) $(LDADD)
+foam_expoao_LDADD = $(LIBSIU_DIR)/libserial.a \
+		$(EXPOAO_LIBS) $(LDADD)
 
 endif HAVE_EXPOAO
 ### END EXPOAO TARGET ###
