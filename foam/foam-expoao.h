@@ -70,7 +70,7 @@ public:
 
 #endif // HAVE_FOAM_EXPOAO_H
 
-/*!	\page ud_foamex FOAM expoao
+/*!	\page ud_foamexpo FOAM expoao
  
  \section fex_aboutdoc About this document
  
@@ -78,17 +78,48 @@ public:
  
  \section fex_aboutfoamex About FOAM expoao
  
- This FOAM program will operate on the ExPo instrument
+ This FOAM program will operate the adaptive optics for ExPo, the Extreme 
+ Polarimeter\cite rodenhuis2008. The AO for ExPo was designed primarily 
+ stabilize the image such
+ that a coronagraph can be used to block out stellar light and increase 
+ constrast. Besides this it should also aid in increasing the resolution in 
+ the ExPo science camera.
  
+ The adaptive optics system is described in detail in\cite homs2012, but a 
+ brief summary is included below.
+ 
+ \subsection fex_expoao ExPo adaptive optics
+ 
+ The ExPo adaptive optics system is designed to stabilize the image onto the 
+ coronagraph in ExPo while keeping polarisation effects to a minimum. To this 
+ end, there are only 4 optical components that influence the ExPo science beam.
+ 
+ \subsection fex_expohw ExPo hardware
+ 
+ - ExPoAO computer
+ - Andor camera + driver
+ - AlpaoDM + driver
+ - William Herschel Telescope
+
+ \subsection fex_exposw ExPo software
+
+ - Ubuntu 10.04 
+ - foam-expoao
+ - digiport software
+
+ \section fex_install Installation
+ 
+ To install foam-expoao, follow the regular installation instructions.
+
  \section fex_usage Usage
  
  To run FOAM expoao, call:
  
- - ./foam/foam-expoao -c conf/foam-expoao.cfg
+ - foam-expoao [-c /path/to/foam-expoao.cfg]
 
  and connect to it (preferably with the foam-gui):
  
- - ./ui/foam-gui
+ - foam-gui
  - connect to 'localhost' port '1025' (default)
  
  From the GUI you can run in 'Listen', 'Open loop' or 'Closed loop' mode.
@@ -97,8 +128,12 @@ public:
  - Open loop: captures frames and calculates image shifts
  - Closed loop: open loop and correct the image
  
+ \section fex_related More information
+ 
  For more information on the devices that this build uses, see:
  - \ref dev_cam_andor
  - \ref dev_wfs_shwfs
+ - \ref dev_wfc_alpaodm
+ - \ref dev_telescope_wht
  
  */
