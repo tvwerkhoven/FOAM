@@ -70,6 +70,8 @@ public:
 	AlpaoDM(Io &io, foamctrl *const ptc, const string name, const string port, Path const &conffile, const bool online=true);
 	~AlpaoDM();
 	
+	int reset_zerovolt();							//!< Set DM to zero volts, which bypasses the factory offsets
+	
 	// From Wfc::
 	virtual int actuate(const bool block=false);
 	virtual int calibrate();

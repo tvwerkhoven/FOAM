@@ -124,11 +124,23 @@ int AlpaoDM::calibrate() {
 int AlpaoDM::reset() {
 	// Do not use acedev5SoftwareDACReset here as it sets 0 volts to all 
 	// actuators. Setting control vector 0 to all actuators applies a 
-	// pre-calibrated offset vector as well (acedev5GetOffset) such that it is
-	// closer to flat.
+	// pre-calibrated offset vector as well (acedev5GetOffset) such that should
+	// be closer to flat. In some cases this does not work (anymore)
+  // and the DACReset is preferable.
 	set_control(0.0);
 	actuate();
 	
+	// Sleep a little to give the WFC time to relax
+	usleep(0.1*1E6);
+	
+	return 0;
+}
+
+int AlpaoDM::reset_zerovolt() {
+	// Sometimes we want to set the DM to zero volts without offset.
+	if (acedev5SoftwareDACReset(1, &dm_id) == acecsFAILURE)
+		acecsErrDisplay();
+		
 	// Sleep a little to give the WFC time to relax
 	usleep(0.1*1E6);
 	
@@ -170,6 +182,15 @@ void AlpaoDM::on_message(Connection *const conn, string line) {
 			conn->write(format("ok serial %s", serial.c_str()));
 		else if (what == "offset")				// get offset
 			conn->write(format("ok offset %zu %s", offset.size(), offset_str.c_str()));			
+		else
+			parsed = false;
+	} else if (command == "set") {
+		string what = popword(line);
+		
+		if (what == "zerovolt") {					// set zerovolt, set DM to 0 volt without offset
+			conn->write("ok zerovolt");
+			reset_zerovolt();
+		}
 		else
 			parsed = false;
 	} else 
