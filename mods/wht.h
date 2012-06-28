@@ -86,6 +86,7 @@ const string wht_type = "wht";
  CR ::= ASCII code 0x0d
  
  for example:
+ s0000p00 s0000p00 00000p01\r
  00050.00 00050.00 00000.10
  
  to send neutral guiding information (=do nothing) and timeout after 0.1 
