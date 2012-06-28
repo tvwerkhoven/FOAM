@@ -162,6 +162,7 @@ public:
  
  \section dev_wfc_der Derived classes
  - \subpage dev_wfc_simulwfc "Simulate wavefront corrector"
+ - \subpage dev_wfc_alpaodm "Alpao deformable mirror"
  
  \section dev_wfs_more See also
  - \ref dev_wfs "Wavefront sensor devices"

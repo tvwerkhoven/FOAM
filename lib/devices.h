@@ -310,6 +310,7 @@ public:
  - \subpage dev_cam "Camera device"
  - \subpage dev_wfs "Wavefront sensor device"
  - \subpage dev_wfc "Wavefront corrector device"
+ - \subpage dev_telescope "Telescope control device"
 
  \section dev_related See also
  - \ref devmngr "Device Manager info"

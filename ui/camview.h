@@ -193,6 +193,6 @@ public:
  \section camview_derived Derived classes
  
  The following classes are derived from the Camera device:
- - SimCamView and SimCamCtrl
+ - \subpage dev_cam_simcam_ui
  
  */

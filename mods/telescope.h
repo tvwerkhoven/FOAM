@@ -124,5 +124,8 @@ public:
  Most high-speed wavefront corretors (DMs) can only correct so much tip-tilt. 
  Over longer observations, this has to be offloaded to a larger-stroke device,
  generally a telescope. This is done here.
- */
+
+ \section dev_telescope_der Derived classes
+ - \subpage dev_telescope_wht "William Herschel Telescope guiding control"
+*/
 
