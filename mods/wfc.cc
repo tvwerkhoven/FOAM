@@ -248,7 +248,7 @@ int Wfc::actuate(const bool block) {
 	gsl_vector_float_memcpy(control, ctrlparams.ctrl_vec);
 	// Subtract offset vector from actuation signal before sending it to the DM
 	gsl_vector_float_sub(control, offset);
-	dm_actuate(block);
+	return dm_actuate(block);
 }
 
 int Wfc::calibrate() {
