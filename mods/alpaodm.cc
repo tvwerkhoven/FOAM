@@ -76,22 +76,22 @@ Wfc(io, ptc, name, alpaodm_type, port, conffile, online)
 	acedev5GetNbActuator(1, &dm_id, &real_nact);
 	io.msg(IO_DEB2, "AlpaoDM::AlpaoDM()::%d got %d actuators", dm_id, real_nact);
 
-	// Retrieve offset
-	offset.resize(real_nact);
-	double *offset_tmp = &offset[0];
+	// Retrieve calibrated factory hardware offset
+	hwoffset.resize(real_nact);
+	double *hwoffset_tmp = &offset[0];
 	io.msg(IO_DEB2, "AlpaoDM::AlpaoDM()::%d acquiring offset...", dm_id, real_nact);
-	acedev5GetOffset(1, &dm_id, offset_tmp);
+	acedev5GetOffset(1, &dm_id, hwoffset_tmp);
 	
 	for (size_t i=0; i < (size_t) real_nact; i++)
-		offset_str += format("%.4f ", offset.at(i));
+		hwoffset_str += format("%.4f ", hwoffset.at(i));
 	
-	io.msg(IO_DEB2, "AlpaoDM::AlpaoDM()::%d offset: %s", dm_id, offset_str.c_str());
+	io.msg(IO_DEB2, "AlpaoDM::AlpaoDM()::%d hardware offset: %s", dm_id, hwoffset_str.c_str());
 	
 	// Enable DEV5 trigger signal (?)
 	acedev5EnableTrig(1, &dm_id);
 	
 	add_cmd("get serial");
-	add_cmd("get offset");
+	add_cmd("get hwoffset");
 	add_cmd("set zerovolt");
 
 	// Calibrate to allocate memory
@@ -181,8 +181,8 @@ void AlpaoDM::on_message(Connection *const conn, string line) {
 		
 		if (what == "serial")							// get serial
 			conn->write(format("ok serial %s", serial.c_str()));
-		else if (what == "offset")				// get offset
-			conn->write(format("ok offset %zu %s", offset.size(), offset_str.c_str()));			
+		else if (what == "hwoffset")				// get hwoffset
+			conn->write(format("ok hwoffset %zu %s", hwoffset.size(), hwoffset_str.c_str()));			
 		else
 			parsed = false;
 	} else if (command == "set") {

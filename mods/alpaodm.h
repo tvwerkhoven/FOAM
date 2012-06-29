@@ -59,8 +59,8 @@ private:
 	Path conf_acfg;										//!< Alpao DM .acfg file
 	Path conf_data;										//!< Alpao DM associated binary data file
 
-	vector<double> offset;						//!< DM offset (calibrated safe 'zero' position)
-	string offset_str;								//!< Space-separated representation of offset
+	vector<double> hwoffset;					//!< DM factory offset (calibrated safe 'zero' position)
+	string hwoffset_str;							//!< Space-separated representation of offset
 
 	vector<double> act_vec;						//!< Local temporary actuate vector (copy of ctrlparms.ctrl_vec)
 	
