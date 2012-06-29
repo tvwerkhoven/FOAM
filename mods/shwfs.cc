@@ -847,8 +847,8 @@ influence_break:
 }
 
 int Shwfs::calib_zero(Wfc *wfc, Camera *cam) {
-	// Set wavefront corrector to flat position, start camera
-	wfc->reset();
+	// Set wavefront corrector to flat position, start camera --> NB This is not necessary, 'zero' should be independent of the WFC
+//	wfc->reset();
 	
 	io.msg(IO_XNFO, "Shwfs::calib_zero() Start camera...");
 	cam->set_mode(Camera::RUNNING);
