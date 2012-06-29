@@ -195,6 +195,15 @@ int Wfc::set_control_act(const float val, const size_t act_id) {
 	return ctrl_apply_actmap();
 }
 
+float Wfc::get_control_act(const size_t act_id) {
+	if (!get_calib())
+		calibrate();
+	
+	// return actuator 'act_id' value
+	return gsl_vector_float_get(ctrlparams.target, act_id);
+}
+
+
 int Wfc::set_wafflepattern(const float val) {
 	if (!have_waffle) {
 		io.msg(IO_WARN, "Wfc::set_wafflepattern() no waffle!");

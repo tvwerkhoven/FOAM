@@ -116,12 +116,20 @@ public:
 	 @param [in] val New control target for all WFC actuators
 	 */
 	int set_control(const float val=0.0);
+
 	/*! @brief Set WFC control for a specific actuators, ignoring current signal
 	 
 	 @param [in] val New control target for WFC
 	 @param [in] act_id WFC actuator to set
 	 */
 	int set_control_act(const float val, const size_t act_id);
+	
+	/*! @brief Get WFC control for a specific actuators
+	 
+	 @param [in] act_id WFC actuator to set
+	 @return Actuator signal for act_id
+	 */
+	float get_control_act(const size_t act_id);
 	
 	/*! @brief Set wafflepattern on DM with value 'val'
 	 
