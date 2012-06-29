@@ -831,6 +831,12 @@ int Shwfs::calib_influence(Wfc *wfc, Camera *cam, const vector <float> &actpos, 
 		
 		// Reset this actuator to its original position
 		wfc->set_control_act(thisact, actid);
+		// Do not set the mirror back to 'flat' (or whatever reset() does) here: 
+		// use the shape of the mirror as set *before* calibrating the influence 
+		// matrix.
+		// If reset() gives a bad mirror shape, than we need to add some offset
+		// before we can calculate a proper influence matrix. Setting the mirror
+		// back with reset() would negate this offset every time.
 	}
 		
 	io.msg(IO_XNFO, "Shwfs::calib_influence() Process data...");
@@ -847,8 +853,8 @@ influence_break:
 }
 
 int Shwfs::calib_zero(Wfc *wfc, Camera *cam) {
-	// Set wavefront corrector to flat position, start camera --> NB This is not necessary, 'zero' should be independent of the WFC
-//	wfc->reset();
+//	The zero calibration should be independent of the wavefront corrector
+//	shape, so we do no reset() here it as it might have some interesting shape.
 	
 	io.msg(IO_XNFO, "Shwfs::calib_zero() Start camera...");
 	cam->set_mode(Camera::RUNNING);
