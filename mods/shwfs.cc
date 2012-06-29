@@ -795,6 +795,7 @@ int Shwfs::calibrate() {
 
 int Shwfs::calib_influence(Wfc *wfc, Camera *cam, const vector <float> &actpos, const double sval_cutoff) {
 	double wfc_response = 0.1;
+	double thisact = 0;
 	
 	// Check sanity
 	if (wfc->get_nact() > (int) (2*mlacfg.size())) {
@@ -812,12 +813,14 @@ int Shwfs::calib_influence(Wfc *wfc, Camera *cam, const vector <float> &actpos, 
 	// Loop over all actuators, actuate according to actpos
 	io.msg(IO_XNFO, "Shwfs::calib_influence() Start calibration loop...");
 	for (int actid = 0; actid < wfc->get_nact(); actid++) {	// Loop over actuators
+		// Get current actuation signal for this actuator;
+		thisact = wfc->get_control_act(actid);
 		for (int posid = 0; posid < (int) actpos.size(); posid++) {	// Loop over actuator voltages
 			if (ptc->mode != AO_MODE_CAL)	// Abort if mode is not 'calib' anymore
 				goto influence_break;
 			
-			// Set actuator 'i' to 'actpos[p]', measure, wait until WFC is done
-			wfc->set_control_act(actpos.at(posid), actid);
+			// Set actuator 'actid' to 'thisact + actpos[p]', measure, wait until WFC is done
+			wfc->set_control_act(thisact + actpos.at(posid), actid);
 			wfc->actuate();
 			usleep(wfc_response * 1E6);
 			
@@ -826,8 +829,8 @@ int Shwfs::calib_influence(Wfc *wfc, Camera *cam, const vector <float> &actpos, 
 			build_infmat(wfc->getname(), frame, actid, posid);
 		}
 		
-		// Reset WFC to flat position
-		wfc->reset();
+		// Reset this actuator to its original position
+		wfc->set_control_act(thisact, actid);
 	}
 		
 	io.msg(IO_XNFO, "Shwfs::calib_influence() Process data...");
