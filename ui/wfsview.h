@@ -90,7 +90,7 @@ public:
  The following classes are derived from this class:
  - \subpage dev_wfs_shwfs_ui "Shack-Hartmann Wavefront sensor device UI"
  
- \section wfsview_derived Related classes
+ \section wfsview_rel Related classes
  
  The following classes are closely related to this class:
  - \ref dev_cam_ui "Camera device UI"

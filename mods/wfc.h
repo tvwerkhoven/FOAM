@@ -89,10 +89,10 @@ public:
 	
 	wfc_ctrl_t ctrlparams;
 	
-	int get_nact() const { return virt_nact; }
+	int get_nact() const { return virt_nact; } //!< Return the number of actuators in use by the WFC
 	void set_nact(const int val) { virt_nact = val; }
 
-	void set_gain(const double p, const double i, const double d) { ctrlparams.gain.p = p; ctrlparams.gain.i = i; ctrlparams.gain.d = d; }
+	void set_gain(const double p, const double i, const double d) { ctrlparams.gain.p = p; ctrlparams.gain.i = i; ctrlparams.gain.d = d; } //!< Set PID gain for WFC control
 	
 	/*! @brief Update WFC control
 	 
@@ -179,6 +179,7 @@ public:
  
  \section dev_wfc_der Derived classes
  - \subpage dev_wfc_simulwfc "Simulate wavefront corrector"
+ - \subpage dev_wfc_alpaodm "Alpao deformable mirror"
  
  \section dev_wfs_more See also
  - \ref dev_wfs "Wavefront sensor devices"

@@ -414,11 +414,11 @@ void PhysUnitEntry::on_unit_changed(const PhysUnit &prev) {
 	entry.set_text(format("%lf", unitgroup.from_native(native)));
 }
 
-DelayedAdjustment::DelayedAdjustment(Adjustment &adjustment, int delay): adjustment(adjustment), delay(delay) {
+DelayedAdjustment::DelayedAdjustment(Gtk::Adjustment &adjustment, int delay): adjustment(adjustment), delay(delay) {
 	adjustment.signal_value_changed().connect(sigc::mem_fun(this, &DelayedAdjustment::on_value_changed));
 }
 
-DelayedAdjustment::DelayedAdjustment(SpinButton &widget, int delay): adjustment(*widget.get_adjustment()), delay(delay) {
+DelayedAdjustment::DelayedAdjustment(Gtk::SpinButton &widget, int delay): adjustment(*widget.get_adjustment()), delay(delay) {
 	adjustment.signal_value_changed().connect(sigc::mem_fun(this, &DelayedAdjustment::on_value_changed));
 }
 
