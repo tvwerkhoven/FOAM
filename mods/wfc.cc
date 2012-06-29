@@ -247,6 +247,13 @@ int Wfc::actuate(const bool block) {
 	// Copy ctrlparams.ctrl_vec to control
 	gsl_vector_float_memcpy(control, ctrlparams.ctrl_vec);
 	// Add offset vector from actuation signal before sending it to the DM
+//	When initially running the DM calibration, the shape is not at all flat
+//	at '0' control. When the first influence matrix is obtained and the 
+//	system has run in closed loop for a bit, the DM will converge to an 
+//		actuation signal that is more flat than '0'. We can set this acutation 
+//		signal as an offset so that we always add it to the control signal. When
+//		we then set the DM to '0', this offset is added such that it is as flat
+//		as possible.
 	gsl_vector_float_add(control, offset);
 	return dm_actuate(block);
 }
