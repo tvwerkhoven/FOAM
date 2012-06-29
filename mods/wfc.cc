@@ -36,7 +36,7 @@ Wfc::Wfc(Io &io, foamctrl *const ptc, const string name, const string type, cons
 Device(io, ptc, name, wfc_type + "." + type, port, conffile, online),
 real_nact(0), virt_nact(0), use_actmap(false), 
 have_waffle(false),
-offset(NULL), control(NULL) {	
+offset(NULL), offset_str("0"), control(NULL) {	
 	io.msg(IO_DEB2, "Wfc::Wfc()");
 
 	try {
@@ -59,6 +59,7 @@ offset(NULL), control(NULL) {
 	add_cmd("get nact");
 	//! @todo	add_cmd("get real_nact");
 	add_cmd("get ctrl");
+	add_cmd("get offset");
 	add_cmd("set offset");
 
 	add_cmd("act waffle");
@@ -402,6 +403,9 @@ void Wfc::on_message(Connection *const conn, string line) {
 			conn->write(format("ok nact %d", get_nact()));
 		} else if (what == "ctrl") {			// get ctrl
 			conn->write(format("ok ctrl %s", ctrl_as_str().c_str()));
+		} else if (what == "offset") {		// get offset
+			conn->write(format("ok offset %s", offset_str.c_str()));
+			
 		} else
 			parsed = false;
 
@@ -416,14 +420,14 @@ void Wfc::on_message(Connection *const conn, string line) {
 			net_broadcast(format("ok gain %g %g %g", ctrlparams.gain.p, ctrlparams.gain.i, ctrlparams.gain.d));
 		} else if (what == "offset") {		// set offset <off0> <off1> ... <offN>
 			conn->addtag("offset");
-			string offstr = "ok offset";
+			offset_str = format("%zu", offset->size);
 			double thisoff = 0;
 			for (size_t actid=0; actid < offset->size; actid++) {
 				thisoff = popdouble(line);
 				gsl_vector_float_set(offset, actid, thisoff);
-				offstr += format(" %.3g", thisoff);
+				offset_str += format(" %.3g", thisoff);
 			}
-			net_broadcast(offstr);
+			net_broadcast(format("ok offset %s", offset_str.c_str()));
 		} else
 			parsed = false;
 	} else if (command == "act") { 

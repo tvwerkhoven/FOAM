@@ -70,6 +70,7 @@ protected:
 	string ctrl_as_str(const char *fmt="%.4f") const; //!< Return control vector ctrlparams.target as string (not thread-safe)
 	
 	gsl_vector_float *offset;						//!< Offset added to all control vectors (size real_nact)
+	string offset_str;									//!< String representation of offset vector
 	gsl_vector_float *control;					//!< Vector used to actuate the DM == ctrl_vec - offset (size real_nact)
 
 public:
