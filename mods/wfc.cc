@@ -418,7 +418,7 @@ void Wfc::on_message(Connection *const conn, string line) {
 			conn->addtag("offset");
 			string offstr = "ok offset";
 			double thisoff = 0;
-			for (size_t actid=0; actid < offset->size; offset++) {
+			for (size_t actid=0; actid < offset->size; actid++) {
 				thisoff = popdouble(line);
 				gsl_vector_float_set(offset, actid, thisoff);
 				offstr += format(" %.3g", thisoff);
