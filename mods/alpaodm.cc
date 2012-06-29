@@ -78,8 +78,8 @@ Wfc(io, ptc, name, alpaodm_type, port, conffile, online)
 
 	// Retrieve calibrated factory hardware offset
 	hwoffset.resize(real_nact);
-	double *hwoffset_tmp = &offset[0];
-	io.msg(IO_DEB2, "AlpaoDM::AlpaoDM()::%d acquiring offset...", dm_id, real_nact);
+	double *hwoffset_tmp = &hwoffset[0];
+	io.msg(IO_DEB2, "AlpaoDM::AlpaoDM()::%d acquiring hardware offset...", dm_id, real_nact);
 	acedev5GetOffset(1, &dm_id, hwoffset_tmp);
 	
 	for (size_t i=0; i < (size_t) real_nact; i++)
