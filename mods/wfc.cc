@@ -59,6 +59,7 @@ offset(NULL), control(NULL) {
 	add_cmd("get nact");
 	//! @todo	add_cmd("get real_nact");
 	add_cmd("get ctrl");
+	add_cmd("set offset");
 
 	add_cmd("act waffle");
 	add_cmd("act random");
