@@ -92,6 +92,7 @@ Wfc(io, ptc, name, alpaodm_type, port, conffile, online)
 	
 	add_cmd("get serial");
 	add_cmd("get offset");
+	add_cmd("set zerovolt");
 
 	// Calibrate to allocate memory
 	calibrate();
