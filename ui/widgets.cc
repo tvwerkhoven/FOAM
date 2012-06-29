@@ -149,7 +149,7 @@ void BarGraph::on_update(const std::vector< double > &graph_vals) {
 			max = fabs(graph_vals.at(i));
 		else if (fabs(graph_vals.at(i)) < min)
 			min = fabs(graph_vals.at(i));
-		allvals += format(", %.4f", graph_vals.at(i));
+		allvals += format(" %.4f", graph_vals.at(i));
 	}
 	
 	e_minval.set_text(format("%.4f", min));
