@@ -69,6 +69,10 @@ protected:
 	bool have_waffle;										//!< Do we know about the waffle pattern?
 	string ctrl_as_str(const char *fmt="%.4f") const; //!< Return control vector ctrlparams.target as string (not thread-safe)
 	
+	gsl_vector_float *offset;						//!< Offset added to all control vectors (size real_nact)
+	string offset_str;									//!< String representation of offset vector
+	gsl_vector_float *control;					//!< Vector used to actuate the DM == ctrl_vec + offset (size real_nact)
+
 public:
 	// Common Wfc settings
 	typedef struct wfc_ctrl {
@@ -113,12 +117,20 @@ public:
 	 @param [in] val New control target for all WFC actuators
 	 */
 	int set_control(const float val=0.0);
+
 	/*! @brief Set WFC control for a specific actuators, ignoring current signal
 	 
 	 @param [in] val New control target for WFC
 	 @param [in] act_id WFC actuator to set
 	 */
 	int set_control_act(const float val, const size_t act_id);
+	
+	/*! @brief Get WFC control for a specific actuators
+	 
+	 @param [in] act_id WFC actuator to set
+	 @return Actuator signal for act_id
+	 */
+	float get_control_act(const size_t act_id);
 	
 	/*! @brief Set wafflepattern on DM with value 'val'
 	 
@@ -134,13 +146,18 @@ public:
 	 */
 	int set_randompattern(const float maxval);
 
-	// To be implemented by derived classes:
 	/*! @brief Actuate WFC using internal control vector
+	 
+	 This function applies some final corrections to the control vector before 
+	 sending it to the hardware using dm_actuate().
 	 
 	 @param [in] block Block until WFC is in requested position (not always available)
 	 */
-	virtual int actuate(const bool block=false) = 0;
-		
+	int actuate(const bool block=false);
+
+	// To be implemented by derived classes:
+	virtual int dm_actuate(const bool block=false) = 0; //!< Send actuation signal to hardware
+
 	virtual int calibrate();						//!< Calibrate actuator
 	virtual int reset();								//!< Reset mirror to best known 'flat' position
 	virtual void loosen(const double amp, const int niter=10, const double delay=0.1);	//!< Loosen the mirror by jolting it a few times

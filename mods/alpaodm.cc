@@ -76,22 +76,23 @@ Wfc(io, ptc, name, alpaodm_type, port, conffile, online)
 	acedev5GetNbActuator(1, &dm_id, &real_nact);
 	io.msg(IO_DEB2, "AlpaoDM::AlpaoDM()::%d got %d actuators", dm_id, real_nact);
 
-	// Retrieve offset
-	offset.resize(real_nact);
-	double *offset_tmp = &offset[0];
-	io.msg(IO_DEB2, "AlpaoDM::AlpaoDM()::%d acquiring offset...", dm_id, real_nact);
-	acedev5GetOffset(1, &dm_id, offset_tmp);
+	// Retrieve calibrated factory hardware offset
+	hwoffset.resize(real_nact);
+	double *hwoffset_tmp = &hwoffset[0];
+	io.msg(IO_DEB2, "AlpaoDM::AlpaoDM()::%d acquiring hardware offset...", dm_id, real_nact);
+	acedev5GetOffset(1, &dm_id, hwoffset_tmp);
 	
 	for (size_t i=0; i < (size_t) real_nact; i++)
-		offset_str += format("%.4f ", offset.at(i));
+		hwoffset_str += format("%.4f ", hwoffset.at(i));
 	
-	io.msg(IO_DEB2, "AlpaoDM::AlpaoDM()::%d offset: %s", dm_id, offset_str.c_str());
+	io.msg(IO_DEB2, "AlpaoDM::AlpaoDM()::%d hardware offset: %s", dm_id, hwoffset_str.c_str());
 	
 	// Enable DEV5 trigger signal (?)
 	acedev5EnableTrig(1, &dm_id);
 	
 	add_cmd("get serial");
-	add_cmd("get offset");
+	add_cmd("get hwoffset");
+	add_cmd("set zerovolt");
 
 	// Calibrate to allocate memory
 	calibrate();
@@ -124,8 +125,9 @@ int AlpaoDM::calibrate() {
 int AlpaoDM::reset() {
 	// Do not use acedev5SoftwareDACReset here as it sets 0 volts to all 
 	// actuators. Setting control vector 0 to all actuators applies a 
-	// pre-calibrated offset vector as well (acedev5GetOffset) such that it is
-	// closer to flat.
+	// pre-calibrated offset vector as well (acedev5GetOffset) such that should
+	// be closer to flat. In some cases this does not work (anymore)
+  // and the DACReset is preferable.
 	set_control(0.0);
 	actuate();
 	
@@ -135,10 +137,21 @@ int AlpaoDM::reset() {
 	return 0;
 }
 
-int AlpaoDM::actuate(const bool /*block*/) {
+int AlpaoDM::reset_zerovolt() {
+	// Sometimes we want to set the DM to zero volts without offset.
+	if (acedev5SoftwareDACReset(1, &dm_id) == acecsFAILURE)
+		acecsErrDisplay();
+		
+	// Sleep a little to give the WFC time to relax
+	usleep(0.1*1E6);
+	
+	return 0;
+}
+
+int AlpaoDM::dm_actuate(const bool /*block*/) {
 	// Copy from ctrlparams to local double array:
 	for (size_t i=0; i<real_nact; i++)
-		act_vec.at(i) = gsl_vector_float_get(ctrlparams.ctrl_vec, i);
+		act_vec.at(i) = gsl_vector_float_get(control, i);
 	
 	// acedev5Send expected pointer to double-array, take address of first
 	// vector element to satisfy this need. std::vector guarantees data contiguity
@@ -168,8 +181,17 @@ void AlpaoDM::on_message(Connection *const conn, string line) {
 		
 		if (what == "serial")							// get serial
 			conn->write(format("ok serial %s", serial.c_str()));
-		else if (what == "offset")				// get offset
-			conn->write(format("ok offset %zu %s", offset.size(), offset_str.c_str()));			
+		else if (what == "hwoffset")				// get hwoffset
+			conn->write(format("ok hwoffset %zu %s", hwoffset.size(), hwoffset_str.c_str()));			
+		else
+			parsed = false;
+	} else if (command == "set") {
+		string what = popword(line);
+		
+		if (what == "zerovolt") {					// set zerovolt, set DM to 0 volt without offset
+			conn->write("ok zerovolt");
+			reset_zerovolt();
+		}
 		else
 			parsed = false;
 	} else 

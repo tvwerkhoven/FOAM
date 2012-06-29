@@ -35,7 +35,8 @@
 Wfc::Wfc(Io &io, foamctrl *const ptc, const string name, const string type, const string port, Path const & conffile, const bool online):
 Device(io, ptc, name, wfc_type + "." + type, port, conffile, online),
 real_nact(0), virt_nact(0), use_actmap(false), 
-have_waffle(false) {	
+have_waffle(false),
+offset(NULL), offset_str("0"), control(NULL) {	
 	io.msg(IO_DEB2, "Wfc::Wfc()");
 
 	try {
@@ -58,11 +59,14 @@ have_waffle(false) {
 	add_cmd("get nact");
 	//! @todo	add_cmd("get real_nact");
 	add_cmd("get ctrl");
+	add_cmd("get offset");
+	add_cmd("set offset");
 
 	add_cmd("act waffle");
 	add_cmd("act random");
 	add_cmd("act all");
 	add_cmd("act one");
+	add_cmd("act vec");
 }
 
 Wfc::~Wfc() {
@@ -73,6 +77,9 @@ Wfc::~Wfc() {
 	gsl_vector_float_free(ctrlparams.err);
 	gsl_vector_float_free(ctrlparams.prev);
 	gsl_vector_float_free(ctrlparams.pid_int);
+
+	gsl_vector_float_free(offset);
+	gsl_vector_float_free(control);
 }
 
 string Wfc::ctrl_as_str(const char *fmt) const {
@@ -191,6 +198,15 @@ int Wfc::set_control_act(const float val, const size_t act_id) {
 	return ctrl_apply_actmap();
 }
 
+float Wfc::get_control_act(const size_t act_id) {
+	if (!get_calib())
+		calibrate();
+	
+	// return actuator 'act_id' value
+	return gsl_vector_float_get(ctrlparams.target, act_id);
+}
+
+
 int Wfc::set_wafflepattern(const float val) {
 	if (!have_waffle) {
 		io.msg(IO_WARN, "Wfc::set_wafflepattern() no waffle!");
@@ -228,6 +244,20 @@ int Wfc::set_randompattern(const float maxval) {
 	return ctrl_apply_actmap();
 }
 
+int Wfc::actuate(const bool block) {
+	// Copy ctrlparams.ctrl_vec to control
+	gsl_vector_float_memcpy(control, ctrlparams.ctrl_vec);
+	// Add offset vector from actuation signal before sending it to the DM
+//	When initially running the DM calibration, the shape is not at all flat
+//	at '0' control. When the first influence matrix is obtained and the 
+//	system has run in closed loop for a bit, the DM will converge to an 
+//		actuation signal that is more flat than '0'. We can set this acutation 
+//		signal as an offset so that we always add it to the control signal. When
+//		we then set the DM to '0', this offset is added such that it is as flat
+//		as possible.
+	gsl_vector_float_add(control, offset);
+	return dm_actuate(block);
+}
 
 int Wfc::calibrate() {
 	// Parse actuator map string
@@ -252,6 +282,11 @@ int Wfc::calibrate() {
 	} else {
 		ctrlparams.ctrl_vec = ctrlparams.target;
 	}
+
+	gsl_vector_float_free(offset);
+	offset = gsl_vector_float_calloc(real_nact);
+	gsl_vector_float_free(control);
+	control = gsl_vector_float_calloc(real_nact);
 	
 	set_calib(true);
 	return 0;
@@ -376,6 +411,9 @@ void Wfc::on_message(Connection *const conn, string line) {
 			conn->write(format("ok nact %d", get_nact()));
 		} else if (what == "ctrl") {			// get ctrl
 			conn->write(format("ok ctrl %s", ctrl_as_str().c_str()));
+		} else if (what == "offset") {		// get offset
+			conn->write(format("ok offset %s", offset_str.c_str()));
+			
 		} else
 			parsed = false;
 
@@ -388,6 +426,16 @@ void Wfc::on_message(Connection *const conn, string line) {
 			ctrlparams.gain.i = popdouble(line);
 			ctrlparams.gain.d = popdouble(line);
 			net_broadcast(format("ok gain %g %g %g", ctrlparams.gain.p, ctrlparams.gain.i, ctrlparams.gain.d));
+		} else if (what == "offset") {		// set offset <off0> <off1> ... <offN>
+			conn->addtag("offset");
+			offset_str = format("%zu", offset->size);
+			double thisoff = 0;
+			for (size_t actid=0; actid < offset->size; actid++) {
+				thisoff = popdouble(line);
+				gsl_vector_float_set(offset, actid, thisoff);
+				offset_str += format(" %.3g", thisoff);
+			}
+			net_broadcast(format("ok offset %s", offset_str.c_str()));
 		} else
 			parsed = false;
 	} else if (command == "act") { 
@@ -421,14 +469,14 @@ void Wfc::on_message(Connection *const conn, string line) {
 			actuate();
 			conn->write(format("ok act all"));
             
-        //! @todo Implement setting all actuators with a vector
-//		} else if (actwhat == "vec") { 		// act vec <val> <val> <val> <val>
-//            for (size_t acti=0; acti < ctrlparams.target->size; acti++) {
-//                double actval = popdouble(line);
-//                gsl_vector_float_set(ctrlparams.target, acti, actval);
-//            }
-//			actuate();
-//			conn->write(format("ok act all"));
+		} else if (actwhat == "vec") { 		// act vec <val0> <val1> ... <valN>
+			double actval = 0;
+			for (size_t acti=0; acti < ctrlparams.target->size; acti++) {
+				actval = popdouble(line);
+				gsl_vector_float_set(ctrlparams.target, acti, actval);
+			}
+			actuate();
+			conn->write(format("ok act vec"));
 		} else
 			parsed = false;
 	} else {

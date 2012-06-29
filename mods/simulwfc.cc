@@ -105,20 +105,20 @@ int SimulWfc::calibrate() {
 	return Wfc::calibrate();
 }
 
-int SimulWfc::actuate(const bool /*block*/) {
+int SimulWfc::dm_actuate(const bool /*block*/) {
 	gsl_matrix_set_zero(wfc_sim);
 	
-	if (actpos.size() != ctrlparams.ctrl_vec->size)
-		return io.msg(IO_ERR, "SimulWfc::actuate() # of actuator position != # of actuator amplitudes!");
+	if (actpos.size() != control->size)
+		return io.msg(IO_ERR, "SimulWfc::dm_actuate() # of actuator position != # of actuator amplitudes!");
 
-	float amp_abssum = gsl_blas_sasum(ctrlparams.ctrl_vec);
+	float amp_abssum = gsl_blas_sasum(control);
 	if (amp_abssum < min_actvec_amp) {						// if vector amplitude is small, set WFC 'flat'
-		io.msg(IO_INFO, "SimulWfc::actuate() sum(actvec) (%g) < %g, setting to 0", amp_abssum, min_actvec_amp);
+		io.msg(IO_INFO, "SimulWfc::dm_actuate() sum(actvec) (%g) < %g, setting to 0", amp_abssum, min_actvec_amp);
 		return 0;
 	}
 	
 	for (size_t i=0; i<actpos.size(); i++) {
-		float amp = gsl_vector_float_get(ctrlparams.ctrl_vec, i);
+		float amp = gsl_vector_float_get(control, i);
 		add_gauss(wfc_sim, actpos[i], actsize, clamp(amp, float(-1.0), float(1.0)));
 	}
 	

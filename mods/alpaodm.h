@@ -59,8 +59,8 @@ private:
 	Path conf_acfg;										//!< Alpao DM .acfg file
 	Path conf_data;										//!< Alpao DM associated binary data file
 
-	vector<double> offset;						//!< DM offset (calibrated safe 'zero' position)
-	string offset_str;								//!< Space-separated representation of offset
+	vector<double> hwoffset;					//!< DM factory offset (calibrated safe 'zero' position)
+	string hwoffset_str;							//!< Space-separated representation of offset
 
 	vector<double> act_vec;						//!< Local temporary actuate vector (copy of ctrlparms.ctrl_vec)
 	
@@ -70,8 +70,10 @@ public:
 	AlpaoDM(Io &io, foamctrl *const ptc, const string name, const string port, Path const &conffile, const bool online=true);
 	~AlpaoDM();
 	
+	int reset_zerovolt();							//!< Set DM to zero volts, which bypasses the factory offsets
+	
 	// From Wfc::
-	virtual int actuate(const bool block=false);
+	virtual int dm_actuate(const bool block=false);
 	virtual int calibrate();
 	virtual int reset();
 	

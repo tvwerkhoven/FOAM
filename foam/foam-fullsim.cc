@@ -219,19 +219,22 @@ int FOAM_FullSim::calib() {
 	int calret = 0;
 	
 	if (ptc->calib == "influence") {		// Calibrate influence function
-		// calib influence [singval cutoff] -- 
+		// calib influence [actuation amplitude] [singval cutoff] -- 
+		// actuation amplitude: how far should we move the actuators?
 		// singval < 0: drop these modes
 		// singval > 1: use this amount of modes
 		// else: use this amount of singular value
+		double act_amp = popdouble(ptc->calib_opt);
+		if (act_amp == 0.0) act_amp = 1.0;
 		double sval_cutoff = popdouble(ptc->calib_opt);
 		if (sval_cutoff == 0.0) sval_cutoff = 0.7;
-		io.msg(IO_INFO, "FOAM_FullSim::calib() influence calibration, sval=%g", sval_cutoff);
-
+		io.msg(IO_INFO, "FOAM_FullSim::calib() influence calibration, amp=%g, sval=%g", act_amp, sval_cutoff);
+		
 		// Init actuation vector & positions, camera, 
 		vector <float> actpos;
-		actpos.push_back(-1.0);
-		actpos.push_back(1.0);
-		
+		actpos.push_back(-act_amp);
+		actpos.push_back(act_amp);
+
 		// Disable seeing during calibration
 		double old_seeingfac = simcam->get_seeingfac(); simcam->set_seeingfac(0.0);
 		bool old_do_wfcerr = simcam->do_simwfcerr; simcam->do_simwfcerr = false;

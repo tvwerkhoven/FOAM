@@ -795,6 +795,7 @@ int Shwfs::calibrate() {
 
 int Shwfs::calib_influence(Wfc *wfc, Camera *cam, const vector <float> &actpos, const double sval_cutoff) {
 	double wfc_response = 0.1;
+	double thisact = 0;
 	
 	// Check sanity
 	if (wfc->get_nact() > (int) (2*mlacfg.size())) {
@@ -812,12 +813,14 @@ int Shwfs::calib_influence(Wfc *wfc, Camera *cam, const vector <float> &actpos, 
 	// Loop over all actuators, actuate according to actpos
 	io.msg(IO_XNFO, "Shwfs::calib_influence() Start calibration loop...");
 	for (int actid = 0; actid < wfc->get_nact(); actid++) {	// Loop over actuators
+		// Get current actuation signal for this actuator;
+		thisact = wfc->get_control_act(actid);
 		for (int posid = 0; posid < (int) actpos.size(); posid++) {	// Loop over actuator voltages
 			if (ptc->mode != AO_MODE_CAL)	// Abort if mode is not 'calib' anymore
 				goto influence_break;
 			
-			// Set actuator 'i' to 'actpos[p]', measure, wait until WFC is done
-			wfc->set_control_act(actpos.at(posid), actid);
+			// Set actuator 'actid' to 'thisact + actpos[p]', measure, wait until WFC is done
+			wfc->set_control_act(thisact + actpos.at(posid), actid);
 			wfc->actuate();
 			usleep(wfc_response * 1E6);
 			
@@ -826,8 +829,14 @@ int Shwfs::calib_influence(Wfc *wfc, Camera *cam, const vector <float> &actpos, 
 			build_infmat(wfc->getname(), frame, actid, posid);
 		}
 		
-		// Reset WFC to flat position
-		wfc->reset();
+		// Reset this actuator to its original position
+		wfc->set_control_act(thisact, actid);
+		// Do not set the mirror back to 'flat' (or whatever reset() does) here: 
+		// use the shape of the mirror as set *before* calibrating the influence 
+		// matrix.
+		// If reset() gives a bad mirror shape, than we need to add some offset
+		// before we can calculate a proper influence matrix. Setting the mirror
+		// back with reset() would negate this offset every time.
 	}
 		
 	io.msg(IO_XNFO, "Shwfs::calib_influence() Process data...");
@@ -844,8 +853,8 @@ influence_break:
 }
 
 int Shwfs::calib_zero(Wfc *wfc, Camera *cam) {
-	// Set wavefront corrector to flat position, start camera
-	wfc->reset();
+//	The zero calibration should be independent of the wavefront corrector
+//	shape, so we do no reset() here it as it might have some interesting shape.
 	
 	io.msg(IO_XNFO, "Shwfs::calib_zero() Start camera...");
 	cam->set_mode(Camera::RUNNING);
