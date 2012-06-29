@@ -246,8 +246,8 @@ int Wfc::set_randompattern(const float maxval) {
 int Wfc::actuate(const bool block) {
 	// Copy ctrlparams.ctrl_vec to control
 	gsl_vector_float_memcpy(control, ctrlparams.ctrl_vec);
-	// Subtract offset vector from actuation signal before sending it to the DM
-	gsl_vector_float_sub(control, offset);
+	// Add offset vector from actuation signal before sending it to the DM
+	gsl_vector_float_add(control, offset);
 	return dm_actuate(block);
 }
 
