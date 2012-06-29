@@ -404,6 +404,16 @@ void Wfc::on_message(Connection *const conn, string line) {
 			ctrlparams.gain.i = popdouble(line);
 			ctrlparams.gain.d = popdouble(line);
 			net_broadcast(format("ok gain %g %g %g", ctrlparams.gain.p, ctrlparams.gain.i, ctrlparams.gain.d));
+		} else if (what == "offset") {		// set offset <off0> <off1> ... <offN>
+			conn->addtag("offset");
+			string offstr = "ok offset";
+			double thisoff = 0;
+			for (size_t actid=0; actid < offset->size; offset++) {
+				thisoff = popdouble(line);
+				gsl_vector_float_set(offset, actid, thisoff);
+				offstr += format(" %.3g", thisoff);
+			}
+			net_broadcast(offstr);
 		} else
 			parsed = false;
 	} else if (command == "act") { 
