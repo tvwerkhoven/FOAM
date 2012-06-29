@@ -66,6 +66,7 @@ offset(NULL), offset_str("0"), control(NULL) {
 	add_cmd("act random");
 	add_cmd("act all");
 	add_cmd("act one");
+	add_cmd("act vec");
 }
 
 Wfc::~Wfc() {
@@ -468,14 +469,14 @@ void Wfc::on_message(Connection *const conn, string line) {
 			actuate();
 			conn->write(format("ok act all"));
             
-        //! @todo Implement setting all actuators with a vector
-//		} else if (actwhat == "vec") { 		// act vec <val> <val> <val> <val>
-//            for (size_t acti=0; acti < ctrlparams.target->size; acti++) {
-//                double actval = popdouble(line);
-//                gsl_vector_float_set(ctrlparams.target, acti, actval);
-//            }
-//			actuate();
-//			conn->write(format("ok act all"));
+		} else if (actwhat == "vec") { 		// act vec <val0> <val1> ... <valN>
+			double actval = 0;
+			for (size_t acti=0; acti < ctrlparams.target->size; acti++) {
+				actval = popdouble(line);
+				gsl_vector_float_set(ctrlparams.target, acti, actval);
+			}
+			actuate();
+			conn->write(format("ok act vec"));
 		} else
 			parsed = false;
 	} else {
