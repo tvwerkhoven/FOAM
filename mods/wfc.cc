@@ -24,6 +24,7 @@
 #include <gsl/gsl_blas.h>
 #include <gsl/gsl_vector.h>
 
+#include "utils.h"
 #include "types.h"
 #include "config.h"
 #include "path++.h"
@@ -36,7 +37,7 @@ Wfc::Wfc(Io &io, foamctrl *const ptc, const string name, const string type, cons
 Device(io, ptc, name, wfc_type + "." + type, port, conffile, online),
 real_nact(0), virt_nact(0), use_actmap(false), 
 have_waffle(false),
-offset(NULL), offset_str("0"), control(NULL) {	
+offset(NULL), offset_str("0"), control(NULL), maxact(1.0) {	
 	io.msg(IO_DEB2, "Wfc::Wfc()");
 
 	try {
@@ -61,6 +62,9 @@ offset(NULL), offset_str("0"), control(NULL) {
 	add_cmd("get ctrl");
 	add_cmd("get offset");
 	add_cmd("set offset");
+
+	add_cmd("get maxact");
+	add_cmd("set maxact");
 
 	add_cmd("act waffle");
 	add_cmd("act random");
@@ -146,6 +150,14 @@ int Wfc::update_control(const gsl_vector_float *const error, const gain_t g, con
 	if (g.p != 0) {
 		// ctrlparams.target += pid->p * ctrlparams.err
 		gsl_blas_saxpy(g.p, ctrlparams.err, ctrlparams.target);
+	}
+	
+	// Clamp WFC control values if requested
+	if (maxact != 1.0) {
+		for (size_t actid=0; actid<ctrlparams.target->size; actid++) {
+			float thisact = gsl_vector_float_get(ctrlparams.target, actid);
+			gsl_vector_float_set(ctrlparams.target, actid, clamp(thisact, -maxact, maxact));
+		}
 	}
 	
 	//! @todo Extend update_control() with (P)ID control
@@ -411,6 +423,9 @@ void Wfc::on_message(Connection *const conn, string line) {
 			conn->write(format("ok nact %d", get_nact()));
 		} else if (what == "ctrl") {			// get ctrl
 			conn->write(format("ok ctrl %s", ctrl_as_str().c_str()));
+		} else if (what == "maxact") {		// get maxact
+			conn->addtag("maxact");
+			conn->write(format("ok maxact %g", maxact));
 		} else if (what == "offset") {		// get offset
 			conn->write(format("ok offset %s", offset_str.c_str()));
 			
@@ -426,6 +441,10 @@ void Wfc::on_message(Connection *const conn, string line) {
 			ctrlparams.gain.i = popdouble(line);
 			ctrlparams.gain.d = popdouble(line);
 			net_broadcast(format("ok gain %g %g %g", ctrlparams.gain.p, ctrlparams.gain.i, ctrlparams.gain.d));
+		} else if (what == "maxact") {		// set maxact <float>
+			conn->addtag("maxact");
+			maxact = popdouble(line);
+			net_broadcast(format("ok maxact %g", maxact));
 		} else if (what == "offset") {		// set offset <off0> <off1> ... <offN>
 			conn->addtag("offset");
 			offset_str = format("%zu", offset->size);
