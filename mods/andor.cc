@@ -502,9 +502,6 @@ void AndorCam::cam_handler() {
 				if (ret != DRV_SUCCESS && ret != DRV_IDLE)
 					io.msg(IO_WARN, "AndorCam::cam_handler(W) AbortAcquisition: %s", error_desc[ret].c_str());
 
-				// Close shutter
-				cam_set_shutter(SHUTTER_CLOSED);
-
 				// We wait until the mode changed (for WAITING), or until the thread is canceled (for OFF)
 				{
 					io.msg(IO_INFO, "AndorCam::cam_handler(W) waiting...");
