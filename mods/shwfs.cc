@@ -59,6 +59,9 @@ method(Shift::COG)
 	add_cmd("mla get");
 	add_cmd("mla set");
 
+	add_cmd("set shift_mini");
+	add_cmd("get shift_mini");
+
 	add_cmd("get shifts");
 	
 	//! @todo Move microlens array configuration to separate class
@@ -93,7 +96,7 @@ method(Shift::COG)
 	simaxr = cfg.getint("simaxr", -1);
 	simini_f = cfg.getdouble("simini_f", 0.6);
 	
-	shift_mini = cfg.getdouble("shift_mini", 10);
+	shift_mini = cfg.getdouble("shift_mini", 100);
 	
 	// Generate MLA grid
 	gen_mla_grid(mlacfg, cam.get_res(), sisize, sipitch, xoff, disp, shape, overlap);
@@ -197,6 +200,7 @@ void Shwfs::on_message(Connection *const conn, string line) {
 		if (what == "shifts") {						// get shifts
 			conn->write("ok shifts " + get_shifts_str());
 		} else if (what == "shift_mini") {				// get shift_mini
+			conn->addtag("shift_mini");
 			conn->write(format("ok shift_mini %g", shift_mini));
 		} else 
 			parsed = false;
@@ -204,8 +208,9 @@ void Shwfs::on_message(Connection *const conn, string line) {
 		string what = popword(line);
 		
 		if (what == "shift_mini") {				// set shift_mini
+			conn->addtag("shift_mini");
 			shift_mini = popdouble(line);
-			conn->write(format("ok shift_mini %g", shift_mini));
+			net_broadcast(format("ok shift_mini %g", shift_mini), "shift_mini");
 		} else 
 			parsed = false;
 	} else {
