@@ -376,7 +376,7 @@ void CamView::do_histo_update() {
 		
 		sum /= pixels;
 		sumsquared /= pixels;
-		rms = sqrt(sumsquared - sum * sum) / sum;
+		rms = sqrt(sumsquared/pixels);
 	}
 	
 	// Update ranges
