@@ -588,7 +588,7 @@ int AndorCam::cam_set_frametranfer(const int ft)  {
 }
 
 int AndorCam::cam_get_frametranfer() const {
-	netio.broadcast(format("ok frametransfer %d", frametransfer), "frametransfer");
+	net_broadcast(format("ok frametransfer %d", frametransfer), "frametransfer");
 
 	return frametransfer;	
 }
@@ -709,7 +709,7 @@ void AndorCam::cam_get_coolrange(int *mintemp, int *maxtemp) {
 	
 	*mintemp = temp[0];
 	*maxtemp = temp[1];
-	netio.broadcast(format("ok coolrange %d %d", temp[0], temp[1]), "cooling");
+	net_broadcast(format("ok coolrange %d %d", temp[0], temp[1]), "cooling");
 }
 
 bool AndorCam::cam_get_cooleron() {
@@ -729,8 +729,8 @@ void AndorCam::cam_set_cooler(bool status) {
 		CoolerOFF();
 	else
 		CoolerON();
-	bool coolstat = cam_get_cooleron()
-	netio.broadcast(format("ok coolerstatus %d", coolstat), "cooling");
+	bool coolstat = cam_get_cooleron();
+	net_broadcast(format("ok coolerstatus %d", coolstat), "cooling");
 }
 
 void AndorCam::cam_set_cooltarget(const int value) {
@@ -761,7 +761,7 @@ void AndorCam::cam_set_cooltarget(const int value) {
 	// Also get new EM CCD gain range
 	cam_get_gain_range(&emgain_range[0], &emgain_range[1]);
 	
-	netio.broadcast(format("ok cooltarget %lf", cooling.target), "cooling");
+	net_broadcast(format("ok cooltarget %lf", cool_info.target), "cooling");
 }
 
 int AndorCam::cam_get_cooltemp() {
