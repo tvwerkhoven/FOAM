@@ -368,7 +368,7 @@ int Shwfs::build_infmat(string wfcname, Camera::frame_t *frame, int actid, int a
 int Shwfs::calc_infmat(const string &wfcname) {
 	if (!calib[wfcname].init) {
 		io.msg(IO_WARN, "Shwfs::calc_infmat(): Call Shwfs::init_infmat() first.");
-		return 0;
+		return -1;
 	}
 
 	/*
