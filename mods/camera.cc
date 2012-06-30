@@ -771,10 +771,10 @@ int Camera::darkburst(size_t bcount) {
 	if(!accumburst(accum, ndark))
 		return io.msg(IO_ERR, "Error taking darkframe!");
 	
-	darkexp = exposure;
+	dark_exposure = exposure;
 
 	//! @todo implement darkflat save
-	//accumsave(dark, "dark", dark_exposure);
+	accumsave(accum, "dark", dark_exposure);
 	
 	// Link data to dark
 	if (dark.image) 
@@ -784,7 +784,7 @@ int Camera::darkburst(size_t bcount) {
 	dark.data = dark.image;
 	
 	io.msg(IO_DEB1, "Got new dark.");
-	net_broadcast(format("ok dark %d", nflat));
+	net_broadcast(format("ok dark %d", ndark));
 	
 	set_mode(OFF);
 	return 0;
@@ -810,10 +810,9 @@ int Camera::flatburst(size_t bcount) {
 	if(!accumburst(accum, nflat))
 		return io.msg(IO_ERR, "Error taking flatframe!");
 	
-	flatexp = exposure;
+	flat_exposure = exposure;
 	
-	//! @todo implement flatflat save
-	//accumsave(flat, "flat", flat_exposure);
+	accumsave(accum, "flat", flat_exposure);
 	
 	// Link data to flat
 	if (flat.image) 
@@ -856,3 +855,59 @@ bool Camera::accumburst(uint32_t *accum, size_t bcount) {
 	return true;
 }
 
+bool Camera::accumsave(uint32_t *accum, string accumname, double thisexp) {
+	// Generate path to store file to, based on filenamebase
+	Path filename = mkfname(accumname) + ".fits";
+	io.msg(IO_DEB1, "Camera::accumsave(%p) to %s", accum, filename.c_str());
+	
+	fitsfile *fptr;
+	int status = 0, naxis = 2;
+	long fpixel = 1, nelements = -1;
+	long naxes[naxis];
+	nelements = res.x * res.y;
+	naxes[0] = res.x; naxes[1] = res.y;
+	
+	// Open file
+	fits_create_file(&fptr, filename.c_str(), &status);
+	if (status) return status;
+	
+	// Get filedatatype parameters
+	int ftype=0, dtype=0;
+	ftype = ULONG_IMG; dtype = TUINT;
+
+	// Create image 
+	fits_create_img(fptr, ftype, naxis, naxes, &status);
+	if (status) return status;
+	
+	// Write header: http://heasarc.gsfc.nasa.gov/docs/software/fitsio/c/c_user/node39.html
+	
+	// Write a keyword; must pass the ADDRESS of the value
+	fits_write_date(fptr, &status);
+	
+	fits_add_card(fptr, "ORIGIN", PACKAGE_NAME " -- " PACKAGE_VERSION);
+	fits_add_card(fptr, "DEVNAME", name, "FOAM device name");
+	fits_add_card(fptr, "DEVTYPE", type, "FOAM device type");
+	fits_add_card(fptr, "TELESCOPE", fits_telescope);
+	fits_add_card(fptr, "INSTRUMENT", fits_instrument);
+	fits_add_card(fptr, "OBSERVER", fits_observer);
+	fits_add_card(fptr, "TARGET", fits_target);
+	fits_add_card(fptr, "ACCUM", accumname, "accumulation name");
+	fits_add_card(fptr, "EXPTIME", format("%lf", thisexp), "[s] Exposure time");
+	fits_add_card(fptr, "INTERVAL", format("%lf", interval), "[s] Frame cadence");
+	fits_add_card(fptr, "GAIN", format("%lf", gain));
+	fits_add_card(fptr, "OFFSET", format("%lf", offset));
+	if (status) return status;
+	
+	fits_write_comment(fptr, fits_comments.c_str(), &status);
+	if (status) return status;
+	
+	fits_write_img(fptr, dtype, fpixel, nelements, accum, &status);
+
+	if (status) return status;
+	
+	// Close file
+	fits_close_file(fptr, &status);
+	if (status) return status;
+	
+	return 0;
+}

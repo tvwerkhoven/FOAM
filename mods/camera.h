@@ -231,6 +231,7 @@ protected:
 
 	void calculate_stats(frame *const frame) const;		//!< Calculate rms and such
 	bool accumburst(uint32_t *accum, size_t bcount);	//!< For dark/flat acquisition
+	bool accumsave(uint32_t *accum, string accumname, double thisexp); //!< Store accumulation burst
 //	void statistics(Connection *conn, size_t bcount);	//!< Post back statistics
 	
 	Path makename(const string &base) const;					//!< Make filename from outputdir and filenamebase
@@ -255,8 +256,8 @@ protected:
 	size_t nflat;									//!< Number of frames used in Camera::flatframe
 	frame_t dark;									//!< Dark frame, dark.image is a sum of Camera::ndark frames, type is uint32_t.
 	frame_t flat;									//!< Flat frame, flat.image is a sum of Camera::nflat frames, type is uint32_t.
-	double darkexp;								//!< Exposure used for darkimage
-	double flatexp;								//!< Exposure used for flatimage
+	double dark_exposure;					//!< Exposure used for darkimage
+	double flat_exposure;					//!< Exposure used for flatimage
 
 	int shutstat;									//!< Shutter status: 0 is closed, 1 is open, see shutter_t
 	double interval;							//!< Frame time (exposure + readout)
