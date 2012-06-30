@@ -188,6 +188,7 @@ int FOAM_ExpoAO::closed_loop() {
 	closedperf_addlog("wfc->update_control()");
 	
 	// Use control vector to compute total shifts that we are correcting
+	//! @bug This does not work with
 	ixonwfs->comp_shift(alpao_dm97->getname(), alpao_dm97->ctrlparams.target, wf_meas->wf_full);
 	openperf_addlog("wfs->comp_shift");
 	
