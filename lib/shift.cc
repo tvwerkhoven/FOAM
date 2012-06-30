@@ -131,9 +131,11 @@ void Shift::_calc_cog(const uint8_t *img, const coord_t &res, const vector_t &cr
 				p++;
 				continue;
 			}
-			v[0] += *p * i;
-			v[1] += *p * j;
-			sum += *p;
+			// We subtract the constant background as it introduces an offset shift 
+			// in the CoG tracking
+			v[0] += (*p-mini) * i;
+			v[1] += (*p-mini) * j;
+			sum += (*p-mini);
 			p++;
 		}
 	}
@@ -167,9 +169,11 @@ void Shift::_calc_cog(const uint16_t *img, const coord_t &res, const vector_t &c
 				p++;
 				continue;
 			}
-			v[0] += *p * i;
-			v[1] += *p * j;
-			sum += *p;
+			// We subtract the constant background as it introduces an offset shift 
+			// in the CoG tracking
+			v[0] += (*p-mini) * i;
+			v[1] += (*p-mini) * j;
+			sum += (*p-mini);
 			p++;
 		}
 	}
