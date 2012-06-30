@@ -43,8 +43,8 @@ using namespace std;
 Camera::Camera(Io &io, foamctrl *const ptc, const string name, const string type, const string port, Path const &conffile, const bool online):
 Device(io, ptc, name, cam_type + "." + type, port, conffile, online),
 do_proc(true), nframes(-1), count(0), timeouts(0), ndark(10), nflat(10), 
-darkexp(1.0), flatexp(1.0),
-interval(1.0), exposure(1.0), gain(1.0), offset(0.0), 
+dark_exposure(1.0), flat_exposure(1.0),
+shutstat(SHUTTER_CLOSED), interval(1.0), exposure(1.0), gain(1.0), offset(0.0), 
 res(0,0), depth(-1),
 mode(Camera::OFF),
 filenamebase("FOAM"), nstore(0),
@@ -403,6 +403,9 @@ void Camera::on_message(Connection *const conn, string line) {
 		if(what == "mode") {
 			string mode_str = popword(line);
 			set_mode(str2mode(mode_str));
+		} else if(what == "shutter") {
+			conn->addtag("shutter");
+			cam_set_shutter(popint(line));
 		} else if(what == "exposure") {
 			conn->addtag("exposure");
 			set_exposure(popdouble(line));
@@ -431,6 +434,9 @@ void Camera::on_message(Connection *const conn, string line) {
 		if(what == "mode") {
 			conn->addtag("mode");
 			conn->write("ok mode " + mode2str(mode));
+		} else if(what == "shutter") {
+			conn->addtag("shutter");
+			conn->write(format("ok shutter %d", shutstat));
 		} else if(what == "exposure") {
 			conn->addtag("exposure");
 			conn->write(format("ok exposure %lf", exposure));
@@ -756,6 +762,7 @@ int Camera::darkburst(size_t bcount) {
 	io.msg(IO_DEB1, "Starting dark burst of %zu frames", ndark);
 	
 	set_mode(RUNNING);
+	cam_set_shutter(SHUTTER_CLOSED);
 	
 	// Allocate memory for darkfield
 	uint32_t *accum = new uint32_t[res.x * res.y];

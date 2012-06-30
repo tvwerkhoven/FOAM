@@ -152,7 +152,7 @@ AndorCam::~AndorCam() {
 	
 	// Abort acquisition and close shutter
 	AbortAcquisition();
-	SetShutter(1, 2, 0, 0);
+	cam_set_shutter(SHUTTER_CLOSED);
 	sleep(1);
 
 	// Disable cooler, warm up CCD
@@ -426,6 +426,19 @@ void AndorCam::do_restart() {
 	io.msg(IO_INFO, "AndorCam::do_restart()");
 }
 
+void AndorCam::cam_set_shutter(const int status) {
+	int ret;
+	if (status == SHUTTER_OPEN)
+		ret = SetShutter(1, 1, 50, 50);
+	else
+		ret = SetShutter(1, 2, 0, 0);
+
+	if (ret != DRV_SUCCESS)
+		io.msg(IO_WARN, "AndorCam::cam_handler(R) SetShutter: %s", error_desc[ret].c_str());
+	else
+		shutstat = status;
+}
+
 void AndorCam::cam_handler() { 
 	io.msg(IO_DEB1, "AndorCam::cam_handler()");
 	//pthread::setcanceltype(PTHREAD_CANCEL_ASYNCHRONOUS);	
@@ -437,9 +450,7 @@ void AndorCam::cam_handler() {
 				io.msg(IO_DEB1, "AndorCam::cam_handler() RUNNING");
 
 				// Open shutter
-				ret = SetShutter(1, 1, 50, 50);
-				if (ret != DRV_SUCCESS)
-					io.msg(IO_WARN, "AndorCam::cam_handler(R) SetShutter: %s", error_desc[ret].c_str());
+				cam_set_shutter(SHUTTER_OPEN);
 
 				// Start acquisition
 				ret = StartAcquisition();
@@ -476,7 +487,7 @@ void AndorCam::cam_handler() {
 				
 				// Abort acquisition and close shutter
 				AbortAcquisition();
-				SetShutter(1, 2, 0, 0);
+				cam_set_shutter(SHUTTER_CLOSED);
 
 				break;
 			case Camera::SINGLE:
@@ -495,9 +506,7 @@ void AndorCam::cam_handler() {
 					io.msg(IO_WARN, "AndorCam::cam_handler(W) AbortAcquisition: %s", error_desc[ret].c_str());
 
 				// Close shutter
-				SetShutter(1, 2, 0, 0);
-				if (ret != DRV_SUCCESS)
-					io.msg(IO_WARN, "AndorCam::cam_handler(W) SetShutter: %s", error_desc[ret].c_str());
+				cam_set_shutter(SHUTTER_CLOSED);
 
 				// We wait until the mode changed (for WAITING), or until the thread is canceled (for OFF)
 				{

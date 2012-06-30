@@ -148,6 +148,7 @@ public:
 	double cam_get_gain();
 	void cam_set_offset(const double value);
 	double cam_get_offset();
+	void cam_set_shutter(const int status);
 	
 	void cam_set_mode(const mode_t newmode);
 	void do_restart();

@@ -131,6 +131,12 @@ class Camera: public foam::Device {
 	friend class Wfs;
 public:
 	typedef enum {
+		SHUTTER_CLOSED = 0,
+		SHUTTER_OPEN,
+		SHUTTER_ERROR
+	} shutter_t;
+	
+	typedef enum {
 		OFF = 0,
 		WAITING,
 		SINGLE,
@@ -214,6 +220,9 @@ protected:
 	virtual void cam_set_offset(const double value)=0;		//!< Set offset in camera
 	virtual double cam_get_offset() =0;							//!< Get offset from camera
 
+	virtual void cam_set_shutter(const int status) { shutstat = status; } //!< Set camera shutter open or closed
+	virtual int cam_get_shutter() const { return shutstat; } //!< Return camera shutter status
+
 	virtual void cam_set_mode(const mode_t newmode)=0; //!< Set mode for cam_handler()
 	virtual void do_restart()=0;
 
@@ -249,6 +258,7 @@ protected:
 	double darkexp;								//!< Exposure used for darkimage
 	double flatexp;								//!< Exposure used for flatimage
 
+	int shutstat;									//!< Shutter status: 0 is closed, 1 is open, see shutter_t
 	double interval;							//!< Frame time (exposure + readout)
 	double exposure;							//!< Exposure time
 	double gain;									//!< Camera gain
