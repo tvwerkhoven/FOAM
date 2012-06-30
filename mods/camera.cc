@@ -834,18 +834,14 @@ int Camera::flatburst(size_t bcount) {
 }
 
 bool Camera::accumburst(uint32_t *accum, size_t bcount) {
-	// Stop camera first so we can take it
-	set_mode(WAITING);
-	
-	// Grab mutexholder for exclusive camera access and start camera
-	pthread::mutexholder h(&cam_mutex);
 	set_mode(RUNNING);
 
 	size_t start = count;
 	size_t rx = 0;
 	
+	//! @todo Check this code
 	while(rx < bcount) {
-		frame_t *f = get_frame(start + rx);
+		frame_t *f = get_next_frame(true);
 		if(!f)
 			return false;
 		
