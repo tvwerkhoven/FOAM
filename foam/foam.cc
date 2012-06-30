@@ -51,7 +51,7 @@ do_sighandle(true), sighandler(NULL),
 do_perflog(false), open_perf(NULL), closed_perf(NULL),
 it_closed_l(0), it_open_l(0),
 nodaemon(false), listenport(""), error(false), conffile(FOAM_DEFAULTCONF), execname(argv[0]),
-io(IO_DEB2)
+io(IO_XNFO)
 {
 	io.msg(IO_DEB2, "FOAM::FOAM()");
 		

@@ -131,6 +131,12 @@ class Camera: public foam::Device {
 	friend class Wfs;
 public:
 	typedef enum {
+		SHUTTER_CLOSED = 0,
+		SHUTTER_OPEN,
+		SHUTTER_ERROR
+	} shutter_t;
+	
+	typedef enum {
 		OFF = 0,
 		WAITING,
 		SINGLE,
@@ -214,6 +220,9 @@ protected:
 	virtual void cam_set_offset(const double value)=0;		//!< Set offset in camera
 	virtual double cam_get_offset() =0;							//!< Get offset from camera
 
+	virtual void cam_set_shutter(const int status) { shutstat = status; } //!< Set camera shutter open or closed
+	virtual int cam_get_shutter() const { return shutstat; } //!< Return camera shutter status
+
 	virtual void cam_set_mode(const mode_t newmode)=0; //!< Set mode for cam_handler()
 	virtual void do_restart()=0;
 
@@ -222,6 +231,7 @@ protected:
 
 	void calculate_stats(frame *const frame) const;		//!< Calculate rms and such
 	bool accumburst(uint32_t *accum, size_t bcount);	//!< For dark/flat acquisition
+	bool accumsave(uint32_t *accum, string accumname, double thisexp); //!< Store accumulation burst
 //	void statistics(Connection *conn, size_t bcount);	//!< Post back statistics
 	
 	Path makename(const string &base) const;					//!< Make filename from outputdir and filenamebase
@@ -246,9 +256,10 @@ protected:
 	size_t nflat;									//!< Number of frames used in Camera::flatframe
 	frame_t dark;									//!< Dark frame, dark.image is a sum of Camera::ndark frames, type is uint32_t.
 	frame_t flat;									//!< Flat frame, flat.image is a sum of Camera::nflat frames, type is uint32_t.
-	double darkexp;								//!< Exposure used for darkimage
-	double flatexp;								//!< Exposure used for flatimage
+	double dark_exposure;					//!< Last used darkfield exposure
+	double flat_exposure;					//!< Last used flatfield exposure
 
+	int shutstat;									//!< Shutter status: 0 is closed, 1 is open, see shutter_t
 	double interval;							//!< Frame time (exposure + readout)
 	double exposure;							//!< Exposure time
 	double gain;									//!< Camera gain

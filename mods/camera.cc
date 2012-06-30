@@ -43,8 +43,8 @@ using namespace std;
 Camera::Camera(Io &io, foamctrl *const ptc, const string name, const string type, const string port, Path const &conffile, const bool online):
 Device(io, ptc, name, cam_type + "." + type, port, conffile, online),
 do_proc(true), nframes(-1), count(0), timeouts(0), ndark(10), nflat(10), 
-darkexp(1.0), flatexp(1.0),
-interval(1.0), exposure(1.0), gain(1.0), offset(0.0), 
+dark_exposure(1.0), flat_exposure(1.0),
+shutstat(SHUTTER_CLOSED), interval(1.0), exposure(1.0), gain(1.0), offset(0.0), 
 res(0,0), depth(-1),
 mode(Camera::OFF),
 filenamebase("FOAM"), nstore(0),
@@ -61,6 +61,7 @@ fits_telescope("undef"), fits_observer("undef"), fits_instrument("undef"), fits_
 	add_cmd("set offset");
 	add_cmd("set filename");
 	add_cmd("set fits");
+	add_cmd("set shutter");
 	add_cmd("get mode");
 	add_cmd("get exposure");
 	add_cmd("get interval");
@@ -72,6 +73,7 @@ fits_telescope("undef"), fits_observer("undef"), fits_instrument("undef"), fits_
 	add_cmd("get resolution");
 	add_cmd("get filename");
 	add_cmd("get fits");
+	add_cmd("get shutter");
 	add_cmd("thumbnail");
 	add_cmd("grab");
 	add_cmd("store");
@@ -268,24 +270,35 @@ void Camera::calculate_stats(frame_t *const frame) const {
 	
 	double sum = 0;
 	double sumsquared = 0;
+	size_t idx;
 
 	if(depth <= 8) {
 		uint8_t *image = (uint8_t *)frame->image;
-		for(size_t i = 0; i < (size_t) res.x * res.y; i++) {
-			frame->histo[image[i]]++;
-			sum += image[i];
-			sumsquared += (image[i] * image[i]);
-			if (image[i] > frame->max) frame->max = image[i];
-			else if (image[i] < frame->min) frame->min = image[i];
+		// Loop over all pixels, but ignore the outermost pixels as these could 
+		// contain 'bad' pixels (i.e. Andor cameras)
+		for(size_t j = 1; j < (size_t) res.y - 1; j++) {
+			for(size_t i = 1; i < (size_t) res.x -1; i++) {
+				idx = i + j*res.y;
+				frame->histo[image[idx]]++;
+				sum += image[idx];
+				sumsquared += (image[idx] * image[idx]);
+				// Find minimum and maximum, but ignore brightest pixels
+				if (image[idx] > frame->max && image[idx] < thismaxval) frame->max = image[idx];
+				else if (image[idx] < frame->min && image[idx] != 0) frame->min = image[idx];
+			}
 		}
 	} else {
 		uint16_t *image = (uint16_t *)frame->image;
-		for(size_t i = 0; i < (size_t) res.x * res.y; i++) {
-			frame->histo[image[i]]++;
-			sum += image[i];
-			sumsquared += (image[i] * image[i]);
-			if (image[i] > frame->max) frame->max = image[i];
-			else if (image[i] < frame->min) frame->min = image[i];
+		for(size_t j = 1; j < (size_t) res.y - 1; j++) {
+			for(size_t i = 1; i < (size_t) res.x -1; i++) {
+				idx = i + j*res.y;
+				frame->histo[image[idx]]++;
+				sum += image[idx];
+				sumsquared += (image[idx] * image[idx]);
+				// Find minimum and maximum, but ignore brightest pixels
+				if (image[idx] > frame->max && image[idx] < thismaxval) frame->max = image[idx];
+				else if (image[idx] < frame->min && image[idx] != 0) frame->min = image[idx];
+			}
 		}
 	}
 
@@ -299,9 +312,10 @@ void Camera::calculate_stats(frame_t *const frame) const {
 	
 //	sum /= res.x * res.y;
 //	sumsquared /= res.x * res.y;
-	
-	frame->avg = sum / (res.x * res.y);
-	frame->rms = sqrt((sumsquared/(res.x * res.y)) - frame->avg * frame->avg) / frame->avg;
+	size_t npix = ((res.x-2) * (res.y-2));
+	frame->avg = sum / npix;
+	// RMS is wrong?
+	frame->rms = sqrt((sumsquared/npix) - (frame->avg * frame->avg)) / frame->avg;
 }
 
 void *Camera::cam_queue(void * const data, void * const image, struct timeval *const tv) {
@@ -403,6 +417,9 @@ void Camera::on_message(Connection *const conn, string line) {
 		if(what == "mode") {
 			string mode_str = popword(line);
 			set_mode(str2mode(mode_str));
+		} else if(what == "shutter") {
+			conn->addtag("shutter");
+			cam_set_shutter(popint(line));
 		} else if(what == "exposure") {
 			conn->addtag("exposure");
 			set_exposure(popdouble(line));
@@ -431,6 +448,9 @@ void Camera::on_message(Connection *const conn, string line) {
 		if(what == "mode") {
 			conn->addtag("mode");
 			conn->write("ok mode " + mode2str(mode));
+		} else if(what == "shutter") {
+			conn->addtag("shutter");
+			conn->write(format("ok shutter %d", shutstat));
 		} else if(what == "exposure") {
 			conn->addtag("exposure");
 			conn->write(format("ok exposure %lf", exposure));
@@ -484,9 +504,11 @@ void Camera::on_message(Connection *const conn, string line) {
 	} else if(command == "dark") {
 		if (darkburst(popint(line)) )
 			conn->write("error :Error during dark burst");
+		conn->write(format("ok flat %d", ndark));
 	} else if(command == "flat") {
 		if (flatburst(popint(line)))
 			conn->write("error :Error during flat burst");
+		conn->write(format("ok flat %d", nflat));
 //	} else if(command == "statistics") {
 //		statistics(conn, popint(line));
 	} else {
@@ -755,7 +777,7 @@ int Camera::darkburst(size_t bcount) {
 		
 	io.msg(IO_DEB1, "Starting dark burst of %zu frames", ndark);
 	
-	set_mode(RUNNING);
+	cam_set_shutter(SHUTTER_CLOSED);
 	
 	// Allocate memory for darkfield
 	uint32_t *accum = new uint32_t[res.x * res.y];
@@ -764,10 +786,9 @@ int Camera::darkburst(size_t bcount) {
 	if(!accumburst(accum, ndark))
 		return io.msg(IO_ERR, "Error taking darkframe!");
 	
-	darkexp = exposure;
+	dark_exposure = exposure;
 
-	//! @todo implement darkflat save
-	//accumsave(dark, "dark", dark_exposure);
+	accumsave(accum, "dark", dark_exposure);
 	
 	// Link data to dark
 	if (dark.image) 
@@ -777,9 +798,8 @@ int Camera::darkburst(size_t bcount) {
 	dark.data = dark.image;
 	
 	io.msg(IO_DEB1, "Got new dark.");
-	net_broadcast(format("ok dark %d", nflat));
+	net_broadcast(format("ok dark %d", ndark));
 	
-	set_mode(OFF);
 	return 0;
 }
 
@@ -790,12 +810,6 @@ int Camera::flatburst(size_t bcount) {
 	
 	io.msg(IO_DEB1, "Starting flat burst of %zu frames", nflat);
 	
-	//! @todo fix this
-	set_mode(RUNNING);
-	//	state = WAITING;
-	//	get_state(connection, true);
-	//	set_state(WAITING, true);
-	
 	// Allocate memory for flatfield
 	uint32_t *accum = new uint32_t[res.x * res.y];
 	memset(accum, 0, res.x * res.y * sizeof *accum);
@@ -803,10 +817,9 @@ int Camera::flatburst(size_t bcount) {
 	if(!accumburst(accum, nflat))
 		return io.msg(IO_ERR, "Error taking flatframe!");
 	
-	flatexp = exposure;
+	flat_exposure = exposure;
 	
-	//! @todo implement flatflat save
-	//accumsave(flat, "flat", flat_exposure);
+	accumsave(accum, "flat", flat_exposure);
 	
 	// Link data to flat
 	if (flat.image) 
@@ -818,18 +831,18 @@ int Camera::flatburst(size_t bcount) {
 	io.msg(IO_DEB1, "Got new flat.");
 	net_broadcast(format("ok flat %d", nflat));
 	
-	set_mode(OFF);
 	return 0;
 }
 
 bool Camera::accumburst(uint32_t *accum, size_t bcount) {
-	pthread::mutexholder h(&cam_mutex);
-	
+	set_mode(RUNNING);
+
 	size_t start = count;
 	size_t rx = 0;
 	
+	//! @todo Check this code
 	while(rx < bcount) {
-		frame_t *f = get_frame(start + rx);
+		frame_t *f = get_next_frame(true);
 		if(!f)
 			return false;
 		
@@ -845,7 +858,65 @@ bool Camera::accumburst(uint32_t *accum, size_t bcount) {
 		
 		rx++;
 	}
-	
+
+	set_mode(WAITING);
+
 	return true;
 }
 
+bool Camera::accumsave(uint32_t *accum, string accumname, double thisexp) {
+	// Generate path to store file to, based on filenamebase
+	Path filename = mkfname(accumname + ".fits");
+	io.msg(IO_DEB1, "Camera::accumsave(%p) to %s", accum, filename.c_str());
+	
+	fitsfile *fptr;
+	int status = 0, naxis = 2;
+	long fpixel = 1, nelements = -1;
+	long naxes[naxis];
+	nelements = res.x * res.y;
+	naxes[0] = res.x; naxes[1] = res.y;
+	
+	// Open file
+	fits_create_file(&fptr, filename.c_str(), &status);
+	if (status) return status;
+	
+	// Get filedatatype parameters
+	int ftype=0, dtype=0;
+	ftype = ULONG_IMG; dtype = TUINT;
+
+	// Create image 
+	fits_create_img(fptr, ftype, naxis, naxes, &status);
+	if (status) return status;
+	
+	// Write header: http://heasarc.gsfc.nasa.gov/docs/software/fitsio/c/c_user/node39.html
+	
+	// Write a keyword; must pass the ADDRESS of the value
+	fits_write_date(fptr, &status);
+	
+	fits_add_card(fptr, "ORIGIN", PACKAGE_NAME " -- " PACKAGE_VERSION);
+	fits_add_card(fptr, "DEVNAME", name, "FOAM device name");
+	fits_add_card(fptr, "DEVTYPE", type, "FOAM device type");
+	fits_add_card(fptr, "TELESCOPE", fits_telescope);
+	fits_add_card(fptr, "INSTRUMENT", fits_instrument);
+	fits_add_card(fptr, "OBSERVER", fits_observer);
+	fits_add_card(fptr, "TARGET", fits_target);
+	fits_add_card(fptr, "ACCUM", accumname, "accumulation name");
+	fits_add_card(fptr, "EXPTIME", format("%lf", thisexp), "[s] Exposure time");
+	fits_add_card(fptr, "INTERVAL", format("%lf", interval), "[s] Frame cadence");
+	fits_add_card(fptr, "GAIN", format("%lf", gain));
+	fits_add_card(fptr, "OFFSET", format("%lf", offset));
+	if (status) return status;
+	
+	fits_write_comment(fptr, fits_comments.c_str(), &status);
+	if (status) return status;
+	
+	fits_write_img(fptr, dtype, fpixel, nelements, accum, &status);
+
+	if (status) return status;
+	
+	// Close file
+	fits_close_file(fptr, &status);
+	if (status) return status;
+	
+	return 0;
+}

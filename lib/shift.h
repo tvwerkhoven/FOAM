@@ -84,6 +84,7 @@ private:
 		void *refimg;											//!< Reference image (for method=CORR)
 		uint32_t mini;										//!< Minimum intensity to consider (for method=COG)
 		std::vector<vector_t> crops;			//!< Crop fields within the bigger image
+		fcoord_t maxshift;								//!< Clamp the calculated shifts with this range
 		gsl_vector_float *shifts;					//!< Pre-allocated output vector
 		pthread::mutex mutex;							//!< Lock for jobid and done
 		int jobid;												//!< Next crop field to process
@@ -113,8 +114,8 @@ private:
 	 @param [out] *vec Shift found within crop field in img
 	 @param [in] mini Minimum intensity to consider
 	 */
-	void _calc_cog(const uint8_t *img, const coord_t &res, const vector_t &crop, float *vec, const uint8_t mini=0);
-	void _calc_cog(const uint16_t *img, const coord_t &res, const vector_t &crop, float *vec, const uint16_t mini=0);
+	void _calc_cog(const uint8_t *img, const coord_t &res, const vector_t &crop, const fcoord_t maxshift, float *vec, const uint8_t mini=0);
+	void _calc_cog(const uint16_t *img, const coord_t &res, const vector_t &crop, const fcoord_t maxshift, float *vec, const uint16_t mini=0);
 	
 public:
 	Shift(Io &io, const int nthr=1);
@@ -125,14 +126,14 @@ public:
 	 @param [in] img Pointer to image data.
 	 @param [in] res Resolution of image data (i.e. data stride)
 	 @param [in] *crops Array of crop field to process
+	 @param [in] maxshift Maximum shift to allow, if higher: clamp at +- this value
 	 @param [out] *shifts Buffer to hold results (pre-allocated)
 	 @param [in] method Tracking method (see method_t)
 	 @param [in] wait Block until complete, or return asap
 	 @param [in] mini Minimum intensity to consider (for COG)
 	 */
-	bool calc_shifts(const uint8_t *img, const coord_t res, const std::vector<vector_t> &crops, gsl_vector_float *shifts, const method_t method=COG, const bool wait=true, const uint8_t mini=0);
-	bool calc_shifts(const uint16_t *img, const coord_t res, const std::vector<vector_t> &crops, gsl_vector_float *shifts, const method_t method=COG, const bool wait=true, const uint16_t mini=0);
-
+	bool calc_shifts(const uint8_t *img, const coord_t res, const std::vector<vector_t> &crops, const fcoord_t maxshift, gsl_vector_float *shifts, const method_t method=COG, const bool wait=true, const uint8_t mini=0);
+	bool calc_shifts(const uint16_t *img, const coord_t res, const std::vector<vector_t> &crops, const fcoord_t maxshift, gsl_vector_float *shifts, const method_t method=COG, const bool wait=true, const uint16_t mini=0);
 };
 
 #endif // HAVE_SHIFT_H
