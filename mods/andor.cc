@@ -450,9 +450,6 @@ void AndorCam::cam_handler() {
 			case Camera::RUNNING:
 				io.msg(IO_DEB1, "AndorCam::cam_handler() RUNNING");
 
-				// Open shutter
-				cam_set_shutter(SHUTTER_OPEN);
-
 				// Start acquisition
 				ret = StartAcquisition();
 				if (ret != DRV_SUCCESS) {
@@ -488,7 +485,6 @@ void AndorCam::cam_handler() {
 				
 				// Abort acquisition and close shutter
 				AbortAcquisition();
-				cam_set_shutter(SHUTTER_CLOSED);
 
 				break;
 			case Camera::SINGLE:
@@ -505,9 +501,6 @@ void AndorCam::cam_handler() {
 				ret = AbortAcquisition();
 				if (ret != DRV_SUCCESS && ret != DRV_IDLE)
 					io.msg(IO_WARN, "AndorCam::cam_handler(W) AbortAcquisition: %s", error_desc[ret].c_str());
-
-				// Close shutter
-				cam_set_shutter(SHUTTER_CLOSED);
 
 				// We wait until the mode changed (for WAITING), or until the thread is canceled (for OFF)
 				{

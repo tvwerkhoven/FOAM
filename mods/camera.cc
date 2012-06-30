@@ -61,6 +61,7 @@ fits_telescope("undef"), fits_observer("undef"), fits_instrument("undef"), fits_
 	add_cmd("set offset");
 	add_cmd("set filename");
 	add_cmd("set fits");
+	add_cmd("set shutter");
 	add_cmd("get mode");
 	add_cmd("get exposure");
 	add_cmd("get interval");
@@ -72,6 +73,7 @@ fits_telescope("undef"), fits_observer("undef"), fits_instrument("undef"), fits_
 	add_cmd("get resolution");
 	add_cmd("get filename");
 	add_cmd("get fits");
+	add_cmd("get shutter");
 	add_cmd("thumbnail");
 	add_cmd("grab");
 	add_cmd("store");
@@ -268,24 +270,35 @@ void Camera::calculate_stats(frame_t *const frame) const {
 	
 	double sum = 0;
 	double sumsquared = 0;
+	size_t idx;
 
 	if(depth <= 8) {
 		uint8_t *image = (uint8_t *)frame->image;
-		for(size_t i = 0; i < (size_t) res.x * res.y; i++) {
-			frame->histo[image[i]]++;
-			sum += image[i];
-			sumsquared += (image[i] * image[i]);
-			if (image[i] > frame->max) frame->max = image[i];
-			else if (image[i] < frame->min) frame->min = image[i];
+		// Loop over all pixels, but ignore the outermost pixels as these could 
+		// contain 'bad' pixels (i.e. Andor cameras)
+		for(size_t j = 1; j < (size_t) res.y - 1; j++) {
+			for(size_t i = 1; i < (size_t) res.x -1; i++) {
+				idx = i + j*res.y;
+				frame->histo[image[idx]]++;
+				sum += image[idx];
+				sumsquared += (image[idx] * image[idx]);
+				// Find minimum and maximum, but ignore brightest pixels
+				if (image[idx] > frame->max && image[idx] < thismaxval) frame->max = image[i];
+				else if (image[idx] < frame->min && image[idx] != 0) frame->min = image[i];
+			}
 		}
 	} else {
 		uint16_t *image = (uint16_t *)frame->image;
-		for(size_t i = 0; i < (size_t) res.x * res.y; i++) {
-			frame->histo[image[i]]++;
-			sum += image[i];
-			sumsquared += (image[i] * image[i]);
-			if (image[i] > frame->max) frame->max = image[i];
-			else if (image[i] < frame->min) frame->min = image[i];
+		for(size_t j = 1; j < (size_t) res.y - 1; j++) {
+			for(size_t i = 1; i < (size_t) res.x -1; i++) {
+				idx = i + j*res.y;
+				frame->histo[image[idx]]++;
+				sum += image[idx];
+				sumsquared += (image[idx] * image[idx]);
+				// Find minimum and maximum, but ignore brightest pixels
+				if (image[idx] > frame->max && image[idx] < thismaxval) frame->max = image[i];
+				else if (image[idx] < frame->min && image[idx] != 0) frame->min = image[i];
+			}
 		}
 	}
 
@@ -299,9 +312,9 @@ void Camera::calculate_stats(frame_t *const frame) const {
 	
 //	sum /= res.x * res.y;
 //	sumsquared /= res.x * res.y;
-	
-	frame->avg = sum / (res.x * res.y);
-	frame->rms = sqrt((sumsquared/(res.x * res.y)) - frame->avg * frame->avg) / frame->avg;
+	size_t npix = ((res.x-2) * (res.y-2));
+	frame->avg = sum / npix;
+	frame->rms = sqrt((sumsquared/npix) - frame->avg * frame->avg) / frame->avg;
 }
 
 void *Camera::cam_queue(void * const data, void * const image, struct timeval *const tv) {
@@ -490,9 +503,11 @@ void Camera::on_message(Connection *const conn, string line) {
 	} else if(command == "dark") {
 		if (darkburst(popint(line)) )
 			conn->write("error :Error during dark burst");
+		conn->write(format("ok flat %d", ndark));
 	} else if(command == "flat") {
 		if (flatburst(popint(line)))
 			conn->write("error :Error during flat burst");
+		conn->write(format("ok flat %d", nflat));
 //	} else if(command == "statistics") {
 //		statistics(conn, popint(line));
 	} else {
@@ -761,7 +776,6 @@ int Camera::darkburst(size_t bcount) {
 		
 	io.msg(IO_DEB1, "Starting dark burst of %zu frames", ndark);
 	
-	set_mode(RUNNING);
 	cam_set_shutter(SHUTTER_CLOSED);
 	
 	// Allocate memory for darkfield
@@ -785,7 +799,6 @@ int Camera::darkburst(size_t bcount) {
 	io.msg(IO_DEB1, "Got new dark.");
 	net_broadcast(format("ok dark %d", ndark));
 	
-	set_mode(OFF);
 	return 0;
 }
 
@@ -795,8 +808,6 @@ int Camera::flatburst(size_t bcount) {
 		nflat = bcount;
 	
 	io.msg(IO_DEB1, "Starting flat burst of %zu frames", nflat);
-	
-	set_mode(RUNNING);
 	
 	// Allocate memory for flatfield
 	uint32_t *accum = new uint32_t[res.x * res.y];
@@ -819,18 +830,18 @@ int Camera::flatburst(size_t bcount) {
 	io.msg(IO_DEB1, "Got new flat.");
 	net_broadcast(format("ok flat %d", nflat));
 	
-	set_mode(OFF);
 	return 0;
 }
 
 bool Camera::accumburst(uint32_t *accum, size_t bcount) {
-	pthread::mutexholder h(&cam_mutex);
-	
+	set_mode(RUNNING);
+
 	size_t start = count;
 	size_t rx = 0;
 	
+	//! @todo Check this code
 	while(rx < bcount) {
-		frame_t *f = get_frame(start + rx);
+		frame_t *f = get_next_frame(true);
 		if(!f)
 			return false;
 		
@@ -846,13 +857,15 @@ bool Camera::accumburst(uint32_t *accum, size_t bcount) {
 		
 		rx++;
 	}
-	
+
+	set_mode(WAITING);
+
 	return true;
 }
 
 bool Camera::accumsave(uint32_t *accum, string accumname, double thisexp) {
 	// Generate path to store file to, based on filenamebase
-	Path filename = mkfname(accumname) + ".fits";
+	Path filename = mkfname(accumname + ".fits");
 	io.msg(IO_DEB1, "Camera::accumsave(%p) to %s", accum, filename.c_str());
 	
 	fitsfile *fptr;
