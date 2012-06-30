@@ -234,6 +234,7 @@ bool Shift::calc_shifts(const uint16_t *img, const coord_t res, const std::vecto
 	workpool.refimg = (void *) NULL;
 	workpool.mini = mini;
 	workpool.crops = crops;
+	workpool.maxshift = maxshift;
 	workpool.shifts = shifts;
 	workpool.jobid = crops.size()-1;
 	workpool.done = 0;
