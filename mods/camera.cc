@@ -283,8 +283,8 @@ void Camera::calculate_stats(frame_t *const frame) const {
 				sum += image[idx];
 				sumsquared += (image[idx] * image[idx]);
 				// Find minimum and maximum, but ignore brightest pixels
-				if (image[idx] > frame->max && image[idx] < thismaxval) frame->max = image[i];
-				else if (image[idx] < frame->min && image[idx] != 0) frame->min = image[i];
+				if (image[idx] > frame->max && image[idx] < thismaxval) frame->max = image[idx];
+				else if (image[idx] < frame->min && image[idx] != 0) frame->min = image[idx];
 			}
 		}
 	} else {
@@ -296,8 +296,8 @@ void Camera::calculate_stats(frame_t *const frame) const {
 				sum += image[idx];
 				sumsquared += (image[idx] * image[idx]);
 				// Find minimum and maximum, but ignore brightest pixels
-				if (image[idx] > frame->max && image[idx] < thismaxval) frame->max = image[i];
-				else if (image[idx] < frame->min && image[idx] != 0) frame->min = image[i];
+				if (image[idx] > frame->max && image[idx] < thismaxval) frame->max = image[idx];
+				else if (image[idx] < frame->min && image[idx] != 0) frame->min = image[idx];
 			}
 		}
 	}
@@ -314,7 +314,8 @@ void Camera::calculate_stats(frame_t *const frame) const {
 //	sumsquared /= res.x * res.y;
 	size_t npix = ((res.x-2) * (res.y-2));
 	frame->avg = sum / npix;
-	frame->rms = sqrt((sumsquared/npix) - frame->avg * frame->avg) / frame->avg;
+	// RMS is wrong?
+	frame->rms = sqrt((sumsquared/npix) - (frame->avg * frame->avg)) / frame->avg;
 }
 
 void *Camera::cam_queue(void * const data, void * const image, struct timeval *const tv) {
