@@ -72,6 +72,7 @@ protected:
 	gsl_vector_float *offset;						//!< Offset added to all control vectors (size real_nact)
 	string offset_str;									//!< String representation of offset vector
 	gsl_vector_float *control;					//!< Vector used to actuate the DM == ctrl_vec + offset (size real_nact)
+	float maxact;												//!< Maximum actuation signal to allow, clamp all WFC control to [-maxact, maxact]
 
 public:
 	// Common Wfc settings
