@@ -76,6 +76,7 @@ private:
 	
 	struct cooling cool_info;						//!< Camera cooling info
 	
+	int frametransfer;									//!< Current frametransfer mode
 	int emgain_range[2];								//!< EM CCD gain range for the camera
 	
 	string andordir;										//!< Andor configuration file directory (i.e. /usr/local/etc/andor)
@@ -97,6 +98,17 @@ private:
 	int cam_get_coolstatus();								//!< Get current cooler status (DRV_TEMP_OFF, DRV_TEMP_STABILIZED, DRV_TEMP_NOT_REACHED, DRV_TEMP_DRIFT, DRV_TEMP_NOT_STABILIZED)
 	void cam_set_cooler(bool status=true); //!< Turn cooler on or off
 	
+	
+	/*!
+	 @brief Set frametransfer mode on camera
+	 	 
+	 @param [in] ft Enable frametransfer mode (1) or disable it (0)
+	 @return Frametransfer status set.
+	 */
+	int cam_set_frametranfer(const int ft);
+
+	int cam_get_frametranfer() const; //!< Get frametransfer mode from camera
+
 	/*!
 	 @brief Set EM gain mode (0: DAC 0--255, 1: DAC 0--4095, 2: Linear, 3: Real EM gain)
 	 
@@ -136,6 +148,7 @@ public:
 	double cam_get_gain();
 	void cam_set_offset(const double value);
 	double cam_get_offset();
+	void cam_set_shutter(const int status);
 	
 	void cam_set_mode(const mode_t newmode);
 	void do_restart();
