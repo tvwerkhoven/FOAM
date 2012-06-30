@@ -54,6 +54,9 @@ andordir("/")
 	// Register network commands here
 	add_cmd("set cooling");
 	add_cmd("get cooling");
+	add_cmd("get temperature");
+	add_cmd("set frametransfer");
+	add_cmd("get frametransfer");
 	
 	// Set static parameters
 	emgain_range[0] = emgain_range[1] = 0;
@@ -68,7 +71,7 @@ andordir("/")
 	
 	int pagain = cfg.getint("pa_gain", 2);
   
-	int frametransfer = cfg.getint("frametransfer", 0);
+	frametransfer = cfg.getint("frametransfer", 0);
 	
 	// EM gain settings
 	int emgain_m = cfg.getint("emccdgain_mode", 0);
@@ -105,9 +108,7 @@ andordir("/")
 		io.msg(IO_ERR, "AndorCam::AndorCam() SetPreAmpGain error: %d, %s", ret, error_desc[ret].c_str());
   
 	// Set frame transfer
-	ret = SetFrameTransferMode(frametransfer);
-	if (ret != DRV_SUCCESS) 
-		io.msg(IO_ERR, "AndorCam::AndorCam() SetFrameTransferMode error: %d, %s", ret, error_desc[ret].c_str());
+	cam_set_frametranfer(frametransfer);
 
 	// Set gain mode (automatically queries the gain range as well)
 	cam_set_gain_mode(emgain_m);
@@ -387,6 +388,13 @@ void AndorCam::on_message(Connection *const conn, string line) {
 		if (what == "cooling") {					// get cooling
 			conn->addtag("cooling");
 			conn->write(format("ok cooling %d", cool_info.target));
+		} else if (what == "frametransfer") { // get frametransfer
+			conn->addtag("frametransfer");
+			cam_get_frametranfer();
+		} else if (what == "temperature") { // get temperature
+			int ctmp = cam_get_cooltemp();
+			conn->addtag("cooling");
+			conn->write(format("ok temperature %d", ctmp));
 		} else
 			parsed = false;
 	} else if (command == "set") {			// set ...
@@ -399,6 +407,10 @@ void AndorCam::on_message(Connection *const conn, string line) {
 				cam_set_cooltarget(temp);
 			else
 				conn->write(format("error :temperature invalid, should be [%d, %d]", cool_info.range[0], cool_info.range[1]));
+		} else if (what == "frametransfer") { // set frametransfer <bool>
+			int ft = popint(line);
+			conn->addtag("frametransfer");
+			cam_set_frametranfer(ft);
 		} else
 			parsed = false;
 	} else
@@ -556,6 +568,21 @@ double AndorCam::cam_get_interval() {
 	return interval;
 }
 
+int AndorCam::cam_set_frametranfer(const int ft)  {
+	int ret = SetFrameTransferMode(ft);
+	if (ret != DRV_SUCCESS) 
+		io.msg(IO_ERR, "AndorCam::AndorCam() SetFrameTransferMode error: %d, %s", ret, error_desc[ret].c_str());
+	else
+		frametransfer = ft;
+	return cam_get_frametranfer();
+}
+
+int AndorCam::cam_get_frametranfer() const {
+	netio.broadcast(format("ok frametransfer %d", frametransfer), "frametransfer");
+
+	return frametransfer;	
+}
+
 void AndorCam::cam_set_gain(const double value) {
 	int ret = 0;
 	io.msg(IO_DEB1, "AndorCam::cam_set_gain() %g", value);
@@ -672,6 +699,7 @@ void AndorCam::cam_get_coolrange(int *mintemp, int *maxtemp) {
 	
 	*mintemp = temp[0];
 	*maxtemp = temp[1];
+	netio.broadcast(format("ok coolrange %d %d", temp[0], temp[1]), "cooling");
 }
 
 bool AndorCam::cam_get_cooleron() {
@@ -691,6 +719,8 @@ void AndorCam::cam_set_cooler(bool status) {
 		CoolerOFF();
 	else
 		CoolerON();
+	bool coolstat = cam_get_cooleron()
+	netio.broadcast(format("ok coolerstatus %d", coolstat), "cooling");
 }
 
 void AndorCam::cam_set_cooltarget(const int value) {
@@ -721,7 +751,7 @@ void AndorCam::cam_set_cooltarget(const int value) {
 	// Also get new EM CCD gain range
 	cam_get_gain_range(&emgain_range[0], &emgain_range[1]);
 	
-	//netio.broadcast(format("ok cooltarget %lf", cooling.target), "cooling");
+	netio.broadcast(format("ok cooltarget %lf", cooling.target), "cooling");
 }
 
 int AndorCam::cam_get_cooltemp() {
