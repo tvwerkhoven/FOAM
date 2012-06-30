@@ -450,9 +450,6 @@ void AndorCam::cam_handler() {
 			case Camera::RUNNING:
 				io.msg(IO_DEB1, "AndorCam::cam_handler() RUNNING");
 
-				// Open shutter
-				cam_set_shutter(SHUTTER_OPEN);
-
 				// Start acquisition
 				ret = StartAcquisition();
 				if (ret != DRV_SUCCESS) {
@@ -488,7 +485,6 @@ void AndorCam::cam_handler() {
 				
 				// Abort acquisition and close shutter
 				AbortAcquisition();
-				cam_set_shutter(SHUTTER_CLOSED);
 
 				break;
 			case Camera::SINGLE:
