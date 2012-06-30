@@ -162,7 +162,8 @@ AndorCam::~AndorCam() {
 	while (temp < 5) {
 		temp = cam_get_cooltemp();
 		io.msg(IO_INFO, "AndorCam::~AndorCam() waiting for camera to warm up (temp == %d < 5).", temp);
-		sleep(1);
+		net_broadcast(format("ok shutdown :waiting for camera to warm up (temp == %d < 5).", temp));
+		sleep(10);
 	}
 	io.msg(IO_INFO, "AndorCam::~AndorCam() camera warmed up (temp == %d >= 5).", temp);
 	
