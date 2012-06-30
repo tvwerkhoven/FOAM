@@ -560,6 +560,9 @@ void AndorCam::cam_get_timings() {
 		exposure = (double) exp;
 		interval = (double) kin;
 	}
+	// Update new timings
+	net_broadcast(format("ok exposure %lf", exposure), "exposure");
+	net_broadcast(format("ok interval %lf", interval), "interval");
 }
 
 void AndorCam::cam_set_interval(const double value) {
@@ -585,6 +588,8 @@ int AndorCam::cam_set_frametranfer(const int ft)  {
 		io.msg(IO_ERR, "AndorCam::AndorCam() SetFrameTransferMode error: %d, %s", ret, error_desc[ret].c_str());
 	else
 		frametransfer = ft;
+	// Exposure, interval etc. are probably updated, refresh here
+	cam_get_timings();
 	return cam_get_frametranfer();
 }
 
