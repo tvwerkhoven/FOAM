@@ -52,8 +52,8 @@ andordir("/")
 	int ret=0;
 	
 	// Register network commands here
-	add_cmd("set cooling");
-	add_cmd("get cooling");
+	add_cmd("set cooltarget");
+	add_cmd("get cooltarget");
 	add_cmd("get temperature");
 	add_cmd("set frametransfer");
 	add_cmd("get frametransfer");
@@ -387,9 +387,9 @@ void AndorCam::on_message(Connection *const conn, string line) {
 	if (command == "get") {							// get ...
 		string what = popword(line);
 		
-		if (what == "cooling") {					// get cooling
+		if (what == "cooltarget") {					// get cooltarget
 			conn->addtag("cooling");
-			conn->write(format("ok cooling %d", cool_info.target));
+			conn->write(format("ok cooltarget %d", cool_info.target));
 		} else if (what == "frametransfer") { // get frametransfer
 			conn->addtag("frametransfer");
 			cam_get_frametranfer();
@@ -402,13 +402,13 @@ void AndorCam::on_message(Connection *const conn, string line) {
 	} else if (command == "set") {			// set ...
 		string what = popword(line);
 
-		if (what == "cooling") {					// set cooling <temp>
+		if (what == "cooltarget") {					// set cooltarget <temp>
 			int temp = popint(line);
 			conn->addtag("cooling");
 			if (temp < cool_info.range[1] && temp > cool_info.range[0])
 				cam_set_cooltarget(temp);
 			else
-				conn->write(format("error :temperature invalid, should be [%d, %d]", cool_info.range[0], cool_info.range[1]));
+				conn->write(format("error :cooltarget temperature invalid, should be [%d, %d]", cool_info.range[0], cool_info.range[1]));
 		} else if (what == "frametransfer") { // set frametransfer <bool>
 			int ft = popint(line);
 			conn->addtag("frametransfer");
