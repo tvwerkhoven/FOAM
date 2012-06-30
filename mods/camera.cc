@@ -772,7 +772,6 @@ int Camera::darkburst(size_t bcount) {
 		
 	io.msg(IO_DEB1, "Starting dark burst of %zu frames", ndark);
 	
-	set_mode(RUNNING);
 	cam_set_shutter(SHUTTER_CLOSED);
 	
 	// Allocate memory for darkfield
@@ -796,7 +795,6 @@ int Camera::darkburst(size_t bcount) {
 	io.msg(IO_DEB1, "Got new dark.");
 	net_broadcast(format("ok dark %d", ndark));
 	
-	set_mode(OFF);
 	return 0;
 }
 
@@ -806,8 +804,6 @@ int Camera::flatburst(size_t bcount) {
 		nflat = bcount;
 	
 	io.msg(IO_DEB1, "Starting flat burst of %zu frames", nflat);
-	
-	set_mode(RUNNING);
 	
 	// Allocate memory for flatfield
 	uint32_t *accum = new uint32_t[res.x * res.y];
@@ -830,13 +826,14 @@ int Camera::flatburst(size_t bcount) {
 	io.msg(IO_DEB1, "Got new flat.");
 	net_broadcast(format("ok flat %d", nflat));
 	
-	set_mode(OFF);
 	return 0;
 }
 
 bool Camera::accumburst(uint32_t *accum, size_t bcount) {
 	pthread::mutexholder h(&cam_mutex);
-	
+
+	set_mode(RUNNING);
+
 	size_t start = count;
 	size_t rx = 0;
 	
@@ -857,7 +854,9 @@ bool Camera::accumburst(uint32_t *accum, size_t bcount) {
 		
 		rx++;
 	}
-	
+
+	set_mode(WAITING);
+
 	return true;
 }
 
