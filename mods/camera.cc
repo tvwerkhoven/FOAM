@@ -863,7 +863,7 @@ bool Camera::accumburst(uint32_t *accum, size_t bcount) {
 
 bool Camera::accumsave(uint32_t *accum, string accumname, double thisexp) {
 	// Generate path to store file to, based on filenamebase
-	Path filename = mkfname(accumname) + ".fits";
+	Path filename = mkfname(accumname + ".fits");
 	io.msg(IO_DEB1, "Camera::accumsave(%p) to %s", accum, filename.c_str());
 	
 	fitsfile *fptr;
