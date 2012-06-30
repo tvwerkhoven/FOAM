@@ -156,6 +156,7 @@ AndorCam::~AndorCam() {
 	sleep(1);
 
 	// Disable cooler, warm up CCD
+	cam_set_cooltarget(15);
 	cam_set_cooler(false);
 	int temp = cam_get_cooltemp();
 	while (temp < 5) {
