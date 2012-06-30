@@ -773,7 +773,6 @@ int Camera::darkburst(size_t bcount) {
 	
 	dark_exposure = exposure;
 
-	//! @todo implement darkflat save
 	accumsave(accum, "dark", dark_exposure);
 	
 	// Link data to dark
@@ -797,11 +796,7 @@ int Camera::flatburst(size_t bcount) {
 	
 	io.msg(IO_DEB1, "Starting flat burst of %zu frames", nflat);
 	
-	//! @todo fix this
 	set_mode(RUNNING);
-	//	state = WAITING;
-	//	get_state(connection, true);
-	//	set_state(WAITING, true);
 	
 	// Allocate memory for flatfield
 	uint32_t *accum = new uint32_t[res.x * res.y];

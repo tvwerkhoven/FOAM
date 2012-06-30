@@ -256,8 +256,8 @@ protected:
 	size_t nflat;									//!< Number of frames used in Camera::flatframe
 	frame_t dark;									//!< Dark frame, dark.image is a sum of Camera::ndark frames, type is uint32_t.
 	frame_t flat;									//!< Flat frame, flat.image is a sum of Camera::nflat frames, type is uint32_t.
-	double dark_exposure;					//!< Exposure used for darkimage
-	double flat_exposure;					//!< Exposure used for flatimage
+	double dark_exposure;					//!< Last used darkfield exposure
+	double flat_exposure;					//!< Last used flatfield exposure
 
 	int shutstat;									//!< Shutter status: 0 is closed, 1 is open, see shutter_t
 	double interval;							//!< Frame time (exposure + readout)
