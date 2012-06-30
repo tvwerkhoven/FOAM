@@ -61,6 +61,7 @@ fits_telescope("undef"), fits_observer("undef"), fits_instrument("undef"), fits_
 	add_cmd("set offset");
 	add_cmd("set filename");
 	add_cmd("set fits");
+	add_cmd("set shutter");
 	add_cmd("get mode");
 	add_cmd("get exposure");
 	add_cmd("get interval");
@@ -72,6 +73,7 @@ fits_telescope("undef"), fits_observer("undef"), fits_instrument("undef"), fits_
 	add_cmd("get resolution");
 	add_cmd("get filename");
 	add_cmd("get fits");
+	add_cmd("get shutter");
 	add_cmd("thumbnail");
 	add_cmd("grab");
 	add_cmd("store");
@@ -501,9 +503,11 @@ void Camera::on_message(Connection *const conn, string line) {
 	} else if(command == "dark") {
 		if (darkburst(popint(line)) )
 			conn->write("error :Error during dark burst");
+		conn->write(format("ok flat %d", ndark));
 	} else if(command == "flat") {
 		if (flatburst(popint(line)))
 			conn->write("error :Error during flat burst");
+		conn->write(format("ok flat %d", nflat));
 //	} else if(command == "statistics") {
 //		statistics(conn, popint(line));
 	} else {
@@ -830,8 +834,11 @@ int Camera::flatburst(size_t bcount) {
 }
 
 bool Camera::accumburst(uint32_t *accum, size_t bcount) {
+	// Stop camera first so we can take it
+	set_mode(WAITING);
+	
+	// Grab mutexholder for exclusive camera access and start camera
 	pthread::mutexholder h(&cam_mutex);
-
 	set_mode(RUNNING);
 
 	size_t start = count;
