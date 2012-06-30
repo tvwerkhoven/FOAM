@@ -163,7 +163,7 @@ int FOAM::init() {
 }
 
 void FOAM::show_version() const {
-	printf("FOAM (%s version %s, built %s %s with )\n", PACKAGE_NAME, PACKAGE_VERSION, __DATE__, __TIME__);
+	printf("%s\n", FOAM_VERSION_STR.c_str());
 #ifdef __VERSION__
 	printf("Compiled with GCC: %s\n", __VERSION__);
 #else
@@ -606,6 +606,8 @@ void FOAM::on_message(Connection *const conn, string line) {
 			conn->write(format("ok mode %s", mode2str(ptc->mode).c_str()));
 		else if (var == "devices")
 			conn->write(format("ok devices %s", devices->getlist().c_str()));
+		else if (var == "version")
+			conn->write(format("ok version %s", FOAM_VERSION_STR.c_str()));
 		else 
 			conn->write("error get :unknown variable");
 	}
