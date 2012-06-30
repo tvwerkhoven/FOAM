@@ -138,6 +138,7 @@ private:
 	int simaxr;													//!< Maximum radius to use, or edge erosion subimages
 	float simini_f;											//!< Minimum intensity for a subimage as fraction of the max intensity in a frame
 	float shift_mini;										//!< Minimum intensity to consider when calculating centroiding positions
+	fcoord_t maxshift;									//!< Maximum image shift to allow for each subaperture. Higher values will be clamped between -maxshift.[x,y] and +maxshift.[x,y]
 	
 	// Parameters for static MLA grids:
 	coord_t sisize;											//!< Subimage size in pixels

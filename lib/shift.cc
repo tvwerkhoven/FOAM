@@ -29,6 +29,7 @@
 
 #include "io.h"
 #include "types.h"
+#include "utils.h"
 #include "format.h"
 
 #include "shift.h"
@@ -95,9 +96,9 @@ void Shift::_worker_func() {
 				break;
 			
 			if (workpool.bpp == 8)
-				_calc_cog((uint8_t *)workpool.img, workpool.res, workpool.crops[myjob], shift, (uint8_t)workpool.mini);
+				_calc_cog((uint8_t *)workpool.img, workpool.res, workpool.crops[myjob], workpool.maxshift, shift, (uint8_t)workpool.mini);
 			else if (workpool.bpp == 16)
-				_calc_cog((uint16_t *)workpool.img, workpool.res, workpool.crops[myjob], shift, (uint16_t)workpool.mini);
+				_calc_cog((uint16_t *)workpool.img, workpool.res, workpool.crops[myjob], workpool.maxshift, shift, (uint16_t)workpool.mini);
 			else
 				throw format("Shift::_worker_func(): bitdepth %d unsupported!", workpool.bpp);
 			
@@ -111,7 +112,7 @@ void Shift::_worker_func() {
 	}
 }
 
-void Shift::_calc_cog(const uint8_t *img, const coord_t &res, const vector_t &crop, float *v, const uint8_t mini) {
+void Shift::_calc_cog(const uint8_t *img, const coord_t &res, const vector_t &crop, const fcoord_t maxshift, float *v, const uint8_t mini) {
 	uint8_t *p;
 	float sum;
 
@@ -143,11 +144,11 @@ void Shift::_calc_cog(const uint8_t *img, const coord_t &res, const vector_t &cr
 		return;
 	}
 
-	v[0] = v[0]/sum - crop.lx - (crop.tx - crop.lx)/2;
-	v[1] = v[1]/sum - crop.ly - (crop.ty - crop.ly)/2;
+	v[0] = clamp(v[0]/sum - crop.lx - (crop.tx - crop.lx)/2, -maxshift.x, maxshift.x);
+	v[1] = clamp(v[1]/sum - crop.ly - (crop.ty - crop.ly)/2, -maxshift.y, maxshift.y);
 }
 
-void Shift::_calc_cog(const uint16_t *img, const coord_t &res, const vector_t &crop, float *v, const uint16_t mini) {
+void Shift::_calc_cog(const uint16_t *img, const coord_t &res, const vector_t &crop, const fcoord_t maxshift, float *v, const uint16_t mini) {
 	uint16_t *p;
 	float sum;
 	
@@ -179,11 +180,12 @@ void Shift::_calc_cog(const uint16_t *img, const coord_t &res, const vector_t &c
 		return;
 	}
 	
-	v[0] = v[0]/sum - crop.lx - (crop.tx - crop.lx)/2;
-	v[1] = v[1]/sum - crop.ly - (crop.ty - crop.ly)/2;
+	// We limit the shift vector to a maximum allowed shift
+	v[0] = clamp(v[0]/sum - crop.lx - (crop.tx - crop.lx)/2, -maxshift.x, maxshift.x);
+	v[1] = clamp(v[1]/sum - crop.ly - (crop.ty - crop.ly)/2, -maxshift.y, maxshift.y);
 }
 
-bool Shift::calc_shifts(const uint8_t *img, const coord_t res, const std::vector<vector_t> &crops, gsl_vector_float *shifts, const method_t method, const bool wait, const uint8_t mini) {
+bool Shift::calc_shifts(const uint8_t *img, const coord_t res, const std::vector<vector_t> &crops, const fcoord_t maxshift, gsl_vector_float *shifts, const method_t method, const bool wait, const uint8_t mini) {
 //	io.msg(IO_DEB2, "Shift::calc_shifts(uint8_t)");
 	
 	// Setup work parameters
@@ -194,6 +196,7 @@ bool Shift::calc_shifts(const uint8_t *img, const coord_t res, const std::vector
 	workpool.refimg = (void *) NULL;
 	workpool.mini = mini;
 	workpool.crops = crops;
+	workpool.maxshift = maxshift;
 	workpool.shifts = shifts;
 	workpool.jobid = crops.size()-1;
 	workpool.done = 0;
@@ -216,7 +219,7 @@ bool Shift::calc_shifts(const uint8_t *img, const coord_t res, const std::vector
 	return true;
 }
 
-bool Shift::calc_shifts(const uint16_t *img, const coord_t res, const std::vector<vector_t> &crops, gsl_vector_float *shifts, const method_t method, const bool wait, const uint16_t mini) {
+bool Shift::calc_shifts(const uint16_t *img, const coord_t res, const std::vector<vector_t> &crops, const fcoord_t maxshift, gsl_vector_float *shifts, const method_t method, const bool wait, const uint16_t mini) {
 //	io.msg(IO_DEB2, "Shift::calc_shifts(uint16_t)");
 	
 	// Setup work parameters

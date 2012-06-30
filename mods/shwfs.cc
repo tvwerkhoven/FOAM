@@ -46,9 +46,9 @@ using namespace std;
 
 Shwfs::Shwfs(Io &io, foamctrl *const ptc, const string name, const string port, Path const &conffile, Camera &wfscam, const bool online):
 Wfs(io, ptc, name, shwfs_type, port, conffile, wfscam, online),
-shifts(io, 1),
+shifts(io, 1), 
 shift_vec(NULL), ref_vec(NULL), tot_shift_vec(NULL),
-method(Shift::COG)
+method(Shift::COG), maxshift(32, 32)
 {
 	io.msg(IO_DEB2, "Shwfs::Shwfs()");
 	add_cmd("mla generate");
@@ -61,6 +61,9 @@ method(Shift::COG)
 
 	add_cmd("set shift_mini");
 	add_cmd("get shift_mini");
+
+	add_cmd("set maxshift");
+	add_cmd("get maxshift");
 
 	add_cmd("get shifts");
 	
@@ -199,6 +202,9 @@ void Shwfs::on_message(Connection *const conn, string line) {
 		
 		if (what == "shifts") {						// get shifts
 			conn->write("ok shifts " + get_shifts_str());
+		} else if (what == "maxshift") {	// get maxshift
+			conn->addtag("maxshift");
+			conn->write(format("ok maxshift %f %f", maxshift.x, maxshift.y));
 		} else if (what == "shift_mini") {				// get shift_mini
 			conn->addtag("shift_mini");
 			conn->write(format("ok shift_mini %g", shift_mini));
@@ -211,6 +217,18 @@ void Shwfs::on_message(Connection *const conn, string line) {
 			conn->addtag("shift_mini");
 			shift_mini = popdouble(line);
 			net_broadcast(format("ok shift_mini %g", shift_mini), "shift_mini");
+		} else if (what == "maxshift") {	// get maxshift
+			conn->addtag("maxshift");
+			double tmpx = popdouble(line);
+			double tmpy = popdouble(line);
+			if (tmpx > 0 && tmpy > 0) {
+				maxshift.x = tmpx;
+				maxshift.y = tmpy;
+				net_broadcast(format("ok maxshift %f %f", maxshift.x, maxshift.y), "maxshift");
+			} else {
+				conn->write(format("error set maxshift :Maximum shift should be positive, was %f %f", 
+													 maxshift.x, maxshift.y));
+			}
 		} else 
 			parsed = false;
 	} else {
@@ -235,10 +253,10 @@ Wfs::wf_info_t* Shwfs::measure(Camera::frame_t *frame) {
 	
 	// Calculate shifts
 	if (cam.get_depth() == 16) {
-		shifts.calc_shifts((uint16_t *) frame->image, cam.get_res(), mlacfg, shift_vec, method, true, shift_mini);
+		shifts.calc_shifts((uint16_t *) frame->image, cam.get_res(), mlacfg, maxshift, shift_vec, method, true, shift_mini);
 	}
 	else if (cam.get_depth() == 8) {
-		shifts.calc_shifts((uint8_t *) frame->image, cam.get_res(), mlacfg, shift_vec, method, true, shift_mini);
+		shifts.calc_shifts((uint8_t *) frame->image, cam.get_res(), mlacfg, maxshift, shift_vec, method, true, shift_mini);
 	}
 	else {
 		io.msg(IO_ERR, "Shwfs::measure() unknown camera datatype");
