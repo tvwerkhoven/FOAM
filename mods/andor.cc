@@ -52,8 +52,11 @@ andordir("/")
 	int ret=0;
 	
 	// Register network commands here
-	add_cmd("set cooling");
-	add_cmd("get cooling");
+	add_cmd("set cooltarget");
+	add_cmd("get cooltarget");
+	add_cmd("get temperature");
+	add_cmd("set frametransfer");
+	add_cmd("get frametransfer");
 	
 	// Set static parameters
 	emgain_range[0] = emgain_range[1] = 0;
@@ -68,7 +71,7 @@ andordir("/")
 	
 	int pagain = cfg.getint("pa_gain", 2);
   
-	int frametransfer = cfg.getint("frametransfer", 0);
+	frametransfer = cfg.getint("frametransfer", 0);
 	
 	// EM gain settings
 	int emgain_m = cfg.getint("emccdgain_mode", 0);
@@ -105,9 +108,7 @@ andordir("/")
 		io.msg(IO_ERR, "AndorCam::AndorCam() SetPreAmpGain error: %d, %s", ret, error_desc[ret].c_str());
   
 	// Set frame transfer
-	ret = SetFrameTransferMode(frametransfer);
-	if (ret != DRV_SUCCESS) 
-		io.msg(IO_ERR, "AndorCam::AndorCam() SetFrameTransferMode error: %d, %s", ret, error_desc[ret].c_str());
+	cam_set_frametranfer(frametransfer);
 
 	// Set gain mode (automatically queries the gain range as well)
 	cam_set_gain_mode(emgain_m);
@@ -151,16 +152,18 @@ AndorCam::~AndorCam() {
 	
 	// Abort acquisition and close shutter
 	AbortAcquisition();
-	SetShutter(1, 2, 0, 0);
+	cam_set_shutter(SHUTTER_CLOSED);
 	sleep(1);
 
 	// Disable cooler, warm up CCD
+	cam_set_cooltarget(15);
 	cam_set_cooler(false);
 	int temp = cam_get_cooltemp();
 	while (temp < 5) {
 		temp = cam_get_cooltemp();
 		io.msg(IO_INFO, "AndorCam::~AndorCam() waiting for camera to warm up (temp == %d < 5).", temp);
-		sleep(1);
+		net_broadcast(format("ok shutdown :waiting for camera to warm up (temp == %d < 5).", temp));
+		sleep(10);
 	}
 	io.msg(IO_INFO, "AndorCam::~AndorCam() camera warmed up (temp == %d >= 5).", temp);
 	
@@ -384,21 +387,32 @@ void AndorCam::on_message(Connection *const conn, string line) {
 	if (command == "get") {							// get ...
 		string what = popword(line);
 		
-		if (what == "cooling") {					// get cooling
+		if (what == "cooltarget") {					// get cooltarget
 			conn->addtag("cooling");
-			conn->write(format("ok cooling %d", cool_info.target));
+			conn->write(format("ok cooltarget %d", cool_info.target));
+		} else if (what == "frametransfer") { // get frametransfer
+			conn->addtag("frametransfer");
+			cam_get_frametranfer();
+		} else if (what == "temperature") { // get temperature
+			int ctmp = cam_get_cooltemp();
+			conn->addtag("cooling");
+			conn->write(format("ok temperature %d", ctmp));
 		} else
 			parsed = false;
 	} else if (command == "set") {			// set ...
 		string what = popword(line);
 
-		if (what == "cooling") {					// set cooling <temp>
+		if (what == "cooltarget") {					// set cooltarget <temp>
 			int temp = popint(line);
 			conn->addtag("cooling");
 			if (temp < cool_info.range[1] && temp > cool_info.range[0])
 				cam_set_cooltarget(temp);
 			else
-				conn->write(format("error :temperature invalid, should be [%d, %d]", cool_info.range[0], cool_info.range[1]));
+				conn->write(format("error :cooltarget temperature invalid, should be [%d, %d]", cool_info.range[0], cool_info.range[1]));
+		} else if (what == "frametransfer") { // set frametransfer <bool>
+			int ft = popint(line);
+			conn->addtag("frametransfer");
+			cam_set_frametranfer(ft);
 		} else
 			parsed = false;
 	} else
@@ -413,6 +427,19 @@ void AndorCam::do_restart() {
 	io.msg(IO_INFO, "AndorCam::do_restart()");
 }
 
+void AndorCam::cam_set_shutter(const int status) {
+	int ret;
+	if (status == SHUTTER_OPEN)
+		ret = SetShutter(1, 1, 50, 50);
+	else
+		ret = SetShutter(1, 2, 0, 0);
+
+	if (ret != DRV_SUCCESS)
+		io.msg(IO_WARN, "AndorCam::cam_handler(R) SetShutter: %s", error_desc[ret].c_str());
+	else
+		shutstat = status;
+}
+
 void AndorCam::cam_handler() { 
 	io.msg(IO_DEB1, "AndorCam::cam_handler()");
 	//pthread::setcanceltype(PTHREAD_CANCEL_ASYNCHRONOUS);	
@@ -424,9 +451,7 @@ void AndorCam::cam_handler() {
 				io.msg(IO_DEB1, "AndorCam::cam_handler() RUNNING");
 
 				// Open shutter
-				ret = SetShutter(1, 1, 50, 50);
-				if (ret != DRV_SUCCESS)
-					io.msg(IO_WARN, "AndorCam::cam_handler(R) SetShutter: %s", error_desc[ret].c_str());
+				cam_set_shutter(SHUTTER_OPEN);
 
 				// Start acquisition
 				ret = StartAcquisition();
@@ -463,7 +488,7 @@ void AndorCam::cam_handler() {
 				
 				// Abort acquisition and close shutter
 				AbortAcquisition();
-				SetShutter(1, 2, 0, 0);
+				cam_set_shutter(SHUTTER_CLOSED);
 
 				break;
 			case Camera::SINGLE:
@@ -482,9 +507,7 @@ void AndorCam::cam_handler() {
 					io.msg(IO_WARN, "AndorCam::cam_handler(W) AbortAcquisition: %s", error_desc[ret].c_str());
 
 				// Close shutter
-				SetShutter(1, 2, 0, 0);
-				if (ret != DRV_SUCCESS)
-					io.msg(IO_WARN, "AndorCam::cam_handler(W) SetShutter: %s", error_desc[ret].c_str());
+				cam_set_shutter(SHUTTER_CLOSED);
 
 				// We wait until the mode changed (for WAITING), or until the thread is canceled (for OFF)
 				{
@@ -537,6 +560,9 @@ void AndorCam::cam_get_timings() {
 		exposure = (double) exp;
 		interval = (double) kin;
 	}
+	// Update new timings
+	net_broadcast(format("ok exposure %lf", exposure), "exposure");
+	net_broadcast(format("ok interval %lf", interval), "interval");
 }
 
 void AndorCam::cam_set_interval(const double value) {
@@ -554,6 +580,23 @@ void AndorCam::cam_set_interval(const double value) {
 double AndorCam::cam_get_interval() {
 	cam_get_timings();
 	return interval;
+}
+
+int AndorCam::cam_set_frametranfer(const int ft)  {
+	int ret = SetFrameTransferMode(ft);
+	if (ret != DRV_SUCCESS) 
+		io.msg(IO_ERR, "AndorCam::AndorCam() SetFrameTransferMode error: %d, %s", ret, error_desc[ret].c_str());
+	else
+		frametransfer = ft;
+	// Exposure, interval etc. are probably updated, refresh here
+	cam_get_timings();
+	return cam_get_frametranfer();
+}
+
+int AndorCam::cam_get_frametranfer() const {
+	net_broadcast(format("ok frametransfer %d", frametransfer), "frametransfer");
+
+	return frametransfer;	
 }
 
 void AndorCam::cam_set_gain(const double value) {
@@ -672,6 +715,7 @@ void AndorCam::cam_get_coolrange(int *mintemp, int *maxtemp) {
 	
 	*mintemp = temp[0];
 	*maxtemp = temp[1];
+	net_broadcast(format("ok coolrange %d %d", temp[0], temp[1]), "cooling");
 }
 
 bool AndorCam::cam_get_cooleron() {
@@ -691,6 +735,8 @@ void AndorCam::cam_set_cooler(bool status) {
 		CoolerOFF();
 	else
 		CoolerON();
+	bool coolstat = cam_get_cooleron();
+	net_broadcast(format("ok coolerstatus %d", coolstat), "cooling");
 }
 
 void AndorCam::cam_set_cooltarget(const int value) {
@@ -721,7 +767,7 @@ void AndorCam::cam_set_cooltarget(const int value) {
 	// Also get new EM CCD gain range
 	cam_get_gain_range(&emgain_range[0], &emgain_range[1]);
 	
-	//netio.broadcast(format("ok cooltarget %lf", cooling.target), "cooling");
+	net_broadcast(format("ok cooltarget %lf", cool_info.target), "cooling");
 }
 
 int AndorCam::cam_get_cooltemp() {
