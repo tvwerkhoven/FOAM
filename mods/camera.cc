@@ -268,24 +268,35 @@ void Camera::calculate_stats(frame_t *const frame) const {
 	
 	double sum = 0;
 	double sumsquared = 0;
+	size_t idx;
 
 	if(depth <= 8) {
 		uint8_t *image = (uint8_t *)frame->image;
-		for(size_t i = 0; i < (size_t) res.x * res.y; i++) {
-			frame->histo[image[i]]++;
-			sum += image[i];
-			sumsquared += (image[i] * image[i]);
-			if (image[i] > frame->max) frame->max = image[i];
-			else if (image[i] < frame->min) frame->min = image[i];
+		// Loop over all pixels, but ignore the outermost pixels as these could 
+		// contain 'bad' pixels (i.e. Andor cameras)
+		for(size_t j = 1; j < (size_t) res.y - 1; j++) {
+			for(size_t i = 1; i < (size_t) res.x -1; i++) {
+				idx = i + j*res.y;
+				frame->histo[image[idx]]++;
+				sum += image[idx];
+				sumsquared += (image[idx] * image[idx]);
+				// Find minimum and maximum, but ignore brightest pixels
+				if (image[idx] > frame->max && image[idx] < thismaxval) frame->max = image[i];
+				else if (image[idx] < frame->min && image[idx] != 0) frame->min = image[i];
+			}
 		}
 	} else {
 		uint16_t *image = (uint16_t *)frame->image;
-		for(size_t i = 0; i < (size_t) res.x * res.y; i++) {
-			frame->histo[image[i]]++;
-			sum += image[i];
-			sumsquared += (image[i] * image[i]);
-			if (image[i] > frame->max) frame->max = image[i];
-			else if (image[i] < frame->min) frame->min = image[i];
+		for(size_t j = 1; j < (size_t) res.y - 1; j++) {
+			for(size_t i = 1; i < (size_t) res.x -1; i++) {
+				idx = i + j*res.y;
+				frame->histo[image[idx]]++;
+				sum += image[idx];
+				sumsquared += (image[idx] * image[idx]);
+				// Find minimum and maximum, but ignore brightest pixels
+				if (image[idx] > frame->max && image[idx] < thismaxval) frame->max = image[i];
+				else if (image[idx] < frame->min && image[idx] != 0) frame->min = image[i];
+			}
 		}
 	}
 
@@ -299,9 +310,9 @@ void Camera::calculate_stats(frame_t *const frame) const {
 	
 //	sum /= res.x * res.y;
 //	sumsquared /= res.x * res.y;
-	
-	frame->avg = sum / (res.x * res.y);
-	frame->rms = sqrt((sumsquared/(res.x * res.y)) - frame->avg * frame->avg) / frame->avg;
+	size_t npix = ((res.x-2) * (res.y-2));
+	frame->avg = sum / npix;
+	frame->rms = sqrt((sumsquared/npix) - frame->avg * frame->avg) / frame->avg;
 }
 
 void *Camera::cam_queue(void * const data, void * const image, struct timeval *const tv) {
