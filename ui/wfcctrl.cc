@@ -35,7 +35,7 @@ WfcCtrl::WfcCtrl(Log &log, const string h, const string p, const string n):
 DeviceCtrl(log, h, p, n)
 {
 	log.term(format("%s", __PRETTY_FUNCTION__));
-	
+	cmd_ign_list.insert("ctrl");
 }
 
 WfcCtrl::~WfcCtrl() {
