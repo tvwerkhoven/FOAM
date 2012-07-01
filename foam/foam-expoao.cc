@@ -50,6 +50,10 @@ int FOAM_ExpoAO::load_modules() {
 	
 	//! @todo Try-catch clause does not function properly, errors don't propagate outward io.msg() problem?
 	try {
+		// Init WHT telescope interface
+		wht_track = new WHT(io, ptc, "wht", ptc->listenport, ptc->conffile);
+		devices->add((foam::Device *) wht_track);
+		
 		// Init Alpao DM
 		io.msg(IO_INFO, "Init Alpao DM97-15...");
 		alpao_dm97 = new AlpaoDM(io, ptc, "alpao_dm97", ptc->listenport, ptc->conffile);
@@ -67,10 +71,6 @@ int FOAM_ExpoAO::load_modules() {
 		ixonwfs = new Shwfs(io, ptc, "ixonwfs", ptc->listenport, ptc->conffile, *ixoncam);
 		devices->add((foam::Device *) ixonwfs);
 		
-		// Init WHT telescope interface
-		wht_track = new WHT(io, ptc, "wht", ptc->listenport, ptc->conffile);
-		devices->add((foam::Device *) wht_track);
-
 	} catch (std::runtime_error &e) {
 		io.msg(IO_ERR | IO_FATAL, "FOAM_ExpoAO::load_modules: %s", e.what());
 		return -1;
@@ -125,7 +125,7 @@ int FOAM_ExpoAO::open_loop() {
 		vec_str += format("%.3g ", gsl_vector_float_get(alpao_dm97->ctrlparams.err, i));
 	io.msg(IO_DEB1, "FOAM_ExpoAO::wfc_rec: %s", vec_str.c_str());
 	
-	ixonwfs->comp_shift(alpao_dm97->getname(), alpao_dm97->ctrlparams.err, wf_meas->wfamp);
+	ixonwfs->comp_shift(alpao_dm97->getname(), alpao_dm97->ctrlparams.err, wf_meas->wf_full);
 	openperf_addlog("wfs->comp_shift");
 
 	float ttx=0, tty=0;
@@ -188,6 +188,7 @@ int FOAM_ExpoAO::closed_loop() {
 	closedperf_addlog("wfc->update_control()");
 	
 	// Use control vector to compute total shifts that we are correcting
+	//! @bug This does not work with
 	ixonwfs->comp_shift(alpao_dm97->getname(), alpao_dm97->ctrlparams.target, wf_meas->wf_full);
 	openperf_addlog("wfs->comp_shift");
 	

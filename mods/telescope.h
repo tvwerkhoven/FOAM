@@ -55,9 +55,11 @@ const string telescope_type = "telescope";
  
  The Telescope class takes raw input (in any units), stored in c0, c1. This 
  is then scaled and rotated, and stored in sht0, sht1. A handler thread, 
- tel_handler(), then calls update_telescope_track() every X seconds. This 
- routine should be implemented in a derived class which which converts sht0, 
- sht1 into hardware-specific coordinates.
+ tel_handler(), then calls calc_offload() every X seconds. This routine converts
+ the raw input shifts to generic coordaintes and then calls update_telescope_track()
+ which should be implemented in a derived class to drive the telescope itself.
+ 
+ (Telescope::set_track_offset) c0, c1 -> (Telescope::calc_offload) -> sht0, sht1 -> (Derived::update_telescope_track) -> ctrl0, ctrl1
  
  \section telescope_cfg Configuration params
  
@@ -105,12 +107,33 @@ public:
 	float ccd_ang;					//!< Rotation of CCD with respect to telescope restframe
 	
 	float handler_p;				//!< Handler update period (seconds)
+	bool do_offload;				//!< Enable or disable live offloading
 	
 	void set_track_offset(const float _c0, const float _c1) { c0 = _c0; c1 = _c1; }
 	void get_track_offset(float * const _c0, float * const _c1) { *_c0 = c0; *_c1 = c1; }
 	
-	// To be implemented in derived class. If not implemented, this is a dummy and it displays random stuff
-	virtual int update_telescope_track(const float, const float) { c0 = (c0 + 0.1); c1 = (c1 + 0.5); return 0; }
+	/*! @brief Convert shift vector from instrument pixels to generic coordinates
+	 
+	 Convert from instrument pixels to millimeters or something similar. This is 
+	 done with shift_vec = rot_mat(ccd_ang) # (scalefac * input_vec).
+	 
+	 Output is stored in Telescope::sht0, Telescope::sht1.
+	 
+	 @param [in] insh0 Shift vector dimension 0
+	 @param [in] insh1 Shift vector dimension 1
+	 */
+	void calc_offload(const float insh0, const float insh1);
+	
+	/*! @brief Given generic shift coordinates, track the telescope
+	 
+	 This function needs to be implemented in specific telescope classes because
+	 we do not know here what coordinat system we should use. If not it will do 
+	 random stuff.
+	 
+	 @param [in] sht0 Generic shift dimension 0
+	 @param [in] sht1 Generic shift dimension 1
+	 */
+	virtual int update_telescope_track(const float sht0, const float sht1) { c0 = (c0 + 0.1); c1 = (c1 + 0.5); return 0; }
 
 	// From Devices::
 	virtual void on_message(Connection *const conn, string);

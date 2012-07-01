@@ -760,7 +760,7 @@ void AndorCam::cam_set_cooltarget(const int value) {
 	// Also get new EM CCD gain range
 	cam_get_gain_range(&emgain_range[0], &emgain_range[1]);
 	
-	net_broadcast(format("ok cooltarget %lf", cool_info.target), "cooling");
+	net_broadcast(format("ok cooltarget %d", cool_info.target), "cooling");
 }
 
 int AndorCam::cam_get_cooltemp() {

@@ -72,11 +72,12 @@ protected:
 	gsl_vector_float *offset;						//!< Offset added to all control vectors (size real_nact)
 	string offset_str;									//!< String representation of offset vector
 	gsl_vector_float *control;					//!< Vector used to actuate the DM == ctrl_vec + offset (size real_nact)
+	float maxact;												//!< Maximum actuation signal to allow, clamp all WFC control to [-maxact, maxact]
 
 public:
 	// Common Wfc settings
 	typedef struct wfc_ctrl {
-		wfc_ctrl(): target(NULL), err(NULL), prev(NULL), gain(1,0,0), pid_int(NULL) { }
+		wfc_ctrl(): ctrl_vec(NULL), target(NULL), err(NULL), prev(NULL), gain(1,0,0), pid_int(NULL) { }
 		gsl_vector_float *ctrl_vec;				//!< Control vector sent to the WFC (size real_nact). If use_actmap is false, this points to 'target' and has no memory itself. If use_actmap is true, it has its own memory and data has to be copied here.
 
 		gsl_vector_float *target;					//!< (Requested) actuator amplitudes, should be between -1 and 1. (size virt_nact)

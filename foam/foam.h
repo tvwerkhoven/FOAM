@@ -50,6 +50,8 @@ using namespace std;
 
 typedef Protocol::Server::Connection Connection;
 
+const string FOAM_VERSION_STR = format("%s version %s, built %s %s", PACKAGE_NAME, PACKAGE_VERSION, __DATE__, __TIME__);
+
 /*!
  @brief Main FOAM class
  

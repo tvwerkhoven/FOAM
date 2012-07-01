@@ -40,7 +40,8 @@ using namespace std;
 
 Telescope::Telescope(Io &io, foamctrl *const ptc, const string name, const string type, const string port, Path const &conffile, const bool online):
 Device(io, ptc, name, telescope_type + "." + type, port, conffile, online),
-c0(0), c1(0), sht0(0), sht1(0), ctrl0(0), ctrl1(0), ccd_ang(0), handler_p(0)
+c0(0), c1(0), sht0(0), sht1(0), ctrl0(0), ctrl1(0), ccd_ang(0), 
+handler_p(0), do_offload(true)
 {
 	io.msg(IO_DEB2, "Telescope::Telescope()");
 	
@@ -70,9 +71,29 @@ c0(0), c1(0), sht0(0), sht1(0), ctrl0(0), ctrl1(0), ccd_ang(0), handler_p(0)
 	add_cmd("get pix2shiftstr");
 	add_cmd("get tel_track");
 	add_cmd("get tel_units");
+	add_cmd("get offloading");
+	add_cmd("set offloading");
+	add_cmd("track pixshift");
+	add_cmd("track telshift");
 
 	// Start handler thread
 	tel_thr.create(sigc::mem_fun(*this, &Telescope::tel_handler));
+}
+
+void Telescope::calc_offload(const float insh0, const float insh1) {
+	// From input offset (in arbitrary units, i.e. pixels in the WFS camera), 
+	// calculate proper shift coordinates, i.e.: 
+	// shift_vec = rot_mat # (scale_vec * input_vec)
+	// General:
+	// x' = scalefac0 [ x cos(th), - y sin(th) ]
+	// y; = scalefac1 [ x sin(th), + y cos(th) ]
+	sht0 = scalefac[0] * insh0 * cos(ccd_ang * M_PI/180.0) - scalefac[1] * insh1 * sin(ccd_ang * M_PI/180.0);
+	sht1 = scalefac[0] * insh0 * sin(ccd_ang * M_PI/180.0) + scalefac[1] * insh1 * cos(ccd_ang * M_PI/180.0);
+	
+	// Then feed these coordinates to the telescope which can convert it to 
+	//telescope-specific commands
+	io.msg(IO_DEB1, "Telescope::calc_offload(%f, %f) -> %f, %f", insh0, insh1, sht0, sht1);
+	update_telescope_track(sht0, sht1);
 }
 
 void Telescope::tel_handler() {
@@ -82,19 +103,9 @@ void Telescope::tel_handler() {
 	while (ptc->mode != AO_MODE_SHUTDOWN) {
 		gettimeofday(&last, 0);
 		
-		// From input offset (in arbitrary units, i.e. pixels), calculate proper 
-		// shift coordinates, i.e.: 
-		// shift_vec = rot_mat # (scale_vec * input_vec)
-		// General:
-		// x' = scalefac0 [ x cos(th), - y sin(th) ]
-		// y; = scalefac1 [ x sin(th), + y cos(th) ]
-		sht0 = scalefac[0] * c0 * cos(ccd_ang * M_PI/180.0) - scalefac[1] * c1 * sin(ccd_ang * M_PI/180.0);
-		sht1 = scalefac[0] * c0 * sin(ccd_ang * M_PI/180.0) + scalefac[1] * c1 * cos(ccd_ang * M_PI/180.0);
-		
-		io.msg(IO_DEB1, "Telescope::tel_handler() (%g, %g) -> (%g, %g) -> (%g, %g)", 
-					 c0, c1, sht0, sht1, ctrl0, ctrl1);
-
-		update_telescope_track(sht0, sht1);
+		// Calculate offload and track the telescope to the correct position
+		if (do_offload)
+			calc_offload(c0, c1);
 
 		// Make sure each iteration takes at minimum handler_p seconds:
 		// update duration = now - last
@@ -134,17 +145,16 @@ void Telescope::on_message(Connection *const conn, string line) {
 			conn->write(format("ok scalefac %g %g", scalefac[0], scalefac[1]));
 		} else if (what == "ttgain") {			// get ttgain
 			conn->addtag("ttgain");
-  		conn->write(format("ok ttgain %g %g %g", ttgain.p, ttgain.i, ttgain.d));
+  		conn->write(format("ok ttgain %g", ttgain.p));
 		} else if (what == "tel_track") {	// get tel_track - Telescope tracking position
 			conn->write(format("ok tel_track %g %g", telpos[0], telpos[1]));
 		} else if (what == "tel_units") {	// get tel_units - Telescope tracking units
 			conn->write(format("ok tel_units %s %s", telunits[0].c_str(), telunits[1].c_str()));
+		} else if (what == "offloading") {		// get offloading
+			conn->write(format("ok offloading %d", (int) do_offload));
 		} else if (what == "ccd_ang") {		// get ccd_ang - CCD rotation angle
 			conn->addtag("ccd_ang");
 			conn->write(format("ok ccd_ang %g", ccd_ang));
-		} else if (what == "pixshift") {	// get pixshift - Give last known pixel shift
-			conn->addtag("pixshift");
-			conn->write(format("ok pixshift %g %g", c0, c1));
 		} else if (what == "shifts") {		// get shifts - Give raw shifts, conv shifts, ctrl shifts
 			conn->addtag("shifts");
 			conn->write(format("ok shifts %g %g %g %g %g %g", c0, c1, sht0, sht1, ctrl0, ctrl1));
@@ -165,10 +175,11 @@ void Telescope::on_message(Connection *const conn, string line) {
 		} else if (what == "ttgain") {			// set ttgain <p> <i> <d>
 			conn->addtag("ttgain");
 			ttgain.p = popdouble(line);
-			ttgain.i = popdouble(line);
-			ttgain.d = popdouble(line);
 			conn->addtag("ttgain");
-  		conn->write(format("ok ttgain %g %g %g", ttgain.p, ttgain.i, ttgain.d));
+  		conn->write(format("ok ttgain %g", ttgain.p));
+		} else if (what == "offloading") {		// set offloading <0,1>
+			do_offload = popint(line);
+			conn->write(format("ok offloading %d", (int) do_offload));
 		} else if (what == "ccd_ang") {		// set ccd_ang <ang>
 			conn->addtag("ccd_ang");
 			ccd_ang = popdouble(line);
@@ -176,7 +187,21 @@ void Telescope::on_message(Connection *const conn, string line) {
 			conn->write(format("ok ccd_ang %g", ccd_ang));
 		} else
 			parsed = false;
-
+	} else if (command == "track") {
+		string what = popword(line);
+		
+		if (what == "pixshift") {						// track pixshift <pixel0> <pixel1>
+			c0 = popdouble(line);
+			c1 = popdouble(line);
+			calc_offload(c0, c1);
+			conn->write(format("ok track pixshift %f %f", c0, c1));
+		} else if (what == "telshift") {		// track telshift <shift0> <shift1>
+			sht0 = popdouble(line);
+			sht1 = popdouble(line);
+			update_telescope_track(sht0, sht1);
+			conn->write(format("ok track telshift %f %f", sht0, sht1));
+		} else
+			parsed = false;
 	} else {
 		parsed = false;
 	}
