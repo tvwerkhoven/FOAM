@@ -216,8 +216,9 @@ void CamCtrl::calculate_stats() {
 	uint16_t *image = (uint16_t *)monitor.image;
 	for(size_t j = 1; j < (size_t) height - 1; j++) {
 		for(size_t i = 1; i < (size_t) width -1; i++) {
-			monitor.histo[image[idx]]++;
 			idx = i + j*width;
+
+			monitor.histo[image[idx]]++;
 			sum += image[idx];
 			sumsquared += ((double)image[idx] * (double)image[idx]);
 			// Find minimum and maximum, but ignore brightest pixels
