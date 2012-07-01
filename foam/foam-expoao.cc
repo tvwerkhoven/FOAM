@@ -50,6 +50,10 @@ int FOAM_ExpoAO::load_modules() {
 	
 	//! @todo Try-catch clause does not function properly, errors don't propagate outward io.msg() problem?
 	try {
+		// Init WHT telescope interface
+		wht_track = new WHT(io, ptc, "wht", ptc->listenport, ptc->conffile);
+		devices->add((foam::Device *) wht_track);
+		
 		// Init Alpao DM
 		io.msg(IO_INFO, "Init Alpao DM97-15...");
 		alpao_dm97 = new AlpaoDM(io, ptc, "alpao_dm97", ptc->listenport, ptc->conffile);
@@ -67,10 +71,6 @@ int FOAM_ExpoAO::load_modules() {
 		ixonwfs = new Shwfs(io, ptc, "ixonwfs", ptc->listenport, ptc->conffile, *ixoncam);
 		devices->add((foam::Device *) ixonwfs);
 		
-		// Init WHT telescope interface
-		wht_track = new WHT(io, ptc, "wht", ptc->listenport, ptc->conffile);
-		devices->add((foam::Device *) wht_track);
-
 	} catch (std::runtime_error &e) {
 		io.msg(IO_ERR | IO_FATAL, "FOAM_ExpoAO::load_modules: %s", e.what());
 		return -1;
