@@ -77,7 +77,7 @@ protected:
 public:
 	// Common Wfc settings
 	typedef struct wfc_ctrl {
-		wfc_ctrl(): target(NULL), err(NULL), prev(NULL), gain(1,0,0), pid_int(NULL) { }
+		wfc_ctrl(): ctrl_vec(NULL), target(NULL), err(NULL), prev(NULL), gain(1,0,0), pid_int(NULL) { }
 		gsl_vector_float *ctrl_vec;				//!< Control vector sent to the WFC (size real_nact). If use_actmap is false, this points to 'target' and has no memory itself. If use_actmap is true, it has its own memory and data has to be copied here.
 
 		gsl_vector_float *target;					//!< (Requested) actuator amplitudes, should be between -1 and 1. (size virt_nact)
