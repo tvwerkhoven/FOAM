@@ -128,6 +128,40 @@ public:
  - Open loop: captures frames and calculates image shifts
  - Closed loop: open loop and correct the image
  
+ \section fex_troubleshoot Troubleshooting
+ 
+ These are some known issues on the FOAM ExPoAO system
+ 
+ \section fex_trbl_andor FOAM does not exit
+ 
+ FOAM has a bug that it does not exit properly at the end. Simply pressing ^C 
+ after you see the Andor and Alpao drivers have exited will quit the program 
+ just fine. 
+
+ Note that the Andor camera is first warmed up to room temperature before FOAM
+ exits so be sure that this is not happening.
+
+ \section fex_trbl_andor Could not initialize andor camera
+ 
+ When you get an error like:
+ <pre>
+ [err ] FOAM_ExpoAO::load_modules: Could not initialize andor camera! error: 20992, DRV_NOT_AVAILABLE
+ </pre>
+ the Andor driver has come in a bad state and needs to be reset. This can be 
+ done by re-installing the Andor camera driver located in 
+ ~expoao/drivers/andor_sdk. Simply run 
+ <pre>
+ sudo ./install_andor
+ </pre>
+ and install the driver for the iXon series and restart FOAM.
+ 
+ This error especially occurs when FOAM does not exit gracefully
+
+ \section fex_trbl_alpao Could not initialize Alpao driver
+ 
+ The Alpao driver can also crash, which also requires a reinstall.
+
+ 
  \section fex_related More information
  
  For more information on the devices that this build uses, see:
