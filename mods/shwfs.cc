@@ -368,7 +368,7 @@ int Shwfs::build_infmat(string wfcname, Camera::frame_t *frame, int actid, int a
 int Shwfs::calc_infmat(const string &wfcname) {
 	if (!calib[wfcname].init) {
 		io.msg(IO_WARN, "Shwfs::calc_infmat(): Call Shwfs::init_infmat() first.");
-		return 0;
+		return -1;
 	}
 
 	/*
@@ -433,6 +433,13 @@ int Shwfs::calc_infmat(const string &wfcname) {
 int Shwfs::calc_actmat(const string &wfcname, const double singval, const bool check_svd, const enum wfbasis) {
 	io.msg(IO_XNFO, "Shwfs::calc_actmat(): calc'ing for wfc '%s' with singval cutoff %g.",
 				 wfcname.c_str(), singval);
+	
+	//! @todo init_infmat() needs to be called automatically at init somehwere
+	if (!calib[wfcname].init) {
+		io.msg(IO_WARN, "Shwfs::calc_actmat(): Call Shwfs::init_infmat() first.");
+		return 0;
+	}
+
 	// Using input:
 	// calib[wfcname].meas.infmat
 	// Calculating:
@@ -441,8 +448,7 @@ int Shwfs::calc_actmat(const string &wfcname, const double singval, const bool c
 	// calib[wfcname].actmat.s
 	// calib[wfcname].actmat.Sigma
 	// calib[wfcname].actmat.V
-	
-	
+		
 	// Make matrix aliases
 	gsl_matrix_float *mat = calib[wfcname].actmat.mat;
 
