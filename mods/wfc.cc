@@ -153,11 +153,9 @@ int Wfc::update_control(const gsl_vector_float *const error, const gain_t g, con
 	}
 	
 	// Clamp WFC control values if requested
-	if (maxact != 1.0) {
-		for (size_t actid=0; actid<ctrlparams.target->size; actid++) {
-			float thisact = gsl_vector_float_get(ctrlparams.target, actid);
-			gsl_vector_float_set(ctrlparams.target, actid, clamp(thisact, -maxact, maxact));
-		}
+	for (size_t actid=0; actid<ctrlparams.target->size; actid++) {
+		float thisact = gsl_vector_float_get(ctrlparams.target, actid);
+		gsl_vector_float_set(ctrlparams.target, actid, clamp(thisact, -maxact, maxact));
 	}
 	
 	//! @todo Extend update_control() with (P)ID control
