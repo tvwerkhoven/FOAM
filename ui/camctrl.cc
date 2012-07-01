@@ -45,6 +45,10 @@ CamCtrl::CamCtrl(Log &log, const string h, const string p, const string n):
 
 CamCtrl::~CamCtrl() {
 	log.term(format("%s", __PRETTY_FUNCTION__));
+	if (monitor.histo)
+		free(monitor.histo);
+	if (monitor.image)
+		free(monitor.image);
 	set_mode(OFF);
 }
 
@@ -146,25 +150,21 @@ void CamCtrl::on_monitor_message(string line) {
 		return;
 	}
 
-	// The rest of the line is: <size> <x1> <y1> <x2> <y2> <scale> [histogram] [avg] [rms]
+	// The rest of the line is: <size> <x1> <y1> <x2> <y2> <scale> [avg] [rms]
 	size_t size = popsize(line);
-	int histosize = (1 << depth) * sizeof *monitor.histo;
 	int x1 = popint(line);
 	int y1 = popint(line);
 	int x2 = popint(line);
 	int y2 = popint(line);
 	int scale = popint(line);
-	bool do_histo = false;
 	double avg=0, rms=0;
 	int min=INT_MAX, max=0;
 
 	string extra;
 	
-	// Extra options might be: histogram, avg, rms, min, max
+	// Extra options might be: avg, rms, min, max
 	while(!(extra = popword(line)).empty()) {
-		if(extra == "histogram") {
-			do_histo = true;
-		} else if(extra == "avg") {
+		if(extra == "avg") {
 			avg = popdouble(line);
 		} else if(extra == "rms") {
 			rms = popdouble(line);
@@ -180,6 +180,8 @@ void CamCtrl::on_monitor_message(string line) {
 		log.term(format("%s (mutex)", __PRETTY_FUNCTION__));
 		if(size > monitor.size)
 			monitor.image = (uint16_t *)realloc(monitor.image, size);
+		if (!monitor.histo)
+			monitor.histo = (uint32_t *)malloc((1 << depth) * sizeof *monitor.histo);
 		monitor.size = size;
 		monitor.x1 = x1;
 		monitor.y1 = y1;
@@ -191,21 +193,43 @@ void CamCtrl::on_monitor_message(string line) {
 		monitor.rms = rms;
 		monitor.min = min;
 		monitor.max = max;
-
-		if(do_histo)
-			monitor.histo = (uint32_t *)realloc(monitor.histo, histosize);
 	}
 
 	log.term(format("%s (read1 %d)", __PRETTY_FUNCTION__, monitor.size));
 	monitorprotocol.read(monitor.image, monitor.size);
-
-	if(do_histo) {
-		log.term(format("%s (read2 %d)", __PRETTY_FUNCTION__, histosize));
-		monitorprotocol.read(monitor.histo, histosize);
-	}
+	
+	calculate_stats();
 
 	log.term(format("%s (signal)", __PRETTY_FUNCTION__));
 	signal_monitor();
+}
+
+void CamCtrl::calculate_stats() {
+	size_t thismaxval = (1 << monitor.depth);
+	
+	double sum = 0;
+	double sumsquared = 0;
+	size_t idx;
+	int width = monitor.x2 - monitor.x1;
+	int height = monitor.y2 - monitor.y1;
+	
+	uint16_t *image = (uint16_t *)monitor.image;
+	for(size_t j = 1; j < (size_t) height - 1; j++) {
+		for(size_t i = 1; i < (size_t) width -1; i++) {
+			idx = i + j*width;
+
+			monitor.histo[image[idx]]++;
+			sum += image[idx];
+			sumsquared += ((double)image[idx] * (double)image[idx]);
+			// Find minimum and maximum, but ignore brightest pixels
+			if (image[idx] > monitor.max && image[idx] < thismaxval) monitor.max = image[idx];
+			else if (image[idx] < monitor.min && image[idx] != 0) monitor.min = image[idx];
+		}
+	}
+	
+	size_t npix = ((width-2) * (height-2));
+	monitor.avg = sum / npix;
+	monitor.rms = sqrt((sumsquared/npix));
 }
 
 void CamCtrl::get_thumbnail() { send_cmd("thumbnail"); }
@@ -251,10 +275,8 @@ void CamCtrl::burst(int count, int fsel) {
 
 void CamCtrl::store(int nstore) { send_cmd(format("store %d", nstore)); }
 
-void CamCtrl::grab(int x1, int y1, int x2, int y2, int scale, bool darkflat, bool histo) {
+void CamCtrl::grab(int x1, int y1, int x2, int y2, int scale, bool darkflat) {
 	string command = format("grab %d %d %d %d %d", x1, y1, x2, y2, scale);
-	if (histo)
-		command += " histogram";
 	if(darkflat)
 		command += " darkflat";
 	monitorprotocol.write(command);

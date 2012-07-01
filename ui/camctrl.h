@@ -72,6 +72,8 @@ protected:
 	int depth;													//!< Camera bitdepth
 	string filename;										//!< Filename camera will store data to
 	size_t nstore;											//!< How many upcoming frames will be stored
+	
+	void calculate_stats();							//!< Calculate frame statistics
 
 	// From DeviceCtrl::
 	virtual void on_message(string line);
@@ -151,7 +153,7 @@ public:
 	void darkburst(int count);					//!< Take a burst of darkfield images
 	void flatburst(int count);					//!< Take a burst of flatfield images
 	void burst(int count, int fsel = 0); //!< Take a burst of images
-	void grab(int x1, int y1, int x2, int y2, int scale = 1, bool df_correct = false, bool histo = false); //!< Grab an image from the camera, crop it from (x1, y1) to (x2, y2) and take every 'scale'th pixel. Optically dark & flatfield correct it and get a histogram
+	void grab(int x1, int y1, int x2, int y2, int scale = 1, bool df_correct = false); //!< Grab an image from the camera, crop it from (x1, y1) to (x2, y2) and take every 'scale'th pixel. Optically dark & flatfield correct.
 	void store(int nstore);							//!< Store upcoming nstore frames to disk
 	
 	Glib::Dispatcher signal_thumbnail;	//!< New thumbnail available
