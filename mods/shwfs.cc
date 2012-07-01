@@ -1040,10 +1040,27 @@ int Shwfs::find_mla_grid(std::vector<vector_t> &mlacfg, const coord_t size, cons
 			throw format("Shwfs::find_mla_grid() Could not allocate memory (size=%zu)!", imsize);
 		memcpy(image, f->image, imsize);
 	}
+	
+	// Set outer band to zero so we don't find subapertures there. Loop over all 
+	// pixels and set the image to zero if either x or y is in the outer edge
+	if (cam.get_depth() <= 8) {
+		uint8_t *cimg = (uint8_t *)image;
+		for (int y=0; y<cam.get_height(); y++)
+			for (int x=0; x<cam.get_width(); x++)
+				if (x <= size.x/2 || x >= cam.get_width() - size.x/2 ||
+						y <= size.y/2 || y >= cam.get_height() - size.y/2)
+					cimg[y*cam.get_width() + x] = 0;
+	} else {
+		uint16_t *cimg = (uint16_t *)image;
+		for (int y=0; y<cam.get_height(); y++)
+			for (int x=0; x<cam.get_width(); x++)
+				if (x <= size.x/2 || x >= cam.get_width() - size.x/2 ||
+						y <= size.y/2 || y >= cam.get_height() - size.y/2)
+					cimg[y*cam.get_width() + x] = 0;
+	}
 
 	vector_t tmpsi;
 	mlacfg.clear();
-	
 	coord_t sipos;
 	
 	size_t maxidx = 0;
@@ -1077,7 +1094,7 @@ int Shwfs::find_mla_grid(std::vector<vector_t> &mlacfg, const coord_t size, cons
 		}
 		
 		// Intensity too low, done
-		if (maxi < mini) {
+		if (maxi < mini || maxi == 0) {
 			io.msg(IO_XNFO, "Shwfs::find_mla_grid() maxi(%d) < mini(%d), break", maxi, mini);
 			break;
 		}
@@ -1099,19 +1116,15 @@ int Shwfs::find_mla_grid(std::vector<vector_t> &mlacfg, const coord_t size, cons
 			break;
 		}
 		if ((int) mlacfg.size() >= cam.get_width()*cam.get_height()/size.x/size.y) {
-			//!< @todo check this code, does aborting work?
 			io.msg(IO_WARN, "Shwfs::find_mla_grid() subaperture detection overflow, aborting!");
-			free(image);
-			mlacfg.clear();
-			mlacfg.size(); 
+			break;
 		}
 		
-		// Set the current subimage to zero such that we don't detect it next time
-		int xran[] = {max(0, tmpsi.lx), min(cam.get_width(), tmpsi.tx)};
-		int yran[] = {max(0, tmpsi.ly), min(cam.get_height(), tmpsi.ty)};
+		// Set the current subimage and surrounding border to zero such that we 
+		// don't detect it next time
+		int xran[] = {max(0, tmpsi.lx-size.x/2), min(cam.get_width(), tmpsi.tx+size.x/2)};
+		int yran[] = {max(0, tmpsi.ly-size.y/2), min(cam.get_height(), tmpsi.ty+size.y/2)};
 		
-//		io.msg(IO_DEB1, "Shwfs::find_mla_grid() setting to zero from (%d, %d) to (%d, %d)", 
-//					 xran[0], yran[0], xran[1], yran[1]);
 		if (cam.get_depth() <= 8) {
 			uint8_t *cimg = (uint8_t *)image;
 			for (int y=yran[0]; y<yran[1]; y++)
