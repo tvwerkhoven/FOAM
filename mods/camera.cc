@@ -42,7 +42,7 @@ using namespace std;
 
 Camera::Camera(Io &io, foamctrl *const ptc, const string name, const string type, const string port, Path const &conffile, const bool online):
 Device(io, ptc, name, cam_type + "." + type, port, conffile, online),
-do_proc(true), nframes(-1), count(0), timeouts(0), ndark(10), nflat(10), 
+do_proc(false), nframes(-1), count(0), timeouts(0), ndark(10), nflat(10), 
 dark_exposure(1.0), flat_exposure(1.0),
 shutstat(SHUTTER_CLOSED), interval(1.0), exposure(1.0), gain(1.0), offset(0.0), 
 res(0,0), depth(-1),
@@ -115,11 +115,9 @@ Camera::~Camera() {
 	proc_thr.join();
 	
 	// Delete the camera ringbuffer here. The only memory we free here is the
-	// array of *references* to frames and the histogram memory. The image data
+	// array of *references* to frames. The image data
 	// itself (frames.data and frames.image) should be free'd by the derived 
 	// classes because we don't know what kind of object it is here.
-	for (size_t i=0; i<nframes; i++)
-		delete[] frames[i].histo;
 	delete[] frames;
 }
 
@@ -266,7 +264,6 @@ int Camera::store_frame(const frame_t *const frame) const {
 
 void Camera::calculate_stats(frame_t *const frame) const {
 	size_t thismaxval = get_maxval();
-	memset(frame->histo, 0, thismaxval * sizeof *frame->histo);
 	
 	double sum = 0;
 	double sumsquared = 0;
@@ -279,7 +276,6 @@ void Camera::calculate_stats(frame_t *const frame) const {
 		for(size_t j = 1; j < (size_t) res.y - 1; j++) {
 			for(size_t i = 1; i < (size_t) res.x -1; i++) {
 				idx = i + j*res.y;
-				frame->histo[image[idx]]++;
 				sum += image[idx];
 				sumsquared += (image[idx] * image[idx]);
 				// Find minimum and maximum, but ignore brightest pixels
@@ -292,7 +288,6 @@ void Camera::calculate_stats(frame_t *const frame) const {
 		for(size_t j = 1; j < (size_t) res.y - 1; j++) {
 			for(size_t i = 1; i < (size_t) res.x -1; i++) {
 				idx = i + j*res.y;
-				frame->histo[image[idx]]++;
 				sum += image[idx];
 				sumsquared += (image[idx] * image[idx]);
 				// Find minimum and maximum, but ignore brightest pixels
@@ -336,9 +331,6 @@ void *Camera::cam_queue(void * const data, void * const image, struct timeval *c
 	//! @todo Need to distinguish between data bitdepth and camera bitdepth
 	// Use depth/8, remember depth is in bits, size in bytes
 	frame->size = frame->npixels * frame->depth/8;
-	
-	if(!frame->histo)
-		frame->histo = new uint32_t[get_maxval()];
 	
 	// Reset values in frame struct
 	frame->proc = false;
@@ -488,15 +480,12 @@ void Camera::on_message(Connection *const conn, string line) {
 		int y2 = popint(line);
 		int scale = popint(line);
 		bool do_df = false;
-		bool do_histo = false;
 		string option;
 		while(!(option = popword(line)).empty()) {
 			if(option == "darkflat")
 				do_df = true;
-			else if(option == "histogram")
-				do_histo = true;
 		}
-		grab(conn, x1, y1, x2, y2, scale, do_df, do_histo);
+		grab(conn, x1, y1, x2, y2, scale, do_df);
 	} else if(command == "store") {
 		conn->addtag("store");
 		set_store(popint(line));
@@ -645,7 +634,7 @@ uint8_t *Camera::get_thumbnail(Connection *conn = NULL) {
 	return buffer;
 }
 
-void Camera::grab(Connection *conn, int x1, int y1, int x2, int y2, int scale = 1, bool do_df = false, bool do_histo = false) {	
+void Camera::grab(Connection *conn, int x1, int y1, int x2, int y2, int scale = 1, bool do_df = false) {	
 	x1 = clamp(x1, 0, res.x);
 	y1 = clamp(y1, 0, res.y);
 	x2 = clamp(x2, 0, res.x / scale);
@@ -683,9 +672,6 @@ void Camera::grab(Connection *conn, int x1, int y1, int x2, int y2, int scale = 
 		
 		if(f->tv.tv_sec)
 			extra += format(" timestamp %li.%06li", f->tv.tv_sec, f->tv.tv_usec);
-		
-		if(f->histo && do_histo)
-			extra += " histogram";
 		
 		extra += format(" avg %lf rms %lf", f->avg, f->rms);
 		extra += format(" min %d max %d", f->min, f->max);
@@ -733,9 +719,8 @@ void Camera::grab(Connection *conn, int x1, int y1, int x2, int y2, int scale = 
 		
 		free(buffer);
 		
-	finish:
-		if(f->histo && do_histo)
-			conn->write(f->histo, sizeof *f->histo * get_maxval());
+finish:
+		;
 	}
 }
 

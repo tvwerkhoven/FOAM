@@ -92,7 +92,7 @@ int FOAM_ExpoAO::open_init() {
 	if (ixonwfs->check_subimgs(ixoncam->get_res()))
 		return -1;
 
-	ixoncam->set_proc_frames(true);
+	ixoncam->set_proc_frames(false);
 	ixoncam->set_mode(Camera::RUNNING);
 	
 	return 0;

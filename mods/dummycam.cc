@@ -61,7 +61,6 @@ DummyCamera::~DummyCamera() {
 	// Delete frames in buffer
 	for (size_t f=0; f<nframes; f++) {
 		free((uint16_t *) frames[f].data);
-		delete[] frames[f].histo;
 	}
 	
 	cam_thr.cancel();

@@ -78,7 +78,7 @@ const string cam_type = "cam";
  \li set <prop>: set a property (see list below)
  \li get <prop>: get a property (see list below)
  \li thumnail: get a 32x32x8 thumbnail
- \li grab <x1> <y1> <x2> <y2> <scale> [darkflat] [histogram]: grab an image cropped from (x1,y1) to (x2,y2) and scaled down by factor scale. Darkflat and histogram are optional.
+ \li grab <x1> <y1> <x2> <y2> <scale> [darkflat]: grab an image cropped from (x1,y1) to (x2,y2) and scaled down by factor scale. Darkflat is optional.
  \li dark [n]: grab <n> darkframes, otherwise take the default <ndark>
  \li flat [n]: grab <n> flatframes, otherwise take the default <nflat>
  
@@ -168,7 +168,6 @@ public:
 	typedef struct frame {
 		void *data;						//!< Generic data pointer, might be necessary for some hardware
 		void *image;					//!< Pointer to frame data (unsigned int, 8 or 16 bpp)
-		uint32_t *histo;			//!< Histogram data (optional)
 		size_t id;						//!< Unique frame ID
 		size_t size;					//!< Size of 'image' [bytes]
 		coord_t res;					//!< Resolution of 'image' [pixels]
@@ -181,7 +180,6 @@ public:
 		frame() {
 			data = 0;
 			image = 0;
-			histo = 0;
 			id = 0;
 			size = 0;
 			proc = false;
@@ -239,7 +237,7 @@ protected:
 	int store_frame(const frame_t *const frame) const;	//!< Store frame to disk
 	
 	uint8_t *get_thumbnail(Connection *conn);					//!< Get 32x32x8 thumnail
-	void grab(Connection *conn, int x1, int y1, int x2, int y2, int scale, bool do_df, bool do_histo);
+	void grab(Connection *conn, int x1, int y1, int x2, int y2, int scale, bool do_df);
 
 	uint8_t df_correct(const uint8_t *in, size_t offset);
 	uint16_t df_correct(const uint16_t *in, size_t offset);

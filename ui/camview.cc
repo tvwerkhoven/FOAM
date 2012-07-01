@@ -353,32 +353,15 @@ int CamView::histo_scale_func(int max) {
 void CamView::do_histo_update() {	
 	int pixels = 0;											// Number of pixels
 	size_t max = 1 << camctrl->get_depth(); // Maximum intensity in image
-	double sum = 0;
-	double sumsquared = 0;
-	double rms = max;
 	bool overexposed = false;						//!< Overexposed flag
 	
 	// Don't do anything is histoframe is hidden
 	if (!histoframe.is_visible())
 		return;
 	
-	// Analyze histogram data if available. histo is a linear array from 0 to
-	// the maximum intensity and counts pixels for each intensity bin.
-	if (histo_img) {
-		for (int i = 0; i < (int) max; i++) {
-			pixels += histo_img[i];
-			sum += (double)i * histo_img[i];
-			sumsquared += (double)(i * i) * histo_img[i];
-			
-			if (i >= 0.98 * max && histo_img[i])
-				overexposed = true;
-		}
-		
-		sum /= pixels;
-		sumsquared /= pixels;
-		rms = sqrt(sumsquared/pixels);
-	}
-	
+	if (camctrl->monitor.max >= 0.98 * max)
+		overexposed = true;
+
 	// Update ranges
 	minval.set_range(0, 1 << camctrl->get_depth());
 	maxval.set_range(0, 1 << camctrl->get_depth());
@@ -386,8 +369,8 @@ void CamView::do_histo_update() {
 	// Update min/max/avg/rms data values
 	e_datamin.set_text(format("%d", camctrl->monitor.min));
 	e_datamax.set_text(format("%d", camctrl->monitor.max));
-	e_avg.set_text(format("%.2lf", sum));
-	e_rms.set_text(format("%.3lf", rms));
+	e_avg.set_text(format("%.2lf", camctrl->monitor.avg));
+	e_rms.set_text(format("%.3lf", camctrl->monitor.rms));
 
 	// Draw the histogram
 	
@@ -444,7 +427,7 @@ bool CamView::on_timeout() {
 	// -> if OK: we are displaying a frame, get a new one & set to WAITING
 	// -> if ERROR or CLEAR: don't do anything
 	if (display.get_state() == SwitchButton::OK) {
-		camctrl->grab(0, 0, camctrl->get_width(), camctrl->get_height(), 1, false, histo.get_active());
+		camctrl->grab(0, 0, camctrl->get_width(), camctrl->get_height(), 1, false);
 		display.set_state(SwitchButton::WAITING);
 	}
 
@@ -567,7 +550,7 @@ void CamView::on_display_clicked() {
 	// -> if CLEAR: request frame, set button to WAITING
 	// -> if WAITING, OK or ERROR: stop capture 
 	if (display.get_state() == SwitchButton::CLEAR) {
- 		camctrl->grab(0, 0, camctrl->get_width(), camctrl->get_height(), 1, false, histo.get_active());
+ 		camctrl->grab(0, 0, camctrl->get_width(), camctrl->get_height(), 1, false);
 		display.set_state(SwitchButton::WAITING);
 	}
 	else
