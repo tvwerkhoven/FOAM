@@ -51,7 +51,9 @@ void DeviceCtrl::connect() {
 void DeviceCtrl::send_cmd(const string &cmd) {
 	lastcmd = cmd;
 	protocol.write(cmd);
-	log.add(Log::DEBUG, devname + ": -> " + cmd);
+	set<string>::iterator it = cmd_ign_list.find(cmd);
+	if (it == cmd_ign_list.end())
+		log.add(Log::DEBUG, devname + ": -> " + cmd);
 	log.term(format("%s (%s)", __PRETTY_FUNCTION__, cmd.c_str()));
 }
 
@@ -60,15 +62,18 @@ void DeviceCtrl::on_message_common(string line) {
 	// Save line for passing to on_message()
 	string orig = line;
 	string stat = popword(line);
+	string cmd = popword(line);
 	
 	if (stat != "ok") {
 		ok = false;
 		errormsg = line;
-		log.add(Log::ERROR, devname + ": <- " + stat + " " + line);
+		log.add(Log::ERROR, devname + ": <- " + stat + " " + cmd + " " + line);
 	} else {
 		ok = true;
-		log.add(Log::OK, devname + ": <- " + stat + " " + line);
 		
+		set<string>::iterator it = cmd_ign_list.find(cmd);
+		if (it == cmd_ign_list.end())
+			log.add(Log::OK, devname + ": <- " + stat + " " + cmd + " " + line);
 		// Common functions are complete, call on_message for further parsing. 
 		// DeviceCtrl::on_message() is virtual so it will call the derived class first.
 		
