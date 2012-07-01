@@ -437,7 +437,7 @@ int Shwfs::calc_actmat(const string &wfcname, const double singval, const bool c
 	//! @todo init_infmat() needs to be called automatically at init somehwere
 	if (!calib[wfcname].init) {
 		io.msg(IO_WARN, "Shwfs::calc_actmat(): Call Shwfs::init_infmat() first.");
-		return 0;
+		return -1;
 	}
 
 	// Using input:
@@ -629,6 +629,8 @@ string Shwfs::get_singval_str(const string &wfcname) const {
 
 	string singval_str;
 	gsl_vector *s_tmp = calib.find(wfcname)->second.actmat.s;
+	if (!s_tmp)
+		return "0";
 	
 	singval_str = format("%zu", s_tmp->size);
 	for (size_t idx=0; idx<s_tmp->size; idx++)
