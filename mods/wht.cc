@@ -81,6 +81,7 @@ altfac(-1.0), delay(1.0)
 		if (!wht_ctrl)
 			throw std::runtime_error(format("Could not open serial port %s!", sport.c_str()));
 	}
+	sleep(1);
 	
 	// Set neutral position
 	tcs_control(50.00, 50.00, 0.01);
