@@ -125,7 +125,7 @@ int FOAM_ExpoAO::open_loop() {
 		vec_str += format("%.3g ", gsl_vector_float_get(alpao_dm97->ctrlparams.err, i));
 	io.msg(IO_DEB1, "FOAM_ExpoAO::wfc_rec: %s", vec_str.c_str());
 	
-	ixonwfs->comp_shift(alpao_dm97->getname(), alpao_dm97->ctrlparams.err, wf_meas->wfamp);
+	ixonwfs->comp_shift(alpao_dm97->getname(), alpao_dm97->ctrlparams.err, wf_meas->wf_full);
 	openperf_addlog("wfs->comp_shift");
 
 	float ttx=0, tty=0;
