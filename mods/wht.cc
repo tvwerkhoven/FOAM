@@ -101,6 +101,7 @@ WHT::~WHT() {
 	// Join with WHT updater thread
 	wht_cfg_thr.cancel();
 	wht_cfg_thr.join();
+	io.msg(IO_INFO, "WHT::~WHT() done");
 }
 
 void WHT::wht_updater() {
@@ -214,7 +215,10 @@ int WHT::update_telescope_track(const float sht0, const float sht1) {
 	return 0;
 }
 
-void WHT::tcs_control(const float tcs0, const float tcs1, const float thisdelay) {
+void WHT::tcs_control(float tcs0, float tcs1, const float thisdelay) {
+	// Clamp values to be nice to the TCS
+	tcs0 = clamp((float) tcs0, 45.0f, 55.0f);
+	tcs1 = clamp((float) tcs1, 45.0f, 55.0f);
 	// This is the command string sent over the serial port. Syntax is specified 
 	// in wht.h, but should be like '00050.00 00050.00 00000.10\r'. The delay is 
 	// the timeout until the TCS will resume normal (unguided) tracking. We set 

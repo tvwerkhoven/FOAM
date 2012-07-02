@@ -177,7 +177,7 @@ private:
 	string track_port;			//!< port to read wht_live_url on;
 	
 	int update_wht_coords(double *const alt, double *const az, double *const delay); //!< Update WHT pointings coordinates from online thing
-	void tcs_control(const float tcs0, const float tcs1, const float thisdelay); //!< Send control command to William Herschel Telescope control system (TCS)
+	void tcs_control(float tcs0, float tcs1, const float thisdelay); //!< Send control command to William Herschel Telescope control system (TCS)
 	
 public:
 	WHT(Io &io, foamctrl *const ptc, const string name, const string port, Path const &conffile, const bool online=true);
