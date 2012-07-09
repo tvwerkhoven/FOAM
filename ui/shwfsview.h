@@ -91,6 +91,7 @@ private:
 	// Extra events:
 	void on_subi_select_changed();			//!< Select a subimage combobox
 	void on_subi_add_clicked();					//!< Add new subimage button
+	void on_subi_clear_clicked();				//!< Clear subimage pattern
 	void on_subi_del_clicked();					//!< Delete selected subimage button
 	void on_subi_update_clicked();			//!< Update current subimage coordinates
 	

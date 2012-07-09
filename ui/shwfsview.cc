@@ -119,9 +119,6 @@ subi_bounds("Show subaps"), subi_vecs("Show shifts"), subi_vecdelayi("every", "s
 	clear_gui();
 	disable_gui();
 	
-	// Show bounds by default
-	on_subi_bounds_clicked();
-	
 	// finalize
 	show_all_children();
 }
@@ -288,10 +285,10 @@ void ShwfsView::on_subi_bounds_clicked() {
 	// If the button is clear: show bounds, otherwise: set button to clear (and hide bounds)
 	if (subi_bounds.get_state() == SwitchButton::CLEAR) {
 		wfscam_ui->glarea.showboxes(true);
-		subi_vecs.set_state(SwitchButton::OK);
+		subi_bounds.set_state(SwitchButton::OK);
 	} else {
 		wfscam_ui->glarea.showboxes(false);
-		subi_vecs.set_state(SwitchButton::CLEAR);
+		subi_bounds.set_state(SwitchButton::CLEAR);
 	}
 }
 
