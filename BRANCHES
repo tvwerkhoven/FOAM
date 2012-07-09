@@ -1,0 +1,78 @@
+FOAM git branches documentation.
+
+*** Semi-permanent development branches
+
+* master
+Main development branch. Should compile.
+
+* production
+Production branch. Must compile & work stably.
+
+* gh-pages
+GitHub website branch. Not actively used.
+
+*** Temporary branches
+
+These branches come and go, and this list might not be up-to-date. Check git log and gitk for details.
+
+* topic_andor_speed (implemented)
+Improve Andor speed: EM CCD gain and frame transfer
+
+* topic_tt_offload (implemented)
+Offload tip-tilt to WHT. Implement coordinate conversion and RS232 writing
+
+* topic_compile_gitrev (implemented)
+Read version and include in binary
+
+* topic_wfc_mutex (implemented)
+When operating in closed loop, and when setting the actuators manually as well, somethings some function could be called simultaneously. We use a mutex to solve this problem and let only one thread at a time call actuate().
+
+* topic_calib_store (RC)
+Store calibration files for re-use lateron
+
+* topic_compile_gitrev2
+Need to execute ./version.sh at compile time, *not* only at commit time!
+
+* topic_gui_wht (implemented in master)
+Add telescope GUI. Shows telescope position, raw shift, converted shift.
+Todo: show control packets to telescope, add control for ccd_ang, scalefac, gain, altfac?
+
+* topic_simstat_update
+Update simstatic mode after a long time
+
+* topic_doc_fix (RC)
+Fix/extend doxygen documentation
+
+* topic_infl_bootstrap (implemented in master)
+Improve influence matrix calibration if we have a flat reset() mirror shape
+-> Do not reste mirror to 0 in between actuators OK
+-> Give amplitude for influence matrix calibration as parameter OK
+-> Test 0 control versus 0 volts OK
+
+* topic_testing_dummy (alpha)
+Use FOAM_dummy in hardware tests so we have small stand-alone programs for each piece of hardware.
+
+* topic_usability_fix (implemented in master)
+Fix some network commands
+v frame transfer -> works
+v temperature -> works
+v darkfield? -> works, no stats yet?
+
+* topic_cam_statsfix (implemented in master)
+Ignore bright and dark pixels, ignore andor rightmost column of pixels
+v ignore outer edge pixels in statistics calculations -> works
+
+* topic_cog_threshold (implemented in master)
+- Implement CoG threshold (shift_mini) live update -> works
+- Implement SHWFS tracking clamping -> works
+
+* topic_wfc_clamp (implemented in master)
+- Clamp WFC control signals to prevent badness -> works
+
+* topic_ui_stats (RC)
+- Calculate image stats in GUI only (rms, avg, etc.) -> works
+
+* topic_dev_ignorelist (RC)
+- Add list of commands not to report in the terminal for each Device
+
+* miscellaneous
