@@ -86,7 +86,7 @@ public:
 	
 	//Zernike zernbasis;									//!< Zernike polynomials basis
 	//gsl_matrix_float *zerninfl;					//!< Influence matrix to convert WFS data to Zernike modes
-	
+
 	wf_info_t wf;												//!< Wavefront representation
 	
 	Camera &cam;												//!< Reference to the camera class used for this WFS
