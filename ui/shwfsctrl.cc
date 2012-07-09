@@ -75,7 +75,7 @@ void ShwfsCtrl::on_message(string line) {
 	if (what == "mla") {								// ok mla <N> [idx x0 y0 x1 y1 [idx x0 y0 x1 y1 [...]]]
 		n = popint(line);
 		
-		if (n <= 0) {
+		if (n < 0) {
 			ok = false;
 			errormsg = "Unexpected response for 'mla'";
 			signal_message();

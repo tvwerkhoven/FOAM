@@ -290,6 +290,7 @@ void ShwfsView::on_subi_bounds_clicked() {
 		wfscam_ui->glarea.showboxes(false);
 		subi_bounds.set_state(SwitchButton::CLEAR);
 	}
+	wfscam_ui->glarea.do_update();
 }
 
 void ShwfsView::on_subi_vecs_clicked() {
