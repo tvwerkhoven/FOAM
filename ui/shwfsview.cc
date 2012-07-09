@@ -33,7 +33,7 @@ shwfs_addnew("Add new"),
 subi_frame("Subimages"),
 subi_lx("X_0"), subi_ly("Y_0"), subi_tx("X_1"), subi_ty("Y_1"), 
 subi_update("Update"), subi_del("Del"), subi_add("Add"), subi_clear("Clear"), subi_regen("Regen pattern"), subi_find("Find pattern"), subi_find_minif("Min I", "fac"),
-subi_vecs("Show shifts"), subi_vecdelayi("every", "s")
+subi_bounds("Show subaps"), subi_vecs("Show shifts"), subi_vecdelayi("every", "s")
 {
 	log.term(format("%s", __PRETTY_FUNCTION__));
 	
@@ -70,6 +70,7 @@ subi_vecs("Show shifts"), subi_vecdelayi("every", "s")
 	subi_find.signal_clicked().connect(sigc::mem_fun(*this, &ShwfsView::on_subi_find_clicked));
 	
 	subi_vecs.signal_clicked().connect(sigc::mem_fun(*this, &ShwfsView::on_subi_vecs_clicked));
+	subi_bounds.signal_clicked().connect(sigc::mem_fun(*this, &ShwfsView::on_subi_bounds_clicked));
 	//subi_vecdelayi.entry.signal_activate().connect(sigc::mem_fun(*this, &ShwfsView::on_subi_vecs_clicked));
 	
 	shwfsctrl->signal_sh_shifts.connect(sigc::mem_fun(*this, &ShwfsView::do_sh_shifts_update));
@@ -98,6 +99,7 @@ subi_vecs("Show shifts"), subi_vecdelayi("every", "s")
 	subi_find_box.pack_start(subi_find_minif, PACK_SHRINK);
 	subi_vbox13.pack_start(subi_find_box, PACK_SHRINK);
 	
+	subi_hbox141.pack_start(subi_bounds, PACK_SHRINK);
 	subi_hbox141.pack_start(subi_vecs, PACK_SHRINK);
 	subi_hbox141.pack_start(subi_vecdelayi, PACK_SHRINK);
 	subi_vbox14.pack_start(subi_hbox141, PACK_SHRINK);
@@ -116,6 +118,9 @@ subi_vecs("Show shifts"), subi_vecdelayi("every", "s")
 	
 	clear_gui();
 	disable_gui();
+	
+	// Show bounds by default
+	on_subi_bounds_clicked();
 	
 	// finalize
 	show_all_children();
@@ -136,6 +141,7 @@ void ShwfsView::enable_gui() {
 	subi_clear.set_sensitive(true);
 	subi_regen.set_sensitive(true);
 	subi_find.set_sensitive(true);
+	subi_bounds.set_sensitive(true);
 	subi_vecs.set_sensitive(true);
 }
 
@@ -150,6 +156,7 @@ void ShwfsView::disable_gui() {
 	subi_clear.set_sensitive(false);
 	subi_regen.set_sensitive(false);
 	subi_find.set_sensitive(false);
+	subi_bounds.set_sensitive(false);
 	subi_vecs.set_sensitive(false);	
 }
 
@@ -171,6 +178,7 @@ void ShwfsView::clear_gui() {
 		wfscam_ui->glarea.clearlines();
 	}
 	
+	subi_bounds.set_state(SwitchButton::CLEAR);
 	subi_vecs.set_state(SwitchButton::CLEAR);
 }
 
@@ -273,6 +281,18 @@ void ShwfsView::on_subi_find_clicked() {
 	
 	// Find subimage pattern heuristically
 	shwfsctrl->mla_find_pattern(subi_find_minif.get_value());
+}
+
+void ShwfsView::on_subi_bounds_clicked() {
+	log.term(format("%s", __PRETTY_FUNCTION__));
+	// If the button is clear: show bounds, otherwise: set button to clear (and hide bounds)
+	if (subi_bounds.get_state() == SwitchButton::CLEAR) {
+		wfscam_ui->glarea.showboxes(true);
+		subi_vecs.set_state(SwitchButton::OK);
+	} else {
+		wfscam_ui->glarea.showboxes(false);
+		subi_vecs.set_state(SwitchButton::CLEAR);
+	}
 }
 
 void ShwfsView::on_subi_vecs_clicked() {
