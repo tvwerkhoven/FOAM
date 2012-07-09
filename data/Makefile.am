@@ -2,8 +2,10 @@
 foamsimdatadir = $(datadir)/foam/simdata
 
 # Crop wavefront file (asymmetric is better for testing)
+#! @bug The convert -crop method is broken, creates 3D fits file. Backup: use Python & Pyfits
 wavefront-crop*: wavefront.fits
-	convert wavefront.fits -depth 8 -crop 1024x768+0+128 wavefront-crop.fits
+# convert wavefront.fits -depth 8 -crop 1024x768+0+128 wavefront-crop.fits
+	python -c "import pyfits; img=pyfits.getdata('wavefront.fits'); pyfits.writeto('wavefront-crop.fits', img[128:-128,:], clobber=True)"
 	convert wavefront-crop.fits wavefront-crop.png
 
 # Convert wavefront file to png
