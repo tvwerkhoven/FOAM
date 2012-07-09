@@ -64,7 +64,7 @@ private:
 	Button subi_update;									//!< Update current subimage data
 	Button subi_del;										//!< Delete current subimage
 	Button subi_add;										//!< Add new subimage
-																			//!< @todo Add 'clear' button to clear out MLA pattern
+	Button subi_clear;									//!< clear out MLA pattern
 	
 	Button subi_regen;									//!< Re-generate subimage pattern
 	HBox subi_find_box;
@@ -72,6 +72,7 @@ private:
 	LabeledSpinEntry subi_find_minif;		//!< Find subimages up to this factor less than the maximum intensity
 	
 	SwitchButton subi_vecs;							//!< Display shift vectors or not
+	SwitchButton subi_bounds;						//!< Display subaperture bounds or not
 																			//! @todo convert subi_vecdelayi to spin entry
 	LabeledSpinEntry subi_vecdelayi;		//!< Display shift vectors every X seconds
 	float subi_vecdelay;								//!< Delay for displaying shift vectors (in seconds)

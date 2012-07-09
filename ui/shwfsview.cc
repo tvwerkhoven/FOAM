@@ -32,7 +32,7 @@ WfsView((WfsCtrl *) ctrl, log, foamctrl, n), shwfsctrl(ctrl),
 shwfs_addnew("Add new"),
 subi_frame("Subimages"),
 subi_lx("X_0"), subi_ly("Y_0"), subi_tx("X_1"), subi_ty("Y_1"), 
-subi_update("Update"), subi_del("Del"), subi_add("Add"), subi_regen("Regen pattern"), subi_find("Find pattern"), subi_find_minif("Min I", "fac"),
+subi_update("Update"), subi_del("Del"), subi_add("Add"), subi_clear("Clear"), subi_regen("Regen pattern"), subi_find("Find pattern"), subi_find_minif("Min I", "fac"),
 subi_vecs("Show shifts"), subi_vecdelayi("every", "s")
 {
 	log.term(format("%s", __PRETTY_FUNCTION__));
@@ -62,6 +62,7 @@ subi_vecs("Show shifts"), subi_vecdelayi("every", "s")
 	// Signals & callbacks
 	subi_select.signal_changed().connect(sigc::mem_fun(*this, &ShwfsView::on_subi_select_changed));
 	subi_add.signal_clicked().connect(sigc::mem_fun(*this, &ShwfsView::on_subi_add_clicked));
+	subi_clear.signal_clicked().connect(sigc::mem_fun(*this, &ShwfsView::on_subi_clear_clicked));
 	subi_del.signal_clicked().connect(sigc::mem_fun(*this, &ShwfsView::on_subi_del_clicked));
 	subi_update.signal_clicked().connect(sigc::mem_fun(*this, &ShwfsView::on_subi_update_clicked));
 	
@@ -79,6 +80,7 @@ subi_vecs("Show shifts"), subi_vecdelayi("every", "s")
 	subi_hbox1.set_spacing(4);
 	
 	subi_hbox111.pack_start(subi_add, PACK_SHRINK);
+	subi_hbox111.pack_start(subi_clear, PACK_SHRINK);
 	subi_hbox111.pack_start(subi_del, PACK_SHRINK);
 	subi_hbox111.pack_start(subi_update, PACK_SHRINK);
 	subi_vbox11.pack_start(subi_select, PACK_SHRINK);
@@ -131,6 +133,7 @@ void ShwfsView::enable_gui() {
 	subi_update.set_sensitive(true);
 	subi_del.set_sensitive(true);
 	subi_add.set_sensitive(true);
+	subi_clear.set_sensitive(true);
 	subi_regen.set_sensitive(true);
 	subi_find.set_sensitive(true);
 	subi_vecs.set_sensitive(true);
@@ -144,6 +147,7 @@ void ShwfsView::disable_gui() {
 	subi_update.set_sensitive(false);
 	subi_del.set_sensitive(false);
 	subi_add.set_sensitive(false);
+	subi_clear.set_sensitive(false);
 	subi_regen.set_sensitive(false);
 	subi_find.set_sensitive(false);
 	subi_vecs.set_sensitive(false);	
@@ -186,6 +190,12 @@ void ShwfsView::on_subi_select_changed() {
 	subi_ly.set_value(tmp_si.ly);
 	subi_tx.set_value(tmp_si.tx);
 	subi_ty.set_value(tmp_si.ty);
+}
+
+void ShwfsView::on_subi_clear_clicked() {
+	log.term(format("%s", __PRETTY_FUNCTION__));
+
+	shwfsctrl->mla_clear();
 }
 
 void ShwfsView::on_subi_add_clicked() {
@@ -336,6 +346,8 @@ void ShwfsView::on_message_update() {
 	
 	// Add text to add a new subimage
 	subi_select.append_text(shwfs_addnew);
+	
+	// Add number of subaps
 	
 	// Add subimage boxes & wavefront vectors to glarea
 	if (wfscam_ui) {

@@ -221,6 +221,7 @@ public:
 	bool store_mla_grid(const bool overwrite=false) const;
 	
 	int mla_update_si(const int nx0, const int ny0, const int nx1, const int ny1, const int idx=-1);
+	int mla_clear();
 	int mla_del_si(const int idx);
 
 	/*! @brief Convert shifts to basis functions
