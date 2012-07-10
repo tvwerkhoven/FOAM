@@ -172,6 +172,9 @@ void Shwfs::on_message(Connection *const conn, string line) {
 			conn->addtag("mla");
 			if (mla_del_si(popint(line)))
 				conn->write("error mla del :Incorrect subimage index");
+		} else if (what == "clear") {				// mla clear
+			conn->addtag("mla");
+			mla_clear();
 		} else if(what == "add") {				// mla add <lx> <ly> <tx> <ty>
 			conn->addtag("mla");
 			int nx0, ny0, nx1, ny1;
@@ -783,8 +786,10 @@ void Shwfs::store_reference() {
 }
 
 int Shwfs::calibrate() {
-	if (mlacfg.size() == 0) {
+	if (mlacfg.size() <= 0) {
 		io.msg(IO_XNFO, "Shwfs::calibrate(): cannot calibrate without subapertures defined.");
+		// Always set modes to the number of subaps, also if 0
+		wf.nmodes = mlacfg.size() * 2;
 		return -1;
 	}
 	
@@ -1189,6 +1194,16 @@ int Shwfs::mla_update_si(const int nx0, const int ny0, const int nx1, const int 
 	else {
 		return -1;
 	}
+}
+
+int Shwfs::mla_clear() {
+	set_calib(false);
+
+	mlacfg.clear();
+
+	calibrate();
+	net_broadcast("ok mla " + get_mla_str(), "mla");
+	return 0;
 }
 
 int Shwfs::mla_del_si(const int idx) {
