@@ -59,7 +59,7 @@ e_gain("Gain", "", -INFINITY, INFINITY, 1.0, 10.0, 0),
 e_res("Res."), e_mode("Mode"),
 flipv("Flip V"), fliph("Flip H"), crosshair("+"), grid("Grid"), histo("Histo"), underover("Underover"), 
 zoomin(Stock::ZOOM_IN), zoomout(Stock::ZOOM_OUT), zoom100(Stock::ZOOM_100), zoomfit(Stock::ZOOM_FIT), 
-histoalign(0.5, 0.5, 0, 0), 
+histoalign(0.5, 0.5, 0, 0), histo_w(256), histo_h(100),
 minval("Display min"), maxval("Display max"), e_avg("Avg."), e_rms("RMS"), e_datamin("Min"), e_datamax("Max")
 {
 	log.term(format("%s", __PRETTY_FUNCTION__));
@@ -71,7 +71,7 @@ minval("Display min"), maxval("Display max"), e_avg("Avg."), e_rms("RMS"), e_dat
 	
 	// Setup histogram
 	histo_img = 0;
-	histopixbuf = Gdk::Pixbuf::create(Gdk::COLORSPACE_RGB, false, 8, 256, 100);
+	histopixbuf = Gdk::Pixbuf::create(Gdk::COLORSPACE_RGB, false, 8, histo_w, histo_h);
 	histopixbuf->fill(0xFFFFFF00);
 	histoimage.set(histopixbuf);
 	histoimage.set_double_buffered(false);
@@ -388,39 +388,33 @@ void CamView::do_histo_update() {
 	
 	// Draw black bars in the histogram
 	uint8_t *out = (uint8_t *)histopixbuf->get_pixels();
-
-	fprintf(stderr, "pixels: %d, bins: %d, hscale: %g\n", 
-					pixels, CAMCTRL_HISTOBINS, hscale);
 	
 	if(histo_img) {
-		fprintf(stderr, "making histo: ");
 		// Loop over all histogram counts
 		for(int i = 0; i < (int) CAMCTRL_HISTOBINS; i++) {
-			int height = (int) 100 * histo_scale_func(histo_img[i] * hscale);
-			fprintf(stderr, "%d -> %d, ", i, height);
-			if(height > 100)
-				height = 100;
+			int height = (int) histo_h * histo_scale_func(histo_img[i] * hscale);
+			if(height > histo_h)
+				height = histo_h;
 			// Set histogram pixel bar at x=f(i), height is f(histo_img[i])
-			for(int y = 100 - height; y < 100; y++) {
-				uint8_t *p = out + 3 * ((i * (int) (256.0 / CAMCTRL_HISTOBINS)) + 256 * y);
+			for(int y = histo_h - height; y < histo_h; y++) {
+				uint8_t *p = out + 3 * ((i * (int) (1.0*histo_w / CAMCTRL_HISTOBINS)) + histo_w * y);
 				p[0] = 0;
 				p[1] = 0;
 				p[2] = 0;
 			}
 		}
-		fprintf(stderr, "\n");
 	}
 	
 	// Make vertical bars (red and cyan) at minval and maxval:
-	int x1 = clamp(minval.get_value_as_int() * 256 / max, (size_t) 0, (size_t) 256);
-	int x2 = clamp(maxval.get_value_as_int() * 256 / max, (size_t) 0, (size_t) 256);
+	int x1 = clamp(minval.get_value_as_int() * histo_w / max, (size_t) 0, (size_t) histo_w);
+	int x2 = clamp(maxval.get_value_as_int() * histo_w / max, (size_t) 0, (size_t) histo_w);
 	
-	for(int y = 0; y < 100; y += 2) {
-		uint8_t *p = out + 3 * (x1 + 256 * y);
+	for(int y = 0; y < histo_h; y += 2) {
+		uint8_t *p = out + 3 * (x1 + histo_w * y);
 		p[0] = 255;
 		p[1] = 0;
 		p[2] = 0;
-		p = out + 3 * (x2 + 256 * y);
+		p = out + 3 * (x2 + histo_w * y);
 		p[0] = 0;
 		p[1] = 255;
 		p[2] = 255;

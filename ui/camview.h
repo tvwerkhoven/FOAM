@@ -97,6 +97,8 @@ protected:
 	EventBox histoevents;
 	Image histoimage;
 	Glib::RefPtr<Gdk::Pixbuf> histopixbuf;
+	const int histo_w;
+	const int histo_h;
 
 	VBox histovbox;
 	LabeledSpinEntry minval;						//!< Minimum value to display in glviewer
