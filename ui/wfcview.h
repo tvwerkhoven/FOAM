@@ -54,6 +54,12 @@ private:
 	Button calib_waffle;
 	LabeledSpinEntry calib_amp;
 
+	Frame ctrl_frame;
+	HBox ctrl_hbox;
+	LabeledSpinEntry ctrl_gainp;
+	LabeledSpinEntry ctrl_gaini;
+	LabeledSpinEntry ctrl_gaind;
+
 	Frame wfcact_frame;
 	HBox wfcact_hbox;
 	BarGraph wfcact_gr;
@@ -65,6 +71,7 @@ private:
 	void on_calib_waffle_clicked();			//!< Callback for calib_waffle button
 	void on_calib_setall_act();					//!< Callback for calib_setall entry
 	void on_calib_setact_act();					//!< Callback for calib_setactid/calib_setactval entries
+	void on_gain_act();									//!< Callback for ctrl_gainp/ctrl_gaini/ctrl_gaind entries
 	
 	// From DevicePage::
 	virtual void on_message_update();
