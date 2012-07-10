@@ -213,6 +213,9 @@ void CamCtrl::calculate_stats() {
 	int width = monitor.x2 - monitor.x1;
 	int height = monitor.y2 - monitor.y1;
 	
+	// Set histogram to 0
+	memset(monitor.histo, 0, thismaxval * sizeof *monitor.histo);
+	
 	uint16_t *image = (uint16_t *)monitor.image;
 	for(size_t j = 1; j < (size_t) height - 1; j++) {
 		for(size_t i = 1; i < (size_t) width -1; i++) {
