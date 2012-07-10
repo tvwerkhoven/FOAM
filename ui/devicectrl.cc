@@ -48,13 +48,17 @@ void DeviceCtrl::connect() {
 	protocol.connect();
 }
 
-void DeviceCtrl::send_cmd(const string &cmd) {
-	lastcmd = cmd;
-	protocol.write(cmd);
-	set<string>::iterator it = cmd_ign_list.find(cmd);
+void DeviceCtrl::send_cmd(const string &cmdstr) {
+	lastcmd = cmdstr;
+	protocol.write(cmdstr);
+	
+	string cmdcp = cmdstr;
+	string cmd = popword(cmdcp);
+	string what = popword(cmdcp);
+	set<string>::iterator it = cmd_ign_list.find(what);
 	if (it == cmd_ign_list.end())
-		log.add(Log::DEBUG, devname + ": -> " + cmd);
-	log.term(format("%s (%s)", __PRETTY_FUNCTION__, cmd.c_str()));
+		log.add(Log::DEBUG, devname + ": -> " + cmdstr);
+	log.term(format("%s (%s)", __PRETTY_FUNCTION__, cmdstr.c_str()));
 }
 
 void DeviceCtrl::on_message_common(string line) {
