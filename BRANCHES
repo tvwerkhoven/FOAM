@@ -75,4 +75,10 @@ v ignore outer edge pixels in statistics calculations -> works
 * topic_dev_ignorelist (RC)
 - Add list of commands not to report in the terminal for each Device
 
+* topic_ui_wfs (RC)
+- Implement reset subaps, toggle show subaps
+
+* topic_ui_wfcgain
+- Implement gain setting for WFC
+
 * miscellaneous
