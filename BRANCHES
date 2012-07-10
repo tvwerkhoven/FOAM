@@ -69,7 +69,7 @@ v ignore outer edge pixels in statistics calculations -> works
 * topic_wfc_clamp (implemented in master)
 - Clamp WFC control signals to prevent badness -> works
 
-* topic_ui_stats (RC)
+* topic_ui_stats (implemented)
 - Calculate image stats in GUI only (rms, avg, etc.) -> works
 
 * topic_dev_ignorelist (RC)
@@ -80,5 +80,8 @@ v ignore outer edge pixels in statistics calculations -> works
 
 * topic_ui_wfcgain (implemented, testing)
 - Implement gain setting for WFC
+
+# topic_ui_histo
+- Reduce histogram to 256 bins
 
 * miscellaneous

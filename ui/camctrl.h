@@ -46,6 +46,8 @@ using namespace std;
  is also included. Write-access to the data is managed by 
  CamCtrl::monitor.mutex.
  */
+const uint32_t CAMCTRL_HISTOBINS = 256;	//!< Number of bins in the histogram
+
 class CamCtrl: public DeviceCtrl {
 public:
 	typedef enum {
@@ -100,6 +102,7 @@ public:
 			x2 = 0;
 			y1 = 0;
 			y2 = 0;
+			npix = 0;
 			scale = 1;
 			depth = 0;
 			avg=0;
@@ -115,6 +118,7 @@ public:
 		int y1;														//!< Position of this frame wrt the original frame (x1, y2) to (x2, y2)
 		int x2;														//!< Position of this frame wrt the original frame (x1, y2) to (x2, y2)
 		int y2;														//!< Position of this frame wrt the original frame (x1, y2) to (x2, y2)
+		int npix;													//!< Number of pixels
 		int scale;												//!< Spatial scaling, 1=every pixel, 2=every second pixel, etc.
 
 		double avg;
