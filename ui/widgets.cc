@@ -97,6 +97,7 @@ gr_align(0.5, 0.5, 0.0, 0.0) {
 	b_refresh.signal_clicked().connect(sigc::mem_fun(*this, &BarGraph::do_update));
 	b_autoupd.signal_clicked().connect(sigc::mem_fun(*this, &BarGraph::on_autoupd_clicked));
 	
+	//! @todo This is very slow at 10Hz already?
 	refresh_timer = Glib::signal_timeout().connect(sigc::mem_fun(*this, &BarGraph::on_timeout), 1000.0/30.0);
 }
 
