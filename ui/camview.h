@@ -99,6 +99,8 @@ protected:
 	Glib::RefPtr<Gdk::Pixbuf> histopixbuf;
 	const int histo_w;
 	const int histo_h;
+	LabeledSpinEntry histo_scl;							//!< Histogram scaling value
+	VSeparator histo_vsep;
 
 	VBox histovbox;
 	LabeledSpinEntry minval;						//!< Minimum value to display in glviewer

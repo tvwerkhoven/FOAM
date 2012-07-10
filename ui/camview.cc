@@ -59,7 +59,7 @@ e_gain("Gain", "", -INFINITY, INFINITY, 1.0, 10.0, 0),
 e_res("Res."), e_mode("Mode"),
 flipv("Flip V"), fliph("Flip H"), crosshair("+"), grid("Grid"), histo("Histo"), underover("Underover"), 
 zoomin(Stock::ZOOM_IN), zoomout(Stock::ZOOM_OUT), zoom100(Stock::ZOOM_100), zoomfit(Stock::ZOOM_FIT), 
-histoalign(0.5, 0.5, 0, 0), histo_w(256), histo_h(100),
+histoalign(0.5, 0.5, 0, 0), histo_w(256), histo_h(100), histo_scl(""),
 minval("Display min"), maxval("Display max"), e_avg("Avg."), e_rms("RMS"), e_datamin("Min"), e_datamax("Max")
 {
 	log.term(format("%s", __PRETTY_FUNCTION__));
@@ -75,6 +75,9 @@ minval("Display min"), maxval("Display max"), e_avg("Avg."), e_rms("RMS"), e_dat
 	histopixbuf->fill(0xFFFFFF00);
 	histoimage.set(histopixbuf);
 	histoimage.set_double_buffered(false);
+	histo_scl.set_range(0.0, 1.0);
+	histo_scl.set_digits(2);
+	histo_scl.set_value(0.1);
 	
 	e_res.set_width_chars(10);
 	e_res.set_editable(false);
@@ -191,6 +194,8 @@ minval("Display min"), maxval("Display max"), e_avg("Avg."), e_rms("RMS"), e_dat
 	histovbox.pack_start(maxval);
 
 	histohbox.pack_start(histoalign);
+	histohbox.pack_start(histo_scl, PACK_SHRINK);
+	histohbox.pack_start(histo_vsep, PACK_SHRINK);
 	histohbox.pack_start(histovbox, PACK_SHRINK);
 
 	histoframe.add(histohbox);
@@ -378,7 +383,7 @@ void CamView::do_histo_update() {
 	// nr of bins: CAMCTRL_HISTOBINS
 	// avg nr of pixels/bin: pixels / CAMCTRL_HISTOBINS
 	// avg filling should give bar height of ~0.1:
-	const double hscale = 0.1 / (pixels / CAMCTRL_HISTOBINS);
+	const double hscale = histo_scl.get_value() / (pixels / CAMCTRL_HISTOBINS);
 	
 	// Color red if overexposed
 	if (overexposed && underover.get_active())
