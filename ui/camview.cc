@@ -330,28 +330,28 @@ void CamView::on_underover_toggled() {
 }
 
 
-int CamView::histo_scale_func(int max) {
+double CamView::histo_scale_func(double histoval) {
 	switch (histo_scale_f) {
 		case LINEAR:
-			return max;
+			return histoval;
 		case SQRT:
-			return sqrt(max*100);
+			return sqrt(histoval);
 			// Increasing steepness of the function:
 		case LOG2:
-			return log2((max*1.0/100.0)+1.)*100;
-		case LOG10:
-			return log10((max*9.0/100.0)+1.)*100;
-		case LOG20:
-			return log10((max*19.0/100.0)+1.)*100/log10(20.0);
-		case LOG100:
-			return log10((max*99.0/100.0)+1.)*100/log10(100.0);
+			return log2(histoval+1.);
+//		case LOG10:
+//			return log10((histoval*9.0/100.0)+1.)*100;
+//		case LOG20:
+//			return log10((histoval*19.0/100.0)+1.)*100/log10(20.0);
+//		case LOG100:
+//			return log10((histoval*99.0/100.0)+1.)*100/log10(100.0);
 		default:
-			return max;
+			return histoval;
 	}
 }
 
 void CamView::do_histo_update() {	
-	int pixels = 0;											// Number of pixels
+	int pixels = camctrl->monitor.npix;			// Number of pixels
 	size_t max = 1 << camctrl->get_depth(); // Maximum intensity in image
 	bool overexposed = false;						//!< Overexposed flag
 	
@@ -375,10 +375,10 @@ void CamView::do_histo_update() {
 	// Draw the histogram
 	
 	// total nr of pixels: pixels
-	// maximum intensity in image (nr of bins): max
-	// avg nr of pixels/bin: pixels / max
-	// with average filled bin, the bar height will be ~0.1
-	const int hscale = 1 + 10 * pixels / max;
+	// nr of bins: CAMCTRL_HISTOBINS
+	// avg nr of pixels/bin: pixels / CAMCTRL_HISTOBINS
+	// avg filling should give bar height of ~0.1:
+	const double hscale = 0.1 / (pixels / CAMCTRL_HISTOBINS);
 	
 	// Color red if overexposed
 	if (overexposed && underover.get_active())
@@ -388,24 +388,32 @@ void CamView::do_histo_update() {
 	
 	// Draw black bars in the histogram
 	uint8_t *out = (uint8_t *)histopixbuf->get_pixels();
+
+	fprintf(stderr, "pixels: %d, bins: %d, hscale: %g\n", 
+					pixels, CAMCTRL_HISTOBINS, hscale);
 	
 	if(histo_img) {
-		for(int i = 0; i < (int) max; i++) {
-			int height = histo_scale_func(histo_img[i] * 100 / hscale);
+		fprintf(stderr, "making histo: ");
+		// Loop over all histogram counts
+		for(int i = 0; i < (int) CAMCTRL_HISTOBINS; i++) {
+			int height = (int) 100 * histo_scale_func(histo_img[i] * hscale);
+			fprintf(stderr, "%d -> %d, ", i, height);
 			if(height > 100)
 				height = 100;
+			// Set histogram pixel bar at x=f(i), height is f(histo_img[i])
 			for(int y = 100 - height; y < 100; y++) {
-				uint8_t *p = out + 3 * ((i * 256 / max) + 256 * y);
+				uint8_t *p = out + 3 * ((i * (int) (256.0 / CAMCTRL_HISTOBINS)) + 256 * y);
 				p[0] = 0;
 				p[1] = 0;
 				p[2] = 0;
 			}
 		}
+		fprintf(stderr, "\n");
 	}
 	
 	// Make vertical bars (red and cyan) at minval and maxval:
-	int x1 = clamp(minval.get_value_as_int() * 256 / max, (size_t) 0, (size_t) (1 << camctrl->get_depth()) - 1);
-	int x2 = clamp(maxval.get_value_as_int() * 256 / max, (size_t) 0, (size_t) (1 << camctrl->get_depth()) - 1);
+	int x1 = clamp(minval.get_value_as_int() * 256 / max, (size_t) 0, (size_t) 256);
+	int x2 = clamp(maxval.get_value_as_int() * 256 / max, (size_t) 0, (size_t) 256);
 	
 	for(int y = 0; y < 100; y += 2) {
 		uint8_t *p = out + 3 * (x1 + 256 * y);
@@ -454,8 +462,8 @@ void CamView::do_full_update() {
 	// Do histogram, make local copy if needed
 	if (camctrl->monitor.histo) {
 		if (!histo_img)
-			histo_img = (uint32_t *) malloc((1 << camctrl->get_depth()) * sizeof *histo_img);
-		memcpy(histo_img, camctrl->monitor.histo, (1 << camctrl->get_depth()) * sizeof *histo_img);
+			histo_img = (uint32_t *) malloc(CAMCTRL_HISTOBINS * sizeof *histo_img);
+		memcpy(histo_img, camctrl->monitor.histo, CAMCTRL_HISTOBINS * sizeof *histo_img);
 	} 
 	else if (histo_img) {
 		free(histo_img);

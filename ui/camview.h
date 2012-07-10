@@ -156,15 +156,15 @@ protected:
 	virtual void on_monitor_update();		//!< New camera image available, display it
 	bool on_timeout();									//!< Timeout function, do regular updates (camera image etc.)
 	
-	int histo_scale_func(int i);				//!< Histogram scaling function (set through histo_scale_f). Must scale input from 0 to 100 onto 0 to 100
+	double histo_scale_func(double i);				//!< Histogram scaling function (set through histo_scale_f). Must scale input from 0 to 1 onto 0 to 1
 
 public:
 	enum _histo_scale_f {
 		LINEAR=0,
 		SQRT,
-		LOG10,
-		LOG20,
-		LOG100,
+//		LOG10,
+//		LOG20,
+//		LOG100,
 		LOG2,
 	};
 	enum _histo_scale_f histo_scale_f;

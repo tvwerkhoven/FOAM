@@ -181,12 +181,13 @@ void CamCtrl::on_monitor_message(string line) {
 		if(size > monitor.size)
 			monitor.image = (uint16_t *)realloc(monitor.image, size);
 		if (!monitor.histo)
-			monitor.histo = (uint32_t *)malloc((1 << depth) * sizeof *monitor.histo);
+			monitor.histo = (uint32_t *)malloc(CAMCTRL_HISTOBINS * sizeof *monitor.histo);
 		monitor.size = size;
 		monitor.x1 = x1;
 		monitor.y1 = y1;
 		monitor.x2 = x2;
 		monitor.y2 = y2;
+		monitor.npix = (x2 - x1) * (y2 - y1);
 		monitor.scale = scale;
 		monitor.depth = depth;
 		monitor.avg = avg;
@@ -214,14 +215,16 @@ void CamCtrl::calculate_stats() {
 	int height = monitor.y2 - monitor.y1;
 	
 	// Set histogram to 0
-	memset(monitor.histo, 0, thismaxval * sizeof *monitor.histo);
+	memset(monitor.histo, 0, CAMCTRL_HISTOBINS * sizeof *monitor.histo);
 	
 	uint16_t *image = (uint16_t *)monitor.image;
 	for(size_t j = 1; j < (size_t) height - 1; j++) {
 		for(size_t i = 1; i < (size_t) width -1; i++) {
 			idx = i + j*width;
 
-			monitor.histo[image[idx]]++;
+			// Intensity is image[idx], max intensity is thismaxval, then rescale 
+			// to 0...CAMCTRL_HISTOBINS
+			monitor.histo[(int) (CAMCTRL_HISTOBINS * (double)image[idx]/(double)thismaxval)]++;
 			sum += image[idx];
 			sumsquared += ((double)image[idx] * (double)image[idx]);
 			// Find minimum and maximum, but ignore brightest pixels
