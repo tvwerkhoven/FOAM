@@ -41,10 +41,10 @@ LibSIU
 ======
 
 Before installing FOAM, please install libsiu first. This utility library
-is available at <http://dotdb.phys.uu.nl/git/browse>. To install this
+is available at <https://github.com/tvwerkhoven/libsiu>. To install this
 software:
 
-- git clone http://dotdb.phys.uu.nl/git/libsiu libsiu
+- git clone https://github.com/tvwerkhoven/libsiu.git libsiu
 - cd libsiu
 - autoreconf -sfi
 - ./configure
