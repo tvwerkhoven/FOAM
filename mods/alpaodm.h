@@ -62,7 +62,7 @@ const string alpaodm_type = "alpaodm";
  Make actuator maps:
  
  <pre>
-actmap =   [66, 55, 44, 33, 22,
+actlayout= [66, 55, 44, 33, 22,
         77, 67, 56, 45, 34, 23, 13,
     86, 78, 68, 57, 46, 35, 24, 14, 6,
 93, 87, 79, 69, 58, 47, 36, 25, 15, 7,  1,
@@ -86,13 +86,17 @@ actmask =  [0,0,1,0,0,
           0,1,1,1,1,1,0,
             0,0,1,0,0] 
  
- 
+
+import numpy as np 
 actmap = np.r_[actlayout][np.r_[actmask] == 1]
 actmapstr = str(len(actmap))
+actmaphumanstr = str(len(actmap))
 for virt_act, real_act in enumerate(actmap):
-actmapstr += " %d %d" % (virt_act, real_act)
+  actmapstr += " %d %d" % (virt_act, real_act)
+  actmaphumanstr += ", %d -> %d" % (virt_act, real_act)
 
 print actmapstr
+print actmaphumanstr
  </pre>
  
  
