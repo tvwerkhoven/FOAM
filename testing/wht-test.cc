@@ -41,12 +41,21 @@ int main(int argc, char *argv[]) {
 		exit(-1);
 
 	fd.io.msg(IO_INFO, "Running test mode");
-	fd.io.msg(IO_INFO, "Init WHT...");
+	
+	if (fd.ptc->conffile == FOAM_DEFAULTCONF) {
+		fd.io.msg(IO_INFO, "Using default config file './wht-test.cfg'");
+		fd.ptc->conffile = "./wht-test.cfg";
+	} else {
+		fd.io.msg(IO_INFO, "Using other config file '%s'", fd.ptc->conffile.c_str());
+	}
 	
 	// Init WHT telescope interface
+	fd.io.msg(IO_INFO, "Init WHT in 1 second...");
+	sleep(1);
+	
 	WHT *wht;
 	try {
-		WHT *wht = new WHT(fd.io, fd.ptc, "wht-test", fd.ptc->listenport, Path("./wht-test.cfg"));
+		WHT *wht = new WHT(fd.io, fd.ptc, "wht-test", fd.ptc->listenport, fd.ptc->conffile);
 		fd.devices->add((foam::Device *) wht);
 	} catch (std::runtime_error &e) {
 		fd.io.msg(IO_ERR, "Failed to initialize WHT: %s", e.what());
