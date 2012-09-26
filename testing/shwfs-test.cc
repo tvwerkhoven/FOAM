@@ -29,6 +29,7 @@
 using namespace std;
 
 int main(int argc, char *argv[]) {
+	//! @todo Upgrade this to stand-alone FOAM_dummy mode like wht-test
 	Io io(10);
 	io.msg(IO_INFO, "Init Io");
 	Path tmp("");

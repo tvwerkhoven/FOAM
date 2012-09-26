@@ -28,6 +28,7 @@
 using namespace std;
 
 int main() {
+	//! @todo Upgrade this to stand-alone FOAM_dummy mode like wht-test
 	printf("Init Io...\n");
 	Io io(10);
 	
