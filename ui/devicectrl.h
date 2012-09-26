@@ -63,7 +63,8 @@ protected:
 	string lastcmd;											//!< Last cmd we sent
 	
 	cmdlist_t devcmds;									//!< List of device commands available
-	
+	set<string> cmd_ign_list;						//!< List of commands to ignore in the logging window
+
 	/*! @brief New data received from Device over network
 	 
 	 This virtual function is the GUI version of Device::on_message on the 

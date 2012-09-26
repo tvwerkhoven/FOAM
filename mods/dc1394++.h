@@ -86,51 +86,6 @@ public:
 	}
 };
 
-class enumpair2 {
-public:
-	typedef int _eint;
-	int curr, size;
-	
-	// String based mapping
-	int *enumarr;
-	std::string *strarr;
-	
-	void insert(_eint e, std::string val) {
-		enumarr[curr] = e;
-		strarr[curr] = val;
-		curr++;
-		// Realloc is space is needed
-		if (curr >= size) {
-			enumarr = (int *) realloc(enumarr, size + 16);
-			strarr = (std::string *) realloc(strarr, size + 16);
-			size += 16;
-		}
-	}
-	_eint getenum(std::string val) {
-		for (int i=0; i<curr; i++)
-			if (strarr[i] == val)
-				return enumarr[i];
-		return -1;
-	}
-	std::string getstr(_eint e) {
-		for (int i=0; i<curr; i++)
-			if (enumarr[i] == e)
-				return strarr[i];
-		return "";
-	}
-	
-	enumpair2() {
-		curr = 0;
-		size = 16;
-		enumarr = (int *) malloc(size * sizeof *enumarr);
-		strarr = (std::string *) malloc(size * sizeof(std::string));
-	}
-	~enumpair2() {
-		free(enumarr);
-		free(strarr);
-	}
-};
-
 class dc1394 {
 	dc1394_t *handle;
 
@@ -323,11 +278,8 @@ class dc1394 {
 	
 	bool check_framerate(float fps) {
 		//! @todo add check for current mode
-		//if (log2(fps/1.875) < 0.0 || log2(fps/1.875) > 7.0 || (int) log2(fps/1.875) != log2(fps/1.875))
 		if (fps == fix_framerate(fps))
 			return true;
-//		if (fps == 1.875 || fps == 3.75 || fps == 7.5 || fps == 15.0 || fps == 30.0 || fps == 60.0 || fps == 120.0 || fps == 240.0) 
-//			return true;
 		return false;
 	}
 	
@@ -338,8 +290,7 @@ class dc1394 {
 	}
 	
 	bool check_isospeed(int speed) {
-//		if (speed == 100 || speed == 200 || speed == 400 || speed == 800 || speed == 1600 || speed == 3200)
-//			return true;
+		// Check if 'speed' is a valid iso speed
 		if (speed == fix_isospeed(speed))
 			return true;
 		return false;

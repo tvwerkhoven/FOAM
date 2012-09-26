@@ -57,7 +57,7 @@ do_sighandle(true), sighandler(NULL),
 do_perflog(false), open_perf(NULL), closed_perf(NULL),
 it_closed_l(0), it_open_l(0),
 nodaemon(false), listenport(""), error(false), conffile(FOAM_DEFAULTCONF), execname(argv[0]),
-io(IO_DEB2)
+io(IO_XNFO)
 {
 	io.msg(IO_DEB2, "FOAM::FOAM()");
 		
@@ -169,7 +169,7 @@ int FOAM::init() {
 }
 
 void FOAM::show_version() const {
-	printf("FOAM (%s version %s, built %s %s with )\n", PACKAGE_NAME, PACKAGE_VERSION, __DATE__, __TIME__);
+	printf("%s\n", FOAM_VERSION_STR.c_str());
 #ifdef __VERSION__
 	printf("Compiled with GCC: %s\n", __VERSION__);
 #else
@@ -612,6 +612,8 @@ void FOAM::on_message(Connection *const conn, string line) {
 			conn->write(format("ok mode %s", mode2str(ptc->mode).c_str()));
 		else if (var == "devices")
 			conn->write(format("ok devices %s", devices->getlist().c_str()));
+		else if (var == "version")
+			conn->write(format("ok version %s", FOAM_VERSION_STR.c_str()));
 		else 
 			conn->write("error get :unknown variable");
 	}
@@ -743,6 +745,7 @@ ALIASES += longname="Modular Adaptive Optics Framework"
   - \subpage ud_foamdum "FOAM dummy"
   - \subpage ud_foamss "FOAM static-simulation"
   - \subpage ud_foamfs "FOAM full-simulation"
+  - \subpage ud_foamexpo "FOAM ExPo AO"
 */
 
 /*!

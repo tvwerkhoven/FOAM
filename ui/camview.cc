@@ -59,7 +59,7 @@ e_gain("Gain", "", -INFINITY, INFINITY, 1.0, 10.0, 0),
 e_res("Res."), e_mode("Mode"),
 flipv("Flip V"), fliph("Flip H"), crosshair("+"), grid("Grid"), histo("Histo"), underover("Underover"), 
 zoomin(Stock::ZOOM_IN), zoomout(Stock::ZOOM_OUT), zoom100(Stock::ZOOM_100), zoomfit(Stock::ZOOM_FIT), 
-histoalign(0.5, 0.5, 0, 0), 
+histoalign(0.5, 0.5, 0, 0), histo_w(256), histo_h(100), histo_scl(""),
 minval("Display min"), maxval("Display max"), e_avg("Avg."), e_rms("RMS"), e_datamin("Min"), e_datamax("Max")
 {
 	log.term(format("%s", __PRETTY_FUNCTION__));
@@ -71,10 +71,13 @@ minval("Display min"), maxval("Display max"), e_avg("Avg."), e_rms("RMS"), e_dat
 	
 	// Setup histogram
 	histo_img = 0;
-	histopixbuf = Gdk::Pixbuf::create(Gdk::COLORSPACE_RGB, false, 8, 256, 100);
+	histopixbuf = Gdk::Pixbuf::create(Gdk::COLORSPACE_RGB, false, 8, histo_w, histo_h);
 	histopixbuf->fill(0xFFFFFF00);
 	histoimage.set(histopixbuf);
 	histoimage.set_double_buffered(false);
+	histo_scl.set_range(0.0, 1.0);
+	histo_scl.set_digits(2);
+	histo_scl.set_value(0.1);
 	
 	e_res.set_width_chars(10);
 	e_res.set_editable(false);
@@ -191,6 +194,8 @@ minval("Display min"), maxval("Display max"), e_avg("Avg."), e_rms("RMS"), e_dat
 	histovbox.pack_start(maxval);
 
 	histohbox.pack_start(histoalign);
+	histohbox.pack_start(histo_scl, PACK_SHRINK);
+	histohbox.pack_start(histo_vsep, PACK_SHRINK);
 	histohbox.pack_start(histovbox, PACK_SHRINK);
 
 	histoframe.add(histohbox);
@@ -330,55 +335,38 @@ void CamView::on_underover_toggled() {
 }
 
 
-int CamView::histo_scale_func(int max) {
+double CamView::histo_scale_func(double histoval) {
 	switch (histo_scale_f) {
 		case LINEAR:
-			return max;
+			return histoval;
 		case SQRT:
-			return sqrt(max*100);
+			return sqrt(histoval);
 			// Increasing steepness of the function:
 		case LOG2:
-			return log2((max*1.0/100.0)+1.)*100;
-		case LOG10:
-			return log10((max*9.0/100.0)+1.)*100;
-		case LOG20:
-			return log10((max*19.0/100.0)+1.)*100/log10(20.0);
-		case LOG100:
-			return log10((max*99.0/100.0)+1.)*100/log10(100.0);
+			return log2(histoval+1.);
+//		case LOG10:
+//			return log10((histoval*9.0/100.0)+1.)*100;
+//		case LOG20:
+//			return log10((histoval*19.0/100.0)+1.)*100/log10(20.0);
+//		case LOG100:
+//			return log10((histoval*99.0/100.0)+1.)*100/log10(100.0);
 		default:
-			return max;
+			return histoval;
 	}
 }
 
 void CamView::do_histo_update() {	
-	int pixels = 0;											// Number of pixels
+	int pixels = camctrl->monitor.npix;			// Number of pixels
 	size_t max = 1 << camctrl->get_depth(); // Maximum intensity in image
-	double sum = 0;
-	double sumsquared = 0;
-	double rms = max;
 	bool overexposed = false;						//!< Overexposed flag
 	
 	// Don't do anything is histoframe is hidden
 	if (!histoframe.is_visible())
 		return;
 	
-	// Analyze histogram data if available. histo is a linear array from 0 to
-	// the maximum intensity and counts pixels for each intensity bin.
-	if (histo_img) {
-		for (int i = 0; i < (int) max; i++) {
-			pixels += histo_img[i];
-			sum += (double)i * histo_img[i];
-			sumsquared += (double)(i * i) * histo_img[i];
-			
-			if (i >= 0.98 * max && histo_img[i])
-				overexposed = true;
-		}
-		
-		sum /= pixels;
-		sumsquared /= pixels;
-		rms = sqrt(sumsquared - sum * sum) / sum;
-	}
-	
+	if (camctrl->monitor.max >= 0.98 * max)
+		overexposed = true;
+
 	// Update ranges
 	minval.set_range(0, 1 << camctrl->get_depth());
 	maxval.set_range(0, 1 << camctrl->get_depth());
@@ -386,16 +374,16 @@ void CamView::do_histo_update() {
 	// Update min/max/avg/rms data values
 	e_datamin.set_text(format("%d", camctrl->monitor.min));
 	e_datamax.set_text(format("%d", camctrl->monitor.max));
-	e_avg.set_text(format("%.2lf", sum));
-	e_rms.set_text(format("%.3lf", rms));
+	e_avg.set_text(format("%.2lf", camctrl->monitor.avg));
+	e_rms.set_text(format("%.3lf", camctrl->monitor.rms));
 
 	// Draw the histogram
 	
 	// total nr of pixels: pixels
-	// maximum intensity in image (nr of bins): max
-	// avg nr of pixels/bin: pixels / max
-	// with average filled bin, the bar height will be ~0.1
-	const int hscale = 1 + 10 * pixels / max;
+	// nr of bins: CAMCTRL_HISTOBINS
+	// avg nr of pixels/bin: pixels / CAMCTRL_HISTOBINS
+	// avg filling should give bar height of ~0.1:
+	const double hscale = histo_scl.get_value() / (pixels / CAMCTRL_HISTOBINS);
 	
 	// Color red if overexposed
 	if (overexposed && underover.get_active())
@@ -407,12 +395,14 @@ void CamView::do_histo_update() {
 	uint8_t *out = (uint8_t *)histopixbuf->get_pixels();
 	
 	if(histo_img) {
-		for(int i = 0; i < (int) max; i++) {
-			int height = histo_scale_func(histo_img[i] * 100 / hscale);
-			if(height > 100)
-				height = 100;
-			for(int y = 100 - height; y < 100; y++) {
-				uint8_t *p = out + 3 * ((i * 256 / max) + 256 * y);
+		// Loop over all histogram counts
+		for(int i = 0; i < (int) CAMCTRL_HISTOBINS; i++) {
+			int height = (int) histo_h * histo_scale_func(histo_img[i] * hscale);
+			if(height > histo_h)
+				height = histo_h;
+			// Set histogram pixel bar at x=f(i), height is f(histo_img[i])
+			for(int y = histo_h - height; y < histo_h; y++) {
+				uint8_t *p = out + 3 * ((i * (int) (1.0*histo_w / CAMCTRL_HISTOBINS)) + histo_w * y);
 				p[0] = 0;
 				p[1] = 0;
 				p[2] = 0;
@@ -421,15 +411,15 @@ void CamView::do_histo_update() {
 	}
 	
 	// Make vertical bars (red and cyan) at minval and maxval:
-	int x1 = clamp(minval.get_value_as_int() * 256 / max, (size_t) 0, (size_t) (1 << camctrl->get_depth()) - 1);
-	int x2 = clamp(maxval.get_value_as_int() * 256 / max, (size_t) 0, (size_t) (1 << camctrl->get_depth()) - 1);
+	int x1 = clamp(minval.get_value_as_int() * histo_w / max, (size_t) 0, (size_t) histo_w);
+	int x2 = clamp(maxval.get_value_as_int() * histo_w / max, (size_t) 0, (size_t) histo_w);
 	
-	for(int y = 0; y < 100; y += 2) {
-		uint8_t *p = out + 3 * (x1 + 256 * y);
+	for(int y = 0; y < histo_h; y += 2) {
+		uint8_t *p = out + 3 * (x1 + histo_w * y);
 		p[0] = 255;
 		p[1] = 0;
 		p[2] = 0;
-		p = out + 3 * (x2 + 256 * y);
+		p = out + 3 * (x2 + histo_w * y);
 		p[0] = 0;
 		p[1] = 255;
 		p[2] = 255;
@@ -444,7 +434,7 @@ bool CamView::on_timeout() {
 	// -> if OK: we are displaying a frame, get a new one & set to WAITING
 	// -> if ERROR or CLEAR: don't do anything
 	if (display.get_state() == SwitchButton::OK) {
-		camctrl->grab(0, 0, camctrl->get_width(), camctrl->get_height(), 1, false, histo.get_active());
+		camctrl->grab(0, 0, camctrl->get_width(), camctrl->get_height(), 1, false);
 		display.set_state(SwitchButton::WAITING);
 	}
 
@@ -471,8 +461,8 @@ void CamView::do_full_update() {
 	// Do histogram, make local copy if needed
 	if (camctrl->monitor.histo) {
 		if (!histo_img)
-			histo_img = (uint32_t *) malloc((1 << camctrl->get_depth()) * sizeof *histo_img);
-		memcpy(histo_img, camctrl->monitor.histo, (1 << camctrl->get_depth()) * sizeof *histo_img);
+			histo_img = (uint32_t *) malloc(CAMCTRL_HISTOBINS * sizeof *histo_img);
+		memcpy(histo_img, camctrl->monitor.histo, CAMCTRL_HISTOBINS * sizeof *histo_img);
 	} 
 	else if (histo_img) {
 		free(histo_img);
@@ -567,7 +557,7 @@ void CamView::on_display_clicked() {
 	// -> if CLEAR: request frame, set button to WAITING
 	// -> if WAITING, OK or ERROR: stop capture 
 	if (display.get_state() == SwitchButton::CLEAR) {
- 		camctrl->grab(0, 0, camctrl->get_width(), camctrl->get_height(), 1, false, histo.get_active());
+ 		camctrl->grab(0, 0, camctrl->get_width(), camctrl->get_height(), 1, false);
 		display.set_state(SwitchButton::WAITING);
 	}
 	else

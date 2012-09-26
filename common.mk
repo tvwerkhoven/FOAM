@@ -31,7 +31,7 @@ AM_CPPFLAGS += -D__STDC_FORMAT_MACROS \
 LDADD = $(COMMON_LIBS)
 
 # More error reporting during compilation
-AM_CXXFLAGS = -Wall -Wextra -Wfatal-errors
+AM_CXXFLAGS = -Wall -Wextra -Wfatal-errors -g
 
 ### GSL flags
 AM_CPPFLAGS += -DHAVE_INLINE 

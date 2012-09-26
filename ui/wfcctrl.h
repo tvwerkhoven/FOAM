@@ -58,6 +58,7 @@ public:
 	
 	vector< double > get_ctrlvec() const { return ctrlvec; }
 	int get_nact() const { return nact; }
+	gain_t get_gain() const { return gain; }
 	
 	Glib::Dispatcher signal_wfcctrl;	//!< New actuator voltages available
 };

@@ -64,13 +64,14 @@ private:
 	Button subi_update;									//!< Update current subimage data
 	Button subi_del;										//!< Delete current subimage
 	Button subi_add;										//!< Add new subimage
-																			//!< @todo Add 'clear' button to clear out MLA pattern
+	Button subi_clear;									//!< clear out MLA pattern
 	
 	Button subi_regen;									//!< Re-generate subimage pattern
 	HBox subi_find_box;
 	Button subi_find;										//!< Find subimage pattern
 	LabeledSpinEntry subi_find_minif;		//!< Find subimages up to this factor less than the maximum intensity
 	
+	SwitchButton subi_bounds;						//!< Display subaperture bounds or not
 	SwitchButton subi_vecs;							//!< Display shift vectors or not
 																			//! @todo convert subi_vecdelayi to spin entry
 	LabeledSpinEntry subi_vecdelayi;		//!< Display shift vectors every X seconds
@@ -90,12 +91,14 @@ private:
 	// Extra events:
 	void on_subi_select_changed();			//!< Select a subimage combobox
 	void on_subi_add_clicked();					//!< Add new subimage button
+	void on_subi_clear_clicked();				//!< Clear subimage pattern
 	void on_subi_del_clicked();					//!< Delete selected subimage button
 	void on_subi_update_clicked();			//!< Update current subimage coordinates
 	
 	void on_subi_regen_clicked();				//!< Re-generate new MLA pattern
 	void on_subi_find_clicked();				//!< Heuristically find new MLA pattern
 	
+	void on_subi_bounds_clicked();			//!< Show subap bounds
 	void on_subi_vecs_clicked();				//!< Show SHWFS shift vectors toggler
 	
 	bool on_timeout();

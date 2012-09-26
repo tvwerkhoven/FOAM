@@ -68,7 +68,7 @@ public:
 	gsl_matrix *wfc_sim;								//!< Simulated wavefront correction
 
 	// From Wfc::
-	int actuate(const bool block=false);
+	int dm_actuate(const bool block=false);
 	int calibrate();
 	
 	// From Devices::

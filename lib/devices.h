@@ -192,15 +192,15 @@ public:
 	virtual ~Device();
 	
 	//! @todo obsolete, can go away (no use now)
-	virtual int verify() { return 0; }	//!< Verify the integrity of the device
+	virtual int verify() { return 0; }				//!< Verify the integrity of the device
 	
 	Path mkfname(const string identifier) const { return ptc->outdir + Path(type + "." + name + "_" + identifier); } //!< Make filename for single data file output
 	int set_outputdir(const string identifier); //!< Set output directory for multiple datafiles (e.g. camera output)
 	Path get_outputdir() const { return outputdir; } //!< Get output directory
 	
-	bool isonline() const { return online; }
-	string getname() const { return name; }
-	string gettype() const { return type; }
+	bool isonline() const { return online; }	//!< Check if this Device is online
+	string getname() const { return name; }		//!< Give name of this Device
+	string gettype() const { return type; }		//!< Give type of this Device
 };
 } // namespace foam
 
@@ -310,6 +310,7 @@ public:
  - \subpage dev_cam "Camera device"
  - \subpage dev_wfs "Wavefront sensor device"
  - \subpage dev_wfc "Wavefront corrector device"
+ - \subpage dev_telescope "Telescope control device"
 
  \section dev_related See also
  - \ref devmngr "Device Manager info"

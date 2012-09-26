@@ -97,6 +97,7 @@ gr_align(0.5, 0.5, 0.0, 0.0) {
 	b_refresh.signal_clicked().connect(sigc::mem_fun(*this, &BarGraph::do_update));
 	b_autoupd.signal_clicked().connect(sigc::mem_fun(*this, &BarGraph::on_autoupd_clicked));
 	
+	//! @todo This is very slow at 10Hz already?
 	refresh_timer = Glib::signal_timeout().connect(sigc::mem_fun(*this, &BarGraph::on_timeout), 1000.0/30.0);
 }
 
@@ -149,7 +150,7 @@ void BarGraph::on_update(const std::vector< double > &graph_vals) {
 			max = fabs(graph_vals.at(i));
 		else if (fabs(graph_vals.at(i)) < min)
 			min = fabs(graph_vals.at(i));
-		allvals += format(", %.4f", graph_vals.at(i));
+		allvals += format(" %.4f", graph_vals.at(i));
 	}
 	
 	e_minval.set_text(format("%.4f", min));
@@ -414,11 +415,11 @@ void PhysUnitEntry::on_unit_changed(const PhysUnit &prev) {
 	entry.set_text(format("%lf", unitgroup.from_native(native)));
 }
 
-DelayedAdjustment::DelayedAdjustment(Adjustment &adjustment, int delay): adjustment(adjustment), delay(delay) {
+DelayedAdjustment::DelayedAdjustment(Gtk::Adjustment &adjustment, int delay): adjustment(adjustment), delay(delay) {
 	adjustment.signal_value_changed().connect(sigc::mem_fun(this, &DelayedAdjustment::on_value_changed));
 }
 
-DelayedAdjustment::DelayedAdjustment(SpinButton &widget, int delay): adjustment(*widget.get_adjustment()), delay(delay) {
+DelayedAdjustment::DelayedAdjustment(Gtk::SpinButton &widget, int delay): adjustment(*widget.get_adjustment()), delay(delay) {
 	adjustment.signal_value_changed().connect(sigc::mem_fun(this, &DelayedAdjustment::on_value_changed));
 }
 

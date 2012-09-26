@@ -85,7 +85,7 @@ public:
 
 
 /*!
- \page dev_simcam_ui Simulation Camera devices UI: SimCamView & SimCamCtrl
+ \page dev_cam_simcam_ui Simulation Camera devices UI: SimCamView & SimCamCtrl
  
  \section simcamview_simcamview SimCamView
  

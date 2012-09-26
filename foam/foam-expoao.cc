@@ -50,6 +50,10 @@ int FOAM_ExpoAO::load_modules() {
 	
 	//! @todo Try-catch clause does not function properly, errors don't propagate outward io.msg() problem?
 	try {
+		// Init WHT telescope interface
+		wht_track = new WHT(io, ptc, "wht", ptc->listenport, ptc->conffile);
+		devices->add((foam::Device *) wht_track);
+		
 		// Init Alpao DM
 		io.msg(IO_INFO, "Init Alpao DM97-15...");
 		alpao_dm97 = new AlpaoDM(io, ptc, "alpao_dm97", ptc->listenport, ptc->conffile);
@@ -67,10 +71,6 @@ int FOAM_ExpoAO::load_modules() {
 		ixonwfs = new Shwfs(io, ptc, "ixonwfs", ptc->listenport, ptc->conffile, *ixoncam);
 		devices->add((foam::Device *) ixonwfs);
 		
-		// Init WHT telescope interface
-		wht_track = new WHT(io, ptc, "wht", ptc->listenport, ptc->conffile);
-		devices->add((foam::Device *) wht_track);
-
 	} catch (std::runtime_error &e) {
 		io.msg(IO_ERR | IO_FATAL, "FOAM_ExpoAO::load_modules: %s", e.what());
 		return -1;
@@ -92,7 +92,7 @@ int FOAM_ExpoAO::open_init() {
 	if (ixonwfs->check_subimgs(ixoncam->get_res()))
 		return -1;
 
-	ixoncam->set_proc_frames(true);
+	ixoncam->set_proc_frames(false);
 	ixoncam->set_mode(Camera::RUNNING);
 	
 	return 0;
@@ -125,7 +125,7 @@ int FOAM_ExpoAO::open_loop() {
 		vec_str += format("%.3g ", gsl_vector_float_get(alpao_dm97->ctrlparams.err, i));
 	io.msg(IO_DEB1, "FOAM_ExpoAO::wfc_rec: %s", vec_str.c_str());
 	
-	ixonwfs->comp_shift(alpao_dm97->getname(), alpao_dm97->ctrlparams.err, wf_meas->wfamp);
+	ixonwfs->comp_shift(alpao_dm97->getname(), alpao_dm97->ctrlparams.err, wf_meas->wf_full);
 	openperf_addlog("wfs->comp_shift");
 
 	float ttx=0, tty=0;
@@ -227,18 +227,21 @@ int FOAM_ExpoAO::calib() {
 															 ixonwfs->get_refvec_str().c_str() ));
 	} 
 	else if (ptc->calib == "influence") {		// Calibrate influence function
-		// calib influence [singval cutoff] -- 
+		// calib influence [actuation amplitude] [singval cutoff] -- 
+		// actuation amplitude: how far should we move the actuators?
 		// singval < 0: drop these modes
 		// singval > 1: use this amount of modes
 		// else: use this amount of singular value
+		double act_amp = popdouble(ptc->calib_opt);
+		if (act_amp == 0.0) act_amp = 0.08;
 		double sval_cutoff = popdouble(ptc->calib_opt);
 		if (sval_cutoff == 0.0) sval_cutoff = 0.7;
-		io.msg(IO_INFO, "FOAM_ExpoAO::calib() influence calibration, sval=%g", sval_cutoff);
+		io.msg(IO_INFO, "FOAM_ExpoAO::calib() influence calibration, amp=%g, sval=%g", act_amp, sval_cutoff);
 
 		// Init actuation vector & positions, camera, 
 		vector <float> actpos;
-		actpos.push_back(-0.08);
-		actpos.push_back(0.08);
+		actpos.push_back(-act_amp);
+		actpos.push_back(act_amp);
 		
 		// Calibrate for influence function now
 		calret = ixonwfs->calib_influence(alpao_dm97, ixoncam, actpos, sval_cutoff);

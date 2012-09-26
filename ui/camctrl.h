@@ -46,6 +46,8 @@ using namespace std;
  is also included. Write-access to the data is managed by 
  CamCtrl::monitor.mutex.
  */
+const uint32_t CAMCTRL_HISTOBINS = 256;	//!< Number of bins in the histogram
+
 class CamCtrl: public DeviceCtrl {
 public:
 	typedef enum {
@@ -72,6 +74,8 @@ protected:
 	int depth;													//!< Camera bitdepth
 	string filename;										//!< Filename camera will store data to
 	size_t nstore;											//!< How many upcoming frames will be stored
+	
+	void calculate_stats();							//!< Calculate frame statistics
 
 	// From DeviceCtrl::
 	virtual void on_message(string line);
@@ -98,6 +102,7 @@ public:
 			x2 = 0;
 			y1 = 0;
 			y2 = 0;
+			npix = 0;
 			scale = 1;
 			depth = 0;
 			avg=0;
@@ -113,6 +118,7 @@ public:
 		int y1;														//!< Position of this frame wrt the original frame (x1, y2) to (x2, y2)
 		int x2;														//!< Position of this frame wrt the original frame (x1, y2) to (x2, y2)
 		int y2;														//!< Position of this frame wrt the original frame (x1, y2) to (x2, y2)
+		int npix;													//!< Number of pixels
 		int scale;												//!< Spatial scaling, 1=every pixel, 2=every second pixel, etc.
 
 		double avg;
@@ -151,7 +157,7 @@ public:
 	void darkburst(int count);					//!< Take a burst of darkfield images
 	void flatburst(int count);					//!< Take a burst of flatfield images
 	void burst(int count, int fsel = 0); //!< Take a burst of images
-	void grab(int x1, int y1, int x2, int y2, int scale = 1, bool df_correct = false, bool histo = false); //!< Grab an image from the camera, crop it from (x1, y1) to (x2, y2) and take every 'scale'th pixel. Optically dark & flatfield correct it and get a histogram
+	void grab(int x1, int y1, int x2, int y2, int scale = 1, bool df_correct = false); //!< Grab an image from the camera, crop it from (x1, y1) to (x2, y2) and take every 'scale'th pixel. Optically dark & flatfield correct.
 	void store(int nstore);							//!< Store upcoming nstore frames to disk
 	
 	Glib::Dispatcher signal_thumbnail;	//!< New thumbnail available

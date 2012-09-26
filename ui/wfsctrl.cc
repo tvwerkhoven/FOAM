@@ -37,6 +37,8 @@ wfscam("")
 {
 	log.term(format("%s", __PRETTY_FUNCTION__));
 	
+	// Don't print 'ctrl' commands to log window
+	cmd_ign_list.insert("modes");
 }
 
 WfsCtrl::~WfsCtrl() {

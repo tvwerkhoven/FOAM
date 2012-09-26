@@ -69,10 +69,15 @@ protected:
 	bool have_waffle;										//!< Do we know about the waffle pattern?
 	string ctrl_as_str(const char *fmt="%.4f") const; //!< Return control vector ctrlparams.target as string (not thread-safe)
 	
+	gsl_vector_float *offset;						//!< Offset added to all control vectors (size real_nact)
+	string offset_str;									//!< String representation of offset vector
+	gsl_vector_float *control;					//!< Vector used to actuate the DM == ctrl_vec + offset (size real_nact)
+	float maxact;												//!< Maximum actuation signal to allow, clamp all WFC control to [-maxact, maxact]
+
 public:
 	// Common Wfc settings
 	typedef struct wfc_ctrl {
-		wfc_ctrl(): target(NULL), err(NULL), prev(NULL), gain(1,0,0), pid_int(NULL) { }
+		wfc_ctrl(): ctrl_vec(NULL), target(NULL), err(NULL), prev(NULL), gain(1,0,0), pid_int(NULL) { }
 		gsl_vector_float *ctrl_vec;				//!< Control vector sent to the WFC (size real_nact). If use_actmap is false, this points to 'target' and has no memory itself. If use_actmap is true, it has its own memory and data has to be copied here.
 
 		gsl_vector_float *target;					//!< (Requested) actuator amplitudes, should be between -1 and 1. (size virt_nact)
@@ -85,10 +90,10 @@ public:
 	
 	wfc_ctrl_t ctrlparams;
 	
-	int get_nact() const { return virt_nact; }
+	int get_nact() const { return virt_nact; } //!< Return the number of actuators in use by the WFC
 	void set_nact(const int val) { virt_nact = val; }
 
-	void set_gain(const double p, const double i, const double d) { ctrlparams.gain.p = p; ctrlparams.gain.i = i; ctrlparams.gain.d = d; }
+	void set_gain(const double p, const double i, const double d) { ctrlparams.gain.p = p; ctrlparams.gain.i = i; ctrlparams.gain.d = d; } //!< Set PID gain for WFC control
 	
 	/*! @brief Update WFC control
 	 
@@ -113,12 +118,20 @@ public:
 	 @param [in] val New control target for all WFC actuators
 	 */
 	int set_control(const float val=0.0);
+
 	/*! @brief Set WFC control for a specific actuators, ignoring current signal
 	 
 	 @param [in] val New control target for WFC
 	 @param [in] act_id WFC actuator to set
 	 */
 	int set_control_act(const float val, const size_t act_id);
+	
+	/*! @brief Get WFC control for a specific actuators
+	 
+	 @param [in] act_id WFC actuator to set
+	 @return Actuator signal for act_id
+	 */
+	float get_control_act(const size_t act_id);
 	
 	/*! @brief Set wafflepattern on DM with value 'val'
 	 
@@ -134,13 +147,18 @@ public:
 	 */
 	int set_randompattern(const float maxval);
 
-	// To be implemented by derived classes:
 	/*! @brief Actuate WFC using internal control vector
+	 
+	 This function applies some final corrections to the control vector before 
+	 sending it to the hardware using dm_actuate().
 	 
 	 @param [in] block Block until WFC is in requested position (not always available)
 	 */
-	virtual int actuate(const bool block=false) = 0;
-		
+	int actuate(const bool block=false);
+
+	// To be implemented by derived classes:
+	virtual int dm_actuate(const bool block=false) = 0; //!< Send actuation signal to hardware
+
 	virtual int calibrate();						//!< Calibrate actuator
 	virtual int reset();								//!< Reset mirror to best known 'flat' position
 	virtual void loosen(const double amp, const int niter=10, const double delay=0.1);	//!< Loosen the mirror by jolting it a few times
@@ -162,6 +180,7 @@ public:
  
  \section dev_wfc_der Derived classes
  - \subpage dev_wfc_simulwfc "Simulate wavefront corrector"
+ - \subpage dev_wfc_alpaodm "Alpao deformable mirror"
  
  \section dev_wfs_more See also
  - \ref dev_wfs "Wavefront sensor devices"

@@ -73,6 +73,7 @@ altfac(-1.0), delay(1.0)
 	add_cmd("get trackurl");
 	add_cmd("get altfac");
 	add_cmd("set altfac");
+	add_cmd("track tcs");
 
 	// Open serial port connection
 	if (sport != "none") {
@@ -80,24 +81,27 @@ altfac(-1.0), delay(1.0)
 		if (!wht_ctrl)
 			throw std::runtime_error(format("Could not open serial port %s!", sport.c_str()));
 	}
+	sleep(1);
 	
 	// Set neutral position
-	port_write("0050.00 0050.00 00000.01\r");
+	tcs_control(50.00, 50.00, 0.01);
 }
 
 WHT::~WHT() {
 	io.msg(IO_DEB2, "WHT::~WHT()");
 
 	// Tell TCS we're stopping
-	port_write("0050.00 0050.00 -0000.00\r");
+	tcs_control(50.00, 50.00, 0.00);
 
 	// Stop serial port
-	delete wht_ctrl;
+	if (wht_ctrl)
+		delete wht_ctrl;
 
 	//!< @todo Save all device settings back to cfg file
 	// Join with WHT updater thread
 	wht_cfg_thr.cancel();
 	wht_cfg_thr.join();
+	io.msg(IO_INFO, "WHT::~WHT() done");
 }
 
 void WHT::wht_updater() {
@@ -128,28 +132,35 @@ void WHT::wht_updater() {
 int WHT::update_wht_coords(double *const alt, double *const az, double *const delay) {
 	// Connect if necessary
 	if (!sock_track.is_connected()) {
-//		io.msg(IO_DEB1, "WHT::update_wht_coords(): connecting to %s:%s...", track_host.c_str(), track_port.c_str());
-		sock_track.connect(track_host, track_port);
+		// Check if connection works, otherwise return
+		if (!sock_track.connect(track_host, track_port)) {
+			io.msg(IO_WARN, "WHT::update_wht_coords(): could not connect to %s:%s...", 
+						 track_host.c_str(), track_port.c_str());
+			return -1;
+		}
 		sock_track.setblocking(false);
 	}
+	
 
 	// Open URL, request disconnect 
 	sock_track.printf("GET %s HTTP/1.1\r\nHOST: %s\r\nUser-Agent: FOAM dev.telescope.wht\r\nConnection: close\r\n\r\n\n", 
 										track_file.c_str(), track_host.c_str());
 
 	// Read data
-	string rawdata;
+	string rawdata("");
 	char buf[2048];
+	buf[0] = '\0';
 	while (sock_track.read((void *)buf, 2048))
 		rawdata += string(buf);
 
 	// Parse data, find first line after \r\n\r\n
-	size_t dbeg = rawdata.find("\r\n\r\n") +4;
-	if (dbeg == string::npos) {
+	size_t dbeg = rawdata.find("\r\n\r\n");
+	if (dbeg == string::npos || dbeg == 0) {
 		io.msg(IO_WARN, "WHT::update_wht_coords(): could not find data.");
 		return -1;
 	}
-	string track_data = rawdata.substr(dbeg);
+	// Get tracking data, start after HTTP header and skip the CRLFCRLF
+	string track_data = rawdata.substr(dbeg+4);
 	
 	// Split key=val pairs, find coordinates, store and return
 	string key, val;
@@ -188,7 +199,7 @@ int WHT::update_wht_coords(double *const alt, double *const az, double *const de
 }
 
 int WHT::update_telescope_track(const float sht0, const float sht1) {
-//	io.msg(IO_DEB1, "WHT::update_telescope_track(sht0=%g, sht1=%g)", sht0, sht1);
+	io.msg(IO_DEB1, "WHT::update_telescope_track(sht0=%g, sht1=%g)", sht0, sht1);
 	
 	// We have shift in the focal plane, convert to WHT axis by rotation:
 	// General:
@@ -199,26 +210,26 @@ int WHT::update_telescope_track(const float sht0, const float sht1) {
 	// ele = 50 + 0.01 * [ y * sin( (45-ele) * pi/180 ) - x * cos( (45-e) * pi/180 ) ]
 	ctrl0 = 50 + (ttgain.p * (sht0 * cos(altfac * (telpos[0]*M_PI/180.0)) - sht1 * sin(altfac * (telpos[0]*M_PI/180.0))));
 	ctrl1 = 50 + (ttgain.p * (sht0 * sin(altfac * (telpos[0]*M_PI/180.0)) + sht1 * cos(altfac * (telpos[0]*M_PI/180.0))));
+	tcs_control(ctrl0, ctrl1, delay*10.0+drand48()*0.1);
 	
-	
+	return 0;
+}
+
+void WHT::tcs_control(float tcs0, float tcs1, const float thisdelay) {
+	// Clamp values to be nice to the TCS
+	tcs0 = clamp((float) tcs0, 45.0f, 55.0f);
+	tcs1 = clamp((float) tcs1, 45.0f, 55.0f);
 	// This is the command string sent over the serial port. Syntax is specified 
 	// in wht.h, but should be like '00050.00 00050.00 00000.10\r'. The delay is 
 	// the timeout until the TCS will resume normal (unguided) tracking. We set 
 	// this to 10 times the update delay so it will not timeout. We add a random
 	// offset to check if everything is working.
-	string cmdstr = format("%07.2f %07.2f %07.2f\r", ctrl0, ctrl1, delay*10.0+drand48()*0.1);
+	string cmdstr = format("%08.2f %08.2f %08.2f\r", tcs0, tcs1, thisdelay);
+	io.msg(IO_XNFO, "WHT::tcs_control(): sending '%s'", cmdstr.c_str());
 
-	// Send control command to telescope
-	io.msg(IO_XNFO, "WHT::update_telescope_track(): sending '%s'", cmdstr.c_str());
-	port_write(cmdstr);
-	
-	return 0;
-}
-
-void WHT::port_write(const string cmd) {
-	// Check if serial port is initialized
+	// Check if serial port is initialized and send control command to telescope
 	if (wht_ctrl)
-		wht_ctrl->write(cmd);
+		wht_ctrl->write(cmdstr);
 }
 
 void WHT::on_message(Connection *const conn, string line) {
@@ -243,6 +254,18 @@ void WHT::on_message(Connection *const conn, string line) {
 		if (what == "altfac") {					// set altfac <1,-1
 			conn->addtag("altfac");
 			altfac = popdouble(line);
+		} else
+			parsed = false;
+	} else if (command == "track") {
+		string what = popword(line);
+		
+		if (what == "tcs") {						// track tcs <pixel0> <pixel1> [timecode]
+			float tcs0 = popdouble(line);
+			float tcs1 = popdouble(line);
+			float delaytime = popdouble(line);
+			if (delaytime == 0) delaytime = 10.0+drand48()*0.1;
+			tcs_control(tcs0, tcs1, delaytime);
+			conn->write(format("ok set tcs %f %f %f", tcs0, tcs1, delaytime));
 		} else
 			parsed = false;
 	} else {

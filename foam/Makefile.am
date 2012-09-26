@@ -7,7 +7,7 @@ if HAVE_MACOSX
 AM_LDFLAGS = -framework CoreFoundation -framework Carbon
 endif
 
-LDADD += $(LIBSIU_DIR)/libsocket.a \
+LIBSIU_COMMON = $(LIBSIU_DIR)/libsocket.a \
 		$(LIBSIU_DIR)/libio.a \
 		$(LIBSIU_DIR)/libconfig.a \
 		$(LIBSIU_DIR)/libprotocol.a \
@@ -33,6 +33,7 @@ foam_dummy_CPPFLAGS = -DFOAM_DEFAULTCONF=\"$(sysconfdir)/foam/foam-dummy.cfg\" \
 		$(AM_CPPFLAGS)
 foam_dummy_SOURCES = foam-dummy.cc $(FRAME_SRC) 
 foam_dummy_SOURCES += $(FRAME_HDR)
+foam_dummy_LDADD = $(LIBSIU_COMMON) $(LDADD)
 
 endif HAVE_DUMMY
 ### END DUMMY MODE ###
@@ -68,7 +69,8 @@ foam_simstat_SOURCES += foam-simstatic.h \
 foam_simstat_CPPFLAGS = -DFOAM_DEFAULTCONF=\"$(sysconfdir)/foam/foam-simstat.cfg\" \
 		$(SIMSTAT_CFLAGS) $(AM_CPPFLAGS)
 
-foam_simstat_LDADD = $(LIBSIU_DIR)/libimgdata.a \
+foam_simstat_LDADD = $(LIBSIU_COMMON) \
+		$(LIBSIU_DIR)/libimgdata.a \
 		$(LIBSIU_DIR)/libcsv.a \
 		$(LDADD)
 
@@ -103,8 +105,8 @@ foam_hwtest_SOURCES += foam-hwtest.h \
 foam_hwtest_CPPFLAGS = -DFOAM_DEFAULTCONF=\"$(sysconfdir)/foam/foam-hwtest.cfg\" \
 		$(AM_CPPFLAGS)
 foam_hwtest_CXXFLAGS = $(AM_CXXFLAGS) $(DC1394_CFLAGS)
-foam_hwtest_LDADD = $(LDADD) \
-		$(DC1394_LIBS)
+foam_hwtest_LDADD = $(LIBSIU_COMMON) \
+		$(DC1394_LIBS) $(LDADD)
 
 endif HAVE_DC1394
 
@@ -147,7 +149,8 @@ foam_fullsim_SOURCES += foam-fullsim.h \
 		$(LIB_DIR)/zernike.h \
 		$(LIB_DIR)/simseeing.h
 
-foam_fullsim_LDADD = $(LIBSIU_DIR)/libimgdata.a \
+foam_fullsim_LDADD = $(LIBSIU_COMMON) \
+		$(LIBSIU_DIR)/libimgdata.a \
 		$(LIBSIU_DIR)/libcsv.a \
 		$(LDADD)
 
@@ -200,7 +203,8 @@ foam_expoao_CPPFLAGS = -DFOAM_DEFAULTCONF=\"$(sysconfdir)/foam/foam-expoao.cfg\"
 
 foam_expoao_CXXFLAGS = $(EXPOAO_CFLAGS) $(AM_CXXFLAGS)
 
-foam_expoao_LDADD = $(LIBSIU_DIR)/libserial.a \
+foam_expoao_LDADD = $(LIBSIU_COMMON) \
+		$(LIBSIU_DIR)/libserial.a \
 		$(EXPOAO_LIBS) $(LDADD)
 
 endif HAVE_EXPOAO

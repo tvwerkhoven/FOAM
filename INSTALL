@@ -33,19 +33,22 @@ Other libraries that are used by specific parts of FOAM:
 - opengl, glu, glut
 - gtkglextmm-1.2 >= 1.2.0
 
+To find out what specific libraries are required, run 
+
+- dpkg-depcheck -d ./configure
 
 LibSIU
 ======
 
 Before installing FOAM, please install libsiu first. This utility library
-is available at <http://dotdb.phys.uu.nl/git/browse>. To install this
+is available at <https://github.com/tvwerkhoven/libsiu>. To install this
 software:
 
-- git clone http://dotdb.phys.uu.nl/git/libsiu libsiu
+- git clone https://github.com/tvwerkhoven/libsiu.git libsiu
 - cd libsiu
 - autoreconf -sfi
 - ./configure
-- make -j2
+- make
 
 After that, point to the libsiu/src directory when installing FOAM, i.e.
 
@@ -83,6 +86,8 @@ The FOAM sourcecode is highlighted with Doxygen-compatible comments. To
 extract this information and present it in a easily navigatable format, run:
 
 - make all
+
+or run `doxygen doxyfile` in the docs/ directory.
 
 in the source root. The documentation will then be available in HTML and 
 LaTeX formats in docs/.

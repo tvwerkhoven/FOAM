@@ -46,9 +46,9 @@ using namespace std;
 
 Shwfs::Shwfs(Io &io, foamctrl *const ptc, const string name, const string port, Path const &conffile, Camera &wfscam, const bool online):
 Wfs(io, ptc, name, shwfs_type, port, conffile, wfscam, online),
-shifts(io, 1),
+shifts(io, 1), 
 shift_vec(NULL), ref_vec(NULL), tot_shift_vec(NULL),
-method(Shift::COG)
+method(Shift::COG), maxshift(32, 32)
 {
 	io.msg(IO_DEB2, "Shwfs::Shwfs()");
 	add_cmd("mla generate");
@@ -58,6 +58,12 @@ method(Shift::COG)
 	add_cmd("mla add");
 	add_cmd("mla get");
 	add_cmd("mla set");
+
+	add_cmd("set shift_mini");
+	add_cmd("get shift_mini");
+
+	add_cmd("set maxshift");
+	add_cmd("get maxshift");
 
 	add_cmd("get shifts");
 	
@@ -93,7 +99,7 @@ method(Shift::COG)
 	simaxr = cfg.getint("simaxr", -1);
 	simini_f = cfg.getdouble("simini_f", 0.6);
 	
-	shift_mini = cfg.getdouble("shift_mini", 10);
+	shift_mini = cfg.getdouble("shift_mini", 100);
 	
 	// Generate MLA grid
 	gen_mla_grid(mlacfg, cam.get_res(), sisize, sipitch, xoff, disp, shape, overlap);
@@ -166,6 +172,9 @@ void Shwfs::on_message(Connection *const conn, string line) {
 			conn->addtag("mla");
 			if (mla_del_si(popint(line)))
 				conn->write("error mla del :Incorrect subimage index");
+		} else if (what == "clear") {				// mla clear
+			conn->addtag("mla");
+			mla_clear();
 		} else if(what == "add") {				// mla add <lx> <ly> <tx> <ty>
 			conn->addtag("mla");
 			int nx0, ny0, nx1, ny1;
@@ -196,7 +205,11 @@ void Shwfs::on_message(Connection *const conn, string line) {
 		
 		if (what == "shifts") {						// get shifts
 			conn->write("ok shifts " + get_shifts_str());
+		} else if (what == "maxshift") {	// get maxshift
+			conn->addtag("maxshift");
+			conn->write(format("ok maxshift %f %f", maxshift.x, maxshift.y));
 		} else if (what == "shift_mini") {				// get shift_mini
+			conn->addtag("shift_mini");
 			conn->write(format("ok shift_mini %g", shift_mini));
 		} else 
 			parsed = false;
@@ -204,8 +217,21 @@ void Shwfs::on_message(Connection *const conn, string line) {
 		string what = popword(line);
 		
 		if (what == "shift_mini") {				// set shift_mini
+			conn->addtag("shift_mini");
 			shift_mini = popdouble(line);
-			conn->write(format("ok shift_mini %g", shift_mini));
+			net_broadcast(format("ok shift_mini %g", shift_mini), "shift_mini");
+		} else if (what == "maxshift") {	// get maxshift
+			conn->addtag("maxshift");
+			double tmpx = popdouble(line);
+			double tmpy = popdouble(line);
+			if (tmpx > 0 && tmpy > 0) {
+				maxshift.x = tmpx;
+				maxshift.y = tmpy;
+				net_broadcast(format("ok maxshift %f %f", maxshift.x, maxshift.y), "maxshift");
+			} else {
+				conn->write(format("error set maxshift :Maximum shift should be positive, was %f %f", 
+													 maxshift.x, maxshift.y));
+			}
 		} else 
 			parsed = false;
 	} else {
@@ -230,10 +256,10 @@ Wfs::wf_info_t* Shwfs::measure(Camera::frame_t *frame) {
 	
 	// Calculate shifts
 	if (cam.get_depth() == 16) {
-		shifts.calc_shifts((uint16_t *) frame->image, cam.get_res(), mlacfg, shift_vec, method, true, shift_mini);
+		shifts.calc_shifts((uint16_t *) frame->image, cam.get_res(), mlacfg, maxshift, shift_vec, method, true, shift_mini);
 	}
 	else if (cam.get_depth() == 8) {
-		shifts.calc_shifts((uint8_t *) frame->image, cam.get_res(), mlacfg, shift_vec, method, true, shift_mini);
+		shifts.calc_shifts((uint8_t *) frame->image, cam.get_res(), mlacfg, maxshift, shift_vec, method, true, shift_mini);
 	}
 	else {
 		io.msg(IO_ERR, "Shwfs::measure() unknown camera datatype");
@@ -345,7 +371,7 @@ int Shwfs::build_infmat(string wfcname, Camera::frame_t *frame, int actid, int a
 int Shwfs::calc_infmat(const string &wfcname) {
 	if (!calib[wfcname].init) {
 		io.msg(IO_WARN, "Shwfs::calc_infmat(): Call Shwfs::init_infmat() first.");
-		return 0;
+		return -1;
 	}
 
 	/*
@@ -410,6 +436,13 @@ int Shwfs::calc_infmat(const string &wfcname) {
 int Shwfs::calc_actmat(const string &wfcname, const double singval, const bool check_svd, const enum wfbasis) {
 	io.msg(IO_XNFO, "Shwfs::calc_actmat(): calc'ing for wfc '%s' with singval cutoff %g.",
 				 wfcname.c_str(), singval);
+	
+	//! @todo init_infmat() needs to be called automatically at init somehwere
+	if (!calib[wfcname].init) {
+		io.msg(IO_WARN, "Shwfs::calc_actmat(): Call Shwfs::init_infmat() first.");
+		return -1;
+	}
+
 	// Using input:
 	// calib[wfcname].meas.infmat
 	// Calculating:
@@ -418,8 +451,7 @@ int Shwfs::calc_actmat(const string &wfcname, const double singval, const bool c
 	// calib[wfcname].actmat.s
 	// calib[wfcname].actmat.Sigma
 	// calib[wfcname].actmat.V
-	
-	
+		
 	// Make matrix aliases
 	gsl_matrix_float *mat = calib[wfcname].actmat.mat;
 
@@ -600,6 +632,8 @@ string Shwfs::get_singval_str(const string &wfcname) const {
 
 	string singval_str;
 	gsl_vector *s_tmp = calib.find(wfcname)->second.actmat.s;
+	if (!s_tmp)
+		return "0";
 	
 	singval_str = format("%zu", s_tmp->size);
 	for (size_t idx=0; idx<s_tmp->size; idx++)
@@ -752,8 +786,10 @@ void Shwfs::store_reference() {
 }
 
 int Shwfs::calibrate() {
-	if (mlacfg.size() == 0) {
+	if (mlacfg.size() <= 0) {
 		io.msg(IO_XNFO, "Shwfs::calibrate(): cannot calibrate without subapertures defined.");
+		// Always set modes to the number of subaps, also if 0
+		wf.nmodes = mlacfg.size() * 2;
 		return -1;
 	}
 	
@@ -795,6 +831,7 @@ int Shwfs::calibrate() {
 
 int Shwfs::calib_influence(Wfc *wfc, Camera *cam, const vector <float> &actpos, const double sval_cutoff) {
 	double wfc_response = 0.1;
+	double thisact = 0;
 	
 	// Check sanity
 	if (wfc->get_nact() > (int) (2*mlacfg.size())) {
@@ -812,12 +849,14 @@ int Shwfs::calib_influence(Wfc *wfc, Camera *cam, const vector <float> &actpos, 
 	// Loop over all actuators, actuate according to actpos
 	io.msg(IO_XNFO, "Shwfs::calib_influence() Start calibration loop...");
 	for (int actid = 0; actid < wfc->get_nact(); actid++) {	// Loop over actuators
+		// Get current actuation signal for this actuator;
+		thisact = wfc->get_control_act(actid);
 		for (int posid = 0; posid < (int) actpos.size(); posid++) {	// Loop over actuator voltages
 			if (ptc->mode != AO_MODE_CAL)	// Abort if mode is not 'calib' anymore
 				goto influence_break;
 			
-			// Set actuator 'i' to 'actpos[p]', measure, wait until WFC is done
-			wfc->set_control_act(actpos.at(posid), actid);
+			// Set actuator 'actid' to 'thisact + actpos[p]', measure, wait until WFC is done
+			wfc->set_control_act(thisact + actpos.at(posid), actid);
 			wfc->actuate();
 			usleep(wfc_response * 1E6);
 			
@@ -826,8 +865,14 @@ int Shwfs::calib_influence(Wfc *wfc, Camera *cam, const vector <float> &actpos, 
 			build_infmat(wfc->getname(), frame, actid, posid);
 		}
 		
-		// Reset WFC to flat position
-		wfc->reset();
+		// Reset this actuator to its original position
+		wfc->set_control_act(thisact, actid);
+		// Do not set the mirror back to 'flat' (or whatever reset() does) here: 
+		// use the shape of the mirror as set *before* calibrating the influence 
+		// matrix.
+		// If reset() gives a bad mirror shape, than we need to add some offset
+		// before we can calculate a proper influence matrix. Setting the mirror
+		// back with reset() would negate this offset every time.
 	}
 		
 	io.msg(IO_XNFO, "Shwfs::calib_influence() Process data...");
@@ -844,8 +889,8 @@ influence_break:
 }
 
 int Shwfs::calib_zero(Wfc *wfc, Camera *cam) {
-	// Set wavefront corrector to flat position, start camera
-	wfc->reset();
+//	The zero calibration should be independent of the wavefront corrector
+//	shape, so we do no reset() here it as it might have some interesting shape.
 	
 	io.msg(IO_XNFO, "Shwfs::calib_zero() Start camera...");
 	cam->set_mode(Camera::RUNNING);
@@ -1008,10 +1053,27 @@ int Shwfs::find_mla_grid(std::vector<vector_t> &mlacfg, const coord_t size, cons
 			throw format("Shwfs::find_mla_grid() Could not allocate memory (size=%zu)!", imsize);
 		memcpy(image, f->image, imsize);
 	}
+	
+	// Set outer band to zero so we don't find subapertures there. Loop over all 
+	// pixels and set the image to zero if either x or y is in the outer edge
+	if (cam.get_depth() <= 8) {
+		uint8_t *cimg = (uint8_t *)image;
+		for (int y=0; y<cam.get_height(); y++)
+			for (int x=0; x<cam.get_width(); x++)
+				if (x <= size.x/2 || x >= cam.get_width() - size.x/2 ||
+						y <= size.y/2 || y >= cam.get_height() - size.y/2)
+					cimg[y*cam.get_width() + x] = 0;
+	} else {
+		uint16_t *cimg = (uint16_t *)image;
+		for (int y=0; y<cam.get_height(); y++)
+			for (int x=0; x<cam.get_width(); x++)
+				if (x <= size.x/2 || x >= cam.get_width() - size.x/2 ||
+						y <= size.y/2 || y >= cam.get_height() - size.y/2)
+					cimg[y*cam.get_width() + x] = 0;
+	}
 
 	vector_t tmpsi;
 	mlacfg.clear();
-	
 	coord_t sipos;
 	
 	size_t maxidx = 0;
@@ -1045,7 +1107,7 @@ int Shwfs::find_mla_grid(std::vector<vector_t> &mlacfg, const coord_t size, cons
 		}
 		
 		// Intensity too low, done
-		if (maxi < mini) {
+		if (maxi < mini || maxi == 0) {
 			io.msg(IO_XNFO, "Shwfs::find_mla_grid() maxi(%d) < mini(%d), break", maxi, mini);
 			break;
 		}
@@ -1067,19 +1129,15 @@ int Shwfs::find_mla_grid(std::vector<vector_t> &mlacfg, const coord_t size, cons
 			break;
 		}
 		if ((int) mlacfg.size() >= cam.get_width()*cam.get_height()/size.x/size.y) {
-			//!< @todo check this code, does aborting work?
 			io.msg(IO_WARN, "Shwfs::find_mla_grid() subaperture detection overflow, aborting!");
-			free(image);
-			mlacfg.clear();
-			mlacfg.size(); 
+			break;
 		}
 		
-		// Set the current subimage to zero such that we don't detect it next time
-		int xran[] = {max(0, tmpsi.lx), min(cam.get_width(), tmpsi.tx)};
-		int yran[] = {max(0, tmpsi.ly), min(cam.get_height(), tmpsi.ty)};
+		// Set the current subimage and surrounding border to zero such that we 
+		// don't detect it next time
+		int xran[] = {max(0, tmpsi.lx-size.x/2), min(cam.get_width(), tmpsi.tx+size.x/2)};
+		int yran[] = {max(0, tmpsi.ly-size.y/2), min(cam.get_height(), tmpsi.ty+size.y/2)};
 		
-//		io.msg(IO_DEB1, "Shwfs::find_mla_grid() setting to zero from (%d, %d) to (%d, %d)", 
-//					 xran[0], yran[0], xran[1], yran[1]);
 		if (cam.get_depth() <= 8) {
 			uint8_t *cimg = (uint8_t *)image;
 			for (int y=yran[0]; y<yran[1]; y++)
@@ -1136,6 +1194,16 @@ int Shwfs::mla_update_si(const int nx0, const int ny0, const int nx1, const int 
 	else {
 		return -1;
 	}
+}
+
+int Shwfs::mla_clear() {
+	set_calib(false);
+
+	mlacfg.clear();
+
+	calibrate();
+	net_broadcast("ok mla " + get_mla_str(), "mla");
+	return 0;
 }
 
 int Shwfs::mla_del_si(const int idx) {

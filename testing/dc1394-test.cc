@@ -30,11 +30,13 @@ int main() {
 
 	if(!cameras.size())
 		throw std::runtime_error("No IIDC cameras found.");
-	if (cameras.size() != 1)
-		fprintf(stderr, "dc1394-test.cc: Found multiple IIDC cameras, using the first one.");
 	
-	dc1394::camera *camera = cameras[0];
-	camera->print_more_info();
+	printf("dc1394-test.cc: Found %d IIDC cameras\n", (int) cameras.size());
+	
+	for (int i=0; i<cameras.size(); i++) {
+		dc1394::camera *camera = cameras[i];
+		camera->print_more_info();
+	}
 
 //	camera->set_transmission(false);
 //	camera->set_power(true);

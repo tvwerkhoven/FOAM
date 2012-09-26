@@ -61,7 +61,8 @@ check_PROGRAMS += camsend-test pixbuf-test gtk-test sigcpp-test
 
 camsend_test_SOURCES = camsend-test.cc
 camsend_test_LDADD = $(LIBSIU_DIR)/libprotocol.a \
-		$(LIBSIU_DIR)/libsocket.a $(LDADD)
+		$(LIBSIU_DIR)/libsocket.a \
+		$(LDADD)
 
 
 pixbuf_test_SOURCES = pixbuf-test.cc
@@ -91,14 +92,14 @@ shwfs_test_SOURCES = shwfs-test.cc \
 		$(FOAM_DIR)/foamctrl.cc
 
 shwfs_test_CFLAGS = $(COMMON_CFLAGS) $(FFTW_CFLAGS) $(AM_CFLAGS)
-shwfs_test_LDADD =  $(LDADD) \
-		$(FFTW_LIBS) \
-    $(LIBSIU_DIR)/libcsv.a \
+shwfs_test_LDADD = $(LIBSIU_DIR)/libcsv.a \
 		$(LIBSIU_DIR)/libio.a \
 		$(LIBSIU_DIR)/libpath.a \
 		$(LIBSIU_DIR)/libprotocol.a \
 		$(LIBSIU_DIR)/libconfig.a \
-		$(LIBSIU_DIR)/libimgdata.a
+		$(LIBSIU_DIR)/libimgdata.a \
+		$(FFTW_LIBS) \
+		$(LDADD)
 
 endif HAVE_FULLSIM
 
@@ -111,10 +112,10 @@ check_PROGRAMS += camview-test
 camview_test_SOURCES = camview-test.cc
 camview_test_CPPFLAGS = $(GUI_CFLAGS) $(AM_CPPFLAGS)
 camview_test_CXXFLAGS = $(GUI_CFLAGS) $(AM_CXXFLAGS)
-camview_test_LDADD = $(GUI_LIBS) -lgthread-2.0 \
-		$(LIBSIU_DIR)/libglviewer.a \
+camview_test_LDADD = $(LIBSIU_DIR)/libglviewer.a \
 		$(LIBSIU_DIR)/libprotocol.a \
 		$(LIBSIU_DIR)/libsocket.a \
+		$(GUI_LIBS) -lgthread-2.0 \
 		$(LDADD)
 
 endif HAVE_OPENGL
@@ -150,7 +151,7 @@ check_PROGRAMS += dc1394-test
 dc1394_test_SOURCES = dc1394-test.cc
 dc1394_test_CPPFLAGS = $(DC1394_CFLAGS) $(AM_CPPFLAGS)
 dc1394_test_CXXFLAGS = $(DC1394_CFLAGS) $(AM_CXXFLAGS)
-dc1394_test_LDADD = $(LDADD) $(DC1394_LIBS)
+dc1394_test_LDADD = $(DC1394_LIBS) $(LDADD)
 endif HAVE_DC1394
 
 ### Andor iXon EMCCD test
@@ -168,7 +169,7 @@ andorcam_test_LDADD = $(LIBSIU_DIR)/libio.a \
 		$(LIBSIU_DIR)/libconfig.a \
 		$(LIBSIU_DIR)/libprotocol.a \
 		$(LIBSIU_DIR)/libpath.a \
-		$(LDADD) $(ANDORCAM_LIBS)
+		$(ANDORCAM_LIBS) $(LDADD)
 
 endif HAVE_ANDORCAM
 
@@ -188,7 +189,7 @@ alpaodm_test_LDADD = $(LIBSIU_DIR)/libio.a \
 		$(LIBSIU_DIR)/libconfig.a \
 		$(LIBSIU_DIR)/libprotocol.a \
 		$(LIBSIU_DIR)/libpath.a \
-		$(LDADD) $(ALPAODM_LIBS)
+		$(ALPAODM_LIBS) $(LDADD) 
 
 endif HAVE_ALPAODM
 

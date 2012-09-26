@@ -138,6 +138,7 @@ private:
 	int simaxr;													//!< Maximum radius to use, or edge erosion subimages
 	float simini_f;											//!< Minimum intensity for a subimage as fraction of the max intensity in a frame
 	float shift_mini;										//!< Minimum intensity to consider when calculating centroiding positions
+	fcoord_t maxshift;									//!< Maximum image shift to allow for each subaperture. Higher values will be clamped between -maxshift.[x,y] and +maxshift.[x,y]. Sometimes SHWFS tracking is so bad that it's better to clamp the measurements to a maximum value than to use the bad value.
 	
 	// Parameters for static MLA grids:
 	coord_t sisize;											//!< Subimage size in pixels
@@ -220,6 +221,7 @@ public:
 	bool store_mla_grid(const bool overwrite=false) const;
 	
 	int mla_update_si(const int nx0, const int ny0, const int nx1, const int ny1, const int idx=-1);
+	int mla_clear();
 	int mla_del_si(const int idx);
 
 	/*! @brief Convert shifts to basis functions

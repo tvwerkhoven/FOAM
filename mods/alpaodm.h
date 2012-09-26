@@ -39,6 +39,67 @@ const string alpaodm_type = "alpaodm";
  Although the underlying library supports control for multiple DMs at the same 
  time, support is currently limited for 1 device in total.
  
+ \section alpaodm_mirror Alpao DM 
+ 
+ \subsection alpaodm_actmap
+ 
+ Actuator map for Alpao DM 97:
+ 
+ <pre>
+         66 55 44 33 22
+      77 67 56 45 34 23 13
+   86 78 68 57 46 35 24 14  6
+93 87 79 69 58 47 36 25 15  7 1
+94 88 80 70 59 48 37 26 16  8 2
+95 89 81 71 60 49 38 27 17  9 3
+96 90 82 72 61 50 39 28 18 10 4
+97 91 83 73 62 51 40 29 19 11 5
+   92 84 74 63 52 41 30 20 12
+      85 75 64 53 42 31 21
+         76 65 54 43 32
+ </pre>
+ 
+ Make actuator maps:
+ 
+ <pre>
+actlayout= [66, 55, 44, 33, 22,
+        77, 67, 56, 45, 34, 23, 13,
+    86, 78, 68, 57, 46, 35, 24, 14, 6,
+93, 87, 79, 69, 58, 47, 36, 25, 15, 7,  1,
+94, 88, 80, 70, 59, 48, 37, 26, 16, 8,  2,
+95, 89, 81, 71, 60, 49, 38, 27, 17, 9,  3,
+96, 90, 82, 72, 61, 50, 39, 28, 18, 10, 4,
+97, 91, 83, 73, 62, 51, 40, 29, 19, 11, 5,
+    92, 84, 74, 63, 52, 41, 30, 20, 12,
+        85, 75, 64, 53, 42, 31, 21,
+            76, 65, 54, 43, 32]
+
+actmask =  [0,0,1,0,0,
+          0,1,1,1,1,1,0,
+        0,1,1,1,1,1,1,1,0,
+      0,1,1,1,1,1,1,1,1,1,0,
+      0,1,1,1,1,1,1,1,1,1,0,
+      1,1,1,1,1,1,1,1,1,1,1,
+      0,1,1,1,1,1,1,1,1,1,0,
+      0,1,1,1,1,1,1,1,1,1,0,
+        0,1,1,1,1,1,1,1,0,
+          0,1,1,1,1,1,0,
+            0,0,1,0,0] 
+ 
+
+import numpy as np 
+actmap = np.r_[actlayout][np.r_[actmask] == 1]
+actmapstr = str(len(actmap))
+actmaphumanstr = str(len(actmap))
+for virt_act, real_act in enumerate(actmap):
+  actmapstr += " %d %d" % (virt_act, real_act)
+  actmaphumanstr += ", %d -> %d" % (virt_act, real_act)
+
+print actmapstr
+print actmaphumanstr
+ </pre>
+ 
+ 
  \section alpaodm_cfg Configuration parameters
  
  AlpaoDM supports the following configuration parameters:
@@ -59,8 +120,8 @@ private:
 	Path conf_acfg;										//!< Alpao DM .acfg file
 	Path conf_data;										//!< Alpao DM associated binary data file
 
-	vector<double> offset;						//!< DM offset (calibrated safe 'zero' position)
-	string offset_str;								//!< Space-separated representation of offset
+	vector<double> hwoffset;					//!< DM factory offset (calibrated safe 'zero' position)
+	string hwoffset_str;							//!< Space-separated representation of offset
 
 	vector<double> act_vec;						//!< Local temporary actuate vector (copy of ctrlparms.ctrl_vec)
 	
@@ -70,8 +131,10 @@ public:
 	AlpaoDM(Io &io, foamctrl *const ptc, const string name, const string port, Path const &conffile, const bool online=true);
 	~AlpaoDM();
 	
+	int reset_zerovolt();							//!< Set DM to zero volts, which bypasses the factory offsets
+	
 	// From Wfc::
-	virtual int actuate(const bool block=false);
+	virtual int dm_actuate(const bool block=false);
 	virtual int calibrate();
 	virtual int reset();
 	
