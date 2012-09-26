@@ -23,6 +23,7 @@ ui/Makefile
 conf/Makefile
 data/Makefile
 testing/Makefile
+testing_devs/Makefile
 docs/Makefile
 ])
 
