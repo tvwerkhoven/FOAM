@@ -34,46 +34,42 @@
 using namespace std;
 
 int main(int argc, char *argv[]) {
-	printf("Init Io...\n");
-	Io io(10);
-	
-	// Make dummy FOAM to parse arguments and allow the GUI to connect
+	// Init FOAM_dummy class
 	FOAM_dummy fd(argc, argv);
-	
+		
 	if (fd.init())
 		exit(-1);
-	
-	string port = fd.ptc->listenport;
 
+	fd.io.msg(IO_INFO, "Running test mode");
 	fd.io.msg(IO_INFO, "Init WHT...");
+	
+	// Init WHT telescope interface
 	WHT *wht;
 	try {
-		wht = new WHT(fd.io, fd.ptc, "wht-test", port, Path("./wht-test.cfg"), true);
+		WHT *wht = new WHT(fd.io, fd.ptc, "wht-test", fd.ptc->listenport, Path("./wht-test.cfg"));
+		fd.devices->add((foam::Device *) wht);
 	} catch (std::runtime_error &e) {
-		io.msg(IO_ERR, "Failed to initialize WHT: %s", e.what());
+		fd.io.msg(IO_ERR, "Failed to initialize WHT: %s", e.what());
 		return 1;
 	}
+
+	sleep(1);
+	Protocol::Client protocol("127.0.0.1", fd.ptc->listenport);
+	protocol.connect();
+	
+	// Test commands
+	protocol.write(format("wht-test set ccd_ang %lf", 117.0));
+
+	protocol.write(("wht-test track tcs 51 52 9.9"));
+	sleep(1);
+
+	protocol.write(("wht-test track pixshift 10 10"));
 	sleep(1);
 	
-	io.msg(IO_INFO, "Init complete, sending test (0,0) and (1,1).");
-	
-	wht->set_track_offset(0, 0);
-	usleep(0.5 * 1E6);
-
-	wht->set_track_offset(1, 1);
-	usleep(0.5 * 1E6);
-
-	io.msg(IO_INFO, "WHT instance listening on port %s. ^C to stop.", port.c_str());
-
-	while (true) {
-		sleep(1);
-	}
-	
-	io.msg(IO_INFO, "Quitting now...");
-	delete wht;
-	
-	io.msg(IO_INFO, "Program exit in 1 seconds...");
+	protocol.write(("wht-test track telshift -10 -10"));
 	sleep(1);
+
+	fd.listen();
 	
 	return 0;
 }
