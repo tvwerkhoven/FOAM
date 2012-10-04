@@ -130,6 +130,7 @@ Shwfs::~Shwfs() {
 		gsl_matrix_float_free(curdat.meas.infmat_f);
 		
 		gsl_matrix_float_free(curdat.actmat.mat);
+		gsl_matrix_free(curdat.actmat.mat_dbl);
 		gsl_matrix_free(curdat.actmat.U);
 		gsl_vector_free(curdat.actmat.s);
 		gsl_matrix_free(curdat.actmat.Sigma);
@@ -317,6 +318,7 @@ void Shwfs::init_infmat(const string &wfcname, const size_t nact, const vector <
 		
 		// Free() .actmat matrices
 		gsl_matrix_float_free(calib[wfcname].actmat.mat);
+		gsl_matrix_free(calib[wfcname].actmat.mat_dbl);
 		gsl_matrix_free(calib[wfcname].actmat.U);
 		gsl_vector_free(calib[wfcname].actmat.s);
 		gsl_matrix_free(calib[wfcname].actmat.Sigma);
@@ -341,6 +343,7 @@ void Shwfs::init_infmat(const string &wfcname, const size_t nact, const vector <
 
 	// Init actuation matrices
 	calib[wfcname].actmat.mat = gsl_matrix_float_calloc(nact, calib[wfcname].nmeas);
+	calib[wfcname].actmat.mat_dbl = gsl_matrix_calloc(nact, calib[wfcname].nmeas);
 
 	calib[wfcname].actmat.s = gsl_vector_calloc(nact);
 
@@ -433,7 +436,126 @@ int Shwfs::calc_infmat(const string &wfcname) {
 	return 0;
 }
 
-int Shwfs::calc_actmat(const string &wfcname, const double singval, const bool check_svd, const enum wfbasis) {
+int Shwfs::update_actmat(const string &wfcname, const double singval) {
+	io.msg(IO_XNFO, "Shwfs::update_actmat(): updating for wfc '%s' with singval cutoff %g.",
+				 wfcname.c_str(), singval);
+
+	if (!calib[wfcname].init) {
+		io.msg(IO_WARN, "Shwfs::update_actmat(): Call Shwfs::init_infmat() first.");
+		return -1;
+	}
+
+	// Using input:
+	// calib[wfcname].actmat.U -- decomposition of infmat
+	// calib[wfcname].actmat.s -- decomposition of infmat
+	// calib[wfcname].actmat.V -- decomposition of infmat
+	// singval -- singular values to use
+	// Calculating:
+	// calib[wfcname].actmat.Sigma -- matrix containing cut-off 1/singval diagonal
+	// calib[wfcname].actmat.mat -- pseudo-inverse of infmat
+	// calib[wfcname].actmat.mat_dbl -- pseudo-inverse of infmat (double)
+	// This routine is run live, so calib[wfcname].actmat.mat might be in use!
+	// to solve this, we calcualte the new matrix somewhere else, and swap the
+	// pointers at the end, keeping the old data alive for a bit so the running
+	// calculations can finish.
+
+	// Make matrix aliases
+	// This is the output for the final actuation matrix (mat = float, mat_dbl = double)
+	gsl_matrix_float *mat = calib[wfcname].actmat.mat;
+	gsl_matrix *mat_dbl = calib[wfcname].actmat.mat_dbl;
+	// This will hold the new actuation matrix while we calculate it
+	gsl_matrix_float *newmat = gsl_matrix_float_calloc(mat->size1, mat->size2);
+
+	// These matrices will hold the SVD components
+	gsl_matrix *U = calib[wfcname].actmat.U;
+	gsl_matrix *Sigma = calib[wfcname].actmat.Sigma;
+	gsl_vector *s = calib[wfcname].actmat.s;
+	gsl_matrix *V = calib[wfcname].actmat.V;
+	
+	// Calculate sum of singular values
+	double sum=0;
+	for (size_t j=0; j < s->size; j++)
+		sum += gsl_vector_get(s, j);
+	
+	// Calculate various condition cutoffs (i.e. if we want to use 85%, 90% or
+	// 95% of the total singular values of the system), and store these cutoffs
+	// in a list
+	int acc85=0, acc90=0, acc95=0, use_nmodes=0;
+	double sum2=0;
+	std::vector<double> cum_singval_list;
+	for (size_t j=0; j < s->size; j++) {
+		double sval = gsl_vector_get(s, j);
+		sum2 += sval;
+		cum_singval_list.push_back(sum2/sum);
+		if (sum2/sum < 0.85) acc85++;
+		if (sum2/sum < 0.9) acc90++;
+		if (sum2/sum < 0.95) acc95++;
+		if (sum2/sum < singval) use_nmodes++;
+	}
+	// If user-supplied singval < 0, use N-singval modes:
+	if (singval < 0)
+		use_nmodes = (int) fmax(s->size - singval, 1.0);
+	// if singval > 1, use this many modes
+	else if (singval > 1)
+		use_nmodes = (int) fmin(s->size, singval);
+	// else if singval is [0, 1], use as many modes to get a condition of
+	// 'singval' (already counted above)
+	
+	// Store the current calibration settings
+	calib[wfcname].actmat.use_nmodes = use_nmodes;
+	calib[wfcname].actmat.condition = gsl_vector_get(s, 0)/gsl_vector_get(s, s->size-1);
+	calib[wfcname].actmat.use_singval = cum_singval_list.at(use_nmodes);
+	
+	io.msg(IO_XNFO, "Shwfs::update_actmat(): SVD condition: %g, nmodes: %zu",
+				 calib[wfcname].actmat.condition,
+				 s->size);
+	io.msg(IO_XNFO, "Shwfs::update_actmat(): cond 0.85 @ %d, 0.90 @ %d, 0.95 @ %d modes",
+				 acc85, acc90, acc95);
+	io.msg(IO_XNFO, "Shwfs::update_actmat(): singval == %g, using %d modes.", singval, use_nmodes);
+
+	// Fill matrix Sigma with values 1/singval and store to disk
+	gsl_matrix_set_zero(Sigma);
+	for (size_t j=0; j < s->size; j++) {
+		if ((int) j >= use_nmodes)
+			gsl_matrix_set(Sigma, j, j, 0);
+		
+		double sval = gsl_vector_get(s, j);
+		if (sval != 0) sval = 1.0/sval;
+		
+		gsl_matrix_set(Sigma, j, j, sval);
+	}
+
+	// Calculate explicit pseudo-inverse matrix of infmat, store in mat_dbl. The
+	// pseudo-inverse is given by actmat = V . Sigma . U^T
+	// Allocate memory for operations
+	gsl_matrix *workmat = gsl_matrix_calloc(mat->size1, mat->size2);
+	
+	// First calculate workmat = (Sigma . U^T)
+	gsl_blas_dgemm (CblasNoTrans, CblasTrans, 1.0, Sigma, U, 0.0, workmat);
+	// Then calculate mat_dbl = (V . workmat)
+	gsl_blas_dgemm (CblasNoTrans, CblasNoTrans, 1.0, V, workmat, 0.0, mat_dbl);
+	
+	// Free temporary matrix
+	gsl_matrix_free(workmat);
+
+	// Copy mat_dbl (double) to newmat (float)
+	for (size_t i=0; i<newmat->size1; i++)
+		for (size_t j=0; j<newmat->size2; j++)
+			gsl_matrix_float_set(newmat, i, j, gsl_matrix_get(mat_dbl, i, j));
+	
+	// Wait a bit for calculations to finish, then swap pointers
+	//! @todo This should be handled with mutexes or something?
+	usleep(100000); // = 0.1e6
+	
+	// Swap matrix mat & newmat
+	gsl_matrix_float *oldmat = mat;
+	mat = newmat;
+	gsl_matrix_float_free(oldmat);
+	
+	return 0;
+}
+
+int Shwfs::calc_actmat(const string &wfcname, const double singval, const bool check_svd) {
 	io.msg(IO_XNFO, "Shwfs::calc_actmat(): calc'ing for wfc '%s' with singval cutoff %g.",
 				 wfcname.c_str(), singval);
 	
@@ -444,16 +566,16 @@ int Shwfs::calc_actmat(const string &wfcname, const double singval, const bool c
 	}
 
 	// Using input:
-	// calib[wfcname].meas.infmat
+	// calib[wfcname].meas.infmat -- the influence matrix measured in calc_infmat()
+	//
 	// Calculating:
-	// calib[wfcname].actmat.mat
-	// calib[wfcname].actmat.U
-	// calib[wfcname].actmat.s
-	// calib[wfcname].actmat.Sigma
-	// calib[wfcname].actmat.V
-		
+	// calib[wfcname].actmat.U -- decomposition of infmat
+	// calib[wfcname].actmat.s -- decomposition of infmat
+	// calib[wfcname].actmat.Sigma -- decomposition of infmat
+	// calib[wfcname].actmat.V -- decomposition of infmat
+
 	// Make matrix aliases
-	gsl_matrix_float *mat = calib[wfcname].actmat.mat;
+	gsl_matrix *mat_dbl = calib[wfcname].actmat.mat_dbl;
 
 	gsl_matrix *infmat = calib[wfcname].meas.infmat;
 	gsl_matrix *U = calib[wfcname].actmat.U;
@@ -461,15 +583,19 @@ int Shwfs::calc_actmat(const string &wfcname, const double singval, const bool c
 	gsl_vector *s = calib[wfcname].actmat.s;
 	gsl_matrix *V = calib[wfcname].actmat.V;
 	
-	gsl_matrix *actmat_d = gsl_matrix_calloc(mat->size1, mat->size2);
-	gsl_vector *workvec = gsl_vector_calloc(s->size);
-
 	// Copy input matrix to U (which will be overwritten by gsl_linalg_SV_decomp())
 	gsl_matrix_memcpy(U, infmat);
 	
-	// Singular value decompose this matrix:
+	// Singular value decompose infmat (stored in U) into U, V and s. workvec is
+	// temporary memory required for this operation
+	gsl_vector *workvec = gsl_vector_calloc(s->size);
 	gsl_linalg_SV_decomp(U, V, s, workvec);
 	
+	gsl_vector_free(workvec);
+
+	// Given the SVD components and 'sinval', calculate the new actuation matrix
+	update_actmat(wfcname, singval);
+
 	// Store decomposition to disk
 	Path outf; FILE *fd;
 	
@@ -486,84 +612,23 @@ int Shwfs::calc_actmat(const string &wfcname, const double singval, const bool c
 	outf = mkfname(wfcname + format("_V_%zu_%zu.csv", V->size1, V->size2));
 	fd = fopen(outf.c_str(), "w+");
 	gsl_matrix_fprintf (fd, V, "%.12g");
-	fclose(fd);	
-	
-	// Calculate sum of singular values
-	double sum=0;
-	for (size_t j=0; j < s->size; j++)
-		sum += gsl_vector_get(s, j);
-	
-	// Calculate various condition cutoffs
-	int acc85=0, acc90=0, acc95=0, use_nmodes=0;
-	double sum2=0;
-	std::vector<double> cum_singval_list;
-	for (size_t j=0; j < s->size; j++) {
-		double sval = gsl_vector_get(s, j);
-		sum2 += sval;
-		cum_singval_list.push_back(sum2/sum);
-		if (sum2/sum < 0.85) acc85++;
-		if (sum2/sum < 0.9) acc90++;
-		if (sum2/sum < 0.95) acc95++;
-		if (sum2/sum < singval) use_nmodes++;
-	}
-	// If singval < 0, drop a few modes
-	if (singval < 0)
-		use_nmodes = (int) fmax(s->size - singval, 1.0);
-	// if singval > 1, use this many modes
-	else if (singval > 1)
-		use_nmodes = (int) fmin(s->size, singval);
-	// else, use as many modes to get a condition of 'singval' (already counted above)
-	
-	calib[wfcname].actmat.use_nmodes = use_nmodes;
-	calib[wfcname].actmat.condition = gsl_vector_get(s, 0)/gsl_vector_get(s, s->size-1);
-	calib[wfcname].actmat.use_singval = cum_singval_list.at(use_nmodes);
-	
-	io.msg(IO_XNFO, "Shwfs::calc_actmat(): SVD condition: %g, nmodes: %zu", 
-				 calib[wfcname].actmat.condition, 
-				 s->size);
-	io.msg(IO_XNFO, "Shwfs::calc_actmat(): cond 0.85 @ %d, 0.90 @ %d, 0.95 @ %d modes", 
-				 acc85, acc90, acc95);
-	io.msg(IO_XNFO, "Shwfs::calc_actmat(): singval == %g, using %d modes.", singval, use_nmodes);
-	
-	// Fill singular value *matrix* Sigma and store to disk
-	sum2 = 0.0;
-	gsl_matrix_set_zero(Sigma);
-	for (size_t j=0; j < s->size; j++) {
-		if ((int) j == use_nmodes)
-			break;
-		
-		double sval = gsl_vector_get(s, j);
-		sum2 += sval;
-		if (sval != 0) sval = 1.0/sval;
-		
-		gsl_matrix_set(Sigma, j, j, sval);
-	}
+	fclose(fd);
 	
 	outf = mkfname(wfcname + format("_Sigma_%zu_%zu.csv", Sigma->size1, Sigma->size2));
 	fd = fopen(outf.c_str(), "w+");
 	gsl_matrix_fprintf (fd, Sigma, "%.12g");
 	fclose(fd);
 	
-	// Calculate explicit pseudo-inverse matrix of infmat, store in actmat. The 
-	// pseudo-inverse is given by actmat = V . Sigma . U^T
-	gsl_matrix *workmat = gsl_matrix_calloc(mat->size1, mat->size2);
-	
-	// First calculate workmat = (Sigma . U^T)
-	gsl_blas_dgemm (CblasNoTrans, CblasTrans, 1.0, Sigma, U, 0.0, workmat);
-	// Then calculate actmat_d = (V . workmat)
-	gsl_blas_dgemm (CblasNoTrans, CblasNoTrans, 1.0, V, workmat, 0.0, actmat_d);
-	
-	// Store inverse matrix to disk
-	outf = mkfname(wfcname + format("_actmat_%zu_%zu.csv", actmat_d->size1, actmat_d->size2));
+	// Store psuedo-inverse matrix to disk
+	outf = mkfname(wfcname + format("_actmat_%zu_%zu.csv", mat_dbl->size1, mat_dbl->size2));
 	fd = fopen(outf.c_str(), "w+");
-	gsl_matrix_fprintf (fd, actmat_d, "%.12g");
+	gsl_matrix_fprintf (fd, mat_dbl, "%.12g");
 	fclose(fd);
 	
 	if (check_svd) {
 		// Test inversion, calculate (mat . infmat):
-		gsl_matrix_free(workmat);
-		workmat = gsl_matrix_calloc(actmat_d->size1, infmat->size2);
-		gsl_blas_dgemm (CblasNoTrans, CblasNoTrans, 1.0, actmat_d, infmat, 0.0, workmat);
+		gsl_matrix *workmat = gsl_matrix_calloc(mat_dbl->size1, mat_dbl->size2);
+		gsl_blas_dgemm (CblasNoTrans, CblasNoTrans, 1.0, mat_dbl, infmat, 0.0, workmat);
 		
 		// Store pseudo-ident matrix to disk
 		outf = mkfname(wfcname + format("_pseudo-ident_%zu_%zu.csv", workmat->size1, workmat->size2));
@@ -572,7 +637,7 @@ int Shwfs::calc_actmat(const string &wfcname, const double singval, const bool c
 		fclose(fd);
 		
 		// Sum all elements in workmat (should be sum(identity(workmat->size1)) = workmat->size1)
-		sum=0;
+		double sum=0;
 		for (size_t i=0; i<workmat->size1; i++)
 			for (size_t j=0; j<workmat->size2; j++)
 				sum += gsl_matrix_get(workmat, i, j);
@@ -600,7 +665,7 @@ int Shwfs::calc_actmat(const string &wfcname, const double singval, const bool c
 		gsl_linalg_SV_solve (U, V, s, vecout, vecrec);
 		
 		// Backward calculate with explicit matrix:
-		gsl_blas_dgemv(CblasNoTrans, 1.0, actmat_d, vecout, 0.0, vecrec2);
+		gsl_blas_dgemv(CblasNoTrans, 1.0, mat_dbl, vecout, 0.0, vecrec2);
 		
 		// Print vectors
 		double qual1=0, qual2=0;
@@ -613,15 +678,12 @@ int Shwfs::calc_actmat(const string &wfcname, const double singval, const bool c
 		io.msg(IO_XNFO, "Shwfs::calc_actmat(): avg. rel. error: best: %g, here: %g.",
 					 1.-qual1, 1.-qual2);
 		
-		// Copy actmat_d (double) to mat (float)
-		for (size_t i=0; i<mat->size1; i++)
-			for (size_t j=0; j<mat->size2; j++)
-				gsl_matrix_float_set(mat, i, j, gsl_matrix_get(actmat_d, i, j));
+		gsl_matrix_free(workmat);
+		gsl_vector_free(vecin);
+		gsl_vector_free(vecout);
+		gsl_vector_free(vecrec);
+		gsl_vector_free(vecrec2);
 	}
-
-	// Free temporary matrices
-	gsl_matrix_free(workmat);
-	gsl_matrix_free(actmat_d);
 
 	return 0;
 }
@@ -675,10 +737,12 @@ string Shwfs::get_refvec_str() const {
 	return refvec_str;
 }
 
-gsl_vector_float *Shwfs::comp_ctrlcmd(const string &wfcname, const gsl_vector_float *shift, gsl_vector_float *act) {
+int Shwfs::comp_ctrlcmd(const string &wfcname, const gsl_vector_float *shift, gsl_vector_float *act) {
 	//! @todo comp_ctrlcmd() does not know whether the matrix calib[wfcname].actmat.mat is proper or not. Need better calibration tracking, not at device level but at the top level of the program perhaps.
+	if (!act)
+		return 1;
 	if (calib.find(wfcname) == calib.end())
-		return NULL;
+		return 1;
 	if (!get_calib())
 		calibrate();
 	
@@ -689,12 +753,12 @@ gsl_vector_float *Shwfs::comp_ctrlcmd(const string &wfcname, const gsl_vector_fl
 	// y = \alpha op(A) x + \beta y
 	gsl_blas_sgemv(CblasNoTrans, -1.0, calib[wfcname].actmat.mat, shift, 0.0, act);
 
-	return act;
+	return 0;
 }
 
-gsl_vector_float *Shwfs::comp_shift(const string &wfcname, const gsl_vector_float *act, gsl_vector_float *shift) {
+int Shwfs::comp_shift(const string &wfcname, const gsl_vector_float *act, gsl_vector_float *shift) {
 	if (calib.find(wfcname) == calib.end())
-		return NULL;
+		return 1;
 	if (!get_calib())
 		calibrate();
 	
@@ -708,7 +772,7 @@ gsl_vector_float *Shwfs::comp_shift(const string &wfcname, const gsl_vector_floa
 	// y = \alpha op(A) x + \beta y
 	gsl_blas_sgemv(CblasNoTrans, 1.0, calib[wfcname].meas.infmat_f, act, 0.0, shift);
 		
-	return shift;
+	return 0;
 }
 
 void Shwfs::comp_tt(const gsl_vector_float *shift, float *ttx, float *tty) {
