@@ -608,7 +608,15 @@ void FOAM::on_message(Connection *const conn, string line) {
 			conn->write(format("ok devices %s", devices->getlist().c_str()));
 		else if (var == "version")
 			conn->write(format("ok version %s", FOAM_VERSION_STR.c_str()));
-		else 
+		else if (var == "calibmodes") {
+			calib_mode_t::iterator it;
+			string calmodes_str("");
+			for (it=calib_modes.begin() ; it != calib_modes.end(); it++ )
+				calmodes_str += it->first + " ";
+
+			conn->write(format("ok calibmodes %d %s", (int) calib_modes.size(), calmodes_str.c_str()));
+		}
+		else
 			conn->write("error get :unknown variable");
 	}
   else if (cmd == "mode") {
@@ -650,6 +658,7 @@ int FOAM::show_nethelp(const Connection *const conn, string topic, string /*rest
 ":==== FOAM help ==========================\n"
 ":help [command]:         Help (on a certain command, if available).\n"
 ":mode <mode>:            close or open the loop.\n"
+":calib <mode> [opts]:    calibrate system <mode>.\n"
 ":get <var>:              read a system variable.\n"
 ":verb <level>:           set verbosity to <level>.\n"
 ":verb <+|->:             increase/decrease verbosity by 1 step.\n"
@@ -657,6 +666,15 @@ int FOAM::show_nethelp(const Connection *const conn, string topic, string /*rest
 ":exit or quit:           disconnect from daemon.\n"
 ":shutdown:               shutdown FOAM.");
 	}		
+	else if (topic == "calib") {
+		string cal_help_str = ":calib <mode> [opts]:    Calibrate AO system.\n";
+		
+		calib_mode_t::iterator it;
+		for (it=calib_modes.begin() ; it != calib_modes.end(); it++ ) {
+			cal_help_str += format(":  mode=%s: %s\n", it->first.c_str(), it->second.help.c_str());
+		}
+		conn->write(cal_help_str);
+	}
 	else if (topic == "mode") {
 		conn->write(\
 ":mode <mode>:            Close or open the AO-loop.\n"
