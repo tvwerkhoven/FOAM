@@ -320,7 +320,7 @@ int FOAM_ExpoAO::calib(const string &calib_mode, const string &calib_opts) {
 
 void FOAM_ExpoAO::on_message(Connection *const conn, string line) {
 	io.msg(IO_DEB2, "FOAM_ExpoAO::on_message(line=%s)", line.c_str());
-	FOAM::on_message(conn, orig);
+	FOAM::on_message(conn, line);
 }
 
 int main(int argc, char *argv[]) {
