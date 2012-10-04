@@ -121,10 +121,10 @@ int FOAM_simstatic::closed_finish() {
 // MISC ROUTINES //
 /*****************/
 
-int FOAM_simstatic::calib() {
-	io.msg(IO_DEB2, "FOAM_simstatic::calib()=%s", ptc->calib.c_str());
+int FOAM_simstatic::calib(const string &calib_mode, const string &calib_opts) {
+	io.msg(IO_DEB2, "FOAM_simstatic::calib()=%s", calib_mode.c_str());
 
-	if (ptc->calib == "influence") {
+	if (calib_mode == "influence") {
 		io.msg(IO_DEB2, "FOAM_simstatic::calib INFLUENCE");
 		usleep((useconds_t) 1.0 * 1000000);
 		return 0;
