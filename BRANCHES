@@ -49,7 +49,7 @@ Improve influence matrix calibration if we have a flat reset() mirror shape
 -> Give amplitude for influence matrix calibration as parameter OK
 -> Test 0 control versus 0 volts OK
 
-* topic_testing_dummy (alpha)
+* topic_testing_dummy (implemented)
 Use FOAM_dummy in hardware tests so we have small stand-alone programs for each piece of hardware.
 
 * topic_usability_fix (implemented in master)
