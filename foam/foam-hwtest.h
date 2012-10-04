@@ -54,7 +54,7 @@ public:
 	virtual int open_loop();
 	virtual int open_finish();
 	
-	virtual int calib();
+	virtual int calib(const string &calib_mode, const string &calib_opts);
 };
 
 #endif // HAVE_FOAM_SIMSTATIC_H

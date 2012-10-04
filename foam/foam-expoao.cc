@@ -44,6 +44,15 @@ Shwfs *ixonwfs;
 AlpaoDM *alpao_dm97;
 WHT *wht_track;
 
+FOAM_ExpoAO::FOAM_ExpoAO(int argc, char *argv[]): FOAM(argc, argv) {
+	io.msg(IO_DEB2, "FOAM_ExpoAO::FOAM_ExpoAO()");
+	// Register calibration modes
+	calib_modes["zero"] = calib_mode("zero", "Set current WFS data as reference", "", false);
+	calib_modes["influence"] = calib_mode("influence", "Measure wfs-wfc influence, cutoff at singv", "[singv]", false);
+	calib_modes["offsetvec"] = calib_mode("offsetvec", "Add offset vector to correction", "[x] [y]", false);
+	calib_modes["svd"] = calib_mode("svd", "Recalculate SVD wfs-wfc influence, cutoff at singv.", "[singv]", true);
+}
+
 int FOAM_ExpoAO::load_modules() {
 	io.msg(IO_DEB2, "FOAM_ExpoAO::load_modules()");
 	io.msg(IO_INFO, "This is the expoao build, enjoy.");
@@ -211,11 +220,12 @@ int FOAM_ExpoAO::closed_finish() {
 // MISC ROUTINES //
 /*****************/
 
-int FOAM_ExpoAO::calib() {
-	io.msg(IO_DEB2, "FOAM_ExpoAO::calib()=%s", ptc->calib.c_str());
+int FOAM_ExpoAO::calib(const string &calib_mode, const string &calib_opts) {
+	io.msg(IO_DEB2, "FOAM_ExpoAO::calib()=%s", calib_mode.c_str());
 	int calret = 0;
+	string this_opts = calib_opts;
 	
-	if (ptc->calib == "zero") {							// Calibrate reference/'flat' wavefront
+	if (calib_mode == "zero") {							// Calibrate reference/'flat' wavefront
 		io.msg(IO_INFO, "FOAM_ExpoAO::calib() Zero calibration");
 		calret = ixonwfs->calib_zero(alpao_dm97, ixoncam);
 		
@@ -226,15 +236,15 @@ int FOAM_ExpoAO::calib() {
 		protocol->broadcast(format("ok calib zero :%s", 
 															 ixonwfs->get_refvec_str().c_str() ));
 	} 
-	else if (ptc->calib == "influence") {		// Calibrate influence function
+	else if (calib_mode == "influence") {		// Calibrate influence function
 		// calib influence [actuation amplitude] [singval cutoff] -- 
 		// actuation amplitude: how far should we move the actuators?
 		// singval < 0: drop these modes
 		// singval > 1: use this amount of modes
 		// else: use this amount of singular value
-		double act_amp = popdouble(ptc->calib_opt);
+		double act_amp = popdouble(this_opts);
 		if (act_amp == 0.0) act_amp = 0.08;
-		double sval_cutoff = popdouble(ptc->calib_opt);
+		double sval_cutoff = popdouble(this_opts);
 		if (sval_cutoff == 0.0) sval_cutoff = 0.7;
 		io.msg(IO_INFO, "FOAM_ExpoAO::calib() influence calibration, amp=%g, sval=%g", act_amp, sval_cutoff);
 
@@ -260,9 +270,9 @@ int FOAM_ExpoAO::calib() {
 															 ixonwfs->get_svd_modeuse(alpao_dm97->getname())
 															 ));
 	} 
-	else if (ptc->calib == "offsetvec") {	// Add offset vector to correction 
-		double xoff = popdouble(ptc->calib_opt);
-		double yoff = popdouble(ptc->calib_opt);
+	else if (calib_mode == "offsetvec") {	// Add offset vector to correction 
+		double xoff = popdouble(this_opts);
+		double yoff = popdouble(this_opts);
 		
 		if (ixonwfs->calib_offset(xoff, yoff)) {
 			io.msg(IO_ERR, "FOAM_ExpoAO::calib() offset vector could not be applied!");
@@ -271,18 +281,18 @@ int FOAM_ExpoAO::calib() {
 			io.msg(IO_INFO, "FOAM_ExpoAO::calib() apply offset vector (%g, %g)", xoff, yoff);
 		}
 	}
-	else if (ptc->calib == "svd") {					// (Re-)calculate SVD given the influence matrix
+	else if (calib_mode == "svd") {					// (Re-)calculate SVD given the influence matrix
 		// calib svd [singval cutoff] -- 
 		// singval < 0: drop these modes
 		// singval > 1: use this amount of modes
 		// else: use this amount of singular value
         //! @todo Document this
         //! @bug When singval == # actuators, this code crashes (i.e. 37 virtual actuators and asking singval=37 crashes)
-		double sval_cutoff = popdouble(ptc->calib_opt);
+		double sval_cutoff = popdouble(this_opts);
 		if (sval_cutoff == 0.0) sval_cutoff = 0.7;
 		io.msg(IO_INFO, "FOAM_ExpoAO::calib() re-calc SVD, sval=%g", sval_cutoff);
 		
-		calret = ixonwfs->calc_actmat(alpao_dm97->getname(), sval_cutoff);
+		calret = ixonwfs->update_actmat(alpao_dm97->getname(), sval_cutoff);
 		
 		// If we failed, return.
 		if (calret)
@@ -310,55 +320,7 @@ int FOAM_ExpoAO::calib() {
 
 void FOAM_ExpoAO::on_message(Connection *const conn, string line) {
 	io.msg(IO_DEB2, "FOAM_ExpoAO::on_message(line=%s)", line.c_str());
-	
-	bool parsed = true;
-	string orig = line;
-	string cmd = popword(line);
-	
-	if (cmd == "help") {								// help
-		string topic = popword(line);
-		parsed = false;
-		if (topic.size() == 0) {
-			conn->write(\
-												":==== expoao help =========================\n"
-												":get calibmodes:         List calibration modes\n"
-												":calib <mode> [opts]:    Calibrate AO system.");
-		}
-		else if (topic == "calib") {			// help calib
-			conn->write(\
-									":calib <mode> [opt]:     Calibrate AO system.\n"
-									":  mode=zero:            Set current WFS data as reference.\n"
-									":  mode=influence [singv]:\n"
-									":                        Measure wfs-wfc influence, cutoff at singv\n"
-									":  mode=offsetvec [x] [y]:\n"
-									":                        Add offset vector to correction.\n"
-									":  mode=svd [singv]:     Recalculate SVD wfs-wfc influence, cutoff at singv.");
-		}
-	}
-	else if (cmd == "get") {						// get ...
-		string what = popword(line);
-		if (what == "calibmodes")					// get calibmodes
-			conn->write("ok calibmodes 4 zero influence offsetvec svd");
-		else
-			parsed = false;
-	}
-	else if (cmd == "calib") {					// calib <calmode> <calopts>
-		string calmode = popword(line);
-		string calopts = line;
-		conn->write("ok cmd calib");
-		ptc->calib = calmode;
-		ptc->calib_opt = calopts;
-		ptc->mode = AO_MODE_CAL;
-		{
-			pthread::mutexholder h(&mode_mutex);
-			mode_cond.signal();						// signal a change to the threads
-		}
-	}
-	else
-		parsed = false;
-	
-	if (!parsed)
-		FOAM::on_message(conn, orig);
+	FOAM::on_message(conn, orig);
 }
 
 int main(int argc, char *argv[]) {

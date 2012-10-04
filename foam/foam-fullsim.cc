@@ -44,6 +44,16 @@ SimulCam *simcam;
 Shwfs *simwfs;
 Telescope *simtel;
 
+FOAM_FullSim::FOAM_FullSim(int argc, char *argv[]): FOAM(argc, argv) {
+	io.msg(IO_DEB2, "FOAM_FullSim::FOAM_FullSim()");
+
+	// Register calibration modes
+	calib_modes["zero"] = calib_mode("zero", "Set current WFS data as reference", "", false);
+	calib_modes["influence"] = calib_mode("influence", "Measure wfs-wfc influence, cutoff at singv", "[singv]", false);
+	calib_modes["offsetvec"] = calib_mode("offsetvec", "Add offset vector to correction", "[x] [y]", false);
+	calib_modes["svd"] = calib_mode("svd", "Recalculate SVD wfs-wfc influence, cutoff at singv.", "[singv]", true);
+}
+
 int FOAM_FullSim::load_modules() {
 	io.msg(IO_DEB2, "FOAM_FullSim::load_modules()");
 	io.msg(IO_INFO, "This is the full simulation mode, enjoy.");
@@ -214,11 +224,12 @@ int FOAM_FullSim::closed_finish() {
 // MISC ROUTINES //
 /*****************/
 
-int FOAM_FullSim::calib() {
-	io.msg(IO_DEB2, "FOAM_FullSim::calib()=%s", ptc->calib.c_str());
+int FOAM_FullSim::calib(const string &calib_mode, const string &calib_opts) {
+	io.msg(IO_DEB2, "FOAM_FullSim::calib()=%s", calib_mode.c_str());
 	int calret = 0;
+	string this_opts = calib_opts;
 	
-	if (ptc->calib == "influence") {		// Calibrate influence function
+	if (calib_mode == "influence") {		// Calibrate influence function
 		// calib influence [actuation amplitude] [singval cutoff] -- 
 		// actuation amplitude: how far should we move the actuators?
 		// singval < 0: drop these modes
@@ -303,8 +314,8 @@ int FOAM_FullSim::calib() {
 		double sval_cutoff = popdouble(ptc->calib_opt);
 		if (sval_cutoff == 0.0) sval_cutoff = 0.7;
 		io.msg(IO_INFO, "FOAM_FullSim::calib() re-calc SVD, sval=%g", sval_cutoff);
-
-		calret = simwfs->calc_actmat(simwfc->getname(), sval_cutoff);
+		
+		calret = simwfs->update_actmat(simwfc->getname(), sval_cutoff);
 		
 		// If we failed, return.
 		if (calret)

@@ -53,7 +53,7 @@ using namespace std;
  */
 class FOAM_FullSim : public FOAM {
 public:
-	FOAM_FullSim(int argc, char *argv[]): FOAM(argc, argv) { io.msg(IO_DEB2, "FOAM_FullSim::FOAM_FullSim()"); } 
+	FOAM_FullSim(int argc, char *argv[]);
 	virtual ~FOAM_FullSim() { io.msg(IO_DEB2, "FOAM_FullSim::~FOAM_FullSim()"); } 
 	
 	virtual int load_modules();
@@ -67,7 +67,7 @@ public:
 	virtual int open_loop();
 	virtual int open_finish();
 	
-	virtual int calib();
+	virtual int calib(const string &calib_mode, const string &calib_opts);
 };
 
 #endif // HAVE_FOAM_FULLSIM_H
