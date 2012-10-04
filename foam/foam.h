@@ -303,7 +303,7 @@ public:
 	 
 	 This function should take care of all calibration of the system.
 	 */
-	virtual int calib() = 0;
+	virtual int calib(const string &calib_mode, const string &calib_opts) = 0;
 };
 
 #endif // HAVE_FOAM_H

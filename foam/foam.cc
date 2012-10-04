@@ -537,7 +537,7 @@ int FOAM::mode_calib() {
 	protocol->broadcast("ok mode calib");
 	
 	// Run calibration inside module
-	if (calib()) {
+	if (calib(ptc->calib, ptc->calib_opt)) {
 		io.msg(IO_WARN, "FOAM::calib() failed.");
 		protocol->broadcast("err calib :calibration failed");
 		ptc->mode = AO_MODE_LISTEN;
@@ -619,7 +619,7 @@ void FOAM::on_message(Connection *const conn, string line) {
 		else
 			conn->write("error get :unknown variable");
 	}
-  else if (cmd == "mode") {
+  else if (cmd == "mode") {				// mode <open|closed|listen>
     string mode = popword(line);
 		if (mode == mode2str(AO_MODE_CLOSED)) {
 			conn->write("ok cmd mode closed");
@@ -647,7 +647,34 @@ void FOAM::on_message(Connection *const conn, string line) {
 		}
 		else
 			conn->write("error cmd mode :mode unkown");
-  }
+  } else if (cmd == "calib") {					// calib <calmode> <calopts>
+		string calmode = popword(line);
+		string calopts = line;
+		conn->write("ok cmd calib");
+		
+		// Check if we know this calibration mode
+		calib_mode_t::iterator thiscal = calib_modes.find(calmode);
+		if (thiscal == calib_modes.end()) {
+			conn->write("err calib :calib mode not found");
+			return;
+		}
+		
+		ptc->calib = calmode;
+		ptc->calib_opt = calopts;
+
+		// Check if we can call this calibration mode directly
+		if (thiscal->second.direct) {
+			// Call calibration directly, this might block for a bit
+			calib(ptc->calib, ptc->calib_opt);
+		} else {
+			// Don't call directly, set runmode to CAL and signal main thread
+			ptc->mode = AO_MODE_CAL;
+			{
+				pthread::mutexholder h(&mode_mutex);
+				mode_cond.signal();						// signal a change to the threads
+			}
+		}
+	}
   else
 		conn->write("error :unknown command");
 }
@@ -665,13 +692,13 @@ int FOAM::show_nethelp(const Connection *const conn, string topic, string /*rest
 ":broadcast <msg>:        send a message to all connected clients.\n"
 ":exit or quit:           disconnect from daemon.\n"
 ":shutdown:               shutdown FOAM.");
-	}		
+	}
 	else if (topic == "calib") {
 		string cal_help_str = ":calib <mode> [opts]:    Calibrate AO system.\n";
 		
 		calib_mode_t::iterator it;
 		for (it=calib_modes.begin() ; it != calib_modes.end(); it++ ) {
-			cal_help_str += format(":  mode=%s: %s\n", it->first.c_str(), it->second.help.c_str());
+			cal_help_str += format(":  mode=%s %s: %s\n", it->first.c_str(), it->second.opts.c_str(), it->second.help.c_str());
 		}
 		conn->write(cal_help_str);
 	}
