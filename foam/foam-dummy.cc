@@ -25,6 +25,43 @@
 
 using namespace std;
 
+FOAM_dummy::FOAM_dummy(int argc, char *argv[]): FOAM(argc, argv) {
+	io.msg(IO_DEB2, "FOAM_dummy::FOAM_dummy()");
+	// Register calibration modes
+	
+	calib_modes["dummy"] = calib_mode("dummy", "this is a dummy calibration mode", "", true);
+	calib_modes["hello"] = calib_mode("hello", "calibratin says hello", "<name>", true);
+}
+
+void FOAM_dummy::on_message(Connection *conn, string line) {
+	io.msg(IO_DEB2, "FOAM_dummy::on_message()");
+	bool parsed = true;
+	string orig = line;
+	string cmd = popword(line);
+	
+	if (cmd == "calib") {					// calib <calmode> <calopts>
+		conn->write("ok cmd calib");
+		string calmode = popword(line);
+		string calopts = line;
+		// Check if we know this calibration mode
+		if (calib_modes.find(calmode) != calib_modes.end()) {
+			if (calmode == "dummy")
+				conn->write(format("ok calib %s :opts %s", calmode.c_str(), calopts.c_str()));
+			else if (calmode == "hello")
+				conn->write(format("ok calib %s :hi there %s!", calmode.c_str(), calopts.c_str()));
+		}
+		else {
+			conn->write("err calib :calib mode not found");
+		}
+	} else {
+		parsed = false;
+	}
+	
+	
+	if (!parsed)
+		FOAM::on_message(conn, orig);
+}
+
 int main(int argc, char *argv[]) {
 	// Init FOAM_dummy class
 	FOAM_dummy foam(argc, argv);
