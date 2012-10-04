@@ -77,7 +77,7 @@ shwfs_test_SOURCES = shwfs-test.cc \
 		$(LIB_DIR)/devices.cc \
 		$(LIB_DIR)/simseeing.cc \
 		$(LIB_DIR)/zernike.cc \
-		../foam/foamctrl.cc
+		$(FOAM_DIR)/foamctrl.cc
 
 shwfs_test_CFLAGS = $(COMMON_CFLAGS) $(FFTW_CFLAGS) $(AM_CFLAGS)
 shwfs_test_LDADD = $(LIBSIU_DIR)/libcsv.a \
@@ -116,24 +116,6 @@ if HAVE_HWDEBUG
 # only do this if we want hardware debugging 
 # install the test programs in a foam-test subdir
 
-### WHT telescope guiding test
-
-check_PROGRAMS += wht-test
-
-wht_test_SOURCES = wht-test.cc \
-		$(MODS_DIR)/telescope.cc \
-		$(MODS_DIR)/wht.cc \
-		$(LIB_DIR)/devices.cc \
-		../foam/foamctrl.cc
-
-wht_test_LDADD = $(LIBSIU_DIR)/libio.a \
-		$(LIBSIU_DIR)/libconfig.a \
-		$(LIBSIU_DIR)/libprotocol.a \
-		$(LIBSIU_DIR)/libsocket.a \
-		$(LIBSIU_DIR)/libserial.a \
-		$(LIBSIU_DIR)/libpath.a \
-		$(LDADD)
-
 ### IEEE1394 (Firewire) camera test
 
 if HAVE_DC1394
@@ -154,7 +136,7 @@ andorcam_test_SOURCES = andorcam-test.cc \
 		$(MODS_DIR)/andor.cc \
 		$(MODS_DIR)/camera.cc \
 		$(LIB_DIR)/devices.cc \
-		../foam/foamctrl.cc
+		$(FOAM_DIR)/foamctrl.cc
 
 andorcam_test_LDADD = $(LIBSIU_DIR)/libio.a \
 		$(LIBSIU_DIR)/libconfig.a \
@@ -174,7 +156,7 @@ alpaodm_test_SOURCES = alpaodm-test.cc \
 		$(MODS_DIR)/alpaodm.cc \
 		$(MODS_DIR)/wfc.cc \
 		$(LIB_DIR)/devices.cc \
-		../foam/foamctrl.cc
+		$(FOAM_DIR)/foamctrl.cc
 
 alpaodm_test_LDADD = $(LIBSIU_DIR)/libio.a \
 		$(LIBSIU_DIR)/libconfig.a \
