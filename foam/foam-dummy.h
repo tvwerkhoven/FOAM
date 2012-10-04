@@ -60,7 +60,8 @@ public:
 	virtual int open_loop() { io.msg(IO_DEB2, "FOAM_dummy::open_loop()"); sleep(1); return 0; }
 	virtual int open_finish() { io.msg(IO_DEB2, "FOAM_dummy::open_finish()"); sleep(1); return 0; }
 	
-	virtual int calib() { io.msg(IO_DEB2, "FOAM_dummy::calib()"); return 0; }
+	virtual int calib(const string &calib_mode, const string &calib_opts);
+	
 };
 
 

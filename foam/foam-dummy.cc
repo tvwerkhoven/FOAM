@@ -33,33 +33,24 @@ FOAM_dummy::FOAM_dummy(int argc, char *argv[]): FOAM(argc, argv) {
 	calib_modes["hello"] = calib_mode("hello", "calibratin says hello", "<name>", true);
 }
 
+int FOAM_dummy::calib(const string &calib_mode, const string &calib_opts) {
+	io.msg(IO_DEB2, "FOAM_dummy::calib()=%s", calib_mode.c_str());
+	string this_opts = calib_opts;
+
+	if (calib_mode == "dummy") {
+		protocol->broadcast(format("ok calib dummy :opts= %s", this_opts.c_str()));
+	} else if (calib_mode == "hello") {
+		protocol->broadcast(format("ok calib hello :hi there %s!", this_opts.c_str()));
+	}
+	else
+		return -1;
+
+	return 0;
+}
+
 void FOAM_dummy::on_message(Connection *conn, string line) {
 	io.msg(IO_DEB2, "FOAM_dummy::on_message()");
-	bool parsed = true;
-	string orig = line;
-	string cmd = popword(line);
-	
-	if (cmd == "calib") {					// calib <calmode> <calopts>
-		conn->write("ok cmd calib");
-		string calmode = popword(line);
-		string calopts = line;
-		// Check if we know this calibration mode
-		if (calib_modes.find(calmode) != calib_modes.end()) {
-			if (calmode == "dummy")
-				conn->write(format("ok calib %s :opts %s", calmode.c_str(), calopts.c_str()));
-			else if (calmode == "hello")
-				conn->write(format("ok calib %s :hi there %s!", calmode.c_str(), calopts.c_str()));
-		}
-		else {
-			conn->write("err calib :calib mode not found");
-		}
-	} else {
-		parsed = false;
-	}
-	
-	
-	if (!parsed)
-		FOAM::on_message(conn, orig);
+	FOAM::on_message(conn, line);
 }
 
 int main(int argc, char *argv[]) {
