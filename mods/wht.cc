@@ -155,7 +155,7 @@ int WHT::update_wht_coords(double *const alt, double *const az, double *const de
 
 	// Parse data, find first line after \r\n\r\n
 	size_t dbeg = rawdata.find("\r\n\r\n");
-	if (dbeg == string::npos || dbeg == 0) {
+	if (dbeg == string::npos || dbeg == 0 || rawdata.size() < dbeg + 5) {
 		io.msg(IO_WARN, "WHT::update_wht_coords(): could not find data.");
 		return -1;
 	}
