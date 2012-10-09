@@ -549,11 +549,11 @@ int Shwfs::update_actmat(const string &wfcname, const double singval) {
 	
 	// Swap matrix mat & newmat. 'mat' should point to 'newmat', old 'mat' contents
 	// should be free'd
-#warning This has a bug? Swapping does not work as expected
+#warning This has a bug? Swapping does not work as expected, free also frees our own mat!
 	gsl_matrix_float *oldmat = mat;
 	mat = newmat;
 	newmat = oldmat;
-	gsl_matrix_float_free(oldmat);
+//	gsl_matrix_float_free(oldmat);
 	
 	return 0;
 }
