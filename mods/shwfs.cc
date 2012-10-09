@@ -543,13 +543,16 @@ int Shwfs::update_actmat(const string &wfcname, const double singval) {
 		for (size_t j=0; j<newmat->size2; j++)
 			gsl_matrix_float_set(newmat, i, j, gsl_matrix_get(mat_dbl, i, j));
 	
-	// Wait a bit for calculations to finish, then swap pointers
+	// Wait a bit for calculations using mat to finish, then swap pointers
 	//! @todo This should be handled with mutexes or something?
 	usleep(100000); // = 0.1e6
 	
-	// Swap matrix mat & newmat
+	// Swap matrix mat & newmat. 'mat' should point to 'newmat', old 'mat' contents
+	// should be free'd
+#warning This has a bug? Swapping does not work as expected
 	gsl_matrix_float *oldmat = mat;
 	mat = newmat;
+	newmat = oldmat;
 	gsl_matrix_float_free(oldmat);
 	
 	return 0;
@@ -626,8 +629,9 @@ int Shwfs::calc_actmat(const string &wfcname, const double singval, const bool c
 	fclose(fd);
 	
 	if (check_svd) {
-		// Test inversion, calculate (mat . infmat):
-		gsl_matrix *workmat = gsl_matrix_calloc(mat_dbl->size1, mat_dbl->size2);
+		// Test inversion, calculate (actmat . infmat should be ~identity):
+		gsl_matrix *workmat = gsl_matrix_calloc(mat_dbl->size1, infmat->size2);
+		// workmat = mat_dbl (nact x nmeas) . infmat (nmeas, nact)
 		gsl_blas_dgemm (CblasNoTrans, CblasNoTrans, 1.0, mat_dbl, infmat, 0.0, workmat);
 		
 		// Store pseudo-ident matrix to disk
