@@ -549,12 +549,38 @@ int Shwfs::update_actmat(const string &wfcname, const double singval) {
 	
 	// Swap matrix mat & newmat. 'mat' should point to 'newmat', old 'mat' contents
 	// should be free'd
-#warning This has a bug? Swapping does not work as expected, free also frees our own mat!
-	gsl_matrix_float *oldmat = mat;
-	mat = newmat;
-	newmat = oldmat;
-//	gsl_matrix_float_free(oldmat);
+	gsl_matrix_float *oldmat = calib[wfcname].actmat.mat;
 	
+	fprintf(stderr, "oldmat (%d x %d):\n", (int) oldmat->size1, (int) oldmat->size2);
+	for (size_t i=0; i<oldmat->size1; i++) {
+		for (size_t j=0; j<oldmat->size2; j++) {
+			fprintf(stderr, "%g, ", gsl_matrix_float_get(oldmat, i, j));
+		}
+		fprintf(stderr, "\n");
+	}
+	
+	// Swap matrices!
+	calib[wfcname].actmat.mat = newmat;
+	mat = newmat;
+	
+	fprintf(stderr, "mat (%d x %d):\n", (int) mat->size1, (int) mat->size2);
+	for (size_t i=0; i<mat->size1; i++) {
+		for (size_t j=0; j<mat->size2; j++) {
+			fprintf(stderr, "%g, ", gsl_matrix_float_get(mat, i, j));
+		}
+		fprintf(stderr, "\n");
+	}
+
+//	fprintf(stderr, "newmat (%d x %d):\n", (int) newmat->size1, (int) newmat->size2);
+//	for (size_t i=0; i<newmat->size1; i++) {
+//		for (size_t j=0; j<newmat->size2; j++) {
+//			fprintf(stderr, "%g, ", gsl_matrix_float_get(newmat, i, j));
+//		}
+//		fprintf(stderr, "\n");
+//	}
+
+	gsl_matrix_float_free(oldmat);
+
 	return 0;
 }
 
@@ -578,8 +604,6 @@ int Shwfs::calc_actmat(const string &wfcname, const double singval, const bool c
 	// calib[wfcname].actmat.V -- decomposition of infmat
 
 	// Make matrix aliases
-	gsl_matrix *mat_dbl = calib[wfcname].actmat.mat_dbl;
-
 	gsl_matrix *infmat = calib[wfcname].meas.infmat;
 	gsl_matrix *U = calib[wfcname].actmat.U;
 	gsl_matrix *Sigma = calib[wfcname].actmat.Sigma;
@@ -598,6 +622,10 @@ int Shwfs::calc_actmat(const string &wfcname, const double singval, const bool c
 
 	// Given the SVD components and 'sinval', calculate the new actuation matrix
 	update_actmat(wfcname, singval);
+	
+	// Make matrix aliases (must be *after* update_actmat(), which updates memory)
+	gsl_matrix *mat_dbl = calib[wfcname].actmat.mat_dbl;
+	gsl_matrix_float *mat = calib[wfcname].actmat.mat;
 
 	// Store decomposition to disk
 	Path outf; FILE *fd;
@@ -623,9 +651,9 @@ int Shwfs::calc_actmat(const string &wfcname, const double singval, const bool c
 	fclose(fd);
 	
 	// Store psuedo-inverse matrix to disk
-	outf = mkfname(wfcname + format("_actmat_%zu_%zu.csv", mat_dbl->size1, mat_dbl->size2));
+	outf = mkfname(wfcname + format("_actmat_%zu_%zu.csv", mat->size1, mat->size2));
 	fd = fopen(outf.c_str(), "w+");
-	gsl_matrix_fprintf (fd, mat_dbl, "%.12g");
+	gsl_matrix_float_fprintf (fd, mat, "%.12g");
 	fclose(fd);
 	
 	if (check_svd) {
@@ -754,7 +782,7 @@ int Shwfs::comp_ctrlcmd(const string &wfcname, const gsl_vector_float *shift, gs
 	// of infmat, while it should be of -infmat. Alternative explanation: we 
 	// need to *correct* the shifts measured, not reproduce them
 	// int gsl_blas_sgemv (CBLAS_TRANSPOSE_t TransA, float alpha, const gsl_matrix_float * A, const gsl_vector_float * x, float beta, gsl_vector_float * y)
-	// y = \alpha op(A) x + \beta y
+	// act = -1.0 * op(mat) shift + 0.0 * act
 	gsl_blas_sgemv(CblasNoTrans, -1.0, calib[wfcname].actmat.mat, shift, 0.0, act);
 
 	return 0;
