@@ -183,7 +183,8 @@ int FOAM_FullSim::closed_loop() {
 		vec_str += format("%.3g ", gsl_vector_float_get(wf_meas->wfamp, i));
 	io.msg(IO_INFO, "FOAM_FullSim::wfs_m: %s", vec_str.c_str());
 	
-	simwfs->comp_ctrlcmd(simwfc->getname(), wf_meas->wfamp, simwfc->ctrlparams.err);
+	if (simwfs->comp_ctrlcmd(simwfc->getname(), wf_meas->wfamp, simwfc->ctrlparams.err))
+		io.msg(IO_WARN, "FOAM_FullSim:: comp_ctrlcmd() error!");
 	closedperf_addlog("wfs->comp_ctrlcmd");
 
 	vec_str = "";
@@ -191,7 +192,8 @@ int FOAM_FullSim::closed_loop() {
 		vec_str += format("%.3g ", gsl_vector_float_get(simwfc->ctrlparams.err, i));
 	io.msg(IO_INFO, "FOAM_FullSim::wfc_rec: %s", vec_str.c_str());
 	
-	simwfs->comp_shift(simwfc->getname(), simwfc->ctrlparams.err, wf_meas->wf_full);
+	if (simwfs->comp_shift(simwfc->getname(), simwfc->ctrlparams.err, wf_meas->wf_full))
+		io.msg(IO_WARN, "FOAM_FullSim:: comp_shift() error!");
 	closedperf_addlog("wfs->comp_shift");
 	
 	vec_str = "";
@@ -342,55 +344,8 @@ int FOAM_FullSim::calib(const string &calib_mode, const string &calib_opts) {
 
 void FOAM_FullSim::on_message(Connection *const conn, string line) {
 	io.msg(IO_DEB2, "FOAM_FullSim::on_message(line=%s)", line.c_str());
+	FOAM::on_message(conn, line);
 	
-	bool parsed = true;
-	string orig = line;
-	string cmd = popword(line);
-	
-	if (cmd == "help") {								// help
-		string topic = popword(line);
-		parsed = false;
-		if (topic.size() == 0) {
-			conn->write(\
-												":==== full sim help =========================\n"
-												":get calibmodes:         List calibration modes\n"
-												":calib <mode> [opt]:     Calibrate AO system.");
-		}
-		else if (topic == "calib") {			// help calib
-			conn->write(\
-												":calib <mode> [opt]:     Calibrate AO system.\n"
-												":  mode=zero:            Set current WFS data as reference.\n"
-												":  mode=influence [singv]:\n"
-												":                        Measure wfs-wfc influence, cutoff at singv\n"
-												":  mode=offsetvec [x] [y]:\n"
-												":                        Add offset vector to correction.\n"
-												":  mode=svd [singv]:     Recalculate SVD wfs-wfc influence, cutoff at singv.");
-		}
-	}
-	else if (cmd == "get") {						// get ...
-		string what = popword(line);
-		if (what == "calibmodes")					// get calibmodes
-			conn->write("ok calibmodes 4 zero influence offsetvec svd");
-		else
-			parsed = false;
-	}
-	else if (cmd == "calib") {					// calib <mode> [opt]
-		string calmode = popword(line);
-		string calopts = line;
-		conn->write("ok cmd calib");
-		ptc->calib = calmode;
-		ptc->calib_opt = calopts;
-		ptc->mode = AO_MODE_CAL;
-		{
-			pthread::mutexholder h(&mode_mutex);
-			mode_cond.signal();						// signal a change to the threads
-		}
-	}
-	else
-		parsed = false;
-	
-	if (!parsed)
-		FOAM::on_message(conn, orig);
 }
 
 int main(int argc, char *argv[]) {
