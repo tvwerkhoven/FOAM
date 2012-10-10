@@ -516,13 +516,14 @@ int Shwfs::update_actmat(const string &wfcname, const double singval) {
 	// Fill matrix Sigma with values 1/singval and store to disk
 	gsl_matrix_set_zero(Sigma);
 	for (size_t j=0; j < s->size; j++) {
-		if ((int) j >= use_nmodes)
+		if ((int) j >= use_nmodes) {
 			gsl_matrix_set(Sigma, j, j, 0);
-		
-		double sval = gsl_vector_get(s, j);
-		if (sval != 0) sval = 1.0/sval;
-		
-		gsl_matrix_set(Sigma, j, j, sval);
+		} else {
+			double sval = gsl_vector_get(s, j);
+			if (sval != 0) sval = 1.0/sval;
+			
+			gsl_matrix_set(Sigma, j, j, sval);
+		}
 	}
 
 	// Calculate explicit pseudo-inverse matrix of infmat, store in mat_dbl. The
