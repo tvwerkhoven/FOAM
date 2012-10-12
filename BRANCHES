@@ -84,12 +84,15 @@ v ignore outer edge pixels in statistics calculations -> works
 * topic_ui_histo
 - Reduce histogram to 256 bins
 
-* topic_live_mode (RC)
+* topic_live_mode (implemented, testing)
 - Implement live mode updates
 -> during calibration, store 3 SVD matrices
 -> during runtime, multiply 3 matrices sequentially, with a varying number of singular values
 
 * topic_scale_shift
 - Normalize shifts measured in GUI to size of sub apertures
+
+* topic_dm_zernmat
+- Implement transformation matrix from generalized actuation space to DM actuator space, i.e. from Zernike amplitudes to actuation voltages
 
 * miscellaneous
