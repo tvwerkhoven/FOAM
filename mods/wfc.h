@@ -25,6 +25,7 @@
 #include <stdint.h>
 #include <sys/types.h>
 #include <gsl/gsl_vector.h>
+#include <gsl/gsl_matrix.h>
 
 #include "types.h"
 #include "config.h"
