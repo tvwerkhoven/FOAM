@@ -112,14 +112,15 @@ private:
 		} meas;														//!< Influence measurements
 		
 		struct _actmat {
-			_actmat(): mat(NULL), U(NULL), s(NULL), Sigma(NULL), V(NULL) { }
+			_actmat(): mat(NULL), mat_dbl(NULL), U(NULL), s(NULL), Sigma(NULL), V(NULL) { }
 			gsl_matrix_float *mat;					//!< Actuation matrix = V . Sigma^-1 . U^T (size (nact, nmeas))
+			gsl_matrix *mat_dbl;						//!< Actuation matrix, as double (size (nact, nmeas))
 			gsl_matrix *U;									//!< SVD matrix U of infmat (size (nmeas, nact))
 			gsl_vector *s;									//!< SVD vector s of infmat (size (nact, 1))
 			gsl_matrix *Sigma;							//!< SVD matrix Sigma of infmat (size (nact, nact))
 			gsl_matrix *V;									//!< SVD matrix V of infmat (size (nact, nact))
 			
-			int use_nmodes;									//!< Number of modes to use
+			int use_nmodes;									//!< Number of modes used
 			double use_singval;							//!< Amount of singular values used (i.e. 1.0 for all, 0.5 for half the power in all modes)
 			double condition;								//!< SVD condition, i.e. singval[0]/singval[-1]
 		} actmat;													//!< Actuation matrix & related entitites (inverse of influence measurements)
@@ -261,7 +262,7 @@ public:
 	 */
 	int calib_offset(double x, double y);
 
-	/*! @brief Given shifts, compute control vector 
+	/*! @brief Given a vector of shifts, compute control vector 
 	 
 	 Calculate control vector for a specific wavefront corrector based on 
 	 previously determined influence function (from build_infmat() and
@@ -270,9 +271,9 @@ public:
 	 @param [in] wfcname Name of the wavefront corrector to be used.
 	 @param [in] *shift Vector of measured shifts
 	 @param [out] *act Generalized actuator commands for wfcname (pre-allocated)
-	 @return Computed control vector
+	 @return 0 for ok, 1 for error
 	 */
-	gsl_vector_float *comp_ctrlcmd(const string &wfcname, const gsl_vector_float *shift, gsl_vector_float *act);
+	int comp_ctrlcmd(const string &wfcname, const gsl_vector_float *shift, gsl_vector_float *act);
 	
 	/*! @brief Given a control vector, calculate shifts
 	 
@@ -286,9 +287,9 @@ public:
 	 @param [in] wfcname Name of the wavefront corrector to be used.
 	 @param [in] *act Generalized actuator commands for wfcname 
 	 @param [out] *shift Vector of calculated shifts (pre-allocated)
-	 @return Vector of calculated shifts
+	 @return 0 for ok, 1 for error
 	 */
-	gsl_vector_float *comp_shift(const string &wfcname, const gsl_vector_float *act, gsl_vector_float *shift);
+	int comp_shift(const string &wfcname, const gsl_vector_float *act, gsl_vector_float *shift);
 	
 	/*! @brief Given a shift vector, calculate the tip-tilt
 	 
@@ -354,9 +355,21 @@ public:
 	 
 	 @param [in] wfcname Name of the WFC this WFS is calibrated with
 	 @param [in] singval How much singular value/modes to include
-	 @param [in] basis Basis for which singval counts
+	 @param [in] check_svd Check SVD results for consistency
 	 */	 
-	int calc_actmat(const string &wfcname, const double singval, const bool check_svd=true, const enum wfbasis basis = SENSOR);
+	int calc_actmat(const string &wfcname, const double singval, const bool check_svd=true);
+	
+	/*! @brief Update actuation matrix to drive Wfc, given previously calibrated data
+	 
+	 'Singval' can be used to tweak the SVD results:
+	 if singval < 0: drop 'singval' number of modes (i.e. if nmodes = 50, singval = -5, use 45 modes)
+	 if singval > 1: use this amount of modes
+	 else: singval is between 0 and 1, use this fraction of the total singular value in the reconstruction (i.e. for 0.9, use N modes such that we have 90% of the sum of all singular values)
+	 
+	 @param [in] wfcname Name of the WFC this WFS is calibrated with
+	 @param [in] singval How much singular value/modes to include
+	 */
+	int update_actmat(const string &wfcname, const double singval);
 	
 	/*! @brief Represent singular value array as string
 	 

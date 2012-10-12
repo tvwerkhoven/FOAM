@@ -149,6 +149,19 @@ protected:
 		bool ok;													//!< Track whether a network command is ok or not
 	} netio;
 
+	struct calib_mode {									//!< Struct for storing calibration mode properties
+		calib_mode(): name("undef"), help("undef"), opts(""), direct(false) {}
+		calib_mode(string n, string h, string o, bool d): name(n), help(h), opts(o), direct(d) { }
+
+		string name;											//!< Name of this calibration mode (i.e. 'zero', 'influence', etc.)
+		string help;											//!< Help text for this calibration mode
+		string opts;											//!< Help string for options, i.e. "[x] [y]"
+		bool direct;											//!< Flag for whether we can call this calibration mode direct or not (if we call it directly, the calibration function is called from the network listening thread, otherwise it is called form the main loop thread)
+	};
+	typedef std::map<string, calib_mode> calib_mode_t;
+	
+	calib_mode_t calib_modes; //!< List of calibration modes supported by FOAM, should be registered in
+
 	Protocol::Server *protocol;					//!< Network control socket
 	
 	pthread::mutex mode_mutex;					//!< Network thread <-> main thread mutex/cond pair
@@ -290,7 +303,7 @@ public:
 	 
 	 This function should take care of all calibration of the system.
 	 */
-	virtual int calib() = 0;
+	virtual int calib(const string &calib_mode, const string &calib_opts) = 0;
 };
 
 #endif // HAVE_FOAM_H

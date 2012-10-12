@@ -116,7 +116,7 @@ int FOAM_hwtest::closed_finish() {
 // MISC ROUTINES //
 /*****************/
 
-int FOAM_hwtest::calib() {
+int FOAM_hwtest::calib(const string &calib_mode, const string &calib_opts) {
 	io.msg(IO_DEB2, "FOAM_hwtest::calib()=%s", ptc->calib.c_str());
 
 	if (ptc->calib == "INFLUENCE") {

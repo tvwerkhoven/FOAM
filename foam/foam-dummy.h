@@ -46,11 +46,11 @@ using namespace std;
  */
 class FOAM_dummy : public FOAM {
 public:
-	FOAM_dummy(int argc, char *argv[]): FOAM(argc, argv) { io.msg(IO_DEB2, "FOAM_dummy::FOAM_dummy()"); } 
-	virtual ~FOAM_dummy() { io.msg(IO_DEB2, "FOAM_dummy::~FOAM_dummy()"); } 
+	FOAM_dummy(int argc, char *argv[]);
+	virtual ~FOAM_dummy() { io.msg(IO_DEB2, "FOAM_dummy::~FOAM_dummy()"); }
 	
 	virtual int load_modules() { io.msg(IO_DEB2, "FOAM_dummy::load_modules()"); return 0; } 
-	virtual void on_message(Connection *connection, string line) { FOAM::on_message(connection, line); io.msg(IO_DEB2, "FOAM_dummy::on_message()"); } 
+	virtual void on_message(Connection *connection, string line);
 		
 	virtual int closed_init() { io.msg(IO_DEB2, "FOAM_dummy::closed_init()"); return 0; }
 	virtual int closed_loop()  { io.msg(IO_DEB2, "FOAM_dummy::closed_loop()"); return 0; }
@@ -60,7 +60,8 @@ public:
 	virtual int open_loop() { io.msg(IO_DEB2, "FOAM_dummy::open_loop()"); sleep(1); return 0; }
 	virtual int open_finish() { io.msg(IO_DEB2, "FOAM_dummy::open_finish()"); sleep(1); return 0; }
 	
-	virtual int calib() { io.msg(IO_DEB2, "FOAM_dummy::calib()"); return 0; }
+	virtual int calib(const string &calib_mode, const string &calib_opts);
+	
 };
 
 

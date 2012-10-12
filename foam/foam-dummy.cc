@@ -25,6 +25,34 @@
 
 using namespace std;
 
+FOAM_dummy::FOAM_dummy(int argc, char *argv[]): FOAM(argc, argv) {
+	io.msg(IO_DEB2, "FOAM_dummy::FOAM_dummy()");
+	// Register calibration modes
+	
+	calib_modes["dummy"] = calib_mode("dummy", "this is a dummy calibration mode", "", true);
+	calib_modes["hello"] = calib_mode("hello", "calibratin says hello", "<name>", true);
+}
+
+int FOAM_dummy::calib(const string &calib_mode, const string &calib_opts) {
+	io.msg(IO_DEB2, "FOAM_dummy::calib()=%s", calib_mode.c_str());
+	string this_opts = calib_opts;
+
+	if (calib_mode == "dummy") {
+		protocol->broadcast(format("ok calib dummy :opts= %s", this_opts.c_str()));
+	} else if (calib_mode == "hello") {
+		protocol->broadcast(format("ok calib hello :hi there %s!", this_opts.c_str()));
+	}
+	else
+		return -1;
+
+	return 0;
+}
+
+void FOAM_dummy::on_message(Connection *conn, string line) {
+	io.msg(IO_DEB2, "FOAM_dummy::on_message()");
+	FOAM::on_message(conn, line);
+}
+
 int main(int argc, char *argv[]) {
 	// Init FOAM_dummy class
 	FOAM_dummy foam(argc, argv);

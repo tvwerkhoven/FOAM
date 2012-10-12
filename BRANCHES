@@ -49,7 +49,7 @@ Improve influence matrix calibration if we have a flat reset() mirror shape
 -> Give amplitude for influence matrix calibration as parameter OK
 -> Test 0 control versus 0 volts OK
 
-* topic_testing_dummy (implemented)
+* topic_testing_dummy (implemented in master, RC)
 Use FOAM_dummy in hardware tests so we have small stand-alone programs for each piece of hardware.
 
 * topic_usability_fix (implemented in master)
@@ -81,15 +81,22 @@ v ignore outer edge pixels in statistics calculations -> works
 * topic_ui_wfcgain (implemented, testing)
 - Implement gain setting for WFC
 
-# topic_ui_histo
+* topic_ui_histo
 - Reduce histogram to 256 bins
 
+<<<<<<< HEAD
 * topic_live_mode (RC)
+=======
+* topic_live_mode
+>>>>>>> topic_live_mode
 - Implement live mode updates
 -> during calibration, store 3 SVD matrices
 -> during runtime, multiply 3 matrices sequentially, with a varying number of singular values
 
+<<<<<<< HEAD
 * topic_scale_shift
 - Normalize shifts measured in GUI to size of sub apertures
 
+=======
+>>>>>>> topic_live_mode
 * miscellaneous

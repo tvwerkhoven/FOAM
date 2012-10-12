@@ -51,7 +51,7 @@ using namespace std;
  */
 class FOAM_ExpoAO : public FOAM {
 public:
-	FOAM_ExpoAO(int argc, char *argv[]): FOAM(argc, argv) { io.msg(IO_DEB2, "FOAM_ExpoAO::FOAM_ExpoAO()"); } 
+	FOAM_ExpoAO(int argc, char *argv[]);
 	virtual ~FOAM_ExpoAO() { io.msg(IO_DEB2, "FOAM_ExpoAO::~FOAM_ExpoAO()"); } 
 	
 	virtual int load_modules();
@@ -65,7 +65,7 @@ public:
 	virtual int open_loop();
 	virtual int open_finish();
 	
-	virtual int calib();
+	virtual int calib(const string &calib_mode, const string &calib_opts);
 };
 
 #endif // HAVE_FOAM_EXPOAO_H
