@@ -127,10 +127,10 @@ Wfs::wf_info_t* Wfs::measure(Camera::frame_t *) {
 		wf.basis = SENSOR;
 	}
 	
+	int randoff = (int) (drand48()*wf.nmodes);
 	for (int n=0; n<wf.nmodes; n++)
-		gsl_vector_float_set(wf.wfamp, n, drand48()*2.0-1.0);
+		gsl_vector_float_set(wf.wfamp, n, (n-randoff)*2.0/(wf.nmodes)-1.0);
 	
-	//return 0;
 	return &wf;
 }
 
