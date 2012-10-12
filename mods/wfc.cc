@@ -28,6 +28,7 @@
 #include "types.h"
 #include "config.h"
 #include "path++.h"
+#include "imgdata.h"
 
 #include "foamctrl.h"
 #include "devices.h"
@@ -35,24 +36,32 @@
 
 Wfc::Wfc(Io &io, foamctrl *const ptc, const string name, const string type, const string port, Path const & conffile, const bool online):
 Device(io, ptc, name, wfc_type + "." + type, port, conffile, online),
-real_nact(0), virt_nact(0), use_actmap(false), 
+real_nact(0), virt_nact(0), actmap_mat(NULL),
 have_waffle(false),
-offset(NULL), offset_str("0"), control(NULL), maxact(1.0) {	
+offset_str("0"), maxact(1.0) {
 	io.msg(IO_DEB2, "Wfc::Wfc()");
 
 	try {
-		// Get actuator map. Syntax should be '<N_virt> [virt_act1 real_act1,real_act2,real_act3 [virt_act2 real_act1,real_act2,real_act3]]
-		str_actmap = cfg.getstring("actmap", "");
-		
 		// Get waffle pattern actuators
 		str_waffle_odd = cfg.getstring("waffle_odd", "");
 		str_waffle_even = cfg.getstring("waffle_even", "");
+		
+		// Get actuation mapping, relative to data dir
+		actmap_f = cfg.getstring("actmapfile", "");
+		io.msg(IO_DEB1, "Wfc::Wfc(): Got actmap file: %s", actmap_f.c_str());
 		
 	} catch (std::runtime_error &e) {
 		io.msg(IO_ERR | IO_FATAL, "Wfc: problem with configuration file: %s", e.what());
 	} catch (...) { 
 		io.msg(IO_ERR | IO_FATAL, "Wfc: unknown error at initialisation.");
 		throw;
+	}
+	
+	// Load actuation mapping matrix
+	if (actmap_f != "") {
+		actmap_f = ptc->datadir + actmap_f;
+		actmap_mat = load_actmap_matrix(actmap_f);
+		virt_nact = actmap_mat->size2;
 	}
 	
 	add_cmd("set gain");
@@ -75,15 +84,55 @@ offset(NULL), offset_str("0"), control(NULL), maxact(1.0) {
 
 Wfc::~Wfc() {
 	io.msg(IO_DEB2, "Wfc::~Wfc()");
-	if (use_actmap)
-		gsl_vector_float_free(ctrlparams.ctrl_vec);
+	
+	// WFC control vectors
+	gsl_vector_float_free(ctrlparams.ctrl_vec);
+	gsl_vector_float_free(ctrlparams.offset);
+
 	gsl_vector_float_free(ctrlparams.target);
 	gsl_vector_float_free(ctrlparams.err);
 	gsl_vector_float_free(ctrlparams.prev);
 	gsl_vector_float_free(ctrlparams.pid_int);
+	
+	// Work vector (same size as target, virt_nact)
+	gsl_vector_float_free(workvec);
 
-	gsl_vector_float_free(offset);
-	gsl_vector_float_free(control);
+	// Actuation mapping matrix
+	gsl_matrix_float_free(actmap_mat);
+}
+
+gsl_matrix_float *Wfc::load_actmap_matrix(Path filepath) {
+	
+	io.msg(IO_DEB2, "Wfc::load_actmap_matrix(), file=%s", filepath.c_str());
+	
+	if (!filepath.r())
+		return NULL;
+	
+	ImgData actmap_tmp(io, filepath, ImgData::AUTO);
+	if (actmap_tmp.geterr() != ImgData::ERR_NO_ERROR)
+		throw exception(format("Wfc::load_actmap_matrix() ImgData returned an error: %d", actmap_tmp.geterr()));
+	
+	io.msg(IO_XNFO, "Wfc::load_actmap_matrix() got data: %zux%zux%d",
+				 actmap_tmp.getwidth(), actmap_tmp.getheight(), actmap_tmp.getbpp());
+	
+	// We own the data now, we need to free it as well
+	gsl_matrix *actmap_dbl = actmap_tmp.as_GSL(true);
+
+	if (!actmap_dbl)
+		throw std::runtime_error("Wfc::load_actmap_matrix() Could not load actuation matrix.");
+
+	// Convert from double to float
+	gsl_matrix_float *actmap_flt = gsl_matrix_float_calloc(actmap_dbl->size1, actmap_dbl->size2);
+	
+	// Copy data
+	for (size_t i=0; i<actmap_flt->size1; i++)
+		for (size_t j=0; j<actmap_flt->size2; j++)
+			gsl_matrix_float_set(actmap_flt, i, j, gsl_matrix_get(actmap_dbl, i, j));
+		
+	// Free actmap as double
+	gsl_matrix_free(actmap_dbl);
+	
+	return actmap_flt;
 }
 
 string Wfc::ctrl_as_str(const char *fmt) const {
@@ -102,26 +151,21 @@ string Wfc::ctrl_as_str(const char *fmt) const {
 }
 
 int Wfc::ctrl_apply_actmap() {
-	// If we don't use act_map, ctrl_vec already points to target and we're done
-	if (!use_actmap) {
-//		io.msg(IO_DEB2, "Wfc::ctrl_apply_actmap() no act_map");
-		return 0;
-	}
-	string ctrl_str;
-	
-	// Loop over all virtual actuators in 'actmap'
-	for (size_t v_act=0; v_act<actmap.size(); v_act++) {
-		float ctrl_val = gsl_vector_float_get(ctrlparams.target, v_act);
-//		ctrl_str += format("%d (%g) -> ", v_act, ctrl_val);
-		// Map over all real actuators associated with virtual actuator 'v_act'
-		for (size_t r_act=0; r_act<actmap.at(v_act).size(); r_act++) {
-			// Set real actuator 'r_act' to value of 'v_act'
-			gsl_vector_float_set(ctrlparams.ctrl_vec, actmap.at(v_act).at(r_act), ctrl_val);
-//			ctrl_str += format("%d ", actmap.at(v_act).at(r_act));
-		}
-	}
-//	io.msg(IO_DEB2, "Wfc::ctrl_apply_actmap() %s", ctrl_str.c_str());
+	// This should do: ctrl_vec = actmat . (target + offset)
+	// If actmat = 0: ctrl_vec = target + offset
 
+	// Copy ctrlparams.target to workvec
+	gsl_blas_scopy(ctrlparams.target, workvec);
+
+	// Compute workvec += offset, which gives workvec = ctrlparams.target + offset
+	gsl_blas_saxpy(1.0, ctrlparams.offset, workvec);
+	
+	// Compute ctrl_vec = actmat . workvec
+	if (actmap_mat)
+		gsl_blas_sgemv(CblasNoTrans, 1.0, actmap_mat, workvec, 0.0, ctrlparams.ctrl_vec);
+	else
+		gsl_blas_scopy(workvec, ctrlparams.ctrl_vec);
+	
 	return 0;
 }
 
@@ -152,6 +196,7 @@ int Wfc::update_control(const gsl_vector_float *const error, const gain_t g, con
 		gsl_blas_saxpy(g.p, ctrlparams.err, ctrlparams.target);
 	}
 	
+	//! @todo Move this somewhere deeper, clamping should always happen?
 	// Clamp WFC control values if requested
 	for (size_t actid=0; actid<ctrlparams.target->size; actid++) {
 		float thisact = gsl_vector_float_get(ctrlparams.target, actid);
@@ -216,7 +261,6 @@ float Wfc::get_control_act(const size_t act_id) {
 	return gsl_vector_float_get(ctrlparams.target, act_id);
 }
 
-
 int Wfc::set_wafflepattern(const float val) {
 	if (!have_waffle) {
 		io.msg(IO_WARN, "Wfc::set_wafflepattern() no waffle!");
@@ -237,7 +281,6 @@ int Wfc::set_wafflepattern(const float val) {
 	for (size_t idx=0; idx < waffle_odd.size(); idx++)
 		gsl_vector_float_set(ctrlparams.ctrl_vec, waffle_odd.at(idx), -val);
 	
-    //! @bug Waffle pattern works for *all* actuators, not just actmap, fix
 	return 0;
 }
 
@@ -254,24 +297,10 @@ int Wfc::set_randompattern(const float maxval) {
 	return ctrl_apply_actmap();
 }
 
-int Wfc::actuate(const bool block) {
-	// Copy ctrlparams.ctrl_vec to control
-	gsl_vector_float_memcpy(control, ctrlparams.ctrl_vec);
-	// Add offset vector from actuation signal before sending it to the DM
-//	When initially running the DM calibration, the shape is not at all flat
-//	at '0' control. When the first influence matrix is obtained and the 
-//	system has run in closed loop for a bit, the DM will converge to an 
-//		actuation signal that is more flat than '0'. We can set this acutation 
-//		signal as an offset so that we always add it to the control signal. When
-//		we then set the DM to '0', this offset is added such that it is as flat
-//		as possible.
-	gsl_vector_float_add(control, offset);
-	return dm_actuate(block);
-}
-
 int Wfc::calibrate() {
-	// Parse actuator map string
-	virt_nact = parse_actmap(str_actmap);
+	// Check if we have an actuation map
+	if (actmap_mat == NULL)
+		virt_nact = real_nact;
 	
 	// Parse waffle pattern strings (only here because otherwise real_nact is 0)
 	parse_waffle(str_waffle_odd, str_waffle_even);
@@ -285,25 +314,29 @@ int Wfc::calibrate() {
 	ctrlparams.prev = gsl_vector_float_calloc(virt_nact);
 	gsl_vector_float_free(ctrlparams.pid_int);
 	ctrlparams.pid_int = gsl_vector_float_calloc(virt_nact);
-	
-	if (use_actmap) {
-		gsl_vector_float_free(ctrlparams.ctrl_vec);
-		ctrlparams.ctrl_vec = gsl_vector_float_calloc(real_nact);
-	} else {
-		ctrlparams.ctrl_vec = ctrlparams.target;
-	}
 
-	gsl_vector_float_free(offset);
-	offset = gsl_vector_float_calloc(real_nact);
-	gsl_vector_float_free(control);
-	control = gsl_vector_float_calloc(real_nact);
+	// Memory for offset control
+	gsl_vector_float_free(ctrlparams.offset);
+	ctrlparams.offset = gsl_vector_float_calloc(virt_nact);
+
+	// Memory for output control
+	gsl_vector_float_free(ctrlparams.ctrl_vec);
+	ctrlparams.ctrl_vec = gsl_vector_float_calloc(real_nact);
+	
+	// Work vector (same size as target, virt_nact)
+	gsl_vector_float_free(workvec);
+	workvec = gsl_vector_float_calloc(virt_nact);
 	
 	set_calib(true);
 	return 0;
 }
 
 int Wfc::reset() {
-	set_control(0.0);
+	if (!get_calib())
+		calibrate();
+
+	gsl_vector_float_set_zero(ctrlparams.ctrl_vec);
+	
 	actuate();
 	return 0;
 }
@@ -362,50 +395,6 @@ void Wfc::parse_waffle(string &odd, string &even) {
 	have_waffle = true;
 }
 
-int Wfc::parse_actmap(string &map) {
-	io.msg(IO_DEB2, "Wfc::parse_actmap(map=%s)", map.c_str());
-	if (map.size() <= 0)
-		return real_nact;
-	
-	string actmap_result;
-	// First 'word' is the number of virtual actuators
-	int n_virt = popint(map);
-	
-	actmap_result = format("n_vact: %d ", n_virt);
-	
-	int this_vact;
-	string these_ract;
-	int this_ract;
-	std::vector<int> this_actmap;
-	int vact_count=0;
-	
-	while (map.size() > 0) {
-		vact_count++;
-		this_actmap.clear();
-		// Each virtual actuator map syntax is like: 'v_act r_act1,r_act2,r_act3'
-		this_vact = popint(map);
-		actmap_result += format("vact %d -> ", this_vact);
-		
-		// This will contain 'r_act1,r_act2,...'
-		these_ract = popword(map);
-		while (these_ract.size() > 0) {
-			this_ract = str2int(popword(these_ract, ","));
-			this_actmap.push_back(this_ract);
-			actmap_result += format("%d ", this_ract);
-		}
-		actmap.push_back(this_actmap);
-	}
-	if (n_virt != vact_count)
-		io.msg(IO_ERR, "Wfc::parse_actmap() n_virt %d != vact_count %d", n_virt, vact_count);
-	if (n_virt != (int) actmap.size())
-		io.msg(IO_ERR, "Wfc::parse_actmap() n_virt %d != actmap.size %zu", n_virt, actmap.size());
-
-	io.msg(IO_XNFO, "Wfc::parse_actmap() map: %s", actmap_result.c_str());
-
-	use_actmap = true;
-	return actmap.size();
-}
-
 void Wfc::on_message(Connection *const conn, string line) { 
 	string orig = line;
 	string command = popword(line);
@@ -445,11 +434,11 @@ void Wfc::on_message(Connection *const conn, string line) {
 			net_broadcast(format("ok maxact %g", maxact));
 		} else if (what == "offset") {		// set offset <off0> <off1> ... <offN>
 			conn->addtag("offset");
-			offset_str = format("%zu", offset->size);
+			offset_str = format("%zu", ctrlparams.offset->size);
 			double thisoff = 0;
-			for (size_t actid=0; actid < offset->size; actid++) {
+			for (size_t actid=0; actid < ctrlparams.offset->size; actid++) {
 				thisoff = popdouble(line);
-				gsl_vector_float_set(offset, actid, thisoff);
+				gsl_vector_float_set(ctrlparams.offset, actid, thisoff);
 				offset_str += format(" %.3g", thisoff);
 			}
 			net_broadcast(format("ok offset %s", offset_str.c_str()));
