@@ -50,6 +50,7 @@ void WfsCtrl::on_connected(bool conn) {
 	log.term(format("%s (%d)", __PRETTY_FUNCTION__, conn));
 	
 	if (conn) {
+		send_cmd("measuretest");
 		send_cmd("get modes");
 		send_cmd("get basis");
 		send_cmd("get camera");
