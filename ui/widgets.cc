@@ -43,10 +43,11 @@ static void log_term(string msg) {
 	}
 }
 
-BarGraph::BarGraph(const int width, const int height):
+BarGraph::BarGraph(const int width, const int height, const float scale):
 e_minval("Min"), e_maxval("Max"), e_allval("All"),
+e_scale("Scale", ""),
 b_refresh(Gtk::Stock::REFRESH),
-b_autoupd("Auto Update"), e_autointval("", "s"),
+b_autoupd("Auto"), e_autointval("", "s"),
 gr_align(0.5, 0.5, 0.0, 0.0) {
 	// Init lastupd to 0 ('never')
 	lastupd.tv_sec = 0;
@@ -60,10 +61,15 @@ gr_align(0.5, 0.5, 0.0, 0.0) {
 	e_allval.set_width_chars(14);
 	e_allval.set_editable(false);
 	
+	e_scale.set_digits(1);
+	e_scale.set_value(1.0);
+	e_scale.set_increments(0.1, 1);
+	e_scale.set_range(0.0, 100.0);
+	
 	e_autointval.set_digits(2);
-	e_autointval.set_value(1.0);
+	e_autointval.set_value(scale);
 	e_autointval.set_increments(0.1, 1);
-	e_autointval.set_range(0, 10.0);
+	e_autointval.set_range(0.0, 10.0);
 
 	// Initialize pixbuf and image
 	gr_pixbuf = Gdk::Pixbuf::create(Gdk::COLORSPACE_RGB, false, 8, width, height);
@@ -78,8 +84,10 @@ gr_align(0.5, 0.5, 0.0, 0.0) {
 	vbox1.pack_start(hbox0, PACK_SHRINK);
 	vbox1.pack_start(e_allval, PACK_SHRINK);
 	vbox1.pack_start(hsep1, PACK_SHRINK);
-	vbox1.pack_start(b_refresh, PACK_SHRINK);
 
+	vbox1.pack_start(e_scale, PACK_SHRINK);
+	
+	hbox1.pack_start(b_refresh, PACK_SHRINK);
 	hbox1.pack_start(b_autoupd, PACK_SHRINK);
 	hbox1.pack_start(e_autointval, PACK_SHRINK);
 
@@ -96,6 +104,8 @@ gr_align(0.5, 0.5, 0.0, 0.0) {
 	// Connect events
 	b_refresh.signal_clicked().connect(sigc::mem_fun(*this, &BarGraph::do_update));
 	b_autoupd.signal_clicked().connect(sigc::mem_fun(*this, &BarGraph::on_autoupd_clicked));
+	
+	e_scale.signal_value_changed().connect(sigc::mem_fun(*this, &BarGraph::do_update));
 	
 	//! @todo This is very slow at 10Hz already?
 	refresh_timer = Glib::signal_timeout().connect(sigc::mem_fun(*this, &BarGraph::on_timeout), 1000.0/30.0);
@@ -178,7 +188,8 @@ void BarGraph::on_update(const std::vector< double > &graph_vals) {
 	
 	uint8_t col[3];
 	for (int n = 0; n < nvals; n++) {
-		double amp = clamp(graph_vals.at(n), (double)-1.0, (double)1.0);
+		// Divide by e_scale to scale bars, clamp to [-1, 1]
+		double amp = clamp(graph_vals.at(n)/e_scale.get_value(), (double)-1.0, (double)1.0);
 		int height = amp*h/2.0; // should be between -h/2 and h/2
 		
 		// Set bar color (red 2%, orange 10% or green rest):

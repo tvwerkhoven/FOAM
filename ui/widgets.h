@@ -172,6 +172,8 @@ private:
 	LabeledEntry e_maxval;										//!< Maximum value in bargraph
 	LabeledEntry e_allval;										//!< Vector of all values
 	
+	LabeledSpinEntry e_scale;									//!< Bar graph scale
+	
 	Gtk::HSeparator hsep1;
 	Gtk::Button b_refresh;										//!< Update once button
 	
@@ -192,7 +194,7 @@ private:
 	struct timeval lastupd;										//!< Time of last update
 	
 public:
-	BarGraph(const int width=480, const int height=100);
+	BarGraph(const int width=480, const int height=100, const float scl=1.0);
 	~BarGraph();
 
 	sigc::slot<void> slot_update;							//!< Slot to request update

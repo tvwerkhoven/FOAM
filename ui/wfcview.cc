@@ -36,7 +36,7 @@ wfc_nact("#Act."),
 calib_frame("Calibration"), calib_setall("Set all to"), calib_setactid("Set act #"), calib_setactval("to"),
 calib_random("Set Random"), calib_waffle("Set Waffle"), calib_amp("amp."),
 ctrl_frame("Control"), ctrl_gainp("Gain", "P", -INFINITY), ctrl_gaini("", "I", -INFINITY), ctrl_gaind("", "D", -INFINITY),
-wfcact_frame("WFC actuators"), wfcact_gr(480,100)
+wfcact_frame("WFC actuators"), wfcact_gr(480, 100, 8.0)
 {
 	log.term(format("%s", __PRETTY_FUNCTION__));
 	
