@@ -13,6 +13,7 @@ LIBSIU_COMMON = $(LIBSIU_DIR)/libsocket.a \
 		$(LIBSIU_DIR)/libprotocol.a \
 		$(LIBSIU_DIR)/libperflogger.a \
 		$(LIBSIU_DIR)/libpath.a \
+		$(LIBSIU_DIR)/libimgdata.a \
 		$(LIBSIU_DIR)/libsighandle.a
 		
 
@@ -70,7 +71,6 @@ foam_simstat_CPPFLAGS = -DFOAM_DEFAULTCONF=\"$(sysconfdir)/foam/foam-simstat.cfg
 		$(SIMSTAT_CFLAGS) $(AM_CPPFLAGS)
 
 foam_simstat_LDADD = $(LIBSIU_COMMON) \
-		$(LIBSIU_DIR)/libimgdata.a \
 		$(LIBSIU_DIR)/libcsv.a \
 		$(LDADD)
 
@@ -150,7 +150,6 @@ foam_fullsim_SOURCES += foam-fullsim.h \
 		$(LIB_DIR)/simseeing.h
 
 foam_fullsim_LDADD = $(LIBSIU_COMMON) \
-		$(LIBSIU_DIR)/libimgdata.a \
 		$(LIBSIU_DIR)/libcsv.a \
 		$(LDADD)
 

@@ -159,6 +159,7 @@ alpaodm_test_SOURCES = alpaodm-test.cc \
 		$(FOAM_DIR)/foamctrl.cc
 
 alpaodm_test_LDADD = $(LIBSIU_DIR)/libio.a \
+		$(LIBSIU_DIR)/libimgdata.a \
 		$(LIBSIU_DIR)/libconfig.a \
 		$(LIBSIU_DIR)/libprotocol.a \
 		$(LIBSIU_DIR)/libpath.a \
