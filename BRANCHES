@@ -84,19 +84,12 @@ v ignore outer edge pixels in statistics calculations -> works
 * topic_ui_histo
 - Reduce histogram to 256 bins
 
-<<<<<<< HEAD
 * topic_live_mode (RC)
-=======
-* topic_live_mode
->>>>>>> topic_live_mode
 - Implement live mode updates
 -> during calibration, store 3 SVD matrices
 -> during runtime, multiply 3 matrices sequentially, with a varying number of singular values
 
-<<<<<<< HEAD
 * topic_scale_shift
 - Normalize shifts measured in GUI to size of sub apertures
 
-=======
->>>>>>> topic_live_mode
 * miscellaneous
