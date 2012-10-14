@@ -38,16 +38,81 @@ const string wfc_type = "wfc";
 /*!
  @brief Base wavefront corrector class. This will be overloaded with the specific WFC type
  
+<<<<<<< Updated upstream
+=======
+ \section wfc_ctrl WFC control overview
+ 
+ WFC control goes through several steps, depending on what configuration data is
+ available.
+ 
+ - Clamp values (maxact)
+ - Control offset (ctrl_offset)
+ - Actuation mapping matrix (actmap)
+ 
+ The input control signal is first clamped between [-maxact, maxact]. Then an
+ offset vector is added which can be used to correct non-flatness of the 
+ mirror. Finally, the control vector is multiplied by an optional actuation
+ mapping which maps from control space (i.e. Zernike modes, KL modes, mirror 
+ modes) to the WFC actuator space. In the case that this matrix is identity, 
+ operations all happen in WFC actuator space.
+ 
+ If an actuation mapping is used, the number of control parameters of the WFC
+ is usually reduced, and actmap is not square.
+  
+ \section wfc_actmap Actuator mapping
+ 
+ In some cases, one does not want to drive the WFC actuators as they are, but
+ drive a set of modes instead. This can be achieved by using a matrix that
+ maps the desired actuation basis to WFC actuator signals, which should be of
+ size (real_nact, n_modes) with real_nact < n_modes such that a vector with
+ n_modes elements results in a control vector of real_nact.
+
+ Controlling a mirror using (Zernike) modes instead of directly setting
+ actuators has advantages because control is more stable and robust. When
+ controlling the mirror directly it is possible that certain modes invisible
+ to the wavefront sensor are introduced (such as waffle modes). This is
+ greatly reduced when using modal control.
+ 
+ \section wfc_cmds WFC control commands
+ 
+ The WFC can be driven in various ways. The following commands obey the 
+ actuator mapping:
+ 
+ - update_control() add vector of amplitude to all modes, normal operation
+ - set_control() set all modes to a certain value
+ - set_act() set one mode to a certain value
+ - set_randompattern() set all modes to random values:
+ 
+ The following commands always work directly on WFC actuators:
+
+ - set_wafflepattern() set all actuators to a waffle pattern
+ - reset() set all actuators to 0
+
+>>>>>>> Stashed changes
  \section wfc_netio Network IO
  
  Valid commends include:
  - set gain \<p\> \<i\> \<d\>: change PID gain for WFC
  - get gain: return current gain
+ - get nact: get number of actuators
+ - get ctrl: get control vector Wfc::ctrl_params.target
+ - set offset <act0> [act1] [act2] ... [actn]: set offset control vector Wfc::ctrl_params.offset
+ - get offset: return offset vector
+ - set maxact <float>: set maximum actuation amplitude Wfc::maxact
+ - get maxact: return maximum actuation amplitude
+ - act waffle <amplitude>: set a waffle pattern on the WFC
+ - act random <amplitude>: set WFC to random actuation
+ - act all <actval>: set all modes to **actval**
+ - act one <modeid> <actval>: set mode <modeid> to <actval>
+ - act vec <act0> [act1] ... [actn]: set WFC to this actuation vector
  
  \section wfc_cfg Configuration parameters
  
  - waffle_odd / waffle_even: space or comma-seperated list of actuators for a 
 	 waffle pattern. Stored in waffle_even and waffle_odd.
+ - actmapfile: FITS file containing a matrix with an actuation map. This 
+ should be <virt_nact> by <real_nact>. If present, all WFC commands will use 
+ this mapping, see \ref wfc_actmap.
 
  */
 class Wfc: public foam::Device {

@@ -327,6 +327,7 @@ void MainWindow::on_ctrl_device_update() {
 
 // !!!: General:Miscellaneous functions
 
+/*! @brief Show version in terminal */
 void show_version() {
 	printf("%s\n", FGUI_WELCOME.c_str());
 	printf("%s\n", FGUI_COPYRIGHT.c_str());
@@ -335,6 +336,7 @@ void show_version() {
 				 "see the file COPYING for details.\n");
 }
 
+/*! @brief Show help in terminal */
 void show_clihelp(const string &execname, const bool error = false) {
 	if(error)
 		fprintf(stderr, "Try '%s --help' for more information.\n", execname.c_str());
@@ -348,6 +350,7 @@ void show_clihelp(const string &execname, const bool error = false) {
 	}
 }
 
+/*! @brief Parse command line arguments */
 int parse_args(int argc, char *argv[], string &conffile, bool &do_sighandle) {
 	int r, option_index = 0;
 	
@@ -387,6 +390,7 @@ int parse_args(int argc, char *argv[], string &conffile, bool &do_sighandle) {
 	return 0;
 }
 
+/*! @brief Main GUI program */
 int main(int argc, char *argv[]) {
 	// Parse command-line arguments
 	string conffile("");

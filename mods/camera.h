@@ -79,8 +79,8 @@ const string cam_type = "cam";
  \li get <prop>: get a property (see list below)
  \li thumnail: get a 32x32x8 thumbnail
  \li grab <x1> <y1> <x2> <y2> <scale> [darkflat]: grab an image cropped from (x1,y1) to (x2,y2) and scaled down by factor scale. Darkflat is optional.
- \li dark [n]: grab <n> darkframes, otherwise take the default <ndark>
- \li flat [n]: grab <n> flatframes, otherwise take the default <nflat>
+ \li dark [n]: grab n darkframes, otherwise take the default <ndark>
+ \li flat [n]: grab n flatframes, otherwise take the default <nflat>
  
  Valid set properties:
  \li exposure
@@ -110,7 +110,7 @@ const string cam_type = "cam";
  - offset (0.0): Camera::offset
  - width (512): Camera::res
  - height (512): Camera::res
- - depth (8): Camera::depth
+ - bitdepth (8): Camera::depth
  
  \section cam_calib Calibration
  

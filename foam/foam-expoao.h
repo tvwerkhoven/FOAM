@@ -97,9 +97,10 @@ public:
  \subsection fex_expohw ExPo hardware
  
  - ExPoAO computer
- - Andor camera + driver
- - AlpaoDM + driver
- - William Herschel Telescope
+ - Andor camera + driver, see Camera and AndorCam
+ - Alpao DM97 + driver: see Wfc and AlpaoDM
+ - 8x8 microlens array Shack-Hartmann wavefront sensor: see Wfs and Shwfs
+ - William Herschel Telescope: see Telescope and WHT
 
  \subsection fex_exposw ExPo software
 
@@ -122,17 +123,20 @@ public:
  - foam-gui
  - connect to 'localhost' port '1025' (default)
  
- From the GUI you can run in 'Listen', 'Open loop' or 'Closed loop' mode.
+ \subsection ffs_usage_guioverview GUI Overview
  
- - Listen: does nothing and waits for commands
- - Open loop: captures frames and calculates image shifts
- - Closed loop: open loop and correct the image
+ See \ref ud_fgui "FOAM GUI control" for details on how to operate the GUI.
+ 
+ \subsection ffs_usage_cal Calibration
+ 
+ See \ref shwfs_calib_oper "Shack-Hartmann calibration" for details on how to
+ calibrate a system with a SHWFS.
  
  \section fex_troubleshoot Troubleshooting
  
  These are some known issues on the FOAM ExPoAO system
  
- \section fex_trbl_andor FOAM does not exit
+ \subsection fex_trbl_andor FOAM does not exit
  
  FOAM has a bug that it does not exit properly at the end. Simply pressing ^C 
  after you see the Andor and Alpao drivers have exited will quit the program 
@@ -141,7 +145,7 @@ public:
  Note that the Andor camera is first warmed up to room temperature before FOAM
  exits so be sure that this is not happening.
 
- \section fex_trbl_andor Could not initialize andor camera
+ \subsection fex_trbl_andor Could not initialize andor camera
  
  When you get an error like:
  <pre>
@@ -157,10 +161,9 @@ public:
  
  This error especially occurs when FOAM does not exit gracefully
 
- \section fex_trbl_alpao Could not initialize Alpao driver
+ \subsection fex_trbl_alpao Could not initialize Alpao driver
  
  The Alpao driver can also crash, which also requires a reinstall.
-
  
  \section fex_related More information
  

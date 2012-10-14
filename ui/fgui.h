@@ -153,6 +153,119 @@ public:
 /*********************/
 
 /*!	
+ 
+ \page ud_fgui FOAM GUI
+ 
+ \section ud_aboutgui About the FOAM GUI
+
+ Although FOAM can be controlled over the network by hand, it is easier
+ to use a GUI. To this end, the FOAM GUI is supplied together with the 
+ framework. This document explains how to use this GUI.
+ 
+ \section ud_guistruct FOAM GUI breakdown
+ 
+ When using the FOAM GUI, one or more windows will pop up with information 
+ on the AO system after connecting. There is one
+ 'Control' tab for general control, one 'Log' tab with diagnostic information.
+ Each hardware device has its own tab as well, possibly with additional 
+ windows.
+ 
+ To see how one should control a device, it is best to look at the Device
+ documentation, where these are already described.
+
+ \subsection ud_guistruct_ctrl Control tab
+
+ From the GUI control tab you can connect to FOAM and change the mode.
+ 
+ - Hostname: host running FOAM (numerical or textual, can be localhost)
+ - Port: port to connect to
+ 
+ - Listen: does nothing and waits for commands
+ - Open loop: do wavefront sensing, but do not act on it
+ - Closed loop: measure wavefront and correct it
+ - Shutdown: gracefully shut down
+ 
+ Finally there is a 'Calibration' mode, see 
+ \ref shwfs_calib_oper "Shack-Hartmann calibration" for examples on how to use this
+ 
+ At the bottom some diagnostics are displayed: the number of devices in the 
+ system, the number of frames processed, and the last command returned.
+ 
+ \subsection ud_guistruct_log Log tab
+ 
+ The log tab shows logging messages. Green is good, orange are
+ commands unknown to the GUI (but could be ok), red could point to a problem.
+
+ \subsection ud_guistruct_device Device control
+ 
+ All devices have common GUI elements, under 'Raw device control'. This allows
+ for controls that are not coded in the GUI as buttons or lists, and allow 
+ 'freeform' control.
+ 
+ The dropdown menu lists all commands as reported by the device and the entry
+ field can be used for paramaters.
+
+ \subsection ud_guistruct_camera Camera tab
+ 
+ This controls a camera. The GUI presents several commands for the camera:
+ 
+ - 'Capture' starts capturing frames'
+ - 'Display' requests frames from the control software to display
+ - 'Store' stores N frames (fill in the field right to the button)
+ - 'Exp' (exposure), 'Offset', 'Intv' (interval), 'Gain' set these properties
+ - 'Res' and 'Mode' are read-only information boxes showing the resolution and operating mode.
+ 
+ Some display settings:
+ 
+ - Flip V/H: flip image vertical or horizontal
+ - +: add crosshair
+ - Grid: overlay grid on camera image
+ - Histo: show histogram below camera image.
+ - Underover: indicate under- or over exposure
+
+ The histogram has some additional options:
+
+ - A histogram scale factor
+ - Image statistics (avg, rms, min, max)
+ - Display clipping (display min / display max)
+ 
+ Display clipping can be used to change the contrast. Besides using the entry 
+ boxes, this can also be done by clicking in the histogram with the left 
+ (display min) and right (display max) mouse buttons.
+ 
+ \subsection ud_guistruct_shwfs Shack-Hartmann wavefront sensor tab
+
+ GUI commands:
+ 
+ - The 'Subimages' frame can be used to add/modify subapertures. Select one from drop-down list and modify as wanted.
+ - 'Regen pattern' will re-generate the subap pattern according to the configuration file
+ - 'Find pattern' will heuristically find a subap pattern 'Min I fac' determines how dim a spot is still considered usable. (0.6 is reasonable)
+ - 'Show shifts' will display measured image shifts in the camera window (if available)
+ - 'Show subaps' overlays subapertures in the associated Camera window
+
+ \subsection ud_guistruct_tel Telescope tab
+ 
+ - Tel pos: gives the current telescope position (if available)
+ - Raw: gives the raw tip-tilt shift as measured by the wavefront sensor.
+ - Converted: Gives the tip-tilt shift rotated (CCD rot.) and scaled (Scalefac) to match the telescope geometry
+ - Ctrl: Gives the final control vector sent to the telescope, rotated for telescope altitude and with gain applied.
+ 
+ Track control allows the user to change the control parameters discussed above.
+
+ \subsection ud_guistruct_wfc Wavefront corrector tab
+ 
+ Calibration:
+ 
+ - Set all <actval>: set all modes to an actuation value
+ - Set act <actid> <actval>: set one mode to a value
+ - Set random / waffle <amplitude>: set all modes to random, or set a waffle pattern of certain amplitude
+ 
+ Control:
+ 
+ - Set PID gain for WFC control
+ 
+
+
  \page fgui FOAM GUI
  
  \section aboutgui About the FOAM GUI

@@ -785,6 +785,11 @@ ALIASES += longname="Modular Adaptive Optics Framework"
   - \subpage ud_foamss "FOAM static-simulation"
   - \subpage ud_foamfs "FOAM full-simulation"
   - \subpage ud_foamexpo "FOAM ExPo AO"
+ 
+ Furthremore, thre is documentation on the GUI:
+ 
+ - \subpage ud_fgui "FOAM GUI"
+ 
 */
 
 /*!

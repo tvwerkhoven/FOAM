@@ -72,10 +72,16 @@ public:
  This is the (user) documentation for FOAM dummy, a bare code skeleton showing
  how the FOAM framework is supposed to be used.
  
- \section ffs_aboutfoamfs About FOAM dummy
+ \section fd_aboutfoamfd About FOAM dummy
  
  This module does not do anything and only implements the absolutely necessary
  functions to make it 'work'. It can be used as a test case to see if the code
  compiles properly and does not contain any obvious bugs.
+
+ \section fd_runfd Running FOAM dummy
+ 
+ To run this, simply call the <tt>foam-dummy</tt> executable, or run 
+ <tt>foam-dummy --help</tt> to get a list of options.
+ 
   
 */

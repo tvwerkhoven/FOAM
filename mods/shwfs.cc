@@ -54,6 +54,7 @@ method(Shift::COG), maxshift(32, 32)
 	add_cmd("mla generate");
 	add_cmd("mla find");
 	add_cmd("mla store");
+	add_cmd("mla clear");
 	add_cmd("mla del");
 	add_cmd("mla add");
 	add_cmd("mla get");
@@ -173,7 +174,7 @@ void Shwfs::on_message(Connection *const conn, string line) {
 			conn->addtag("mla");
 			if (mla_del_si(popint(line)))
 				conn->write("error mla del :Incorrect subimage index");
-		} else if (what == "clear") {				// mla clear
+		} else if (what == "clear") {			// mla clear
 			conn->addtag("mla");
 			mla_clear();
 		} else if(what == "add") {				// mla add <lx> <ly> <tx> <ty>
@@ -194,7 +195,7 @@ void Shwfs::on_message(Connection *const conn, string line) {
 
 			if (mla_update_si(nx0, ny0, nx1, ny1, idx))
 				conn->write("error mla update :Incorrect subimage coordinates");
-		} else if(what == "set") {				// mla set [mla configuration]
+		} else if(what == "set") {				// mla set <nsubap> <lx0> <ly0> <tx0> <ty0> [ <lx1> <ly1> <tx1> <ty1> ... [ <lxn> <lyn> <txn> <tyn> ] ]
 			conn->addtag("mla");
 			if (set_mla_str(line))
 				conn->write("error mla set :Could not parse MLA string");
