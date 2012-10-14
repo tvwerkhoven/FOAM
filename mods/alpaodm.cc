@@ -123,13 +123,13 @@ int AlpaoDM::calibrate() {
 }
 
 int AlpaoDM::reset() {
-	// Do not use acedev5SoftwareDACReset here as it sets 0 volts to all 
+	Wfc::reset();
+
+	// Do not use acedev5SoftwareDACReset here as it sets 0 volts to all
 	// actuators. Setting control vector 0 to all actuators applies a 
 	// pre-calibrated offset vector as well (acedev5GetOffset) such that should
 	// be closer to flat. In some cases this does not work (anymore)
   // and the DACReset is preferable.
-	set_control(0.0);
-	actuate();
 	
 	// Sleep a little to give the WFC time to relax
 	usleep(0.1*1E6);
@@ -148,10 +148,10 @@ int AlpaoDM::reset_zerovolt() {
 	return 0;
 }
 
-int AlpaoDM::dm_actuate(const bool /*block*/) {
+int AlpaoDM::actuate(const bool /*block*/) {
 	// Copy from ctrlparams to local double array:
 	for (size_t i=0; i<real_nact; i++)
-		act_vec.at(i) = gsl_vector_float_get(control, i);
+		act_vec.at(i) = gsl_vector_float_get(ctrlparams.ctrl_vec, i);
 	
 	// acedev5Send expected pointer to double-array, take address of first
 	// vector element to satisfy this need. std::vector guarantees data contiguity

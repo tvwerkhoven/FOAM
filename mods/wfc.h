@@ -25,6 +25,7 @@
 #include <stdint.h>
 #include <sys/types.h>
 #include <gsl/gsl_vector.h>
+#include <gsl/gsl_matrix.h>
 
 #include "types.h"
 #include "config.h"
@@ -38,8 +39,11 @@ const string wfc_type = "wfc";
 /*!
  @brief Base wavefront corrector class. This will be overloaded with the specific WFC type
  
+<<<<<<< HEAD
 <<<<<<< Updated upstream
 =======
+=======
+>>>>>>> topic_dm_zernmat
  \section wfc_ctrl WFC control overview
  
  WFC control goes through several steps, depending on what configuration data is
@@ -50,15 +54,20 @@ const string wfc_type = "wfc";
  - Actuation mapping matrix (actmap)
  
  The input control signal is first clamped between [-maxact, maxact]. Then an
+<<<<<<< HEAD
  offset vector is added which can be used to correct non-flatness of the 
  mirror. Finally, the control vector is multiplied by an optional actuation
+=======
+ offset vector is added which can be used to correct non-flattness of the 
+ mirror. Finally, the control vector is multiplied by an optional actuation 
+>>>>>>> topic_dm_zernmat
  mapping which maps from control space (i.e. Zernike modes, KL modes, mirror 
  modes) to the WFC actuator space. In the case that this matrix is identity, 
  operations all happen in WFC actuator space.
  
  If an actuation mapping is used, the number of control parameters of the WFC
  is usually reduced, and actmap is not square.
-  
+
  \section wfc_actmap Actuator mapping
  
  In some cases, one does not want to drive the WFC actuators as they are, but
@@ -88,7 +97,6 @@ const string wfc_type = "wfc";
  - set_wafflepattern() set all actuators to a waffle pattern
  - reset() set all actuators to 0
 
->>>>>>> Stashed changes
  \section wfc_netio Network IO
  
  Valid commends include:
@@ -117,14 +125,14 @@ const string wfc_type = "wfc";
  */
 class Wfc: public foam::Device {
 protected:
-	int real_nact;											//!< Number of actuators in this device. This will be used internally to drive the WFC
-	int virt_nact;											//!< Number of actuators to use. This will be visible to the outside world (i.e. GUI)
-	bool use_actmap;										//!< Use actuator map or not (implies virt_nact != real_nact)
-	typedef std::vector< std::vector<int> > actmap_t;
-	actmap_t actmap;										//!< Actuator map for cases where virt_nact < real_nact. In this case, actmap.size() == virt_nact and 'virtual' actuator 'idx' uses real actuators actmap[idx].
-	int ctrl_apply_actmap();						//!< Apply actmap to actuation vector, if necessary. Assumes ctrlparams.target is set with the proper control values
-	string str_actmap;
-	int parse_actmap(string &map); 		//!< Interpret actmap parameter in config. Syntax should be '<N_virt> [virt_act1 real_act1,real_act2,real_act3 [virt_act2 real_act1,real_act2,real_act3]], i.e. virtual actuators seperated by spaces, real actuators seperated by only commas
+	int real_nact;											//!< Number of hardware actuators in this device. This will be used internally to drive the WFC
+	int virt_nact;											//!< Number of modes to use. This will be visible to the outside world (i.e. GUI)
+
+	Path actmap_f;											//!< Actuator mapping matrix file path
+	gsl_matrix_float *load_actmap_matrix(Path filepath);
+	
+	gsl_matrix_float *actmap_mat;				//!< Actuator mapping matrix, from actuation modes (i.e Zernike) to WFC actuators
+	int ctrl_apply_actmap();						//!< Apply actuation mapping matrix, if necessary.
 	
 	string str_waffle_even;							//!< String representation of even actuators. Should be *real* actuators
 	string str_waffle_odd;							//!< String representation of odd actuators. Should be *real* actuators
@@ -132,19 +140,21 @@ protected:
 	vector<int> waffle_odd;							//!< 'Odd' actuators for waffle pattern. Should be *real* actuators, not virtual
 	void parse_waffle(string &odd, string &even); //!< Interpret data in waffle_even and waffle_odd. Should be *real* actuators, not virtual
 	bool have_waffle;										//!< Do we know about the waffle pattern?
-	string ctrl_as_str(const char *fmt="%.4f") const; //!< Return control vector ctrlparams.target as string (not thread-safe)
 	
-	gsl_vector_float *offset;						//!< Offset added to all control vectors (size real_nact)
+	string ctrl_as_str(const char *fmt="%.4f") const; //!< Return control vector ctrlparams.target as string (not thread-safe)
 	string offset_str;									//!< String representation of offset vector
-	gsl_vector_float *control;					//!< Vector used to actuate the DM == ctrl_vec + offset (size real_nact)
+
 	float maxact;												//!< Maximum actuation signal to allow, clamp all WFC control to [-maxact, maxact]
+	gsl_vector_float *workvec;					//!< Workspace for actuator control (size virt_nact)
 
 public:
 	// Common Wfc settings
 	typedef struct wfc_ctrl {
 		wfc_ctrl(): ctrl_vec(NULL), target(NULL), err(NULL), prev(NULL), gain(1,0,0), pid_int(NULL) { }
-		gsl_vector_float *ctrl_vec;				//!< Control vector sent to the WFC (size real_nact). If use_actmap is false, this points to 'target' and has no memory itself. If use_actmap is true, it has its own memory and data has to be copied here.
+		gsl_vector_float *ctrl_vec;				//!< Control vector sent to the WFC (size real_nact).
 
+		gsl_vector_float *offset;					//!< Offset added to all control modes (size virt_nact)
+		
 		gsl_vector_float *target;					//!< (Requested) actuator amplitudes, should be between -1 and 1. (size virt_nact)
 		gsl_vector_float *err;						//!< Error between current and target actuation (size virt_nact)
 		gsl_vector_float *prev;						//!< Previous actuator amplitudes (size virt_nact)
@@ -212,17 +222,8 @@ public:
 	 */
 	int set_randompattern(const float maxval);
 
-	/*! @brief Actuate WFC using internal control vector
-	 
-	 This function applies some final corrections to the control vector before 
-	 sending it to the hardware using dm_actuate().
-	 
-	 @param [in] block Block until WFC is in requested position (not always available)
-	 */
-	int actuate(const bool block=false);
-
 	// To be implemented by derived classes:
-	virtual int dm_actuate(const bool block=false) = 0; //!< Send actuation signal to hardware
+	virtual int actuate(const bool block=false) = 0; //!< Send actuation signal to hardware
 
 	virtual int calibrate();						//!< Calibrate actuator
 	virtual int reset();								//!< Reset mirror to best known 'flat' position

@@ -37,7 +37,27 @@ const string alpaodm_type = "alpaodm";
  AlpaoDM is derived from Wfc. It can control an Alpao deformable mirror.
  
  Although the underlying library supports control for multiple DMs at the same 
- time, support is currently limited for 1 device in total.
+ time, support is currently limited for 1 device in total. The library is 
+ **not** thread safe.
+ 
+ \section alpaodm_ctrl Alpao Control
+ 
+ The Alpao DM can be controlled using a few functions:
+ 
+ - acedev5Init() - initialize the controller and DM
+ - acedev5GetNbActuator() - get the number of actuators
+ - acedev5GetOffset() - get the hardware offset
+ - acedev5Release() - release the controller and stop
+ 
+ Setting the actuators can be done with two commands:
+ 
+ - acedev5Send() - set a vector of signals [0,1] to the DM, adding a pre-calibrated hardware offset
+ - acedev5SoftwareDACReset() - sets 0 volts to the DM
+ 
+ Because of the hardware offsets, sending '0' signal to the DM using acedev5Send()
+ will result in a different shape than using acedev5SoftwareDACReset() to set
+ the control to 0 volts. One should in principle always use acedev5Send()
+ as this should result in a better shape.
  
  \section alpaodm_mirror Alpao DM 
  
@@ -134,7 +154,7 @@ public:
 	int reset_zerovolt();							//!< Set DM to zero volts, which bypasses the factory offsets
 	
 	// From Wfc::
-	virtual int dm_actuate(const bool block=false);
+	virtual int actuate(const bool block=false);
 	virtual int calibrate();
 	virtual int reset();
 	
