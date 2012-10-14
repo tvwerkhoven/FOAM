@@ -39,11 +39,6 @@ const string wfc_type = "wfc";
 /*!
  @brief Base wavefront corrector class. This will be overloaded with the specific WFC type
  
-<<<<<<< HEAD
-<<<<<<< Updated upstream
-=======
-=======
->>>>>>> topic_dm_zernmat
  \section wfc_ctrl WFC control overview
  
  WFC control goes through several steps, depending on what configuration data is
@@ -54,13 +49,8 @@ const string wfc_type = "wfc";
  - Actuation mapping matrix (actmap)
  
  The input control signal is first clamped between [-maxact, maxact]. Then an
-<<<<<<< HEAD
- offset vector is added which can be used to correct non-flatness of the 
- mirror. Finally, the control vector is multiplied by an optional actuation
-=======
- offset vector is added which can be used to correct non-flattness of the 
+ offset vector is added which can be used to correct non-flattness of the
  mirror. Finally, the control vector is multiplied by an optional actuation 
->>>>>>> topic_dm_zernmat
  mapping which maps from control space (i.e. Zernike modes, KL modes, mirror 
  modes) to the WFC actuator space. In the case that this matrix is identity, 
  operations all happen in WFC actuator space.
@@ -81,6 +71,12 @@ const string wfc_type = "wfc";
  controlling the mirror directly it is possible that certain modes invisible
  to the wavefront sensor are introduced (such as waffle modes). This is
  greatly reduced when using modal control.
+ 
+ One has to keep in mind that the singular value decomposition of the 
+ influence matrix might re-shuffle the actuator mapping modes such that mode 
+ N is not actuator mapping mode N anymore. This is because the SVD re-arranges
+ the modes based on variance, and depending on the normalisation of the
+ mapping matrix, this might not be the same order.
  
  \section wfc_cmds WFC control commands
  
