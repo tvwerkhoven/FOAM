@@ -150,7 +150,7 @@ const string shwfs_type = "shwfs";
  'good' wavefront. Once this is known, deviations from this reference are 
  used to correct the wavefront.
  
- \subsection shwfs_calib_flat WFS-WFC Influence calibration
+ \subsection shwfs_calib_inf WFS-WFC Influence calibration
 
  To calibrate a wavefront sensor (WFS) with respect to a wavefront corrector
  (WFC), we have to meaure the influence of each WFC degree of freedom (i.e. an
@@ -160,7 +160,7 @@ const string shwfs_type = "shwfs";
  \code
 for this_dof in all_dof:
     set_this_dof(-X)
-		wf_x0 = measure_wavefront()
+    wf_x0 = measure_wavefront()
     set_this_dof(+X)
     wf_x1 = measure_wavefront()
     this_dof_inf = (wf_x1 - wf_x0) / (2*X)
@@ -182,7 +182,6 @@ for this_dof in all_dof:
  Since the influence matrix is generally not invertible and should be 
  overdetermined for robust operations, we use a pseudo-inversion to get the 
  actuation matrix. In our case we use a singular value decomposition.
- 
 
  \section shwfs_netio Network IO
  
