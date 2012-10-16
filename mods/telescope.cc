@@ -124,7 +124,7 @@ void Telescope::tel_handler() {
 Telescope::~Telescope() {
 	io.msg(IO_DEB2, "Telescope::~Telescope()");
 
-	//!< @todo Save all device settings back to cfg file
+	//! @todo Save all device settings back to cfg file
 	cfg.set("scalefac", scalefac);
 	
 	// Join with telescope handler thread

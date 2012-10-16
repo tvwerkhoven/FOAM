@@ -105,9 +105,9 @@ const string shwfs_type = "shwfs";
  To get an influence matrix, run an 'Influence' calibration from the 'Control'
  tab. This measurement takes a while, don't disturb the system while 
  calibrating. Influence calibration takes two optional parameters:
- 
+\verbatim
  influence [act_amp] [singval]
- 
+\endverbatim 
  with [act_amp] the amplitude for each mode and [singval] the singular value 
  cut-off to use (see below).
  
@@ -128,6 +128,19 @@ const string shwfs_type = "shwfs";
  - if **singval** > 1: use this many modes from the SVD
  - if 0 < **singval** 1 <: use this much singular value in the SVD. 0.7 should be quite stable but not very accurate, 0.99 should be very accurate but less stable.
 
+ \subsection shwfs_calib_oper_iterative Iterative calibration
+ 
+ Sometimes the initial WFC shape is not very flat. In this case the influence
+ matrix quality is probably not optimal. To improve this, calibrate with a 
+ non-flat WFC, then run closed loop briefly on the calibration source to
+ flatten the WFC with respect to this source, and re-calibrate the influence 
+ matrix. This way a non-flat WFC can be bootstrapped into a proper shape.
+ 
+ Once you are satisfied with the flatness of the WFC, you can copy the current
+ actuation signal from the WFC GUI, and set it as a bias-offset. This offset
+ will be added to all subsequent WFC actuations, such that setting '0' will
+ result in a flatter WFC than before. Also see Wfc::ctrl_params.offset
+ 
  \section shwfs_calib Calibration background
  
  Once the wavefront sensor delivers some input, this must be translated into 
@@ -157,7 +170,7 @@ const string shwfs_type = "shwfs";
  actuator for deformable mirrors, a pixel for spatial light modulators, etc.). 
  This is done as follows:
  
- \code
+ \code{.py}
 for this_dof in all_dof:
     set_this_dof(-X)
     wf_x0 = measure_wavefront()
@@ -189,12 +202,12 @@ for this_dof in all_dof:
  - mla generate: generate microlens array (MLA) pattern
  - mla find [simini_f] [sisize] [nmax] [iter]: heuristically find MLA 
  - mla store: store MLA pattern to disk
- - mla del <idx>: delete MLA subimage **idx**
+ - mla del \<idx\>: delete MLA subimage **idx**
  - mla clear: clear MLA pattern
- - mla add <lx> <ly> <tx> <ty>: add MLA subimage with given coordinates
- - mla get <idx>: get MLA subimage coordinates
- - mla update <idx> <lx> <ly> <tx> <ty>: update MLA subimage **idx**
- - mla set <nsubap> <lx0> <ly0> <tx0> <ty0> [ <lx1> <ly1> <tx1> <ty1> ... [ <lxn> <lyn> <txn> <tyn> ] ]: set new subaperture pattern
+ - mla add \<lx\> \<ly\> \<tx\> \<ty\>: add MLA subimage with given coordinates
+ - mla get \<idx\>: get MLA subimage coordinates
+ - mla update \<idx\> \<lx\> \<ly\> \<tx\> \<ty\>: update MLA subimage **idx**
+ - mla set \<nsubap\> \<lx0\> \<ly0\> \<tx0\> \<ty0\> [ \<lx1\> \<ly1\> \<tx1\> \<ty1\> ... [ \<lxn\> \<lyn\> \<txn\> \<tyn\> ] ]: set new subaperture pattern
 
  - get/set shift_mini: Shwfs::shift_mini
  - get/set maxshift: Shwfs::maxshift
@@ -299,13 +312,13 @@ private:
 	
 	/*! @brief Represent the MLA configuration as one string
 	 
-	 @return <N> [idx x0 y0 x1 y1 [idx x0 y0 x1 y1 [...]]]
+	 @return \<N\> [idx x0 y0 x1 y1 [idx x0 y0 x1 y1 [...]]]
 	 */
 	string get_mla_str() const;
 	
 	/*! @brief Set MLA configuration from string, return number of subaps, reverse of get_mla_str(). Output stored in mlacfg.
 	 
-	 @param [in] mla_str <N> [idx x0 y0 x1 y1 [idx x0 y0 x1 y1 [...]]]
+	 @param [in] mla_str \<N\> [idx x0 y0 x1 y1 [idx x0 y0 x1 y1 [...]]]
 	 @return Number of subimages successfully added (might be != N)
 	 */
 	int set_mla_str(string mla_str);
@@ -317,7 +330,9 @@ private:
 	 String representing SHWFS shift vector, including subaperture center 
 	 coordinates and reference shift. Syntax:
 	 
+	 \verbatim
 	   [<N> [idx subap0_x subap0_y ref0_x ref0_y sh0_x sh0_y [idx subap1_x subap1_y ref1_x ref1_y sh1_x sh1_y [...]]]
+	 \endverbatim
 	 
 	 The origin of the reference shift is the exact center of the subaperture. 
 	 The origin of the shift vector is the end of the reference vector. With 
@@ -512,7 +527,7 @@ public:
 	
 	/*! @brief Represent singular value array as string
 	 
-	 @return <N> <s1> <s2> ... <sN>
+	 @return \<N\> \<s1\> \<s2\> ... \<sN\>
 	 */
 	string get_singval_str(const string &wfcname) const;
 	
@@ -534,7 +549,7 @@ public:
 	
 	/*! @brief Return reference vector as string
 	 
-	 @return <N> <refx1> <refy1> <refx2> <refy2> ... <refNx> <refNy>
+	 @return \<N\> \<refx1\> \<refy1\> \<refx2\> \<refy2\> ... \<refNx\> \<refNy\>
 	 */
 	string get_refvec_str() const;
 

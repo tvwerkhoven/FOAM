@@ -132,6 +132,19 @@ public:
  See \ref shwfs_calib_oper "Shack-Hartmann calibration" for details on how to
  calibrate a system with a SHWFS.
  
+ \subsection ffs_usage_live Live control
+ 
+ After calibration, live control is usually necessary due to changing seeing 
+ conditions. These are some parameters the user can tweak:
+ 
+ - Number of modes (Control tab): tweak the number of modes corrected by choosing 'SVD' and then enter a number of modes (2<N) or enter a decimal number indicating how much power you want to use ([0,1]). This will update while running closed or open-loop
+ - Wfc::maxact (WFC tab): limit the maximum amplitude each mode is set to by changing maxact. This will clamp all actuation values between [-maxact, maxact].
+ - Shwfs::shift_mini (WFS tab): change the background bias ('dark-field'), pixels below this value will be neglected for CoG. Set this to the maximum dark signal you expect.
+ - Shwfs::maxshift (WFS tab): change the maximum shift allowed, like maxact. Shifts above this value will be clipped.
+ - If the signal is too low, you can increase the exposure time of the camera. This is of course a trade-off between noise and speed.
+ - Telescope tracking can be tuned through the Telescope tab. See Telescope and WHT for specific controls.
+ 
+
  \section fex_troubleshoot Troubleshooting
  
  These are some known issues on the FOAM ExPoAO system

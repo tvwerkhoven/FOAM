@@ -54,7 +54,7 @@ int FoamControl::connect(const string &h, const string &p) {
 	return 0;
 }
 
-//!< @todo This should propagate through the whole GUI, also the device tabs
+//! @todo This should propagate through the whole GUI, also the device tabs
 int FoamControl::disconnect() {
 	log.term(format("%s(conn=%d)", __PRETTY_FUNCTION__, protocol.is_connected()));
 

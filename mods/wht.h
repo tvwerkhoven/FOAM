@@ -52,11 +52,13 @@ const string wht_type = "wht";
  focus this entails converting from one reference frame to a rotated frame 
  for the Cassegrain focus.
  
- For ExPo, the conversion is:
- 
+ For ExPo, the conversion was (N.B. this is unverified and might be wrong!):
+
+\verbatim
  alt: =  -0.01 [ x * sin(0.001745 * (45 - ele)) + y * cos(0.001745 * (45 - ele)) ]
- az: = +0.01 [ y * sin(0.001745 * (45 - ele)) - x * cos(0.001745 * (45 - ele)) ]
-  
+ az:  =  +0.01 [ y * sin(0.001745 * (45 - ele)) - x * cos(0.001745 * (45 - ele)) ]
+\endverbatim
+ 
  with x, y the measured shift, 45 the rotation of the ExPo camera, ele the 
  current elevation of the telescope, and 0.001745 180/pi. The scaling, gain 
  etc is all encapsulated in the constant 0.01. This might have to be adjusted
@@ -65,11 +67,12 @@ const string wht_type = "wht";
  @section wht_guiding Guiding RS232 control
 
  Once these coordinates are known, they have to be sent to a RS232 port over 
- ethernet. A Digi PortServer II Rack is used for this, see drivers below. 
- Installing the driver will make a /dev/tty<xxxx> port on the Linux machine
+ ethernet. A Digi PortServer II Rack is used for this, see drivers below.
+ Installing the driver will make a <tt>/dev/tty<xxxx></tt> port on the Linux machine
  which can be used to send guiding offset commands. The syntax for these 
  commands is:
- 
+
+\verbatim
  packet ::= xGuidePosition SPACE yGuidePosition SPACE code CR
  
  xGuidePosition ::= {s0000p00 ..... s9999p99}
@@ -84,15 +87,20 @@ const string wht_type = "wht";
  p ::= ASCII code (‘.’)
  SPACE ::= ASCII code (‘ ‘), 0x20
  CR ::= ASCII code 0x0d
+\endverbatim
  
  for example:
+\verbatim
  s0000p00 s0000p00 00000p01\r
  00050.00 00050.00 00000.10
+\endverbatim
  
  to send neutral guiding information (=do nothing) and timeout after 0.1 
  second. Currently, this is implemented as:
 
+\code{.cc}
  string cmdstr = format("%07.2f %07.2f %07.2f\r", ctrl0, ctrl1, delay*10.0+drand48()*0.1);
+\endcode
  
  @section wht_guiding Live telescope pointing information
  
@@ -101,6 +109,7 @@ const string wht_type = "wht";
  <http://whtics.roque.ing.iac.es:8081/TCSStatus/TCSStatusExPo>. The syntax of 
  this is document is:
  
+ \verbatim
 AZ=298.6429727035839
 ALT=90.28124237374263
 LAST=21 9 15.184
@@ -118,22 +127,30 @@ SOURCERA=4.55967267083519
 SOURCEDEC=0.698131700797732
 SOURCEEQUINOX=2000
 SOURCECOORDTYPE=J
+ \endverbatim
  
  We extract the AZ and ALT parameters, and update if these are different from 
  what we have. We then rotate the coordinate system using the ALT parameter 
  as folows:
 
  In general:
+\verbatim
  x' = [ x cos(th) - y sin(th) ]
  y' = [ x sin(th) + y cos(th) ]
- For ExPo:
- az = 50 - 0.01 * [ x * sin( (45-ele) * pi/180 ) + y * cos( (45-e) * pi/180 ) ]
- ele = 50 + 0.01 * [ y * sin( (45-ele) * pi/180 ) - x * cos( (45-e) * pi/180 ) ]
- 
+\endverbatim
+
  in WHT::update_telescope_track():
+\code{.cc}
  ctrl0 = 50 + (ttgain.p * (sht0 * cos(altfac * (telpos[0]*M_PI/180.0)) - sht1 * sin(altfac * (telpos[0]*M_PI/180.0))));
  ctrl1 = 50 + (ttgain.p * (sht0 * sin(altfac * (telpos[0]*M_PI/180.0)) + sht1 * cos(altfac * (telpos[0]*M_PI/180.0))));
-
+\endcode
+ 
+ @section wht_oper Guiding operations
+ 
+ To use guiding, the user can toggle telescope rotation by setting altfac to
+ 0 or 1 to disable or enable respectively. The rest of the controls are done
+ through the parent Telescope class.
+ 
  @section wht_todo Todo
  
  - test coordinate conversion
@@ -190,6 +207,23 @@ public:
 	int get_wht_coords(float *const alt, float *const az); //!< Get last known WHT pointings coordinates
 	
 	// From Telescope::
+	/*! @brief Given generic shift coordinates, track the WHT
+	
+	 1. Rotate the generic shift by the telescope position (depending on altfac)
+	 2. Apply gain to correction
+	 3. Convert to TCS coordinates, i.e. 50 - \<output of step 2.\>
+	 
+	 Spefically, the code does the following:
+	 \code{.cc}
+	 ctrl0 = 50 + (ttgain.p * (sht0 * cos(altfac * (telpos[0]*M_PI/180.0)) - sht1 * sin(altfac * (telpos[0]*M_PI/180.0))));
+	 ctrl1 = 50 + (ttgain.p * (sht0 * sin(altfac * (telpos[0]*M_PI/180.0)) + sht1 * cos(altfac * (telpos[0]*M_PI/180.0))));
+	 \endcode
+	 
+	 and send ctrl0, ctrl1 to the WHT TCS.
+	 
+	 @param [in] sht0 Generic shift dimension 0
+	 @param [in] sht1 Generic shift dimension 1
+	 */
 	virtual int update_telescope_track(const float sht0, const float sht1);
 	
 	// From Devices::

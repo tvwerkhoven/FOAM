@@ -97,7 +97,7 @@ WHT::~WHT() {
 	if (wht_ctrl)
 		delete wht_ctrl;
 
-	//!< @todo Save all device settings back to cfg file
+	//! @todo Save all device settings back to cfg file
 	// Join with WHT updater thread
 	wht_cfg_thr.cancel();
 	wht_cfg_thr.join();

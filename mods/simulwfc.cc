@@ -86,7 +86,7 @@ wfc_sim(NULL)
 SimulWfc::~SimulWfc() {
 	io.msg(IO_DEB2, "SimulWfc::~SimulWfc()");
 
-	//!< @todo Save all device settings back to cfg file
+	//! @todo Save all device settings back to cfg file
 	cfg.set("actsize", actsize);
 	cfg.set("actresx", actres.x);
 	cfg.set("actresy", actres.y);

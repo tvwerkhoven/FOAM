@@ -46,10 +46,6 @@ const string telescope_type = "telescope";
  or anything else), we simply use dim0 and dim1 as dimensions. It is up to the 
  specific telescope implementation to give these dimensions and units meaning.
  
- Todo:
- 
- - Use scalefacs, rotation and gain to convert pixel shift to intermediate focal plane shift
- - Implement specific conversion details from thereon in children (WHT, ...)
 
  \section telescope_method Method
  
@@ -58,8 +54,12 @@ const string telescope_type = "telescope";
  tel_handler(), then calls calc_offload() every X seconds. This routine converts
  the raw input shifts to generic coordaintes and then calls update_telescope_track()
  which should be implemented in a derived class to drive the telescope itself.
+
+ 1. Telescope::set_track_offset c0, c1
+ 2. Telescope::calc_offload sht0, sht1 := rotmat(ccd_ang) # (scalefac[0] * c0, scalefac[1] * c1)
+ 3. Child::update_telescope_track ctrl0, ctrl1 := f(ttgain, sht0, sht1)
  
- (Telescope::set_track_offset) c0, c1 -> (Telescope::calc_offload) -> sht0, sht1 -> (Derived::update_telescope_track) -> ctrl0, ctrl1
+ i.e. WHT::update_telescope_track
  
  \section telescope_cfg Configuration params
  
@@ -70,10 +70,10 @@ const string telescope_type = "telescope";
  
  \section telescope_netio Network commands
  
- - set scalefac <s0> <s1>: Telescope::scalefac
- - get scalefac: return Telescope::scalefac as <s0> <s1>
- - set ttgain <p> <i> <d>: Telescope::ttgain
- - get ttgain: return Telescope::ttgain as <p> <i> <d>
+ - set scalefac \<s0\> \<s1\>: Telescope::scalefac
+ - get scalefac: return Telescope::scalefac as \<s0\> \<s1\>
+ - set ttgain \<p\> \<i\> \<d\>: Telescope::ttgain
+ - get ttgain: return Telescope::ttgain as \<p\> \<i\> \<d\>
  - set ccd_ang <ang>: Telescope::ccd_ang
  - get ccd_ang <ang>: Telescope::ccd_ang
  - get shifts: return Telescope::c0 Telescope::c1 Telescope::sht0 Telescope::sht1 Telescope::ctrl0 Telescope::ctrl1
@@ -109,7 +109,11 @@ public:
 	float handler_p;				//!< Handler update period (seconds)
 	bool do_offload;				//!< Enable or disable live offloading
 	
+	/*! @brief Set x, y-shifts to specific values for the telescope tracker
+	 */
 	void set_track_offset(const float _c0, const float _c1) { c0 = _c0; c1 = _c1; }
+	/*! @brief Return x, y-shifts as known by the telescope tracker
+	 */
 	void get_track_offset(float * const _c0, float * const _c1) { *_c0 = c0; *_c1 = c1; }
 	
 	/*! @brief Convert shift vector from instrument pixels to generic coordinates

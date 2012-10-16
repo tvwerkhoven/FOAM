@@ -134,7 +134,7 @@ protected:
 	bool on_histo_clicked(GdkEventButton *);
 	void on_minmax_change();						//!< Set new min/max values for display clipping
 	
-	//!< @todo Sort these functions out
+	//! @todo Sort these functions out
 	void on_image_realize();
 	void on_image_expose_event(GdkEventExpose *event);
 	void on_image_configure_event(GdkEventConfigure *event);

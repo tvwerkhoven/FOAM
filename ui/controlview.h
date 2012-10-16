@@ -71,7 +71,7 @@ class ControlPage: public VBox {
 	LabeledEntry stat_lastcmd;					//!< Displays last cmd to FOAM, updated in ControlPage::on_message_update()
 
 	
-	Frame devframe;											//!< @todo add/improve this feature
+	Frame devframe;											//! @todo add/improve this feature
 	HBox devbox;
 	LabeledEntry *dev_devlist;
 	

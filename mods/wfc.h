@@ -102,13 +102,13 @@ const string wfc_type = "wfc";
  - get ctrl: get control vector Wfc::ctrl_params.target
  - set offset <act0> [act1] [act2] ... [actn]: set offset control vector Wfc::ctrl_params.offset
  - get offset: return offset vector
- - set maxact <float>: set maximum actuation amplitude Wfc::maxact
+ - set maxact \<amplitude\>: set maximum actuation amplitude Wfc::maxact
  - get maxact: return maximum actuation amplitude
- - act waffle <amplitude>: set a waffle pattern on the WFC
- - act random <amplitude>: set WFC to random actuation
- - act all <actval>: set all modes to **actval**
- - act one <modeid> <actval>: set mode <modeid> to <actval>
- - act vec <act0> [act1] ... [actn]: set WFC to this actuation vector
+ - act waffle \<amplitude\>: set a waffle pattern on the WFC
+ - act random \<amplitude\>: set WFC to random actuation
+ - act all \<actval\>: set all modes to **actval**
+ - act one \<modeid\> \<actval\>: set mode **modeid** to **actval**
+ - act vec \<act0\> [act1] ... [actn]: set WFC to this actuation vector
  
  \section wfc_cfg Configuration parameters
  

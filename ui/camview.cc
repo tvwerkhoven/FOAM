@@ -224,7 +224,7 @@ minval("Display min"), maxval("Display max"), e_avg("Avg."), e_rms("RMS"), e_dat
 }
 
 CamView::~CamView() {
-	//!< @todo store (gui) configuration here?
+	//! @todo store (gui) configuration here?
 	log.term(format("%s", __PRETTY_FUNCTION__));
 }
 
@@ -604,7 +604,7 @@ bool CamView::on_histo_clicked(GdkEventButton *event) {
 	if (event->button == 3)
 		maxval.set_value(value);
 	
-	//!< @todo implement histogram binning here
+	//! @todo implement histogram binning here
 	do_histo_update();
 	return true;
 }
