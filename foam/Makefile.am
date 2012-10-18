@@ -72,11 +72,12 @@ foam_simstat_CPPFLAGS = -DFOAM_DEFAULTCONF=\"$(sysconfdir)/foam/foam-simstat.cfg
 
 foam_simstat_LDADD = $(LIBSIU_COMMON) \
 		$(LIBSIU_DIR)/libcsv.a \
+		$(SIMSTAT_LIBS) \
 		$(LDADD)
 
 # specific flags and libraries
 foam_simstat_CXXFLAGS = $(SIMSTAT_CFLAGS) $(AM_CXXFLAGS)
-foam_simstat_LDFLAGS = $(SIMSTAT_LIBS) $(AM_LDFLAGS)
+#foam_simstat_LDFLAGS = $(AM_LDFLAGS)
 
 endif HAVE_SIMSTAT
 ### END STATIC SIMULATION MODE ###
@@ -151,6 +152,7 @@ foam_fullsim_SOURCES += foam-fullsim.h \
 
 foam_fullsim_LDADD = $(LIBSIU_COMMON) \
 		$(LIBSIU_DIR)/libcsv.a \
+		$(FULLSIM_LIBS) \
 		$(LDADD)
 
 # Some CPP flags
@@ -159,7 +161,7 @@ foam_fullsim_CPPFLAGS = -DFOAM_DEFAULTCONF=\"$(sysconfdir)/foam/foam-fullsim.cfg
 
 # specific flags and libraries
 foam_fullsim_CXXFLAGS = $(FULLSIM_CFLAGS) $(AM_CXXFLAGS)
-foam_fullsim_LDFLAGS = $(FULLSIM_LIBS) $(AM_LDFLAGS)
+#foam_fullsim_LDFLAGS = $(AM_LDFLAGS)
 
 endif HAVE_FULLSIM
 ### END FULL SIMULATION MODE ###
