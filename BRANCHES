@@ -40,7 +40,7 @@ Todo: show control packets to telescope, add control for ccd_ang, scalefac, gain
 * topic_simstat_update
 Update simstatic mode after a long time
 
-* topic_doc_fix (RC)
+* topic_doc_fix (implemented in master)
 Fix/extend doxygen documentation
 
 * topic_infl_bootstrap (implemented in master)
@@ -72,24 +72,24 @@ v ignore outer edge pixels in statistics calculations -> works
 * topic_ui_stats (implemented)
 - Calculate image stats in GUI only (rms, avg, etc.) -> works
 
-* topic_dev_ignorelist (RC)
+* topic_dev_ignorelist (implemented)
 - Add list of commands not to report in the terminal for each Device
 
-* topic_ui_wfs (implemented, testing)
+* topic_ui_wfs (implemented in master)
 - Implement reset subaps, toggle show subaps
 
-* topic_ui_wfcgain (implemented, testing)
+* topic_ui_wfcgain (implemented in master)
 - Implement gain setting for WFC
 
 * topic_ui_histo
 - Reduce histogram to 256 bins
 
-* topic_live_mode (implemented in master, testing)
+* topic_live_mode (implemented in master)
 - Implement live mode updates
 -> during calibration, store 3 SVD matrices
 -> during runtime, multiply 3 matrices sequentially, with a varying number of singular values
 
-* topic_scale_shift (implemented in master, testing)
+* topic_scale_shift (implemented in master)
 - Normalize shifts measured in GUI to size of sub apertures
 
 * topic_dm_zernmat (implemented in master, testing)
