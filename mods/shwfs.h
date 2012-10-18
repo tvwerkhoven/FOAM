@@ -182,10 +182,12 @@ for this_dof in all_dof:
  This results in an <i>influence matrix</i> which maps from actuation space
  to sensor space:
  
- \f$ p = \mathbf{D} v, \f$
+ \verbatim
+ p = D v,
+ \endverbatim
  
- with \f$v\f$ an actuation signal, \f$\mathbf{D}\f$ the influence matrix and
- \f$p\f$ the resulting wavefront sensor measurement.
+ with <tt>v</tt> an actuation signal, <tt>D</tt> the influence matrix and
+ <tt>p</tt> the resulting wavefront sensor measurement.
  
  In a running system, we want to operate the other way around. A wavefront 
  sensor measures the wavefront (deformation), and we want to use a corrector 
